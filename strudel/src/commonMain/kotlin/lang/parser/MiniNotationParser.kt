@@ -60,19 +60,24 @@ class MiniNotationParser(
 
     fun parse(): MnPattern {
         if (tokens.isEmpty()) return MnPattern.Empty
-        val layers = parseExpression()
-        return MnPattern(layers)
+        return MnPattern(parseExpression())
     }
 
     // ── Recursive descent ─────────────────────────────────────────────────
 
-    /** expression = sequence ( ',' sequence )* */
-    private fun parseExpression(): List<List<MnNode>> {
-        val layers = mutableListOf<List<MnNode>>()
-        do {
-            layers.add(parseSequence())
-        } while (match(TokenType.COMMA))
-        return layers
+    /**
+     * expression = sequence ( ',' sequence )*
+     *
+     * Returns a flat [List<MnNode>]. When commas are present the result is a
+     * single-element list containing a [MnNode.Stack]; otherwise it is the
+     * plain sequence produced by [parseSequence].
+     */
+    private fun parseExpression(): List<MnNode> {
+        val first = parseSequence()
+        if (!check(TokenType.COMMA)) return first
+        val layers = mutableListOf(first)
+        while (match(TokenType.COMMA)) layers.add(parseSequence())
+        return listOf(MnNode.Stack(layers))
     }
 
     /** sequence = step* */
@@ -134,12 +139,8 @@ class MiniNotationParser(
                 match(TokenType.BANG) -> {
                     val countStr = if (check(TokenType.LITERAL)) consume(TokenType.LITERAL, "").text else "2"
                     val count = countStr.toIntOrNull() ?: 2
-                    // If further modifiers follow, wrap copies in a Group and continue
-                    if (!isAtEnd() && isModifier()) {
-                        node = MnNode.Group(layers = listOf(List(count) { node }))
-                    } else {
-                        return List(count) { node }
-                    }
+                    // Produce a Repeat node; any following modifiers are applied to it via the outer loop
+                    node = MnNode.Repeat(node, count)
                 }
 
                 match(TokenType.L_PAREN) -> {
@@ -167,9 +168,9 @@ class MiniNotationParser(
     /** Parses the primary node: atom, group `[]`, alternation `<>`, or rest `~`. */
     private fun parseBaseNode(): MnNode = when {
         match(TokenType.L_BRACKET) -> {
-            val layers = parseExpression()
+            val items = parseExpression()
             consume(TokenType.R_BRACKET, "Expected ']'")
-            MnNode.Group(layers)
+            MnNode.Group(items)
         }
 
         match(TokenType.L_ANGLE) -> {
@@ -208,12 +209,12 @@ class MiniNotationParser(
 
     private fun isModifier(): Boolean {
         if (isAtEnd()) return false
-        return peek().type in MODIFIER_TYPES
+        return peek().type in modifierTypes
     }
 
     private fun List<MnNode>.asSingleNode(): MnNode = when {
         size == 1 -> this[0]
-        else -> MnNode.Group(listOf(this))
+        else -> MnNode.Group(items = this)
     }
 
     private fun peek(): Token = tokens[pos]
@@ -253,9 +254,14 @@ class MiniNotationParser(
         COMMA, STAR, SLASH, TILDE, AT, PIPE, QUESTION, BANG, LITERAL
     }
 
-    private val MODIFIER_TYPES = setOf(
-        TokenType.STAR, TokenType.SLASH, TokenType.AT, TokenType.L_PAREN,
-        TokenType.QUESTION, TokenType.PIPE, TokenType.BANG,
+    private val modifierTypes = setOf(
+        TokenType.STAR,
+        TokenType.SLASH,
+        TokenType.AT,
+        TokenType.L_PAREN,
+        TokenType.QUESTION,
+        TokenType.PIPE,
+        TokenType.BANG,
     )
 
     private data class Token(
@@ -269,28 +275,7 @@ class MiniNotationParser(
         val line: Int,
         /** Column number within the line (1-based) */
         val column: Int,
-    ) {
-        fun toLocation(base: SourceLocation?): SourceLocation? {
-            if (base == null) return null
-
-            val absoluteStartLine = base.startLine + line - 1
-            val absoluteStartColumn = if (line == 1) {
-                base.startColumn + column
-            } else {
-                column
-            }
-            val absoluteEndLine = absoluteStartLine
-            val absoluteEndColumn = absoluteStartColumn + text.length
-
-            return SourceLocation(
-                source = base.source,
-                startLine = absoluteStartLine,
-                startColumn = absoluteStartColumn,
-                endLine = absoluteEndLine,
-                endColumn = absoluteEndColumn
-            )
-        }
-    }
+    )
 
     // ── Tokenizer ─────────────────────────────────────────────────────────
 

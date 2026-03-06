@@ -13,16 +13,12 @@ class MnParserSpec : StringSpec() {
 
     fun parse(input: String): MnPattern = parseMiniNotationMnPattern(input)
 
-    // Convenience helpers
-    fun atom(value: String) = MnNode.Atom(value, sourceRange = null)
-    fun rest() = MnNode.Rest
-
     init {
 
         // ── Atoms ────────────────────────────────────────────────────────────
 
         "empty string produces empty pattern" {
-            parse("").layers shouldBe emptyList()
+            parse("").items shouldBe emptyList()
         }
 
         "single atom 'bd'" {
@@ -53,43 +49,57 @@ class MnParserSpec : StringSpec() {
             (result.items[2] as MnNode.Atom).value shouldBe "sd"
         }
 
-        // ── Stacks (comma-separated layers) ──────────────────────────────────
+        // ── Stacks (MnNode.Stack) ─────────────────────────────────────────────
 
-        "stack 'bd, sd' produces two layers" {
+        "stack 'bd, sd' produces a root Stack node with two layers" {
             val result = parse("bd, sd")
-            result.layers.size shouldBe 2
-            (result.layers[0][0] as MnNode.Atom).value shouldBe "bd"
-            (result.layers[1][0] as MnNode.Atom).value shouldBe "sd"
+            result.items.size shouldBe 1
+            val stack = result.items[0] as MnNode.Stack
+            stack.layers.size shouldBe 2
+            (stack.layers[0][0] as MnNode.Atom).value shouldBe "bd"
+            (stack.layers[1][0] as MnNode.Atom).value shouldBe "sd"
         }
 
         "three-layer stack 'a, b, c'" {
             val result = parse("a, b, c")
-            result.layers.size shouldBe 3
+            val stack = result.items[0] as MnNode.Stack
+            stack.layers.size shouldBe 3
+        }
+
+        "multi-element stack 'a b, c d'" {
+            val result = parse("a b, c d")
+            val stack = result.items[0] as MnNode.Stack
+            stack.layers.size shouldBe 2
+            stack.layers[0].size shouldBe 2
+            stack.layers[1].size shouldBe 2
         }
 
         // ── Groups ───────────────────────────────────────────────────────────
 
-        "group '[bd sd]' produces single Group node" {
+        "group '[bd sd]' produces a flat Group node" {
             val result = parse("[bd sd]")
             result.items.size shouldBe 1
             val group = result.items[0] as MnNode.Group
-            group.layers.size shouldBe 1
-            group.layers[0].size shouldBe 2
-            (group.layers[0][0] as MnNode.Atom).value shouldBe "bd"
-            (group.layers[0][1] as MnNode.Atom).value shouldBe "sd"
+            group.items.size shouldBe 2
+            (group.items[0] as MnNode.Atom).value shouldBe "bd"
+            (group.items[1] as MnNode.Atom).value shouldBe "sd"
         }
 
-        "group with stack '[bd, sd]'" {
+        "group with stack '[bd, sd]' produces Group containing Stack" {
             val result = parse("[bd, sd]")
             val group = result.items[0] as MnNode.Group
-            group.layers.size shouldBe 2
+            group.items.size shouldBe 1
+            val stack = group.items[0] as MnNode.Stack
+            stack.layers.size shouldBe 2
+            (stack.layers[0][0] as MnNode.Atom).value shouldBe "bd"
+            (stack.layers[1][0] as MnNode.Atom).value shouldBe "sd"
         }
 
         "nested group '[[bd sd] hh]'" {
             val result = parse("[[bd sd] hh]")
             val outer = result.items[0] as MnNode.Group
-            outer.layers[0].size shouldBe 2
-            outer.layers[0][0] as MnNode.Group
+            outer.items.size shouldBe 2
+            outer.items[0] as MnNode.Group
         }
 
         // ── Alternation ───────────────────────────────────────────────────────
@@ -161,49 +171,53 @@ class MnParserSpec : StringSpec() {
             atom.mods.probability shouldBe 0.3
         }
 
-        // ── Bang (!) ──────────────────────────────────────────────────────────
+        // ── Bang / Repeat (!) ─────────────────────────────────────────────────
 
-        "bang 'bd!3' expands to 3 atoms" {
+        "bang 'bd!3' produces a single Repeat node" {
             val result = parse("bd!3")
-            result.items.size shouldBe 3
-            result.items.all { (it as MnNode.Atom).value == "bd" } shouldBe true
-        }
-
-        "bang default 'bd!' expands to 2 atoms" {
-            val result = parse("bd!")
-            result.items.size shouldBe 2
-        }
-
-        "bang in sequence 'bd!2 sd' produces 3 steps" {
-            val result = parse("bd!2 sd")
-            result.items.size shouldBe 3
-            (result.items[0] as MnNode.Atom).value shouldBe "bd"
-            (result.items[1] as MnNode.Atom).value shouldBe "bd"
-            (result.items[2] as MnNode.Atom).value shouldBe "sd"
-        }
-
-        "bang with subsequent modifier 'bd!2*2' produces Group" {
-            val result = parse("bd!2*2")
-            // !2 followed by *2 → Group([bd, bd])*2 as single item
             result.items.size shouldBe 1
-            val group = result.items[0] as MnNode.Group
-            group.mods.multiplier shouldBe 2.0
-            group.layers[0].size shouldBe 2
+            val repeat = result.items[0] as MnNode.Repeat
+            repeat.count shouldBe 3
+            (repeat.node as MnNode.Atom).value shouldBe "bd"
         }
 
-        "modifier before bang '*2!3' applies to each copy" {
+        "bang default 'bd!' produces Repeat with count 2" {
+            val result = parse("bd!")
+            result.items.size shouldBe 1
+            val repeat = result.items[0] as MnNode.Repeat
+            repeat.count shouldBe 2
+        }
+
+        "bang in sequence 'bd!2 sd' produces Repeat + atom" {
+            val result = parse("bd!2 sd")
+            result.items.size shouldBe 2
+            val repeat = result.items[0] as MnNode.Repeat
+            repeat.count shouldBe 2
+            (result.items[1] as MnNode.Atom).value shouldBe "sd"
+        }
+
+        "bang with subsequent modifier 'bd!2*2' produces Repeat with mods" {
+            val result = parse("bd!2*2")
+            result.items.size shouldBe 1
+            val repeat = result.items[0] as MnNode.Repeat
+            repeat.count shouldBe 2
+            repeat.mods.multiplier shouldBe 2.0
+        }
+
+        "modifier before bang 'bd*2!3' produces Repeat of bd*2" {
             val result = parse("bd*2!3")
-            result.items.size shouldBe 3
-            result.items.all { (it as MnNode.Atom).mods.multiplier == 2.0 } shouldBe true
+            result.items.size shouldBe 1
+            val repeat = result.items[0] as MnNode.Repeat
+            repeat.count shouldBe 3
+            (repeat.node as MnNode.Atom).mods.multiplier shouldBe 2.0
         }
 
-        "bang inside alternation '<bd!2 sd>'" {
+        "bang inside alternation '<bd!2 sd>' produces Repeat + atom in alt" {
             val result = parse("<bd!2 sd>")
             val alt = result.items[0] as MnNode.Alternation
-            alt.items.size shouldBe 3  // bd bd sd
-            (alt.items[0] as MnNode.Atom).value shouldBe "bd"
-            (alt.items[1] as MnNode.Atom).value shouldBe "bd"
-            (alt.items[2] as MnNode.Atom).value shouldBe "sd"
+            alt.items.size shouldBe 2
+            alt.items[0] as MnNode.Repeat
+            (alt.items[1] as MnNode.Atom).value shouldBe "sd"
         }
 
         // ── Choice (|) ────────────────────────────────────────────────────────
@@ -218,8 +232,12 @@ class MnParserSpec : StringSpec() {
 
         "choice chain 'a | b | c' flattens to Choice([a,b,c])" {
             val result = parse("a | b | c")
+            result.items.size shouldBe 1
             val choice = result.items[0] as MnNode.Choice
             choice.options.size shouldBe 3
+            (choice.options[0] as MnNode.Atom).value shouldBe "a"
+            (choice.options[1] as MnNode.Atom).value shouldBe "b"
+            (choice.options[2] as MnNode.Atom).value shouldBe "c"
         }
 
         "choice with modifier on right 'a | b*2'" {

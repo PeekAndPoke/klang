@@ -1,5 +1,8 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
+import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.pattern.AtomicPattern
+
 /**
  * Intermediate AST node for mini-notation patterns.
  *
@@ -10,7 +13,6 @@ package io.peekandpoke.klang.strudel.lang.parser
  *  - source-location tracking through to [AtomicPattern] nodes
  */
 sealed class MnNode {
-
     // ── Universal modifier bag ────────────────────────────────────────────────
 
     /**
@@ -55,17 +57,18 @@ sealed class MnNode {
          * Defaults to `sourceRange?.first?.plus(1) ?: 1` when null (single-line shortcut).
          */
         val sourceColumn: Int? = null,
+        /** The modifiers */
         val mods: Mods = Mods.None,
     ) : MnNode()
 
     /**
      * Bracketed sub-expression `[ … ]`.
      *
-     * [layers] mirrors the top-level structure: usually one layer (simple group),
-     * but comma-separated content inside brackets creates a stack within the group.
+     * [items] is a flat sequence of nodes. Stacking inside a group is represented by a
+     * [Stack] node as the single item: `Group(items = listOf(Stack(...)))`.
      */
     data class Group(
-        val layers: List<List<MnNode>>,
+        val items: List<MnNode>,
         val mods: Mods = Mods.None,
     ) : MnNode()
 
@@ -84,6 +87,34 @@ sealed class MnNode {
         val mods: Mods = Mods.None,
     ) : MnNode()
 
+    /**
+     * Simultaneous stack of sequences `a b, c d` rendered as comma-separated layers.
+     * When appearing inline within a sequence it is always bracketed: `[layer1, layer2]`.
+     *
+     * Unlike [Group], a Stack has no structural bracket of its own — the commas are the
+     * only syntax that distinguishes it from a plain sequence.
+     */
+    data class Stack(
+        val layers: List<List<MnNode>>,
+        val mods: Mods = Mods.None,
+    ) : MnNode()
+
+    /**
+     * Repeat `node!count` — deferred expansion of the bang operator.
+     *
+     * Keeps `a!8` as a single AST node so the renderer can produce `a!8` again
+     * instead of `a a a a a a a a`. Phase 2 ([MnPatternToStrudelPattern]) expands it.
+     *
+     * [mods] are applied to the whole group of expanded copies (equivalent to wrapping
+     * them in a [Group] with the same mods). When [mods] is empty the copies are
+     * flattened directly into the enclosing sequence.
+     */
+    data class Repeat(
+        val node: MnNode,
+        val count: Int,
+        val mods: Mods = Mods.None,
+    ) : MnNode()
+
     /** Silence `~`. */
     object Rest : MnNode()
 
@@ -95,6 +126,8 @@ sealed class MnNode {
         is Group -> copy(mods = mods.transform())
         is Alternation -> copy(mods = mods.transform())
         is Choice -> copy(mods = mods.transform())
+        is Stack -> copy(mods = mods.transform())
+        is Repeat -> copy(mods = mods.transform())
         is Rest -> this  // Rest has no modifiers (always silent)
     }
 
@@ -103,6 +136,8 @@ sealed class MnNode {
         is Group -> mods
         is Alternation -> mods
         is Choice -> mods
+        is Stack -> mods
+        is Repeat -> mods
         is Rest -> null
     }
 }
@@ -110,23 +145,16 @@ sealed class MnNode {
 // ── Top-level pattern ─────────────────────────────────────────────────────────
 
 /**
- * The root of a parsed mini-notation string.
+ * The root of a parsed mini-notation string — a flat sequence of [MnNode]s.
  *
- * [layers] contains a single entry for a plain sequence, or multiple entries when
- * the top-level uses comma-separated stacking (`a b, c d`).
+ * Stacking at the top level is represented by a single [MnNode.Stack] item:
+ * `MnPattern(items = listOf(Stack(layers = [...])))`.
  */
-data class MnPattern(val layers: List<List<MnNode>>) {
+data class MnPattern(val items: List<MnNode>) {
 
     companion object {
-        val Empty = MnPattern(layers = emptyList())
+        val Empty = MnPattern(items = emptyList())
 
-        /** Convenience constructor for a single-layer pattern. */
-        fun of(vararg items: MnNode) = MnPattern(layers = listOf(items.toList()))
+        fun of(vararg nodes: MnNode) = MnPattern(items = nodes.toList())
     }
-
-    /** True when this pattern is a simultaneous stack (comma-separated layers). */
-    val isStack: Boolean get() = layers.size > 1
-
-    /** The first (and usually only) layer — convenience for single-layer patterns. */
-    val items: List<MnNode> get() = layers.firstOrNull() ?: emptyList()
 }

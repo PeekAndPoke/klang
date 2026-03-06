@@ -4,11 +4,12 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.modals.ModalsManager.Companion.modals
-import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.*
+import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.html.onInput
+import de.peekandpoke.ultra.html.onKeyUp
 import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
@@ -20,15 +21,17 @@ import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import kotlinx.css.*
 import kotlinx.html.*
+import kotlin.math.pow
+import kotlin.math.roundToLong
 
 // ── Tool factory ──────────────────────────────────────────────────────────────
 
 /**
- * A [KlangUiTool] that edits mini-notation pattern strings visually.
+ * A [KlangUiTool] that edits mini-notation pattern strings.
  *
- * Supports flat atoms, groups `[ ]`, alternation `< >`, rest `~`, and modifiers.
- * When [atomTool] implements [KlangUiToolEmbeddable], clicking an atom chip expands
- * an inline editor panel below the chip row instead of opening a modal.
+ * The user edits the raw mini-notation string in a text field.
+ * Clicking into an atom token reveals a modifier panel and, when [atomTool] is set,
+ * an inline or modal sub-tool for editing the atom's value.
  */
 class StrudelMiniNotationEditorTool(
     private val atomTool: KlangUiTool? = null,
@@ -37,8 +40,6 @@ class StrudelMiniNotationEditorTool(
         StrudelMiniNotationEditorComp(ctx, atomTool)
     }
 }
-
-// ── Entry-point helpers ───────────────────────────────────────────────────────
 
 @Suppress("FunctionName")
 private fun Tag.StrudelMiniNotationEditorComp(toolCtx: KlangUiToolContext, atomTool: KlangUiTool?) =
@@ -50,769 +51,594 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : Component<Strudel
 
     data class Props(val toolCtx: KlangUiToolContext, val atomTool: KlangUiTool?)
 
-    // ── Parse initial value ───────────────────────────────────────────────
+    // ── State ─────────────────────────────────────────────────────────────────
 
-    private val initialPattern: MnPattern = run {
-        val raw = props.toolCtx.currentValue
-            ?.trim()?.removePrefix("\"")?.removeSuffix("\"") ?: ""
-        parseMiniNotationMnPattern(raw)
-    }
+    private var text by value(initialText())
+    private var cursorOffset by value(0)
 
-    // ── State ─────────────────────────────────────────────────────────────
+    /** Last atom the cursor was over — retained so modifier/atom panels survive button clicks. */
+    private var lastAtom: MnNode.Atom? = null
 
-    /** Top-level nodes (first layer of the pattern). */
-    private var nodes: List<MnNode> by value(initialPattern.items.toList())
+    // ── Derived ───────────────────────────────────────────────────────────────
 
     /**
-     * Path to the atom currently being inline-edited, or null.
-     * A path [i] points to top-level[i]; [i, j] points to top-level[i]'s child[j].
+     * Memoised parse results keyed by text — re-parses only on new input.
+     * Stable object identity is required so that reference-equality checks in
+     * [replaceAtomInNode] (`node === old`) correctly locate the atom to replace.
      */
-    private var editingPath: List<Int>? by value(null)
+    private val patternCache = mutableMapOf<String, MnPattern?>()
 
-    /** Live text for the inline input. */
-    private var editingText: String by value("")
-
-    /**
-     * Top-level index of the atom whose sub-tool panel is expanded inline.
-     * Only applies to top-level atoms when [Props.atomTool] is [KlangUiToolEmbeddable].
-     */
-    private var expandedIndex: Int? by value(null)
-
-    /**
-     * Specifies which [+] dropdown menu is currently open.
-     * null = no menu open; emptyList() = top-level menu; [i] = inside group/alternation at index i.
-     */
-    private var addMenuPath: List<Int>? by value(null)
-
-    /**
-     * Path to the node whose modifier panel is open, or null.
-     */
-    private var modsEditPath: List<Int>? by value(null)
-
-    private val initialValue: String = props.toolCtx.currentValue ?: "\"\""
-    private var lastCommittedValue: String by value(initialValue)
-
-    // ── Derived ───────────────────────────────────────────────────────────
-
-    private fun buildPattern(): MnPattern = MnPattern(listOf(nodes))
-    private fun buildValue(): String = "\"${MnRenderer.render(buildPattern())}\""
-    private val isInitialModified get() = initialValue != buildValue()
-    private val isCurrentModified get() = lastCommittedValue != buildValue()
-
-    // ── Tree helpers ──────────────────────────────────────────────────────
-
-    private fun getNodeAt(path: List<Int>): MnNode? {
-        if (path.isEmpty()) return null
-        var list = nodes
-        for (i in 0 until path.size - 1) {
-            val node = list.getOrNull(path[i]) ?: return null
-            list = node.childrenOrEmpty()
-        }
-        return list.getOrNull(path.last())
-    }
-
-    private fun getChildrenAt(parentPath: List<Int>): List<MnNode> =
-        if (parentPath.isEmpty()) nodes
-        else (getNodeAt(parentPath)?.childrenOrEmpty() ?: emptyList())
-
-    private fun updateAt(path: List<Int>, new: MnNode) {
-        nodes = updateInList(nodes, path, new)
-    }
-
-    private fun deleteAt(path: List<Int>) {
-        // Close any related state
-        if (editingPath == path) {
-            editingPath = null; editingText = ""
-        }
-        if (editingPath?.startsWith(path) == true) {
-            editingPath = null; editingText = ""
-        }
-        if (modsEditPath == path || modsEditPath?.startsWith(path) == true) modsEditPath = null
-        if (path.size == 1) {
-            val i = path[0]
-            if (expandedIndex == i) expandedIndex = null
-            else if (expandedIndex != null && expandedIndex!! > i) expandedIndex = expandedIndex!! - 1
-        }
-        nodes = deleteFromList(nodes, path)
-    }
-
-    private fun addAt(parentPath: List<Int>, new: MnNode) {
-        nodes = addToList(nodes, parentPath, new)
-    }
-
-    // Recursive tree update helpers
-
-    private fun updateInList(list: List<MnNode>, path: List<Int>, new: MnNode): List<MnNode> {
-        if (path.size == 1) return list.toMutableList().also { it[path[0]] = new }
-        val i = path[0]
-        val node = list.getOrNull(i) ?: return list
-        return list.toMutableList().also { it[i] = node.updateChild(path.drop(1), new) }
-    }
-
-    private fun deleteFromList(list: List<MnNode>, path: List<Int>): List<MnNode> {
-        if (path.size == 1) return list.toMutableList().also { it.removeAt(path[0]) }
-        val i = path[0]
-        val node = list.getOrNull(i) ?: return list
-        return list.toMutableList().also { it[i] = node.deleteChild(path.drop(1)) }
-    }
-
-    private fun addToList(list: List<MnNode>, parentPath: List<Int>, new: MnNode): List<MnNode> {
-        if (parentPath.isEmpty()) return list + new
-        val i = parentPath[0]
-        val node = list.getOrNull(i) ?: return list
-        return list.toMutableList().also { it[i] = node.addChild(parentPath.drop(1), new) }
-    }
-
-    private fun MnNode.childrenOrEmpty(): List<MnNode> = when (this) {
-        is MnNode.Group -> layers.firstOrNull() ?: emptyList()
-        is MnNode.Alternation -> items
-        else -> emptyList()
-    }
-
-    private fun MnNode.withChildren(children: List<MnNode>): MnNode = when (this) {
-        is MnNode.Group -> copy(layers = listOf(children))
-        is MnNode.Alternation -> copy(items = children)
-        else -> this
-    }
-
-    private fun MnNode.updateChild(path: List<Int>, new: MnNode): MnNode =
-        withChildren(updateInList(childrenOrEmpty(), path, new))
-
-    private fun MnNode.deleteChild(path: List<Int>): MnNode =
-        withChildren(deleteFromList(childrenOrEmpty(), path))
-
-    private fun MnNode.addChild(parentPath: List<Int>, new: MnNode): MnNode =
-        withChildren(addToList(childrenOrEmpty(), parentPath, new))
-
-    private fun List<Int>.startsWith(prefix: List<Int>): Boolean =
-        size > prefix.size && subList(0, prefix.size) == prefix
-
-    // ── Mutations ─────────────────────────────────────────────────────────
-
-    private fun startInlineEdit(path: List<Int>, text: String) {
-        editingPath = path
-        editingText = text
-    }
-
-    private fun commitInlineEdit(path: List<Int>) {
-        val atom = getNodeAt(path) as? MnNode.Atom ?: run { cancelInlineEdit(); return }
-        updateAt(path, atom.copy(value = editingText.trim()))
-        editingPath = null
-        editingText = ""
-    }
-
-    private fun cancelInlineEdit() {
-        editingPath = null
-        editingText = ""
-    }
-
-    private fun addAtomAt(parentPath: List<Int>) {
-        val newIndex = getChildrenAt(parentPath).size
-        addAt(parentPath, MnNode.Atom(""))
-        addMenuPath = null
-        val newPath = parentPath + newIndex
-        when {
-            props.atomTool is KlangUiToolEmbeddable && parentPath.isEmpty() ->
-                expandedIndex = newIndex
-
-            props.atomTool != null && parentPath.isEmpty() ->
-                openAtomTool(newIndex, onCancelAction = { deleteAt(newPath) })
-
-            else ->
-                startInlineEdit(newPath, "")
-        }
-    }
-
-    private fun addGroupAt(parentPath: List<Int>) {
-        addAt(parentPath, MnNode.Group(layers = listOf(emptyList())))
-        addMenuPath = null
-    }
-
-    private fun addAlternationAt(parentPath: List<Int>) {
-        addAt(parentPath, MnNode.Alternation(items = emptyList()))
-        addMenuPath = null
-    }
-
-    private fun addRestAt(parentPath: List<Int>) {
-        addAt(parentPath, MnNode.Rest)
-        addMenuPath = null
-    }
-
-    private fun toggleExpandedPanel(index: Int) {
-        expandedIndex = if (expandedIndex == index) null else index
-    }
-
-    private fun openAtomTool(index: Int, onCancelAction: () -> Unit = {}) {
-        val atom = nodes.getOrNull(index) as? MnNode.Atom ?: return
-        val subCtx = KlangUiToolContext(
-            symbol = props.toolCtx.symbol,
-            paramName = props.toolCtx.paramName,
-            currentValue = "\"${atom.value}\"",
-            onCommit = { result ->
-                val newValue = result.trim().removePrefix("\"").removeSuffix("\"")
-                updateAt(listOf(index), atom.copy(value = newValue))
-            },
-            onCancel = onCancelAction,
-        )
-        modals.show { handle ->
-            CodeToolModal(handle) {
-                props.atomTool!!.apply {
-                    render(subCtx.copy(onCancel = { handle.close(); subCtx.onCancel() }))
-                }
+    private val pattern: MnPattern?
+        get() = patternCache.getOrPut(text) {
+            try {
+                parseMiniNotationMnPattern(text)
+            } catch (_: Exception) {
+                null
             }
         }
+
+    private val parseError: Boolean get() = pattern == null && text.isNotBlank()
+    private val selectedAtom: MnNode.Atom? get() = pattern?.let { findAtomAt(it, cursorOffset) }
+    private val isModified: Boolean get() = text != initialText()
+
+    // ── Initial value ─────────────────────────────────────────────────────────
+
+    private fun initialText(): String =
+        props.toolCtx.currentValue?.trim()?.removeSurrounding("\"") ?: ""
+
+    // ── Atom finding ──────────────────────────────────────────────────────────
+
+    /**
+     * Returns the atom at [offset], including the modifier tail after the value token.
+     *
+     * Two passes:
+     * 1. Exact: offset is within the atom's sourceRange (the value token itself).
+     * 2. Modifier tail: cursor is past the value token but there is no whitespace or
+     *    structural character (`[]<>,`) between the atom end and [offset].
+     *    This covers `bd*2`, `bd@1.5`, `bd(3,8)` etc. where the cursor is on the modifiers.
+     */
+    private fun findAtomAt(p: MnPattern, offset: Int): MnNode.Atom? {
+        // Pass 1: cursor is directly on the atom value token
+        p.items.firstNotNullOfOrNull { findAtomInNode(it, offset) }?.let { return it }
+
+        // Pass 2: cursor is in the modifier tail — find the nearest atom whose value ends
+        // before the cursor with no whitespace/structural gap in between
+        val nearest = collectAtoms(p)
+            .filter { it.sourceRange != null && it.sourceRange.last < offset }
+            .maxByOrNull { it.sourceRange!!.last }
+            ?: return null
+
+        val atomEnd = nearest.sourceRange!!.last + 1
+        val between = text.substring(atomEnd.coerceAtMost(text.length), offset.coerceAtMost(text.length))
+        return if (between.none { it.isWhitespace() || it in "[]<>," }) nearest else null
     }
 
-    // ── Outer tool actions ────────────────────────────────────────────────
+    private fun collectAtoms(p: MnPattern): List<MnNode.Atom> = buildList {
+        p.items.forEach { collectAtomsInNode(it, this) }
+    }
+
+    private fun collectAtomsInNode(node: MnNode, list: MutableList<MnNode.Atom>) {
+        when (node) {
+            is MnNode.Atom -> if (node.sourceRange != null) list.add(node)
+            is MnNode.Group -> node.items.forEach { collectAtomsInNode(it, list) }
+            is MnNode.Alternation -> node.items.forEach { collectAtomsInNode(it, list) }
+            is MnNode.Stack -> node.layers.flatten().forEach { collectAtomsInNode(it, list) }
+            is MnNode.Choice -> node.options.forEach { collectAtomsInNode(it, list) }
+            is MnNode.Repeat -> collectAtomsInNode(node.node, list)
+            is MnNode.Rest -> {}
+        }
+    }
+
+    private fun findAtomInNode(node: MnNode, offset: Int): MnNode.Atom? = when (node) {
+        is MnNode.Atom -> node.sourceRange?.takeIf { offset in it }?.let { node }
+        is MnNode.Group -> node.items.firstNotNullOfOrNull { findAtomInNode(it, offset) }
+        is MnNode.Alternation -> node.items.firstNotNullOfOrNull { findAtomInNode(it, offset) }
+        is MnNode.Stack -> node.layers.flatten().firstNotNullOfOrNull { findAtomInNode(it, offset) }
+        is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomInNode(it, offset) }
+        is MnNode.Repeat -> findAtomInNode(node.node, offset)
+        is MnNode.Rest -> null
+    }
+
+    // ── Atom update ───────────────────────────────────────────────────────────
+
+    /** Replaces [old] with [new] in the pattern tree and re-renders the whole string. */
+    private fun updateAtom(old: MnNode.Atom, new: MnNode.Atom) {
+        val p = pattern ?: return
+        text = MnRenderer.render(replaceAtomIn(p, old, new))
+        // Try to restore cursor and lastAtom to the updated atom in the new string
+        val newAtom = pattern?.let { findAtomByValue(it, new.value) }
+        cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
+        lastAtom = newAtom ?: lastAtom
+    }
+
+    private fun replaceAtomIn(p: MnPattern, old: MnNode.Atom, new: MnNode.Atom): MnPattern =
+        MnPattern(p.items.map { replaceAtomInNode(it, old, new) })
+
+    private fun replaceAtomInNode(node: MnNode, old: MnNode.Atom, new: MnNode.Atom): MnNode = when (node) {
+        is MnNode.Atom -> if (node === old) new else node
+        is MnNode.Group -> node.copy(items = node.items.map { replaceAtomInNode(it, old, new) })
+        is MnNode.Alternation -> node.copy(items = node.items.map { replaceAtomInNode(it, old, new) })
+        is MnNode.Stack -> node.copy(layers = node.layers.map { l -> l.map { replaceAtomInNode(it, old, new) } })
+        is MnNode.Choice -> node.copy(options = node.options.map { replaceAtomInNode(it, old, new) })
+        is MnNode.Repeat -> node.copy(node = replaceAtomInNode(node.node, old, new))
+        is MnNode.Rest -> node
+    }
+
+    private fun findAtomByValue(p: MnPattern, value: String): MnNode.Atom? =
+        p.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
+
+    private fun findAtomByValueInNode(node: MnNode, value: String): MnNode.Atom? = when (node) {
+        is MnNode.Atom -> node.takeIf { it.value == value }
+        is MnNode.Group -> node.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
+        is MnNode.Alternation -> node.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
+        is MnNode.Stack -> node.layers.flatten().firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
+        is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
+        is MnNode.Repeat -> findAtomByValueInNode(node.node, value)
+        is MnNode.Rest -> null
+    }
+
+    // ── Actions ───────────────────────────────────────────────────────────────
 
     private fun onCancel() = props.toolCtx.onCancel()
 
     private fun onReset() {
-        nodes = initialPattern.items.toList()
-        editingPath = null; editingText = ""
-        expandedIndex = null; addMenuPath = null; modsEditPath = null
-        lastCommittedValue = initialValue
-        props.toolCtx.onCommit(initialValue)
+        text = initialText()
+        cursorOffset = 0
+        lastAtom = null
     }
 
-    private fun onCommit() {
-        val v = buildValue()
-        lastCommittedValue = v
-        props.toolCtx.onCommit(v)
-    }
+    private fun onCommit() = props.toolCtx.onCommit("\"$text\"")
 
-    // ── Render ────────────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────────
 
     override fun VDom.render() {
+        val atom = (selectedAtom ?: lastAtom).also { if (selectedAtom != null) lastAtom = selectedAtom }
+
         ui.segment {
-            css { minWidth = 50.vw }
-
-            ui.small.header { +"Pattern Editor" }
-
-            // ── Top-level chip row ────────────────────────────────────────
-            chipRow(nodes, emptyList())
-
-            // ── Inline sub-tool panel (top-level atoms only) ──────────────
-            val ei = expandedIndex
-            val tool = props.atomTool
-            if (tool is KlangUiToolEmbeddable && ei != null) {
-                renderExpandedPanel(ei, tool)
+            css {
+                minWidth = 60.vw
+                minHeight = 60.vh
+                display = Display.flex
+                flexDirection = FlexDirection.column
             }
 
-            // ── Modifier editing panel ────────────────────────────────────
-            val mep = modsEditPath
-            val modsNode = mep?.let { getNodeAt(it) }
-            if (mep != null && modsNode != null) {
-                renderModsPanel(mep, modsNode)
+            ui.small.header { +"Mini Notation" }
+
+            renderPatternInput(atom)
+
+            if (atom != null) {
+                ui.divider {}
+                renderModifierPanel(atom)
+                ui.divider {}
+                renderAtomPanel(atom)
             }
+
+            // Filler: grows to fill remaining vertical space when no atom panel is shown
+            div { css { flexGrow = 1.0 } }
 
             ui.divider {}
+            renderBottomBar()
+        }
+    }
 
-            // ── Bottom bar ────────────────────────────────────────────────
-            noui.basic.segment {
+    // ── Pattern text input ────────────────────────────────────────────────────
+
+    private fun FlowContent.renderPatternInput(atom: MnNode.Atom?) {
+        // Compute the character range to highlight (atom value + its modifiers).
+        val highlightStart = atom?.sourceRange?.first
+        val highlightEnd = if (atom != null && highlightStart != null)
+            (highlightStart + MnRenderer.renderNode(atom).length).coerceAtMost(text.length)
+        else null
+
+        div {
+            // Relative container so the highlight layer and textarea can overlap.
+            div {
                 css {
-                    padding = Padding(0.px)
-                    display = Display.flex
-                    justifyContent = JustifyContent.spaceBetween
-                    alignItems = Align.center
-                    gap = 8.px
+                    position = Position.relative
+                    backgroundColor = Color.white
+                    borderRadius = 4.px
                 }
 
-                ui.small.basic.label { +buildValue() }
-
-                noui.basic.segment {
-                    css { padding = Padding(0.px); display = Display.flex; gap = 8.px }
-
-                    ui.basic.button {
-                        onClick { onCancel() }
-                        icon.times()
-                        +"Cancel"
+                // ── Highlight layer ─────────────────────────────────────────
+                // Transparent text div positioned exactly behind the textarea.
+                // The <mark> provides the visible highlight background.
+                div {
+                    css {
+                        position = Position.absolute
+                        top = 0.px; left = 0.px; right = 0.px; bottom = 0.px
+                        fontFamily = "monospace"
+                        fontSize = 15.px
+                        padding = Padding(8.px, 10.px)
+                        put("white-space", "pre-wrap")
+                        put("word-break", "break-word")
+                        put("pointer-events", "none")
+                        put("box-sizing", "border-box")
+                        put("border", "1px solid transparent")
+                        color = Color("transparent")
                     }
-
-                    ui.basic.givenNot(isInitialModified) { disabled }.button {
-                        onClick { onReset() }
-                        icon.undo()
-                        +"Reset"
+                    if (highlightStart != null && highlightEnd != null && highlightStart < highlightEnd) {
+                        +text.substring(0, highlightStart)
+                        mark {
+                            css {
+                                backgroundColor = Color("rgba(200, 200, 255, 0.45)")
+                                color = Color("transparent")
+                                borderRadius = 2.px
+                            }
+                            +text.substring(highlightStart, highlightEnd)
+                        }
+                        +text.substring(highlightEnd)
+                    } else {
+                        +text
                     }
+                }
 
-                    ui.black.givenNot(isCurrentModified) { disabled }.button {
-                        onClick { onCommit() }
-                        icon.check()
-                        +"Update"
+                // ── Editable textarea (on top of highlight layer) ───────────
+                textArea {
+                    placeholder = "e.g. bd sd [hh cp] ~ bd*2"
+                    attributes["value"] = text
+                    css {
+                        position = Position.relative
+                        width = 100.pct
+                        fontFamily = "monospace"
+                        fontSize = 15.px
+                        padding = Padding(8.px, 10.px)
+                        borderRadius = 4.px
+                        put("border", if (parseError) "1px solid #e03131" else "1px solid #ccc")
+                        outline = Outline.none
+                        put("box-sizing", "border-box")
+                        put("resize", "none")
+                        put("overflow", "hidden")
+                        put("min-height", "38px")
+                        backgroundColor = Color("transparent")
+                        put("background", "transparent")
+                        put("caret-color", "#000")
                     }
+                    onInput { e ->
+                        val el = e.target?.asDynamic()
+                        text = el?.value as? String ?: text
+                        cursorOffset = el?.selectionStart as? Int ?: 0
+                        // Refresh lastAtom to a valid reference in the new parse tree.
+                        // Without this, lastAtom holds a stale reference after typing and
+                        // replaceAtomInNode's identity check (===) would always fail.
+                        lastAtom = lastAtom?.value?.let { v -> pattern?.let { p -> findAtomByValue(p, v) } }
+                        // Auto-resize: collapse to auto first to shrink, then expand to scrollHeight
+                        el?.style?.height = "auto"
+                        val scrollH = el?.scrollHeight?.toString() ?: "0"
+                        el?.style?.height = "${scrollH}px"
+                    }
+                    onClick { e ->
+                        cursorOffset = e.target?.asDynamic()?.selectionStart as? Int ?: 0
+                    }
+                    onKeyUp { e ->
+                        cursorOffset = e.target?.asDynamic()?.selectionStart as? Int ?: 0
+                    }
+                }
+            }
+
+            if (parseError) {
+                div {
+                    css { color = Color("#e03131"); fontSize = 12.px; marginTop = 4.px }
+                    +"Invalid pattern"
+                }
+            } else if (atom != null) {
+                div {
+                    css { color = Color("#888"); fontSize = 12.px; marginTop = 4.px }
+                    +"Editing: "
+                    span { css { fontFamily = "monospace"; color = Color("#333"); fontWeight = FontWeight.bold }; +atom.value }
+                }
+            } else {
+                div {
+                    css { color = Color("#999"); fontSize = 12.px; marginTop = 4.px }
+                    +"Click inside an atom token to edit its value and modifiers"
                 }
             }
         }
     }
 
-    // ── Chip row (recursive) ──────────────────────────────────────────────
+    // ── Atom value panel ──────────────────────────────────────────────────────
 
-    private fun FlowContent.chipRow(children: List<MnNode>, parentPath: List<Int>) {
+    private fun FlowContent.renderAtomPanel(atom: MnNode.Atom) {
+        val atomTool = props.atomTool
+        when {
+            atomTool == null -> renderAtomValueInput(atom)
+            atomTool is KlangUiToolEmbeddable -> renderEmbeddedAtomTool(atom, atomTool)
+            else -> renderAtomModalButton(atom, atomTool)
+        }
+    }
+
+    private fun FlowContent.renderAtomValueInput(atom: MnNode.Atom) {
+        div {
+            css { display = Display.flex; alignItems = Align.center; gap = 8.px }
+            span {
+                css { fontSize = 12.px; color = Color("#666"); fontWeight = FontWeight.w600; minWidth = 60.px }
+                +"Value"
+            }
+            input {
+                type = InputType.text
+                value = atom.value
+                css {
+                    fontFamily = "monospace"
+                    fontSize = 14.px
+                    padding = Padding(4.px, 8.px)
+                    borderRadius = 4.px
+                    put("border", "1px solid #ccc")
+                }
+                onInput { e ->
+                    val v = e.target?.asDynamic()?.value as? String ?: return@onInput
+                    updateAtom(atom, atom.copy(value = v))
+                }
+            }
+        }
+    }
+
+    private fun atomSubCtx(atom: MnNode.Atom, onCancel: () -> Unit, onCommit: (String) -> Unit) =
+        props.toolCtx.copy(
+            currentValue = "\"${atom.value}\"",
+            onCancel = onCancel,
+            onCommit = onCommit,
+        )
+
+    private fun FlowContent.renderEmbeddedAtomTool(atom: MnNode.Atom, atomTool: KlangUiToolEmbeddable) {
+        val subCtx = atomSubCtx(atom, onCancel = {}, onCommit = { newVal ->
+            updateAtom(atom, atom.copy(value = newVal.trim().removeSurrounding("\"")))
+        })
+        with(atomTool) { renderEmbedded(subCtx) }
+    }
+
+    private fun FlowContent.renderAtomModalButton(atom: MnNode.Atom, atomTool: KlangUiTool) {
+        ui.basic.small.button {
+            onClick {
+                modals.show { handle ->
+                    CodeToolModal(handle) {
+                        val subCtx = atomSubCtx(
+                            atom,
+                            onCancel = { handle.close() },
+                            onCommit = { newVal ->
+                                updateAtom(atom, atom.copy(value = newVal.trim().removeSurrounding("\"")))
+                                handle.close()
+                            },
+                        )
+                        with(atomTool) { render(subCtx) }
+                    }
+                }
+            }
+            icon.edit()
+            +"Edit '${atom.value}'…"
+        }
+    }
+
+    // ── Modifier panel ────────────────────────────────────────────────────────
+
+    private fun FlowContent.renderModifierPanel(atom: MnNode.Atom) {
+        val mods = atom.mods
         div {
             css {
                 display = Display.flex
                 flexWrap = FlexWrap.wrap
                 alignItems = Align.center
                 gap = 6.px
-                padding = Padding(8.px)
-                if (parentPath.isEmpty()) {
-                    backgroundColor = Color("#f8f9fa")
-                    borderRadius = 4.px
-                    minHeight = 48.px
-                }
+            }
+            span {
+                css { fontSize = 12.px; color = Color("#666"); fontWeight = FontWeight.w600; minWidth = 60.px }
+                +"Mods"
             }
 
-            children.forEachIndexed { i, node ->
-                renderChip(node, parentPath + i)
+            modChip(symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->
+                updateAtom(atom, atom.copy(mods = mods.copy(multiplier = v)))
             }
-
-            renderAddButton(parentPath)
+            modChip(symbol = "/", tooltip = "Divisor — play slower", current = mods.divisor, default = 2.0, min = 1.0, step = 1.0) { v ->
+                updateAtom(atom, atom.copy(mods = mods.copy(divisor = v)))
+            }
+            modChip(symbol = "@", tooltip = "Weight — relative time weight", current = mods.weight, default = 2.0, step = 0.5) { v ->
+                updateAtom(atom, atom.copy(mods = mods.copy(weight = v)))
+            }
+            modChip(
+                symbol = "?",
+                tooltip = "Probability — chance of playing",
+                current = mods.probability,
+                default = 0.5,
+                min = 0.0,
+                max = 1.0,
+                step = 0.05
+            ) { v ->
+                updateAtom(atom, atom.copy(mods = mods.copy(probability = v)))
+            }
+            euclideanChip(atom, mods)
         }
     }
 
-    // ── Add button + dropdown ─────────────────────────────────────────────
-
-    private fun FlowContent.renderAddButton(parentPath: List<Int>) {
-        div {
-            css { position = Position.relative; display = Display.inlineBlock }
-
-            ui.mini.basic.circular.icon.button {
-                css { marginLeft = 2.px }
-                onClick {
-                    addMenuPath = if (addMenuPath == parentPath) null else parentPath
-                }
-                icon.plus()
-            }
-
-            if (addMenuPath == parentPath) {
-                div {
-                    css {
-                        position = Position.absolute
-                        zIndex = 100
-                        top = 28.px
-                        left = 0.px
-                        backgroundColor = Color.white
-                        border = Border(1.px, BorderStyle.solid, Color("#ccc"))
-                        borderRadius = 4.px
-                        put("box-shadow", "0 2px 8px rgba(0,0,0,0.15)")
-                        padding = Padding(4.px)
-                        display = Display.flex
-                        flexDirection = FlexDirection.column
-                        gap = 2.px
-                        minWidth = 170.px
-                    }
-                    addMenuItem("Atom") { addAtomAt(parentPath) }
-                    addMenuDivider()
-                    addMenuItem("Group  [ ]") { addGroupAt(parentPath) }
-                    addMenuItem("Alternation  < >") { addAlternationAt(parentPath) }
-                    addMenuDivider()
-                    addMenuItem("Rest  ~") { addRestAt(parentPath) }
-                }
-            }
-        }
-    }
-
-    private fun FlowContent.addMenuItem(label: String, action: () -> Unit) {
+    private fun FlowContent.modChip(
+        symbol: String,
+        tooltip: String,
+        current: Double?,
+        default: Double,
+        min: Double = 0.0,
+        max: Double? = null,
+        step: Double,
+        onChange: (Double?) -> Unit,
+    ) {
         div {
             css {
-                padding = Padding(6.px, 10.px)
-                cursor = Cursor.pointer
-                borderRadius = 3.px
-                fontFamily = "monospace"
-                fontSize = 13.px
+                display = Display.flex
+                alignItems = Align.center
+                gap = 4.px
+                backgroundColor = Color("#f5f5f5")
+                borderRadius = 6.px
+                padding = Padding(4.px, 8.px)
             }
-            onClick { action() }
+            span {
+                css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+                attributes["title"] = tooltip
+                +symbol
+            }
+            if (current != null) {
+                val decimals = step.decimalPlaces()
+                stepButton("-") {
+                    val next = (current - step).roundTo(decimals).let { if (max != null) it.coerceAtMost(max) else it }.coerceAtLeast(min)
+                    onChange(if (next <= min) null else next)
+                }
+                input {
+                    type = InputType.number
+                    value = current.toFixed(4)
+                    attributes["min"] = min.toString()
+                    if (max != null) attributes["max"] = max.toString()
+                    attributes["step"] = step.toString()
+                    css {
+                        width = 65.px
+                        fontSize = 13.px
+                        padding = Padding(2.px, 4.px)
+                        borderRadius = 4.px
+                        put("border", "1px solid #ccc")
+                    }
+                    onInput { e ->
+                        val v = (e.target?.asDynamic()?.value as? String)?.toDoubleOrNull() ?: return@onInput
+                        onChange(if (v <= min) null else v)
+                    }
+                }
+                stepButton("+") {
+                    val next = (current + step).roundTo(decimals).let { if (max != null) it.coerceAtMost(max) else it }.coerceAtLeast(min)
+                    onChange(next)
+                }
+                span {
+                    css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                    attributes["title"] = "Remove"
+                    onClick { onChange(null) }
+                    +"×"
+                }
+            } else {
+                span {
+                    css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                    attributes["title"] = "Add — $tooltip"
+                    onClick { onChange(default) }
+                    +"+"
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.euclideanChip(atom: MnNode.Atom, mods: MnNode.Mods) {
+        val e = mods.euclidean
+        div {
+            css {
+                display = Display.flex
+                alignItems = Align.center
+                gap = 4.px
+                backgroundColor = Color("#f5f5f5")
+                borderRadius = 6.px
+                padding = Padding(4.px, 8.px)
+            }
+            span {
+                css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+                attributes["title"] = "Euclidean rhythm (pulses, steps, rotation)"
+                +"(,)"
+            }
+            if (e != null) {
+                euclideanInput("pulses", e.pulses, 1) { v ->
+                    updateAtom(atom, atom.copy(mods = mods.copy(euclidean = e.copy(pulses = v))))
+                }
+                span { css { color = Color("#999"); fontSize = 12.px }; +"," }
+                euclideanInput("steps", e.steps, 1) { v ->
+                    updateAtom(atom, atom.copy(mods = mods.copy(euclidean = e.copy(steps = v))))
+                }
+                span { css { color = Color("#999"); fontSize = 12.px }; +"," }
+                euclideanInput("rotation", e.rotation, 0) { v ->
+                    updateAtom(atom, atom.copy(mods = mods.copy(euclidean = e.copy(rotation = v))))
+                }
+                span {
+                    css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                    attributes["title"] = "Remove euclidean"
+                    onClick { updateAtom(atom, atom.copy(mods = mods.copy(euclidean = null))) }
+                    +"×"
+                }
+            } else {
+                span {
+                    css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                    attributes["title"] = "Add euclidean rhythm"
+                    onClick { updateAtom(atom, atom.copy(mods = mods.copy(euclidean = MnNode.Euclidean(3, 8)))) }
+                    +"+"
+                }
+            }
+        }
+    }
+
+    private fun FlowContent.euclideanInput(tooltip: String, value: Int, min: Int, onChange: (Int) -> Unit) {
+        stepButton("-") { if (value - 1 >= min) onChange(value - 1) }
+        input {
+            type = InputType.number
+            this.value = value.toString()
+            attributes["min"] = min.toString()
+            attributes["step"] = "1"
+            attributes["title"] = tooltip
+            css {
+                width = 45.px
+                fontSize = 13.px
+                padding = Padding(2.px, 4.px)
+                borderRadius = 4.px
+                put("border", "1px solid #ccc")
+            }
+            onInput { e ->
+                val v = (e.target?.asDynamic()?.value as? String)?.toIntOrNull() ?: return@onInput
+                onChange(v)
+            }
+        }
+        stepButton("+") { onChange(value + 1) }
+    }
+
+    private fun FlowContent.stepButton(label: String, onClick: () -> Unit) {
+        span {
+            css {
+                cursor = Cursor.pointer
+                color = Color("#555")
+                fontSize = 14.px
+                fontWeight = FontWeight.bold
+                padding = Padding(0.px, 3.px)
+                userSelect = UserSelect.none
+            }
+            onClick { onClick() }
             +label
         }
     }
 
-    private fun FlowContent.addMenuDivider() {
-        div { css { height = 1.px; backgroundColor = Color("#eee"); marginTop = 2.px; marginBottom = 2.px } }
-    }
+    // ── Bottom bar ────────────────────────────────────────────────────────────
 
-    // ── Chip dispatch ─────────────────────────────────────────────────────
-
-    private fun FlowContent.renderChip(node: MnNode, path: List<Int>) {
-        when {
-            node is MnNode.Atom && editingPath == path -> renderAtomChipEditing(path)
-            node is MnNode.Atom && props.atomTool != null && path.size == 1 -> renderAtomChipWithTool(path, node)
-            node is MnNode.Atom -> renderAtomChipPlain(path, node)
-            node is MnNode.Group -> renderGroupChip(path, node)
-            node is MnNode.Alternation -> renderAlternationChip(path, node)
-            node is MnNode.Rest -> renderRestChip(path)
-            else -> renderChoiceChip(path, node)
-        }
-    }
-
-    // ── Atom chip — plain text ────────────────────────────────────────────
-
-    private fun FlowContent.renderAtomChipPlain(path: List<Int>, node: MnNode.Atom) {
+    private fun FlowContent.renderBottomBar() {
         div {
-            css { chipBase(); cursor = Cursor.pointer }
-            onClick { startInlineEdit(path, node.value) }
-            span { css { mono13() }; +(node.value.ifEmpty { "…" }) }
-            modsDisplay(node.mods, path)
-            chipDeleteButton(path)
-        }
-    }
-
-    // ── Atom chip — inline editing ────────────────────────────────────────
-
-    private fun FlowContent.renderAtomChipEditing(path: List<Int>) {
-        div {
-            css { chipBase(); borderColor = Color("#2185d0") }
-            input {
-                css {
-                    fontFamily = "monospace"; fontSize = 13.px
-                    border = Border.none; outline = Outline.none
-                    minWidth = 40.px; width = LinearDimension.auto; background = "none"
-                }
-                value = editingText
-                autoFocus = true
-                onInput { e -> editingText = e.target.asDynamic().value as String }
-                onKeyDown { e ->
-                    when (e.key) {
-                        "Enter" -> commitInlineEdit(path)
-                        "Escape" -> cancelInlineEdit()
-                    }
-                }
-                onBlur { commitInlineEdit(path) }
+            css { display = Display.flex; justifyContent = JustifyContent.flexEnd; gap = 8.px }
+            ui.basic.button {
+                onClick { onCancel() }
+                icon.times()
+                +"Cancel"
+            }
+            ui.basic.givenNot(isModified) { disabled }.button {
+                onClick { onReset() }
+                icon.undo()
+                +"Reset"
+            }
+            ui.black.button {
+                onClick { onCommit() }
+                icon.check()
+                +"Update"
             }
         }
     }
+}
 
-    // ── Atom chip — with sub-tool (top-level only) ────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-    private fun FlowContent.renderAtomChipWithTool(path: List<Int>, node: MnNode.Atom) {
-        val index = path[0]
-        val isEmbeddable = props.atomTool is KlangUiToolEmbeddable
-        val isExpanded = expandedIndex == index
+private fun Double.toFixed(decimals: Int): String {
+    val s = roundTo(decimals).toString()
+    val dotIdx = s.indexOf('.')
+    return if (dotIdx < 0) s else s.trimEnd('0').trimEnd('.')
+}
 
-        div {
-            css { chipBase(); if (isExpanded) borderColor = Color("#2185d0") }
-            span { css { mono13() }; +(node.value.ifEmpty { "…" }) }
-            modsDisplay(node.mods, path)
-            ui.mini.basic.given(isExpanded) { active }.button {
-                css { marginLeft = 4.px; marginRight = 0.px }
-                onClick {
-                    if (isEmbeddable) toggleExpandedPanel(index)
-                    else openAtomTool(index)
-                }
-                +(if (isExpanded) "▼" else "edit")
-            }
-            chipDeleteButton(path)
-        }
-    }
+private fun Double.roundTo(decimals: Int): Double {
+    val factor = 10.0.pow(decimals)
+    return (this * factor).roundToLong().toDouble() / factor
+}
 
-    // ── Group chip  [ … ] ─────────────────────────────────────────────────
-
-    private fun FlowContent.renderGroupChip(path: List<Int>, node: MnNode.Group) {
-        val children = node.layers.firstOrNull() ?: emptyList()
-        div {
-            css {
-                chipBase()
-                padding = Padding(4.px, 6.px)
-                gap = 4.px
-                borderColor = Color("#888")
-                flexWrap = FlexWrap.wrap
-                alignItems = Align.center
-            }
-            span { css { mono13(); color = Color("#555"); fontWeight = FontWeight.bold }; +"[" }
-            children.forEachIndexed { j, child -> renderChip(child, path + j) }
-            renderAddButton(path)
-            span { css { mono13(); color = Color("#555"); fontWeight = FontWeight.bold }; +"]" }
-            modsDisplay(node.mods, path)
-            chipDeleteButton(path)
-        }
-    }
-
-    // ── Alternation chip  < … > ───────────────────────────────────────────
-
-    private fun FlowContent.renderAlternationChip(path: List<Int>, node: MnNode.Alternation) {
-        div {
-            css {
-                chipBase()
-                padding = Padding(4.px, 6.px)
-                gap = 4.px
-                borderColor = Color("#888")
-                borderStyle = BorderStyle.dashed
-                flexWrap = FlexWrap.wrap
-                alignItems = Align.center
-            }
-            span { css { mono13(); color = Color("#555"); fontWeight = FontWeight.bold }; +"<" }
-            node.items.forEachIndexed { j, child -> renderChip(child, path + j) }
-            renderAddButton(path)
-            span { css { mono13(); color = Color("#555"); fontWeight = FontWeight.bold }; +">" }
-            modsDisplay(node.mods, path)
-            chipDeleteButton(path)
-        }
-    }
-
-    // ── Rest chip  ~ ──────────────────────────────────────────────────────
-
-    private fun FlowContent.renderRestChip(path: List<Int>) {
-        div {
-            css { chipBase(); backgroundColor = Color("#f0f0f0"); color = Color("#999") }
-            span { css { mono13(); fontStyle = FontStyle.italic }; +"~" }
-            chipDeleteButton(path)
-        }
-    }
-
-    // ── Choice placeholder chip ───────────────────────────────────────────
-
-    private fun FlowContent.renderChoiceChip(path: List<Int>, node: MnNode) {
-        val label = when (node) {
-            is MnNode.Choice -> "a|b"
-            else -> "?"
-        }
-        div {
-            css { chipBase(); borderStyle = BorderStyle.dashed; color = Color("#888") }
-            span { css { mono13() }; +label }
-            chipDeleteButton(path)
-        }
-    }
-
-    // ── Modifier badges ───────────────────────────────────────────────────
-
-    private fun FlowContent.modsDisplay(mods: MnNode.Mods, path: List<Int>) {
-        if (mods.isEmpty) {
-            // show a faint "+" for mods
-            span {
-                css {
-                    marginLeft = 3.px
-                    fontSize = 10.px
-                    color = Color("#ccc")
-                    cursor = Cursor.pointer
-                    userSelect = UserSelect.none
-                    put("line-height", "1")
-                }
-                onClick { e ->
-                    e.stopPropagation()
-                    modsEditPath = if (modsEditPath == path) null else path
-                }
-                +"⚙"
-            }
-            return
-        }
-        span {
-            css {
-                marginLeft = 4.px
-                display = Display.inlineFlex
-                gap = 2.px
-                alignItems = Align.center
-                cursor = Cursor.pointer
-            }
-            onClick { e ->
-                e.stopPropagation()
-                modsEditPath = if (modsEditPath == path) null else path
-            }
-            mods.multiplier?.let { modBadge("×${it.fmtMod()}", "#6435C9") }
-            mods.divisor?.let { modBadge("÷${it.fmtMod()}", "#6435C9") }
-            mods.weight?.let { modBadge("@${it.fmtMod()}", "#2185d0") }
-            mods.probability?.let { modBadge("?${it.fmtMod()}", "#F2711C") }
-            mods.euclidean?.let { modBadge("(${it.pulses},${it.steps})", "#21BA45") }
-        }
-    }
-
-    private fun FlowContent.modBadge(text: String, hexColor: String) {
-        span {
-            css {
-                fontSize = 10.px
-                fontFamily = "monospace"
-                padding = Padding(1.px, 3.px)
-                borderRadius = 2.px
-                backgroundColor = Color(hexColor).withAlpha(0.12)
-                color = Color(hexColor)
-            }
-            +text
-        }
-    }
-
-    private fun Double.fmtMod(): String {
-        val long = toLong()
-        return if (this == long.toDouble()) long.toString() else toString()
-    }
-
-    // ── Modifier editing panel ────────────────────────────────────────────
-
-    private fun FlowContent.renderModsPanel(path: List<Int>, node: MnNode) {
-        val mods = node.modsOrNull() ?: return
-
-        div {
-            css {
-                marginTop = 8.px
-                padding = Padding(10.px, 12.px)
-                border = Border(1.px, BorderStyle.solid, Color("#ccc"))
-                borderRadius = 4.px
-                backgroundColor = Color("#fafafa")
-            }
-
-            div {
-                css {
-                    display = Display.flex
-                    justifyContent = JustifyContent.spaceBetween
-                    alignItems = Align.center
-                    marginBottom = 8.px
-                }
-                ui.small.header { css { margin = Margin(0.px) }; +"Modifiers" }
-                span {
-                    css { cursor = Cursor.pointer; color = Color("#bbb"); fontSize = 18.px; put("line-height", "1") }
-                    onClick { modsEditPath = null }
-                    +"×"
-                }
-            }
-
-            ui.form {
-                ui.five.stackable.fields {
-
-                    // ×  multiplier
-                    modsNumberField("× Speed", mods.multiplier, step = 0.5) { v ->
-                        updateAt(path, node.withMod { copy(multiplier = v) })
-                    }
-
-                    // ÷  divisor
-                    modsNumberField("÷ Slow", mods.divisor, step = 0.5) { v ->
-                        updateAt(path, node.withMod { copy(divisor = v) })
-                    }
-
-                    // @  weight
-                    modsNumberField("@ Weight", mods.weight, step = 0.1) { v ->
-                        updateAt(path, node.withMod { copy(weight = v) })
-                    }
-
-                    // ?  probability (0–1; 0 means disabled)
-                    modsNumberField("? Prob", mods.probability, step = 0.05) { v ->
-                        updateAt(path, node.withMod { copy(probability = v?.coerceIn(0.0, 1.0)) })
-                    }
-
-                    // Euclidean — (pulses, steps)
-                    modsEuclideanField(mods.euclidean, path, node)
-                }
-            }
-        }
-    }
-
-    private fun FlowContent.modsNumberField(
-        label: String,
-        value: Double?,
-        step: Double = 1.0,
-        onChange: (Double?) -> Unit,
-    ) {
-        UiInputField(value ?: 0.0, { v ->
-            onChange(if (v == 0.0) null else v)
-        }) {
-            label(label)
-            step(step)
-        }
-    }
-
-    private fun FlowContent.modsEuclideanField(
-        euclidean: MnNode.Euclidean?,
-        path: List<Int>,
-        node: MnNode,
-    ) {
-        ui.field {
-            label { +"Euclidean (p,s)" }
-            div {
-                css { display = Display.flex; gap = 4.px }
-                // Pulses input
-                input {
-                    css { fontFamily = "monospace"; fontSize = 13.px; width = 48.px; textAlign = TextAlign.center }
-                    type = InputType.number
-                    placeholder = "p"
-                    value = euclidean?.pulses?.toString() ?: ""
-                    min = "1"
-                    onInput { e ->
-                        val p = (e.target.asDynamic().value as String).toIntOrNull() ?: return@onInput
-                        val s = euclidean?.steps ?: p
-                        val r = euclidean?.rotation ?: 0
-                        updateAt(path, node.withMod { copy(euclidean = MnNode.Euclidean(p, s, r)) })
-                    }
-                }
-                span { css { alignSelf = Align.center; color = Color("#aaa") }; +"," }
-                // Steps input
-                input {
-                    css { fontFamily = "monospace"; fontSize = 13.px; width = 48.px; textAlign = TextAlign.center }
-                    type = InputType.number
-                    placeholder = "s"
-                    value = euclidean?.steps?.toString() ?: ""
-                    min = "1"
-                    onInput { e ->
-                        val s = (e.target.asDynamic().value as String).toIntOrNull() ?: return@onInput
-                        val p = euclidean?.pulses ?: s
-                        val r = euclidean?.rotation ?: 0
-                        updateAt(path, node.withMod { copy(euclidean = MnNode.Euclidean(p, s, r)) })
-                    }
-                }
-                // Clear euclidean
-                if (euclidean != null) {
-                    span {
-                        css { alignSelf = Align.center; color = Color("#bbb"); cursor = Cursor.pointer; marginLeft = 4.px }
-                        onClick { updateAt(path, node.withMod { copy(euclidean = null) }) }
-                        +"×"
-                    }
-                }
-            }
-        }
-    }
-
-    // ── Expanded inline sub-tool panel ─────────────────────────────────────
-
-    private fun FlowContent.renderExpandedPanel(index: Int, tool: KlangUiToolEmbeddable) {
-        val atom = nodes.getOrNull(index) as? MnNode.Atom ?: return
-        val subCtx = KlangUiToolContext(
-            symbol = props.toolCtx.symbol,
-            paramName = props.toolCtx.paramName,
-            currentValue = "\"${atom.value}\"",
-            onCommit = { result ->
-                val newValue = result.trim().removePrefix("\"").removeSuffix("\"")
-                updateAt(listOf(index), atom.copy(value = newValue))
-            },
-            onCancel = { expandedIndex = null },
-        )
-        div {
-            css {
-                marginTop = 8.px
-                padding = Padding(12.px)
-                border = Border(1.px, BorderStyle.solid, Color("#2185d0").withAlpha(0.3))
-                borderRadius = 4.px
-                backgroundColor = Color("#f0f7ff")
-            }
-            tool.apply { renderEmbedded(subCtx) }
-        }
-    }
-
-    // ── Shared chip helpers ───────────────────────────────────────────────
-
-    private fun CssBuilder.chipBase() {
-        display = Display.inlineFlex
-        alignItems = Align.center
-        gap = 4.px
-        padding = Padding(4.px, 8.px)
-        border = Border(1.px, BorderStyle.solid, Color("#ccc"))
-        borderRadius = 4.px
-        backgroundColor = Color("white")
-    }
-
-    private fun CssBuilder.mono13() {
-        fontFamily = "monospace"
-        fontSize = 13.px
-    }
-
-    private fun FlowContent.chipDeleteButton(path: List<Int>) {
-        span {
-            css {
-                marginLeft = 4.px
-                color = Color("#bbb")
-                cursor = Cursor.pointer
-                userSelect = UserSelect.none
-                put("line-height", "1")
-            }
-            onClick { e ->
-                e.stopPropagation()
-                deleteAt(path)
-            }
-            +"×"
-        }
-    }
+/** Number of significant decimal places in this value (used to match step precision). */
+private fun Double.decimalPlaces(): Int {
+    val s = toString()
+    val dot = s.indexOf('.')
+    return if (dot < 0) 0 else s.substring(dot + 1).trimEnd('0').length
 }

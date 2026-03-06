@@ -24,11 +24,8 @@ object MnPatternToStrudelPattern {
         baseLocation: SourceLocation?,
         atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
     ): StrudelPattern {
-        if (pattern.layers.isEmpty()) return silence
-
-        val layerPatterns = pattern.layers.map { layer -> layerToPattern(layer, baseLocation, atomFactory) }
-
-        return if (layerPatterns.size == 1) layerPatterns[0] else stack(*layerPatterns.toTypedArray())
+        if (pattern.items.isEmpty()) return silence
+        return layerToPattern(pattern.items, baseLocation, atomFactory)
     }
 
     // ── Layer / sequence ──────────────────────────────────────────────────
@@ -37,11 +34,20 @@ object MnPatternToStrudelPattern {
         nodes: List<MnNode>,
         baseLocation: SourceLocation?,
         atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
-    ): StrudelPattern = when {
-        nodes.isEmpty() -> silence
-        nodes.size == 1 -> nodeToPattern(nodes[0], baseLocation, atomFactory)
-        else -> seq(*nodes.map { nodeToPattern(it, baseLocation, atomFactory) }.toTypedArray())
+    ): StrudelPattern {
+        // Expand Repeat nodes that carry no mods — they contribute multiple flat sequence items.
+        val flat = nodes.flatMap { expandRepeat(it) }
+        return when {
+            flat.isEmpty() -> silence
+            flat.size == 1 -> nodeToPattern(flat[0], baseLocation, atomFactory)
+            else -> seq(*flat.map { nodeToPattern(it, baseLocation, atomFactory) }.toTypedArray())
+        }
     }
+
+    /** Expands a [MnNode.Repeat] with empty mods into its constituent copies; leaves other nodes as-is. */
+    private fun expandRepeat(node: MnNode): List<MnNode> =
+        if (node is MnNode.Repeat && node.mods.isEmpty) List(node.count) { node.node }
+        else listOf(node)
 
     // ── Node → pattern ────────────────────────────────────────────────────
 
@@ -54,6 +60,8 @@ object MnPatternToStrudelPattern {
         is MnNode.Group -> groupToPattern(node, baseLocation, atomFactory)
         is MnNode.Alternation -> alternationToPattern(node, baseLocation, atomFactory)
         is MnNode.Choice -> choiceToPattern(node, baseLocation, atomFactory)
+        is MnNode.Stack -> stackToPattern(node, baseLocation, atomFactory)
+        is MnNode.Repeat -> repeatToPattern(node, baseLocation, atomFactory)
         is MnNode.Rest -> silence
     }
 
@@ -77,14 +85,8 @@ object MnPatternToStrudelPattern {
         baseLocation: SourceLocation?,
         atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
     ): StrudelPattern {
-        val base = when {
-            node.layers.isEmpty() -> silence
-            node.layers.size == 1 -> layerToPattern(node.layers[0], baseLocation, atomFactory)
-            else -> {
-                val layers = node.layers.map { layerToPattern(it, baseLocation, atomFactory) }
-                stack(*layers.toTypedArray())
-            }
-        }
+        val base = if (node.items.isEmpty()) silence
+        else layerToPattern(node.items, baseLocation, atomFactory)
         return applyMods(base, node.mods)
     }
 
@@ -96,9 +98,42 @@ object MnPatternToStrudelPattern {
         atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
     ): StrudelPattern {
         if (node.items.isEmpty()) return silence
-        val items = node.items.map { nodeToPattern(it, baseLocation, atomFactory) }
+        // Expand bare Repeat nodes so <bd!2 sd> still means 3 alternation slots
+        val flat = node.items.flatMap { expandRepeat(it) }
+        val items = flat.map { nodeToPattern(it, baseLocation, atomFactory) }
         // <a b c> = seq(a, b, c).slow(n) — each item takes one full cycle
         val base = seq(*items.toTypedArray()).slow(items.size.toDouble())
+        return applyMods(base, node.mods)
+    }
+
+    // ── Repeat ────────────────────────────────────────────────────────────────
+
+    private fun repeatToPattern(
+        node: MnNode.Repeat,
+        baseLocation: SourceLocation?,
+        atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
+    ): StrudelPattern {
+        // Repeat with mods: expand copies and apply mods to the resulting sequence
+        val copies = List(node.count) { nodeToPattern(node.node, baseLocation, atomFactory) }
+        val base = if (copies.size == 1) copies[0] else seq(*copies.toTypedArray())
+        return applyMods(base, node.mods)
+    }
+
+    // ── Stack ─────────────────────────────────────────────────────────────
+
+    private fun stackToPattern(
+        node: MnNode.Stack,
+        baseLocation: SourceLocation?,
+        atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
+    ): StrudelPattern {
+        val base = when {
+            node.layers.isEmpty() -> silence
+            node.layers.size == 1 -> layerToPattern(node.layers[0], baseLocation, atomFactory)
+            else -> {
+                val layers = node.layers.map { layerToPattern(it, baseLocation, atomFactory) }
+                stack(*layers.toTypedArray())
+            }
+        }
         return applyMods(base, node.mods)
     }
 
@@ -144,8 +179,7 @@ object MnPatternToStrudelPattern {
      *
      * [line] and [col] are the 1-based line/column within the mini-notation string, as tracked
      * by the tokeniser. When [line] == 1 the column is offset by [base].startColumn; for
-     * subsequent lines the column is used directly (same convention as [Token.toLocation] in the
-     * original parser).
+     * subsequent lines the column is used directly.
      */
     private fun IntRange.toLocation(base: SourceLocation?, line: Int, col: Int?): SourceLocation? {
         if (base == null) return null

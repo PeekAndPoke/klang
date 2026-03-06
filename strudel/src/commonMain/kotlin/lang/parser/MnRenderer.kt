@@ -11,8 +11,7 @@ package io.peekandpoke.klang.strudel.lang.parser
  */
 object MnRenderer {
 
-    fun render(pattern: MnPattern): String =
-        pattern.layers.joinToString(", ") { layer -> renderLayer(layer) }
+    fun render(pattern: MnPattern): String = renderLayer(pattern.items)
 
     // ── Layer ─────────────────────────────────────────────────────────────
 
@@ -25,7 +24,7 @@ object MnRenderer {
         is MnNode.Atom -> node.value + renderMods(node.mods)
 
         is MnNode.Group -> {
-            val inner = node.layers.joinToString(", ") { layer -> renderLayer(layer) }
+            val inner = renderLayer(node.items)
             "[${inner}]${renderMods(node.mods)}"
         }
 
@@ -40,6 +39,14 @@ object MnRenderer {
             val inner = node.options.joinToString(" | ") { renderNode(it) }
             if (node.mods.isEmpty) inner else "[${inner}]${renderMods(node.mods)}"
         }
+
+        is MnNode.Stack -> {
+            // Stack never owns brackets — the surrounding context (Group or MnPattern) provides them.
+            // Layers are joined with ", "; each layer is a space-separated sequence.
+            node.layers.joinToString(", ") { layer -> renderLayer(layer) } + renderMods(node.mods)
+        }
+
+        is MnNode.Repeat -> renderNode(node.node) + "!${node.count}" + renderMods(node.mods)
 
         is MnNode.Rest -> "~"
     }
