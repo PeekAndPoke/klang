@@ -58,10 +58,15 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
         "bbb" to "bbb",
     )
 
-    /** All scale mode names from the dictionary.
+    /** All scale mode names (canonical + aliases) from the dictionary.
      *  Stored in state with spaces replaced by "_" so they are safe for mini-notation.
      *  Displayed to the user with the original spaces. */
-    private val modeNames: List<String> = ScaleTypeDictionary.names().sorted()
+    private val modeNames: List<String> = listOf(
+        "major", "minor", "pentatonic", "chromatic"
+    ).plus(
+        ScaleTypeDictionary.all()
+            .flatMap { listOf(it.name) + it.aliases }
+            .sorted())
 
     // ── Parse current value ───────────────────────────────────────────────────
 
