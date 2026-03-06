@@ -1435,6 +1435,7 @@ internal val PatternMapperFn._adsr by dslPatternMapperExtension { m, args, callI
  * ```
  *
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
+ * @param-tool params StrudelAdsrEditor
  *
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope

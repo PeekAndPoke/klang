@@ -225,11 +225,15 @@ class StrudelDocsProcessor(
                     val paramName = param.name?.asString() ?: return@forEach
                     val paramType = param.type.resolve()
                     val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ")
+                    val paramUiTools = kdoc.paramTools[paramName] ?: emptyList()
                     append("                    KlangParam(")
                     append("name = \"$paramName\", ")
                     append("type = ${generateTypeModelCode(paramType)}")
                     if (param.isVararg) append(", isVararg = true")
                     if (paramDesc.isNotEmpty()) append(", description = \"\"\"$paramDesc\"\"\"")
+                    if (paramUiTools.isNotEmpty()) {
+                        append(", uitools = listOf(${paramUiTools.joinToString(", ") { "\"$it\"" }})")
+                    }
                     appendLine("),")
                 }
                 appendLine("                ),")

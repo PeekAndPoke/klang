@@ -18,6 +18,8 @@ data class ParsedKDoc(
     val tags: List<String>,
     /** @alias tag (custom, comma-separated alternative function names) */
     val aliases: List<String>,
+    /** @param-tool tags: parameter name -> list of UI tool names */
+    val paramTools: Map<String, List<String>>,
 )
 
 /**
@@ -35,6 +37,7 @@ object KDocParser {
                 category = null,
                 tags = emptyList(),
                 aliases = emptyList(),
+                paramTools = emptyMap(),
             )
         }
 
@@ -99,6 +102,7 @@ object KDocParser {
         var category: String? = null
         val tags = mutableListOf<String>()
         val aliases = mutableListOf<String>()
+        val paramTools = mutableMapOf<String, MutableList<String>>()
 
         var currentTag: String? = null
         var currentContent = StringBuilder()
@@ -131,12 +135,29 @@ object KDocParser {
                         if (trimmed.isNotEmpty()) aliases.add(trimmed)
                     }
                 }
+
+                tag.startsWith("param-tool:") -> {
+                    val paramName = tag.removePrefix("param-tool:")
+                    content.split(",").forEach { t ->
+                        val trimmed = t.trim()
+                        if (trimmed.isNotEmpty()) paramTools.getOrPut(paramName) { mutableListOf() }.add(trimmed)
+                    }
+                }
             }
         }
 
         for (line in tagLines) {
             val t = line.trim()
             when {
+                t.startsWith("@param-tool") -> {
+                    saveCurrentTag()
+                    val match = Regex("@param-tool\\s+(\\w+)\\s*(.*)").matchEntire(t)
+                    if (match != null) {
+                        currentTag = "param-tool:${match.groupValues[1]}"
+                        currentContent = StringBuilder(match.groupValues[2])
+                    }
+                }
+
                 t.startsWith("@param") -> {
                     saveCurrentTag()
                     val match = Regex("@param\\s+(\\w+)\\s*(.*)").matchEntire(t)
@@ -187,6 +208,7 @@ object KDocParser {
             category = category,
             tags = tags,
             aliases = aliases,
+            paramTools = paramTools,
         )
     }
 }

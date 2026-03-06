@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import de.peekandpoke.kraft.popups.PopupsManager
 import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.routing.Router.Companion.router
@@ -28,8 +29,8 @@ import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
 import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
-import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
-import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
+import io.peekandpoke.klang.codemirror.dslEditorExtension
+import io.peekandpoke.klang.codetools.CodeToolModal
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
@@ -43,6 +44,8 @@ import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -136,6 +139,28 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
+    private fun openTool(toolName: String, ctx: KlangUiToolContext) {
+        val tool = KlangUiToolRegistry.get(toolName) ?: return
+
+        modals.show { handle ->
+            CodeToolModal(handle) {
+                tool.apply {
+                    render(
+                        ctx.copy(
+                            onCommit = {
+                                // Update the code
+                                ctx.onCommit(it)
+                                // update the playback if playing
+                                updatePlayback()
+                            },
+                            onCancel = { handle.close(); ctx.onCancel() }
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     private fun navToDoc(doc: KlangSymbol, event: dynamic) {
         val uri = Nav.docsStrudelSearch("function:${doc.name}")
         val pointerEvent = event as? PointerEvent
@@ -173,6 +198,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private fun updatePlayback() {
+        if (isPlaying) {
+            onPlay()
+        }
+    }
 
     private fun onPlay() {
         codeStream(code)
@@ -325,7 +356,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                             } else {
                                 ui.large.circular.white.givenNot(isCodeModified) { disabled }.button {
-                                    onClick { onPlay() }
+                                    onClick { updatePlayback() }
                                     icon.black.redo_alternate()
                                     +"Update"
                                 }
@@ -424,13 +455,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                     codeEditorRef { it.setErrors(emptyList()) }
                                 },
                                 extraExtensions = listOf(
-                                    dslHoverTooltipExtension(
+                                    dslEditorExtension(
                                         docProvider = { KlangDocsRegistry.global.get(it) },
                                         hoverPopup = hoverPopup,
-                                    ),
-                                    dslGoToDocsExtension(
-                                        docProvider = { KlangDocsRegistry.global.get(it) },
+                                        popups = popups,
                                         onNavigate = ::navToDoc,
+                                        onOpenTool = { toolName, ctx, _ ->
+                                            openTool(toolName = toolName, ctx = ctx)
+                                        },
                                     ),
                                 ),
                             ).track(codeEditorRef)

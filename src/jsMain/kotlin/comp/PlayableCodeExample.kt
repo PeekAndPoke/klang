@@ -19,8 +19,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
-import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
-import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
+import io.peekandpoke.klang.codemirror.dslEditorExtension
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -257,12 +256,10 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     editorRef { it.setErrors(emptyList()) }
                 },
                 extraExtensions = listOf(
-                    dslHoverTooltipExtension(
+                    dslEditorExtension(
                         docProvider = { KlangDocsRegistry.global.get(it) },
                         hoverPopup = hoverPopup,
-                    ),
-                    dslGoToDocsExtension(
-                        docProvider = { KlangDocsRegistry.global.get(it) },
+                        popups = popups,
                         onNavigate = ::navToDoc,
                     ),
                 ),
