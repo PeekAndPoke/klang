@@ -132,13 +132,6 @@ fun dslEditorExtension(
                     item("Go to docs: ${func.name}") {
                         onNavigate(func, event)
                     }
-                    item("Open docs in new tab: ${func.name}") {
-                        onNavigate(func, jsObject {
-                            this.shiftKey = true
-                            this.ctrlKey = event.ctrlKey
-                            this.metaKey = event.metaKey
-                        })
-                    }
                 }
 
                 // ── Tool items ─────────────────────────────────────────────

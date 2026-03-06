@@ -26,7 +26,7 @@ import kotlin.math.pow
 var strudelLangTonalInit = false
 
 /** Cleans up the scale name */
-fun String.cleanScaleName() = replace(":", " ")
+fun String.cleanScaleName() = replace(":", " ").replace("_", " ")
 
 /**
  * Resolves the note and frequency based on the index and the current scale.
@@ -103,7 +103,8 @@ internal val PatternMapperFn._scale by dslPatternMapperExtension { m, args, call
  * e.g. `"c4:major"` or `"c4 minor"`. If no scale is set, numeric indices map to semitones.
  * When called with no argument, reinterprets the current event value as a scale name.
  *
- * @param name The scale name in `"root:mode"` or `"root mode"` format.
+ * @param name The scale name in `"root:mode"` or `"root mode"` format, e.g. `"c4:major"`.
+ * @param-tool name StrudelScaleEditor
  * @return A pattern with the scale context applied to each event.
  *
  * ```KlangScript
