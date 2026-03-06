@@ -8,6 +8,7 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -59,6 +60,8 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     private var sustain by value(parsed[2])
     private var release by value(parsed[3])
 
+    private var currentValue by value(props.toolCtx.currentValue ?: "")
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun Double.fmt(): String =
@@ -66,6 +69,17 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
 
     private fun buildValue(): String =
         "\"${attack.fmt()}:${decay.fmt()}:${sustain.fmt()}:${release.fmt()}\""
+
+    private val isModified get() = currentValue != buildValue()
+
+    private fun onCancel() {
+        props.toolCtx.onCancel()
+    }
+
+    private fun onCommit() {
+        currentValue = buildValue()
+        props.toolCtx.onCommit(currentValue)
+    }
 
     // ── Render ────────────────────────────────────────────────────────────────
 
@@ -94,12 +108,14 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
                 }
 
                 ui.basic.button {
-                    onClick { props.toolCtx.onCancel() }
+                    onClick { onCancel() }
+                    icon.times()
                     +"Cancel"
                 }
-                ui.black.button {
-                    onClick { props.toolCtx.onCommit(buildValue()) }
-                    +"OK"
+                ui.black.givenNot(isModified) { disabled }.button {
+                    onClick { onCommit() }
+                    icon.check()
+                    +"Update"
                 }
             }
         }

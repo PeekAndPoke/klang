@@ -151,13 +151,15 @@ fun dslEditorExtension(
                                 paramName = argInfo.paramName,
                                 currentValue = argInfo.argText,
                                 onCommit = { result ->
-                                    view.dispatch(jsObject<dynamic> {
-                                        this.changes = jsObject {
-                                            this.from = argInfo.argFrom
-                                            this.to = argInfo.argTo
-                                            this.insert = result
-                                        }
-                                    })
+                                    view.dispatch(
+                                        view.state.update(jsObject {
+                                            this.changes = jsObject<dynamic> {
+                                                this.from = argInfo.argFrom
+                                                this.to = argInfo.argTo
+                                                this.insert = result
+                                            }
+                                        })
+                                    )
                                 },
                                 onCancel = {},
                             )
