@@ -5,16 +5,19 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.semanticui.forms.old.select.SelectField
+import de.peekandpoke.kraft.semanticui.forms.old.select.SelectFieldComponent
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.comp.NoteStaffComp
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.tones.scale.ScaleTypeDictionary
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -49,8 +52,10 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
         "" to "♮",
         "#" to "#",
         "##" to "##",
+        "###" to "###",
         "b" to "b",
         "bb" to "bb",
+        "bbb" to "bbb",
     )
 
     /** All scale mode names from the dictionary.
@@ -104,11 +109,9 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
 
     private fun buildValue(): String = "\"${letter}${accidental}${octave}:${mode}\""
 
-    /** Resolve the current scale for the steps preview. */
-    private fun currentScaleNotes(): List<String> {
-        val scaleName = "${letter}${accidental}${octave} ${mode.replace("_", " ")}"
-        return Scale.get(scaleName).notes
-    }
+    private fun currentScaleName(): String = "${letter}${accidental}${octave} ${mode.replace("_", " ")}"
+
+    private fun currentScaleNotes(): List<String> = Scale.get(currentScaleName()).notes
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = currentValue != buildValue()
@@ -133,7 +136,7 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
 
     override fun VDom.render() {
         ui.segment {
-            css { minWidth = 600.px }
+            css { minWidth = 50.vw }
 
             ui.small.header { +"Scale" }
 
@@ -165,8 +168,19 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
                     // Scale mode — realValue uses "_" so mini-notation treats it as one token
                     SelectField(::mode) {
                         label("Mode")
-                        modeNames.forEach { m ->
-                            option(realValue = m.replace(" ", "_")) { +m }
+
+                        autoSuggest { search ->
+                            val searchCleaned = search.trim()
+                            flowOf(
+                                modeNames
+                                    .filter { searchCleaned.isBlank() || it.contains(searchCleaned, ignoreCase = true) }
+                                    .map { m ->
+                                        SelectFieldComponent.Option(
+                                            realValue = m.replace(" ", "_"),
+                                            formValue = m,
+                                        ) { +m }
+                                    }
+                            )
                         }
                     }
                 }
@@ -174,19 +188,12 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
 
             ui.divider {}
 
-            // ── Scale steps ──────────────────────────────────────────────────
+            // ── Staff notation ────────────────────────────────────────────────
+            // Show two octaves centred on the root: one octave below + one above,
+            // so notes naturally span both treble and bass staves.
             val notes = currentScaleNotes()
             if (notes.isNotEmpty()) {
-                noui.basic.segment {
-                    css { padding = Padding(0.px); marginBottom = 8.px }
-
-                    notes.forEachIndexed { index, note ->
-                        ui.basic.label {
-                            +index.toString()
-                            noui.detail { +note }
-                        }
-                    }
-                }
+                NoteStaffComp(scaleName = currentScaleName(), range = (-notes.size)..notes.size)
             }
 
             ui.divider {}
