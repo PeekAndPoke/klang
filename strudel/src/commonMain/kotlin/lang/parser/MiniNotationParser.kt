@@ -3,14 +3,10 @@ package io.peekandpoke.klang.strudel.lang.parser
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
-import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
-import io.peekandpoke.klang.strudel.pattern.PropertyOverridePattern
-import io.peekandpoke.klang.strudel.pattern.SequencePattern
+import io.peekandpoke.klang.strudel.lang.StrudelDslArg
+import io.peekandpoke.klang.strudel.lang.silence
+
+// ── Backward-compatible public API ────────────────────────────────────────────
 
 fun <T> parseMiniNotation(
     input: StrudelDslArg<T>,
@@ -30,210 +26,237 @@ fun parseMiniNotation(
     input: String,
     baseLocation: SourceLocation? = null,
     atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
-): StrudelPattern = MiniNotationParser(
-    input = input,
+): StrudelPattern = MnPatternToStrudelPattern.convert(
+    pattern = parseMiniNotationMnPattern(input, baseLocation),
     baseLocation = baseLocation,
     atomFactory = atomFactory,
-).parse()
+)
 
+/** Phase 1 only — parses mini-notation string into an intermediate [MnPattern] tree. */
+fun parseMiniNotationMnPattern(input: String, baseLocation: SourceLocation? = null): MnPattern =
+    MiniNotationParser(input, baseLocation).parse()
+
+// ── Parser ────────────────────────────────────────────────────────────────────
+
+/**
+ * Phase-1 parser: tokenises [input] and builds an [MnPattern] AST.
+ *
+ * No strudel runtime dependency — the result can be used by the visual editor
+ * and round-tripped through [MnRenderer] without ever touching [StrudelPattern].
+ *
+ * Phase 2 ([MnPatternToStrudelPattern]) converts the tree to a [StrudelPattern].
+ *
+ * [baseLocation] is optional and used only for error message formatting.
+ */
 class MiniNotationParser(
     private val input: String,
     private val baseLocation: SourceLocation? = null,
-    private val atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
 ) {
+
     private val tokens = tokenize(input)
     private var pos = 0
 
-    // Internal pattern to mark sequences that should be flattened into the parent
-    private class SplittableSequencePattern(val patterns: List<StrudelPattern>) : StrudelPattern {
-        // This pattern acts like a SequencePattern if used directly (fallback)
-        val inner = SequencePattern.create(patterns)
+    // ── Public entry point ─────────────────────────────────────────────────
 
-        override val weight: Double get() = inner.weight
-
-        override val numSteps: Rational? get() = inner.numSteps
-
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> =
-            inner.queryArcContextual(from, to, ctx)
+    fun parse(): MnPattern {
+        if (tokens.isEmpty()) return MnPattern.Empty
+        val layers = parseExpression()
+        return MnPattern(layers)
     }
 
-    fun parse(): StrudelPattern {
-        if (tokens.isEmpty()) return silence
+    // ── Recursive descent ─────────────────────────────────────────────────
 
-        val result = parseExpression()
-
-        // We could check if (pos < tokens.size) here to warn about unconsumed input
-
-        return result
-    }
-
-    // Expression: pattern1, pattern2, ... (Stack)
-    private fun parseExpression(): StrudelPattern {
-        val patterns = mutableListOf<StrudelPattern>()
-
+    /** expression = sequence ( ',' sequence )* */
+    private fun parseExpression(): List<List<MnNode>> {
+        val layers = mutableListOf<List<MnNode>>()
         do {
-            patterns.add(parseSequence())
+            layers.add(parseSequence())
         } while (match(TokenType.COMMA))
-
-        return if (patterns.size == 1) patterns[0] else stack(*patterns.toTypedArray())
+        return layers
     }
 
-    // Sequence: pattern1 pattern2 ... (Sequence)
-    private fun parseSequence(): StrudelPattern {
-        val steps = mutableListOf<StrudelPattern>()
-
+    /** sequence = step* */
+    private fun parseSequence(): List<MnNode> {
+        val nodes = mutableListOf<MnNode>()
         while (!isAtEnd() && !check(TokenType.COMMA) && !check(TokenType.R_BRACKET) && !check(TokenType.R_ANGLE)) {
-            val step = parseStep()
-            if (step is SplittableSequencePattern) {
-                steps.addAll(step.patterns)
-            } else {
-                steps.add(step)
-            }
+            nodes.addAll(parseStep())
         }
-
-        return if (steps.isEmpty()) {
-            silence
-        } else if (steps.size == 1) {
-            steps[0]
-        } else {
-            seq(*steps.toTypedArray())
-        }
+        return nodes
     }
 
-    // Step: Atom, Group [], Alternation <>, Silence ~, with modifiers
-    private fun parseStep(): StrudelPattern {
-        var pattern = when {
-            match(TokenType.L_BRACKET) -> {
-                val p = parseExpression()
-                consume(TokenType.R_BRACKET, "Expected ']'")
-                p
-            }
+    /**
+     * Parses one step (base node + modifiers).
+     *
+     * Usually returns a single-element list.
+     * Returns n copies when `!n` is the last modifier (bang expansion flattened into parent).
+     */
+    private fun parseStep(): List<MnNode> {
+        var node = parseBaseNode()
 
-            match(TokenType.L_ANGLE) -> {
-                val p = parseAlternation()
-                consume(TokenType.R_ANGLE, "Expected '>'")
-                p
-            }
-
-            match(TokenType.TILDE) -> silence
-
-            match(TokenType.LITERAL) -> {
-                val token = previous()
-                val text = token.text
-
-                // Build source location chain for this atom
-                val atomLocation = token.toLocation(baseLocation)
-                val locationChain = if (atomLocation != null) {
-                    SourceLocationChain.single(atomLocation)
-                } else {
-                    null
+        while (!isAtEnd() && isModifier()) {
+            when {
+                match(TokenType.STAR) -> {
+                    val factor = consume(TokenType.LITERAL, "Expected number after '*'").text.toDoubleOrNull() ?: 1.0
+                    node = node.withMod { copy(multiplier = (multiplier ?: 1.0) * factor) }
                 }
 
-                // Always treat as a single atom, no special parsing here
-                atomFactory(text, locationChain)
-            }
-
-            else -> {
-                // Determine what went wrong for better error
-                if (isAtEnd()) {
-                    parseError("Unexpected end of input")
-                } else {
-                    parseError("Unexpected token: ${peek().text}")
+                match(TokenType.SLASH) -> {
+                    val factor = consume(TokenType.LITERAL, "Expected number after '/'").text.toDoubleOrNull() ?: 1.0
+                    node = node.withMod { copy(divisor = (divisor ?: 1.0) * factor) }
                 }
+
+                match(TokenType.AT) -> {
+                    val weight = consume(TokenType.LITERAL, "Expected number after '@'").text.toDoubleOrNull() ?: 1.0
+                    node = node.withMod { copy(weight = weight) }
+                }
+
+                match(TokenType.QUESTION) -> {
+                    val probStr = if (check(TokenType.LITERAL) && peek().text.firstOrNull()?.isDigit() == true) {
+                        consume(TokenType.LITERAL, "").text
+                    } else {
+                        null
+                    }
+                    val probability = probStr?.toDoubleOrNull() ?: 0.5
+                    node = node.withMod { copy(probability = probability) }
+                }
+
+                match(TokenType.PIPE) -> {
+                    // Left-associative, flatten chains: a | b | c → Choice([a, b, c])
+                    val rightItems = parseStep()
+                    val right = rightItems.asSingleNode()
+                    val rightOptions = if (right is MnNode.Choice) right.options else listOf(right)
+                    node = when (node) {
+                        is MnNode.Choice -> node.copy(options = node.options + rightOptions)
+                        else -> MnNode.Choice(listOf(node) + rightOptions)
+                    }
+                }
+
+                match(TokenType.BANG) -> {
+                    val countStr = if (check(TokenType.LITERAL)) consume(TokenType.LITERAL, "").text else "2"
+                    val count = countStr.toIntOrNull() ?: 2
+                    // If further modifiers follow, wrap copies in a Group and continue
+                    if (!isAtEnd() && isModifier()) {
+                        node = MnNode.Group(layers = listOf(List(count) { node }))
+                    } else {
+                        return List(count) { node }
+                    }
+                }
+
+                match(TokenType.L_PAREN) -> {
+                    val pulsesStr = consume(TokenType.LITERAL, "Expected pulses number").text
+                    val pulses = pulsesStr.toIntOrNull() ?: parseError("Invalid pulses: $pulsesStr")
+                    consume(TokenType.COMMA, "Expected ',' in Euclidean rhythm")
+                    val stepsStr = consume(TokenType.LITERAL, "Expected steps number").text
+                    val steps = stepsStr.toIntOrNull() ?: parseError("Invalid steps: $stepsStr")
+                    var rotation = 0
+                    if (match(TokenType.COMMA)) {
+                        val rotStr = consume(TokenType.LITERAL, "Expected rotation number").text
+                        rotation = rotStr.toIntOrNull() ?: parseError("Invalid rotation: $rotStr")
+                    }
+                    consume(TokenType.R_PAREN, "Expected ')' after Euclidean rhythm")
+                    node = node.withMod { copy(euclidean = MnNode.Euclidean(pulses, steps, rotation)) }
+                }
+
+                else -> break
             }
         }
 
-        // Apply modifiers (?, |, !, *, /, @, (p,s))
-        while (!isAtEnd() && (check(TokenType.STAR) || check(TokenType.SLASH) || check(TokenType.AT) ||
-                    check(TokenType.L_PAREN) || check(TokenType.QUESTION) || check(TokenType.PIPE) ||
-                    check(TokenType.BANG))
-        ) {
-            if (match(TokenType.STAR)) {
-                val factorStr = consume(TokenType.LITERAL, "Expected number after '*'").text
-                val factor = factorStr.toDoubleOrNull() ?: 1.0
-                pattern = pattern.fast(factor)
-            } else if (match(TokenType.SLASH)) {
-                val factorStr = consume(TokenType.LITERAL, "Expected number after '/'").text
-                val factor = factorStr.toDoubleOrNull() ?: 1.0
-                pattern = pattern.slow(factor)
-            } else if (match(TokenType.BANG)) {
-                val countStr = if (check(TokenType.LITERAL)) consume(TokenType.LITERAL, "").text else "2"
-                val count = countStr.toIntOrNull() ?: 2
-                val steps = List(count) { pattern }
-                // Wrap in SplittableSequencePattern to allow flattening
-                pattern = SplittableSequencePattern(steps)
-            } else if (match(TokenType.QUESTION)) {
-                val probStr = if (check(TokenType.LITERAL) && peek().text.firstOrNull()?.isDigit() == true) {
-                    consume(TokenType.LITERAL, "").text
-                } else {
-                    null
-                }
-                val probability = probStr?.toDoubleOrNull() ?: 0.5
-                pattern = pattern.degradeBy(probability)
-            } else if (match(TokenType.PIPE)) {
-                val right = parseStep()
-                pattern = pattern.choice(right)
-            } else if (match(TokenType.AT)) {
-                val weightStr = consume(TokenType.LITERAL, "Expected number after '@'").text
-                val weight = weightStr.toDoubleOrNull() ?: 1.0
-                pattern = PropertyOverridePattern(pattern, weightOverride = weight)
-            } else if (match(TokenType.L_PAREN)) {
-                // Euclidean rhythm: (pulses, steps) or (pulses, steps, rotation)
-                val pulsesStr = consume(TokenType.LITERAL, "Expected pulses number").text
-                val pulses = pulsesStr.toIntOrNull() ?: parseError("Invalid pulses number: $pulsesStr")
-
-                consume(TokenType.COMMA, "Expected ',' in Euclidean rhythm")
-
-                val stepsStr = consume(TokenType.LITERAL, "Expected steps number").text
-                val steps = stepsStr.toIntOrNull() ?: parseError("Invalid steps number: $stepsStr")
-
-                var rotation = 0
-                if (match(TokenType.COMMA)) {
-                    val rotationStr = consume(TokenType.LITERAL, "Expected rotation number").text
-                    rotation = rotationStr.toIntOrNull() ?: parseError("Invalid rotation number: $rotationStr")
-                }
-
-                consume(TokenType.R_PAREN, "Expected ')' after Euclidean rhythm")
-
-                pattern = EuclideanPattern
-                    .create(inner = pattern, pulses = pulses, steps = steps, rotation = rotation)
-            }
-        }
-
-        return pattern
+        return listOf(node)
     }
 
-    // Alternation: < a b c >  (Sequence treated as one per cycle)
-    private fun parseAlternation(): StrudelPattern {
-        val steps = mutableListOf<StrudelPattern>()
+    /** Parses the primary node: atom, group `[]`, alternation `<>`, or rest `~`. */
+    private fun parseBaseNode(): MnNode = when {
+        match(TokenType.L_BRACKET) -> {
+            val layers = parseExpression()
+            consume(TokenType.R_BRACKET, "Expected ']'")
+            MnNode.Group(layers)
+        }
 
-        // Parse items until '>'
+        match(TokenType.L_ANGLE) -> {
+            val items = parseAlternationItems()
+            consume(TokenType.R_ANGLE, "Expected '>'")
+            MnNode.Alternation(items)
+        }
+
+        match(TokenType.TILDE) -> MnNode.Rest
+
+        match(TokenType.LITERAL) -> {
+            val token = previous()
+            MnNode.Atom(
+                value = token.text,
+                sourceRange = token.start until token.end,
+                sourceLine = token.line,
+                sourceColumn = token.column,
+            )
+        }
+
+        isAtEnd() -> parseError("Unexpected end of input")
+
+        else -> parseError("Unexpected token: ${peek().text}")
+    }
+
+    /** Parses the items inside `< … >`, flattening any bang expansions. */
+    private fun parseAlternationItems(): List<MnNode> {
+        val items = mutableListOf<MnNode>()
         while (!isAtEnd() && !check(TokenType.R_ANGLE)) {
-            val step = parseStep()
-            // Should we flatten ! inside alternation?
-            // <a!2 c> -> <a a c> -> Cycle 0: a, Cycle 1: a, Cycle 2: c.
-            // Yes, this is consistent.
-            if (step is SplittableSequencePattern) {
-                steps.addAll(step.patterns)
-            } else {
-                steps.add(step)
-            }
+            items.addAll(parseStep())
         }
-
-        if (steps.isEmpty()) return silence
-
-        // <a b c> is equivalent to slow(3, seq(a, b, c))
-        // This makes each step take 1 full cycle
-        val seqPattern = seq(*steps.toTypedArray())
-        return seqPattern.slow(steps.size)
+        return items
     }
 
-    // --- Tokenizer ---
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private fun isModifier(): Boolean {
+        if (isAtEnd()) return false
+        return peek().type in MODIFIER_TYPES
+    }
+
+    private fun List<MnNode>.asSingleNode(): MnNode = when {
+        size == 1 -> this[0]
+        else -> MnNode.Group(listOf(this))
+    }
+
+    private fun peek(): Token = tokens[pos]
+    private fun previous(): Token = tokens[pos - 1]
+    private fun isAtEnd(): Boolean = pos >= tokens.size
+
+    private fun check(type: TokenType): Boolean = !isAtEnd() && peek().type == type
+
+    private fun match(type: TokenType): Boolean {
+        if (check(type)) {
+            pos++
+            return true
+        }
+        return false
+    }
+
+    private fun consume(type: TokenType, message: String): Token {
+        if (check(type)) return tokens[pos++]
+        parseError(message)
+    }
+
+    private fun parseError(message: String): Nothing {
+        val charPos = if (pos < tokens.size) {
+            tokens[pos].start
+        } else if (tokens.isNotEmpty()) {
+            tokens.last().start + tokens.last().text.length
+        } else {
+            0
+        }
+        throw MiniNotationParseException(message, charPos, baseLocation)
+    }
+
+    // ── Token types ───────────────────────────────────────────────────────
 
     private enum class TokenType {
         L_BRACKET, R_BRACKET, L_ANGLE, R_ANGLE, L_PAREN, R_PAREN,
         COMMA, STAR, SLASH, TILDE, AT, PIPE, QUESTION, BANG, LITERAL
     }
+
+    private val MODIFIER_TYPES = setOf(
+        TokenType.STAR, TokenType.SLASH, TokenType.AT, TokenType.L_PAREN,
+        TokenType.QUESTION, TokenType.PIPE, TokenType.BANG,
+    )
 
     private data class Token(
         val type: TokenType,
@@ -247,27 +270,15 @@ class MiniNotationParser(
         /** Column number within the line (1-based) */
         val column: Int,
     ) {
-        /**
-         * Create a SourceLocation for this token
-         */
         fun toLocation(base: SourceLocation?): SourceLocation? {
             if (base == null) return null
 
-            // Calculate absolute line and column
-            // base.startColumn points to the first character INSIDE the string (after the opening quote)
-            // base.startLine points to the line with the opening quote
-            // token.line and token.column are both 1-based within the string content
-
-            val absoluteStartLine = base.startLine + line - 1  // -1 because line 1 in content is on base.startLine
+            val absoluteStartLine = base.startLine + line - 1
             val absoluteStartColumn = if (line == 1) {
-                // Same line as the opening quote - add to base column (both 1-based)
                 base.startColumn + column
             } else {
-                // Different line - just use the token's column (already 1-based)
                 column
             }
-
-            // Calculate end position based on token length
             val absoluteEndLine = absoluteStartLine
             val absoluteEndColumn = absoluteStartColumn + text.length
 
@@ -281,222 +292,90 @@ class MiniNotationParser(
         }
     }
 
+    // ── Tokenizer ─────────────────────────────────────────────────────────
+
     private fun tokenize(input: String): List<Token> {
         val tokens = mutableListOf<Token>()
         var i = 0
-        var line = 1  // 1-based
-        var column = 1  // 1-based
+        var line = 1
+        var column = 1
 
         fun addToken(type: TokenType, text: String, start: Int, end: Int, tokenLine: Int, tokenColumn: Int) {
-            tokens.add(
-                Token(type = type, text = text, start = start, end = end, line = tokenLine, column = tokenColumn)
-            )
+            tokens.add(Token(type = type, text = text, start = start, end = end, line = tokenLine, column = tokenColumn))
         }
 
         while (i < input.length) {
             val c = input[i]
             when (c) {
                 '\n' -> {
-                    i++
-                    line++
-                    column = 1  // Reset to 1 at start of new line
+                    i++; line++; column = 1
                 }
 
                 ' ', '\t', '\r' -> {
-                    i++
-                    column++
+                    i++; column++
                 }
+
                 '(' -> {
-                    addToken(
-                        type = TokenType.L_PAREN,
-                        text = "(",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.L_PAREN, "(", i, i + 1, line, column); i++; column++
                 }
 
                 ')' -> {
-                    addToken(
-                        type = TokenType.R_PAREN,
-                        text = ")",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.R_PAREN, ")", i, i + 1, line, column); i++; column++
                 }
 
                 '[' -> {
-                    addToken(
-                        type = TokenType.L_BRACKET,
-                        text = "[",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.L_BRACKET, "[", i, i + 1, line, column); i++; column++
                 }
 
                 ']' -> {
-                    addToken(
-                        type = TokenType.R_BRACKET,
-                        text = "]",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.R_BRACKET, "]", i, i + 1, line, column); i++; column++
                 }
 
                 '<' -> {
-                    addToken(
-                        type = TokenType.L_ANGLE,
-                        text = "<",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.L_ANGLE, "<", i, i + 1, line, column); i++; column++
                 }
 
                 '>' -> {
-                    addToken(
-                        type = TokenType.R_ANGLE,
-                        text = ">",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.R_ANGLE, ">", i, i + 1, line, column); i++; column++
                 }
 
                 ',' -> {
-                    addToken(
-                        type = TokenType.COMMA,
-                        text = ",",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.COMMA, ",", i, i + 1, line, column); i++; column++
                 }
 
                 '*' -> {
-                    addToken(
-                        type = TokenType.STAR,
-                        text = "*",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
-                }
-
-                '/' -> {
-                    // Check for // comment
-                    if (i + 1 < input.length && input[i + 1] == '/') {
-                        // Skip comment until end of line
-                        i += 2 // Skip //
-                        while (i < input.length && input[i] != '\n') {
-                            i++
-                        }
-                        // Don't increment column - newline will reset it
-                    } else {
-                        // Single / is a division/slow operator
-                        addToken(
-                            type = TokenType.SLASH,
-                            text = "/",
-                            start = i,
-                            end = i + 1,
-                            tokenLine = line,
-                            tokenColumn = column
-                        )
-                        i++
-                        column++
-                    }
+                    addToken(TokenType.STAR, "*", i, i + 1, line, column); i++; column++
                 }
 
                 '~' -> {
-                    addToken(
-                        type = TokenType.TILDE,
-                        text = "~",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.TILDE, "~", i, i + 1, line, column); i++; column++
                 }
 
                 '@' -> {
-                    addToken(
-                        type = TokenType.AT,
-                        text = "@",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.AT, "@", i, i + 1, line, column); i++; column++
                 }
 
                 '|' -> {
-                    addToken(
-                        type = TokenType.PIPE,
-                        text = "|",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.PIPE, "|", i, i + 1, line, column); i++; column++
                 }
 
                 '?' -> {
-                    addToken(
-                        type = TokenType.QUESTION,
-                        text = "?",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.QUESTION, "?", i, i + 1, line, column); i++; column++
                 }
 
                 '!' -> {
-                    addToken(
-                        type = TokenType.BANG,
-                        text = "!",
-                        start = i,
-                        end = i + 1,
-                        tokenLine = line,
-                        tokenColumn = column
-                    )
-                    i++
-                    column++
+                    addToken(TokenType.BANG, "!", i, i + 1, line, column); i++; column++
+                }
+
+                '/' -> {
+                    if (i + 1 < input.length && input[i + 1] == '/') {
+                        // Skip comment until end of line
+                        i += 2
+                        while (i < input.length && input[i] != '\n') i++
+                    } else {
+                        addToken(TokenType.SLASH, "/", i, i + 1, line, column)
+                        i++; column++
+                    }
                 }
 
                 else -> {
@@ -505,19 +384,11 @@ class MiniNotationParser(
                     val tokenColumn = column
                     while (i < input.length) {
                         if (input[i] in " []<>,*~@()|?! \t\n\r") break
-
                         if (input[i] == '/') {
-                            // Check if this slash is likely a division operator (followed by number or space)
                             val next = if (i + 1 < input.length) input[i + 1] else null
-                            // If followed by digit, dot (float), or whitespace -> treat as operator
-                            if (next == null || next.isDigit() || next == '.' || next.isWhitespace()) {
-                                break
-                            }
-                            // Otherwise treat as part of the literal (e.g. chord "F/A")
+                            if (next == null || next.isDigit() || next == '.' || next.isWhitespace()) break
                         }
-
-                        i++
-                        column++
+                        i++; column++
                     }
                     addToken(
                         type = TokenType.LITERAL,
@@ -525,53 +396,11 @@ class MiniNotationParser(
                         start = start,
                         end = i,
                         tokenLine = tokenLine,
-                        tokenColumn = tokenColumn
+                        tokenColumn = tokenColumn,
                     )
                 }
             }
         }
         return tokens
-    }
-
-    // --- Helpers ---
-
-    private fun peek(): Token = tokens[pos]
-    private fun previous(): Token = tokens[pos - 1]
-    private fun isAtEnd(): Boolean = pos >= tokens.size
-
-    private fun check(type: TokenType): Boolean {
-        if (isAtEnd()) return false
-        return peek().type == type
-    }
-
-    private fun match(type: TokenType): Boolean {
-        if (check(type)) {
-            pos++
-            return true
-        }
-        return false
-    }
-
-    private fun consume(type: TokenType, message: String): Token {
-        if (check(type)) {
-            return tokens[pos++]
-        }
-        parseError(message)
-    }
-
-    /**
-     * Throw a parse error with position information
-     */
-    private fun parseError(message: String): Nothing {
-        // Calculate position in the input string
-        val charPos = if (pos < tokens.size) {
-            tokens[pos].start
-        } else if (tokens.isNotEmpty()) {
-            tokens.last().start + tokens.last().text.length
-        } else {
-            0
-        }
-
-        throw MiniNotationParseException(message, charPos, baseLocation)
     }
 }

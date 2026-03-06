@@ -1,6 +1,6 @@
 # Mini-Notation Point-and-Click Editor
 
-> **Status**: Planned
+> **Status**: Phase 1 complete
 > **Author**: Claude + user
 > **Date**: 2026-03-06
 
@@ -182,8 +182,8 @@ class StrudelMiniNotationEditorTool(
 ```
 ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────────────┐ ┌───┐
 │ 0.01:0.1:0.8 │ │ 0.05:0.2:0.7 │ │ [  0.01:0.1:0.8   0.1:0.3:0.6  ] │ │ ~ │  [+]
-│  ╱╲___        │ │  ╱╲__        │ │   ╱╲___           ╱╲__           │ │   │
-│      [edit]   │ │      [edit]  │ │       [edit]          [edit]     │ │   │
+│  ╱╲___       │ │  ╱╲__        │ │   ╱╲___           ╱╲__           │ │   │
+│      [edit]  │ │      [edit]  │ │       [edit]          [edit]     │ │   │
 └──────────────┘ └──────────────┘ └──────────────────────────────────┘ └───┘
 
   "0.01:0.1:0.8:0.3 0.05:0.2:0.7:0.2 [0.01:0.1:0.8:0.3 0.1:0.3:0.6:0.4] ~"
@@ -259,34 +259,47 @@ Files:
 
 ## 9. Key Files
 
-| Role                        | File                                                                     | Status                     |
-|-----------------------------|--------------------------------------------------------------------------|----------------------------|
-| Data model                  | `strudel/src/commonMain/kotlin/lang/parser/MnNode.kt`                    | new                        |
-| Phase 1 (rework)            | `strudel/src/commonMain/kotlin/lang/parser/MiniNotationParser.kt`        | rework                     |
-| Phase 2 (new)               | `strudel/src/commonMain/kotlin/lang/parser/MnPatternToStrudelPattern.kt` | new                        |
-| Renderer                    | `strudel/src/commonMain/kotlin/lang/parser/MnRenderer.kt`                | new                        |
-| Phase 1 tests               | `strudel/src/commonTest/kotlin/lang/parser/MnParserSpec.kt`              | new                        |
-| Phase 2 / integration tests | `strudel/src/commonTest/kotlin/lang/parser/MiniNotationParserSpec.kt`    | existing — must still pass |
-| UI tool                     | `src/jsMain/kotlin/codetools/StrudelMiniNotationEditorTool.kt`           | new                        |
-| Tool registration           | `src/jsMain/kotlin/index.kt`                                             | modify                     |
-| Default tool hook           | `klangui/src/jsMain/kotlin/KlangUiTool.kt`                               | modify                     |
-| Default tool trigger        | `src/jsMain/kotlin/codemirror/DslGoToDocsExtension.kt`                   | modify                     |
-| ADSR annotation             | `strudel/src/commonMain/kotlin/lang/lang_dynamics.kt`                    | modify                     |
-| Scale annotation            | `strudel/src/commonMain/kotlin/lang/lang_tonal.kt`                       | modify                     |
+| Role                        | File                                                                     | Status          |
+|-----------------------------|--------------------------------------------------------------------------|-----------------|
+| Data model                  | `strudel/src/commonMain/kotlin/lang/parser/MnNode.kt`                    | done            |
+| Phase 1 (rework)            | `strudel/src/commonMain/kotlin/lang/parser/MiniNotationParser.kt`        | done            |
+| Phase 2 (new)               | `strudel/src/commonMain/kotlin/lang/parser/MnPatternToStrudelPattern.kt` | done            |
+| Renderer                    | `strudel/src/commonMain/kotlin/lang/parser/MnRenderer.kt`                | done            |
+| Phase 1 structure tests     | `strudel/src/commonTest/kotlin/lang/parser/MnParserSpec.kt`              | done            |
+| Round-trip tests            | `strudel/src/commonTest/kotlin/lang/parser/MnRoundTripSpec.kt`           | done            |
+| Phase 2 / integration tests | `strudel/src/commonTest/kotlin/lang/parser/MiniNotationParserSpec.kt`    | done (existing) |
+| UI tool                     | `src/jsMain/kotlin/codetools/StrudelMiniNotationEditorTool.kt`           | not started     |
+| Tool registration           | `src/jsMain/kotlin/index.kt`                                             | not started     |
+| Default tool hook           | `klangui/src/jsMain/kotlin/KlangUiTool.kt`                               | not started     |
+| Default tool trigger        | `src/jsMain/kotlin/codemirror/DslGoToDocsExtension.kt`                   | not started     |
+| ADSR annotation             | `strudel/src/commonMain/kotlin/lang/lang_dynamics.kt`                    | not started     |
+| Scale annotation            | `strudel/src/commonMain/kotlin/lang/lang_tonal.kt`                       | not started     |
 
 ---
 
 ## 10. Implementation Phases
 
-### Phase 1 — Model + Parser rework + Renderer (commonMain)
+### Phase 1 — Model + Parser rework + Renderer (commonMain) ✅
 
-- [ ] Define `MnNode` + `MnPattern` in `MnNode.kt`
-- [ ] Rework `MiniNotationParser` to build `MnNode` tree in phase 1
-- [ ] Add `MnPatternToStrudelPattern` as phase 2 — preserve all current behaviour
-- [ ] Keep backward-compatible two-argument `parse()` entry point
-- [ ] Write `MnRenderer`
-- [ ] Write `MnParserSpec` round-trip tests
-- [ ] All existing parser/spec tests still pass: `./gradlew :strudel:jvmTest`
+- [x] Define `MnNode` + `MnPattern` in `MnNode.kt`
+- [x] Rework `MiniNotationParser` to build `MnNode` tree in phase 1
+- [x] Add `MnPatternToStrudelPattern` as phase 2 — preserve all current behaviour
+- [x] Keep backward-compatible `parseMiniNotation()` entry points
+- [x] Write `MnRenderer`
+- [x] Write `MnParserSpec` (structure tests) + `MnRoundTripSpec` (round-trip tests)
+- [x] All 3845 existing parser/spec tests still pass: `./gradlew :strudel:jvmTest`
+
+**Implementation notes:**
+
+- `MnNode.Atom` carries `sourceLine` + `sourceColumn` from the tokeniser for correct
+  multiline source-location tracking (single-line assumption was insufficient).
+- `parseMiniNotationMnPattern(input, baseLocation?)` is the new public phase-1 entry point.
+- `!n` (bang) expansion: `parseStep()` returns `List<MnNode>` — bare `!n` returns n copies
+  (flattened into parent sequence); `!n` followed by further modifiers wraps copies in a
+  `Group` node (matches original `SplittableSequencePattern` semantics).
+- `|` (pipe) chains are flattened into `Choice([a, b, c])` during parsing.
+- `MnNode.Mods` is a universal bag shared by `Atom`, `Group`, `Alternation`, `Choice`.
+- Phase-2 modifier order: euclidean → multiplier → divisor → probability → weight.
 
 ### Phase 2 — Basic UI (flat atoms, sub-tool delegation)
 

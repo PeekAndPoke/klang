@@ -1,0 +1,74 @@
+package io.peekandpoke.klang.strudel.lang.parser
+
+/**
+ * Serialises an [MnPattern] back to a canonical mini-notation string.
+ *
+ * Round-trip invariant:
+ * ```
+ * MiniNotationParser(render(pattern)).parse() == pattern
+ * ```
+ * (modulo insignificant whitespace)
+ */
+object MnRenderer {
+
+    fun render(pattern: MnPattern): String =
+        pattern.layers.joinToString(", ") { layer -> renderLayer(layer) }
+
+    // ── Layer ─────────────────────────────────────────────────────────────
+
+    private fun renderLayer(nodes: List<MnNode>): String =
+        nodes.joinToString(" ") { renderNode(it) }
+
+    // ── Node ──────────────────────────────────────────────────────────────
+
+    fun renderNode(node: MnNode): String = when (node) {
+        is MnNode.Atom -> node.value + renderMods(node.mods)
+
+        is MnNode.Group -> {
+            val inner = node.layers.joinToString(", ") { layer -> renderLayer(layer) }
+            "[${inner}]${renderMods(node.mods)}"
+        }
+
+        is MnNode.Alternation -> {
+            val inner = node.items.joinToString(" ") { renderNode(it) }
+            "<${inner}>${renderMods(node.mods)}"
+        }
+
+        is MnNode.Choice -> {
+            // Choices may not have mods themselves (mods sit on the individual options).
+            // If the Choice has mods we wrap it in a group to apply them.
+            val inner = node.options.joinToString(" | ") { renderNode(it) }
+            if (node.mods.isEmpty) inner else "[${inner}]${renderMods(node.mods)}"
+        }
+
+        is MnNode.Rest -> "~"
+    }
+
+    // ── Mods ──────────────────────────────────────────────────────────────
+
+    private fun renderMods(mods: MnNode.Mods): String {
+        if (mods.isEmpty) return ""
+        return buildString {
+            // Order matches phase-2 application: euclidean → multiplier → divisor → probability → weight
+            mods.euclidean?.let { e ->
+                append(
+                    if (e.rotation != 0) "(${e.pulses},${e.steps},${e.rotation})"
+                    else "(${e.pulses},${e.steps})"
+                )
+            }
+            mods.multiplier?.let { append("*${renderNumber(it)}") }
+            mods.divisor?.let { append("/${renderNumber(it)}") }
+            mods.probability?.let { append("?${renderNumber(it)}") }
+            mods.weight?.let { append("@${renderNumber(it)}") }
+        }
+    }
+
+    // ── Number formatting ─────────────────────────────────────────────────
+
+    /**
+     * Renders a [Double] without a trailing `.0` when the value is a whole number.
+     * E.g. `2.0` → `"2"`, `0.5` → `"0.5"`.
+     */
+    private fun renderNumber(d: Double): String =
+        if (d == kotlin.math.floor(d) && !d.isInfinite()) d.toLong().toString() else d.toString()
+}
