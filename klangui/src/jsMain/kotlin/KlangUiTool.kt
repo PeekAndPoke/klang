@@ -31,6 +31,18 @@ fun interface KlangUiTool {
 }
 
 /**
+ * A [KlangUiTool] that can also render its editing content inline, without
+ * Cancel / Reset / Update buttons.
+ *
+ * When rendered embedded, [FlowContent.renderEmbedded] is called instead of [FlowContent.render].
+ * The tool must call [KlangUiToolContext.onCommit] on every live change so that the host
+ * (e.g. the mini-notation editor) stays in sync automatically.
+ */
+interface KlangUiToolEmbeddable : KlangUiTool {
+    fun FlowContent.renderEmbedded(ctx: KlangUiToolContext)
+}
+
+/**
  * Global registry mapping tool names (as declared in `@param-tool` KDoc tags) to [KlangUiTool] implementations.
  *
  * Register tools at application startup:

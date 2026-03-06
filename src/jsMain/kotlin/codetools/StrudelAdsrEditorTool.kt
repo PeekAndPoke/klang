@@ -11,34 +11,38 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.unsafe
 
-// ── Registration helper ───────────────────────────────────────────────────────
+// ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiTool] implementation that opens the [StrudelAdsrEditorComp]. */
-val StrudelAdsrEditorTool = KlangUiTool { ctx ->
-    StrudelAdsrEditorComp(ctx)
+/** [KlangUiToolEmbeddable] for editing a single ADSR envelope string. */
+object StrudelAdsrEditorTool : KlangUiToolEmbeddable {
+    override fun FlowContent.render(ctx: KlangUiToolContext) {
+        StrudelAdsrEditorComp(ctx, embedded = false)
+    }
+
+    override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) {
+        StrudelAdsrEditorComp(ctx, embedded = true)
+    }
 }
+
+// ── Entry-point helpers ───────────────────────────────────────────────────────
+
+@Suppress("FunctionName")
+private fun Tag.StrudelAdsrEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
+    comp(StrudelAdsrEditorComp.Props(toolCtx, embedded)) { StrudelAdsrEditorComp(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-@Suppress("FunctionName")
-private fun FlowContent.StrudelAdsrEditorComp(toolCtx: KlangUiToolContext) =
-    comp(StrudelAdsrEditorComp.Props(toolCtx)) { StrudelAdsrEditorComp(it) }
-
-@Suppress("FunctionName")
-private fun Tag.StrudelAdsrEditorComp(toolCtx: KlangUiToolContext) =
-    comp(StrudelAdsrEditorComp.Props(toolCtx)) { StrudelAdsrEditorComp(it) }
-
 private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEditorComp.Props>(ctx) {
 
-    data class Props(val toolCtx: KlangUiToolContext)
+    data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
     // ── Parse current value from raw source text ──────────────────────────────
 
@@ -76,8 +80,14 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
         "\"${attack.fmt()}:${decay.fmt()}:${sustain.fmt()}:${release.fmt()}\""
 
     private val isInitialModified get() = initialValue != buildValue()
-
     private val isCurrentModified get() = currentValue != buildValue()
+
+    /** Called after every slider change in embedded mode — propagates live updates to the host. */
+    private fun liveUpdate() {
+        if (props.embedded) {
+            props.toolCtx.onCommit(buildValue())
+        }
+    }
 
     private fun onCancel() {
         props.toolCtx.onCancel()
@@ -101,54 +111,53 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     // ── Render ────────────────────────────────────────────────────────────────
 
     override fun VDom.render() {
-        ui.segment {
-            css { minWidth = 600.px }
-
-            ui.small.header { +"ADSR Envelope" }
-
-            ui.form {
-                ui.four.stackable.fields {
-                    adsrRow("Attack", "sec", attack, 0.001) { attack = it }
-                    adsrRow("Decay", "sec", decay, 0.001) { decay = it }
-                    adsrRow("Sustain", "", sustain, 0.01) { sustain = it }
-                    adsrRow("Release", "sec", release, 0.001) { release = it }
+        if (props.embedded) {
+            renderContent()
+        } else {
+            ui.segment {
+                css { minWidth = 600.px }
+                ui.small.header { +"ADSR Envelope" }
+                renderContent()
+                ui.divider {}
+                div {
+                    css {
+                        display = Display.flex
+                        justifyContent = JustifyContent.flexEnd
+                        gap = 8.px
+                    }
+                    ui.basic.button {
+                        onClick { onCancel() }
+                        icon.times()
+                        +"Cancel"
+                    }
+                    ui.basic.givenNot(isInitialModified) { disabled }.button {
+                        onClick { onReset() }
+                        icon.undo()
+                        +"Reset"
+                    }
+                    ui.black.givenNot(isCurrentModified) { disabled }.button {
+                        onClick { onCommit() }
+                        icon.check()
+                        +"Update"
+                    }
                 }
             }
+        }
+    }
 
-            ui.divider {}
-
-            div {
-                css { marginBottom = 1.rem }
-                unsafe { raw(buildAdsrSvg()) }
+    private fun FlowContent.renderContent() {
+        ui.form {
+            ui.four.stackable.fields {
+                adsrRow("Attack", "sec", attack, 0.001) { attack = it; liveUpdate() }
+                adsrRow("Decay", "sec", decay, 0.001) { decay = it; liveUpdate() }
+                adsrRow("Sustain", "", sustain, 0.01) { sustain = it; liveUpdate() }
+                adsrRow("Release", "sec", release, 0.001) { release = it; liveUpdate() }
             }
-
-            ui.divider {}
-
-            div {
-                css {
-                    display = Display.flex
-                    justifyContent = JustifyContent.flexEnd
-                    gap = 8.px
-                }
-
-                ui.basic.button {
-                    onClick { onCancel() }
-                    icon.times()
-                    +"Cancel"
-                }
-
-                ui.basic.givenNot(isInitialModified) { disabled }.button {
-                    onClick { onReset() }
-                    icon.undo()
-                    +"Reset"
-                }
-
-                ui.black.givenNot(isCurrentModified) { disabled }.button {
-                    onClick { onCommit() }
-                    icon.check()
-                    +"Update"
-                }
-            }
+        }
+        ui.divider {}
+        div {
+            css { if (!props.embedded) marginBottom = 1.rem }
+            unsafe { raw(buildAdsrSvg()) }
         }
     }
 
@@ -157,9 +166,9 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     private fun buildAdsrSvg(): String {
         val w = 560.0
         val h = 120.0
-        val padL = 12.0;
+        val padL = 12.0
         val padR = 12.0
-        val padT = 10.0;
+        val padT = 10.0
         val padB = 22.0
         val drawW = w - padL - padR
         val drawH = h - padT - padB

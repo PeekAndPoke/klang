@@ -15,33 +15,36 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.comp.NoteStaffComp
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.tones.scale.ScaleTypeDictionary
-import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 
-// ── Registration helper ───────────────────────────────────────────────────────
+// ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiTool] implementation that opens the [StrudelScaleEditorComp]. */
-val StrudelScaleEditorTool = KlangUiTool { ctx ->
-    StrudelScaleEditorComp(ctx)
+/** [KlangUiToolEmbeddable] for editing a single scale string (e.g. `"c4:major"`). */
+object StrudelScaleEditorTool : KlangUiToolEmbeddable {
+    override fun FlowContent.render(ctx: KlangUiToolContext) {
+        StrudelScaleEditorComp(ctx, embedded = false)
+    }
+
+    override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) {
+        StrudelScaleEditorComp(ctx, embedded = true)
+    }
 }
+
+// ── Entry-point helpers ───────────────────────────────────────────────────────
+@Suppress("FunctionName")
+private fun Tag.StrudelScaleEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
+    comp(StrudelScaleEditorComp.Props(toolCtx, embedded)) { StrudelScaleEditorComp(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-@Suppress("FunctionName")
-private fun FlowContent.StrudelScaleEditorComp(toolCtx: KlangUiToolContext) =
-    comp(StrudelScaleEditorComp.Props(toolCtx)) { StrudelScaleEditorComp(it) }
-
-@Suppress("FunctionName")
-private fun Tag.StrudelScaleEditorComp(toolCtx: KlangUiToolContext) =
-    comp(StrudelScaleEditorComp.Props(toolCtx)) { StrudelScaleEditorComp(it) }
-
 private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEditorComp.Props>(ctx) {
 
-    data class Props(val toolCtx: KlangUiToolContext)
+    data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
     // ── Static data ───────────────────────────────────────────────────────────
 
@@ -121,6 +124,13 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = currentValue != buildValue()
 
+    /** Called after every field change in embedded mode — propagates live updates to the host. */
+    private fun liveUpdate() {
+        if (props.embedded) {
+            props.toolCtx.onCommit(buildValue())
+        }
+    }
+
     private fun onCancel() = props.toolCtx.onCancel()
 
     private fun onReset() {
@@ -140,103 +150,100 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
     // ── Render ────────────────────────────────────────────────────────────────
 
     override fun VDom.render() {
-        ui.segment {
-            css { minWidth = 50.vw }
-
-            ui.small.header { +"Scale" }
-
-            ui.form {
-                ui.four.stackable.fields {
-
-                    // Note letter
-                    SelectField(::letter) {
-                        label("Note")
-                        letters.forEach { l ->
-                            option(realValue = l) { +l.uppercase() }
-                        }
-                    }
-
-                    // Accidental
-                    SelectField(::accidental) {
-                        label("Accidental")
-                        accidentals.forEach { (value, label) ->
-                            option(realValue = value, formValue = value) { +label }
-                        }
-                    }
-
-                    // Octave
-                    UiInputField(octave, { octave = it }) {
-                        label("Octave")
-                        step(1)
-                    }
-
-                    // Scale mode — realValue uses "_" so mini-notation treats it as one token
-                    SelectField(::mode) {
-                        label("Mode")
-
-                        autoSuggest { search ->
-                            val searchCleaned = search.trim()
-                            flowOf(
-                                modeNames
-                                    .filter { searchCleaned.isBlank() || it.contains(searchCleaned, ignoreCase = true) }
-                                    .map { m ->
-                                        SelectFieldComponent.Option(
-                                            realValue = m.replace(" ", "_"),
-                                            formValue = m,
-                                        ) { +m }
-                                    }
-                            )
-                        }
-                    }
-                }
-            }
-
-            ui.divider {}
-
-            // ── Staff notation ────────────────────────────────────────────────
-            // Show two octaves centred on the root: one octave below + one above,
-            // so notes naturally span both treble and bass staves.
-            val notes = currentScaleNotes()
-            if (notes.isNotEmpty()) {
-                NoteStaffComp(scaleName = currentScaleName(), range = (-notes.size)..notes.size)
-            }
-
-            ui.divider {}
-
-            // ── Preview + buttons ────────────────────────────────────────────
-            noui.basic.segment {
-                css {
-                    padding = Padding(0.px)
-                    display = Display.flex
-                    justifyContent = JustifyContent.spaceBetween
-                    alignItems = Align.center
-                    gap = 8.px
-                }
-
-                ui.small.basic.label { +buildValue() }
-
+        if (props.embedded) {
+            renderContent()
+        } else {
+            ui.segment {
+                css { minWidth = 50.vw }
+                ui.small.header { +"Scale" }
+                renderContent()
+                ui.divider {}
                 noui.basic.segment {
-                    css { padding = Padding(0.px); display = Display.flex; gap = 8.px }
-
-                    ui.basic.button {
-                        onClick { onCancel() }
-                        icon.times()
-                        +"Cancel"
+                    css {
+                        padding = Padding(0.px)
+                        display = Display.flex
+                        justifyContent = JustifyContent.spaceBetween
+                        alignItems = Align.center
+                        gap = 8.px
                     }
-
-                    ui.basic.givenNot(isInitialModified) { disabled }.button {
-                        onClick { onReset() }
-                        icon.undo()
-                        +"Reset"
-                    }
-
-                    ui.black.givenNot(isCurrentModified) { disabled }.button {
-                        onClick { onCommit() }
-                        icon.check()
-                        +"Update"
+                    ui.small.basic.label { +buildValue() }
+                    noui.basic.segment {
+                        css { padding = Padding(0.px); display = Display.flex; gap = 8.px }
+                        ui.basic.button {
+                            onClick { onCancel() }
+                            icon.times()
+                            +"Cancel"
+                        }
+                        ui.basic.givenNot(isInitialModified) { disabled }.button {
+                            onClick { onReset() }
+                            icon.undo()
+                            +"Reset"
+                        }
+                        ui.black.givenNot(isCurrentModified) { disabled }.button {
+                            onClick { onCommit() }
+                            icon.check()
+                            +"Update"
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun FlowContent.renderContent() {
+        ui.form {
+            ui.four.stackable.fields {
+
+                // Note letter
+                SelectField(letter, { letter = it; liveUpdate() }) {
+                    label("Note")
+                    letters.forEach { l ->
+                        option(realValue = l) { +l.uppercase() }
+                    }
+                }
+
+                // Accidental
+                SelectField(accidental, { accidental = it; liveUpdate() }) {
+                    label("Accidental")
+                    accidentals.forEach { (value, label) ->
+                        option(realValue = value, formValue = value) { +label }
+                    }
+                }
+
+                // Octave
+                UiInputField(octave, { octave = it; liveUpdate() }) {
+                    label("Octave")
+                    step(1)
+                }
+
+                // Scale mode — realValue uses "_" so mini-notation treats it as one token
+                SelectField(mode, { mode = it; liveUpdate() }) {
+                    label("Mode")
+                    autoSuggest { search ->
+                        val searchCleaned = search.trim()
+                        flowOf(
+                            modeNames
+                                .filter { searchCleaned.isBlank() || it.contains(searchCleaned, ignoreCase = true) }
+                                .map { m ->
+                                    SelectFieldComponent.Option(
+                                        realValue = m.replace(" ", "_"),
+                                        formValue = m,
+                                    ) { +m }
+                                }
+                        )
+                    }
+                }
+            }
+        }
+
+        ui.divider {}
+
+        // ── Staff notation ────────────────────────────────────────────────────
+        val notes = currentScaleNotes()
+        if (notes.isNotEmpty()) {
+            NoteStaffComp(scaleName = currentScaleName(), range = (-notes.size)..notes.size)
+        }
+
+        ui.divider {}
     }
 }
