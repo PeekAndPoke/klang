@@ -8,8 +8,6 @@ import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
 import kotlinx.css.*
 import kotlinx.html.*
-import kotlin.math.pow
-import kotlin.math.roundToLong
 
 // ── Pattern text input ────────────────────────────────────────────────────────
 
@@ -376,34 +374,8 @@ private fun FlowContent.mnStepButton(label: String, onClick: () -> Unit) {
     }
 }
 
-// ── String helpers ────────────────────────────────────────────────────────────
-
-/**
- * Wraps a mini-notation string in the appropriate quote style for committing back to source.
- * Multi-line strings use backtick quotes; single-line strings use double quotes.
- */
-internal fun String.quoteForCommit(): String =
-    if (contains('\n')) "`$this`" else "\"$this\""
-
-// ── Numeric helpers ───────────────────────────────────────────────────────────
-
-internal fun Double.toFixed(decimals: Int): String {
-    val s = roundTo(decimals).toString()
-    val dotIdx = s.indexOf('.')
-    return if (dotIdx < 0) s else s.trimEnd('0').trimEnd('.')
-}
-
-internal fun Double.roundTo(decimals: Int): Double {
-    val factor = 10.0.pow(decimals)
-    return (this * factor).roundToLong().toDouble() / factor
-}
+// ── Scroll helper ─────────────────────────────────────────────────────────────
 
 private fun CommonAttributeGroupFacade.mnOnScroll(handler: (org.w3c.dom.events.Event) -> Unit) {
     consumer.onTagEvent(this, "onscroll", handler.asDynamic())
-}
-
-internal fun Double.decimalPlaces(): Int {
-    val s = toString()
-    val dot = s.indexOf('.')
-    return if (dot < 0) 0 else s.substring(dot + 1).trimEnd('0').length
 }

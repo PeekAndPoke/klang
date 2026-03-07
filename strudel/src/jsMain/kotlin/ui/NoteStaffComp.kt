@@ -15,10 +15,7 @@ import kotlinx.css.Overflow
 import kotlinx.css.UserSelect
 import kotlinx.css.overflowX
 import kotlinx.css.userSelect
-import kotlinx.html.FlowContent
-import kotlinx.html.Tag
-import kotlinx.html.div
-import kotlinx.html.unsafe
+import kotlinx.html.*
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
 import kotlin.math.roundToInt
@@ -39,9 +36,10 @@ fun FlowContent.noteStaffSvg(
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
     scaleName: String? = null,
+    onAtomSelect: (MnNode.Atom) -> Unit = {},
     onNodeChange: (MnNode, MnNode) -> Unit,
 ) {
-    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, scaleName, onNodeChange)
+    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, scaleName, onAtomSelect, onNodeChange)
 }
 
 @Suppress("FunctionName")
@@ -51,77 +49,80 @@ private fun Tag.NoteStaffComp(
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
     scaleName: String?,
+    onAtomSelect: (MnNode.Atom) -> Unit,
     onNodeChange: (MnNode, MnNode) -> Unit,
 ) = comp(
-    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, scaleName, onNodeChange)
+    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, scaleName, onAtomSelect, onNodeChange)
 ) { NoteStaffComponent(it) }
-
-// ── Staff layout constants ────────────────────────────────────────────────────
-
-private const val HALF_STEP = 4.8       // px per diatonic step
-private const val NOTE_RADIUS_X = 4.8   // half-width of note head ellipse
-private const val NOTE_RADIUS_Y = 3.6   // half-height
-private const val LEFT_MARGIN = 38.0    // px reserved for clef (no key sig)
-private const val NOTE_COL_W = 22.0     // px per note column
-private const val STAFF_TOP = 29.0      // top of staff (top line Y)
-private const val CLEF_END_X = 30.0    // approx x where clef glyph ends
-private const val KEY_SIG_ACC_W = 9.0  // px per key-signature accidental
-private const val NOTE_GAP = 16.0      // gap between last key-sig acc and first note
-
-// ── Key signature data ────────────────────────────────────────────────────────
-
-/** Staff positions for sharps in treble clef (FCGDAEB order). */
-private val SHARP_KEY_POSITIONS = linkedMapOf(
-    "F" to 10, "C" to 7, "G" to 11, "D" to 8, "A" to 5, "E" to 9, "B" to 6
-)
-
-/** Staff positions for flats in treble clef (BEADGCF order). */
-private val FLAT_KEY_POSITIONS = linkedMapOf(
-    "B" to 6, "E" to 9, "A" to 5, "D" to 8, "G" to 4, "C" to 7, "F" to 10
-)
-
-private data class KeySignature(val symbol: String, val staffPositions: List<Int>)
-
-private fun buildKeySignature(scaleName: String?): KeySignature? {
-    scaleName ?: return null
-    val scale = Scale.get(scaleName)
-    if (scale.empty) return null
-
-    val sharpLetters = scale.notes
-        .map { Note.get(it) }
-        .filter { !it.empty && it.acc.contains('#') }
-        .map { it.letter }
-        .toSet()
-    val flatLetters = scale.notes
-        .map { Note.get(it) }
-        .filter { !it.empty && it.acc.isNotEmpty() && !it.acc.contains('#') }
-        .map { it.letter }
-        .toSet()
-
-    return when {
-        sharpLetters.isNotEmpty() -> {
-            val positions = SHARP_KEY_POSITIONS.entries.filter { it.key in sharpLetters }.map { it.value }
-            if (positions.isEmpty()) null else KeySignature("♯", positions)
-        }
-
-        flatLetters.isNotEmpty() -> {
-            val positions = FLAT_KEY_POSITIONS.entries.filter { it.key in flatLetters }.map { it.value }
-            if (positions.isEmpty()) null else KeySignature("♭", positions)
-        }
-
-        else -> null
-    }
-}
-
-// Staff lines are at treble positions 2=E4, 4=G4, 6=B4, 8=D5, 10=F5
-private val STAFF_LINE_POSITIONS = listOf(2, 4, 6, 8, 10)
-
-/** Convert a staff position to SVG Y coordinate. C4=0, D4=1, … F5=10 is top line. */
-private fun staffPosToY(pos: Int, topY: Double): Double = topY + (10 - pos) * HALF_STEP
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent.Props>(ctx) {
+
+    // ── Layout constants ──────────────────────────────────────────────────────
+
+    companion object {
+        private const val HALF_STEP = 4.8       // px per diatonic step
+        private const val NOTE_RADIUS_X = 4.8   // half-width of note head ellipse
+        private const val NOTE_RADIUS_Y = 3.6   // half-height
+        private const val LEFT_MARGIN = 38.0    // px reserved for clef (no key sig)
+        private const val NOTE_COL_W = 22.0     // px per note column
+        private const val STAFF_TOP = 29.0      // top of staff (top line Y)
+        private const val CLEF_END_X = 30.0    // approx x where clef glyph ends
+        private const val KEY_SIG_ACC_W = 9.0  // px per key-signature accidental
+        private const val NOTE_GAP = 16.0      // gap between last key-sig acc and first note
+
+        // Staff lines are at treble positions 2=E4, 4=G4, 6=B4, 8=D5, 10=F5
+        private val STAFF_LINE_POSITIONS = listOf(2, 4, 6, 8, 10)
+
+        /** Convert a staff position to SVG Y coordinate. C4=0, D4=1, … F5=10 is top line. */
+        private fun staffPosToY(pos: Int, topY: Double): Double = topY + (10 - pos) * HALF_STEP
+
+        /** Staff positions for sharps in treble clef (FCGDAEB order). */
+        private val SHARP_KEY_POSITIONS = linkedMapOf(
+            "F" to 10, "C" to 7, "G" to 11, "D" to 8, "A" to 5, "E" to 9, "B" to 6
+        )
+
+        /** Staff positions for flats in treble clef (BEADGCF order). */
+        private val FLAT_KEY_POSITIONS = linkedMapOf(
+            "B" to 6, "E" to 9, "A" to 5, "D" to 8, "G" to 4, "C" to 7, "F" to 10
+        )
+
+        private data class KeySignature(val symbol: String, val staffPositions: List<Int>)
+
+        private fun buildKeySignature(scaleName: String?): KeySignature? {
+            scaleName ?: return null
+            val scale = Scale.get(scaleName)
+            if (scale.empty) return null
+
+            val sharpLetters = scale.notes
+                .map { Note.get(it) }
+                .filter { !it.empty && it.acc.contains('#') }
+                .map { it.letter }
+                .toSet()
+            val flatLetters = scale.notes
+                .map { Note.get(it) }
+                .filter { !it.empty && it.acc.isNotEmpty() && !it.acc.contains('#') }
+                .map { it.letter }
+                .toSet()
+
+            return when {
+                sharpLetters.isNotEmpty() -> {
+                    val positions = SHARP_KEY_POSITIONS.entries.filter { it.key in sharpLetters }.map { it.value }
+                    if (positions.isEmpty()) null else KeySignature("♯", positions)
+                }
+
+                flatLetters.isNotEmpty() -> {
+                    val positions = FLAT_KEY_POSITIONS.entries.filter { it.key in flatLetters }.map { it.value }
+                    if (positions.isEmpty()) null else KeySignature("♭", positions)
+                }
+
+                else -> null
+            }
+        }
+    }
+
+    // ── Props ─────────────────────────────────────────────────────────────────
 
     data class Props(
         val pattern: MnPattern?,
@@ -129,6 +130,7 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val atomToPos: (String) -> Int?,
         val posToValue: (Int) -> String,
         val scaleName: String?,
+        val onAtomSelect: (MnNode.Atom) -> Unit,
         val onNodeChange: (MnNode, MnNode) -> Unit,
     )
 
@@ -138,9 +140,6 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
     private var dragStartY: Double = 0.0
     private var dragStartPos: Int = 0
     private var dragPreviewPos: Int? = null
-
-    /** Atom id of the last zero-drag click — clicking the same atom again converts it to a rest. */
-    private var lastClickedAtomId: Int? = null
 
     // ── Derived ───────────────────────────────────────────────────────────────
 
@@ -180,18 +179,8 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val newPos = dragStartPos + delta
         val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
         if (atom != null) {
-            if (delta == 0) {
-                // Pure click: second click on same atom → convert to rest
-                if (lastClickedAtomId == atomId) {
-                    lastClickedAtomId = null
-                    props.onNodeChange(atom, MnNode.Rest(atom.sourceRange))
-                } else {
-                    lastClickedAtomId = atomId
-                }
-            } else {
-                lastClickedAtomId = null
-                props.onNodeChange(atom, atom.copy(value = props.posToValue(newPos)))
-            }
+            if (delta == 0) props.onAtomSelect(atom)
+            else props.onNodeChange(atom, atom.copy(value = props.posToValue(newPos)))
         }
         dragAtomId = null
         dragPreviewPos = null
@@ -219,19 +208,6 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             }
             onMouseDown { e ->
                 val element = e.target as? org.w3c.dom.Element
-
-                // Rest click: convert rest to default note
-                val restRangeStr = element?.getAttribute("data-rest-range-start")
-                if (restRangeStr != null) {
-                    val rangeStart = restRangeStr.toIntOrNull() ?: return@onMouseDown
-                    val rest = currentItems.filterIsInstance<MnNode.Rest>()
-                        .find { it.sourceRange?.first == rangeStart } ?: return@onMouseDown
-                    e.preventDefault()
-                    props.onNodeChange(rest, MnNode.Atom(value = props.posToValue(6)))
-                    return@onMouseDown
-                }
-
-                // Atom drag
                 val atomIdStr = element?.getAttribute("data-atom-id") ?: return@onMouseDown
                 val posStr = element.getAttribute("data-staff-pos") ?: return@onMouseDown
                 val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
@@ -245,15 +221,39 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
                 window.addEventListener("mouseup", onMouseUpWindow)
                 triggerRedraw()
             }
+
+            // Double-click: convert note ↔ rest
+            onDblClick { e ->
+                val element = e.target as? org.w3c.dom.Element
+
+                // Atom → rest
+                val atomIdStr = element?.getAttribute("data-atom-id")
+                if (atomIdStr != null) {
+                    val atomId = atomIdStr.toIntOrNull() ?: return@onDblClick
+                    val atom = currentItems.filterIsInstance<MnNode.Atom>()
+                        .find { it.id == atomId } ?: return@onDblClick
+                    props.onNodeChange(atom, MnNode.Rest(atom.sourceRange))
+                    return@onDblClick
+                }
+
+                // Rest → note
+                val restRangeStr = element?.getAttribute("data-rest-range-start")
+                if (restRangeStr != null) {
+                    val rangeStart = restRangeStr.toIntOrNull() ?: return@onDblClick
+                    val rest = currentItems.filterIsInstance<MnNode.Rest>()
+                        .find { it.sourceRange?.first == rangeStart } ?: return@onDblClick
+                    props.onNodeChange(rest, MnNode.Atom(value = props.posToValue(6)))
+                }
+            }
             unsafe {
-                +buildSvg(currentItems, 0.0) // width computed inside buildSvg
+                +buildSvg(currentItems)
             }
         }
     }
 
     // ── SVG builder ───────────────────────────────────────────────────────────
 
-    private fun buildSvg(currentItems: List<MnNode>, width: Double): String {
+    private fun buildSvg(currentItems: List<MnNode>): String {
         // Key signature
         val keySig = buildKeySignature(props.scaleName)
         val keySigWidth = if (keySig != null) keySig.staffPositions.size * KEY_SIG_ACC_W + NOTE_GAP else NOTE_GAP
@@ -326,7 +326,7 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         sb.append(
             """<rect x="${x - w / 2}" y="${lineY - h}" width="$w" height="$h" rx="1" """ +
                     """fill="#444" data-rest-range-start="$rangeStart" """ +
-                    """style="cursor:pointer" title="Click to convert to note"/>"""
+                    """style="cursor:pointer" title="Double-click to convert to note"/>"""
         )
     }
 
@@ -429,64 +429,8 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
     }
 }
 
-// ── Staff position helpers ────────────────────────────────────────────────────
+// ── Event helpers ─────────────────────────────────────────────────────────────
 
-/**
- * Returns the staff position for this note (C4 = 0, D4 = 1, … B4 = 6, C5 = 7, …).
- * Returns null if the note is empty.
- */
-fun io.peekandpoke.klang.tones.note.Note.staffPosition(): Int? {
-    if (empty) return null
-    return step + 7 * ((oct ?: 4) - 4)
-}
-
-/**
- * Converts a staff position back to a note name string (lowercase letter + octave).
- * C4 = 0, D4 = 1, E4 = 2, F4 = 3, G4 = 4, A4 = 5, B4 = 6, C5 = 7, …
- */
-fun staffPositionToNote(pos: Int): String {
-    val octave = 4 + pos.floorDiv(7)
-    val step = ((pos % 7) + 7) % 7
-    val letter = io.peekandpoke.klang.tones.note.Note.stepToLetter(step).lowercase()
-    return "$letter$octave"
-}
-
-/**
- * Converts a scale degree (0-based) to a staff position given the scale's note list.
- *
- * The scale notes list contains pitch-class names with octave (e.g. ["C3","D3","E3","F3","G3","A3","B3"]).
- * Degrees outside [0, size) wrap around with octave adjustment.
- */
-fun scaleDegreeToStaffPosition(degree: Int, scaleNotes: List<String>): Int {
-    if (scaleNotes.isEmpty()) return 0
-    val size = scaleNotes.size
-    val idx = ((degree % size) + size) % size
-    val octaveShift = degree.floorDiv(size)
-    val note = io.peekandpoke.klang.tones.note.Note.get(scaleNotes[idx])
-    return (note.staffPosition() ?: 0) + 7 * octaveShift
-}
-
-/**
- * Finds the scale degree whose staff position is closest to [targetPos].
- * Returns the degree (may be outside [0, size) for out-of-range positions).
- */
-fun nearestScaleDegree(targetPos: Int, scaleNotes: List<String>): Int {
-    if (scaleNotes.isEmpty()) return 0
-    val size = scaleNotes.size
-
-    // Search within a reasonable range of octaves
-    var bestDegree = 0
-    var bestDist = Int.MAX_VALUE
-    for (octShift in -2..2) {
-        for (i in 0 until size) {
-            val deg = octShift * size + i
-            val pos = scaleDegreeToStaffPosition(deg, scaleNotes)
-            val dist = kotlin.math.abs(pos - targetPos)
-            if (dist < bestDist) {
-                bestDist = dist
-                bestDegree = deg
-            }
-        }
-    }
-    return bestDegree
+private fun CommonAttributeGroupFacade.onDblClick(handler: (MouseEvent) -> Unit) {
+    consumer.onTagEvent(this, "ondblclick", handler.asDynamic())
 }

@@ -346,6 +346,10 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                         atomToPos = ::atomToStaffPosition,
                         posToValue = ::staffPositionToAtomValue,
                         scaleName = keySignatureScaleName(),
+                        onAtomSelect = { atom ->
+                            cursorOffset = atom.sourceRange?.first ?: cursorOffset
+                            lastAtom = atom
+                        },
                     ) { old, new -> updateNode(old, new) }
 
                     staffRendered = true
