@@ -179,7 +179,7 @@ class MiniNotationParser(
             MnNode.Alternation(items)
         }
 
-        match(TokenType.TILDE) -> MnNode.Rest
+        match(TokenType.TILDE) -> MnNode.Rest(sourceRange = previous().start until previous().end)
 
         match(TokenType.LINEBREAK) -> MnNode.Linebreak
 

@@ -168,6 +168,6 @@ private fun MnNode.stripSourceRanges(): MnNode = when (this) {
     is MnNode.Choice -> copy(options = options.map { it.stripSourceRanges() })
     is MnNode.Stack -> copy(layers = layers.map { layer -> layer.map { it.stripSourceRanges() } })
     is MnNode.Repeat -> copy(node = node.stripSourceRanges())
-    is MnNode.Rest -> this
+    is MnNode.Rest -> copy(sourceRange = null)
     is MnNode.Linebreak -> this
 }

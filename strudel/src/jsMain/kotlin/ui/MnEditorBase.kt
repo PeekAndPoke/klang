@@ -59,8 +59,10 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     // ── Initial value ─────────────────────────────────────────────────────────
 
-    private fun initialText(): String =
-        props.toolCtx.currentValue?.trim()?.removeSurrounding("\"") ?: ""
+    private fun initialText(): String {
+        val raw = props.toolCtx.currentValue?.trim() ?: return ""
+        return raw.removeSurrounding("\"").removeSurrounding("`")
+    }
 
     // ── Atom finding ──────────────────────────────────────────────────────────
 
@@ -98,6 +100,24 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
             is MnNode.Choice -> node.options.forEach { collectAtomsInNode(it, list) }
             is MnNode.Repeat -> collectAtomsInNode(node.node, list)
             is MnNode.Rest -> {}
+            is MnNode.Linebreak -> {}
+        }
+    }
+
+    /** Collects atoms AND rests (both with source positions) in document order. Used by staff renderers. */
+    protected fun collectStaffItems(p: MnPattern): List<MnNode> = buildList {
+        p.items.forEach { collectStaffItemsInNode(it, this) }
+    }
+
+    private fun collectStaffItemsInNode(node: MnNode, list: MutableList<MnNode>) {
+        when (node) {
+            is MnNode.Atom -> if (node.sourceRange != null) list.add(node)
+            is MnNode.Rest -> if (node.sourceRange != null) list.add(node)
+            is MnNode.Group -> node.items.forEach { collectStaffItemsInNode(it, list) }
+            is MnNode.Alternation -> node.items.forEach { collectStaffItemsInNode(it, list) }
+            is MnNode.Stack -> node.layers.flatten().forEach { collectStaffItemsInNode(it, list) }
+            is MnNode.Choice -> node.options.forEach { collectStaffItemsInNode(it, list) }
+            is MnNode.Repeat -> collectStaffItemsInNode(node.node, list)
             is MnNode.Linebreak -> {}
         }
     }
@@ -150,6 +170,30 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         is MnNode.Repeat -> findAtomByIdInNode(node.node, id)
         is MnNode.Rest -> null
         is MnNode.Linebreak -> null
+    }
+
+    /** Replaces [old] (Atom or Rest) with [new] in the pattern tree and re-renders. */
+    protected fun updateNode(old: MnNode, new: MnNode) {
+        val p = pattern ?: return
+        text = MnRenderer.render(MnPattern(p.items.map { replaceNodeInNode(it, old, new) }))
+        if (new is MnNode.Atom) {
+            val newAtom = pattern?.let { findAtomById(it, (old as? MnNode.Atom)?.id ?: -1) }
+            cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
+            lastAtom = newAtom ?: lastAtom
+        } else {
+            lastAtom = null
+        }
+    }
+
+    private fun replaceNodeInNode(node: MnNode, old: MnNode, new: MnNode): MnNode = when (node) {
+        is MnNode.Atom -> if (old is MnNode.Atom && node.id == old.id) new else node
+        is MnNode.Rest -> if (old is MnNode.Rest && old.sourceRange != null && node.sourceRange == old.sourceRange) new else node
+        is MnNode.Group -> node.copy(items = node.items.map { replaceNodeInNode(it, old, new) })
+        is MnNode.Alternation -> node.copy(items = node.items.map { replaceNodeInNode(it, old, new) })
+        is MnNode.Stack -> node.copy(layers = node.layers.map { l -> l.map { replaceNodeInNode(it, old, new) } })
+        is MnNode.Choice -> node.copy(options = node.options.map { replaceNodeInNode(it, old, new) })
+        is MnNode.Repeat -> node.copy(node = replaceNodeInNode(node.node, old, new))
+        is MnNode.Linebreak -> node
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────
@@ -239,7 +283,9 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
             if (atom != null) {
                 ui.divider {}
-                mnModifierPanel(atom) { updated -> updateAtom(atom, updated) }
+                mnModifierPanel(atom, onToggleRest = {
+                    updateNode(atom, MnNode.Rest(atom.sourceRange))
+                }) { updated -> updateAtom(atom, updated) }
             }
 
             div { css { flexGrow = 1.0 } }
@@ -260,7 +306,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
      */
     private fun FlowContent.renderStaves() {
         val p = pattern ?: return
-        val allAtoms = collectAtoms(p)
+        val allItems = collectStaffItems(p)
         val lines = text.split('\n')
         var lineStart = 0
         var staffRendered = false
@@ -269,22 +315,29 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
             val lineEnd = lineStart + line.length
 
             if (line.isNotBlank()) {
-                val lineAtoms = allAtoms.filter {
-                    it.sourceRange != null && it.sourceRange.first in lineStart..lineEnd
+                val lineItems = allItems.filter { node ->
+                    val range = when (node) {
+                        is MnNode.Atom -> node.sourceRange
+                        is MnNode.Rest -> node.sourceRange
+                        else -> null
+                    }
+                    range != null && range.first in lineStart..lineEnd
                 }
 
-                if (lineAtoms.isNotEmpty()) {
+                if (lineItems.isNotEmpty()) {
                     if (staffRendered) div { css { height = 8.px } }
 
-                    val linePattern = MnPattern(lineAtoms)
-                    val lineActiveAtom = selectedAtom?.let { a -> lineAtoms.find { it.id == a.id } }
+                    val linePattern = MnPattern(lineItems)
+                    val lineActiveAtom = selectedAtom?.let { a ->
+                        lineItems.filterIsInstance<MnNode.Atom>().find { it.id == a.id }
+                    }
 
                     noteStaffSvg(
                         pattern = linePattern,
                         activeAtom = lineActiveAtom,
                         atomToPos = ::atomToStaffPosition,
                         posToValue = ::staffPositionToAtomValue,
-                    ) { old, new -> updateAtom(old, new) }
+                    ) { old, new -> updateNode(old, new) }
 
                     staffRendered = true
                 }

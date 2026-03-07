@@ -29,7 +29,8 @@ class MnParserSpec : StringSpec() {
 
         "single rest '~'" {
             val result = parse("~")
-            result shouldBe MnPattern.of(MnNode.Rest)
+            result.items.size shouldBe 1
+            result.items[0] shouldBe MnNode.Rest(sourceRange = 0 until 1)
         }
 
         // ── Sequences ────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ class MnParserSpec : StringSpec() {
             val result = parse("bd ~ sd")
             result.items.size shouldBe 3
             (result.items[0] as MnNode.Atom).value shouldBe "bd"
-            result.items[1] shouldBe MnNode.Rest
+            (result.items[1] as MnNode.Rest).sourceRange shouldBe (3 until 4)
             (result.items[2] as MnNode.Atom).value shouldBe "sd"
         }
 

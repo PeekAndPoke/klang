@@ -24,10 +24,11 @@ import kotlin.math.roundToInt
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 /**
- * Renders an interactive treble-clef staff SVG for editing note atoms.
+ * Renders an interactive treble-clef staff SVG for editing note atoms and rests.
  *
  * Note heads are positioned according to [atomToPos]. Dragging a note head up or down
- * shifts it by diatonic steps and calls [onAtomChange] on release.
+ * shifts it by diatonic steps and calls [onNodeChange] on release.
+ * Clicking a rest symbol converts it to the default note at B4.
  * The [activeAtom] is highlighted with a blue stroke ring.
  */
 fun FlowContent.noteStaffSvg(
@@ -35,9 +36,9 @@ fun FlowContent.noteStaffSvg(
     activeAtom: MnNode.Atom?,
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
-    onAtomChange: (MnNode.Atom, MnNode.Atom) -> Unit,
+    onNodeChange: (MnNode, MnNode) -> Unit,
 ) {
-    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, onAtomChange)
+    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, onNodeChange)
 }
 
 @Suppress("FunctionName")
@@ -46,19 +47,19 @@ private fun Tag.NoteStaffComp(
     activeAtom: MnNode.Atom?,
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
-    onAtomChange: (MnNode.Atom, MnNode.Atom) -> Unit,
+    onNodeChange: (MnNode, MnNode) -> Unit,
 ) = comp(
-    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, onAtomChange)
+    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, onNodeChange)
 ) { NoteStaffComponent(it) }
 
 // ── Staff layout constants ────────────────────────────────────────────────────
 
-private const val HALF_STEP = 6.0       // px per diatonic step
-private const val NOTE_RADIUS_X = 6.0   // half-width of note head ellipse
-private const val NOTE_RADIUS_Y = 4.5   // half-height
-private const val LEFT_MARGIN = 48.0    // px before first note
-private const val NOTE_COL_W = 28.0     // px per note column
-private const val STAFF_TOP = 36.0      // top of staff (top line Y)
+private const val HALF_STEP = 4.8       // px per diatonic step
+private const val NOTE_RADIUS_X = 4.8   // half-width of note head ellipse
+private const val NOTE_RADIUS_Y = 3.6   // half-height
+private const val LEFT_MARGIN = 38.0    // px before first note
+private const val NOTE_COL_W = 22.0     // px per note column
+private const val STAFF_TOP = 29.0      // top of staff (top line Y)
 
 // Staff lines are at treble positions 2=E4, 4=G4, 6=B4, 8=D5, 10=F5
 private val STAFF_LINE_POSITIONS = listOf(2, 4, 6, 8, 10)
@@ -75,7 +76,7 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val activeAtom: MnNode.Atom?,
         val atomToPos: (String) -> Int?,
         val posToValue: (Int) -> String,
-        val onAtomChange: (MnNode.Atom, MnNode.Atom) -> Unit,
+        val onNodeChange: (MnNode, MnNode) -> Unit,
     )
 
     // ── Drag state ────────────────────────────────────────────────────────────
@@ -87,21 +88,21 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
 
     // ── Derived ───────────────────────────────────────────────────────────────
 
-    private val atoms: List<MnNode.Atom>
+    private val staffItems: List<MnNode>
         get() = props.pattern?.let { p ->
             buildList { p.items.forEach { collectStaffNodes(it, this) } }
         } ?: emptyList()
 
-    // Collect all top-level renderable nodes (including Rests) in order
-    private fun collectStaffNodes(node: MnNode, list: MutableList<MnNode.Atom>) {
+    // Collect atoms and rests (with source positions) in document order
+    private fun collectStaffNodes(node: MnNode, list: MutableList<MnNode>) {
         when (node) {
             is MnNode.Atom -> list.add(node)
+            is MnNode.Rest -> if (node.sourceRange != null) list.add(node)
             is MnNode.Group -> node.items.forEach { collectStaffNodes(it, list) }
             is MnNode.Alternation -> node.items.firstOrNull()?.let { collectStaffNodes(it, list) }
             is MnNode.Stack -> node.layers.firstOrNull()?.forEach { collectStaffNodes(it, list) }
             is MnNode.Choice -> node.options.forEach { collectStaffNodes(it, list) }
             is MnNode.Repeat -> collectStaffNodes(node.node, list)
-            is MnNode.Rest -> {}
             is MnNode.Linebreak -> {}
         }
     }
@@ -121,9 +122,9 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val atomId = dragAtomId ?: return@upHandler
         val delta = ((dragStartY - me.clientY) / HALF_STEP).roundToInt()
         val newPos = dragStartPos + delta
-        val atom = atoms.find { it.id == atomId }
+        val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
         if (atom != null) {
-            props.onAtomChange(atom, atom.copy(value = props.posToValue(newPos)))
+            props.onNodeChange(atom, atom.copy(value = props.posToValue(newPos)))
         }
         dragAtomId = null
         dragPreviewPos = null
@@ -142,9 +143,9 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
     // ── Render ────────────────────────────────────────────────────────────────
 
     override fun VDom.render() {
-        val currentAtoms = atoms
-        val svgWidth = (LEFT_MARGIN + currentAtoms.size * NOTE_COL_W + NOTE_COL_W).coerceAtLeast(200.0)
-        val svgHeight = 130.0
+        val currentItems = staffItems
+        val svgWidth = (LEFT_MARGIN + currentItems.size * NOTE_COL_W + NOTE_COL_W).coerceAtLeast(160.0)
+        val svgHeight = 104.0
 
         div {
             css {
@@ -153,6 +154,19 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             }
             onMouseDown { e ->
                 val target = e.target?.asDynamic()
+
+                // Rest click: convert rest to default note
+                val restRangeStr = target?.dataset?.restRangeStart as? String
+                if (restRangeStr != null) {
+                    val rangeStart = restRangeStr.toIntOrNull() ?: return@onMouseDown
+                    val rest = currentItems.filterIsInstance<MnNode.Rest>()
+                        .find { it.sourceRange?.first == rangeStart } ?: return@onMouseDown
+                    e.preventDefault()
+                    props.onNodeChange(rest, MnNode.Atom(value = props.posToValue(6)))
+                    return@onMouseDown
+                }
+
+                // Atom drag
                 val atomIdStr = target?.dataset?.atomId as? String ?: return@onMouseDown
                 val posStr = target.dataset.staffPos as? String ?: return@onMouseDown
                 val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
@@ -167,14 +181,14 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
                 triggerRedraw()
             }
             unsafe {
-                +buildSvg(currentAtoms, svgWidth, svgHeight)
+                +buildSvg(currentItems, svgWidth, svgHeight)
             }
         }
     }
 
     // ── SVG builder ───────────────────────────────────────────────────────────
 
-    private fun buildSvg(currentAtoms: List<MnNode.Atom>, width: Double, height: Double): String {
+    private fun buildSvg(currentItems: List<MnNode>, width: Double, height: Double): String {
         val sb = StringBuilder()
         sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${width.toInt()}" height="${height.toInt()}" style="display:block;font-family:serif;">""")
 
@@ -186,16 +200,31 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         }
 
         // Treble clef
-        sb.append("""<text x="4" y="${staffPosToY(4) + NOTE_RADIUS_Y * 4}" font-size="52" fill="#333" style="user-select:none;line-height:1">&#119070;</text>""")
+        sb.append("""<text x="4" y="${staffPosToY(4) + NOTE_RADIUS_Y * 4}" font-size="42" fill="#333" style="user-select:none;line-height:1">&#119070;</text>""")
 
-        // Note heads
-        for ((idx, atom) in currentAtoms.withIndex()) {
+        // Notes and rests
+        for ((idx, item) in currentItems.withIndex()) {
             val x = LEFT_MARGIN + idx * NOTE_COL_W
-            renderAtomSvg(sb, atom, x)
+            when (item) {
+                is MnNode.Atom -> renderAtomSvg(sb, item, x)
+                is MnNode.Rest -> renderRestSvg(sb, item, x)
+                else -> {}
+            }
         }
 
         sb.append("</svg>")
         return sb.toString()
+    }
+
+    private fun renderRestSvg(sb: StringBuilder, rest: MnNode.Rest, x: Double) {
+        val rangeStart = rest.sourceRange?.first ?: return
+        val pos = 6 // B4 — middle of staff
+        val y = staffPosToY(pos)
+        sb.append(
+            """<text x="$x" y="${y + 3}" text-anchor="middle" font-size="18" fill="#444" font-family="serif" """ +
+                    """data-rest-range-start="$rangeStart" style="cursor:pointer;user-select:none" """ +
+                    """title="Click to convert to note">&#119101;</text>"""
+        )
     }
 
     private fun renderAtomSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double) {
@@ -229,11 +258,11 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         if (stemUp) {
             val stemX = x + NOTE_RADIUS_X - 0.5
             val stemTop = y - HALF_STEP * 3.5
-            sb.append("""<line x1="$stemX" y1="${y - NOTE_RADIUS_Y + 0.5}" x2="$stemX" y2="$stemTop" stroke="$noteColor" stroke-width="1.5"/>""")
+            sb.append("""<line x1="$stemX" y1="${y - NOTE_RADIUS_Y + 0.5}" x2="$stemX" y2="$stemTop" stroke="$noteColor" stroke-width="1.2"/>""")
         } else {
             val stemX = x - NOTE_RADIUS_X + 0.5
             val stemBottom = y + HALF_STEP * 3.5
-            sb.append("""<line x1="$stemX" y1="${y + NOTE_RADIUS_Y - 0.5}" x2="$stemX" y2="$stemBottom" stroke="$noteColor" stroke-width="1.5"/>""")
+            sb.append("""<line x1="$stemX" y1="${y + NOTE_RADIUS_Y - 0.5}" x2="$stemX" y2="$stemBottom" stroke="$noteColor" stroke-width="1.2"/>""")
         }
 
         // Note head ellipse — data attributes for drag identification
@@ -253,13 +282,13 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         renderLedgerLines(sb, pos, x)
         val color = if (isActive) "#2266cc" else "#999"
         sb.append(
-            """<text x="$x" y="${y + 4}" text-anchor="middle" font-size="14" fill="$color" """ +
+            """<text x="$x" y="${y + 3}" text-anchor="middle" font-size="11" fill="$color" """ +
                     """data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:default;user-select:none">?</text>"""
         )
     }
 
     private fun renderLedgerLines(sb: StringBuilder, pos: Int, x: Double) {
-        val ledgerHalfW = NOTE_RADIUS_X + 3.0
+        val ledgerHalfW = NOTE_RADIUS_X + 2.5
         // Below staff: pos <= 0, every even position gets a ledger line
         var p = 0
         while (p >= pos) {
@@ -286,9 +315,9 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             acc.startsWith("b") || acc.startsWith("f") -> "♭"
             else -> return
         }
-        val ax = x - NOTE_RADIUS_X - 8.0
+        val ax = x - NOTE_RADIUS_X - 6.0
         sb.append(
-            """<text x="$ax" y="${y + 4}" text-anchor="middle" font-size="12" fill="#333" style="user-select:none">$accText</text>"""
+            """<text x="$ax" y="${y + 3}" text-anchor="middle" font-size="10" fill="#333" style="user-select:none">$accText</text>"""
         )
     }
 

@@ -48,8 +48,7 @@ fun FlowContent.mnPatternTextInput(
                     fontFamily = "monospace"
                     fontSize = 15.px
                     padding = Padding(8.px, 10.px)
-                    put("white-space", "pre-wrap")
-                    put("word-break", "break-word")
+                    put("white-space", "pre")
                     put("pointer-events", "none")
                     put("box-sizing", "border-box")
                     put("border", "1px solid transparent")
@@ -80,6 +79,7 @@ fun FlowContent.mnPatternTextInput(
             textArea {
                 placeholder = "e.g. bd sd [hh cp] ~ bd*2"
                 attributes["value"] = text
+                rows = (text.count { it == '\n' } + 1).toString()
                 css {
                     position = Position.relative
                     width = 100.pct
@@ -91,7 +91,9 @@ fun FlowContent.mnPatternTextInput(
                     outline = Outline.none
                     put("box-sizing", "border-box")
                     put("resize", "none")
-                    put("overflow", "hidden")
+                    put("white-space", "pre")
+                    put("overflow-x", "auto")
+                    put("overflow-y", "hidden")
                     put("min-height", "38px")
                     backgroundColor = Color("transparent")
                     put("background", "transparent")
@@ -146,7 +148,11 @@ fun FlowContent.mnPatternTextInput(
  * @param atom The atom whose modifiers are shown.
  * @param onAtomChange Called when the atom (with updated mods) should replace the original.
  */
-fun FlowContent.mnModifierPanel(atom: MnNode.Atom, onAtomChange: (MnNode.Atom) -> Unit) {
+fun FlowContent.mnModifierPanel(
+    atom: MnNode.Atom,
+    onToggleRest: (() -> Unit)? = null,
+    onAtomChange: (MnNode.Atom) -> Unit,
+) {
     val mods = atom.mods
     div {
         css {
@@ -158,6 +164,23 @@ fun FlowContent.mnModifierPanel(atom: MnNode.Atom, onAtomChange: (MnNode.Atom) -
         span {
             css { fontSize = 12.px; color = Color("#666"); fontWeight = FontWeight.w600; minWidth = 60.px }
             +"Mods"
+        }
+
+        if (onToggleRest != null) {
+            span {
+                css {
+                    cursor = Cursor.pointer
+                    fontFamily = "monospace"
+                    fontSize = 13.px
+                    color = Color("#888")
+                    backgroundColor = Color("#f5f5f5")
+                    borderRadius = 6.px
+                    padding = Padding(4.px, 10.px)
+                }
+                attributes["title"] = "Convert to rest"
+                onClick { onToggleRest() }
+                +"~ rest"
+            }
         }
 
         mnModChip(symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->

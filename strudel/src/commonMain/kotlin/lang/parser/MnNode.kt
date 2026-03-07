@@ -125,8 +125,8 @@ sealed class MnNode {
         val mods: Mods = Mods.None,
     ) : MnNode()
 
-    /** Silence `~`. */
-    object Rest : MnNode()
+    /** Silence `~`. Carries the source position so it can be located in the text for replacement. */
+    data class Rest(val sourceRange: IntRange? = null) : MnNode()
 
     /** Line break in a multi-line mini-notation string. Carries no musical meaning; used for visual layout. */
     object Linebreak : MnNode()
