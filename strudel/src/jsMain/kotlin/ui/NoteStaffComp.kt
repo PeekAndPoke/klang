@@ -65,7 +65,7 @@ private const val STAFF_TOP = 29.0      // top of staff (top line Y)
 private val STAFF_LINE_POSITIONS = listOf(2, 4, 6, 8, 10)
 
 /** Convert a staff position to SVG Y coordinate. C4=0, D4=1, … F5=10 is top line. */
-private fun staffPosToY(pos: Int): Double = STAFF_TOP + (10 - pos) * HALF_STEP
+private fun staffPosToY(pos: Int, topY: Double): Double = topY + (10 - pos) * HALF_STEP
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -145,7 +145,6 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
     override fun VDom.render() {
         val currentItems = staffItems
         val svgWidth = (LEFT_MARGIN + currentItems.size * NOTE_COL_W + NOTE_COL_W).coerceAtLeast(160.0)
-        val svgHeight = 104.0
 
         div {
             css {
@@ -153,10 +152,10 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
                 userSelect = UserSelect.none
             }
             onMouseDown { e ->
-                val target = e.target?.asDynamic()
+                val element = e.target as? org.w3c.dom.Element
 
                 // Rest click: convert rest to default note
-                val restRangeStr = target?.dataset?.restRangeStart as? String
+                val restRangeStr = element?.getAttribute("data-rest-range-start")
                 if (restRangeStr != null) {
                     val rangeStart = restRangeStr.toIntOrNull() ?: return@onMouseDown
                     val rest = currentItems.filterIsInstance<MnNode.Rest>()
@@ -167,8 +166,8 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
                 }
 
                 // Atom drag
-                val atomIdStr = target?.dataset?.atomId as? String ?: return@onMouseDown
-                val posStr = target.dataset.staffPos as? String ?: return@onMouseDown
+                val atomIdStr = element?.getAttribute("data-atom-id") ?: return@onMouseDown
+                val posStr = element.getAttribute("data-staff-pos") ?: return@onMouseDown
                 val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
                 val pos = posStr.toIntOrNull() ?: return@onMouseDown
                 e.preventDefault()
@@ -181,33 +180,52 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
                 triggerRedraw()
             }
             unsafe {
-                +buildSvg(currentItems, svgWidth, svgHeight)
+                +buildSvg(currentItems, svgWidth)
             }
         }
     }
 
     // ── SVG builder ───────────────────────────────────────────────────────────
 
-    private fun buildSvg(currentItems: List<MnNode>, width: Double, height: Double): String {
+    private fun buildSvg(currentItems: List<MnNode>, width: Double): String {
+        // Dynamic layout: expand height for notes outside normal staff range
+        val notePositions = currentItems.filterIsInstance<MnNode.Atom>()
+            .mapNotNull { props.atomToPos(it.value) }
+        val maxPos = (notePositions.maxOrNull() ?: 10).coerceAtLeast(10)
+        val minPos = (notePositions.minOrNull() ?: 0).coerceAtMost(0)
+        // Extra headroom above for high notes (above F5 = pos 10)
+        val topExtra = maxOf(0.0, (maxPos - 10) * HALF_STEP + HALF_STEP * 1.5)
+        // Extra room below for low notes (below C4 = pos 0)
+        val bottomExtra = maxOf(0.0, (-minPos) * HALF_STEP + HALF_STEP * 2)
+        val topY = STAFF_TOP + topExtra
+        val height = 104.0 + topExtra + bottomExtra
+
         val sb = StringBuilder()
         sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${width.toInt()}" height="${height.toInt()}" style="display:block;font-family:serif;">""")
 
         // Staff lines
         val lineWidth = width - 8.0
         for (linePos in STAFF_LINE_POSITIONS) {
-            val y = staffPosToY(linePos)
+            val y = staffPosToY(linePos, topY)
             sb.append("""<line x1="4" y1="$y" x2="${lineWidth.toInt()}" y2="$y" stroke="#333" stroke-width="1.2"/>""")
         }
 
         // Treble clef
-        sb.append("""<text x="4" y="${staffPosToY(4) + NOTE_RADIUS_Y * 4}" font-size="42" fill="#333" style="user-select:none;line-height:1">&#119070;</text>""")
+        sb.append(
+            """<text x="4" y="${
+                staffPosToY(
+                    4,
+                    topY
+                ) + NOTE_RADIUS_Y * 4
+            }" font-size="42" fill="#333" style="user-select:none;line-height:1">&#119070;</text>"""
+        )
 
         // Notes and rests
         for ((idx, item) in currentItems.withIndex()) {
             val x = LEFT_MARGIN + idx * NOTE_COL_W
             when (item) {
-                is MnNode.Atom -> renderAtomSvg(sb, item, x)
-                is MnNode.Rest -> renderRestSvg(sb, item, x)
+                is MnNode.Atom -> renderAtomSvg(sb, item, x, topY)
+                is MnNode.Rest -> renderRestSvg(sb, item, x, topY)
                 else -> {}
             }
         }
@@ -216,29 +234,30 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         return sb.toString()
     }
 
-    private fun renderRestSvg(sb: StringBuilder, rest: MnNode.Rest, x: Double) {
+    private fun renderRestSvg(sb: StringBuilder, rest: MnNode.Rest, x: Double, topY: Double) {
         val rangeStart = rest.sourceRange?.first ?: return
-        val pos = 6 // B4 — middle of staff
-        val y = staffPosToY(pos)
+        // Draw a half-rest block: filled rectangle sitting on top of the B4 line (pos=6)
+        val lineY = staffPosToY(6, topY)
+        val w = NOTE_RADIUS_X * 2.4
+        val h = HALF_STEP * 0.75
         sb.append(
-            """<text x="$x" y="${y + 3}" text-anchor="middle" font-size="18" fill="#444" font-family="serif" """ +
-                    """data-rest-range-start="$rangeStart" style="cursor:pointer;user-select:none" """ +
-                    """title="Click to convert to note">&#119101;</text>"""
+            """<rect x="${x - w / 2}" y="${lineY - h}" width="$w" height="$h" rx="1" """ +
+                    """fill="#444" data-rest-range-start="$rangeStart" """ +
+                    """style="cursor:pointer" title="Click to convert to note"/>"""
         )
     }
 
-    private fun renderAtomSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double) {
+    private fun renderAtomSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, topY: Double) {
         val isActive = atom.id == props.activeAtom?.id
         val isDragging = dragAtomId == atom.id
         val pos = if (isDragging) dragPreviewPos ?: dragStartPos else props.atomToPos(atom.value)
 
         if (pos == null) {
-            // Unknown value — render a "?" at C4 position
-            renderUnknownSvg(sb, atom, x, isActive)
+            renderUnknownSvg(sb, atom, x, isActive, topY)
             return
         }
 
-        val y = staffPosToY(pos)
+        val y = staffPosToY(pos, topY)
         val noteColor = when {
             isDragging -> "#2266cc"
             isActive -> "#3355aa"
@@ -250,10 +269,8 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         }
         val strokeWidth = if (isActive || isDragging) 2.0 else 1.2
 
-        // Ledger lines (below staff: pos <= 0; above staff: pos >= 12)
-        renderLedgerLines(sb, pos, x)
+        renderLedgerLines(sb, pos, x, topY)
 
-        // Stem (up for pos < 6, down for pos >= 6)
         val stemUp = pos < 6
         if (stemUp) {
             val stemX = x + NOTE_RADIUS_X - 0.5
@@ -265,21 +282,19 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             sb.append("""<line x1="$stemX" y1="${y + NOTE_RADIUS_Y - 0.5}" x2="$stemX" y2="$stemBottom" stroke="$noteColor" stroke-width="1.2"/>""")
         }
 
-        // Note head ellipse — data attributes for drag identification
         sb.append(
             """<ellipse cx="$x" cy="$y" rx="$NOTE_RADIUS_X" ry="$NOTE_RADIUS_Y" """ +
                     """fill="$noteColor" stroke="$strokeColor" stroke-width="$strokeWidth" """ +
                     """data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:grab"/>"""
         )
 
-        // Accidental text if needed
         renderAccidental(sb, atom.value, x, y)
     }
 
-    private fun renderUnknownSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, isActive: Boolean) {
+    private fun renderUnknownSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, isActive: Boolean, topY: Double) {
         val pos = 0 // C4
-        val y = staffPosToY(pos)
-        renderLedgerLines(sb, pos, x)
+        val y = staffPosToY(pos, topY)
+        renderLedgerLines(sb, pos, x, topY)
         val color = if (isActive) "#2266cc" else "#999"
         sb.append(
             """<text x="$x" y="${y + 3}" text-anchor="middle" font-size="11" fill="$color" """ +
@@ -287,19 +302,19 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         )
     }
 
-    private fun renderLedgerLines(sb: StringBuilder, pos: Int, x: Double) {
+    private fun renderLedgerLines(sb: StringBuilder, pos: Int, x: Double, topY: Double) {
         val ledgerHalfW = NOTE_RADIUS_X + 2.5
         // Below staff: pos <= 0, every even position gets a ledger line
         var p = 0
         while (p >= pos) {
-            val y = staffPosToY(p)
+            val y = staffPosToY(p, topY)
             sb.append("""<line x1="${x - ledgerHalfW}" y1="$y" x2="${x + ledgerHalfW}" y2="$y" stroke="#555" stroke-width="1.2"/>""")
             p -= 2
         }
         // Above staff: pos >= 12, every even position gets a ledger line
         p = 12
         while (p <= pos) {
-            val y = staffPosToY(p)
+            val y = staffPosToY(p, topY)
             sb.append("""<line x1="${x - ledgerHalfW}" y1="$y" x2="${x + ledgerHalfW}" y2="$y" stroke="#555" stroke-width="1.2"/>""")
             p += 2
         }

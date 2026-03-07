@@ -47,11 +47,11 @@ fun FlowContent.mnPatternTextInput(
                     top = 0.px; left = 0.px; right = 0.px; bottom = 0.px
                     fontFamily = "monospace"
                     fontSize = 15.px
-                    padding = Padding(8.px, 10.px)
-                    put("white-space", "pre")
-                    put("pointer-events", "none")
-                    put("box-sizing", "border-box")
-                    put("border", "1px solid transparent")
+//                    padding = Padding(8.px, 10.px)
+                    whiteSpace = WhiteSpace.pre
+                    pointerEvents = PointerEvents.none
+                    boxSizing = BoxSizing.borderBox
+                    border = Border(1.px, BorderStyle.solid, Color.transparent)
                     color = Color("transparent")
                 }
                 if (highlightStart != null && highlightEnd != null && highlightStart < highlightEnd) {
