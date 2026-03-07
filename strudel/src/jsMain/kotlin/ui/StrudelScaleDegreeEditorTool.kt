@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.ui
 
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -18,6 +19,10 @@ import kotlinx.html.Tag
  * rendered above the staff.
  */
 object StrudelScaleDegreeEditorTool : KlangUiTool {
+    override val title: String = "Scale Degree Editor"
+
+    override val iconFn: SemanticIconFn = { music }
+
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         StrudelScaleDegreeEditorComp(ctx)
     }
@@ -33,7 +38,7 @@ private fun Tag.StrudelScaleDegreeEditorComp(toolCtx: KlangUiToolContext) =
 
 private class StrudelScaleDegreeEditorComp(ctx: Ctx<Props>) : MnEditorBase<StrudelScaleDegreeEditorComp.Props>(ctx) {
 
-    data class Props(override val toolCtx: KlangUiToolContext) : MnPatternEditorBase.BaseProps
+    data class Props(override val toolCtx: KlangUiToolContext) : BaseProps
 
     // ── Scale state ───────────────────────────────────────────────────────────
 

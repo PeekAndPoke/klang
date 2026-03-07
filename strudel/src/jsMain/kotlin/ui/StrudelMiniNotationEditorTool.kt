@@ -7,6 +7,7 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onInput
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
@@ -29,6 +30,10 @@ import kotlinx.html.*
 class StrudelMiniNotationEditorTool(
     private val atomTool: KlangUiTool? = null,
 ) : KlangUiTool {
+    override val title: String = atomTool?.title ?: "Mini-Notation Editor"
+
+    override val iconFn: SemanticIconFn = atomTool?.iconFn ?: { code }
+
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         StrudelMiniNotationEditorComp(ctx, atomTool)
     }
@@ -45,7 +50,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
     data class Props(
         override val toolCtx: KlangUiToolContext,
         val atomTool: KlangUiTool?,
-    ) : MnPatternEditorBase.BaseProps
+    ) : BaseProps
 
     // ── Render ────────────────────────────────────────────────────────────────
 

@@ -9,6 +9,7 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -23,6 +24,10 @@ import kotlinx.html.unsafe
 
 /** [KlangUiToolEmbeddable] for editing a single ADSR envelope string. */
 object StrudelAdsrEditorTool : KlangUiToolEmbeddable {
+    override val title: String = "ADSR Editor"
+
+    override val iconFn: SemanticIconFn = { chart_area }
+
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         StrudelAdsrEditorComp(ctx, embedded = false)
     }

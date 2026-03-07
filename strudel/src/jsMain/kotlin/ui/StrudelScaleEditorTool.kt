@@ -6,6 +6,7 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
@@ -21,6 +22,10 @@ import kotlinx.html.Tag
 
 /** [KlangUiToolEmbeddable] for editing a single scale string (e.g. `"c4:major"`). */
 object StrudelScaleEditorTool : KlangUiToolEmbeddable {
+    override val title: String = "Scale Editor"
+
+    override val iconFn: SemanticIconFn = { music }
+
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         StrudelScaleEditorComp(ctx, embedded = false)
     }

@@ -2,6 +2,7 @@ package io.peekandpoke.klang.strudel.ui
 
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
@@ -20,6 +21,10 @@ import kotlinx.html.Tag
  * to the active scale (auto-detected from the pattern or set manually).
  */
 object StrudelNoteEditorTool : KlangUiTool {
+    override val title: String = "Note Editor"
+
+    override val iconFn: SemanticIconFn = { music }
+
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         StrudelNoteEditorComp(ctx)
     }

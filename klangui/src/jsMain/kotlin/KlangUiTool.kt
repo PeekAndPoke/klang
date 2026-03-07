@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.ui
 
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.html.FlowContent
 
@@ -27,6 +28,10 @@ data class KlangUiToolContext(
  * declared in a `@param-tool` KDoc tag.
  */
 fun interface KlangUiTool {
+    val title: String? get() = null
+
+    val iconFn: SemanticIconFn get() = { wrench }
+
     fun FlowContent.render(ctx: KlangUiToolContext)
 }
 

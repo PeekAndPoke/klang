@@ -177,7 +177,7 @@ internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponen
         /** Currently selected atom or rest — highlighted with a blue stroke. */
         val selection: MnSelection?,
         /** Receives all user interactions with the staff. */
-        val onAction: (NoteStaffComponent.Action) -> Unit,
+        val onAction: (Action) -> Unit,
     )
 
     // ── Drag / click state ────────────────────────────────────────────────────
@@ -186,6 +186,12 @@ internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponen
     private var dragStartY: Double = 0.0
     private var dragStartPos: Int = 0
     private var dragPreviewPos: Int? = null
+
+    /** Atom id of the last mousedown target — used by dblclick to avoid detached-DOM issues. */
+    private var lastMouseDownAtomId: Int? = null
+
+    /** Rest source-range start of the last mousedown target — used by dblclick. */
+    private var lastMouseDownRestRangeStart: Int? = null
 
     // ── Layout snapshot (updated each render, used for click-to-insert) ────────
 
@@ -290,11 +296,14 @@ internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponen
             }
             onMouseDown { e ->
                 val element = e.target as? org.w3c.dom.Element
+                lastMouseDownAtomId = null
+                lastMouseDownRestRangeStart = null
 
                 // Rest click → select (no drag)
                 val restEl = element?.closest("[data-rest-range-start]")
                 if (restEl != null) {
                     val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onMouseDown
+                    lastMouseDownRestRangeStart = rangeStart
                     val rest = staffItems.filterIsInstance<MnNode.Rest>()
                         .find { it.sourceRange?.first == rangeStart } ?: return@onMouseDown
                     props.onAction(Action.Select(MnSelection.Rest(rest)))
@@ -307,6 +316,7 @@ internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponen
                 val posStr = noteEl.getAttribute("data-staff-pos") ?: return@onMouseDown
                 val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
                 val pos = posStr.toIntOrNull() ?: return@onMouseDown
+                lastMouseDownAtomId = atomId
                 e.preventDefault()
                 dragAtomId = atomId
                 dragStartY = e.clientY.toDouble()
@@ -317,32 +327,33 @@ internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponen
                 triggerRedraw()
             }
 
-            // Double-click: remove note/rest, or insert a new note on the staff
+            // Double-click: remove note/rest, or insert a new note on the staff.
+            // We use lastMouseDownAtomId / lastMouseDownRestRangeStart (set in onMouseDown on a
+            // live DOM) instead of e.target.closest(...), because by the time dblclick fires the
+            // target element may have been detached by intermediate re-renders.
             onDblClick { e ->
-                val element = e.target as? org.w3c.dom.Element
-
-                // Double-click on a note → remove it
-                val noteEl = element?.closest("[data-atom-id]")
-                if (noteEl != null) {
-                    val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return@onDblClick
-                    val atom = staffItems.filterIsInstance<MnNode.Atom>()
-                        .find { it.id == atomId } ?: return@onDblClick
-                    props.onAction(Action.Remove(atom))
-                    return@onDblClick
+                val atomId = lastMouseDownAtomId
+                if (atomId != null) {
+                    val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
+                    if (atom != null) {
+                        props.onAction(Action.Remove(atom))
+                        return@onDblClick
+                    }
                 }
 
-                // Double-click on a rest → remove it
-                val restEl = element?.closest("[data-rest-range-start]")
-                if (restEl != null) {
-                    val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onDblClick
+                val restRangeStart = lastMouseDownRestRangeStart
+                if (restRangeStart != null) {
                     val rest = staffItems.filterIsInstance<MnNode.Rest>()
-                        .find { it.sourceRange?.first == rangeStart } ?: return@onDblClick
-                    props.onAction(Action.Remove(rest))
-                    return@onDblClick
+                        .find { it.sourceRange?.first == restRangeStart }
+                    if (rest != null) {
+                        props.onAction(Action.Remove(rest))
+                        return@onDblClick
+                    }
                 }
 
-                // Double-click on empty staff area → insert a new note
-                val svg = element?.closest("svg") ?: return@onDblClick
+                // Double-click on empty staff area → find the live SVG via currentTarget
+                val container = e.currentTarget as? org.w3c.dom.Element
+                val svg = container?.querySelector("svg") ?: return@onDblClick
                 val rect = svg.getBoundingClientRect()
                 val svgX = e.clientX - rect.left
                 val svgY = e.clientY - rect.top

@@ -7,6 +7,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onMouseEnter
 import de.peekandpoke.ultra.html.onMouseLeave
+import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.codemirror.ext.*
@@ -15,6 +16,7 @@ import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import kotlinx.css.minWidth
 import kotlinx.css.px
+import kotlinx.html.FlowContent
 
 /**
  * Combined CodeMirror extension for DSL editor interactions:
@@ -108,14 +110,14 @@ fun dslEditorExtension(
 
         popups.showContextMenu(anchor = anchor, positioning = PopupsManager.Positioning.BottomLeft) { handle ->
 
-            fun item(label: String, action: () -> Unit) {
+            fun item(label: FlowContent.() -> Unit, action: () -> Unit) {
                 noui.link.item {
                     onClick {
                         it.stopPropagation()
                         handle.close()
                         action()
                     }
-                    +label
+                    label()
                 }
             }
 
@@ -129,7 +131,7 @@ fun dslEditorExtension(
 
                 // ── Docs navigation items ──────────────────────────────────
                 if (func != null) {
-                    item("Go to docs: ${func.name}") {
+                    item({ icon.book(); +"Go to docs: ${func.name}" }) {
                         onNavigate(func, event)
                     }
                 }
@@ -137,8 +139,13 @@ fun dslEditorExtension(
                 // ── Tool items ─────────────────────────────────────────────
                 if (argInfo != null && onOpenTool != null) {
                     if (func != null) noui.divider {}
-                    argInfo.tools.forEach { (toolName, _) ->
-                        item("Open $toolName\u2026") {
+                    argInfo.tools.forEach { (toolName, tool) ->
+                        item({
+                            tool.run {
+                                icon.iconFn().render()
+                            }
+                            +(tool.title ?: toolName)
+                        }) {
                             // argTo is tracked as a mutable local because the tool can commit
                             // multiple times (e.g. the user tweaks values and hits Update
                             // repeatedly without closing the modal). Each commit may insert a
@@ -148,6 +155,7 @@ fun dslEditorExtension(
                             // argFrom + result.length after every commit so the next commit
                             // replaces exactly the text that was just written.
                             var argTo = argInfo.argTo
+
                             val ctx = KlangUiToolContext(
                                 symbol = argInfo.symbol,
                                 paramName = argInfo.paramName,

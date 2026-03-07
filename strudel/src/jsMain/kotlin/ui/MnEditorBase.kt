@@ -48,9 +48,6 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     private val undoStack = ArrayDeque<String>()
     private val redoStack = ArrayDeque<String>()
 
-    val canUndo: Boolean get() = undoStack.isNotEmpty()
-    val canRedo: Boolean get() = redoStack.isNotEmpty()
-
     /** Push current [text] onto the undo stack before a programmatic edit. */
     protected fun pushUndo() {
         undoStack.addLast(text)
@@ -335,8 +332,8 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 lastAtom = selectedAtom; lastRest = null
             }
         }
+
         val rest = if (atom != null) null else lastRest
-        val selection: MnSelection? = atom?.let { MnSelection.Atom(it) } ?: rest?.let { MnSelection.Rest(it) }
 
         ui.segment {
             css {
