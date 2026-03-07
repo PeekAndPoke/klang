@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.ui
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
+import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -64,6 +65,7 @@ private class StrudelScaleDegreeEditorComp(ctx: Ctx<Props>) : MnEditorBase<Strud
     // ── Scale picker ──────────────────────────────────────────────────────────
 
     override fun FlowContent.renderExtraControls() {
+        ui.divider()
         scalePicker(scaleName) { scaleName = it }
     }
 }

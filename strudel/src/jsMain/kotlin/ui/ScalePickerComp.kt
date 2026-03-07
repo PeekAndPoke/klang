@@ -111,14 +111,14 @@ private class ScalePickerComp(ctx: Ctx<Props>) : Component<ScalePickerComp.Props
                     letters.forEach { l -> option(realValue = l) { +l.uppercase() } }
                 }
 
-                SelectField(accidental, { accidental = it; emit() }) {
-                    label("Accidental")
-                    accidentals.forEach { (v, label) -> option(realValue = v, formValue = v) { +label } }
-                }
-
                 UiInputField(octave, { octave = it; emit() }) {
                     label("Octave")
                     step(1)
+                }
+
+                SelectField(accidental, { accidental = it; emit() }) {
+                    label("Accidental")
+                    accidentals.forEach { (v, label) -> option(realValue = v, formValue = v) { +label } }
                 }
 
                 SelectField(mode, { mode = it; emit() }) {

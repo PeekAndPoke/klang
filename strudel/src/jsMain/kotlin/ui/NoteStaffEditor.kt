@@ -317,6 +317,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                 val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
                 val pos = posStr.toIntOrNull() ?: return@onMouseDown
                 lastMouseDownAtomId = atomId
+                console.log("[mousedown] captured atomId=$atomId")
                 e.preventDefault()
                 dragAtomId = atomId
                 dragStartY = e.clientY.toDouble()
@@ -333,8 +334,12 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             // target element may have been detached by intermediate re-renders.
             onDblClick { e ->
                 val atomId = lastMouseDownAtomId
+                val allAtoms = staffItems.filterIsInstance<MnNode.Atom>()
+                console.log("[dblclick] atomId=$atomId allAtomIds=${allAtoms.map { it.id }} restRangeStart=$lastMouseDownRestRangeStart")
+
                 if (atomId != null) {
-                    val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
+                    val atom = allAtoms.find { it.id == atomId }
+                    console.log("[dblclick] found atom=$atom")
                     if (atom != null) {
                         props.onAction(Action.Remove(atom))
                         return@onDblClick
