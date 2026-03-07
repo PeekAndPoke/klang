@@ -336,6 +336,10 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                     if (staffRendered) div { css { height = 8.px } }
 
                     val linePattern = MnPattern(lineItems)
+                    // Preserve tree structure for bracket rendering by filtering top-level nodes
+                    val lineStructuralPattern = MnPattern(
+                        p.items.mapNotNull { extractLineSubtree(it, lineStart, lineEnd) }
+                    )
                     val lineActiveAtom = selectedAtom?.let { a ->
                         lineItems.filterIsInstance<MnNode.Atom>().find { it.id == a.id }
                     }
@@ -346,6 +350,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                         atomToPos = ::atomToStaffPosition,
                         posToValue = ::staffPositionToAtomValue,
                         scaleName = keySignatureScaleName(),
+                        structuralPattern = lineStructuralPattern,
                         onAtomSelect = { atom ->
                             cursorOffset = atom.sourceRange?.first ?: cursorOffset
                             lastAtom = atom
@@ -358,5 +363,25 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
             lineStart += line.length + 1 // +1 for the '\n'
         }
+    }
+
+    private fun extractLineSubtree(node: MnNode, start: Int, end: Int): MnNode? = when (node) {
+        is MnNode.Atom -> if (node.sourceRange?.first?.let { it in start..end } == true) node else null
+        is MnNode.Rest -> if (node.sourceRange?.first?.let { it in start..end } == true) node else null
+        is MnNode.Group -> node.items.mapNotNull { extractLineSubtree(it, start, end) }
+            .let { if (it.isEmpty()) null else node.copy(items = it) }
+
+        is MnNode.Alternation -> node.items.mapNotNull { extractLineSubtree(it, start, end) }
+            .let { if (it.isEmpty()) null else node.copy(items = it) }
+
+        is MnNode.Stack -> node.layers.map { l -> l.mapNotNull { extractLineSubtree(it, start, end) } }
+            .filter { it.isNotEmpty() }
+            .let { if (it.isEmpty()) null else node.copy(layers = it) }
+
+        is MnNode.Choice -> node.options.mapNotNull { extractLineSubtree(it, start, end) }
+            .let { if (it.isEmpty()) null else node.copy(options = it) }
+
+        is MnNode.Repeat -> extractLineSubtree(node.node, start, end)?.let { node.copy(node = it) }
+        is MnNode.Linebreak -> null
     }
 }

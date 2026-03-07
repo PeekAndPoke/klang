@@ -77,6 +77,7 @@ fun FlowContent.mnPatternTextInput(
             textArea {
                 placeholder = "e.g. bd sd [hh cp] ~ bd*2"
                 attributes["value"] = text
+                attributes["spellcheck"] = "false"
                 rows = (text.count { it == '\n' } + 1).toString()
                 css {
                     position = Position.relative

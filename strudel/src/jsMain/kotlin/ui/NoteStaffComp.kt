@@ -36,10 +36,11 @@ fun FlowContent.noteStaffSvg(
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
     scaleName: String? = null,
+    structuralPattern: MnPattern? = null,
     onAtomSelect: (MnNode.Atom) -> Unit = {},
     onNodeChange: (MnNode, MnNode) -> Unit,
 ) {
-    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, scaleName, onAtomSelect, onNodeChange)
+    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, scaleName, structuralPattern, onAtomSelect, onNodeChange)
 }
 
 @Suppress("FunctionName")
@@ -49,10 +50,11 @@ private fun Tag.NoteStaffComp(
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
     scaleName: String?,
+    structuralPattern: MnPattern?,
     onAtomSelect: (MnNode.Atom) -> Unit,
     onNodeChange: (MnNode, MnNode) -> Unit,
 ) = comp(
-    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, scaleName, onAtomSelect, onNodeChange)
+    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, scaleName, structuralPattern, onAtomSelect, onNodeChange)
 ) { NoteStaffComponent(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -67,6 +69,7 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         private const val NOTE_RADIUS_Y = 3.6   // half-height
         private const val LEFT_MARGIN = 38.0    // px reserved for clef (no key sig)
         private const val NOTE_COL_W = 22.0     // px per note column
+        private const val BRACKET_COL_W = 10.0 // px per bracket mark column
         private const val STAFF_TOP = 29.0      // top of staff (top line Y)
         private const val CLEF_END_X = 30.0    // approx x where clef glyph ends
         private const val KEY_SIG_ACC_W = 9.0  // px per key-signature accidental
@@ -87,6 +90,13 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         private val FLAT_KEY_POSITIONS = linkedMapOf(
             "B" to 6, "E" to 9, "A" to 5, "D" to 8, "G" to 4, "C" to 7, "F" to 10
         )
+
+        enum class BracketType { Group, Alternation }
+
+        sealed class LayoutItem {
+            data class Note(val node: MnNode) : LayoutItem()
+            data class BracketMark(val type: BracketType, val isOpen: Boolean) : LayoutItem()
+        }
 
         private data class KeySignature(val symbol: String, val staffPositions: List<Int>)
 
@@ -130,6 +140,7 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val atomToPos: (String) -> Int?,
         val posToValue: (Int) -> String,
         val scaleName: String?,
+        val structuralPattern: MnPattern?,
         val onAtomSelect: (MnNode.Atom) -> Unit,
         val onNodeChange: (MnNode, MnNode) -> Unit,
     )
@@ -148,16 +159,38 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             buildList { p.items.forEach { collectStaffNodes(it, this) } }
         } ?: emptyList()
 
-    // Collect atoms and rests (with source positions) in document order
-    private fun collectStaffNodes(node: MnNode, list: MutableList<MnNode>) {
+    private fun collectStaffNodes(node: MnNode, items: MutableList<MnNode>) {
         when (node) {
-            is MnNode.Atom -> list.add(node)
-            is MnNode.Rest -> if (node.sourceRange != null) list.add(node)
-            is MnNode.Group -> node.items.forEach { collectStaffNodes(it, list) }
-            is MnNode.Alternation -> node.items.firstOrNull()?.let { collectStaffNodes(it, list) }
-            is MnNode.Stack -> node.layers.firstOrNull()?.forEach { collectStaffNodes(it, list) }
-            is MnNode.Choice -> node.options.forEach { collectStaffNodes(it, list) }
-            is MnNode.Repeat -> collectStaffNodes(node.node, list)
+            is MnNode.Atom -> items.add(node)
+            is MnNode.Rest -> if (node.sourceRange != null) items.add(node)
+            is MnNode.Group -> node.items.forEach { collectStaffNodes(it, items) }
+            is MnNode.Alternation -> node.items.forEach { collectStaffNodes(it, items) }
+            is MnNode.Stack -> node.layers.firstOrNull()?.forEach { collectStaffNodes(it, items) }
+            is MnNode.Choice -> node.options.forEach { collectStaffNodes(it, items) }
+            is MnNode.Repeat -> collectStaffNodes(node.node, items)
+            is MnNode.Linebreak -> {}
+        }
+    }
+
+    private fun buildLayoutItems(node: MnNode, result: MutableList<LayoutItem>) {
+        when (node) {
+            is MnNode.Atom -> result.add(LayoutItem.Note(node))
+            is MnNode.Rest -> if (node.sourceRange != null) result.add(LayoutItem.Note(node))
+            is MnNode.Group -> {
+                result.add(LayoutItem.BracketMark(BracketType.Group, isOpen = true))
+                node.items.forEach { buildLayoutItems(it, result) }
+                result.add(LayoutItem.BracketMark(BracketType.Group, isOpen = false))
+            }
+
+            is MnNode.Alternation -> {
+                result.add(LayoutItem.BracketMark(BracketType.Alternation, isOpen = true))
+                node.items.forEach { buildLayoutItems(it, result) }
+                result.add(LayoutItem.BracketMark(BracketType.Alternation, isOpen = false))
+            }
+
+            is MnNode.Stack -> node.layers.firstOrNull()?.forEach { buildLayoutItems(it, result) }
+            is MnNode.Choice -> node.options.forEach { buildLayoutItems(it, result) }
+            is MnNode.Repeat -> buildLayoutItems(node.node, result)
             is MnNode.Linebreak -> {}
         }
     }
@@ -246,23 +279,34 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
                 }
             }
             unsafe {
-                +buildSvg(currentItems)
+                +buildSvg()
             }
         }
     }
 
     // ── SVG builder ───────────────────────────────────────────────────────────
 
-    private fun buildSvg(currentItems: List<MnNode>): String {
+    private fun buildSvg(): String {
         // Key signature
         val keySig = buildKeySignature(props.scaleName)
-        val keySigWidth = if (keySig != null) keySig.staffPositions.size * KEY_SIG_ACC_W + NOTE_GAP else NOTE_GAP
+        val keySigWidth = if (keySig != null) {
+            keySig.staffPositions.size * KEY_SIG_ACC_W + NOTE_GAP
+        } else {
+            NOTE_GAP
+        }
         val noteStartX = maxOf(LEFT_MARGIN, CLEF_END_X + keySigWidth)
+
+        // Build interleaved layout: bracket marks get their own column alongside notes/rests
+        val layoutItems = buildList {
+            (props.structuralPattern ?: props.pattern)?.items?.forEach {
+                buildLayoutItems(it, this)
+            }
+        }
 
         // Dynamic layout: expand height for notes outside normal staff range
         // Also account for key sig accidentals that may go above the top staff line (e.g. G5=11)
-        val notePositions = currentItems.filterIsInstance<MnNode.Atom>()
-            .mapNotNull { props.atomToPos(it.value) }
+        val notePositions = layoutItems.filterIsInstance<LayoutItem.Note>()
+            .mapNotNull { (it.node as? MnNode.Atom)?.let { a -> props.atomToPos(a.value) } }
         val keySigMaxPos = keySig?.staffPositions?.maxOrNull() ?: 10
         val maxPos = (notePositions.maxOrNull() ?: 10).coerceAtLeast(keySigMaxPos).coerceAtLeast(10)
         val minPos = (notePositions.minOrNull() ?: 0).coerceAtMost(0)
@@ -271,8 +315,8 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val topY = STAFF_TOP + topExtra
         val height = 104.0 + topExtra + bottomExtra
 
-        // Recompute width based on noteStartX
-        val svgWidth = (noteStartX + currentItems.size * NOTE_COL_W + NOTE_COL_W).coerceAtLeast(160.0)
+        val totalItemsWidth = layoutItems.sumOf { if (it is LayoutItem.Note) NOTE_COL_W else BRACKET_COL_W }
+        val svgWidth = (noteStartX + totalItemsWidth + NOTE_COL_W).coerceAtLeast(160.0)
 
         val sb = StringBuilder()
         sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth.toInt()}" height="${height.toInt()}" style="display:block;font-family:serif;">""")
@@ -303,18 +347,61 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             }
         }
 
-        // Notes and rests
-        for ((idx, item) in currentItems.withIndex()) {
-            val x = noteStartX + idx * NOTE_COL_W
+        // Render each layout item; notes get NOTE_COL_W, bracket marks get BRACKET_COL_W
+        var x = noteStartX
+        for (item in layoutItems) {
             when (item) {
-                is MnNode.Atom -> renderAtomSvg(sb, item, x, topY)
-                is MnNode.Rest -> renderRestSvg(sb, item, x, topY)
-                else -> {}
+                is LayoutItem.Note -> {
+                    when (val node = item.node) {
+                        is MnNode.Atom -> renderAtomSvg(sb, node, x, topY)
+                        is MnNode.Rest -> renderRestSvg(sb, node, x, topY)
+                        else -> {}
+                    }
+                    x += NOTE_COL_W
+                }
+
+                is LayoutItem.BracketMark -> {
+                    renderBracketMark(sb, item, x, topY)
+                    x += BRACKET_COL_W
+                }
             }
         }
 
         sb.append("</svg>")
         return sb.toString()
+    }
+
+    private fun renderBracketMark(sb: StringBuilder, mark: LayoutItem.BracketMark, x: Double, topY: Double) {
+        val ext = 4.0
+        val yTop = topY - ext
+        val yBottom = topY + 8 * HALF_STEP + ext
+        val yMid = (yTop + yBottom) / 2
+        val tickW = 5.0
+        val sw = "1.4"
+        val color = if (mark.type == BracketType.Group) "#888" else "#2a9d8f"
+
+        when (mark.type) {
+            BracketType.Group -> {
+                sb.append("""<line x1="$x" y1="$yTop" x2="$x" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                if (mark.isOpen) {
+                    sb.append("""<line x1="$x" y1="$yTop"    x2="${x + tickW}" y2="$yTop"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x" y1="$yBottom" x2="${x + tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                } else {
+                    sb.append("""<line x1="${x - tickW}" y1="$yTop"    x2="$x" y2="$yTop"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="${x - tickW}" y1="$yBottom" x2="$x" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                }
+            }
+
+            BracketType.Alternation -> {
+                if (mark.isOpen) {
+                    sb.append("""<line x1="${x + tickW}" y1="$yTop"    x2="$x"           y2="$yMid"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x"           y1="$yMid"    x2="${x + tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                } else {
+                    sb.append("""<line x1="${x - tickW}" y1="$yTop"    x2="$x"           y2="$yMid"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x"           y1="$yMid"    x2="${x - tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                }
+            }
+        }
     }
 
     private fun renderRestSvg(sb: StringBuilder, rest: MnNode.Rest, x: Double, topY: Double) {
