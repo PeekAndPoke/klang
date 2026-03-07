@@ -126,7 +126,7 @@ sealed class MnNode {
     ) : MnNode()
 
     /** Silence `~`. Carries the source position so it can be located in the text for replacement. */
-    data class Rest(val sourceRange: IntRange? = null) : MnNode()
+    data class Rest(val sourceRange: IntRange? = null, val mods: Mods = Mods.None) : MnNode()
 
     /** Line break in a multi-line mini-notation string. Carries no musical meaning; used for visual layout. */
     object Linebreak : MnNode()
@@ -141,7 +141,7 @@ sealed class MnNode {
         is Choice -> copy(mods = mods.transform())
         is Stack -> copy(mods = mods.transform())
         is Repeat -> copy(mods = mods.transform())
-        is Rest -> this
+        is Rest -> copy(mods = mods.transform())
         is Linebreak -> this
     }
 
@@ -152,7 +152,7 @@ sealed class MnNode {
         is Choice -> mods
         is Stack -> mods
         is Repeat -> mods
-        is Rest -> null
+        is Rest -> mods
         is Linebreak -> null
     }
 }

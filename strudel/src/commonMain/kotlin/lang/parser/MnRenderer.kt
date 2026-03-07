@@ -59,7 +59,7 @@ object MnRenderer {
 
         is MnNode.Repeat -> renderNode(node.node) + "!${node.count}" + renderMods(node.mods)
 
-        is MnNode.Rest -> "~"
+        is MnNode.Rest -> "~" + renderMods(node.mods)
 
         is MnNode.Linebreak -> "\n"
     }

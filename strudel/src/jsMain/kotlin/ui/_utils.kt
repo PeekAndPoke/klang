@@ -1,8 +1,20 @@
 package io.peekandpoke.klang.strudel.ui
 
+import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.tones.note.Note
 import kotlin.math.pow
 import kotlin.math.roundToLong
+
+// ── Selection ─────────────────────────────────────────────────────────────────
+
+/** The currently selected item in a note staff. */
+sealed interface MnSelection {
+    data class Atom(val node: MnNode.Atom) : MnSelection
+    data class Rest(val node: MnNode.Rest) : MnSelection
+}
+
+val MnSelection?.atom: MnNode.Atom? get() = (this as? MnSelection.Atom)?.node
+val MnSelection?.rest: MnNode.Rest? get() = (this as? MnSelection.Rest)?.node
 
 // ── Staff position helpers ────────────────────────────────────────────────────
 

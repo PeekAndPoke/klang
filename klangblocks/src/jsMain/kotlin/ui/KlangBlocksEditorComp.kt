@@ -13,6 +13,7 @@ import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -133,16 +134,12 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             return@listener
         }
 
-        when (val key = ke.key.lowercase()) {
-            "z" if !ke.shiftKey -> {
+        when {
+            KlangKeyBindings.isUndo(ke) -> {
                 ke.preventDefault(); editingCtx.undo()
             }
 
-            "z" if ke.shiftKey -> {
-                ke.preventDefault(); editingCtx.redo()
-            }
-
-            "y" -> {
+            KlangKeyBindings.isRedo(ke) -> {
                 ke.preventDefault(); editingCtx.redo()
             }
         }

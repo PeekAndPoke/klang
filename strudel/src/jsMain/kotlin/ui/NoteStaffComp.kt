@@ -25,41 +25,70 @@ import kotlin.math.roundToInt
 /**
  * Renders an interactive treble-clef staff SVG for editing note atoms and rests.
  *
- * Note heads are positioned according to [atomToPos]. Dragging a note head up or down
- * shifts it by diatonic steps and calls [onNodeChange] on release.
- * Clicking a rest symbol converts it to the default note at B4.
- * The [activeAtom] is highlighted with a blue stroke ring.
+ * - Drag a note head up/down to change pitch; emits [NoteStaffComponent.Action.Replace].
+ * - Double-click a note or rest to delete it; emits [NoteStaffComponent.Action.Remove].
+ * - Double-click empty staff area to insert a note; emits [NoteStaffComponent.Action.Add].
+ * - Right-click a note/rest to toggle note ↔ rest; emits [NoteStaffComponent.Action.Replace].
+ * - Single-click a note or rest to select it; emits [NoteStaffComponent.Action.Select].
+ * - The [selection] node is highlighted with a blue stroke.
  */
-fun FlowContent.noteStaffSvg(
+internal fun FlowContent.noteStaffSvg(
+    /** Flat pattern used to determine which atoms/rests to display. */
     pattern: MnPattern?,
-    activeAtom: MnNode.Atom?,
+    /** Maps a raw atom value (e.g. "c4") to a staff position (C4=0, D4=1, …), or null if not renderable. */
     atomToPos: (String) -> Int?,
+    /** Maps a staff position back to a raw atom value string (e.g. 6 → "b4"). */
     posToValue: (Int) -> String,
+    /** Optional scale name used to draw a key signature on the staff. */
     scaleName: String? = null,
+    /** Hierarchical pattern used for bracket structure; falls back to [pattern] if null. */
     structuralPattern: MnPattern? = null,
-    onAtomSelect: (MnNode.Atom) -> Unit = {},
-    onNodeChange: (MnNode, MnNode) -> Unit,
+    /** Currently selected atom or rest — highlighted with a blue stroke. */
+    selection: MnSelection? = null,
+    /** Receives all user interactions with the staff. */
+    onAction: (NoteStaffComponent.Action) -> Unit = {},
 ) {
-    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, scaleName, structuralPattern, onAtomSelect, onNodeChange)
+    this@noteStaffSvg.NoteStaffComp(
+        pattern, atomToPos, posToValue, scaleName, structuralPattern, selection, onAction,
+    )
 }
 
 @Suppress("FunctionName")
 private fun Tag.NoteStaffComp(
     pattern: MnPattern?,
-    activeAtom: MnNode.Atom?,
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
     scaleName: String?,
     structuralPattern: MnPattern?,
-    onAtomSelect: (MnNode.Atom) -> Unit,
-    onNodeChange: (MnNode, MnNode) -> Unit,
+    selection: MnSelection?,
+    onAction: (NoteStaffComponent.Action) -> Unit,
 ) = comp(
-    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, scaleName, structuralPattern, onAtomSelect, onNodeChange)
+    NoteStaffComponent.Props(
+        pattern, atomToPos, posToValue, scaleName, structuralPattern, selection, onAction,
+    )
 ) { NoteStaffComponent(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent.Props>(ctx) {
+internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent.Props>(ctx) {
+
+    // ── Action type ───────────────────────────────────────────────────────────
+
+    /** Actions emitted by the note staff editor. */
+    sealed interface Action {
+        /** User clicked a note or rest to select it. */
+        data class Select(val selection: MnSelection) : Action
+
+        /** User double-clicked a note or rest to delete it. */
+        data class Remove(val node: MnNode) : Action
+
+        /** User double-clicked an empty staff area to insert a note.
+         *  [insertAfterAtomId] is the id of the atom to insert after, or null to append at the start. */
+        data class Add(val insertAfterAtomId: Int?, val staffPos: Int) : Action
+
+        /** User dragged a note to a new pitch, or right-clicked to toggle note ↔ rest. */
+        data class Replace(val old: MnNode, val new: MnNode) : Action
+    }
 
     // ── Layout constants ──────────────────────────────────────────────────────
 
@@ -135,14 +164,20 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
     // ── Props ─────────────────────────────────────────────────────────────────
 
     data class Props(
+        /** Flat pattern used to determine which atoms/rests to display. */
         val pattern: MnPattern?,
-        val activeAtom: MnNode.Atom?,
+        /** Maps a raw atom value (e.g. "c4") to a staff position (C4=0, D4=1, …). */
         val atomToPos: (String) -> Int?,
+        /** Maps a staff position back to a raw atom value string. */
         val posToValue: (Int) -> String,
+        /** Optional scale name used to draw a key signature. */
         val scaleName: String?,
+        /** Hierarchical pattern used for bracket structure. */
         val structuralPattern: MnPattern?,
-        val onAtomSelect: (MnNode.Atom) -> Unit,
-        val onNodeChange: (MnNode, MnNode) -> Unit,
+        /** Currently selected atom or rest — highlighted with a blue stroke. */
+        val selection: MnSelection?,
+        /** Receives all user interactions with the staff. */
+        val onAction: (NoteStaffComponent.Action) -> Unit,
     )
 
     // ── Drag / click state ────────────────────────────────────────────────────
@@ -151,6 +186,22 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
     private var dragStartY: Double = 0.0
     private var dragStartPos: Int = 0
     private var dragPreviewPos: Int? = null
+
+    // ── Layout snapshot (updated each render, used for click-to-insert) ────────
+
+    /** topY of the last rendered staff, used to map click Y → staff position. */
+    private var lastTopY: Double = STAFF_TOP
+
+    /** (atomId, svgX-center) for each note atom in the last rendered layout, in order. */
+    private var lastAtomCenters: List<Pair<Int, Double>> = emptyList()
+
+    // ── Ghost note state ──────────────────────────────────────────────────────
+
+    /** SVG-relative x of the mouse, or null when not hovering over the staff area. */
+    private var ghostSvgX: Double? = null
+
+    /** Snapped staff position under the mouse cursor. */
+    private var ghostStaffPos: Int? = null
 
     // ── Derived ───────────────────────────────────────────────────────────────
 
@@ -212,8 +263,8 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val newPos = dragStartPos + delta
         val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
         if (atom != null) {
-            if (delta == 0) props.onAtomSelect(atom)
-            else props.onNodeChange(atom, atom.copy(value = props.posToValue(newPos)))
+            if (delta == 0) props.onAction(Action.Select(MnSelection.Atom(atom)))
+            else props.onAction(Action.Replace(atom, atom.copy(value = props.posToValue(newPos))))
         }
         dragAtomId = null
         dragPreviewPos = null
@@ -232,8 +283,6 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
     // ── Render ────────────────────────────────────────────────────────────────
 
     override fun VDom.render() {
-        val currentItems = staffItems
-
         div {
             css {
                 overflowX = Overflow.auto
@@ -241,8 +290,21 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             }
             onMouseDown { e ->
                 val element = e.target as? org.w3c.dom.Element
-                val atomIdStr = element?.getAttribute("data-atom-id") ?: return@onMouseDown
-                val posStr = element.getAttribute("data-staff-pos") ?: return@onMouseDown
+
+                // Rest click → select (no drag)
+                val restEl = element?.closest("[data-rest-range-start]")
+                if (restEl != null) {
+                    val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onMouseDown
+                    val rest = staffItems.filterIsInstance<MnNode.Rest>()
+                        .find { it.sourceRange?.first == rangeStart } ?: return@onMouseDown
+                    props.onAction(Action.Select(MnSelection.Rest(rest)))
+                    return@onMouseDown
+                }
+
+                // Note click → start drag
+                val noteEl = element?.closest("[data-atom-id]") ?: return@onMouseDown
+                val atomIdStr = noteEl.getAttribute("data-atom-id") ?: return@onMouseDown
+                val posStr = noteEl.getAttribute("data-staff-pos") ?: return@onMouseDown
                 val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
                 val pos = posStr.toIntOrNull() ?: return@onMouseDown
                 e.preventDefault()
@@ -255,29 +317,95 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
                 triggerRedraw()
             }
 
-            // Double-click: convert note ↔ rest
+            // Double-click: remove note/rest, or insert a new note on the staff
             onDblClick { e ->
                 val element = e.target as? org.w3c.dom.Element
 
-                // Atom → rest
-                val atomIdStr = element?.getAttribute("data-atom-id")
-                if (atomIdStr != null) {
-                    val atomId = atomIdStr.toIntOrNull() ?: return@onDblClick
-                    val atom = currentItems.filterIsInstance<MnNode.Atom>()
+                // Double-click on a note → remove it
+                val noteEl = element?.closest("[data-atom-id]")
+                if (noteEl != null) {
+                    val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return@onDblClick
+                    val atom = staffItems.filterIsInstance<MnNode.Atom>()
                         .find { it.id == atomId } ?: return@onDblClick
-                    props.onNodeChange(atom, MnNode.Rest(atom.sourceRange))
+                    props.onAction(Action.Remove(atom))
                     return@onDblClick
                 }
 
-                // Rest → note
-                val restRangeStr = element?.getAttribute("data-rest-range-start")
-                if (restRangeStr != null) {
-                    val rangeStart = restRangeStr.toIntOrNull() ?: return@onDblClick
-                    val rest = currentItems.filterIsInstance<MnNode.Rest>()
+                // Double-click on a rest → remove it
+                val restEl = element?.closest("[data-rest-range-start]")
+                if (restEl != null) {
+                    val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onDblClick
+                    val rest = staffItems.filterIsInstance<MnNode.Rest>()
                         .find { it.sourceRange?.first == rangeStart } ?: return@onDblClick
-                    props.onNodeChange(rest, MnNode.Atom(value = props.posToValue(6)))
+                    props.onAction(Action.Remove(rest))
+                    return@onDblClick
+                }
+
+                // Double-click on empty staff area → insert a new note
+                val svg = element?.closest("svg") ?: return@onDblClick
+                val rect = svg.getBoundingClientRect()
+                val svgX = e.clientX - rect.left
+                val svgY = e.clientY - rect.top
+                val (afterId, staffPos) = computeInsertionPoint(svgX, svgY)
+                props.onAction(Action.Add(afterId, staffPos))
+            }
+
+            // Right-click: toggle note ↔ rest
+            onContextMenu { e ->
+                e.preventDefault()
+                val element = e.target as? org.w3c.dom.Element
+
+                // Note → rest
+                val noteEl = element?.closest("[data-atom-id]")
+                if (noteEl != null) {
+                    val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return@onContextMenu
+                    val atom = staffItems.filterIsInstance<MnNode.Atom>()
+                        .find { it.id == atomId } ?: return@onContextMenu
+                    props.onAction(Action.Replace(atom, MnNode.Rest(atom.sourceRange)))
+                    return@onContextMenu
+                }
+
+                // Rest → note (at the clicked pitch)
+                val restEl = element?.closest("[data-rest-range-start]")
+                if (restEl != null) {
+                    val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onContextMenu
+                    val rest = staffItems.filterIsInstance<MnNode.Rest>()
+                        .find { it.sourceRange?.first == rangeStart } ?: return@onContextMenu
+                    val svg = restEl.closest("svg")
+                    val staffPos = if (svg != null) {
+                        val rect = svg.getBoundingClientRect()
+                        computeInsertionPoint(e.clientX - rect.left, e.clientY - rect.top).second
+                    } else 6
+                    props.onAction(Action.Replace(rest, MnNode.Atom(value = props.posToValue(staffPos))))
                 }
             }
+            // Mouse move over staff area: update ghost note position
+            onMouseMove { e ->
+                if (dragAtomId != null) return@onMouseMove
+                val element = e.target as? org.w3c.dom.Element
+                val onNote = element?.closest("[data-atom-id]") != null ||
+                        element?.closest("[data-rest-range-start]") != null
+                val svg = element?.closest("svg")
+                if (onNote || svg == null) {
+                    if (ghostSvgX != null) {
+                        ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+                    }
+                    return@onMouseMove
+                }
+                val rect = svg.getBoundingClientRect()
+                val svgX = e.clientX - rect.left
+                val snapped = ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
+                if (svgX != ghostSvgX || snapped != ghostStaffPos) {
+                    ghostSvgX = svgX; ghostStaffPos = snapped; triggerRedraw()
+                }
+            }
+
+            onMouseLeave {
+                if (ghostSvgX != null) {
+                    ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+                }
+            }
+
             unsafe {
                 +buildSvg()
             }
@@ -360,25 +488,50 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         }
 
         // Notes and rests (on top of staff lines and brackets)
+        // Also build layout snapshot for click-to-insert and ghost preview
+        val atomCenters = mutableListOf<Pair<Int, Double>>()
         x = noteStartX
         for (item in layoutItems) {
             when (item) {
                 is LayoutItem.Note -> {
                     val cx = x + NOTE_COL_W / 2
                     when (val node = item.node) {
-                        is MnNode.Atom -> renderAtomSvg(sb, node, cx, topY)
-                        is MnNode.Rest -> renderRestSvg(sb, node, cx, topY)
+                        is MnNode.Atom -> {
+                            renderAtomSvg(sb, node, cx, topY); atomCenters.add(node.id to cx)
+                        }
+
+                        is MnNode.Rest -> renderRestSvg(sb, node, cx, topY, node.sourceRange == props.selection.rest?.sourceRange)
                         else -> {}
                     }
                     x += NOTE_COL_W
                 }
-
                 is LayoutItem.BracketMark -> x += BRACKET_COL_W
             }
+        }
+        lastTopY = topY
+        lastAtomCenters = atomCenters
+
+        // Ghost note preview (topmost layer so it's always visible)
+        val gx = ghostSvgX
+        val gpos = ghostStaffPos
+        if (gx != null && gpos != null) {
+            val gy = staffPosToY(gpos, topY)
+            renderLedgerLines(sb, gpos, gx, topY)
+            sb.append("""<ellipse cx="$gx" cy="$gy" rx="$NOTE_RADIUS_X" ry="$NOTE_RADIUS_Y" fill="#2266cc" opacity="0.35" style="pointer-events:none"/>""")
         }
 
         sb.append("</svg>")
         return sb.toString()
+    }
+
+    /** Maps SVG coordinates to an insertion point: (insertAfterAtomId, staffPosition). */
+    private fun computeInsertionPoint(svgX: Double, svgY: Double): Pair<Int?, Int> {
+        val staffPos = ((lastTopY + 10 * HALF_STEP - svgY) / HALF_STEP).roundToInt()
+        val insertAfterAtomId = lastAtomCenters
+            .filter { (_, cx) -> cx <= svgX }
+            .maxByOrNull { (_, cx) -> cx }
+            ?.first
+        return insertAfterAtomId to staffPos
     }
 
     private fun renderBracketMark(sb: StringBuilder, mark: LayoutItem.BracketMark, x: Double, topY: Double) {
@@ -414,21 +567,22 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         }
     }
 
-    private fun renderRestSvg(sb: StringBuilder, rest: MnNode.Rest, x: Double, topY: Double) {
+    private fun renderRestSvg(sb: StringBuilder, rest: MnNode.Rest, x: Double, topY: Double, isActive: Boolean = false) {
         val rangeStart = rest.sourceRange?.first ?: return
-        // Draw a half-rest block: filled rectangle sitting on top of the B4 line (pos=6)
         val lineY = staffPosToY(6, topY)
         val w = NOTE_RADIUS_X * 2.4
         val h = HALF_STEP * 0.75
+        val stroke = if (isActive) """ stroke="#2266cc" stroke-width="2"""" else ""
+        sb.append("""<g data-rest-range-start="$rangeStart" style="cursor:pointer">""")
         sb.append(
             """<rect x="${x - w / 2}" y="${lineY - h}" width="$w" height="$h" rx="1" """ +
-                    """fill="#444" data-rest-range-start="$rangeStart" """ +
-                    """style="cursor:pointer" title="Double-click to convert to note"/>"""
+                    """fill="${if (isActive) "#3355aa" else "#444"}"$stroke/>"""
         )
+        sb.append("</g>")
     }
 
     private fun renderAtomSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, topY: Double) {
-        val isActive = atom.id == props.activeAtom?.id
+        val isActive = atom.id == props.selection.atom?.id
         val isDragging = dragAtomId == atom.id
         val pos = if (isDragging) dragPreviewPos ?: dragStartPos else props.atomToPos(atom.value)
 
@@ -449,6 +603,9 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         }
         val strokeWidth = if (isActive || isDragging) 2.0 else 1.2
 
+        // Wrap all parts in a <g> so `closest("[data-atom-id]")` works from stem, accidental, etc.
+        sb.append("""<g data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:grab">""")
+
         renderLedgerLines(sb, pos, x, topY)
 
         val stemUp = pos < 6
@@ -464,11 +621,12 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
 
         sb.append(
             """<ellipse cx="$x" cy="$y" rx="$NOTE_RADIUS_X" ry="$NOTE_RADIUS_Y" """ +
-                    """fill="$noteColor" stroke="$strokeColor" stroke-width="$strokeWidth" """ +
-                    """data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:grab"/>"""
+                    """fill="$noteColor" stroke="$strokeColor" stroke-width="$strokeWidth"/>"""
         )
 
         renderAccidental(sb, atom.value, x, y)
+
+        sb.append("</g>")
     }
 
     private fun renderUnknownSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, isActive: Boolean, topY: Double) {
@@ -530,4 +688,16 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
 
 private fun CommonAttributeGroupFacade.onDblClick(handler: (MouseEvent) -> Unit) {
     consumer.onTagEvent(this, "ondblclick", handler.asDynamic())
+}
+
+private fun CommonAttributeGroupFacade.onContextMenu(handler: (MouseEvent) -> Unit) {
+    consumer.onTagEvent(this, "oncontextmenu", handler.asDynamic())
+}
+
+private fun CommonAttributeGroupFacade.onMouseMove(handler: (MouseEvent) -> Unit) {
+    consumer.onTagEvent(this, "onmousemove", handler.asDynamic())
+}
+
+private fun CommonAttributeGroupFacade.onMouseLeave(handler: () -> Unit) {
+    consumer.onTagEvent(this, "onmouseleave", handler.asDynamic())
 }

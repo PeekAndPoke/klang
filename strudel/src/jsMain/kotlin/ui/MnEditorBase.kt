@@ -11,10 +11,14 @@ import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
 import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
+import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import kotlinx.browser.document
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.div
+import org.w3c.dom.events.Event
+import org.w3c.dom.events.KeyboardEvent
 
 /**
  * Abstract base component containing all shared state and logic for mini-notation editors.
@@ -35,6 +39,61 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     /** Last atom the cursor was over — retained so panels survive button clicks. */
     protected var lastAtom: MnNode.Atom? = null
+
+    /** Last rest selected in the staff — cleared when an atom is selected. */
+    protected var lastRest: MnNode.Rest? = null
+
+    // ── Undo / redo ───────────────────────────────────────────────────────────
+
+    private val undoStack = ArrayDeque<String>()
+    private val redoStack = ArrayDeque<String>()
+
+    val canUndo: Boolean get() = undoStack.isNotEmpty()
+    val canRedo: Boolean get() = redoStack.isNotEmpty()
+
+    /** Push current [text] onto the undo stack before a programmatic edit. */
+    protected fun pushUndo() {
+        undoStack.addLast(text)
+        redoStack.clear()
+    }
+
+    fun undo() {
+        if (undoStack.isEmpty()) return
+        redoStack.addLast(text)
+        text = undoStack.removeLast()
+        cursorOffset = text.length
+        lastAtom = null
+        triggerRedraw()
+    }
+
+    fun redo() {
+        if (redoStack.isEmpty()) return
+        undoStack.addLast(text)
+        text = redoStack.removeLast()
+        cursorOffset = text.length
+        lastAtom = null
+        triggerRedraw()
+    }
+
+    private val keydownListener: (Event) -> Unit = listener@{ event ->
+        val ke = event as? KeyboardEvent ?: return@listener
+        when {
+            KlangKeyBindings.isUndo(ke) -> {
+                ke.preventDefault(); undo()
+            }
+
+            KlangKeyBindings.isRedo(ke) -> {
+                ke.preventDefault(); redo()
+            }
+        }
+    }
+
+    init {
+        lifecycle {
+            onMount { document.addEventListener("keydown", keydownListener) }
+            onUnmount { document.removeEventListener("keydown", keydownListener) }
+        }
+    }
 
     // ── Parse cache ───────────────────────────────────────────────────────────
 
@@ -140,6 +199,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     /** Replaces [old] with [new] in the pattern tree and re-renders the whole string. */
     protected fun updateAtom(old: MnNode.Atom, new: MnNode.Atom) {
         val p = pattern ?: return
+        pushUndo()
         text = MnRenderer.render(replaceAtomIn(p, old, new))
         val newAtom = pattern?.let { findAtomById(it, old.id) }
         cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
@@ -177,6 +237,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     /** Replaces [old] (Atom or Rest) with [new] in the pattern tree and re-renders. */
     protected fun updateNode(old: MnNode, new: MnNode) {
         val p = pattern ?: return
+        pushUndo()
         text = MnRenderer.render(MnPattern(p.items.map { replaceNodeInNode(it, old, new) }))
         if (new is MnNode.Atom) {
             val newAtom = pattern?.let { findAtomById(it, (old as? MnNode.Atom)?.id ?: -1) }
@@ -203,6 +264,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     protected fun onCancel() = props.toolCtx.onCancel()
 
     protected fun onReset() {
+        pushUndo()
         text = initialText()
         cursorOffset = 0
         lastAtom = null
@@ -268,7 +330,13 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
     // ── Template render ───────────────────────────────────────────────────────
 
     override fun VDom.render() {
-        val atom = (selectedAtom ?: lastAtom).also { if (selectedAtom != null) lastAtom = selectedAtom }
+        val atom = (selectedAtom ?: lastAtom).also {
+            if (selectedAtom != null) {
+                lastAtom = selectedAtom; lastRest = null
+            }
+        }
+        val rest = if (atom != null) null else lastRest
+        val selection: MnSelection? = atom?.let { MnSelection.Atom(it) } ?: rest?.let { MnSelection.Rest(it) }
 
         ui.segment {
             css {
@@ -294,6 +362,19 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 mnModifierPanel(atom, onToggleRest = {
                     updateNode(atom, MnNode.Rest(atom.sourceRange))
                 }) { updated -> updateAtom(atom, updated) }
+            } else if (rest != null) {
+                ui.divider {}
+                mnModifierPanel(rest, onToggleNote = {
+                    updateNode(rest, MnNode.Atom(value = staffPositionToAtomValue(6)))
+                    lastRest = null
+                }) { updated ->
+                    updateNode(rest, updated)
+                    // Re-find the rest at the same source position after re-render
+                    lastRest = pattern?.let { p ->
+                        collectStaffItems(p).filterIsInstance<MnNode.Rest>()
+                            .find { it.sourceRange?.first == rest.sourceRange?.first }
+                    }
+                }
             }
 
             div { css { flexGrow = 1.0 } }
@@ -344,18 +425,40 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                         lineItems.filterIsInstance<MnNode.Atom>().find { it.id == a.id }
                     }
 
+                    val lineActiveRest = lastRest?.let { r ->
+                        lineItems.filterIsInstance<MnNode.Rest>().find { it.sourceRange == r.sourceRange }
+                    }
+                    val lineSelection: MnSelection? =
+                        lineActiveAtom?.let { MnSelection.Atom(it) }
+                            ?: lineActiveRest?.let { MnSelection.Rest(it) }
+
                     noteStaffSvg(
                         pattern = linePattern,
-                        activeAtom = lineActiveAtom,
                         atomToPos = ::atomToStaffPosition,
                         posToValue = ::staffPositionToAtomValue,
                         scaleName = keySignatureScaleName(),
                         structuralPattern = lineStructuralPattern,
-                        onAtomSelect = { atom ->
-                            cursorOffset = atom.sourceRange?.first ?: cursorOffset
-                            lastAtom = atom
+                        selection = lineSelection,
+                        onAction = { action ->
+                            when (action) {
+                                is NoteStaffComponent.Action.Select -> when (val sel = action.selection) {
+                                    is MnSelection.Atom -> {
+                                        cursorOffset = sel.node.sourceRange?.first ?: cursorOffset
+                                        lastAtom = sel.node; lastRest = null
+                                    }
+
+                                    is MnSelection.Rest -> {
+                                        cursorOffset = sel.node.sourceRange?.first ?: cursorOffset
+                                        lastRest = sel.node; lastAtom = null
+                                    }
+                                }
+
+                                is NoteStaffComponent.Action.Remove -> removeNode(action.node)
+                                is NoteStaffComponent.Action.Add -> addNote(action.insertAfterAtomId, action.staffPos)
+                                is NoteStaffComponent.Action.Replace -> updateNode(action.old, action.new)
+                            }
                         },
-                    ) { old, new -> updateNode(old, new) }
+                    )
 
                     staffRendered = true
                 }
@@ -363,6 +466,37 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
             lineStart += line.length + 1 // +1 for the '\n'
         }
+    }
+
+    private fun removeNode(node: MnNode) {
+        val range = when (node) {
+            is MnNode.Atom -> node.sourceRange
+            is MnNode.Rest -> node.sourceRange
+            else -> null
+        } ?: return
+        pushUndo()
+        val before = text.substring(0, range.first)
+        val after = text.substring(range.last + 1)
+        text = (before + after).replace(Regex(" {2,}"), " ").trim()
+        cursorOffset = range.first.coerceAtMost(text.length)
+        lastAtom = null
+    }
+
+    private fun addNote(insertAfterAtomId: Int?, staffPos: Int) {
+        val newValue = staffPositionToAtomValue(staffPos)
+        pushUndo()
+        val p = pattern
+        if (p == null || insertAfterAtomId == null) {
+            text = if (text.isBlank()) newValue else "$text $newValue"
+            cursorOffset = text.length
+            return
+        }
+        val afterAtom = findAtomById(p, insertAfterAtomId)
+        val insertPos = (afterAtom?.sourceRange?.last ?: run {
+            text = "$text $newValue"; cursorOffset = text.length; return
+        }) + 1
+        text = text.substring(0, insertPos) + " $newValue" + text.substring(insertPos)
+        cursorOffset = insertPos + 1 + newValue.length
     }
 
     private fun extractLineSubtree(node: MnNode, start: Int, end: Int): MnNode? = when (node) {

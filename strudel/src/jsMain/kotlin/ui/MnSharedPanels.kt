@@ -213,6 +213,73 @@ fun FlowContent.mnModifierPanel(
     }
 }
 
+/**
+ * Renders the modifier chip row for a rest (multiplier, divisor, weight, probability, euclidean)
+ * plus a button to convert it back to a note.
+ *
+ * @param rest The rest whose modifiers are shown.
+ * @param onToggleNote Called when the rest should be converted to a note. Null to hide the button.
+ * @param onRestChange Called when the rest (with updated mods) should replace the original.
+ */
+fun FlowContent.mnModifierPanel(
+    rest: MnNode.Rest,
+    onToggleNote: (() -> Unit)? = null,
+    onRestChange: (MnNode.Rest) -> Unit,
+) {
+    val mods = rest.mods
+    div {
+        css {
+            display = Display.flex
+            flexWrap = FlexWrap.wrap
+            alignItems = Align.center
+            gap = 6.px
+        }
+        span {
+            css { fontSize = 12.px; color = Color("#666"); fontWeight = FontWeight.w600; minWidth = 60.px }
+            +"Mods"
+        }
+
+        if (onToggleNote != null) {
+            span {
+                css {
+                    cursor = Cursor.pointer
+                    fontFamily = "monospace"
+                    fontSize = 13.px
+                    color = Color("#888")
+                    backgroundColor = Color("#f5f5f5")
+                    borderRadius = 6.px
+                    padding = Padding(4.px, 10.px)
+                }
+                attributes["title"] = "Convert to note"
+                onClick { onToggleNote() }
+                +"♩ note"
+            }
+        }
+
+        mnModChip(symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->
+            onRestChange(rest.copy(mods = mods.copy(multiplier = v)))
+        }
+        mnModChip(symbol = "/", tooltip = "Divisor — play slower", current = mods.divisor, default = 2.0, min = 1.0, step = 1.0) { v ->
+            onRestChange(rest.copy(mods = mods.copy(divisor = v)))
+        }
+        mnModChip(symbol = "@", tooltip = "Weight — relative time weight", current = mods.weight, default = 2.0, step = 0.5) { v ->
+            onRestChange(rest.copy(mods = mods.copy(weight = v)))
+        }
+        mnModChip(
+            symbol = "?",
+            tooltip = "Probability — chance of playing",
+            current = mods.probability,
+            default = 0.5,
+            min = 0.0,
+            max = 1.0,
+            step = 0.05
+        ) { v ->
+            onRestChange(rest.copy(mods = mods.copy(probability = v)))
+        }
+        mnEuclideanChipForRest(rest, mods, onRestChange)
+    }
+}
+
 // ── Private chip helpers ──────────────────────────────────────────────────────
 
 private fun FlowContent.mnModChip(
@@ -331,6 +398,55 @@ private fun FlowContent.mnEuclideanChip(
                 css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
                 attributes["title"] = "Add euclidean rhythm"
                 onClick { onAtomChange(atom.copy(mods = mods.copy(euclidean = MnNode.Euclidean(3, 8)))) }
+                +"+"
+            }
+        }
+    }
+}
+
+private fun FlowContent.mnEuclideanChipForRest(
+    rest: MnNode.Rest,
+    mods: MnNode.Mods,
+    onRestChange: (MnNode.Rest) -> Unit,
+) {
+    val e = mods.euclidean
+    div {
+        css {
+            display = Display.flex
+            alignItems = Align.center
+            gap = 4.px
+            backgroundColor = Color("#f5f5f5")
+            borderRadius = 6.px
+            padding = Padding(4.px, 8.px)
+        }
+        span {
+            css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+            attributes["title"] = "Euclidean rhythm (pulses, steps, rotation)"
+            +"(,)"
+        }
+        if (e != null) {
+            mnEuclideanInput("pulses", e.pulses, 1) { v ->
+                onRestChange(rest.copy(mods = mods.copy(euclidean = e.copy(pulses = v))))
+            }
+            span { css { color = Color("#999"); fontSize = 12.px }; +"," }
+            mnEuclideanInput("steps", e.steps, 1) { v ->
+                onRestChange(rest.copy(mods = mods.copy(euclidean = e.copy(steps = v))))
+            }
+            span { css { color = Color("#999"); fontSize = 12.px }; +"," }
+            mnEuclideanInput("rotation", e.rotation, 0) { v ->
+                onRestChange(rest.copy(mods = mods.copy(euclidean = e.copy(rotation = v))))
+            }
+            span {
+                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                attributes["title"] = "Remove euclidean"
+                onClick { onRestChange(rest.copy(mods = mods.copy(euclidean = null))) }
+                +"×"
+            }
+        } else {
+            span {
+                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                attributes["title"] = "Add euclidean rhythm"
+                onClick { onRestChange(rest.copy(mods = mods.copy(euclidean = MnNode.Euclidean(3, 8)))) }
                 +"+"
             }
         }
