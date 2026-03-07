@@ -251,7 +251,7 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
 /**
  * Sets the sound index on this pattern.
  *
- * When param [n] is null, the sequence values will be reinterpreted as sound index.
+ * When param [index] is null, the sequence values will be reinterpreted as sound index.
  *
  * ```KlangScript
  * n("0 2 4").scale("c4:major").note()   // indices 0, 2, 4 → C4, E4, G4
@@ -261,8 +261,8 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
  * s("hh").n("0 1 2")                    // selects different hh samples by index
  * ```
  *
- * @param n The sound index to set, or null to reparse sequence values as sound index.
- * @param-tool n StrudelScaleDegreeEditor
+ * @param index The sound index to set, or null to reparse sequence values as sound index.
+ * @param-tool index StrudelScaleDegreeEditor
  *
  * @category tonal
  * @tags n, note number, sample index, pitch index, pattern-creator
@@ -273,7 +273,8 @@ fun StrudelPattern.n(index: PatternLike? = null): StrudelPattern =
 
 /** Sets the sound index on this string pattern. */
 @StrudelDsl
-fun String.n(index: PatternLike): StrudelPattern = this._n(listOf(index).asStrudelDslArgs())
+fun String.n(index: PatternLike? = null): StrudelPattern =
+    this._n(listOfNotNull(index).asStrudelDslArgs())
 
 /**
  * Creates a pattern of sound indices.
