@@ -109,6 +109,33 @@ class MnRoundTripSpec : StringSpec() {
         "choice chain 'a | b | c'" { assertRoundTrip("a | b | c") }
         "choice with modifier 'a | b*2'" { assertRoundTrip("a | b*2") }
 
+        // ── Linebreaks ────────────────────────────────────────────────────────
+
+        "linebreak: two lines 'bd sd\\nhh cp'" { assertRoundTrip("bd sd\nhh cp") }
+        "linebreak: three lines 'a b\\nc d\\ne f'" { assertRoundTrip("a b\nc d\ne f") }
+        "linebreak: consecutive linebreaks 'a b\\n\\nc d'" { assertRoundTrip("a b\n\nc d") }
+        "linebreak: leading linebreak '\\nbd sd'" { assertRoundTrip("\nbd sd") }
+        "linebreak: trailing linebreak 'bd sd\\n'" { assertRoundTrip("bd sd\n") }
+        "linebreak: with modifiers 'bd*2\\nsd/2'" { assertRoundTrip("bd*2\nsd/2") }
+        "linebreak: with groups 'bd [sd hh]\\ncp ~'" { assertRoundTrip("bd [sd hh]\ncp ~") }
+        "linebreak: AST contains Linebreak node" {
+            val p = parse("bd sd\nhh cp")
+            p.items.any { it is MnNode.Linebreak } shouldBe true
+        }
+        "linebreak: splitOnLinebreaks produces two segments" {
+            val p = parse("bd sd\nhh cp")
+            val lines = p.splitOnLinebreaks()
+            lines.size shouldBe 2
+            lines[0].items.size shouldBe 2 // bd, sd
+            lines[1].items.size shouldBe 2 // hh, cp
+        }
+        "linebreak: consecutive linebreaks produce empty middle segment" {
+            val p = parse("a b\n\nc d")
+            val lines = p.splitOnLinebreaks()
+            lines.size shouldBe 3
+            lines[1].items shouldBe emptyList()
+        }
+
         // ── Complex combinations ──────────────────────────────────────────────
 
         "complex 'bd sd [hh cp] ~'" { assertRoundTrip("bd sd [hh cp] ~") }
@@ -140,4 +167,5 @@ private fun MnNode.stripSourceRanges(): MnNode = when (this) {
     is MnNode.Stack -> copy(layers = layers.map { layer -> layer.map { it.stripSourceRanges() } })
     is MnNode.Repeat -> copy(node = node.stripSourceRanges())
     is MnNode.Rest -> this
+    is MnNode.Linebreak -> this
 }

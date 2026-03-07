@@ -59,7 +59,17 @@ sealed class MnNode {
         val sourceColumn: Int? = null,
         /** The modifiers */
         val mods: Mods = Mods.None,
-    ) : MnNode()
+    ) : MnNode() {
+        /**
+         * Stable identity key within a single parse — equals [sourceRange]`.first`, or -1 when
+         * no source location is available (e.g. programmatically constructed atoms).
+         *
+         * Two atoms in the same [MnPattern] always have distinct ids (≥ 0).
+         * Use this instead of reference equality (`===`) or value-string matching when you
+         * need to re-find an atom in a re-parsed tree after a text edit.
+         */
+        val id: Int get() = sourceRange?.first ?: -1
+    }
 
     /**
      * Bracketed sub-expression `[ … ]`.
@@ -118,6 +128,9 @@ sealed class MnNode {
     /** Silence `~`. */
     object Rest : MnNode()
 
+    /** Line break in a multi-line mini-notation string. Carries no musical meaning; used for visual layout. */
+    object Linebreak : MnNode()
+
     // ── Modifier application helpers ─────────────────────────────────────────
 
     /** Returns a copy of this node with [transform] applied to its [Mods]. */
@@ -128,7 +141,8 @@ sealed class MnNode {
         is Choice -> copy(mods = mods.transform())
         is Stack -> copy(mods = mods.transform())
         is Repeat -> copy(mods = mods.transform())
-        is Rest -> this  // Rest has no modifiers (always silent)
+        is Rest -> this
+        is Linebreak -> this
     }
 
     fun modsOrNull(): Mods? = when (this) {
@@ -139,6 +153,7 @@ sealed class MnNode {
         is Stack -> mods
         is Repeat -> mods
         is Rest -> null
+        is Linebreak -> null
     }
 }
 
@@ -156,5 +171,26 @@ data class MnPattern(val items: List<MnNode>) {
         val Empty = MnPattern(items = emptyList())
 
         fun of(vararg nodes: MnNode) = MnPattern(items = nodes.toList())
+    }
+
+    /**
+     * Splits the top-level item list on [MnNode.Linebreak] nodes.
+     *
+     * Each [MnNode.Linebreak] acts as a line separator. The result always contains
+     * at least one entry; consecutive linebreaks produce empty [MnPattern]s.
+     */
+    fun splitOnLinebreaks(): List<MnPattern> {
+        val result = mutableListOf<MnPattern>()
+        var current = mutableListOf<MnNode>()
+        for (item in items) {
+            if (item is MnNode.Linebreak) {
+                result.add(MnPattern(current))
+                current = mutableListOf()
+            } else {
+                current.add(item)
+            }
+        }
+        result.add(MnPattern(current))
+        return result
     }
 }

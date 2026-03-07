@@ -59,9 +59,9 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : Component<Strudel
     // ── Derived ───────────────────────────────────────────────────────────────
 
     /**
-     * Memoised parse results keyed by text — re-parses only on new input.
-     * Stable object identity is required so that reference-equality checks in
-     * [replaceAtomInNode] (`node === old`) correctly locate the atom to replace.
+     * Memoised parse results keyed by text — avoids redundant re-parses.
+     * No longer a correctness requirement (atom identity is tracked via [MnNode.Atom.id]);
+     * kept as a pure performance optimisation.
      */
     private val patternCache = mutableMapOf<String, MnPattern?>()
 
@@ -123,6 +123,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : Component<Strudel
             is MnNode.Choice -> node.options.forEach { collectAtomsInNode(it, list) }
             is MnNode.Repeat -> collectAtomsInNode(node.node, list)
             is MnNode.Rest -> {}
+            is MnNode.Linebreak -> {}
         }
     }
 
@@ -134,6 +135,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : Component<Strudel
         is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomInNode(it, offset) }
         is MnNode.Repeat -> findAtomInNode(node.node, offset)
         is MnNode.Rest -> null
+        is MnNode.Linebreak -> null
     }
 
     // ── Atom update ───────────────────────────────────────────────────────────
@@ -142,8 +144,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : Component<Strudel
     private fun updateAtom(old: MnNode.Atom, new: MnNode.Atom) {
         val p = pattern ?: return
         text = MnRenderer.render(replaceAtomIn(p, old, new))
-        // Try to restore cursor and lastAtom to the updated atom in the new string
-        val newAtom = pattern?.let { findAtomByValue(it, new.value) }
+        val newAtom = pattern?.let { findAtomById(it, old.id) }
         cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
         lastAtom = newAtom ?: lastAtom
     }
@@ -152,26 +153,28 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : Component<Strudel
         MnPattern(p.items.map { replaceAtomInNode(it, old, new) })
 
     private fun replaceAtomInNode(node: MnNode, old: MnNode.Atom, new: MnNode.Atom): MnNode = when (node) {
-        is MnNode.Atom -> if (node === old) new else node
+        is MnNode.Atom -> if (node.id == old.id) new else node
         is MnNode.Group -> node.copy(items = node.items.map { replaceAtomInNode(it, old, new) })
         is MnNode.Alternation -> node.copy(items = node.items.map { replaceAtomInNode(it, old, new) })
         is MnNode.Stack -> node.copy(layers = node.layers.map { l -> l.map { replaceAtomInNode(it, old, new) } })
         is MnNode.Choice -> node.copy(options = node.options.map { replaceAtomInNode(it, old, new) })
         is MnNode.Repeat -> node.copy(node = replaceAtomInNode(node.node, old, new))
         is MnNode.Rest -> node
+        is MnNode.Linebreak -> node
     }
 
-    private fun findAtomByValue(p: MnPattern, value: String): MnNode.Atom? =
-        p.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
+    private fun findAtomById(p: MnPattern, id: Int): MnNode.Atom? =
+        if (id < 0) null else p.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
 
-    private fun findAtomByValueInNode(node: MnNode, value: String): MnNode.Atom? = when (node) {
-        is MnNode.Atom -> node.takeIf { it.value == value }
-        is MnNode.Group -> node.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
-        is MnNode.Alternation -> node.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
-        is MnNode.Stack -> node.layers.flatten().firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
-        is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
-        is MnNode.Repeat -> findAtomByValueInNode(node.node, value)
+    private fun findAtomByIdInNode(node: MnNode, id: Int): MnNode.Atom? = when (node) {
+        is MnNode.Atom -> node.takeIf { it.id == id }
+        is MnNode.Group -> node.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
+        is MnNode.Alternation -> node.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
+        is MnNode.Stack -> node.layers.flatten().firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
+        is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
+        is MnNode.Repeat -> findAtomByIdInNode(node.node, id)
         is MnNode.Rest -> null
+        is MnNode.Linebreak -> null
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────
@@ -204,7 +207,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : Component<Strudel
             mnPatternTextInput(text, atom, parseError) { newText, cursor ->
                 text = newText
                 cursorOffset = cursor
-                lastAtom = lastAtom?.value?.let { v -> pattern?.let { p -> findAtomByValue(p, v) } }
+                lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
             }
 
             if (atom != null) {

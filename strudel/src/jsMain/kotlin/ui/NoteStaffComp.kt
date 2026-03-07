@@ -37,7 +37,7 @@ fun FlowContent.noteStaffSvg(
     posToValue: (Int) -> String,
     onAtomChange: (MnNode.Atom, MnNode.Atom) -> Unit,
 ) {
-    NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, onAtomChange)
+    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, onAtomChange)
 }
 
 @Suppress("FunctionName")
@@ -80,7 +80,7 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
 
     // ── Drag state ────────────────────────────────────────────────────────────
 
-    private var dragAtomIdx: Int? = null
+    private var dragAtomId: Int? = null
     private var dragStartY: Double = 0.0
     private var dragStartPos: Int = 0
     private var dragPreviewPos: Int? = null
@@ -101,7 +101,8 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             is MnNode.Stack -> node.layers.firstOrNull()?.forEach { collectStaffNodes(it, list) }
             is MnNode.Choice -> node.options.forEach { collectStaffNodes(it, list) }
             is MnNode.Repeat -> collectStaffNodes(node.node, list)
-            is MnNode.Rest -> {} // rests have no Atom; rendered separately via pattern walk
+            is MnNode.Rest -> {}
+            is MnNode.Linebreak -> {}
         }
     }
 
@@ -117,14 +118,14 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
 
     private val onMouseUpWindow: (Event) -> Unit = upHandler@{ e ->
         val me = e as? MouseEvent ?: return@upHandler
-        val idx = dragAtomIdx ?: return@upHandler
+        val atomId = dragAtomId ?: return@upHandler
         val delta = ((dragStartY - me.clientY) / HALF_STEP).roundToInt()
         val newPos = dragStartPos + delta
-        val atom = atoms.getOrNull(idx)
+        val atom = atoms.find { it.id == atomId }
         if (atom != null) {
             props.onAtomChange(atom, atom.copy(value = props.posToValue(newPos)))
         }
-        dragAtomIdx = null
+        dragAtomId = null
         dragPreviewPos = null
         window.removeEventListener("mousemove", onMouseMoveWindow)
         window.removeEventListener("mouseup", onMouseUpWindow)
@@ -152,12 +153,12 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             }
             onMouseDown { e ->
                 val target = e.target?.asDynamic()
-                val idxStr = target?.dataset?.atomIdx as? String ?: return@onMouseDown
+                val atomIdStr = target?.dataset?.atomId as? String ?: return@onMouseDown
                 val posStr = target.dataset.staffPos as? String ?: return@onMouseDown
-                val idx = idxStr.toIntOrNull() ?: return@onMouseDown
+                val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
                 val pos = posStr.toIntOrNull() ?: return@onMouseDown
                 e.preventDefault()
-                dragAtomIdx = idx
+                dragAtomId = atomId
                 dragStartY = e.clientY.toDouble()
                 dragStartPos = pos
                 dragPreviewPos = pos
@@ -190,21 +191,21 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         // Note heads
         for ((idx, atom) in currentAtoms.withIndex()) {
             val x = LEFT_MARGIN + idx * NOTE_COL_W
-            renderAtomSvg(sb, atom, idx, x)
+            renderAtomSvg(sb, atom, x)
         }
 
         sb.append("</svg>")
         return sb.toString()
     }
 
-    private fun renderAtomSvg(sb: StringBuilder, atom: MnNode.Atom, idx: Int, x: Double) {
-        val isActive = atom === props.activeAtom
-        val isDragging = dragAtomIdx == idx
+    private fun renderAtomSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double) {
+        val isActive = atom.id == props.activeAtom?.id
+        val isDragging = dragAtomId == atom.id
         val pos = if (isDragging) dragPreviewPos ?: dragStartPos else props.atomToPos(atom.value)
 
         if (pos == null) {
             // Unknown value — render a "?" at C4 position
-            renderUnknownSvg(sb, atom, idx, x, isActive)
+            renderUnknownSvg(sb, atom, x, isActive)
             return
         }
 
@@ -239,21 +240,21 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         sb.append(
             """<ellipse cx="$x" cy="$y" rx="$NOTE_RADIUS_X" ry="$NOTE_RADIUS_Y" """ +
                     """fill="$noteColor" stroke="$strokeColor" stroke-width="$strokeWidth" """ +
-                    """data-atom-idx="$idx" data-staff-pos="$pos" style="cursor:grab"/>"""
+                    """data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:grab"/>"""
         )
 
         // Accidental text if needed
         renderAccidental(sb, atom.value, x, y)
     }
 
-    private fun renderUnknownSvg(sb: StringBuilder, atom: MnNode.Atom, idx: Int, x: Double, isActive: Boolean) {
+    private fun renderUnknownSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, isActive: Boolean) {
         val pos = 0 // C4
         val y = staffPosToY(pos)
         renderLedgerLines(sb, pos, x)
         val color = if (isActive) "#2266cc" else "#999"
         sb.append(
             """<text x="$x" y="${y + 4}" text-anchor="middle" font-size="14" fill="$color" """ +
-                    """data-atom-idx="$idx" data-staff-pos="$pos" style="cursor:default;user-select:none">?</text>"""
+                    """data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:default;user-select:none">?</text>"""
         )
     }
 

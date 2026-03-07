@@ -35,8 +35,9 @@ object MnPatternToStrudelPattern {
         baseLocation: SourceLocation?,
         atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
     ): StrudelPattern {
+        // Linebreaks are visual-only — ignore them during pattern conversion.
         // Expand Repeat nodes that carry no mods — they contribute multiple flat sequence items.
-        val flat = nodes.flatMap { expandRepeat(it) }
+        val flat = nodes.filter { it !is MnNode.Linebreak }.flatMap { expandRepeat(it) }
         return when {
             flat.isEmpty() -> silence
             flat.size == 1 -> nodeToPattern(flat[0], baseLocation, atomFactory)
@@ -63,6 +64,7 @@ object MnPatternToStrudelPattern {
         is MnNode.Stack -> stackToPattern(node, baseLocation, atomFactory)
         is MnNode.Repeat -> repeatToPattern(node, baseLocation, atomFactory)
         is MnNode.Rest -> silence
+        is MnNode.Linebreak -> silence
     }
 
     // ── Atom ──────────────────────────────────────────────────────────────
@@ -98,8 +100,8 @@ object MnPatternToStrudelPattern {
         atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
     ): StrudelPattern {
         if (node.items.isEmpty()) return silence
-        // Expand bare Repeat nodes so <bd!2 sd> still means 3 alternation slots
-        val flat = node.items.flatMap { expandRepeat(it) }
+        // Expand bare Repeat nodes so <bd!2 sd> still means 3 alternation slots; strip Linebreaks
+        val flat = node.items.filter { it !is MnNode.Linebreak }.flatMap { expandRepeat(it) }
         val items = flat.map { nodeToPattern(it, baseLocation, atomFactory) }
         // <a b c> = seq(a, b, c).slow(n) — each item takes one full cycle
         val base = seq(*items.toTypedArray()).slow(items.size.toDouble())

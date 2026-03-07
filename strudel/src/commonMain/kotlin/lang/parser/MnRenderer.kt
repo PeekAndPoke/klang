@@ -15,8 +15,19 @@ object MnRenderer {
 
     // ── Layer ─────────────────────────────────────────────────────────────
 
-    private fun renderLayer(nodes: List<MnNode>): String =
-        nodes.joinToString(" ") { renderNode(it) }
+    private fun renderLayer(nodes: List<MnNode>): String = buildString {
+        var needSpace = false
+        for (node in nodes) {
+            if (node is MnNode.Linebreak) {
+                append("\n")
+                needSpace = false
+            } else {
+                if (needSpace) append(" ")
+                append(renderNode(node))
+                needSpace = true
+            }
+        }
+    }
 
     // ── Node ──────────────────────────────────────────────────────────────
 
@@ -49,6 +60,8 @@ object MnRenderer {
         is MnNode.Repeat -> renderNode(node.node) + "!${node.count}" + renderMods(node.mods)
 
         is MnNode.Rest -> "~"
+
+        is MnNode.Linebreak -> "\n"
     }
 
     // ── Mods ──────────────────────────────────────────────────────────────

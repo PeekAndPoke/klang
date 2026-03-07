@@ -181,6 +181,8 @@ class MiniNotationParser(
 
         match(TokenType.TILDE) -> MnNode.Rest
 
+        match(TokenType.LINEBREAK) -> MnNode.Linebreak
+
         match(TokenType.LITERAL) -> {
             val token = previous()
             MnNode.Atom(
@@ -251,7 +253,7 @@ class MiniNotationParser(
 
     private enum class TokenType {
         L_BRACKET, R_BRACKET, L_ANGLE, R_ANGLE, L_PAREN, R_PAREN,
-        COMMA, STAR, SLASH, TILDE, AT, PIPE, QUESTION, BANG, LITERAL
+        COMMA, STAR, SLASH, TILDE, AT, PIPE, QUESTION, BANG, LITERAL, LINEBREAK
     }
 
     private val modifierTypes = setOf(
@@ -293,6 +295,7 @@ class MiniNotationParser(
             val c = input[i]
             when (c) {
                 '\n' -> {
+                    addToken(TokenType.LINEBREAK, "\n", i, i + 1, line, column)
                     i++; line++; column = 1
                 }
 

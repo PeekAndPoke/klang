@@ -45,9 +45,9 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
     // ── Parse cache ───────────────────────────────────────────────────────────
 
     /**
-     * Memoised parse results keyed by text — re-parses only on new input.
-     * Stable object identity is required so that reference-equality checks in
-     * [replaceAtomInNode] (`node === old`) correctly locate the atom to replace.
+     * Memoised parse results keyed by text — avoids redundant re-parses.
+     * No longer a correctness requirement (atom identity is tracked via [MnNode.Atom.id]);
+     * kept as a pure performance optimisation.
      */
     protected val patternCache = mutableMapOf<String, MnPattern?>()
 
@@ -118,6 +118,7 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
             is MnNode.Choice -> node.options.forEach { collectAtomsInNode(it, list) }
             is MnNode.Repeat -> collectAtomsInNode(node.node, list)
             is MnNode.Rest -> {}
+            is MnNode.Linebreak -> {}
         }
     }
 
@@ -129,6 +130,7 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
         is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomInNode(it, offset) }
         is MnNode.Repeat -> findAtomInNode(node.node, offset)
         is MnNode.Rest -> null
+        is MnNode.Linebreak -> null
     }
 
     // ── Atom update ───────────────────────────────────────────────────────────
@@ -137,7 +139,8 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
     protected fun updateAtom(old: MnNode.Atom, new: MnNode.Atom) {
         val p = pattern ?: return
         text = MnRenderer.render(replaceAtomIn(p, old, new))
-        val newAtom = pattern?.let { findAtomByValue(it, new.value) }
+        // Re-find the updated atom by its original source position in the freshly rendered text.
+        val newAtom = pattern?.let { findAtomById(it, old.id) }
         cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
         lastAtom = newAtom ?: lastAtom
     }
@@ -146,26 +149,28 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
         MnPattern(p.items.map { replaceAtomInNode(it, old, new) })
 
     private fun replaceAtomInNode(node: MnNode, old: MnNode.Atom, new: MnNode.Atom): MnNode = when (node) {
-        is MnNode.Atom -> if (node === old) new else node
+        is MnNode.Atom -> if (node.id == old.id) new else node
         is MnNode.Group -> node.copy(items = node.items.map { replaceAtomInNode(it, old, new) })
         is MnNode.Alternation -> node.copy(items = node.items.map { replaceAtomInNode(it, old, new) })
         is MnNode.Stack -> node.copy(layers = node.layers.map { l -> l.map { replaceAtomInNode(it, old, new) } })
         is MnNode.Choice -> node.copy(options = node.options.map { replaceAtomInNode(it, old, new) })
         is MnNode.Repeat -> node.copy(node = replaceAtomInNode(node.node, old, new))
         is MnNode.Rest -> node
+        is MnNode.Linebreak -> node
     }
 
-    protected fun findAtomByValue(p: MnPattern, value: String): MnNode.Atom? =
-        p.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
+    protected fun findAtomById(p: MnPattern, id: Int): MnNode.Atom? =
+        if (id < 0) null else p.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
 
-    private fun findAtomByValueInNode(node: MnNode, value: String): MnNode.Atom? = when (node) {
-        is MnNode.Atom -> node.takeIf { it.value == value }
-        is MnNode.Group -> node.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
-        is MnNode.Alternation -> node.items.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
-        is MnNode.Stack -> node.layers.flatten().firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
-        is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomByValueInNode(it, value) }
-        is MnNode.Repeat -> findAtomByValueInNode(node.node, value)
+    private fun findAtomByIdInNode(node: MnNode, id: Int): MnNode.Atom? = when (node) {
+        is MnNode.Atom -> node.takeIf { it.id == id }
+        is MnNode.Group -> node.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
+        is MnNode.Alternation -> node.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
+        is MnNode.Stack -> node.layers.flatten().firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
+        is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
+        is MnNode.Repeat -> findAtomByIdInNode(node.node, id)
         is MnNode.Rest -> null
+        is MnNode.Linebreak -> null
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────
@@ -195,7 +200,7 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
             mnPatternTextInput(text, atom, parseError) { newText, cursor ->
                 text = newText
                 cursorOffset = cursor
-                lastAtom = lastAtom?.value?.let { v -> pattern?.let { p -> findAtomByValue(p, v) } }
+                lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
             }
 
             renderExtraControls()
@@ -219,59 +224,32 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
     // ── Staff rendering ───────────────────────────────────────────────────────
 
     /**
-     * Renders one [noteStaffSvg] per line of [text].
+     * Renders one [NoteStaffComp] per line.
      *
-     * Each line is parsed independently so notes stay in their own staff row.
-     * The active atom for each line is found by mapping [cursorOffset] to a
-     * line-local character offset.
+     * The full pattern (which contains [MnNode.Linebreak] nodes) is split on those
+     * linebreaks. Each non-empty segment is rendered as its own staff row.
      */
     private fun FlowContent.renderStaves() {
-        val lines = text.split('\n')
-        var lineStart = 0
+        val p = pattern ?: return
         var staffRendered = false
 
-        for ((lineIdx, line) in lines.withIndex()) {
-            if (line.isBlank()) {
-                lineStart += line.length + 1
-                continue
-            }
+        for (linePattern in p.splitOnLinebreaks()) {
+            if (linePattern.items.isEmpty()) continue
 
             if (staffRendered) {
                 div { css { height = 8.px } }
             }
 
-            // Parse the line independently, reusing the shared cache
-            val linePattern = patternCache.getOrPut(line) {
-                try {
-                    parseMiniNotationMnPattern(line)
-                } catch (_: Exception) {
-                    null
-                }
-            }
-
-            // Map cursor to this line's local offset (only if cursor is within this line)
-            val lineEnd = lineStart + line.length
-            val lineActiveAtom = if (cursorOffset in lineStart..lineEnd) {
-                linePattern?.let { findAtomAt(it, cursorOffset - lineStart) }
-            } else null
+            val lineActiveAtom = selectedAtom?.let { a -> findAtomById(linePattern, a.id) }
 
             noteStaffSvg(
                 pattern = linePattern,
                 activeAtom = lineActiveAtom,
                 atomToPos = ::atomToStaffPosition,
                 posToValue = ::staffPositionToAtomValue,
-            ) { old, new ->
-                val updatedLine = linePattern?.let {
-                    MnRenderer.render(replaceAtomIn(it, old, new))
-                } ?: line
-                val newLines = lines.toMutableList()
-                newLines[lineIdx] = updatedLine
-                text = newLines.joinToString("\n")
-                lastAtom = lastAtom?.value?.let { v -> pattern?.let { p -> findAtomByValue(p, v) } }
-            }
+            ) { old, new -> updateAtom(old, new) }
 
             staffRendered = true
-            lineStart += line.length + 1 // +1 for the '\n'
         }
     }
 
