@@ -25,11 +25,11 @@ import kotlin.math.roundToInt
 /**
  * Renders an interactive treble-clef staff SVG for editing note atoms and rests.
  *
- * - Drag a note head up/down to change pitch; emits [NoteStaffComponent.Action.Replace].
- * - Double-click a note or rest to delete it; emits [NoteStaffComponent.Action.Remove].
- * - Double-click empty staff area to insert a note; emits [NoteStaffComponent.Action.Add].
- * - Right-click a note/rest to toggle note ↔ rest; emits [NoteStaffComponent.Action.Replace].
- * - Single-click a note or rest to select it; emits [NoteStaffComponent.Action.Select].
+ * - Drag a note head up/down to change pitch; emits [NoteStaffEditor.Action.Replace].
+ * - Double-click a note or rest to delete it; emits [NoteStaffEditor.Action.Remove].
+ * - Double-click empty staff area to insert a note; emits [NoteStaffEditor.Action.Add].
+ * - Right-click a note/rest to toggle note ↔ rest; emits [NoteStaffEditor.Action.Replace].
+ * - Single-click a note or rest to select it; emits [NoteStaffEditor.Action.Select].
  * - The [selection] node is highlighted with a blue stroke.
  */
 internal fun FlowContent.noteStaffSvg(
@@ -46,7 +46,7 @@ internal fun FlowContent.noteStaffSvg(
     /** Currently selected atom or rest — highlighted with a blue stroke. */
     selection: MnSelection? = null,
     /** Receives all user interactions with the staff. */
-    onAction: (NoteStaffComponent.Action) -> Unit = {},
+    onAction: (NoteStaffEditor.Action) -> Unit = {},
 ) {
     this@noteStaffSvg.NoteStaffComp(
         pattern, atomToPos, posToValue, scaleName, structuralPattern, selection, onAction,
@@ -61,16 +61,16 @@ private fun Tag.NoteStaffComp(
     scaleName: String?,
     structuralPattern: MnPattern?,
     selection: MnSelection?,
-    onAction: (NoteStaffComponent.Action) -> Unit,
+    onAction: (NoteStaffEditor.Action) -> Unit,
 ) = comp(
-    NoteStaffComponent.Props(
+    NoteStaffEditor.Props(
         pattern, atomToPos, posToValue, scaleName, structuralPattern, selection, onAction,
     )
-) { NoteStaffComponent(it) }
+) { NoteStaffEditor(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent.Props>(ctx) {
+internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Props>(ctx) {
 
     // ── Action type ───────────────────────────────────────────────────────────
 
@@ -584,7 +584,7 @@ internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponen
         val w = NOTE_RADIUS_X * 2.4
         val h = HALF_STEP * 0.75
         val stroke = if (isActive) """ stroke="#2266cc" stroke-width="2"""" else ""
-        sb.append("""<g data-rest-range-start="$rangeStart" style="cursor:pointer">""")
+        sb.append("""<g data-rest-range-start="$rangeStart" style="cursor:default">""")
         sb.append(
             """<rect x="${x - w / 2}" y="${lineY - h}" width="$w" height="$h" rx="1" """ +
                     """fill="${if (isActive) "#3355aa" else "#444"}"$stroke/>"""
@@ -615,7 +615,7 @@ internal class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponen
         val strokeWidth = if (isActive || isDragging) 2.0 else 1.2
 
         // Wrap all parts in a <g> so `closest("[data-atom-id]")` works from stem, accidental, etc.
-        sb.append("""<g data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:grab">""")
+        sb.append("""<g data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:default">""")
 
         renderLedgerLines(sb, pos, x, topY)
 

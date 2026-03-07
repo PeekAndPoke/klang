@@ -438,7 +438,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                         selection = lineSelection,
                         onAction = { action ->
                             when (action) {
-                                is NoteStaffComponent.Action.Select -> when (val sel = action.selection) {
+                                is NoteStaffEditor.Action.Select -> when (val sel = action.selection) {
                                     is MnSelection.Atom -> {
                                         cursorOffset = sel.node.sourceRange?.first ?: cursorOffset
                                         lastAtom = sel.node; lastRest = null
@@ -450,9 +450,9 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                                     }
                                 }
 
-                                is NoteStaffComponent.Action.Remove -> removeNode(action.node)
-                                is NoteStaffComponent.Action.Add -> addNote(action.insertAfterAtomId, action.staffPos)
-                                is NoteStaffComponent.Action.Replace -> updateNode(action.old, action.new)
+                                is NoteStaffEditor.Action.Remove -> removeNode(action.node)
+                                is NoteStaffEditor.Action.Add -> addNote(action.insertAfterAtomId, action.staffPos)
+                                is NoteStaffEditor.Action.Replace -> updateNode(action.old, action.new)
                             }
                         },
                     )
