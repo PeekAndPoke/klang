@@ -43,7 +43,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.100.8"
+        private const val ultra_version = "0.100.9"
 
         object Ultra {
             const val common = "io.peekandpoke.ultra:common:$ultra_version"

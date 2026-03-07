@@ -4,20 +4,22 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.*
+import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.onContextMenu
+import de.peekandpoke.ultra.html.onMouseDown
+import de.peekandpoke.ultra.html.onMouseLeave
+import de.peekandpoke.ultra.html.onMouseMove
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
+import io.peekandpoke.klang.ui.DblClickCtrl
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
-import io.peekandpoke.klang.ui.*
 import kotlinx.browser.window
 import kotlinx.css.Overflow
 import kotlinx.css.UserSelect
 import kotlinx.css.overflowX
 import kotlinx.css.userSelect
-import kotlinx.html.FlowContent
-import kotlinx.html.Tag
-import kotlinx.html.div
+import kotlinx.html.*
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
 import kotlin.math.roundToInt
@@ -189,6 +191,11 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
     private var dragStartPos: Int = 0
     private var dragPreviewPos: Int? = null
 
+    private val dblClick = DblClickCtrl()
+
+    /** Set to true when a double-click removal was handled in onMouseDown, so onDblClick skips insertion. */
+    private var doubleClickHandled: Boolean = false
+
     // ── Layout snapshot (updated each render, used for click-to-insert) ────────
 
     /** topY of the last rendered staff, used to map click Y → staff position. */
@@ -290,137 +297,132 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                 overflowX = Overflow.auto
                 userSelect = UserSelect.none
             }
-            onMouseDown(::handleMouseDown)
-            onDblClick(::handleDblClick)
-            onContextMenu(::handleContextMenu)
-            onMouseMove(::handleMouseMove)
-            onMouseLeave { handleMouseLeave() }
-            renderSvg()
-        }
-    }
+            onMouseDown { e ->
+                val element = e.target as? org.w3c.dom.Element
+                doubleClickHandled = false
 
-    // ── Event handlers ────────────────────────────────────────────────────────
+                // Rest click
+                val restEl = element?.closest("[data-rest-range-start]")
+                if (restEl != null) {
+                    val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onMouseDown
+                    val rest = staffItems.filterIsInstance<MnNode.Rest>()
+                        .find { it.sourceRange?.first == rangeStart } ?: return@onMouseDown
+                    dblClick(rangeStart) {
+                        doubleClickHandled = true
+                        props.onAction(Action.Remove(rest))
+                    }
+                    if (!doubleClickHandled) props.onAction(Action.Select(MnSelection.Rest(rest)))
+                    return@onMouseDown
+                }
 
-    private fun handleMouseDown(e: MouseEvent) {
-        val element = e.target as? org.w3c.dom.Element
+                // Note click → double-click removes, single click starts drag
+                val noteEl = element?.closest("[data-atom-id]") ?: return@onMouseDown
+                val atomIdStr = noteEl.getAttribute("data-atom-id") ?: return@onMouseDown
+                val posStr = noteEl.getAttribute("data-staff-pos") ?: return@onMouseDown
+                val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
+                val pos = posStr.toIntOrNull() ?: return@onMouseDown
+                val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
 
-        // Rest click → select
-        val restEl = element?.closest("[data-rest-range-start]")
-        if (restEl != null) {
-            val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return
-            val rest = staffItems.filterIsInstance<MnNode.Rest>()
-                .find { it.sourceRange?.first == rangeStart } ?: return
-            props.onAction(Action.Select(MnSelection.Rest(rest)))
-            return
-        }
+                if (atom != null) {
+                    dblClick(atomId) {
+                        doubleClickHandled = true
+                        props.onAction(Action.Remove(atom))
+                    }
+                }
+                if (doubleClickHandled) return@onMouseDown
 
-        // Note click → start drag (select emitted on mouseup when delta == 0)
-        val noteEl = element?.closest("[data-atom-id]") ?: return
-        val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return
-        val pos = noteEl.getAttribute("data-staff-pos")?.toIntOrNull() ?: return
-
-        e.preventDefault()
-        dragAtomId = atomId
-        dragStartY = e.clientY.toDouble()
-        dragStartPos = pos
-        dragPreviewPos = pos
-        window.addEventListener("mousemove", onMouseMoveWindow)
-        window.addEventListener("mouseup", onMouseUpWindow)
-        triggerRedraw()
-    }
-
-    // Double-click: remove atom/rest, or insert on empty area.
-    // The VDom DSL keeps DOM nodes stable across redraws (keyed elements),
-    // so the native dblclick event fires reliably.
-    private fun handleDblClick(e: MouseEvent) {
-        val element = e.target as? org.w3c.dom.Element
-
-        // Double-click on atom → remove
-        val noteEl = element?.closest("[data-atom-id]")
-        if (noteEl != null) {
-            val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return
-            val atom = staffItems.filterIsInstance<MnNode.Atom>()
-                .find { it.id == atomId } ?: return
-            props.onAction(Action.Remove(atom))
-            return
-        }
-
-        // Double-click on rest → remove
-        val restEl = element?.closest("[data-rest-range-start]")
-        if (restEl != null) {
-            val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return
-            val rest = staffItems.filterIsInstance<MnNode.Rest>()
-                .find { it.sourceRange?.first == rangeStart } ?: return
-            props.onAction(Action.Remove(rest))
-            return
-        }
-
-        // Double-click on empty staff area → insert
-        val container = e.currentTarget as? org.w3c.dom.Element
-        val svg = container?.querySelector("svg") ?: return
-        val rect = svg.getBoundingClientRect()
-        val (afterId, staffPos) = computeInsertionPoint(e.clientX - rect.left, e.clientY - rect.top)
-        props.onAction(Action.Add(afterId, staffPos))
-    }
-
-    // Right-click: toggle note ↔ rest
-    private fun handleContextMenu(e: MouseEvent) {
-        e.preventDefault()
-        val element = e.target as? org.w3c.dom.Element
-
-        // Note → rest
-        val noteEl = element?.closest("[data-atom-id]")
-        if (noteEl != null) {
-            val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return
-            val atom = staffItems.filterIsInstance<MnNode.Atom>()
-                .find { it.id == atomId } ?: return
-            props.onAction(Action.Replace(atom, MnNode.Rest(atom.sourceRange)))
-            return
-        }
-
-        // Rest → note (at the clicked pitch)
-        val restEl = element?.closest("[data-rest-range-start]") ?: return
-        val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return
-        val rest = staffItems.filterIsInstance<MnNode.Rest>()
-            .find { it.sourceRange?.first == rangeStart } ?: return
-        val svg = restEl.closest("svg")
-        val staffPos = if (svg != null) {
-            val rect = svg.getBoundingClientRect()
-            computeInsertionPoint(e.clientX - rect.left, e.clientY - rect.top).second
-        } else 6
-        props.onAction(Action.Replace(rest, MnNode.Atom(value = props.posToValue(staffPos))))
-    }
-
-    // Mouse move over staff area: update ghost note position
-    private fun handleMouseMove(e: MouseEvent) {
-        if (dragAtomId != null) return
-        val element = e.target as? org.w3c.dom.Element
-        val onNote = element?.closest("[data-atom-id]") != null ||
-                element?.closest("[data-rest-range-start]") != null
-        val svg = element?.closest("svg")
-        if (onNote || svg == null) {
-            if (ghostSvgX != null) {
-                ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+                e.preventDefault()
+                dragAtomId = atomId
+                dragStartY = e.clientY.toDouble()
+                dragStartPos = pos
+                dragPreviewPos = pos
+                window.addEventListener("mousemove", onMouseMoveWindow)
+                window.addEventListener("mouseup", onMouseUpWindow)
+                triggerRedraw()
             }
-            return
-        }
-        val rect = svg.getBoundingClientRect()
-        val svgX = e.clientX - rect.left
-        val snapped = ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
-        if (svgX != ghostSvgX || snapped != ghostStaffPos) {
-            ghostSvgX = svgX; ghostStaffPos = snapped; triggerRedraw()
+
+            // Double-click on empty staff area → insert a note.
+            // Removal is handled in onMouseDown via DblClickCtrl (timestamp-based detection),
+            // which avoids the detached-DOM problem that prevents the dblclick event from firing.
+            onDblClick { e ->
+                // Removal is handled in onMouseDown (double-click detection by timestamp).
+                // Here we only handle double-click on empty staff area → insert a note.
+                if (doubleClickHandled) { doubleClickHandled = false; return@onDblClick }
+
+                val container = e.currentTarget as? org.w3c.dom.Element
+                val svg = container?.querySelector("svg") ?: return@onDblClick
+                val rect = svg.getBoundingClientRect()
+                val svgX = e.clientX - rect.left
+                val svgY = e.clientY - rect.top
+                val (afterId, staffPos) = computeInsertionPoint(svgX, svgY)
+                props.onAction(Action.Add(afterId, staffPos))
+            }
+
+            // Right-click: toggle note ↔ rest
+            onContextMenu { e ->
+                e.preventDefault()
+                val element = e.target as? org.w3c.dom.Element
+
+                // Note → rest
+                val noteEl = element?.closest("[data-atom-id]")
+                if (noteEl != null) {
+                    val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return@onContextMenu
+                    val atom = staffItems.filterIsInstance<MnNode.Atom>()
+                        .find { it.id == atomId } ?: return@onContextMenu
+                    props.onAction(Action.Replace(atom, MnNode.Rest(atom.sourceRange)))
+                    return@onContextMenu
+                }
+
+                // Rest → note (at the clicked pitch)
+                val restEl = element?.closest("[data-rest-range-start]")
+                if (restEl != null) {
+                    val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onContextMenu
+                    val rest = staffItems.filterIsInstance<MnNode.Rest>()
+                        .find { it.sourceRange?.first == rangeStart } ?: return@onContextMenu
+                    val svg = restEl.closest("svg")
+                    val staffPos = if (svg != null) {
+                        val rect = svg.getBoundingClientRect()
+                        computeInsertionPoint(e.clientX - rect.left, e.clientY - rect.top).second
+                    } else 6
+                    props.onAction(Action.Replace(rest, MnNode.Atom(value = props.posToValue(staffPos))))
+                }
+            }
+            // Mouse move over staff area: update ghost note position
+            onMouseMove { e ->
+                if (dragAtomId != null) return@onMouseMove
+                val element = e.target as? org.w3c.dom.Element
+                val onNote = element?.closest("[data-atom-id]") != null ||
+                        element?.closest("[data-rest-range-start]") != null
+                val svg = element?.closest("svg")
+                if (onNote || svg == null) {
+                    if (ghostSvgX != null) {
+                        ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+                    }
+                    return@onMouseMove
+                }
+                val rect = svg.getBoundingClientRect()
+                val svgX = e.clientX - rect.left
+                val snapped = ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
+                if (svgX != ghostSvgX || snapped != ghostStaffPos) {
+                    ghostSvgX = svgX; ghostStaffPos = snapped; triggerRedraw()
+                }
+            }
+
+            onMouseLeave {
+                if (ghostSvgX != null) {
+                    ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+                }
+            }
+
+            unsafe {
+                +buildSvg()
+            }
         }
     }
 
-    private fun handleMouseLeave() {
-        if (ghostSvgX != null) {
-            ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
-        }
-    }
+    // ── SVG builder ───────────────────────────────────────────────────────────
 
-    // ── SVG DSL rendering ─────────────────────────────────────────────────────
-
-    private fun FlowContent.renderSvg() {
+    private fun buildSvg(): String {
         // Key signature
         val keySig = buildKeySignature(props.scaleName)
         val keySigWidth = if (keySig != null) {
@@ -438,6 +440,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         }
 
         // Dynamic layout: expand height for notes outside normal staff range
+        // Also account for key sig accidentals that may go above the top staff line (e.g. G5=11)
         val notePositions = layoutItems.filterIsInstance<LayoutItem.Note>()
             .mapNotNull { (it.node as? MnNode.Atom)?.let { a -> props.atomToPos(a.value) } }
         val keySigMaxPos = keySig?.staffPositions?.maxOrNull() ?: 10
@@ -451,92 +454,82 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val totalItemsWidth = layoutItems.sumOf { if (it is LayoutItem.Note) NOTE_COL_W else BRACKET_COL_W }
         val svgWidth = (noteStartX + totalItemsWidth + NOTE_COL_W).coerceAtLeast(160.0)
 
-        val atomCenters = mutableListOf<Pair<Int, Double>>()
+        val sb = StringBuilder()
+        sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth.toInt()}" height="${height.toInt()}" style="display:block;font-family:serif;">""")
 
-        svgRoot(svgWidth.toInt(), height.toInt(), style = "display:block;font-family:serif;") {
-
-            // Bracket marks (behind everything)
-            var x = noteStartX
-            for (item in layoutItems) {
-                when (item) {
-                    is LayoutItem.Note -> x += NOTE_COL_W
-                    is LayoutItem.BracketMark -> {
-                        renderBracketMark(item, x + BRACKET_COL_W / 2, topY)
-                        x += BRACKET_COL_W
-                    }
+        // Brackets first (behind everything)
+        var x = noteStartX
+        for (item in layoutItems) {
+            when (item) {
+                is LayoutItem.Note -> x += NOTE_COL_W
+                is LayoutItem.BracketMark -> {
+                    renderBracketMark(sb, item, x + BRACKET_COL_W / 2, topY)
+                    x += BRACKET_COL_W
                 }
-            }
-
-            // Staff lines
-            val lineWidth = svgWidth - 8.0
-            for ((idx, linePos) in STAFF_LINE_POSITIONS.withIndex()) {
-                val y = staffPosToY(linePos, topY)
-                svgLine(4, y, lineWidth.toInt(), y, key = "staff-$idx")
-            }
-
-            // Treble clef
-            svgText(
-                4, staffPosToY(4, topY) + NOTE_RADIUS_Y * 4,
-                text = "\uD834\uDD1E", // 𝄞
-                fontSize = "42",
-                style = "user-select:none;line-height:1",
-                key = "clef",
-            )
-
-            // Key signature accidentals
-            keySig?.staffPositions?.forEachIndexed { idx, pos ->
-                val ax = CLEF_END_X + idx * KEY_SIG_ACC_W + KEY_SIG_ACC_W / 2
-                val ay = staffPosToY(pos, topY)
-                svgText(
-                    ax, ay + 4, text = keySig.symbol,
-                    fontSize = "15", fontWeight = "bold",
-                    textAnchor = "middle",
-                    style = "user-select:none",
-                    key = "keysig-$idx",
-                )
-            }
-
-            // Notes and rests (on top of staff lines and brackets)
-            x = noteStartX
-            for (item in layoutItems) {
-                when (item) {
-                    is LayoutItem.Note -> {
-                        val cx = x + NOTE_COL_W / 2
-                        when (val node = item.node) {
-                            is MnNode.Atom -> {
-                                renderAtomSvg(node, cx, topY)
-                                atomCenters.add(node.id to cx)
-                            }
-
-                            is MnNode.Rest -> renderRestSvg(
-                                node, cx, topY,
-                                node.sourceRange == props.selection.rest?.sourceRange,
-                            )
-
-                            else -> {}
-                        }
-                        x += NOTE_COL_W
-                    }
-
-                    is LayoutItem.BracketMark -> x += BRACKET_COL_W
-                }
-            }
-
-            // Ghost note preview (topmost layer so it's always visible)
-            val gx = ghostSvgX
-            val gpos = ghostStaffPos
-            if (gx != null && gpos != null) {
-                val gy = staffPosToY(gpos, topY)
-                renderLedgerLines(gpos, gx, topY)
-                svgEllipse(
-                    gx, gy, NOTE_RADIUS_X, NOTE_RADIUS_Y,
-                    fill = "#2266cc", opacity = "0.35", style = "pointer-events:none",
-                )
             }
         }
 
+        // Staff lines
+        val lineWidth = svgWidth - 8.0
+        for (linePos in STAFF_LINE_POSITIONS) {
+            val y = staffPosToY(linePos, topY)
+            sb.append("""<line x1="4" y1="$y" x2="${lineWidth.toInt()}" y2="$y" stroke="#333" stroke-width="1.2"/>""")
+        }
+
+        // Treble clef
+        sb.append(
+            """<text x="4" y="${
+                staffPosToY(
+                    4,
+                    topY
+                ) + NOTE_RADIUS_Y * 4
+            }" font-size="42" fill="#333" style="user-select:none;line-height:1">&#119070;</text>"""
+        )
+
+        // Key signature accidentals
+        if (keySig != null) {
+            keySig.staffPositions.forEachIndexed { idx, pos ->
+                val x = CLEF_END_X + idx * KEY_SIG_ACC_W + KEY_SIG_ACC_W / 2
+                val y = staffPosToY(pos, topY)
+                sb.append("""<text x="$x" y="${y + 4}" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" style="user-select:none">${keySig.symbol}</text>""")
+            }
+        }
+
+        // Notes and rests (on top of staff lines and brackets)
+        // Also build layout snapshot for click-to-insert and ghost preview
+        val atomCenters = mutableListOf<Pair<Int, Double>>()
+        x = noteStartX
+        for (item in layoutItems) {
+            when (item) {
+                is LayoutItem.Note -> {
+                    val cx = x + NOTE_COL_W / 2
+                    when (val node = item.node) {
+                        is MnNode.Atom -> {
+                            renderAtomSvg(sb, node, cx, topY); atomCenters.add(node.id to cx)
+                        }
+
+                        is MnNode.Rest -> renderRestSvg(sb, node, cx, topY, node.sourceRange == props.selection.rest?.sourceRange)
+                        else -> {}
+                    }
+                    x += NOTE_COL_W
+                }
+                is LayoutItem.BracketMark -> x += BRACKET_COL_W
+            }
+        }
         lastTopY = topY
         lastAtomCenters = atomCenters
+
+        // Ghost note preview (topmost layer so it's always visible)
+        val gx = ghostSvgX
+        val gpos = ghostStaffPos
+        if (gx != null && gpos != null) {
+            val gy = staffPosToY(gpos, topY)
+            renderLedgerLines(sb, gpos, gx, topY)
+            sb.append("""<ellipse cx="$gx" cy="$gy" rx="$NOTE_RADIUS_X" ry="$NOTE_RADIUS_Y" fill="#2266cc" opacity="0.35" style="pointer-events:none"/>""")
+        }
+
+        sb.append("</svg>")
+        return sb.toString()
     }
 
     /** Maps SVG coordinates to an insertion point: (insertAfterAtomId, staffPosition). */
@@ -549,7 +542,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         return insertAfterAtomId to staffPos
     }
 
-    private fun FlowContent.renderBracketMark(mark: LayoutItem.BracketMark, x: Double, topY: Double) {
+    private fun renderBracketMark(sb: StringBuilder, mark: LayoutItem.BracketMark, x: Double, topY: Double) {
         val ext = 4.0
         val yTop = topY - ext
         val yBottom = topY + 8 * HALF_STEP + ext
@@ -560,54 +553,49 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
         when (mark.type) {
             BracketType.Group -> {
-                svgLine(x, yTop, x, yBottom, stroke = color, strokeWidth = sw)
+                sb.append("""<line x1="$x" y1="$yTop" x2="$x" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
                 if (mark.isOpen) {
-                    svgLine(x, yTop, x + tickW, yTop, stroke = color, strokeWidth = sw)
-                    svgLine(x, yBottom, x + tickW, yBottom, stroke = color, strokeWidth = sw)
+                    sb.append("""<line x1="$x" y1="$yTop"    x2="${x + tickW}" y2="$yTop"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x" y1="$yBottom" x2="${x + tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
                 } else {
-                    svgLine(x - tickW, yTop, x, yTop, stroke = color, strokeWidth = sw)
-                    svgLine(x - tickW, yBottom, x, yBottom, stroke = color, strokeWidth = sw)
+                    sb.append("""<line x1="${x - tickW}" y1="$yTop"    x2="$x" y2="$yTop"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="${x - tickW}" y1="$yBottom" x2="$x" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
                 }
             }
 
             BracketType.Alternation -> {
                 if (mark.isOpen) {
-                    svgLine(x + tickW, yTop, x, yMid, stroke = color, strokeWidth = sw)
-                    svgLine(x, yMid, x + tickW, yBottom, stroke = color, strokeWidth = sw)
+                    sb.append("""<line x1="${x + tickW}" y1="$yTop"    x2="$x"           y2="$yMid"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x"           y1="$yMid"    x2="${x + tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
                 } else {
-                    svgLine(x - tickW, yTop, x, yMid, stroke = color, strokeWidth = sw)
-                    svgLine(x, yMid, x - tickW, yBottom, stroke = color, strokeWidth = sw)
+                    sb.append("""<line x1="${x - tickW}" y1="$yTop"    x2="$x"           y2="$yMid"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x"           y1="$yMid"    x2="${x - tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
                 }
             }
         }
     }
 
-    private fun FlowContent.renderRestSvg(
-        rest: MnNode.Rest, x: Double, topY: Double, isActive: Boolean = false,
-    ) {
+    private fun renderRestSvg(sb: StringBuilder, rest: MnNode.Rest, x: Double, topY: Double, isActive: Boolean = false) {
         val rangeStart = rest.sourceRange?.first ?: return
         val lineY = staffPosToY(6, topY)
         val w = NOTE_RADIUS_X * 2.4
         val h = HALF_STEP * 0.75
-        svgG(key = "rest-$rangeStart", style = "cursor:default") {
-            attributes["data-rest-range-start"] = rangeStart.toString()
-            svgRect(
-                x - w / 2, lineY - h, w, h,
-                fill = if (isActive) "#3355aa" else "#444",
-                rx = "1",
-                stroke = if (isActive) "#2266cc" else null,
-                strokeWidth = if (isActive) "2" else null,
-            )
-        }
+        val stroke = if (isActive) """ stroke="#2266cc" stroke-width="2"""" else ""
+        sb.append("""<g data-rest-range-start="$rangeStart" style="cursor:default">""")
+        sb.append(
+            """<rect x="${x - w / 2}" y="${lineY - h}" width="$w" height="$h" rx="1" """ +
+                    """fill="${if (isActive) "#3355aa" else "#444"}"$stroke/>"""
+        )
+        sb.append("</g>")
     }
 
-    private fun FlowContent.renderAtomSvg(atom: MnNode.Atom, x: Double, topY: Double) {
+    private fun renderAtomSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, topY: Double) {
         val isActive = atom.id == props.selection.atom?.id
         val isDragging = dragAtomId == atom.id
         val pos = if (isDragging) dragPreviewPos ?: dragStartPos else props.atomToPos(atom.value)
 
         if (pos == null) {
-            renderUnknownSvg(atom, x, isActive, topY)
+            renderUnknownSvg(sb, atom, x, isActive, topY)
             return
         }
 
@@ -617,70 +605,80 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             isActive -> "#3355aa"
             else -> "#222"
         }
-        val strokeColor = if (isActive || isDragging) "#2266cc" else "#333"
-        val strokeWidth = if (isActive || isDragging) "2" else "1.2"
-
-        svgG(key = "atom-${atom.id}", style = "cursor:default") {
-            attributes["data-atom-id"] = atom.id.toString()
-            attributes["data-staff-pos"] = pos.toString()
-
-            renderLedgerLines(pos, x, topY)
-
-            val stemUp = pos < 6
-            if (stemUp) {
-                val stemX = x + NOTE_RADIUS_X - 0.5
-                svgLine(stemX, y - NOTE_RADIUS_Y + 2, stemX, y - HALF_STEP * 3.5, stroke = noteColor)
-            } else {
-                val stemX = x - NOTE_RADIUS_X + 0.5
-                svgLine(stemX, y + NOTE_RADIUS_Y - 2, stemX, y + HALF_STEP * 3.5, stroke = noteColor)
-            }
-
-            svgEllipse(x, y, NOTE_RADIUS_X, NOTE_RADIUS_Y, fill = noteColor, stroke = strokeColor, strokeWidth = strokeWidth)
-
-            renderAccidental(atom.value, x, y)
+        val strokeColor = when {
+            isActive || isDragging -> "#2266cc"
+            else -> "#333"
         }
+        val strokeWidth = if (isActive || isDragging) 2.0 else 1.2
+
+        // Wrap all parts in a <g> so `closest("[data-atom-id]")` works from stem, accidental, etc.
+        sb.append("""<g data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:default">""")
+
+        renderLedgerLines(sb, pos, x, topY)
+
+        val stemUp = pos < 6
+        if (stemUp) {
+            val stemX = x + NOTE_RADIUS_X - 0.5
+            val stemTop = y - HALF_STEP * 3.5
+            sb.append("""<line x1="$stemX" y1="${y - NOTE_RADIUS_Y + 2}" x2="$stemX" y2="$stemTop" stroke="$noteColor" stroke-width="1.2"/>""")
+        } else {
+            val stemX = x - NOTE_RADIUS_X + 0.5
+            val stemBottom = y + HALF_STEP * 3.5
+            sb.append("""<line x1="$stemX" y1="${y + NOTE_RADIUS_Y - 2}" x2="$stemX" y2="$stemBottom" stroke="$noteColor" stroke-width="1.2"/>""")
+        }
+
+        sb.append(
+            """<ellipse cx="$x" cy="$y" rx="$NOTE_RADIUS_X" ry="$NOTE_RADIUS_Y" """ +
+                    """fill="$noteColor" stroke="$strokeColor" stroke-width="$strokeWidth"/>"""
+        )
+
+        renderAccidental(sb, atom.value, x, y)
+
+        sb.append("</g>")
     }
 
-    private fun FlowContent.renderUnknownSvg(atom: MnNode.Atom, x: Double, isActive: Boolean, topY: Double) {
+    private fun renderUnknownSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, isActive: Boolean, topY: Double) {
         val pos = 0 // C4
         val y = staffPosToY(pos, topY)
+        renderLedgerLines(sb, pos, x, topY)
         val color = if (isActive) "#2266cc" else "#999"
-        svgG(key = "atom-${atom.id}", style = "cursor:default;user-select:none") {
-            attributes["data-atom-id"] = atom.id.toString()
-            attributes["data-staff-pos"] = pos.toString()
-            renderLedgerLines(pos, x, topY)
-            svgText(x, y + 3, text = "?", fill = color, fontSize = "11", textAnchor = "middle")
-        }
+        sb.append(
+            """<text x="$x" y="${y + 3}" text-anchor="middle" font-size="11" fill="$color" """ +
+                    """data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:default;user-select:none">?</text>"""
+        )
     }
 
-    private fun FlowContent.renderLedgerLines(pos: Int, x: Double, topY: Double) {
+    private fun renderLedgerLines(sb: StringBuilder, pos: Int, x: Double, topY: Double) {
         val ledgerHalfW = NOTE_RADIUS_X + 2.5
         // Below staff: pos <= 0, every even position gets a ledger line
         var p = 0
         while (p >= pos) {
-            svgLine(x - ledgerHalfW, staffPosToY(p, topY), x + ledgerHalfW, staffPosToY(p, topY), stroke = "#555")
+            val y = staffPosToY(p, topY)
+            sb.append("""<line x1="${x - ledgerHalfW}" y1="$y" x2="${x + ledgerHalfW}" y2="$y" stroke="#555" stroke-width="1.2"/>""")
             p -= 2
         }
         // Above staff: pos >= 12, every even position gets a ledger line
         p = 12
         while (p <= pos) {
-            svgLine(x - ledgerHalfW, staffPosToY(p, topY), x + ledgerHalfW, staffPosToY(p, topY), stroke = "#555")
+            val y = staffPosToY(p, topY)
+            sb.append("""<line x1="${x - ledgerHalfW}" y1="$y" x2="${x + ledgerHalfW}" y2="$y" stroke="#555" stroke-width="1.2"/>""")
             p += 2
         }
     }
 
-    private fun FlowContent.renderAccidental(value: String, x: Double, y: Double) {
+    private fun renderAccidental(sb: StringBuilder, value: String, x: Double, y: Double) {
+        // Detect sharps and flats in note names like "c#4", "db3", "f##5"
         val acc = extractAccidental(value) ?: return
         val accText = when {
-            acc.startsWith("##") || acc.startsWith("x") -> "\uD834\uDD2A" // 𝄪 double sharp
+            acc.startsWith("##") || acc.startsWith("x") -> "𝄪"
             acc.startsWith("#") -> "♯"
-            acc.startsWith("bb") || acc.startsWith("ff") -> "\uD834\uDD2B" // 𝄫 double flat
+            acc.startsWith("bb") || acc.startsWith("ff") -> "𝄫"
             acc.startsWith("b") || acc.startsWith("f") -> "♭"
             else -> return
         }
-        svgText(
-            x - NOTE_RADIUS_X - 6.0, y + 3, text = accText,
-            fontSize = "10", textAnchor = "middle", style = "user-select:none",
+        val ax = x - NOTE_RADIUS_X - 6.0
+        sb.append(
+            """<text x="$ax" y="${y + 3}" text-anchor="middle" font-size="10" fill="#333" style="user-select:none">$accText</text>"""
         )
     }
 
@@ -692,4 +690,10 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val rest = value.drop(1).takeWhile { it == '#' || it == 'b' || it == 'x' || it == 'f' || it == 's' }
         return rest.ifEmpty { null }
     }
+}
+
+// ── Event helpers ─────────────────────────────────────────────────────────────
+
+private fun CommonAttributeGroupFacade.onDblClick(handler: (MouseEvent) -> Unit) {
+    consumer.onTagEvent(this, "ondblclick", handler.asDynamic())
 }
