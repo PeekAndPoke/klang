@@ -44,6 +44,7 @@
 | 2026-03-03 | Anthropic | —       | 59.50 USD |
 | 2026-03-04 | Anthropic | —       | 59.50 USD |
 | 2026-03-06 | Anthropic | —       | 59.50 USD |
+| 2026-03-07 | Anthropic | —       | 59.50 USD |
 
 ## Subscription
 

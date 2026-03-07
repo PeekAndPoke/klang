@@ -3,9 +3,6 @@ package io.peekandpoke.klang.strudel.ui
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.semanticui.forms.UiInputField
-import de.peekandpoke.kraft.semanticui.forms.old.select.SelectField
-import de.peekandpoke.kraft.semanticui.forms.old.select.SelectFieldComponent
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
@@ -13,11 +10,9 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.tones.scale.Scale
-import io.peekandpoke.klang.tones.scale.ScaleTypeDictionary
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.comp.NoteStaffComp
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -46,80 +41,30 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
 
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
-    // ── Static data ───────────────────────────────────────────────────────────
-
-    private val letters = listOf("c", "d", "e", "f", "g", "a", "b")
-
-    /** Accidentals: stored value → display label */
-    private val accidentals = listOf(
-        "" to "♮",
-        "#" to "#",
-        "##" to "##",
-        "###" to "###",
-        "b" to "b",
-        "bb" to "bb",
-        "bbb" to "bbb",
-    )
-
-    /** All scale mode names (canonical + aliases) from the dictionary.
-     *  Stored in state with spaces replaced by "_" so they are safe for mini-notation.
-     *  Displayed to the user with the original spaces. */
-    private val modeNames: List<String> = listOf(
-        "major", "minor", "pentatonic", "chromatic"
-    ).plus(
-        ScaleTypeDictionary.all()
-            .flatMap { listOf(it.name) + it.aliases }
-            .sorted())
-
-    // ── Parse current value ───────────────────────────────────────────────────
-
-    private val parsed = run {
-        // Strip surrounding quotes, e.g. "\"c4:major\"" → "c4:major"
-        val raw = props.toolCtx.currentValue
-            ?.trim()
-            ?.removePrefix("\"")
-            ?.removeSuffix("\"")
-            ?: ""
-
-        // Split root from mode on ":" (canonical) — normalise "_" → " " in mode
-        val colonIdx = raw.indexOf(':')
-        val rootPart = if (colonIdx >= 0) raw.substring(0, colonIdx) else raw
-        val modePart = if (colonIdx >= 0) raw.substring(colonIdx + 1).replace("_", " ") else "major"
-
-        // Parse letter (first char a-g), then accidental (longest match first), then octave
-        val letter = rootPart.firstOrNull()?.lowercaseChar()?.takeIf { it in 'a'..'g' }?.toString() ?: "c"
-        val afterLetter = rootPart.drop(1)
-        val accidental = listOf("##", "bb", "#", "b").firstOrNull { afterLetter.startsWith(it) } ?: ""
-        val octave = afterLetter.removePrefix(accidental).toIntOrNull() ?: 4
-
-        Parsed(
-            letter = letter,
-            accidental = accidental,
-            octave = octave,
-            // Store mode with underscores (mini-notation safe)
-            mode = modePart.ifBlank { "major" }.replace(" ", "_"),
-        )
-    }
-
-    private data class Parsed(val letter: String, val accidental: String, val octave: Int, val mode: String)
-
-    private var letter by value(parsed.letter)
-    private var accidental by value(parsed.accidental)
-    private var octave by value(parsed.octave)
-
-    /** Mode is stored with "_" replacing spaces so it is safe as a mini-notation token. */
-    private var mode by value(parsed.mode)
+    // ── Parse initial value ───────────────────────────────────────────────────
 
     private val initialValue = props.toolCtx.currentValue ?: ""
+
+    /** Initial scale name derived from [initialValue] (e.g. `"c4:major"` → `"c4 major"`). */
+    private val initialScaleName: String = run {
+        val raw = initialValue.trim().removeSurrounding("\"")
+        raw.replace(":", " ").replace("_", " ").ifBlank { "c4 major" }
+    }
+
+    private var pickedScaleName by value(initialScaleName)
     private var currentValue by value(initialValue)
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun buildValue(): String = "\"${letter}${accidental}${octave}:${mode}\""
+    private fun buildValue(): String {
+        val scale = Scale.get(pickedScaleName)
+        if (scale.empty) return "\"c4:major\""
+        val tonic = (scale.tonic ?: "C4").lowercase()
+        val mode = scale.type.replace(" ", "_")
+        return "\"$tonic:$mode\""
+    }
 
-    private fun currentScaleName(): String = "${letter}${accidental}${octave} ${mode.replace("_", " ")}"
-
-    private fun currentScaleNotes(): List<String> = Scale.get(currentScaleName()).notes
+    private fun currentScaleNotes(): List<String> = Scale.get(pickedScaleName).notes
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = currentValue != buildValue()
@@ -134,10 +79,7 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
     private fun onCancel() = props.toolCtx.onCancel()
 
     private fun onReset() {
-        letter = parsed.letter
-        accidental = parsed.accidental
-        octave = parsed.octave
-        mode = parsed.mode
+        pickedScaleName = initialScaleName
         currentValue = initialValue
         props.toolCtx.onCommit(currentValue)
     }
@@ -191,57 +133,14 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
     }
 
     private fun FlowContent.renderContent() {
-        ui.form {
-            ui.four.stackable.fields {
-
-                // Note letter
-                SelectField(letter, { letter = it; liveUpdate() }) {
-                    label("Note")
-                    letters.forEach { l ->
-                        option(realValue = l) { +l.uppercase() }
-                    }
-                }
-
-                // Accidental
-                SelectField(accidental, { accidental = it; liveUpdate() }) {
-                    label("Accidental")
-                    accidentals.forEach { (value, label) ->
-                        option(realValue = value, formValue = value) { +label }
-                    }
-                }
-
-                // Octave
-                UiInputField(octave, { octave = it; liveUpdate() }) {
-                    label("Octave")
-                    step(1)
-                }
-
-                // Scale mode — realValue uses "_" so mini-notation treats it as one token
-                SelectField(mode, { mode = it; liveUpdate() }) {
-                    label("Mode")
-                    autoSuggest { search ->
-                        val searchCleaned = search.trim()
-                        flowOf(
-                            modeNames
-                                .filter { searchCleaned.isBlank() || it.contains(searchCleaned, ignoreCase = true) }
-                                .map { m ->
-                                    SelectFieldComponent.Option(
-                                        realValue = m.replace(" ", "_"),
-                                        formValue = m,
-                                    ) { +m }
-                                }
-                        )
-                    }
-                }
-            }
-        }
+        scalePicker(pickedScaleName) { pickedScaleName = it; liveUpdate() }
 
         ui.divider {}
 
         // ── Staff notation ────────────────────────────────────────────────────
         val notes = currentScaleNotes()
         if (notes.isNotEmpty()) {
-            NoteStaffComp(scaleName = currentScaleName(), range = (-notes.size)..notes.size)
+            NoteStaffComp(scaleName = pickedScaleName, range = (-notes.size)..notes.size)
         }
 
         ui.divider {}

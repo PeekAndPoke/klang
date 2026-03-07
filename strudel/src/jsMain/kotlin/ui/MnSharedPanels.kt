@@ -59,9 +59,14 @@ fun FlowContent.mnPatternTextInput(
                     +text.substring(0, highlightStart)
                     mark {
                         css {
-                            backgroundColor = Color("rgba(200, 200, 255, 0.45)")
+                            val col = Color("#CCF")
+                            backgroundColor = col.withAlpha(0.5)
                             color = Color("transparent")
                             borderRadius = 2.px
+                            border = Border(1.px, BorderStyle.solid, col.withAlpha(0.8))
+                            padding = Padding(1.px, 2.px)
+                            marginTop = (-1).px
+                            marginLeft = (-3).px
                         }
                         +text.substring(highlightStart, highlightEnd)
                     }
