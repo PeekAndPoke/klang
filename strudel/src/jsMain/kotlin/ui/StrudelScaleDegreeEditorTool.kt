@@ -36,7 +36,7 @@ private fun Tag.StrudelScaleDegreeEditorComp(toolCtx: KlangUiToolContext) =
 
 private class StrudelScaleDegreeEditorComp(ctx: Ctx<Props>) : MnEditorBase<StrudelScaleDegreeEditorComp.Props>(ctx) {
 
-    data class Props(override val toolCtx: KlangUiToolContext) : MnEditorBase.BaseProps
+    data class Props(override val toolCtx: KlangUiToolContext) : MnPatternEditorBase.BaseProps
 
     // ── Scale state ───────────────────────────────────────────────────────────
 

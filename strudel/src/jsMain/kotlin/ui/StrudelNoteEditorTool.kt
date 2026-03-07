@@ -32,7 +32,7 @@ private fun Tag.StrudelNoteEditorComp(toolCtx: KlangUiToolContext) =
 
 private class StrudelNoteEditorComp(ctx: Ctx<Props>) : MnEditorBase<StrudelNoteEditorComp.Props>(ctx) {
 
-    data class Props(override val toolCtx: KlangUiToolContext) : MnEditorBase.BaseProps
+    data class Props(override val toolCtx: KlangUiToolContext) : MnPatternEditorBase.BaseProps
 
     // ── Position mapping ──────────────────────────────────────────────────────
 

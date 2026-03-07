@@ -17,18 +17,11 @@ import kotlinx.html.FlowContent
 import kotlinx.html.div
 
 /**
- * Abstract base component for note-staff editors.
+ * Abstract base component containing all shared state and logic for mini-notation editors.
  *
- * Subclasses provide the two direction mappings between atom string values and staff positions:
- * - [atomToStaffPosition]: given a raw atom value (e.g. "c4" or "0"), return a staff position
- *   (integer, C4 = 0, D4 = 1, …) or null if the value cannot be rendered on a staff.
- * - [staffPositionToAtomValue]: given a staff position, return the string value to write into
- *   the pattern (e.g. "e4" or "2").
- *
- * The shared render template shows: text input → extra controls → note staff → modifier panel → bottom bar.
- * Override [renderExtraControls] to inject anything between the text input and the staff.
+ * Subclasses that also need a note staff should extend [MnEditorBase] instead.
  */
-abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component<P>(ctx) {
+abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Component<P>(ctx) {
 
     interface BaseProps {
         val toolCtx: KlangUiToolContext
@@ -39,7 +32,7 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
     protected var text by value(initialText())
     protected var cursorOffset by value(0)
 
-    /** Last atom the cursor was over — retained so modifier panel survives button clicks. */
+    /** Last atom the cursor was over — retained so panels survive button clicks. */
     protected var lastAtom: MnNode.Atom? = null
 
     // ── Parse cache ───────────────────────────────────────────────────────────
@@ -49,7 +42,7 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
      * No longer a correctness requirement (atom identity is tracked via [MnNode.Atom.id]);
      * kept as a pure performance optimisation.
      */
-    protected val patternCache = mutableMapOf<String, MnPattern?>()
+    private val patternCache = mutableMapOf<String, MnPattern?>()
 
     protected val pattern: MnPattern?
         get() = patternCache.getOrPut(text) {
@@ -63,19 +56,6 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
     protected val parseError: Boolean get() = pattern == null && text.isNotBlank()
     protected val selectedAtom: MnNode.Atom? get() = pattern?.let { findAtomAt(it, cursorOffset) }
     protected val isModified: Boolean get() = text != initialText()
-
-    // ── Abstract: position mapping ────────────────────────────────────────────
-
-    /** Maps a raw atom value to a staff position (C4 = 0, D4 = 1, …), or null if not representable. */
-    protected abstract fun atomToStaffPosition(value: String): Int?
-
-    /** Maps a staff position back to the atom value string. */
-    protected abstract fun staffPositionToAtomValue(pos: Int): String
-
-    // ── Optional hooks ────────────────────────────────────────────────────────
-
-    /** Override to render additional controls between the text input and the staff. */
-    protected open fun FlowContent.renderExtraControls() {}
 
     // ── Initial value ─────────────────────────────────────────────────────────
 
@@ -105,7 +85,7 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
         return if (between.none { it.isWhitespace() || it in "[]<>," }) nearest else null
     }
 
-    protected fun collectAtoms(p: MnPattern): List<MnNode.Atom> = buildList {
+    private fun collectAtoms(p: MnPattern): List<MnNode.Atom> = buildList {
         p.items.forEach { collectAtomsInNode(it, this) }
     }
 
@@ -139,13 +119,12 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
     protected fun updateAtom(old: MnNode.Atom, new: MnNode.Atom) {
         val p = pattern ?: return
         text = MnRenderer.render(replaceAtomIn(p, old, new))
-        // Re-find the updated atom by its original source position in the freshly rendered text.
         val newAtom = pattern?.let { findAtomById(it, old.id) }
         cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
         lastAtom = newAtom ?: lastAtom
     }
 
-    protected fun replaceAtomIn(p: MnPattern, old: MnNode.Atom, new: MnNode.Atom): MnPattern =
+    private fun replaceAtomIn(p: MnPattern, old: MnNode.Atom, new: MnNode.Atom): MnPattern =
         MnPattern(p.items.map { replaceAtomInNode(it, old, new) })
 
     private fun replaceAtomInNode(node: MnNode, old: MnNode.Atom, new: MnNode.Atom): MnNode = when (node) {
@@ -184,6 +163,55 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
     }
 
     protected fun onCommit() = props.toolCtx.onCommit(text.quoteForCommit())
+
+    // ── Bottom bar ────────────────────────────────────────────────────────────
+
+    protected fun FlowContent.renderBottomBar() {
+        div {
+            css { display = Display.flex; justifyContent = JustifyContent.flexEnd; gap = 8.px }
+            ui.basic.button {
+                onClick { onCancel() }
+                icon.times()
+                +"Cancel"
+            }
+            ui.basic.givenNot(isModified) { disabled }.button {
+                onClick { onReset() }
+                icon.undo()
+                +"Reset"
+            }
+            ui.black.button {
+                onClick { onCommit() }
+                icon.check()
+                +"Update"
+            }
+        }
+    }
+}
+
+// ── Note staff editor base ────────────────────────────────────────────────────
+
+/**
+ * Abstract base component for note-staff editors.
+ *
+ * Subclasses provide the two direction mappings between atom string values and staff positions:
+ * - [atomToStaffPosition]: given a raw atom value (e.g. "c4" or "0"), return a staff position
+ *   (integer, C4 = 0, D4 = 1, …) or null if the value cannot be rendered on a staff.
+ * - [staffPositionToAtomValue]: given a staff position, return the string value to write into
+ *   the pattern (e.g. "e4" or "2").
+ *
+ * The shared render template shows: text input → extra controls → note staff → modifier panel → bottom bar.
+ * Override [renderExtraControls] to inject anything between the text input and the staff.
+ */
+abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : MnPatternEditorBase<P>(ctx) {
+
+    /** Maps a raw atom value to a staff position (C4 = 0, D4 = 1, …), or null if not representable. */
+    protected abstract fun atomToStaffPosition(value: String): Int?
+
+    /** Maps a staff position back to the atom value string. */
+    protected abstract fun staffPositionToAtomValue(pos: Int): String
+
+    /** Override to render additional controls between the text input and the staff. */
+    protected open fun FlowContent.renderExtraControls() {}
 
     // ── Template render ───────────────────────────────────────────────────────
 
@@ -250,29 +278,6 @@ abstract class MnEditorBase<P : MnEditorBase.BaseProps>(ctx: Ctx<P>) : Component
             ) { old, new -> updateAtom(old, new) }
 
             staffRendered = true
-        }
-    }
-
-    // ── Bottom bar ────────────────────────────────────────────────────────────
-
-    protected fun FlowContent.renderBottomBar() {
-        div {
-            css { display = Display.flex; justifyContent = JustifyContent.flexEnd; gap = 8.px }
-            ui.basic.button {
-                onClick { onCancel() }
-                icon.times()
-                +"Cancel"
-            }
-            ui.basic.givenNot(isModified) { disabled }.button {
-                onClick { onReset() }
-                icon.undo()
-                +"Reset"
-            }
-            ui.black.button {
-                onClick { onCommit() }
-                icon.check()
-                +"Update"
-            }
         }
     }
 }
