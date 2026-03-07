@@ -321,6 +321,18 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val sb = StringBuilder()
         sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth.toInt()}" height="${height.toInt()}" style="display:block;font-family:serif;">""")
 
+        // Brackets first (behind everything)
+        var x = noteStartX
+        for (item in layoutItems) {
+            when (item) {
+                is LayoutItem.Note -> x += NOTE_COL_W
+                is LayoutItem.BracketMark -> {
+                    renderBracketMark(sb, item, x + BRACKET_COL_W / 2, topY)
+                    x += BRACKET_COL_W
+                }
+            }
+        }
+
         // Staff lines
         val lineWidth = svgWidth - 8.0
         for (linePos in STAFF_LINE_POSITIONS) {
@@ -347,23 +359,21 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             }
         }
 
-        // Render each layout item; notes get NOTE_COL_W, bracket marks get BRACKET_COL_W
-        var x = noteStartX
+        // Notes and rests (on top of staff lines and brackets)
+        x = noteStartX
         for (item in layoutItems) {
             when (item) {
                 is LayoutItem.Note -> {
+                    val cx = x + NOTE_COL_W / 2
                     when (val node = item.node) {
-                        is MnNode.Atom -> renderAtomSvg(sb, node, x, topY)
-                        is MnNode.Rest -> renderRestSvg(sb, node, x, topY)
+                        is MnNode.Atom -> renderAtomSvg(sb, node, cx, topY)
+                        is MnNode.Rest -> renderRestSvg(sb, node, cx, topY)
                         else -> {}
                     }
                     x += NOTE_COL_W
                 }
 
-                is LayoutItem.BracketMark -> {
-                    renderBracketMark(sb, item, x, topY)
-                    x += BRACKET_COL_W
-                }
+                is LayoutItem.BracketMark -> x += BRACKET_COL_W
             }
         }
 
@@ -377,8 +387,8 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val yBottom = topY + 8 * HALF_STEP + ext
         val yMid = (yTop + yBottom) / 2
         val tickW = 5.0
-        val sw = "1.4"
-        val color = if (mark.type == BracketType.Group) "#888" else "#2a9d8f"
+        val sw = "2"
+        val color = "#AAA"
 
         when (mark.type) {
             BracketType.Group -> {
@@ -445,11 +455,11 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         if (stemUp) {
             val stemX = x + NOTE_RADIUS_X - 0.5
             val stemTop = y - HALF_STEP * 3.5
-            sb.append("""<line x1="$stemX" y1="${y - NOTE_RADIUS_Y + 0.5}" x2="$stemX" y2="$stemTop" stroke="$noteColor" stroke-width="1.2"/>""")
+            sb.append("""<line x1="$stemX" y1="${y - NOTE_RADIUS_Y + 2}" x2="$stemX" y2="$stemTop" stroke="$noteColor" stroke-width="1.2"/>""")
         } else {
             val stemX = x - NOTE_RADIUS_X + 0.5
             val stemBottom = y + HALF_STEP * 3.5
-            sb.append("""<line x1="$stemX" y1="${y + NOTE_RADIUS_Y - 0.5}" x2="$stemX" y2="$stemBottom" stroke="$noteColor" stroke-width="1.2"/>""")
+            sb.append("""<line x1="$stemX" y1="${y + NOTE_RADIUS_Y - 2}" x2="$stemX" y2="$stemBottom" stroke="$noteColor" stroke-width="1.2"/>""")
         }
 
         sb.append(
