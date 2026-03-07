@@ -85,7 +85,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         return if (between.none { it.isWhitespace() || it in "[]<>," }) nearest else null
     }
 
-    private fun collectAtoms(p: MnPattern): List<MnNode.Atom> = buildList {
+    protected fun collectAtoms(p: MnPattern): List<MnNode.Atom> = buildList {
         p.items.forEach { collectAtomsInNode(it, this) }
     }
 
@@ -252,32 +252,45 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
     // ── Staff rendering ───────────────────────────────────────────────────────
 
     /**
-     * Renders one [NoteStaffComp] per line.
+     * Renders one [NoteStaffComp] per non-empty line of [text].
      *
-     * The full pattern (which contains [MnNode.Linebreak] nodes) is split on those
-     * linebreaks. Each non-empty segment is rendered as its own staff row.
+     * Uses atom [MnNode.Atom.sourceRange] positions to assign each atom to its
+     * visual line — so linebreaks inside groups or alternations (`<a\nb>`) split
+     * the display correctly without requiring top-level [MnNode.Linebreak] nodes.
      */
     private fun FlowContent.renderStaves() {
         val p = pattern ?: return
+        val allAtoms = collectAtoms(p)
+        val lines = text.split('\n')
+        var lineStart = 0
         var staffRendered = false
 
-        for (linePattern in p.splitOnLinebreaks()) {
-            if (linePattern.items.isEmpty()) continue
+        for (line in lines) {
+            val lineEnd = lineStart + line.length
 
-            if (staffRendered) {
-                div { css { height = 8.px } }
+            if (line.isNotBlank()) {
+                val lineAtoms = allAtoms.filter {
+                    it.sourceRange != null && it.sourceRange.first in lineStart..lineEnd
+                }
+
+                if (lineAtoms.isNotEmpty()) {
+                    if (staffRendered) div { css { height = 8.px } }
+
+                    val linePattern = MnPattern(lineAtoms)
+                    val lineActiveAtom = selectedAtom?.let { a -> lineAtoms.find { it.id == a.id } }
+
+                    noteStaffSvg(
+                        pattern = linePattern,
+                        activeAtom = lineActiveAtom,
+                        atomToPos = ::atomToStaffPosition,
+                        posToValue = ::staffPositionToAtomValue,
+                    ) { old, new -> updateAtom(old, new) }
+
+                    staffRendered = true
+                }
             }
 
-            val lineActiveAtom = selectedAtom?.let { a -> findAtomById(linePattern, a.id) }
-
-            noteStaffSvg(
-                pattern = linePattern,
-                activeAtom = lineActiveAtom,
-                atomToPos = ::atomToStaffPosition,
-                posToValue = ::staffPositionToAtomValue,
-            ) { old, new -> updateAtom(old, new) }
-
-            staffRendered = true
+            lineStart += line.length + 1 // +1 for the '\n'
         }
     }
 }

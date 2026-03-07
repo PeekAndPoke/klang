@@ -118,6 +118,8 @@ class MnRoundTripSpec : StringSpec() {
         "linebreak: trailing linebreak 'bd sd\\n'" { assertRoundTrip("bd sd\n") }
         "linebreak: with modifiers 'bd*2\\nsd/2'" { assertRoundTrip("bd*2\nsd/2") }
         "linebreak: with groups 'bd [sd hh]\\ncp ~'" { assertRoundTrip("bd [sd hh]\ncp ~") }
+        "linebreak inside group round-trips" { assertRoundTrip("[bd sd\nhh cp]") }
+        "linebreak inside alternation round-trips" { assertRoundTrip("<c\nd>") }
         "linebreak: AST contains Linebreak node" {
             val p = parse("bd sd\nhh cp")
             p.items.any { it is MnNode.Linebreak } shouldBe true
