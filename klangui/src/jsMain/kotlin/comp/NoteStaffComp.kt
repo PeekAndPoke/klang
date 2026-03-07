@@ -6,9 +6,13 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
+import io.peekandpoke.klang.ui.svgEllipse
+import io.peekandpoke.klang.ui.svgLine
+import io.peekandpoke.klang.ui.svgRoot
+import io.peekandpoke.klang.ui.svgText
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.unsafe
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -35,14 +39,12 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
     )
 
     override fun VDom.render() {
-        div {
-            unsafe { raw(buildSvg()) }
-        }
+        div { renderSvg() }
     }
 
-    // ── SVG builder ───────────────────────────────────────────────────────────
+    // ── SVG rendering ─────────────────────────────────────────────────────────
 
-    private fun buildSvg(): String {
+    private fun FlowContent.renderSvg() {
         val cleanScale = props.scaleName.replace("_", " ").replace(":", " ")
         val stepsFn = Scale.steps(cleanScale)
 
@@ -54,7 +56,7 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
             NI(step, name, pos, Note.get(name).pc.drop(1))
         }
 
-        if (notes.isEmpty()) return ""
+        if (notes.isEmpty()) return
 
         // ── Layout ───────────────────────────────────────────────────────────
 
@@ -78,144 +80,105 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
         val svgW = padL + clefAreaW + noteW * notes.size + padR
         val svgH = y(minPos) + padB
 
-        val clefCx = padL + clefAreaW / 2   // centre of the clef area, on the staff
-
-        val sb = StringBuilder()
-        sb.append("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $svgW $svgH" width="100%" style="display:block">""")
-
         val staffX1 = padL                   // staff lines start at left margin
         val staffX2 = svgW - padR            // staff lines end at right margin
+        val clefCx = padL + clefAreaW / 2   // centre of the clef area
         val notesX0 = padL + clefAreaW       // x origin for the first note column
 
-        // ── Treble staff lines: E4(2) G4(4) B4(6) D5(8) F5(10) ───────────────
+        svgRoot(viewBox = "0 0 $svgW $svgH") {
 
-        for (pos in listOf(2, 4, 6, 8, 10)) {
-            val ly = y(pos)
-            sb.append("""<line x1="$staffX1" y1="$ly" x2="$staffX2" y2="$ly" stroke="#999" stroke-width="1"/>""")
-        }
+            // ── Treble staff lines: E4(2) G4(4) B4(6) D5(8) F5(10) ──────────
 
-        // ── Bass staff lines: G2(-10) B2(-8) D3(-6) F3(-4) A3(-2) ────────────
+            for (pos in listOf(2, 4, 6, 8, 10)) {
+                svgLine(staffX1, y(pos), staffX2, y(pos), stroke = "#999", strokeWidth = "1")
+            }
 
-        for (pos in listOf(-10, -8, -6, -4, -2)) {
-            val ly = y(pos)
-            sb.append("""<line x1="$staffX1" y1="$ly" x2="$staffX2" y2="$ly" stroke="#999" stroke-width="1"/>""")
-        }
+            // ── Bass staff lines: G2(-10) B2(-8) D3(-6) F3(-4) A3(-2) ────────
 
-        // ── Vertical bar connecting both staves on the left ───────────────────
+            for (pos in listOf(-10, -8, -6, -4, -2)) {
+                svgLine(staffX1, y(pos), staffX2, y(pos), stroke = "#999", strokeWidth = "1")
+            }
 
-        sb.append("""<line x1="$staffX1" y1="${y(10)}" x2="$staffX1" y2="${y(-10)}" stroke="#777" stroke-width="2"/>""")
+            // ── Vertical bar connecting both staves on the left ───────────────
 
-        // ── G clef (treble): loop wraps around G4 (pos=4, 2nd treble line) ────
-        //
-        //   Layout (all in halfSp units from the clef centre cx):
-        //     • Stem:        x = cx + 1s,  from y(1) (below E4) to y(11) (above F5)
-        //     • Oval loop:   cx′ = cx − 0.5s,  rx = 1.5s,  ry = 2s  (from E4 to B4)
-        //     • Top curl:    from stem top sweeps right then back down to ~D5
-        //     • Bottom scroll: from lower-left of loop curls right to ~C4
+            svgLine(staffX1, y(10), staffX1, y(-10), stroke = "#777", strokeWidth = "2")
 
-        sb.append(gClef(clefCx, s) { pos -> y(pos) })
+            // ── Clef glyphs ───────────────────────────────────────────────────
 
-        // ── F clef (bass): sits on F3 (pos=−4, 4th bass line) ────────────────
-        //
-        //   Layout:
-        //     • Backward-C curve from A3 (pos=−2) to D3 (pos=−6), bowing left
-        //     • Dot above F3: in space pos=−3  (between A3 and F3 lines)
-        //     • Dot below F3: in space pos=−5  (between F3 and D3 lines)
+            renderGClef(clefCx, s) { y(it) }
+            renderFClef(clefCx, s) { y(it) }
 
-        sb.append(fClef(clefCx, s) { pos -> y(pos) })
+            // ── Notes ─────────────────────────────────────────────────────────
 
-        // ── Notes ─────────────────────────────────────────────────────────────
+            notes.forEachIndexed { i, note ->
+                val cx = notesX0 + noteW * i + noteW / 2.0
+                val cy = y(note.pos)
+                val isRoot = note.step == 0
 
-        notes.forEachIndexed { i, note ->
-            val cx = notesX0 + noteW * i + noteW / 2.0
-            val cy = y(note.pos)
-            val isRoot = note.step == 0
-
-            // Ledger lines above treble staff (even positions ≥ 12)
-            if (note.pos > 10) {
-                val stop = if (note.pos % 2 == 0) note.pos else note.pos - 1
-                var lp = 12
-                while (lp <= stop) {
-                    sb.append(ledgerLine(cx, y(lp), noteRx)); lp += 2
+                // Ledger lines above treble staff (even positions ≥ 12)
+                if (note.pos > 10) {
+                    val stop = if (note.pos % 2 == 0) note.pos else note.pos - 1
+                    var lp = 12
+                    while (lp <= stop) {
+                        renderLedgerLine(cx, y(lp), noteRx); lp += 2
+                    }
                 }
-            }
 
-            // Ledger lines below bass staff (even positions ≤ −12)
-            if (note.pos < -10) {
-                val stop = if (note.pos % 2 == 0) note.pos else note.pos + 1
-                var lp = -12
-                while (lp >= stop) {
-                    sb.append(ledgerLine(cx, y(lp), noteRx)); lp -= 2
+                // Ledger lines below bass staff (even positions ≤ −12)
+                if (note.pos < -10) {
+                    val stop = if (note.pos % 2 == 0) note.pos else note.pos + 1
+                    var lp = -12
+                    while (lp >= stop) {
+                        renderLedgerLine(cx, y(lp), noteRx); lp -= 2
+                    }
                 }
+
+                // Middle C ledger line (C4, pos=0) — in the gap between the two staves
+                if (note.pos == 0) renderLedgerLine(cx, y(0), noteRx)
+
+                // Accidental glyph
+                if (note.acc.isNotEmpty()) {
+                    val glyph = note.acc
+                        .replace("##", "\uD834\uDD2A").replace("bb", "\uD834\uDD2B") // 𝄪 𝄫
+                        .replace("#", "♯").replace("b", "♭")
+                    svgText(cx - noteRx - 2, cy + 4, text = glyph, fill = "#555", fontSize = "11", textAnchor = "end")
+                }
+
+                // Note head
+                svgEllipse(cx, cy, noteRx, noteRy, fill = if (isRoot) "#1565c0" else "#2185d0")
+
+                // Labels: note name (line 1) + step index (line 2)
+                val labelFill = if (isRoot) "#1565c0" else "#999"
+                svgText(cx, svgH - padB + 14, text = note.name, fill = labelFill, fontSize = "9", textAnchor = "middle")
+                svgText(cx, svgH - padB + 26, text = note.step.toString(), fill = labelFill, fontSize = "10", textAnchor = "middle")
             }
-
-            // Middle C ledger line (C4, pos=0) — in the gap between the two staves
-            if (note.pos == 0) sb.append(ledgerLine(cx, y(0), noteRx))
-
-            // Accidental glyph
-            if (note.acc.isNotEmpty()) {
-                val glyph = note.acc
-                    .replace("##", "𝄪").replace("bb", "𝄫")
-                    .replace("#", "♯").replace("b", "♭")
-                sb.append("""<text x="${cx - noteRx - 2}" y="${cy + 4}" text-anchor="end" font-size="11" fill="#555">$glyph</text>""")
-            }
-
-            // Note head
-            val fill = if (isRoot) "#1565c0" else "#2185d0"
-            sb.append("""<ellipse cx="$cx" cy="$cy" rx="$noteRx" ry="$noteRy" fill="$fill"/>""")
-
-            // Labels at bottom: note name (line 1) + step index (line 2)
-            val labelFill = if (isRoot) "#1565c0" else "#999"
-            sb.append("""<text x="$cx" y="${svgH - padB + 14}" text-anchor="middle" font-size="9" fill="$labelFill">${note.name}</text>""")
-            sb.append("""<text x="$cx" y="${svgH - padB + 26}" text-anchor="middle" font-size="10" fill="$labelFill">${note.step}</text>""")
         }
-
-        sb.append("</svg>")
-        return sb.toString()
     }
 
     // ── G clef (treble clef) ──────────────────────────────────────────────────
 
     /**
-     * Renders a G clef (treble clef) Unicode glyph (𝄞) centred at [cx].
-     *
-     * Per SMuFL convention the glyph anchor point is the G4 line (pos=4),
-     * which maps to the SVG `y` baseline. Font-size = 8 * halfSp so that
-     * 1 em = 4 staff-spaces, matching the SMuFL design grid.
+     * Renders a G clef (𝄞) centred at [cx].
+     * Font-size = 8 × halfSp so 1 em = 4 staff-spaces (SMuFL grid).
+     * Anchor point is G4 (pos=4); baseline adjusted to pos=3.
      */
-    private fun gClef(cx: Double, s: Double, y: (Int) -> Double): String =
-        """<text x="$cx" y="${y(3)}" text-anchor="middle" font-size="${8 * s}" fill="#555">𝄞</text>"""
+    private fun FlowContent.renderGClef(cx: Double, s: Double, y: (Int) -> Double) {
+        svgText(cx, y(3), text = "\uD834\uDD1E", fontSize = (8 * s).toString(), fill = "#555", textAnchor = "middle")
+    }
 
     // ── F clef (bass clef) ────────────────────────────────────────────────────
 
     /**
-     * Renders an F clef (bass clef) Unicode glyph (𝄢) centred at [cx].
-     *
-     * Per SMuFL convention the glyph anchor point is the F3 line (pos=−4),
-     * which maps to the SVG `y` baseline. Font-size = 8 * halfSp.
+     * Renders an F clef (𝄢) centred at [cx].
+     * Font-size = 8 × halfSp. Baseline adjusted to pos=−11 − 2px.
      */
-    private fun fClef(cx: Double, s: Double, y: (Int) -> Double): String =
-        """<text x="$cx" y="${y(-11) - 2}" text-anchor="middle" font-size="${8 * s}" fill="#555">𝄢</text>"""
+    private fun FlowContent.renderFClef(cx: Double, s: Double, y: (Int) -> Double) {
+        svgText(cx, y(-11) - 2, text = "\uD834\uDD22", fontSize = (8 * s).toString(), fill = "#555", textAnchor = "middle")
+    }
 
-    // ── Shared helpers ────────────────────────────────────────────────────────
+    // ── Ledger line ───────────────────────────────────────────────────────────
 
-    private fun ledgerLine(cx: Double, ly: Double, noteRx: Double) =
-        """<line x1="${cx - noteRx - 4}" y1="$ly" x2="${cx + noteRx + 4}" y2="$ly" stroke="#999" stroke-width="1"/>"""
-}
-
-// ── File-level helpers ────────────────────────────────────────────────────────
-
-private val diatonicOffset = mapOf('c' to 0, 'd' to 1, 'e' to 2, 'f' to 3, 'g' to 4, 'a' to 5, 'b' to 6)
-
-/**
- * Staff position of [noteName] with C4 = 0.
- * Treble lines: 2(E4) 4(G4) 6(B4) 8(D5) 10(F5).
- * Bass lines: −10(G2) −8(B2) −6(D3) −4(F3) −2(A3).
- */
-private fun staffPos(noteName: String): Int? {
-    val note = Note.get(noteName)
-    if (note.empty) return null
-    val oct = note.oct ?: return null
-    val letter = note.pc.firstOrNull()?.lowercaseChar() ?: return null
-    return (oct - 4) * 7 + (diatonicOffset[letter] ?: return null)
+    private fun FlowContent.renderLedgerLine(cx: Double, ly: Double, noteRx: Double) {
+        svgLine(cx - noteRx - 4, ly, cx + noteRx + 4, ly, stroke = "#999", strokeWidth = "1")
+    }
 }

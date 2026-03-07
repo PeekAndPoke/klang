@@ -28,8 +28,7 @@ import kotlinx.html.svg
 // ── Root ──────────────────────────────────────────────────────────────────────
 
 /**
- * Renders an `<svg>` element with [width], [height], and optional [style],
- * then runs [block] with the SVG element as the receiver.
+ * Renders an `<svg>` element with fixed pixel [width] and [height].
  */
 fun FlowContent.svgRoot(
     width: Int,
@@ -40,6 +39,24 @@ fun FlowContent.svgRoot(
     svg {
         attributes["width"] = width.toString()
         attributes["height"] = height.toString()
+        if (style != null) attributes["style"] = style
+        block()
+    }
+}
+
+/**
+ * Renders an `<svg>` element using a [viewBox] for responsive scaling.
+ * Defaults to `width="100%"` so the SVG fills its container.
+ */
+fun FlowContent.svgRoot(
+    viewBox: String,
+    width: String = "100%",
+    style: String? = "display:block;",
+    block: FlowContent.() -> Unit,
+) {
+    svg {
+        attributes["viewBox"] = viewBox
+        attributes["width"] = width
         if (style != null) attributes["style"] = style
         block()
     }
