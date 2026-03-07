@@ -193,6 +193,8 @@ internal val String._note by dslStringExtension { p, args, callInfo -> p._note(a
  * note("<c3 e3 g3> b2")     // alternating chord tones with a bass note
  * ```
  *
+ * @param note The note pattern in mini-notation, e.g. `"c4 e4 g4"`.
+ * @param-tool note StrudelNoteEditor
  * @category tonal
  * @tags note, pitch, frequency, MIDI, note name, pattern-creator
  */
@@ -260,6 +262,7 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
  * ```
  *
  * @param n The sound index to set, or null to reparse sequence values as sound index.
+ * @param-tool n StrudelScaleDegreeEditor
  *
  * @category tonal
  * @tags n, note number, sample index, pitch index, pattern-creator
@@ -274,6 +277,9 @@ fun String.n(index: PatternLike): StrudelPattern = this._n(listOf(index).asStrud
 
 /**
  * Creates a pattern of sound indices.
+ *
+ * @param index The scale degree index pattern in mini-notation, e.g. `"0 1 2 3"`.
+ * @param-tool index StrudelScaleDegreeEditor
  */
 @StrudelDsl
 fun n(index: PatternLike): StrudelPattern = _n(listOf(index).asStrudelDslArgs())
