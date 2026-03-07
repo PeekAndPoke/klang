@@ -75,6 +75,8 @@ private class StrudelNoteEditorComp(ctx: Ctx<Props>) : MnEditorBase<StrudelNoteE
         return "${letter.lowercase()}$acc$octave"
     }
 
+    override fun keySignatureScaleName(): String = activeScaleName
+
     // ── Scale picker ──────────────────────────────────────────────────────────
 
     override fun FlowContent.renderExtraControls() {

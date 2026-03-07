@@ -47,13 +47,13 @@ fun FlowContent.mnPatternTextInput(
                     top = 0.px; left = 0.px; right = 0.px; bottom = 0.px
                     fontFamily = "monospace"
                     fontSize = 15.px
-                    put("line-height", "1.4")
+                    put("line-height", "1.4") // we need this explicitly, dsl function does not work
                     padding = Padding(8.px, 10.px)
                     whiteSpace = WhiteSpace.pre
                     pointerEvents = PointerEvents.none
                     boxSizing = BoxSizing.borderBox
                     border = Border(1.px, BorderStyle.solid, Color.transparent)
-                    put("overflow", "hidden")
+                    overflow = Overflow.hidden
                     color = Color("transparent")
                 }
                 if (highlightStart != null && highlightEnd != null && highlightStart < highlightEnd) {

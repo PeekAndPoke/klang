@@ -8,6 +8,8 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onMouseDown
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
+import io.peekandpoke.klang.tones.note.Note
+import io.peekandpoke.klang.tones.scale.Scale
 import kotlinx.browser.window
 import kotlinx.css.Overflow
 import kotlinx.css.UserSelect
@@ -36,9 +38,10 @@ fun FlowContent.noteStaffSvg(
     activeAtom: MnNode.Atom?,
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
+    scaleName: String? = null,
     onNodeChange: (MnNode, MnNode) -> Unit,
 ) {
-    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, onNodeChange)
+    this@noteStaffSvg.NoteStaffComp(pattern, activeAtom, atomToPos, posToValue, scaleName, onNodeChange)
 }
 
 @Suppress("FunctionName")
@@ -47,9 +50,10 @@ private fun Tag.NoteStaffComp(
     activeAtom: MnNode.Atom?,
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
+    scaleName: String?,
     onNodeChange: (MnNode, MnNode) -> Unit,
 ) = comp(
-    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, onNodeChange)
+    NoteStaffComponent.Props(pattern, activeAtom, atomToPos, posToValue, scaleName, onNodeChange)
 ) { NoteStaffComponent(it) }
 
 // ── Staff layout constants ────────────────────────────────────────────────────
@@ -57,9 +61,57 @@ private fun Tag.NoteStaffComp(
 private const val HALF_STEP = 4.8       // px per diatonic step
 private const val NOTE_RADIUS_X = 4.8   // half-width of note head ellipse
 private const val NOTE_RADIUS_Y = 3.6   // half-height
-private const val LEFT_MARGIN = 38.0    // px before first note
+private const val LEFT_MARGIN = 38.0    // px reserved for clef (no key sig)
 private const val NOTE_COL_W = 22.0     // px per note column
 private const val STAFF_TOP = 29.0      // top of staff (top line Y)
+private const val CLEF_END_X = 30.0    // approx x where clef glyph ends
+private const val KEY_SIG_ACC_W = 9.0  // px per key-signature accidental
+private const val NOTE_GAP = 16.0      // gap between last key-sig acc and first note
+
+// ── Key signature data ────────────────────────────────────────────────────────
+
+/** Staff positions for sharps in treble clef (FCGDAEB order). */
+private val SHARP_KEY_POSITIONS = linkedMapOf(
+    "F" to 10, "C" to 7, "G" to 11, "D" to 8, "A" to 5, "E" to 9, "B" to 6
+)
+
+/** Staff positions for flats in treble clef (BEADGCF order). */
+private val FLAT_KEY_POSITIONS = linkedMapOf(
+    "B" to 6, "E" to 9, "A" to 5, "D" to 8, "G" to 4, "C" to 7, "F" to 10
+)
+
+private data class KeySignature(val symbol: String, val staffPositions: List<Int>)
+
+private fun buildKeySignature(scaleName: String?): KeySignature? {
+    scaleName ?: return null
+    val scale = Scale.get(scaleName)
+    if (scale.empty) return null
+
+    val sharpLetters = scale.notes
+        .map { Note.get(it) }
+        .filter { !it.empty && it.acc.contains('#') }
+        .map { it.letter }
+        .toSet()
+    val flatLetters = scale.notes
+        .map { Note.get(it) }
+        .filter { !it.empty && it.acc.isNotEmpty() && !it.acc.contains('#') }
+        .map { it.letter }
+        .toSet()
+
+    return when {
+        sharpLetters.isNotEmpty() -> {
+            val positions = SHARP_KEY_POSITIONS.entries.filter { it.key in sharpLetters }.map { it.value }
+            if (positions.isEmpty()) null else KeySignature("♯", positions)
+        }
+
+        flatLetters.isNotEmpty() -> {
+            val positions = FLAT_KEY_POSITIONS.entries.filter { it.key in flatLetters }.map { it.value }
+            if (positions.isEmpty()) null else KeySignature("♭", positions)
+        }
+
+        else -> null
+    }
+}
 
 // Staff lines are at treble positions 2=E4, 4=G4, 6=B4, 8=D5, 10=F5
 private val STAFF_LINE_POSITIONS = listOf(2, 4, 6, 8, 10)
@@ -76,6 +128,7 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val activeAtom: MnNode.Atom?,
         val atomToPos: (String) -> Int?,
         val posToValue: (Int) -> String,
+        val scaleName: String?,
         val onNodeChange: (MnNode, MnNode) -> Unit,
     )
 
@@ -158,7 +211,6 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
 
     override fun VDom.render() {
         val currentItems = staffItems
-        val svgWidth = (LEFT_MARGIN + currentItems.size * NOTE_COL_W + NOTE_COL_W).coerceAtLeast(160.0)
 
         div {
             css {
@@ -194,7 +246,7 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
                 triggerRedraw()
             }
             unsafe {
-                +buildSvg(currentItems, svgWidth)
+                +buildSvg(currentItems, 0.0) // width computed inside buildSvg
             }
         }
     }
@@ -202,23 +254,31 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
     // ── SVG builder ───────────────────────────────────────────────────────────
 
     private fun buildSvg(currentItems: List<MnNode>, width: Double): String {
+        // Key signature
+        val keySig = buildKeySignature(props.scaleName)
+        val keySigWidth = if (keySig != null) keySig.staffPositions.size * KEY_SIG_ACC_W + NOTE_GAP else NOTE_GAP
+        val noteStartX = maxOf(LEFT_MARGIN, CLEF_END_X + keySigWidth)
+
         // Dynamic layout: expand height for notes outside normal staff range
+        // Also account for key sig accidentals that may go above the top staff line (e.g. G5=11)
         val notePositions = currentItems.filterIsInstance<MnNode.Atom>()
             .mapNotNull { props.atomToPos(it.value) }
-        val maxPos = (notePositions.maxOrNull() ?: 10).coerceAtLeast(10)
+        val keySigMaxPos = keySig?.staffPositions?.maxOrNull() ?: 10
+        val maxPos = (notePositions.maxOrNull() ?: 10).coerceAtLeast(keySigMaxPos).coerceAtLeast(10)
         val minPos = (notePositions.minOrNull() ?: 0).coerceAtMost(0)
-        // Extra headroom above for high notes (above F5 = pos 10)
         val topExtra = maxOf(0.0, (maxPos - 10) * HALF_STEP + HALF_STEP * 1.5)
-        // Extra room below for low notes (below C4 = pos 0)
         val bottomExtra = maxOf(0.0, (-minPos) * HALF_STEP + HALF_STEP * 2)
         val topY = STAFF_TOP + topExtra
         val height = 104.0 + topExtra + bottomExtra
 
+        // Recompute width based on noteStartX
+        val svgWidth = (noteStartX + currentItems.size * NOTE_COL_W + NOTE_COL_W).coerceAtLeast(160.0)
+
         val sb = StringBuilder()
-        sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${width.toInt()}" height="${height.toInt()}" style="display:block;font-family:serif;">""")
+        sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth.toInt()}" height="${height.toInt()}" style="display:block;font-family:serif;">""")
 
         // Staff lines
-        val lineWidth = width - 8.0
+        val lineWidth = svgWidth - 8.0
         for (linePos in STAFF_LINE_POSITIONS) {
             val y = staffPosToY(linePos, topY)
             sb.append("""<line x1="4" y1="$y" x2="${lineWidth.toInt()}" y2="$y" stroke="#333" stroke-width="1.2"/>""")
@@ -234,9 +294,18 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
             }" font-size="42" fill="#333" style="user-select:none;line-height:1">&#119070;</text>"""
         )
 
+        // Key signature accidentals
+        if (keySig != null) {
+            keySig.staffPositions.forEachIndexed { idx, pos ->
+                val x = CLEF_END_X + idx * KEY_SIG_ACC_W + KEY_SIG_ACC_W / 2
+                val y = staffPosToY(pos, topY)
+                sb.append("""<text x="$x" y="${y + 4}" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" style="user-select:none">${keySig.symbol}</text>""")
+            }
+        }
+
         // Notes and rests
         for ((idx, item) in currentItems.withIndex()) {
-            val x = LEFT_MARGIN + idx * NOTE_COL_W
+            val x = noteStartX + idx * NOTE_COL_W
             when (item) {
                 is MnNode.Atom -> renderAtomSvg(sb, item, x, topY)
                 is MnNode.Rest -> renderRestSvg(sb, item, x, topY)

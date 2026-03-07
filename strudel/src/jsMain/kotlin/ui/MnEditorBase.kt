@@ -259,6 +259,9 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
     /** Maps a staff position back to the atom value string. */
     protected abstract fun staffPositionToAtomValue(pos: Int): String
 
+    /** Override to provide the scale name for the key signature drawn on the staff. */
+    protected open fun keySignatureScaleName(): String? = null
+
     /** Override to render additional controls between the text input and the staff. */
     protected open fun FlowContent.renderExtraControls() {}
 
@@ -342,6 +345,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                         activeAtom = lineActiveAtom,
                         atomToPos = ::atomToStaffPosition,
                         posToValue = ::staffPositionToAtomValue,
+                        scaleName = keySignatureScaleName(),
                     ) { old, new -> updateNode(old, new) }
 
                     staffRendered = true

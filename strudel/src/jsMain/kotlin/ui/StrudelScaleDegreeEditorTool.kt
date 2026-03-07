@@ -54,6 +54,8 @@ private class StrudelScaleDegreeEditorComp(ctx: Ctx<Props>) : MnEditorBase<Strud
     override fun staffPositionToAtomValue(pos: Int): String =
         nearestScaleDegree(pos, scaleNotes).toString()
 
+    override fun keySignatureScaleName(): String = scaleName
+
     // ── Scale picker ──────────────────────────────────────────────────────────
 
     override fun FlowContent.renderExtraControls() {
