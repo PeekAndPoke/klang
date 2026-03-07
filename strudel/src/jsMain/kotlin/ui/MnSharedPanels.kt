@@ -47,11 +47,13 @@ fun FlowContent.mnPatternTextInput(
                     top = 0.px; left = 0.px; right = 0.px; bottom = 0.px
                     fontFamily = "monospace"
                     fontSize = 15.px
-//                    padding = Padding(8.px, 10.px)
+                    put("line-height", "1.4")
+                    padding = Padding(8.px, 10.px)
                     whiteSpace = WhiteSpace.pre
                     pointerEvents = PointerEvents.none
                     boxSizing = BoxSizing.borderBox
                     border = Border(1.px, BorderStyle.solid, Color.transparent)
+                    put("overflow", "hidden")
                     color = Color("transparent")
                 }
                 if (highlightStart != null && highlightEnd != null && highlightStart < highlightEnd) {
@@ -62,10 +64,8 @@ fun FlowContent.mnPatternTextInput(
                             backgroundColor = col.withAlpha(0.5)
                             color = Color("transparent")
                             borderRadius = 2.px
-                            border = Border(1.px, BorderStyle.solid, col.withAlpha(0.8))
-                            padding = Padding(1.px, 2.px)
-                            marginTop = (-1).px
-                            marginLeft = (-3).px
+                            // box-shadow instead of border so it doesn't affect line height
+                            put("box-shadow", "0 0 0 1px ${col.withAlpha(0.8)}")
                         }
                         +text.substring(highlightStart, highlightEnd)
                     }
@@ -85,6 +85,7 @@ fun FlowContent.mnPatternTextInput(
                     width = 100.pct
                     fontFamily = "monospace"
                     fontSize = 15.px
+                    put("line-height", "1.4")
                     padding = Padding(8.px, 10.px)
                     borderRadius = 4.px
                     put("border", if (parseError) "1px solid #e03131" else "1px solid #ccc")
@@ -116,6 +117,12 @@ fun FlowContent.mnPatternTextInput(
                 onKeyUp { e ->
                     val cursor = e.target?.asDynamic()?.selectionStart as? Int ?: 0
                     onChange(text, cursor)
+                }
+                // Sync horizontal scroll of the highlight overlay with the textarea
+                mnOnScroll { e ->
+                    val scrollLeft = e.target?.asDynamic()?.scrollLeft as? Double ?: 0.0
+                    val overlay = (e.target as? org.w3c.dom.Element)?.previousElementSibling
+                    if (overlay != null) overlay.asDynamic().scrollLeft = scrollLeft
                 }
             }
         }
@@ -389,6 +396,10 @@ internal fun Double.toFixed(decimals: Int): String {
 internal fun Double.roundTo(decimals: Int): Double {
     val factor = 10.0.pow(decimals)
     return (this * factor).roundToLong().toDouble() / factor
+}
+
+private fun CommonAttributeGroupFacade.mnOnScroll(handler: (org.w3c.dom.events.Event) -> Unit) {
+    consumer.onTagEvent(this, "onscroll", handler.asDynamic())
 }
 
 internal fun Double.decimalPlaces(): Int {

@@ -31,6 +31,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     protected var text by value(initialText())
     protected var cursorOffset by value(0)
+    private var lastCommittedText by value(initialText())
 
     /** Last atom the cursor was over — retained so panels survive button clicks. */
     protected var lastAtom: MnNode.Atom? = null
@@ -56,6 +57,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     protected val parseError: Boolean get() = pattern == null && text.isNotBlank()
     protected val selectedAtom: MnNode.Atom? get() = pattern?.let { findAtomAt(it, cursorOffset) }
     protected val isModified: Boolean get() = text != initialText()
+    protected val hasUncommittedChanges: Boolean get() = text != lastCommittedText
 
     // ── Initial value ─────────────────────────────────────────────────────────
 
@@ -206,7 +208,10 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         lastAtom = null
     }
 
-    protected fun onCommit() = props.toolCtx.onCommit(text.quoteForCommit())
+    protected fun onCommit() {
+        lastCommittedText = text
+        props.toolCtx.onCommit(text.quoteForCommit())
+    }
 
     // ── Bottom bar ────────────────────────────────────────────────────────────
 
@@ -223,8 +228,8 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
                 icon.undo()
                 +"Reset"
             }
-            ui.black.button {
-                onClick { onCommit() }
+            ui.black.givenNot(hasUncommittedChanges) { disabled }.button {
+                onClick { if (hasUncommittedChanges) onCommit() }
                 icon.check()
                 +"Update"
             }

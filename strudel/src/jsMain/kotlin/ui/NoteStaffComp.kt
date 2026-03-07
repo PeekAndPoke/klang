@@ -79,12 +79,15 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val onNodeChange: (MnNode, MnNode) -> Unit,
     )
 
-    // ── Drag state ────────────────────────────────────────────────────────────
+    // ── Drag / click state ────────────────────────────────────────────────────
 
     private var dragAtomId: Int? = null
     private var dragStartY: Double = 0.0
     private var dragStartPos: Int = 0
     private var dragPreviewPos: Int? = null
+
+    /** Atom id of the last zero-drag click — clicking the same atom again converts it to a rest. */
+    private var lastClickedAtomId: Int? = null
 
     // ── Derived ───────────────────────────────────────────────────────────────
 
@@ -124,7 +127,18 @@ private class NoteStaffComponent(ctx: Ctx<Props>) : Component<NoteStaffComponent
         val newPos = dragStartPos + delta
         val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
         if (atom != null) {
-            props.onNodeChange(atom, atom.copy(value = props.posToValue(newPos)))
+            if (delta == 0) {
+                // Pure click: second click on same atom → convert to rest
+                if (lastClickedAtomId == atomId) {
+                    lastClickedAtomId = null
+                    props.onNodeChange(atom, MnNode.Rest(atom.sourceRange))
+                } else {
+                    lastClickedAtomId = atomId
+                }
+            } else {
+                lastClickedAtomId = null
+                props.onNodeChange(atom, atom.copy(value = props.posToValue(newPos)))
+            }
         }
         dragAtomId = null
         dragPreviewPos = null
