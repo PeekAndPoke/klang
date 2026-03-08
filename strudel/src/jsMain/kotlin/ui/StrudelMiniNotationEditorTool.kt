@@ -73,11 +73,13 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
             }
 
+            ui.divider {}
             if (atom != null) {
-                ui.divider {}
                 mnModifierPanel(atom) { updated -> updateAtom(atom, updated) }
                 ui.divider {}
                 renderAtomPanel(atom)
+            } else {
+                mnModifierPanelDisabled()
             }
 
             div { css { flexGrow = 1.0 } }

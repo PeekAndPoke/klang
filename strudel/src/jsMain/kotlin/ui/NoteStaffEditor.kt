@@ -5,6 +5,10 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
+import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout
+import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.BracketType
+import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.InsertTarget
+import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.LayoutItem
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
 import io.peekandpoke.klang.tones.note.Note
@@ -88,8 +92,15 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
          * User double-clicked between two nodes to insert a new note there.
          * [leftNode] is the node to the left (null = insert at the very start).
          * [rightNode] is the node to the right (null = insert at the very end).
+         * [skipOpeningBrackets] — see [InsertTarget.Between.skipOpeningBrackets].
          */
-        data class InsertBetween(val leftNode: MnNode?, val rightNode: MnNode?, val staffPos: Int) : Action
+        data class InsertBetween(
+            val leftNode: MnNode?,
+            val rightNode: MnNode?,
+            val staffPos: Int,
+            val skipOpeningBrackets: Int = 0,
+            val exitBrackets: Int = 0,
+        ) : Action
 
         /**
          * User double-clicked on top of an existing node to add a note at the same position.
@@ -131,23 +142,6 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         private val FLAT_KEY_POSITIONS = linkedMapOf(
             "B" to 6, "E" to 9, "A" to 5, "D" to 8, "G" to 4, "C" to 7, "F" to 10
         )
-
-        enum class BracketType { Group, Alternation }
-
-        sealed class LayoutItem {
-            data class Note(val node: MnNode) : LayoutItem()
-            data class Stack(val items: List<MnNode>) : LayoutItem()
-            data class BracketMark(val type: BracketType, val isOpen: Boolean) : LayoutItem()
-        }
-
-        /** What happens when the user double-clicks at this snap slot. */
-        sealed interface InsertTarget {
-            /** Insert a new note between [leftNode] and [rightNode] (either may be null = boundary). */
-            data class Between(val leftNode: MnNode?, val rightNode: MnNode?) : InsertTarget
-
-            /** Overlay an existing column — add note to the stack at [node]. */
-            data class At(val node: MnNode) : InsertTarget
-        }
 
         /**
          * A snap slot in the staff.
@@ -244,51 +238,20 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
     // ── Derived ───────────────────────────────────────────────────────────────
 
-    private val staffItems: List<MnNode>
-        get() = props.pattern?.let { p ->
-            buildList { p.items.forEach { collectStaffNodes(it, this) } }
-        } ?: emptyList()
-
-    private fun collectStaffNodes(node: MnNode, items: MutableList<MnNode>) {
-        when (node) {
-            is MnNode.Atom -> items.add(node)
-            is MnNode.Rest -> if (node.sourceRange != null) items.add(node)
-            is MnNode.Group -> node.items.forEach { collectStaffNodes(it, items) }
-            is MnNode.Alternation -> node.items.forEach { collectStaffNodes(it, items) }
-            is MnNode.Stack -> node.layers.forEach { layer -> layer.forEach { collectStaffNodes(it, items) } }
-            is MnNode.Choice -> node.options.forEach { collectStaffNodes(it, items) }
-            is MnNode.Repeat -> collectStaffNodes(node.node, items)
-            is MnNode.Linebreak -> {}
-        }
-    }
-
-    private fun buildLayoutItems(node: MnNode, result: MutableList<LayoutItem>) {
-        when (node) {
-            is MnNode.Atom -> result.add(LayoutItem.Note(node))
-            is MnNode.Rest -> if (node.sourceRange != null) result.add(LayoutItem.Note(node))
-            is MnNode.Group -> {
-                result.add(LayoutItem.BracketMark(BracketType.Group, isOpen = true))
-                node.items.forEach { buildLayoutItems(it, result) }
-                result.add(LayoutItem.BracketMark(BracketType.Group, isOpen = false))
-            }
-
-            is MnNode.Alternation -> {
-                result.add(LayoutItem.BracketMark(BracketType.Alternation, isOpen = true))
-                node.items.forEach { buildLayoutItems(it, result) }
-                result.add(LayoutItem.BracketMark(BracketType.Alternation, isOpen = false))
-            }
-
-            is MnNode.Stack -> {
-                val stackNodes = buildList {
-                    node.layers.forEach { layer -> layer.forEach { collectStaffNodes(it, this) } }
+    /** All renderable MnNode instances from the layout — includes atoms/rests inside Stacks. */
+    private val staffNodes: List<MnNode>
+        get() = props.pattern?.let { NoteStaffLayout.buildLayoutItems(it) }
+            ?.flatMap { item ->
+                when (item) {
+                    is LayoutItem.Note -> listOf(item.node)
+                    is LayoutItem.Stack -> item.items
+                    is LayoutItem.BracketMark -> emptyList()
                 }
-                if (stackNodes.isNotEmpty()) result.add(LayoutItem.Stack(stackNodes))
             }
-            is MnNode.Choice -> node.options.forEach { buildLayoutItems(it, result) }
-            is MnNode.Repeat -> buildLayoutItems(node.node, result)
-            is MnNode.Linebreak -> {}
-        }
-    }
+            ?: emptyList()
+
+    private fun buildLayoutItems(pattern: MnPattern): List<LayoutItem> =
+        NoteStaffLayout.buildLayoutItems(pattern)
 
     // ── Window drag handlers ──────────────────────────────────────────────────
 
@@ -305,7 +268,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val atomId = dragAtomId ?: return@upHandler
         val delta = ((dragStartY - me.clientY) / HALF_STEP).roundToInt()
         val newPos = dragStartPos + delta
-        val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
+        val atom = staffNodes.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
         if (atom != null) {
             if (delta == 0) props.onAction(Action.Select(MnSelection.Atom(atom)))
             else props.onAction(Action.Replace(atom, atom.copy(value = props.posToValue(newPos))))
@@ -350,7 +313,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val restEl = element?.closest("[data-rest-range-start]")
         if (restEl != null) {
             val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return
-            val rest = staffItems.filterIsInstance<MnNode.Rest>()
+            val rest = staffNodes.filterIsInstance<MnNode.Rest>()
                 .find { it.sourceRange?.first == rangeStart } ?: return
             props.onAction(Action.Select(MnSelection.Rest(rest)))
             return
@@ -381,7 +344,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val noteEl = element?.closest("[data-atom-id]")
         if (noteEl != null) {
             val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return
-            val atom = staffItems.filterIsInstance<MnNode.Atom>()
+            val atom = staffNodes.filterIsInstance<MnNode.Atom>()
                 .find { it.id == atomId } ?: return
             props.onAction(Action.Remove(atom))
             return
@@ -391,7 +354,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val restEl = element?.closest("[data-rest-range-start]")
         if (restEl != null) {
             val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return
-            val rest = staffItems.filterIsInstance<MnNode.Rest>()
+            val rest = staffNodes.filterIsInstance<MnNode.Rest>()
                 .find { it.sourceRange?.first == rangeStart } ?: return
             props.onAction(Action.Remove(rest))
             return
@@ -402,7 +365,9 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val gPos = ghostStaffPos
         val slot = gIdx?.let { lastBoundaries.getOrNull(it) } ?: return
         when (val target = slot.target) {
-            is InsertTarget.Between -> props.onAction(Action.InsertBetween(target.leftNode, target.rightNode, gPos ?: 6))
+            is InsertTarget.Between -> props.onAction(
+                Action.InsertBetween(target.leftNode, target.rightNode, gPos ?: 6, target.skipOpeningBrackets, target.exitBrackets)
+            )
             is InsertTarget.At -> props.onAction(Action.InsertAt(target.node, gPos ?: 6))
         }
     }
@@ -416,7 +381,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val noteEl = element?.closest("[data-atom-id]")
         if (noteEl != null) {
             val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return
-            val atom = staffItems.filterIsInstance<MnNode.Atom>()
+            val atom = staffNodes.filterIsInstance<MnNode.Atom>()
                 .find { it.id == atomId } ?: return
             props.onAction(Action.Replace(atom, MnNode.Rest(atom.sourceRange)))
             return
@@ -425,7 +390,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         // Rest → note (at the clicked pitch)
         val restEl = element?.closest("[data-rest-range-start]") ?: return
         val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return
-        val rest = staffItems.filterIsInstance<MnNode.Rest>()
+        val rest = staffNodes.filterIsInstance<MnNode.Rest>()
             .find { it.sourceRange?.first == rangeStart } ?: return
         val svg = restEl.closest("svg")
         val staffPos = if (svg != null) {
@@ -476,11 +441,9 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val noteStartX = maxOf(LEFT_MARGIN, CLEF_END_X + keySigWidth)
 
         // Build interleaved layout: bracket marks get their own column alongside notes/rests
-        val layoutItems = buildList {
-            (props.structuralPattern ?: props.pattern)?.items?.forEach {
-                buildLayoutItems(it, this)
-            }
-        }
+        val layoutItems = (props.structuralPattern ?: props.pattern)
+            ?.let { buildLayoutItems(it) }
+            ?: emptyList()
 
         // Dynamic layout: expand height for notes outside normal staff range
         val notePositions = layoutItems.flatMap { item ->
@@ -621,54 +584,35 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
         lastTopY = topY
         lastAtomCenters = atomCenters
-        // Precompute first renderable node at-or-after each layout index (for right-neighbour lookup).
-        val firstNodeAfter = arrayOfNulls<MnNode>(layoutItems.size + 1)
-        var lookahead: MnNode? = null
-        for (i in layoutItems.indices.reversed()) {
-            lookahead = when (val li = layoutItems[i]) {
-                is LayoutItem.Note -> li.node
-                is LayoutItem.Stack -> li.items.firstOrNull()
-                is LayoutItem.BracketMark -> lookahead
-            }
-            firstNodeAfter[i] = lookahead
-        }
 
-        // Snap slots: push-edge before each item + overlay-center for Note/Stack + push-edge at end.
-        lastBoundaries = buildList {
-            var bx = noteStartX
-            var leftNode: MnNode? = null
-            for ((idx, item) in layoutItems.withIndex()) {
-                val itemW = when (item) {
-                    is LayoutItem.Note, is LayoutItem.Stack -> NOTE_COL_W
-                    is LayoutItem.BracketMark -> BRACKET_COL_W
-                }
-                // Push-edge before this item
-                add(BoundarySlot(bx, InsertTarget.Between(leftNode, firstNodeAfter[idx]), idx, isPush = true))
-                // Overlay-center for notes/stacks — stack onto existing note
-                when (item) {
-                    is LayoutItem.Note -> {
-                        add(BoundarySlot(bx + itemW / 2, InsertTarget.At(item.node), idx, isPush = false))
-                        leftNode = item.node
-                    }
-                    is LayoutItem.Stack -> {
-                        add(
-                            BoundarySlot(
-                                bx + itemW / 2,
-                                InsertTarget.At(item.items.firstOrNull() ?: item.items.first()),
-                                idx,
-                                isPush = false
-                            )
-                        )
-                        leftNode = item.items.lastOrNull()
-                    }
-
-                    is LayoutItem.BracketMark -> {}
-                }
-                bx += itemW
+        // Delegate slot-target computation to NoteStaffLayout (the single source of truth,
+        // tested from commonTest/jvmTest). We only add pixel positions on top.
+        val slotTargets = NoteStaffLayout.buildInsertTargets(layoutItems)
+        lastBoundaries = slotTargets.map { slot ->
+            val bx = layoutItemToX(slot.itemIdx, layoutItems, noteStartX)
+            val offsetX = when {
+                !slot.isPush -> itemWidth(layoutItems.getOrNull(slot.itemIdx)) / 2  // center overlay
+                slot.itemIdx > 0 -> -2.0  // right-edge push: snap to right edge of preceding item
+                else -> 0.0               // left-edge push: snap to left edge of item
             }
-            // Push-edge after all items
-            add(BoundarySlot(bx, InsertTarget.Between(leftNode, null), layoutItems.size, isPush = true))
+            BoundarySlot(bx + offsetX, slot.target, slot.itemIdx, slot.isPush)
         }
+    }
+
+    /** Returns the column width for a layout item (or 0 for null). */
+    private fun itemWidth(item: LayoutItem?): Double = when (item) {
+        is LayoutItem.Note, is LayoutItem.Stack -> NOTE_COL_W
+        is LayoutItem.BracketMark -> BRACKET_COL_W
+        null -> 0.0
+    }
+
+    /** Returns the X coordinate of the left edge of layout item at [idx]. */
+    private fun layoutItemToX(idx: Int, items: List<LayoutItem>, startX: Double): Double {
+        var x = startX
+        for (i in 0 until idx.coerceAtMost(items.size)) {
+            x += itemWidth(items[i])
+        }
+        return x
     }
 
     private fun FlowContent.renderGhostNote(cx: Double, staffPos: Int?, topY: Double) {

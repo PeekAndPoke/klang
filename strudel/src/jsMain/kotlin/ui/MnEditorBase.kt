@@ -7,7 +7,9 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
 import io.peekandpoke.klang.strudel.lang.editor.MnPatternTextEditor
+import io.peekandpoke.klang.strudel.lang.editor.sourceRange
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
 import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
@@ -24,7 +26,7 @@ import org.w3c.dom.events.KeyboardEvent
 /**
  * Abstract base component containing all shared state and logic for mini-notation editors.
  *
- * Subclasses that also need a note staff should extend [MnEditorBase] instead.
+ * Tree-walking operations (collect, find, replace) are delegated to [MnNodeOps] (commonMain).
  */
 abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Component<P>(ctx) {
 
@@ -112,7 +114,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         }
 
     protected val parseError: Boolean get() = pattern == null && text.isNotBlank()
-    protected val selectedAtom: MnNode.Atom? get() = pattern?.let { findAtomAt(it, cursorOffset) }
+    protected val selectedAtom: MnNode.Atom? get() = pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) }
     protected val isModified: Boolean get() = text != initialText()
     protected val hasUncommittedChanges: Boolean get() = text != lastCommittedText
 
@@ -123,74 +125,13 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         return raw.removeSurrounding("\"").removeSurrounding("`")
     }
 
-    // ── Atom finding ──────────────────────────────────────────────────────────
+    // ── Node queries (delegate to MnNodeOps) ─────────────────────────────────
 
-    /**
-     * Returns the atom at [offset], including the modifier tail after the value token.
-     *
-     * Two passes:
-     * 1. Exact: offset is within the atom's sourceRange (the value token itself).
-     * 2. Modifier tail: cursor is past the value token but there is no whitespace or
-     *    structural character (`[]<>,`) between the atom end and [offset].
-     */
-    protected fun findAtomAt(p: MnPattern, offset: Int): MnNode.Atom? {
-        p.items.firstNotNullOfOrNull { findAtomInNode(it, offset) }?.let { return it }
+    protected fun collectAtoms(p: MnPattern): List<MnNode.Atom> = MnNodeOps.collectAtoms(p)
 
-        val nearest = collectAtoms(p)
-            .filter { it.sourceRange != null && it.sourceRange.last < offset }
-            .maxByOrNull { it.sourceRange!!.last }
-            ?: return null
+    protected fun collectStaffItems(p: MnPattern): List<MnNode> = MnNodeOps.collectStaffItems(p)
 
-        val atomEnd = nearest.sourceRange!!.last + 1
-        val between = text.substring(atomEnd.coerceAtMost(text.length), offset.coerceAtMost(text.length))
-        return if (between.none { it.isWhitespace() || it in "[]<>," }) nearest else null
-    }
-
-    protected fun collectAtoms(p: MnPattern): List<MnNode.Atom> = buildList {
-        p.items.forEach { collectAtomsInNode(it, this) }
-    }
-
-    private fun collectAtomsInNode(node: MnNode, list: MutableList<MnNode.Atom>) {
-        when (node) {
-            is MnNode.Atom -> if (node.sourceRange != null) list.add(node)
-            is MnNode.Group -> node.items.forEach { collectAtomsInNode(it, list) }
-            is MnNode.Alternation -> node.items.forEach { collectAtomsInNode(it, list) }
-            is MnNode.Stack -> node.layers.flatten().forEach { collectAtomsInNode(it, list) }
-            is MnNode.Choice -> node.options.forEach { collectAtomsInNode(it, list) }
-            is MnNode.Repeat -> collectAtomsInNode(node.node, list)
-            is MnNode.Rest -> {}
-            is MnNode.Linebreak -> {}
-        }
-    }
-
-    /** Collects atoms AND rests (both with source positions) in document order. Used by staff renderers. */
-    protected fun collectStaffItems(p: MnPattern): List<MnNode> = buildList {
-        p.items.forEach { collectStaffItemsInNode(it, this) }
-    }
-
-    private fun collectStaffItemsInNode(node: MnNode, list: MutableList<MnNode>) {
-        when (node) {
-            is MnNode.Atom -> if (node.sourceRange != null) list.add(node)
-            is MnNode.Rest -> if (node.sourceRange != null) list.add(node)
-            is MnNode.Group -> node.items.forEach { collectStaffItemsInNode(it, list) }
-            is MnNode.Alternation -> node.items.forEach { collectStaffItemsInNode(it, list) }
-            is MnNode.Stack -> node.layers.flatten().forEach { collectStaffItemsInNode(it, list) }
-            is MnNode.Choice -> node.options.forEach { collectStaffItemsInNode(it, list) }
-            is MnNode.Repeat -> collectStaffItemsInNode(node.node, list)
-            is MnNode.Linebreak -> {}
-        }
-    }
-
-    private fun findAtomInNode(node: MnNode, offset: Int): MnNode.Atom? = when (node) {
-        is MnNode.Atom -> node.sourceRange?.takeIf { offset in it }?.let { node }
-        is MnNode.Group -> node.items.firstNotNullOfOrNull { findAtomInNode(it, offset) }
-        is MnNode.Alternation -> node.items.firstNotNullOfOrNull { findAtomInNode(it, offset) }
-        is MnNode.Stack -> node.layers.flatten().firstNotNullOfOrNull { findAtomInNode(it, offset) }
-        is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomInNode(it, offset) }
-        is MnNode.Repeat -> findAtomInNode(node.node, offset)
-        is MnNode.Rest -> null
-        is MnNode.Linebreak -> null
-    }
+    protected fun findAtomById(p: MnPattern, id: Int): MnNode.Atom? = MnNodeOps.findAtomById(p, id)
 
     // ── Atom update ───────────────────────────────────────────────────────────
 
@@ -198,63 +139,24 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     protected fun updateAtom(old: MnNode.Atom, new: MnNode.Atom) {
         val p = pattern ?: return
         pushUndo()
-        text = MnRenderer.render(replaceAtomIn(p, old, new))
-        val newAtom = pattern?.let { findAtomById(it, old.id) }
+        text = MnRenderer.render(MnNodeOps.replaceNode(p, old, new))
+        val newAtom = pattern?.let { MnNodeOps.findAtomById(it, old.id) }
         cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
         lastAtom = newAtom ?: lastAtom
-    }
-
-    private fun replaceAtomIn(p: MnPattern, old: MnNode.Atom, new: MnNode.Atom): MnPattern =
-        MnPattern(p.items.map { replaceAtomInNode(it, old, new) })
-
-    private fun replaceAtomInNode(node: MnNode, old: MnNode.Atom, new: MnNode.Atom): MnNode = when (node) {
-        is MnNode.Atom -> if (node.id == old.id) new else node
-        is MnNode.Group -> node.copy(items = node.items.map { replaceAtomInNode(it, old, new) })
-        is MnNode.Alternation -> node.copy(items = node.items.map { replaceAtomInNode(it, old, new) })
-        is MnNode.Stack -> node.copy(layers = node.layers.map { l -> l.map { replaceAtomInNode(it, old, new) } })
-        is MnNode.Choice -> node.copy(options = node.options.map { replaceAtomInNode(it, old, new) })
-        is MnNode.Repeat -> node.copy(node = replaceAtomInNode(node.node, old, new))
-        is MnNode.Rest -> node
-        is MnNode.Linebreak -> node
-    }
-
-    protected fun findAtomById(p: MnPattern, id: Int): MnNode.Atom? =
-        if (id < 0) null else p.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
-
-    private fun findAtomByIdInNode(node: MnNode, id: Int): MnNode.Atom? = when (node) {
-        is MnNode.Atom -> node.takeIf { it.id == id }
-        is MnNode.Group -> node.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
-        is MnNode.Alternation -> node.items.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
-        is MnNode.Stack -> node.layers.flatten().firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
-        is MnNode.Choice -> node.options.firstNotNullOfOrNull { findAtomByIdInNode(it, id) }
-        is MnNode.Repeat -> findAtomByIdInNode(node.node, id)
-        is MnNode.Rest -> null
-        is MnNode.Linebreak -> null
     }
 
     /** Replaces [old] (Atom or Rest) with [new] in the pattern tree and re-renders. */
     protected fun updateNode(old: MnNode, new: MnNode) {
         val p = pattern ?: return
         pushUndo()
-        text = MnRenderer.render(MnPattern(p.items.map { replaceNodeInNode(it, old, new) }))
+        text = MnRenderer.render(MnNodeOps.replaceNode(p, old, new))
         if (new is MnNode.Atom) {
-            val newAtom = pattern?.let { findAtomById(it, (old as? MnNode.Atom)?.id ?: -1) }
+            val newAtom = pattern?.let { MnNodeOps.findAtomById(it, (old as? MnNode.Atom)?.id ?: -1) }
             cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
             lastAtom = newAtom ?: lastAtom
         } else {
             lastAtom = null
         }
-    }
-
-    private fun replaceNodeInNode(node: MnNode, old: MnNode, new: MnNode): MnNode = when (node) {
-        is MnNode.Atom -> if (old is MnNode.Atom && node.id == old.id) new else node
-        is MnNode.Rest -> if (old is MnNode.Rest && old.sourceRange != null && node.sourceRange == old.sourceRange) new else node
-        is MnNode.Group -> node.copy(items = node.items.map { replaceNodeInNode(it, old, new) })
-        is MnNode.Alternation -> node.copy(items = node.items.map { replaceNodeInNode(it, old, new) })
-        is MnNode.Stack -> node.copy(layers = node.layers.map { l -> l.map { replaceNodeInNode(it, old, new) } })
-        is MnNode.Choice -> node.copy(options = node.options.map { replaceNodeInNode(it, old, new) })
-        is MnNode.Repeat -> node.copy(node = replaceNodeInNode(node.node, old, new))
-        is MnNode.Linebreak -> node
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────
@@ -355,13 +257,12 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
             renderStaves()
 
+            ui.divider {}
             if (atom != null) {
-                ui.divider {}
                 mnModifierPanel(atom, onToggleRest = {
                     updateNode(atom, MnNode.Rest(atom.sourceRange))
                 }) { updated -> updateAtom(atom, updated) }
             } else if (rest != null) {
-                ui.divider {}
                 mnModifierPanel(rest, onToggleNote = {
                     updateNode(rest, MnNode.Atom(value = staffPositionToAtomValue(6)))
                     lastRest = null
@@ -369,10 +270,12 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                     updateNode(rest, updated)
                     // Re-find the rest at the same source position after re-render
                     lastRest = pattern?.let { p ->
-                        collectStaffItems(p).filterIsInstance<MnNode.Rest>()
+                        MnNodeOps.collectStaffItems(p).filterIsInstance<MnNode.Rest>()
                             .find { it.sourceRange?.first == rest.sourceRange?.first }
                     }
                 }
+            } else {
+                mnModifierPanelDisabled()
             }
 
             div { css { flexGrow = 1.0 } }
@@ -393,7 +296,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
      */
     private fun FlowContent.renderStaves() {
         val p = pattern ?: return
-        val allItems = collectStaffItems(p)
+        val allItems = MnNodeOps.collectStaffItems(p)
         val lines = text.split('\n')
         var lineStart = 0
         var staffRendered = false
@@ -403,12 +306,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
             if (line.isNotBlank()) {
                 val lineItems = allItems.filter { node ->
-                    val range = when (node) {
-                        is MnNode.Atom -> node.sourceRange
-                        is MnNode.Rest -> node.sourceRange
-                        else -> null
-                    }
-                    range != null && range.first in lineStart..lineEnd
+                    node.sourceRange?.first?.let { it in lineStart..lineEnd } == true
                 }
 
                 if (lineItems.isNotEmpty()) {
@@ -452,7 +350,13 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                                 }
 
                                 is NoteStaffEditor.Action.Remove -> removeNode(action.node)
-                                is NoteStaffEditor.Action.InsertBetween -> insertBetween(action.leftNode, action.rightNode, action.staffPos)
+                                is NoteStaffEditor.Action.InsertBetween -> insertBetween(
+                                    action.leftNode,
+                                    action.rightNode,
+                                    action.staffPos,
+                                    action.skipOpeningBrackets,
+                                    action.exitBrackets
+                                )
                                 is NoteStaffEditor.Action.InsertAt -> insertAt(action.existingNode, action.staffPos)
                                 is NoteStaffEditor.Action.Replace -> updateNode(action.old, action.new)
                             }
@@ -471,16 +375,20 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
         pushUndo()
         val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).removeNode(node)
         text = result.text
-        val range = when (node) {
-            is MnNode.Atom -> node.sourceRange; is MnNode.Rest -> node.sourceRange; else -> null
-        }
+        val range = node.sourceRange
         cursorOffset = (range?.first ?: text.length).coerceAtMost(text.length)
         lastAtom = null
     }
 
-    private fun insertBetween(leftNode: MnNode?, rightNode: MnNode?, staffPos: Int) {
+    private fun insertBetween(leftNode: MnNode?, rightNode: MnNode?, staffPos: Int, skipOpeningBrackets: Int = 0, exitBrackets: Int = 0) {
         pushUndo()
-        val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).insertBetween(leftNode, rightNode, staffPos)
+        val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).insertBetween(
+            leftNode,
+            rightNode,
+            staffPos,
+            skipOpeningBrackets,
+            exitBrackets
+        )
         text = result.text
         cursorOffset = text.length
     }
@@ -492,23 +400,21 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
         cursorOffset = text.length
     }
 
-    private fun extractLineSubtree(node: MnNode, start: Int, end: Int): MnNode? = when (node) {
-        is MnNode.Atom -> if (node.sourceRange?.first?.let { it in start..end } == true) node else null
-        is MnNode.Rest -> if (node.sourceRange?.first?.let { it in start..end } == true) node else null
-        is MnNode.Group -> node.items.mapNotNull { extractLineSubtree(it, start, end) }
-            .let { if (it.isEmpty()) null else node.copy(items = it) }
+    private fun extractLineSubtree(node: MnNode, start: Int, end: Int): MnNode? {
+        fun inRange() = node.sourceRange?.first?.let { it in start..end } == true
+        fun List<MnNode>.filterLine() = mapNotNull { extractLineSubtree(it, start, end) }
+        fun List<MnNode>.filterLineOrNull() = filterLine().ifEmpty { null }
 
-        is MnNode.Alternation -> node.items.mapNotNull { extractLineSubtree(it, start, end) }
-            .let { if (it.isEmpty()) null else node.copy(items = it) }
+        return when (node) {
+            is MnNode.Atom, is MnNode.Rest -> if (inRange()) node else null
+            is MnNode.Group -> node.items.filterLineOrNull()?.let { node.copy(items = it) }
+            is MnNode.Alternation -> node.items.filterLineOrNull()?.let { node.copy(items = it) }
+            is MnNode.Stack -> node.layers.map { it.filterLine() }.filter { it.isNotEmpty() }
+                .ifEmpty { null }?.let { node.copy(layers = it) }
 
-        is MnNode.Stack -> node.layers.map { l -> l.mapNotNull { extractLineSubtree(it, start, end) } }
-            .filter { it.isNotEmpty() }
-            .let { if (it.isEmpty()) null else node.copy(layers = it) }
-
-        is MnNode.Choice -> node.options.mapNotNull { extractLineSubtree(it, start, end) }
-            .let { if (it.isEmpty()) null else node.copy(options = it) }
-
-        is MnNode.Repeat -> extractLineSubtree(node.node, start, end)?.let { node.copy(node = it) }
-        is MnNode.Linebreak -> null
+            is MnNode.Choice -> node.options.filterLineOrNull()?.let { node.copy(options = it) }
+            is MnNode.Repeat -> extractLineSubtree(node.node, start, end)?.let { node.copy(node = it) }
+            is MnNode.Linebreak -> null
+        }
     }
 }

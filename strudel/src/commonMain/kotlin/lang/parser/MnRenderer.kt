@@ -53,8 +53,8 @@ object MnRenderer {
 
         is MnNode.Stack -> {
             // Stack never owns brackets — the surrounding context (Group or MnPattern) provides them.
-            // Layers are joined with ", "; each layer is a space-separated sequence.
-            node.layers.joinToString(", ") { layer -> renderLayer(layer) } + renderMods(node.mods)
+            // Layers are joined with "," (no space) to match mini-notation convention: [a,b,c].
+            node.layers.joinToString(",") { layer -> renderLayer(layer) } + renderMods(node.mods)
         }
 
         is MnNode.Repeat -> renderNode(node.node) + "!${node.count}" + renderMods(node.mods)

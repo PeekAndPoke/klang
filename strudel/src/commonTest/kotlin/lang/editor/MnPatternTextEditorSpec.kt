@@ -498,5 +498,271 @@ class MnPatternTextEditorSpec : StringSpec() {
             val result = e.insertBetween(d4, e4, 0)
             result.text shouldBe "[c4 d4*2] n0 [e4 f4]"
         }
+
+        // ── right-edge push: Between(lastAtom, nextNode) — Phase 2 skips ] and > ───────
+        // The UI right-edge push uses firstNodeAfter[idx+1] as rightNode, NOT null.
+        // Phase 2 of insertBetween then skips ] and > so the note lands OUTSIDE the group.
+
+        "insertBetween: right-edge of Stack — rightNode=nextAtom → insert between stacks" {
+            // UI: Between(24, 1, 0) — 1 is first atom of next stack
+            val e = editor("<[0,7,12] [19,24] [1,8,13]>")
+            val n24 = e.atomByValue("24")!!
+            val n1 = e.atomByValue("1")!!
+            val result = e.insertBetween(n24, n1, 0)
+            result.text shouldBe "<[0,7,12] [19,24] n0 [1,8,13]>"
+        }
+
+        "insertBetween: right-edge of Stack [a,b] — rightNode=c → insert after stack, not inside" {
+            // Core fix: <[a,b] [c,d]> right-edge push uses Between(b, c, 0)
+            val e = editor("<[a,b] [c,d]>")
+            val b = e.atomByValue("b")!!
+            val c = e.atomByValue("c")!!
+            val result = e.insertBetween(b, c, 0)
+            result.text shouldBe "<[a,b] n0 [c,d]>"
+        }
+
+        "insertBetween: right-edge of top-level Stack — rightNode=d4 → note after stack" {
+            // [c4,e4] d4: UI right-edge push uses Between(e4, d4, 0)
+            val e = editor("[c4,e4] d4")
+            val e4 = e.atomByValue("e4")!!
+            val d4 = e.atomByValue("d4")!!
+            val result = e.insertBetween(e4, d4, 0)
+            result.text shouldBe "[c4,e4] n0 d4"
+        }
+
+        "insertBetween: left-edge push before Stack — rightNode=c4 → note before stack" {
+            // [c4,e4] d4: left-edge push uses Between(null, c4, skip=0)
+            val e = editor("[c4,e4] d4")
+            val c4 = e.atomByValue("c4")!!
+            val result = e.insertBetween(null, c4, 0)
+            result.text shouldBe "n0 [c4,e4] d4"
+        }
+
+        "insertBetween: right-edge of last Note in group — rightNode=nextAtom → insert outside" {
+            // a [b c] d: UI right-edge of c uses Between(c, d, 0) — Phase 2 skips ] and space
+            val e = editor("a [b c] d")
+            val c = e.atomByValue("c")!!
+            val d = e.atomByValue("d")!!
+            val result = e.insertBetween(c, d, 0)
+            result.text shouldBe "a [b c] n0 d"
+        }
+
+        "insertBetween: null rightNode with last atom of group → still inserts inside (fallback)" {
+            // When rightNode=null (no next atom), insert lands inside the group after the atom
+            val e = editor("a [b c]")
+            val c = e.atomByValue("c")!!
+            val result = e.insertBetween(c, null, 0)
+            result.text shouldBe "a [b c n0]"
+        }
+
+        "insertBetween: non-last atom + null rightNode → insert inside group after atom" {
+            val e = editor("a [b c] d")
+            val b = e.atomByValue("b")!!
+            val result = e.insertBetween(b, null, 0)
+            result.text shouldBe "a [b n0 c] d"
+        }
+
+        // ── skipOpeningBrackets — slot inside opening bracket(s) with null leftNode ─
+
+        "insertBetween: skip=0 inserts BEFORE the alternation" {
+            // slot at idx=0 (before <): leftNode=null, skip=0 → n0 before <
+            val e = editor("<a [c d] [e f]>")
+            val a = e.atomByValue("a")!!
+            val result = e.insertBetween(null, a, 0, skipOpeningBrackets = 0)
+            result.text shouldBe "n0 <a [c d] [e f]>"
+        }
+
+        "insertBetween: skip=1 inserts INSIDE alternation (after <)" {
+            // slot at idx=1 (after <, before first item): leftNode=null, skip=1 → n0 inside <>
+            // No space needed after < in mini-notation: <n0 a ...> is a valid alternation
+            val e = editor("<a [c d] [e f]>")
+            val a = e.atomByValue("a")!!
+            val result = e.insertBetween(null, a, 0, skipOpeningBrackets = 1)
+            result.text shouldBe "<n0 a [c d] [e f]>"
+        }
+
+        "insertBetween: skip=1 inserts after < and before [ in <[a b] [c d]>" {
+            val e = editor("<[a b] [c d]>")
+            val a = e.atomByValue("a")!!
+            val result = e.insertBetween(null, a, 0, skipOpeningBrackets = 1)
+            result.text shouldBe "<n0 [a b] [c d]>"
+        }
+
+        "insertBetween: skip=2 inserts inside the first group in <[a b] [c d]>" {
+            // slot inside [a b] before a: leftNode=null, skip=2 → inside both < and [
+            val e = editor("<[a b] [c d]>")
+            val a = e.atomByValue("a")!!
+            val result = e.insertBetween(null, a, 0, skipOpeningBrackets = 2)
+            result.text shouldBe "<[n0 a b] [c d]>"
+        }
+
+        "insertBetween: skip=1 on flat sequence has no effect (no bracket to skip)" {
+            // For "c4 d4", skip=1 but text[0]='c' is not a bracket → skip loop does nothing → insertPos=0
+            val e = editor("c4 d4")
+            val c4 = e.atomByValue("c4")!!
+            val result = e.insertBetween(null, c4, 0, skipOpeningBrackets = 1)
+            // text[0]='c', not '[' or '<', so skipped=0 after loop → insertPos=0 → before c4
+            result.text shouldBe "n0 c4 d4"
+        }
+
+        // ── Comprehensive insertion positions in deeply nested pattern ────────────
+        //
+        // Pattern: <[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>
+        //
+        // AST structure:
+        //   Alternation
+        //     Group(Stack([0],[7],[12]))                        — [0,7,12]
+        //     Group(Stack([12],[19],[24]))                      — [12,19,24]
+        //     Group(Group(Stack([1],[8],[13])), Group(Stack(…))) — [[1,8,13] [1,8,13]]
+        //     Group(Group(Stack([1],[8],[13])))                  — [[1,8,13]]
+        //
+        // Atoms in document order (atomAt index):
+        //   0="0", 1="7", 2="12"  |  3="12", 4="19", 5="24"
+        //   6="1", 7="8", 8="13"  |  9="1", 10="8", 11="13"
+        //   12="1", 13="8", 14="13"
+
+        "pos 1: * <[0,7,12] …> — before alternation" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(0), 0, skipOpeningBrackets = 0)
+                .text shouldBe "n0 <[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 2: <* [0,7,12] …> — inside alternation, before first group" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(0), 0, skipOpeningBrackets = 1)
+                .text shouldBe "<n0 [0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 3: <[* 0,7,12] …> — inside first group, before stack" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(0), 0, skipOpeningBrackets = 2)
+                .text shouldBe "<[n0 0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 4: <[0,7,12,*] …> — add layer to first stack" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertAt(e.stackNodes()[0], 0)
+                .text shouldBe "<[0,7,12,n0] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 5: <[0,7,12 *] …> — sequential after stack inside group (exitBrackets=1)" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(2), null, 0, exitBrackets = 1)
+                .text shouldBe "<[0,7,12 n0] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 6: <[0,7,12] * [12,19,24] …> — between first and second group" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(2), e.atomAt(3), 0)
+                .text shouldBe "<[0,7,12] n0 [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 7: <… [* 12,19,24] …> — inside second group, before stack" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(3), 0, skipOpeningBrackets = 2)
+                .text shouldBe "<[0,7,12] [n0 12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 8: <… [12,19,24,*] …> — add layer to second stack" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertAt(e.stackNodes()[1], 0)
+                .text shouldBe "<[0,7,12] [12,19,24,n0] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 9: <… [12,19,24] * [[1,8,13] …] …> — between second and third group" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(5), e.atomAt(6), 0)
+                .text shouldBe "<[0,7,12] [12,19,24] n0 [[1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 10: <… [* [1,8,13] [1,8,13]] …> — inside third outer group, before first inner" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(6), 0, skipOpeningBrackets = 2)
+                .text shouldBe "<[0,7,12] [12,19,24] [n0 [1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 11: <… [[* 1,8,13] …] …> — inside first inner group of third, before stack" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(6), 0, skipOpeningBrackets = 3)
+                .text shouldBe "<[0,7,12] [12,19,24] [[n0 1,8,13] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 12: <… [[1,8,13,*] …] …> — add layer to first inner stack of third group" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertAt(e.stackNodes()[2], 0)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13,n0] [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 13: <… [[1,8,13] * [1,8,13]] …> — between two inner groups of third" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(8), e.atomAt(9), 0)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] n0 [1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 14: <… [… [* 1,8,13]] …> — inside second inner group of third, before stack" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(9), 0, skipOpeningBrackets = 3)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [n0 1,8,13]] [[1,8,13]]>"
+        }
+
+        "pos 15: <… [… [1,8,13,*]] …> — add layer to second inner stack of third group" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertAt(e.stackNodes()[3], 0)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13,n0]] [[1,8,13]]>"
+        }
+
+        "pos 16: <… [[1,8,13] [1,8,13 *]] …> — sequential after stack inside inner group (exitBrackets=1)" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(11), null, 0, exitBrackets = 1)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13 n0]] [[1,8,13]]>"
+        }
+
+        "pos 17: <… [[1,8,13] [1,8,13] *] …> — after inner group inside outer (exitBrackets=2)" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(11), null, 0, exitBrackets = 2)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13] n0] [[1,8,13]]>"
+        }
+
+        "pos 18: <… [[1,8,13] [1,8,13]] * [[1,8,13]]> — between third and fourth group" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(11), e.atomAt(12), 0)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] n0 [[1,8,13]]>"
+        }
+
+        "pos 19: <… [* [1,8,13]]> — inside fourth outer group, before inner" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(12), 0, skipOpeningBrackets = 2)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [n0 [1,8,13]]>"
+        }
+
+        "pos 20: <… [[* 1,8,13]]> — inside fourth inner group, before stack" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, e.atomAt(12), 0, skipOpeningBrackets = 3)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[n0 1,8,13]]>"
+        }
+
+        "pos 21: <… [[1,8,13,*]]> — add layer to fourth stack" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertAt(e.stackNodes()[4], 0)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13,n0]]>"
+        }
+
+        "pos 22: <… [[1,8,13 *]]> — sequential after stack inside inner group (exitBrackets=1)" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(14), null, 0, exitBrackets = 1)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13 n0]]>"
+        }
+
+        "pos 23: <… [[1,8,13] *]> — after inner group inside outer (exitBrackets=2)" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(e.atomAt(14), null, 0, exitBrackets = 2)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13] n0]>"
+        }
+
+        "pos 24: <… [[1,8,13]]> * — after alternation, at top level" {
+            val e = editor("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
+            e.insertBetween(null, null, 0)
+                .text shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]> n0"
+        }
     }
 }

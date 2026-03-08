@@ -152,10 +152,12 @@ fun FlowContent.mnPatternTextInput(
  * Renders the modifier chip row for an atom (multiplier, divisor, weight, probability, euclidean).
  *
  * @param atom The atom whose modifiers are shown.
+ * @param disabled When true, all inputs are visually dimmed and non-interactive.
  * @param onAtomChange Called when the atom (with updated mods) should replace the original.
  */
 fun FlowContent.mnModifierPanel(
     atom: MnNode.Atom,
+    disabled: Boolean = false,
     onToggleRest: (() -> Unit)? = null,
     onAtomChange: (MnNode.Atom) -> Unit,
 ) {
@@ -166,6 +168,10 @@ fun FlowContent.mnModifierPanel(
             flexWrap = FlexWrap.wrap
             alignItems = Align.center
             gap = 6.px
+            if (disabled) {
+                opacity = 0.45
+                pointerEvents = PointerEvents.none
+            }
         }
         span {
             css { fontSize = 12.px; color = Color("#666"); fontWeight = FontWeight.w600; minWidth = 60.px }
@@ -211,6 +217,15 @@ fun FlowContent.mnModifierPanel(
         }
         mnEuclideanChip(atom, mods, onAtomChange)
     }
+}
+
+/**
+ * Renders a disabled placeholder modifier panel when no node is selected.
+ * Shows the same chip layout but dimmed and non-interactive.
+ */
+fun FlowContent.mnModifierPanelDisabled() {
+    val emptyAtom = MnNode.Atom(value = "")
+    mnModifierPanel(atom = emptyAtom, disabled = true) {}
 }
 
 /**

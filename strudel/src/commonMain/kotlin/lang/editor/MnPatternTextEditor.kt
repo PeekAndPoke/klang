@@ -21,45 +21,36 @@ class MnPatternTextEditor(
 
     // ── Derived ───────────────────────────────────────────────────────────────
 
-    val pattern: MnPattern?
-        get() = if (text.isBlank()) null else parseMiniNotationMnPattern(text)
-
-    // ── Node queries ──────────────────────────────────────────────────────────
-
-    fun atoms(): List<MnNode.Atom> = buildList {
-        pattern?.items?.forEach { collectAtoms(it, this) }
+    val pattern: MnPattern? by lazy {
+        if (text.isBlank()) null else parseMiniNotationMnPattern(text)
     }
 
-    fun rests(): List<MnNode.Rest> = buildList {
-        pattern?.items?.forEach { collectRests(it, this) }
-    }
+    // ── Node queries (delegate to MnNodeOps) ─────────────────────────────────
+
+    fun atoms(): List<MnNode.Atom> = pattern?.let { MnNodeOps.collectAtoms(it) } ?: emptyList()
+
+    fun rests(): List<MnNode.Rest> = pattern?.let { MnNodeOps.collectRests(it) } ?: emptyList()
 
     fun atomByValue(value: String): MnNode.Atom? = atoms().firstOrNull { it.value == value }
 
     fun atomAt(index: Int): MnNode.Atom? = atoms().getOrNull(index)
 
-    fun stackNodes(): List<MnNode.Stack> = buildList {
-        pattern?.items?.forEach { collectStacks(it, this) }
-    }
+    fun stackNodes(): List<MnNode.Stack> = pattern?.let { MnNodeOps.collectStacks(it) } ?: emptyList()
 
     // ── Operations — each returns a new editor with the updated text ───────────
 
     /**
-     * Removes [node] (Atom or Rest) from the text.
-     * Collapses any resulting double-spaces and trims.
+     * Removes [node] (Atom or Rest) from the pattern via text-based removal for clean whitespace.
      */
     fun removeNode(node: MnNode): MnPatternTextEditor {
-        val range = when (node) {
-            is MnNode.Atom -> node.sourceRange
-            is MnNode.Rest -> node.sourceRange
-            else -> null
-        } ?: return this
+        val range = node.sourceRange ?: return this
+        if (node !is MnNode.Atom && node !is MnNode.Rest) return this
         val before = text.substring(0, range.first)
         val after = text.substring(range.last + 1)
         val newText = (before + after)
-            .replace(Regex(" {2,}"), " ")          // collapse double spaces
-            .replace(Regex("([\\[<,]) "), "$1")    // drop space after structural open chars
-            .replace(Regex(" ([\\]>,])"), "$1")    // drop space before structural close chars
+            .replace(Regex(" {2,}"), " ")
+            .replace(Regex("([\\[<,]) "), "$1")
+            .replace(Regex(" ([\\]>,])"), "$1")
             .trim()
         return copy(newText)
     }
@@ -69,73 +60,43 @@ class MnPatternTextEditor(
      */
     fun updateNode(old: MnNode, new: MnNode): MnPatternTextEditor {
         val p = pattern ?: return this
-        val newPattern = MnPattern(p.items.map { replaceNodeInNode(it, old, new) })
-        return copy(MnRenderer.render(newPattern))
+        return copy(MnRenderer.render(MnNodeOps.replaceNode(p, old, new)))
     }
 
     /**
-     * Inserts a new atom with value [posToValue]\([staffPos]\) between [leftNode] and [rightNode].
+     * Inserts a new atom between [leftNode] and [rightNode] using AST manipulation.
      *
-     * - If both nodes are given → scans forward from `leftNode.end+1` to find the gap:
-     *   Phase 1 skips leftNode's modifier suffix chars (`*`, `/`, `?`, `@`, `(`, digits, etc.);
-     *   Phase 2 skips closing `]`/`>` and spaces.  This places the insertion BEFORE any opening
-     *   bracket of rightNode's enclosing group — e.g. `insertBetween(d, e)` in `<a [c d] [e f]>`
-     *   inserts between `[c d]` and `[e f]`, not inside `[e f]`.
-     * - If only [rightNode] is given → inserts right at `rightNode.sourceRangeStart()`.
-     * - If only [leftNode] is given → inserts after leftNode's modifier suffix.
-     * - Otherwise → appends to the end of the text.
+     * Walks the parse tree to find the parent sequence containing the insertion point,
+     * splices the new atom into that list, and re-renders to text via [MnRenderer].
+     *
+     * [skipOpeningBrackets] > 0 with null [leftNode]: inserts inside N levels of nesting.
+     * [exitBrackets] > 0 with non-null [leftNode]: inserts after exiting N container levels.
      */
-    fun insertBetween(leftNode: MnNode?, rightNode: MnNode?, staffPos: Int): MnPatternTextEditor {
-        val newValue = posToValue(staffPos)
-        val insertPos = when {
-            rightNode != null -> {
-                val rightStart = rightNode.sourceRangeStart() ?: return copy("$text $newValue")
-                val searchFrom = leftNode?.sourceRangeEnd()?.let { it + 1 } ?: 0
-                var pos = searchFrom
-                // Phase 1 (only when leftNode present): skip leftNode's modifier suffix so we
-                // don't land in the middle of e.g. `*2` when sourceRange covers only the bare value.
-                if (leftNode != null) {
-                    while (pos < rightStart && text[pos].isModifierChar()) pos++
-                }
-                // Phase 2: skip closing brackets and spaces to land before any opening bracket
-                // that wraps rightNode (e.g. the [ in [e f] when rightNode = e).
-                while (pos < rightStart && (text[pos] == ']' || text[pos] == '>' || text[pos] == ' ')) pos++
-                pos
-            }
+    fun insertBetween(
+        leftNode: MnNode?,
+        rightNode: MnNode?,
+        staffPos: Int,
+        skipOpeningBrackets: Int = 0,
+        exitBrackets: Int = 0,
+    ): MnPatternTextEditor {
+        val p = pattern ?: return copy(posToValue(staffPos))
+        val newAtom = MnNode.Atom(value = posToValue(staffPos))
 
-            leftNode != null -> {
-                // rightNode is null: insert after leftNode including its modifier suffix.
-                val end = leftNode.sourceRangeEnd() ?: return copy("$text $newValue")
-                var pos = end + 1
-                while (pos < text.length && text[pos].isModifierChar()) pos++
-                pos
-            }
-
-            else -> null
+        // Exit-bracket insertion: insert after leftNode but ascend N container levels first.
+        if (exitBrackets > 0 && leftNode != null) {
+            val result = MnNodeOps.insertAfterExitingBrackets(p, leftNode, newAtom, exitBrackets)
+            return copy(MnRenderer.render(result))
         }
 
-        return if (insertPos == null) {
-            copy(if (text.isBlank()) newValue else "$text $newValue")
-        } else {
-            val before = text.substring(0, insertPos)
-            val after = text.substring(insertPos)
-            // Space before newValue unless the preceding char already separates (space, open-bracket, comma).
-            val prefix = if (before.isNotEmpty() && !before.last().noSpaceNeededAfter()) " " else ""
-            // Space after newValue unless the following char is self-separating (space, close-bracket, comma).
-            val suffix = if (after.isNotEmpty() && !after.first().noSpaceNeededBefore()) " " else ""
-            copy(before + prefix + newValue + suffix + after)
+        // Skip-opening-brackets: insert inside nested brackets before rightNode.
+        if (leftNode == null && rightNode != null && skipOpeningBrackets > 0) {
+            val result = insertAtDepth(p.items, rightNode, newAtom, skipOpeningBrackets, 0)
+            if (result != null) return copy(MnRenderer.render(MnPattern(result)))
         }
+
+        val result = MnNodeOps.insertBetweenAst(p, leftNode, rightNode, newAtom)
+        return copy(MnRenderer.render(result))
     }
-
-    // Modifier suffix char — belongs to a node's modifier (*, /, ?, @, (, ), digits, etc.)
-    // but is NOT a structural separator (space, bracket, comma).
-    private fun Char.isModifierChar() = this != ' ' && this !in "[]<>,"
-
-    // A char after which no extra space is needed (already separated by the char itself).
-    private fun Char.noSpaceNeededAfter() = this == ' ' || this in "[<,"
-
-    // A char before which no extra space is needed.
-    private fun Char.noSpaceNeededBefore() = this == ' ' || this in "]>,"
 
     /**
      * Inserts a new atom at the same position as [existingNode]:
@@ -154,13 +115,8 @@ class MnPatternTextEditor(
 
             is MnNode.Stack -> {
                 val lastEnd = existingNode.layers.flatten()
-                    .mapNotNull {
-                        when (it) {
-                            is MnNode.Atom -> it.sourceRange?.last
-                            is MnNode.Rest -> it.sourceRange?.last
-                            else -> null
-                        }
-                    }.maxOrNull() ?: return copy("$text $newValue")
+                    .mapNotNull { it.sourceRange?.last }
+                    .maxOrNull() ?: return copy("$text $newValue")
                 val closeIdx = text.indexOf(']', lastEnd)
                 if (closeIdx < 0) return copy("$text $newValue")
                 copy(text.substring(0, closeIdx) + ",$newValue" + text.substring(closeIdx))
@@ -174,61 +130,61 @@ class MnPatternTextEditor(
 
     private fun copy(newText: String) = MnPatternTextEditor(newText, posToValue)
 
-    private fun MnNode.sourceRangeEnd(): Int? = when (this) {
-        is MnNode.Atom -> sourceRange?.last
-        is MnNode.Rest -> sourceRange?.last
-        else -> null
-    }
+    /**
+     * Walks [skip] levels of Group/Alternation nesting, then inserts [newAtom] before [rightNode].
+     */
+    private fun insertAtDepth(
+        items: List<MnNode>,
+        rightNode: MnNode,
+        newAtom: MnNode,
+        targetDepth: Int,
+        currentDepth: Int,
+    ): List<MnNode>? {
+        for ((i, item) in items.withIndex()) {
+            val childItems = when (item) {
+                is MnNode.Group -> item.items
+                is MnNode.Alternation -> item.items
+                else -> null
+            }
 
-    private fun MnNode.sourceRangeStart(): Int? = when (this) {
-        is MnNode.Atom -> sourceRange?.first
-        is MnNode.Rest -> sourceRange?.first
-        else -> null
-    }
+            if (childItems != null) {
+                val nextDepth = currentDepth + 1
+                if (nextDepth == targetDepth) {
+                    // Insert inside this container, before rightNode
+                    val insertIdx = childItems.indexOfFirst { it.matchesOrContains(rightNode) }
+                    if (insertIdx >= 0) {
+                        val newChildren = childItems.toMutableList().apply { add(insertIdx, newAtom) }
+                        val rebuilt = when (item) {
+                            is MnNode.Group -> item.copy(items = newChildren)
+                            is MnNode.Alternation -> item.copy(items = newChildren)
+                            else -> error("unreachable")
+                        }
+                        return items.toMutableList().apply { set(i, rebuilt) }
+                    }
+                }
+                // Recurse deeper
+                val deeper = insertAtDepth(childItems, rightNode, newAtom, targetDepth, nextDepth)
+                if (deeper != null) {
+                    val rebuilt = when (item) {
+                        is MnNode.Group -> item.copy(items = deeper)
+                        is MnNode.Alternation -> item.copy(items = deeper)
+                        else -> error("unreachable")
+                    }
+                    return items.toMutableList().apply { set(i, rebuilt) }
+                }
+            }
 
-    private fun collectAtoms(node: MnNode, out: MutableList<MnNode.Atom>) {
-        when (node) {
-            is MnNode.Atom -> if (node.sourceRange != null) out.add(node)
-            is MnNode.Group -> node.items.forEach { collectAtoms(it, out) }
-            is MnNode.Alternation -> node.items.forEach { collectAtoms(it, out) }
-            is MnNode.Stack -> node.layers.flatten().forEach { collectAtoms(it, out) }
-            is MnNode.Choice -> node.options.forEach { collectAtoms(it, out) }
-            is MnNode.Repeat -> collectAtoms(node.node, out)
-            is MnNode.Rest, is MnNode.Linebreak -> {}
+            // Recurse into Stack layers
+            if (item is MnNode.Stack) {
+                for ((li, layer) in item.layers.withIndex()) {
+                    val deeper = insertAtDepth(layer, rightNode, newAtom, targetDepth, currentDepth)
+                    if (deeper != null) {
+                        val newLayers = item.layers.toMutableList().apply { set(li, deeper) }
+                        return items.toMutableList().apply { set(i, item.copy(layers = newLayers)) }
+                    }
+                }
+            }
         }
-    }
-
-    private fun collectRests(node: MnNode, out: MutableList<MnNode.Rest>) {
-        when (node) {
-            is MnNode.Rest -> if (node.sourceRange != null) out.add(node)
-            is MnNode.Group -> node.items.forEach { collectRests(it, out) }
-            is MnNode.Alternation -> node.items.forEach { collectRests(it, out) }
-            is MnNode.Stack -> node.layers.flatten().forEach { collectRests(it, out) }
-            is MnNode.Choice -> node.options.forEach { collectRests(it, out) }
-            is MnNode.Repeat -> collectRests(node.node, out)
-            is MnNode.Atom, is MnNode.Linebreak -> {}
-        }
-    }
-
-    private fun collectStacks(node: MnNode, out: MutableList<MnNode.Stack>) {
-        when (node) {
-            is MnNode.Stack -> out.add(node)
-            is MnNode.Group -> node.items.forEach { collectStacks(it, out) }
-            is MnNode.Alternation -> node.items.forEach { collectStacks(it, out) }
-            is MnNode.Choice -> node.options.forEach { collectStacks(it, out) }
-            is MnNode.Repeat -> collectStacks(node.node, out)
-            is MnNode.Atom, is MnNode.Rest, is MnNode.Linebreak -> {}
-        }
-    }
-
-    private fun replaceNodeInNode(node: MnNode, old: MnNode, new: MnNode): MnNode = when (node) {
-        is MnNode.Atom -> if (old is MnNode.Atom && node.id == old.id) new else node
-        is MnNode.Rest -> if (old is MnNode.Rest && old.sourceRange != null && node.sourceRange == old.sourceRange) new else node
-        is MnNode.Group -> node.copy(items = node.items.map { replaceNodeInNode(it, old, new) })
-        is MnNode.Alternation -> node.copy(items = node.items.map { replaceNodeInNode(it, old, new) })
-        is MnNode.Stack -> node.copy(layers = node.layers.map { l -> l.map { replaceNodeInNode(it, old, new) } })
-        is MnNode.Choice -> node.copy(options = node.options.map { replaceNodeInNode(it, old, new) })
-        is MnNode.Repeat -> node.copy(node = replaceNodeInNode(node.node, old, new))
-        is MnNode.Linebreak -> node
+        return null
     }
 }
