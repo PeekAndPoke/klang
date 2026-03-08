@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package io.peekandpoke.klang
 
 object BuiltInSongs {
@@ -131,6 +133,49 @@ stack(
   
 ).room(0.2).rsize(5.0)
             """,
+        )
+    )
+
+    val osiris = add(
+        Song(
+            id = "$PREFIX-0007",
+            title = "Osiris",
+            cps = 0.44,
+            code = """
+import * from "stdlib"
+import * from "strudel"
+
+stack(
+  // Guitar 1
+  cat(
+    n(`<[0,7,12] [19, 24] [[1,8,13] [1,8,13]] [[1,8,13] [3,10,15]@2 [5,12,17]] [0,7,12] [19, 24] [[6,13,18] [6,13,18]] [[6,13,18] [5,12,17]@2 [6,13,18]]>`).repeat(4),
+    n(`<[[0,7]!4 [0,7]@4]!8 [[0,6]!4 [0,6]@4]!4 [[0,7]!4 [0,7]@4]!4 [[0,7]!4 [0,7]@4]!9 [[0,7]!4 [0,8]@4]!7>`)
+  )
+  .fast(4).scale("e2:chromatic").clip(1.0).hpf(60).lpf(3000).pan(0.5).adsr("0.01:0.2:0.2:0.0")
+  .s("pulse").unison(12).detune(0.01).gain(1.0).distort(5).postgain(0.20).warmth(0.1)
+  .superimpose(x => x.bandf(600).bandq(1.15).crush(4))
+   // .mute()
+
+  , // Guitar 2
+  cat(
+    n("<~!8>").repeat(4),
+    n(`<[36!8]!4 [35!8]!4 [24!8]!4 [25!8] [25!4 28!4] [28!4 29!4] [29!4 31!4]
+        [32!8] [32!4 36!4] [36!8]!2 [31!8]!4 [30!8]!4 [27!8] [27!4 26!4] [26!4 25!4] [25!4 24!4]
+    >`),
+  )
+  .fast(4).scale("e2:chromatic").clip(0.9).hpf(60).lpf(3000).pan(0.5).adsr("0.05:0.2:0.5:0.0")
+  .s("pulse").unison(12).detune(0.01).gain(1.0).distort(5).postgain(0.15).warmth(0.1)
+  .superimpose(x => x.bandf(800).bandq(1.15))
+   // .mute()
+
+  // Drums 1 
+  , s("hh!8").adsr("0.00:0.1:0.1:1.0").gain(1.5) // .solo()
+  // Drums 2
+  , s("<[[bd sd]!2]!8 [[bd sd]!16]!8>").n("<7!8 0!8>").adsr("0.00:0.1:0.7:1.0").gain(0.75)  // . solo()
+)
+  .room(0.02).rsize(3)
+            """.trimIndent(),
+            icon = "guitar",
         )
     )
 }

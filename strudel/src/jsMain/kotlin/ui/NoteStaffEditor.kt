@@ -126,6 +126,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
         sealed class LayoutItem {
             data class Note(val node: MnNode) : LayoutItem()
+            data class Stack(val items: List<MnNode>) : LayoutItem()
             data class BracketMark(val type: BracketType, val isOpen: Boolean) : LayoutItem()
         }
 
@@ -197,10 +198,13 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
     /** (atomId, svgX-center) for each note atom in the last rendered layout, in order. */
     private var lastAtomCenters: List<Pair<Int, Double>> = emptyList()
 
+    /** (edgeX, insertAfterAtomId) for each column boundary — index k = left edge of item k, N = after last. */
+    private var lastBoundaries: List<Pair<Double, Int?>> = emptyList()
+
     // ── Ghost note state ──────────────────────────────────────────────────────
 
-    /** SVG-relative x of the mouse, or null when not hovering over the staff area. */
-    private var ghostSvgX: Double? = null
+    /** Index into lastBoundaries where the ghost note will be inserted (null = no ghost). */
+    private var ghostInsertIdx: Int? = null
 
     /** Snapped staff position under the mouse cursor. */
     private var ghostStaffPos: Int? = null
@@ -218,7 +222,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             is MnNode.Rest -> if (node.sourceRange != null) items.add(node)
             is MnNode.Group -> node.items.forEach { collectStaffNodes(it, items) }
             is MnNode.Alternation -> node.items.forEach { collectStaffNodes(it, items) }
-            is MnNode.Stack -> node.layers.firstOrNull()?.forEach { collectStaffNodes(it, items) }
+            is MnNode.Stack -> node.layers.forEach { layer -> layer.forEach { collectStaffNodes(it, items) } }
             is MnNode.Choice -> node.options.forEach { collectStaffNodes(it, items) }
             is MnNode.Repeat -> collectStaffNodes(node.node, items)
             is MnNode.Linebreak -> {}
@@ -241,7 +245,12 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                 result.add(LayoutItem.BracketMark(BracketType.Alternation, isOpen = false))
             }
 
-            is MnNode.Stack -> node.layers.firstOrNull()?.forEach { buildLayoutItems(it, result) }
+            is MnNode.Stack -> {
+                val stackNodes = buildList {
+                    node.layers.forEach { layer -> layer.forEach { collectStaffNodes(it, this) } }
+                }
+                if (stackNodes.isNotEmpty()) result.add(LayoutItem.Stack(stackNodes))
+            }
             is MnNode.Choice -> node.options.forEach { buildLayoutItems(it, result) }
             is MnNode.Repeat -> buildLayoutItems(node.node, result)
             is MnNode.Linebreak -> {}
@@ -355,7 +364,14 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             return
         }
 
-        // Double-click on empty staff area → insert
+        // Double-click on empty staff area → insert at ghost position (already snapped)
+        val gIdx = ghostInsertIdx
+        val gPos = ghostStaffPos
+        if (gIdx != null && gPos != null && lastBoundaries.isNotEmpty()) {
+            props.onAction(Action.Add(lastBoundaries.getOrNull(gIdx)?.second, gPos))
+            return
+        }
+        // Fallback: compute from raw mouse coords
         val container = e.currentTarget as? org.w3c.dom.Element
         val svg = container?.querySelector("svg") ?: return
         val rect = svg.getBoundingClientRect()
@@ -391,30 +407,31 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         props.onAction(Action.Replace(rest, MnNode.Atom(value = props.posToValue(staffPos))))
     }
 
-    // Mouse move over staff area: update ghost note position
+    // Mouse move over staff area: snap ghost to nearest column boundary edge
     private fun handleMouseMove(e: MouseEvent) {
         if (dragAtomId != null) return
         val element = e.target as? org.w3c.dom.Element
-        val onNote = element?.closest("[data-atom-id]") != null ||
-                element?.closest("[data-rest-range-start]") != null
         val svg = element?.closest("svg")
-        if (onNote || svg == null) {
-            if (ghostSvgX != null) {
-                ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+        if (svg == null) {
+            if (ghostInsertIdx != null) {
+                ghostInsertIdx = null; ghostStaffPos = null; triggerRedraw()
             }
             return
         }
         val rect = svg.getBoundingClientRect()
         val svgX = e.clientX - rect.left
-        val snapped = ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
-        if (svgX != ghostSvgX || snapped != ghostStaffPos) {
-            ghostSvgX = svgX; ghostStaffPos = snapped; triggerRedraw()
+        val newIdx = lastBoundaries.indices.minByOrNull { i ->
+            kotlin.math.abs(lastBoundaries[i].first - svgX)
+        } ?: 0
+        val newPos = ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
+        if (newIdx != ghostInsertIdx || newPos != ghostStaffPos) {
+            ghostInsertIdx = newIdx; ghostStaffPos = newPos; triggerRedraw()
         }
     }
 
     private fun handleMouseLeave() {
-        if (ghostSvgX != null) {
-            ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+        if (ghostInsertIdx != null) {
+            ghostInsertIdx = null; ghostStaffPos = null; triggerRedraw()
         }
     }
 
@@ -438,8 +455,13 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         }
 
         // Dynamic layout: expand height for notes outside normal staff range
-        val notePositions = layoutItems.filterIsInstance<LayoutItem.Note>()
-            .mapNotNull { (it.node as? MnNode.Atom)?.let { a -> props.atomToPos(a.value) } }
+        val notePositions = layoutItems.flatMap { item ->
+            when (item) {
+                is LayoutItem.Note -> listOfNotNull((item.node as? MnNode.Atom)?.let { props.atomToPos(it.value) })
+                is LayoutItem.Stack -> item.items.filterIsInstance<MnNode.Atom>().mapNotNull { props.atomToPos(it.value) }
+                is LayoutItem.BracketMark -> emptyList()
+            }
+        }
         val keySigMaxPos = keySig?.staffPositions?.maxOrNull() ?: 10
         val maxPos = (notePositions.maxOrNull() ?: 10).coerceAtLeast(keySigMaxPos).coerceAtLeast(10)
         val minPos = (notePositions.minOrNull() ?: 0).coerceAtMost(0)
@@ -448,18 +470,26 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val topY = STAFF_TOP + topExtra
         val height = 104.0 + topExtra + bottomExtra
 
-        val totalItemsWidth = layoutItems.sumOf { if (it is LayoutItem.Note) NOTE_COL_W else BRACKET_COL_W }
-        val svgWidth = (noteStartX + totalItemsWidth + NOTE_COL_W).coerceAtLeast(160.0)
+        val totalItemsWidth = layoutItems.sumOf {
+            when (it) {
+                is LayoutItem.Note, is LayoutItem.Stack -> NOTE_COL_W
+                is LayoutItem.BracketMark -> BRACKET_COL_W
+            }
+        }
+        val ghostIdx = ghostInsertIdx
+        val svgWidth = (noteStartX + totalItemsWidth + NOTE_COL_W +
+                (if (ghostIdx != null) NOTE_COL_W else 0.0)).coerceAtLeast(160.0)
 
         val atomCenters = mutableListOf<Pair<Int, Double>>()
 
         svgRoot(svgWidth.toInt(), height.toInt(), style = "display:block;font-family:serif;") {
 
-            // Bracket marks (behind everything)
+            // Bracket marks (behind everything); items at index ≥ ghostIdx shift right by NOTE_COL_W
             var x = noteStartX
-            for (item in layoutItems) {
+            for ((idx, item) in layoutItems.withIndex()) {
+                if (ghostIdx == idx) x += NOTE_COL_W
                 when (item) {
-                    is LayoutItem.Note -> x += NOTE_COL_W
+                    is LayoutItem.Note, is LayoutItem.Stack -> x += NOTE_COL_W
                     is LayoutItem.BracketMark -> {
                         renderBracketMark(item, x + BRACKET_COL_W / 2, topY)
                         x += BRACKET_COL_W
@@ -496,9 +526,14 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                 )
             }
 
-            // Notes and rests (on top of staff lines and brackets)
+            // Notes, rests, and ghost preview.
+            // Items at index ≥ ghostIdx are shifted right by NOTE_COL_W so the ghost fits in the gap.
             x = noteStartX
-            for (item in layoutItems) {
+            for ((idx, item) in layoutItems.withIndex()) {
+                if (ghostIdx == idx) {
+                    renderGhostNote(x + NOTE_COL_W / 2, ghostStaffPos, topY)
+                    x += NOTE_COL_W
+                }
                 when (item) {
                     is LayoutItem.Note -> {
                         val cx = x + NOTE_COL_W / 2
@@ -518,25 +553,59 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                         x += NOTE_COL_W
                     }
 
+                    is LayoutItem.Stack -> {
+                        val cx = x + NOTE_COL_W / 2
+                        for (node in item.items) {
+                            when (node) {
+                                is MnNode.Atom -> {
+                                    renderAtomSvg(node, cx, topY)
+                                    atomCenters.add(node.id to cx)
+                                }
+
+                                is MnNode.Rest -> renderRestSvg(
+                                    node, cx, topY,
+                                    node.sourceRange == props.selection.rest?.sourceRange,
+                                )
+
+                                else -> {}
+                            }
+                        }
+                        x += NOTE_COL_W
+                    }
+
                     is LayoutItem.BracketMark -> x += BRACKET_COL_W
                 }
             }
-
-            // Ghost note preview (topmost layer so it's always visible)
-            val gx = ghostSvgX
-            val gpos = ghostStaffPos
-            if (gx != null && gpos != null) {
-                val gy = staffPosToY(gpos, topY)
-                renderLedgerLines(gpos, gx, topY)
-                svgEllipse(
-                    gx, gy, NOTE_RADIUS_X, NOTE_RADIUS_Y,
-                    fill = "#2266cc", opacity = "0.35", style = "pointer-events:none",
-                )
+            // Ghost after all items
+            if (ghostIdx == layoutItems.size) {
+                renderGhostNote(x + NOTE_COL_W / 2, ghostStaffPos, topY)
             }
         }
 
         lastTopY = topY
         lastAtomCenters = atomCenters
+        // Column boundary edges: index k = left edge of layoutItems[k]; index N = after all items.
+        lastBoundaries = buildList {
+            var bx = noteStartX
+            var lastId: Int? = null
+            add(bx to null)
+            for (item in layoutItems) {
+                when (item) {
+                    is LayoutItem.Note -> {
+                        (item.node as? MnNode.Atom)?.let { lastId = it.id }
+                        bx += NOTE_COL_W
+                    }
+
+                    is LayoutItem.Stack -> {
+                        item.items.filterIsInstance<MnNode.Atom>().lastOrNull()?.let { lastId = it.id }
+                        bx += NOTE_COL_W
+                    }
+
+                    is LayoutItem.BracketMark -> bx += BRACKET_COL_W
+                }
+                add(bx to lastId)
+            }
+        }
     }
 
     /** Maps SVG coordinates to an insertion point: (insertAfterAtomId, staffPosition). */
@@ -547,6 +616,13 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             .maxByOrNull { (_, cx) -> cx }
             ?.first
         return insertAfterAtomId to staffPos
+    }
+
+    private fun FlowContent.renderGhostNote(cx: Double, staffPos: Int?, topY: Double) {
+        if (staffPos == null) return
+        val gy = staffPosToY(staffPos, topY)
+        renderLedgerLines(staffPos, cx, topY)
+        svgEllipse(cx, gy, NOTE_RADIUS_X, NOTE_RADIUS_Y, fill = "#2266cc", opacity = "0.35", style = "pointer-events:none")
     }
 
     private fun FlowContent.renderBracketMark(mark: LayoutItem.BracketMark, x: Double, topY: Double) {
