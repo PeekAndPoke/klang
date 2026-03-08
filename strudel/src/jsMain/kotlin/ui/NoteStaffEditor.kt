@@ -29,7 +29,7 @@ import kotlin.math.roundToInt
  *
  * - Drag a note head up/down to change pitch; emits [NoteStaffEditor.Action.Replace].
  * - Double-click a note or rest to delete it; emits [NoteStaffEditor.Action.Remove].
- * - Double-click empty staff area to insert a note; emits [NoteStaffEditor.Action.Add].
+ * - Double-click empty staff area to insert a note; emits [NoteStaffEditor.Action.InsertBetween] or [NoteStaffEditor.Action.InsertAt].
  * - Right-click a note/rest to toggle note ↔ rest; emits [NoteStaffEditor.Action.Replace].
  * - Single-click a note or rest to select it; emits [NoteStaffEditor.Action.Select].
  * - The [selection] node is highlighted with a blue stroke.
@@ -84,9 +84,19 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         /** User double-clicked a note or rest to delete it. */
         data class Remove(val node: MnNode) : Action
 
-        /** User double-clicked an empty staff area to insert a note.
-         *  [insertAfterAtomId] is the id of the atom to insert after, or null to append at the start. */
-        data class Add(val insertAfterAtomId: Int?, val staffPos: Int) : Action
+        /**
+         * User double-clicked between two nodes to insert a new note there.
+         * [leftNode] is the node to the left (null = insert at the very start).
+         * [rightNode] is the node to the right (null = insert at the very end).
+         */
+        data class InsertBetween(val leftNode: MnNode?, val rightNode: MnNode?, val staffPos: Int) : Action
+
+        /**
+         * User double-clicked on top of an existing node to add a note at the same position.
+         * If [existingNode] is an [MnNode.Atom] → wrap in a Stack `[existingAtom, newAtom]`.
+         * If [existingNode] is an [MnNode.Stack] → add [staffPos] to that stack.
+         */
+        data class InsertAt(val existingNode: MnNode, val staffPos: Int) : Action
 
         /** User dragged a note to a new pitch, or right-clicked to toggle note ↔ rest. */
         data class Replace(val old: MnNode, val new: MnNode) : Action
@@ -129,6 +139,29 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             data class Stack(val items: List<MnNode>) : LayoutItem()
             data class BracketMark(val type: BracketType, val isOpen: Boolean) : LayoutItem()
         }
+
+        /** What happens when the user double-clicks at this snap slot. */
+        sealed interface InsertTarget {
+            /** Insert a new note between [leftNode] and [rightNode] (either may be null = boundary). */
+            data class Between(val leftNode: MnNode?, val rightNode: MnNode?) : InsertTarget
+
+            /** Overlay an existing column — add note to the stack at [node]. */
+            data class At(val node: MnNode) : InsertTarget
+        }
+
+        /**
+         * A snap slot in the staff.
+         * [x] = snap x; [target] = what to do on double-click;
+         * [layoutItemIdx] = index into layoutItems;
+         * [isPush] = true → ghost creates a gap (sequential insert),
+         * false → ghost overlays the column (stack insert).
+         */
+        data class BoundarySlot(
+            val x: Double,
+            val target: InsertTarget,
+            val layoutItemIdx: Int,
+            val isPush: Boolean,
+        )
 
         private data class KeySignature(val symbol: String, val staffPositions: List<Int>)
 
@@ -198,8 +231,8 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
     /** (atomId, svgX-center) for each note atom in the last rendered layout, in order. */
     private var lastAtomCenters: List<Pair<Int, Double>> = emptyList()
 
-    /** (edgeX, insertAfterAtomId) for each column boundary — index k = left edge of item k, N = after last. */
-    private var lastBoundaries: List<Pair<Double, Int?>> = emptyList()
+    /** Snap slots for ghost-note; index into this list is stored in [ghostInsertIdx]. */
+    private var lastBoundaries: List<BoundarySlot> = emptyList()
 
     // ── Ghost note state ──────────────────────────────────────────────────────
 
@@ -364,19 +397,14 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             return
         }
 
-        // Double-click on empty staff area → insert at ghost position (already snapped)
+        // Double-click on empty staff area → use ghost slot (already snapped to nearest boundary)
         val gIdx = ghostInsertIdx
         val gPos = ghostStaffPos
-        if (gIdx != null && gPos != null && lastBoundaries.isNotEmpty()) {
-            props.onAction(Action.Add(lastBoundaries.getOrNull(gIdx)?.second, gPos))
-            return
+        val slot = gIdx?.let { lastBoundaries.getOrNull(it) } ?: return
+        when (val target = slot.target) {
+            is InsertTarget.Between -> props.onAction(Action.InsertBetween(target.leftNode, target.rightNode, gPos ?: 6))
+            is InsertTarget.At -> props.onAction(Action.InsertAt(target.node, gPos ?: 6))
         }
-        // Fallback: compute from raw mouse coords
-        val container = e.currentTarget as? org.w3c.dom.Element
-        val svg = container?.querySelector("svg") ?: return
-        val rect = svg.getBoundingClientRect()
-        val (afterId, staffPos) = computeInsertionPoint(e.clientX - rect.left, e.clientY - rect.top)
-        props.onAction(Action.Add(afterId, staffPos))
     }
 
     // Right-click: toggle note ↔ rest
@@ -402,7 +430,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val svg = restEl.closest("svg")
         val staffPos = if (svg != null) {
             val rect = svg.getBoundingClientRect()
-            computeInsertionPoint(e.clientX - rect.left, e.clientY - rect.top).second
+            ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
         } else 6
         props.onAction(Action.Replace(rest, MnNode.Atom(value = props.posToValue(staffPos))))
     }
@@ -421,7 +449,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val rect = svg.getBoundingClientRect()
         val svgX = e.clientX - rect.left
         val newIdx = lastBoundaries.indices.minByOrNull { i ->
-            kotlin.math.abs(lastBoundaries[i].first - svgX)
+            kotlin.math.abs(lastBoundaries[i].x - svgX)
         } ?: 0
         val newPos = ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
         if (newIdx != ghostInsertIdx || newPos != ghostStaffPos) {
@@ -476,18 +504,18 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                 is LayoutItem.BracketMark -> BRACKET_COL_W
             }
         }
-        val ghostIdx = ghostInsertIdx
+        val ghostSlot = ghostInsertIdx?.let { lastBoundaries.getOrNull(it) }
         val svgWidth = (noteStartX + totalItemsWidth + NOTE_COL_W +
-                (if (ghostIdx != null) NOTE_COL_W else 0.0)).coerceAtLeast(160.0)
+                (if (ghostSlot?.isPush == true) NOTE_COL_W else 0.0)).coerceAtLeast(160.0)
 
         val atomCenters = mutableListOf<Pair<Int, Double>>()
 
         svgRoot(svgWidth.toInt(), height.toInt(), style = "display:block;font-family:serif;") {
 
-            // Bracket marks (behind everything); items at index ≥ ghostIdx shift right by NOTE_COL_W
+            // Bracket marks (behind everything); push-slots shift items at layoutItemIdx right
             var x = noteStartX
             for ((idx, item) in layoutItems.withIndex()) {
-                if (ghostIdx == idx) x += NOTE_COL_W
+                if (ghostSlot?.isPush == true && ghostSlot.layoutItemIdx == idx) x += NOTE_COL_W
                 when (item) {
                     is LayoutItem.Note, is LayoutItem.Stack -> x += NOTE_COL_W
                     is LayoutItem.BracketMark -> {
@@ -527,16 +555,21 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             }
 
             // Notes, rests, and ghost preview.
-            // Items at index ≥ ghostIdx are shifted right by NOTE_COL_W so the ghost fits in the gap.
+            // Push-slots shift items right; overlay-slots draw ghost on top without shifting.
             x = noteStartX
             for ((idx, item) in layoutItems.withIndex()) {
-                if (ghostIdx == idx) {
+                // Push ghost: insert gap before this item
+                if (ghostSlot?.isPush == true && ghostSlot.layoutItemIdx == idx) {
                     renderGhostNote(x + NOTE_COL_W / 2, ghostStaffPos, topY)
                     x += NOTE_COL_W
                 }
                 when (item) {
                     is LayoutItem.Note -> {
                         val cx = x + NOTE_COL_W / 2
+                        // Overlay ghost: draw ghost on top of this column (stack indicator)
+                        if (ghostSlot?.isPush == false && ghostSlot.layoutItemIdx == idx) {
+                            renderGhostNote(cx, ghostStaffPos, topY)
+                        }
                         when (val node = item.node) {
                             is MnNode.Atom -> {
                                 renderAtomSvg(node, cx, topY)
@@ -555,6 +588,10 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
                     is LayoutItem.Stack -> {
                         val cx = x + NOTE_COL_W / 2
+                        // Overlay ghost: draw ghost on top of this column (stack indicator)
+                        if (ghostSlot?.isPush == false && ghostSlot.layoutItemIdx == idx) {
+                            renderGhostNote(cx, ghostStaffPos, topY)
+                        }
                         for (node in item.items) {
                             when (node) {
                                 is MnNode.Atom -> {
@@ -576,46 +613,62 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                     is LayoutItem.BracketMark -> x += BRACKET_COL_W
                 }
             }
-            // Ghost after all items
-            if (ghostIdx == layoutItems.size) {
+            // Push ghost after all items
+            if (ghostSlot?.isPush == true && ghostSlot.layoutItemIdx == layoutItems.size) {
                 renderGhostNote(x + NOTE_COL_W / 2, ghostStaffPos, topY)
             }
         }
 
         lastTopY = topY
         lastAtomCenters = atomCenters
-        // Column boundary edges: index k = left edge of layoutItems[k]; index N = after all items.
+        // Precompute first renderable node at-or-after each layout index (for right-neighbour lookup).
+        val firstNodeAfter = arrayOfNulls<MnNode>(layoutItems.size + 1)
+        var lookahead: MnNode? = null
+        for (i in layoutItems.indices.reversed()) {
+            lookahead = when (val li = layoutItems[i]) {
+                is LayoutItem.Note -> li.node
+                is LayoutItem.Stack -> li.items.firstOrNull()
+                is LayoutItem.BracketMark -> lookahead
+            }
+            firstNodeAfter[i] = lookahead
+        }
+
+        // Snap slots: push-edge before each item + overlay-center for Note/Stack + push-edge at end.
         lastBoundaries = buildList {
             var bx = noteStartX
-            var lastId: Int? = null
-            add(bx to null)
-            for (item in layoutItems) {
+            var leftNode: MnNode? = null
+            for ((idx, item) in layoutItems.withIndex()) {
+                val itemW = when (item) {
+                    is LayoutItem.Note, is LayoutItem.Stack -> NOTE_COL_W
+                    is LayoutItem.BracketMark -> BRACKET_COL_W
+                }
+                // Push-edge before this item
+                add(BoundarySlot(bx, InsertTarget.Between(leftNode, firstNodeAfter[idx]), idx, isPush = true))
+                // Overlay-center for notes/stacks — stack onto existing note
                 when (item) {
                     is LayoutItem.Note -> {
-                        (item.node as? MnNode.Atom)?.let { lastId = it.id }
-                        bx += NOTE_COL_W
+                        add(BoundarySlot(bx + itemW / 2, InsertTarget.At(item.node), idx, isPush = false))
+                        leftNode = item.node
                     }
-
                     is LayoutItem.Stack -> {
-                        item.items.filterIsInstance<MnNode.Atom>().lastOrNull()?.let { lastId = it.id }
-                        bx += NOTE_COL_W
+                        add(
+                            BoundarySlot(
+                                bx + itemW / 2,
+                                InsertTarget.At(item.items.firstOrNull() ?: item.items.first()),
+                                idx,
+                                isPush = false
+                            )
+                        )
+                        leftNode = item.items.lastOrNull()
                     }
 
-                    is LayoutItem.BracketMark -> bx += BRACKET_COL_W
+                    is LayoutItem.BracketMark -> {}
                 }
-                add(bx to lastId)
+                bx += itemW
             }
+            // Push-edge after all items
+            add(BoundarySlot(bx, InsertTarget.Between(leftNode, null), layoutItems.size, isPush = true))
         }
-    }
-
-    /** Maps SVG coordinates to an insertion point: (insertAfterAtomId, staffPosition). */
-    private fun computeInsertionPoint(svgX: Double, svgY: Double): Pair<Int?, Int> {
-        val staffPos = ((lastTopY + 10 * HALF_STEP - svgY) / HALF_STEP).roundToInt()
-        val insertAfterAtomId = lastAtomCenters
-            .filter { (_, cx) -> cx <= svgX }
-            .maxByOrNull { (_, cx) -> cx }
-            ?.first
-        return insertAfterAtomId to staffPos
     }
 
     private fun FlowContent.renderGhostNote(cx: Double, staffPos: Int?, topY: Double) {

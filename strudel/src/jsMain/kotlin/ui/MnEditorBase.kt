@@ -7,6 +7,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.strudel.lang.editor.MnPatternTextEditor
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
 import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
@@ -451,7 +452,8 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                                 }
 
                                 is NoteStaffEditor.Action.Remove -> removeNode(action.node)
-                                is NoteStaffEditor.Action.Add -> addNote(action.insertAfterAtomId, action.staffPos)
+                                is NoteStaffEditor.Action.InsertBetween -> insertBetween(action.leftNode, action.rightNode, action.staffPos)
+                                is NoteStaffEditor.Action.InsertAt -> insertAt(action.existingNode, action.staffPos)
                                 is NoteStaffEditor.Action.Replace -> updateNode(action.old, action.new)
                             }
                         },
@@ -466,34 +468,28 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
     }
 
     private fun removeNode(node: MnNode) {
-        val range = when (node) {
-            is MnNode.Atom -> node.sourceRange
-            is MnNode.Rest -> node.sourceRange
-            else -> null
-        } ?: return
         pushUndo()
-        val before = text.substring(0, range.first)
-        val after = text.substring(range.last + 1)
-        text = (before + after).replace(Regex(" {2,}"), " ").trim()
-        cursorOffset = range.first.coerceAtMost(text.length)
+        val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).removeNode(node)
+        text = result.text
+        val range = when (node) {
+            is MnNode.Atom -> node.sourceRange; is MnNode.Rest -> node.sourceRange; else -> null
+        }
+        cursorOffset = (range?.first ?: text.length).coerceAtMost(text.length)
         lastAtom = null
     }
 
-    private fun addNote(insertAfterAtomId: Int?, staffPos: Int) {
-        val newValue = staffPositionToAtomValue(staffPos)
+    private fun insertBetween(leftNode: MnNode?, rightNode: MnNode?, staffPos: Int) {
         pushUndo()
-        val p = pattern
-        if (p == null || insertAfterAtomId == null) {
-            text = if (text.isBlank()) newValue else "$text $newValue"
-            cursorOffset = text.length
-            return
-        }
-        val afterAtom = findAtomById(p, insertAfterAtomId)
-        val insertPos = (afterAtom?.sourceRange?.last ?: run {
-            text = "$text $newValue"; cursorOffset = text.length; return
-        }) + 1
-        text = text.substring(0, insertPos) + " $newValue" + text.substring(insertPos)
-        cursorOffset = insertPos + 1 + newValue.length
+        val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).insertBetween(leftNode, rightNode, staffPos)
+        text = result.text
+        cursorOffset = text.length
+    }
+
+    private fun insertAt(existingNode: MnNode, staffPos: Int) {
+        pushUndo()
+        val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).insertAt(existingNode, staffPos)
+        text = result.text
+        cursorOffset = text.length
     }
 
     private fun extractLineSubtree(node: MnNode, start: Int, end: Int): MnNode? = when (node) {
