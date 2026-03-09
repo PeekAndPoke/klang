@@ -55,7 +55,7 @@ class CodeMirrorHighlightBuffer(
     private var frameLoopActive = false
 
     /** Max age for a Show op before it is silently dropped (ms). */
-    private val maxOverdueMs = 1000.0
+    private val maxOverdueMs = 300.0
 
     // ── Lifecycle ───────────────────────────────────────────────────────────
 
