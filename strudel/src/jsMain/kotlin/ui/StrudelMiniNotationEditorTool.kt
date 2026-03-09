@@ -75,7 +75,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
 
             ui.divider {}
             if (atom != null) {
-                mnModifierPanel(atom) { updated -> updateAtom(atom, updated) }
+                mnModifierPanel(atom) { updated -> updateNode(atom, updated) }
                 ui.divider {}
                 renderAtomPanel(atom)
             } else {
@@ -119,7 +119,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
                 }
                 onInput { e ->
                     val v = e.target?.asDynamic()?.value as? String ?: return@onInput
-                    updateAtom(atom, atom.copy(value = v))
+                    updateNode(atom, atom.copy(value = v))
                 }
             }
         }
@@ -134,7 +134,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
 
     private fun FlowContent.renderEmbeddedAtomTool(atom: MnNode.Atom, atomTool: KlangUiToolEmbeddable) {
         val subCtx = atomSubCtx(atom, onCancel = {}, onCommit = { newVal ->
-            updateAtom(atom, atom.copy(value = newVal.trim().removeSurrounding("\"")))
+            updateNode(atom, atom.copy(value = newVal.trim().removeSurrounding("\"")))
         })
         with(atomTool) { renderEmbedded(subCtx) }
     }
@@ -148,7 +148,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
                             atom,
                             onCancel = { handle.close() },
                             onCommit = { newVal ->
-                                updateAtom(atom, atom.copy(value = newVal.trim().removeSurrounding("\"")))
+                                updateNode(atom, atom.copy(value = newVal.trim().removeSurrounding("\"")))
                                 handle.close()
                             },
                         )

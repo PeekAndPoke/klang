@@ -170,4 +170,5 @@ private fun MnNode.stripSourceRanges(): MnNode = when (this) {
     is MnNode.Repeat -> copy(node = node.stripSourceRanges())
     is MnNode.Rest -> copy(sourceRange = null)
     is MnNode.Linebreak -> this
+    is MnPattern -> MnPattern(items.map { it.stripSourceRanges() })
 }

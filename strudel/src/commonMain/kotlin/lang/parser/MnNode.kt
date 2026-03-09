@@ -11,8 +11,20 @@ import io.peekandpoke.klang.strudel.pattern.AtomicPattern
  *  - the visual editor to display and edit patterns without runtime dependencies
  *  - a clean round-trip: String → MnPattern → String
  *  - source-location tracking through to [AtomicPattern] nodes
+ *
+ * Every node carries a unique [id] (auto-generated, not part of structural equality).
+ * The editor uses ids to locate and replace nodes in the tree.
  */
 sealed class MnNode {
+
+    /** Unique identity within a single tree — used for editor operations, not part of equals/hashCode. */
+    abstract val id: Int
+
+    companion object {
+        private var idCounter = 0
+        fun nextId(): Int = idCounter++
+    }
+
     // ── Universal modifier bag ────────────────────────────────────────────────
 
     /**
@@ -60,15 +72,10 @@ sealed class MnNode {
         /** The modifiers */
         val mods: Mods = Mods.None,
     ) : MnNode() {
-        /**
-         * Stable identity key within a single parse — equals [sourceRange]`.first`, or -1 when
-         * no source location is available (e.g. programmatically constructed atoms).
-         *
-         * Two atoms in the same [MnPattern] always have distinct ids (≥ 0).
-         * Use this instead of reference equality (`===`) or value-string matching when you
-         * need to re-find an atom in a re-parsed tree after a text edit.
-         */
-        val id: Int get() = sourceRange?.first ?: -1
+        override val id: Int = nextId()
+
+        /** Creates a new atom with the given value, preserving modifiers. */
+        fun withValue(newValue: String) = Atom(value = newValue, mods = mods)
     }
 
     /**
@@ -80,13 +87,23 @@ sealed class MnNode {
     data class Group(
         val items: List<MnNode>,
         val mods: Mods = Mods.None,
-    ) : MnNode()
+    ) : MnNode() {
+        override val id: Int = nextId()
+
+        fun insertAt(index: Int, node: MnNode) =
+            Group(items = items.toMutableList().apply { add(index, node) }, mods = mods)
+    }
 
     /** Cycle alternation `< a b c >` — plays items round-robin, one per cycle. */
     data class Alternation(
         val items: List<MnNode>,
         val mods: Mods = Mods.None,
-    ) : MnNode()
+    ) : MnNode() {
+        override val id: Int = nextId()
+
+        fun insertAt(index: Int, node: MnNode) =
+            Alternation(items = items.toMutableList().apply { add(index, node) }, mods = mods)
+    }
 
     /**
      * Random choice `a | b | c` — picks one option per event.
@@ -95,7 +112,9 @@ sealed class MnNode {
     data class Choice(
         val options: List<MnNode>,
         val mods: Mods = Mods.None,
-    ) : MnNode()
+    ) : MnNode() {
+        override val id: Int = nextId()
+    }
 
     /**
      * Simultaneous stack of sequences `a b, c d` rendered as comma-separated layers.
@@ -107,7 +126,12 @@ sealed class MnNode {
     data class Stack(
         val layers: List<List<MnNode>>,
         val mods: Mods = Mods.None,
-    ) : MnNode()
+    ) : MnNode() {
+        override val id: Int = nextId()
+
+        fun addLayer(vararg nodes: MnNode) =
+            Stack(layers = layers + listOf(nodes.toList()), mods = mods)
+    }
 
     /**
      * Repeat `node!count` — deferred expansion of the bang operator.
@@ -123,13 +147,22 @@ sealed class MnNode {
         val node: MnNode,
         val count: Int,
         val mods: Mods = Mods.None,
-    ) : MnNode()
+    ) : MnNode() {
+        override val id: Int = nextId()
+    }
 
     /** Silence `~`. Carries the source position so it can be located in the text for replacement. */
-    data class Rest(val sourceRange: IntRange? = null, val mods: Mods = Mods.None) : MnNode()
+    data class Rest(val sourceRange: IntRange? = null, val mods: Mods = Mods.None) : MnNode() {
+        override val id: Int = nextId()
+    }
 
     /** Line break in a multi-line mini-notation string. Carries no musical meaning; used for visual layout. */
-    object Linebreak : MnNode()
+    class Linebreak : MnNode() {
+        override val id: Int = nextId()
+        override fun equals(other: Any?) = other is Linebreak
+        override fun hashCode() = "Linebreak".hashCode()
+        override fun toString() = "Linebreak"
+    }
 
     // ── Modifier application helpers ─────────────────────────────────────────
 
@@ -143,6 +176,7 @@ sealed class MnNode {
         is Repeat -> copy(mods = mods.transform())
         is Rest -> copy(mods = mods.transform())
         is Linebreak -> this
+        is MnPattern -> this
     }
 
     fun modsOrNull(): Mods? = when (this) {
@@ -154,6 +188,66 @@ sealed class MnNode {
         is Repeat -> mods
         is Rest -> mods
         is Linebreak -> null
+        is MnPattern -> null
+    }
+
+    // ── Tree navigation ─────────────────────────────────────────────────────
+
+    /** Returns the direct children of this node as a flat list. */
+    fun children(): List<MnNode> = when (this) {
+        is MnPattern -> items
+        is Group -> items
+        is Alternation -> items
+        is Choice -> options
+        is Stack -> layers.flatten()
+        is Repeat -> listOf(node)
+        is Atom, is Rest, is Linebreak -> emptyList()
+    }
+
+    /** Depth-first traversal — calls [action] on this node, then recursively on all descendants. */
+    fun walk(action: (MnNode) -> Unit) {
+        action(this)
+        children().forEach { it.walk(action) }
+    }
+
+    /** Depth-first search — returns the first non-null result of [match]. */
+    fun <T> findFirst(match: (MnNode) -> T?): T? {
+        match(this)?.let { return it }
+        return children().firstNotNullOfOrNull { it.findFirst(match) }
+    }
+
+    /** Find a node by [targetId] anywhere in the tree. */
+    fun findById(targetId: Int): MnNode? = findFirst { if (it.id == targetId) it else null }
+
+    /** Replace a descendant (or self) by [targetId], returning a new tree. */
+    fun replaceById(targetId: Int, replacement: MnNode): MnNode {
+        if (id == targetId) return replacement
+        return when (this) {
+            is Atom, is Rest, is Linebreak -> this
+            is MnPattern -> copy(items = items.map { it.replaceById(targetId, replacement) })
+            is Group -> copy(items = items.map { it.replaceById(targetId, replacement) })
+            is Alternation -> copy(items = items.map { it.replaceById(targetId, replacement) })
+            is Choice -> copy(options = options.map { it.replaceById(targetId, replacement) })
+            is Stack -> copy(layers = layers.map { layer -> layer.map { it.replaceById(targetId, replacement) } })
+            is Repeat -> copy(node = node.replaceById(targetId, replacement))
+        }
+    }
+
+    /** Remove a descendant by [targetId]. Returns null if this node itself was the target. */
+    fun removeById(targetId: Int): MnNode? {
+        if (id == targetId) return null
+        return when (this) {
+            is Atom, is Rest, is Linebreak -> this
+            is MnPattern -> copy(items = items.mapNotNull { it.removeById(targetId) })
+            is Group -> copy(items = items.mapNotNull { it.removeById(targetId) })
+            is Alternation -> copy(items = items.mapNotNull { it.removeById(targetId) })
+            is Choice -> copy(options = options.mapNotNull { it.removeById(targetId) })
+            is Stack -> copy(layers = layers.map { layer -> layer.mapNotNull { it.removeById(targetId) } })
+            is Repeat -> {
+                val newNode = node.removeById(targetId)
+                if (newNode == null) this else copy(node = newNode)
+            }
+        }
     }
 }
 
@@ -162,16 +256,23 @@ sealed class MnNode {
 /**
  * The root of a parsed mini-notation string — a flat sequence of [MnNode]s.
  *
+ * Extends [MnNode] so it participates in tree operations (replaceById, removeById, etc.).
+ *
  * Stacking at the top level is represented by a single [MnNode.Stack] item:
  * `MnPattern(items = listOf(Stack(layers = [...])))`.
  */
-data class MnPattern(val items: List<MnNode>) {
+data class MnPattern(val items: List<MnNode>) : MnNode() {
+
+    override val id: Int = nextId()
 
     companion object {
         val Empty = MnPattern(items = emptyList())
 
         fun of(vararg nodes: MnNode) = MnPattern(items = nodes.toList())
     }
+
+    fun insertAt(index: Int, node: MnNode) =
+        MnPattern(items = items.toMutableList().apply { add(index, node) })
 
     /**
      * Splits the top-level item list on [MnNode.Linebreak] nodes.

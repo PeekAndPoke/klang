@@ -57,6 +57,7 @@ object MnPatternToStrudelPattern {
         baseLocation: SourceLocation?,
         atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
     ): StrudelPattern = when (node) {
+        is MnPattern -> layerToPattern(node.items, baseLocation, atomFactory)
         is MnNode.Atom -> atomToPattern(node, baseLocation, atomFactory)
         is MnNode.Group -> groupToPattern(node, baseLocation, atomFactory)
         is MnNode.Alternation -> alternationToPattern(node, baseLocation, atomFactory)

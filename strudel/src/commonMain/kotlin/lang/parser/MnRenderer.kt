@@ -32,6 +32,8 @@ object MnRenderer {
     // ── Node ──────────────────────────────────────────────────────────────
 
     fun renderNode(node: MnNode): String = when (node) {
+        is MnPattern -> renderLayer(node.items)
+
         is MnNode.Atom -> node.value + renderMods(node.mods)
 
         is MnNode.Group -> {

@@ -8,7 +8,6 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
-import io.peekandpoke.klang.strudel.lang.editor.MnPatternTextEditor
 import io.peekandpoke.klang.strudel.lang.editor.sourceRange
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
@@ -26,7 +25,7 @@ import org.w3c.dom.events.KeyboardEvent
 /**
  * Abstract base component containing all shared state and logic for mini-notation editors.
  *
- * Tree-walking operations (collect, find, replace) are delegated to [MnNodeOps] (commonMain).
+ * Tree operations use [MnNode.replaceById] / [MnNode.removeById] directly.
  */
 abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Component<P>(ctx) {
 
@@ -97,11 +96,6 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     // ── Parse cache ───────────────────────────────────────────────────────────
 
-    /**
-     * Memoised parse results keyed by text — avoids redundant re-parses.
-     * No longer a correctness requirement (atom identity is tracked via [MnNode.Atom.id]);
-     * kept as a pure performance optimisation.
-     */
     private val patternCache = mutableMapOf<String, MnPattern?>()
 
     protected val pattern: MnPattern?
@@ -125,7 +119,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         return raw.removeSurrounding("\"").removeSurrounding("`")
     }
 
-    // ── Node queries (delegate to MnNodeOps) ─────────────────────────────────
+    // ── Node queries ──────────────────────────────────────────────────────────
 
     protected fun collectAtoms(p: MnPattern): List<MnNode.Atom> = MnNodeOps.collectAtoms(p)
 
@@ -133,25 +127,36 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     protected fun findAtomById(p: MnPattern, id: Int): MnNode.Atom? = MnNodeOps.findAtomById(p, id)
 
-    // ── Atom update ───────────────────────────────────────────────────────────
+    // ── Core edit operation ───────────────────────────────────────────────────
 
-    /** Replaces [old] with [new] in the pattern tree and re-renders the whole string. */
-    protected fun updateAtom(old: MnNode.Atom, new: MnNode.Atom) {
+    /** Replaces the node with [targetId] in the tree, re-renders, and updates cursor/selection. */
+    protected fun replaceNode(targetId: Int, replacement: MnNode) {
         val p = pattern ?: return
         pushUndo()
-        text = MnRenderer.render(MnNodeOps.replaceNode(p, old, new))
-        val newAtom = pattern?.let { MnNodeOps.findAtomById(it, old.id) }
-        cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
-        lastAtom = newAtom ?: lastAtom
+        val newRoot = p.replaceById(targetId, replacement) as? MnPattern ?: return
+        text = MnRenderer.render(newRoot)
+        // Try to re-find the atom near the cursor position
+        lastAtom = lastAtom?.let { a -> pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) } }
     }
 
-    /** Replaces [old] (Atom or Rest) with [new] in the pattern tree and re-renders. */
+    /** Removes the node with [targetId] from the tree. */
+    protected fun removeNode(targetId: Int) {
+        val p = pattern ?: return
+        pushUndo()
+        val newRoot = p.removeById(targetId) as? MnPattern ?: return
+        text = MnRenderer.render(newRoot)
+        cursorOffset = cursorOffset.coerceAtMost(text.length)
+        lastAtom = null
+    }
+
+    /** Replaces [old] with [new] in the pattern tree (legacy convenience, uses id-based replace). */
     protected fun updateNode(old: MnNode, new: MnNode) {
         val p = pattern ?: return
         pushUndo()
-        text = MnRenderer.render(MnNodeOps.replaceNode(p, old, new))
+        val newRoot = p.replaceById(old.id, new) as? MnPattern ?: return
+        text = MnRenderer.render(newRoot)
         if (new is MnNode.Atom) {
-            val newAtom = pattern?.let { MnNodeOps.findAtomById(it, (old as? MnNode.Atom)?.id ?: -1) }
+            val newAtom = pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) }
             cursorOffset = newAtom?.sourceRange?.first ?: cursorOffset
             lastAtom = newAtom ?: lastAtom
         } else {
@@ -202,29 +207,17 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 // ── Note staff editor base ────────────────────────────────────────────────────
 
 /**
- * Abstract base component for note-staff editors.
+ * Abstract base for note-staff editors.
  *
- * Subclasses provide the two direction mappings between atom string values and staff positions:
- * - [atomToStaffPosition]: given a raw atom value (e.g. "c4" or "0"), return a staff position
- *   (integer, C4 = 0, D4 = 1, …) or null if the value cannot be rendered on a staff.
- * - [staffPositionToAtomValue]: given a staff position, return the string value to write into
- *   the pattern (e.g. "e4" or "2").
- *
- * The shared render template shows: text input → extra controls → note staff → modifier panel → bottom bar.
- * Override [renderExtraControls] to inject anything between the text input and the staff.
+ * Subclasses provide mappings between atom string values and staff positions:
+ * - [atomToStaffPosition]: "c4" → 0, "d4" → 1, …
+ * - [staffPositionToAtomValue]: 0 → "c4", 1 → "d4", …
  */
 abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : MnPatternEditorBase<P>(ctx) {
 
-    /** Maps a raw atom value to a staff position (C4 = 0, D4 = 1, …), or null if not representable. */
     protected abstract fun atomToStaffPosition(value: String): Int?
-
-    /** Maps a staff position back to the atom value string. */
     protected abstract fun staffPositionToAtomValue(pos: Int): String
-
-    /** Override to provide the scale name for the key signature drawn on the staff. */
     protected open fun keySignatureScaleName(): String? = null
-
-    /** Override to render additional controls between the text input and the staff. */
     protected open fun FlowContent.renderExtraControls() {}
 
     // ── Template render ───────────────────────────────────────────────────────
@@ -261,14 +254,13 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
             if (atom != null) {
                 mnModifierPanel(atom, onToggleRest = {
                     updateNode(atom, MnNode.Rest(atom.sourceRange))
-                }) { updated -> updateAtom(atom, updated) }
+                }) { updated -> updateNode(atom, updated) }
             } else if (rest != null) {
                 mnModifierPanel(rest, onToggleNote = {
                     updateNode(rest, MnNode.Atom(value = staffPositionToAtomValue(6)))
                     lastRest = null
                 }) { updated ->
                     updateNode(rest, updated)
-                    // Re-find the rest at the same source position after re-render
                     lastRest = pattern?.let { p ->
                         MnNodeOps.collectStaffItems(p).filterIsInstance<MnNode.Rest>()
                             .find { it.sourceRange?.first == rest.sourceRange?.first }
@@ -287,13 +279,6 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
     // ── Staff rendering ───────────────────────────────────────────────────────
 
-    /**
-     * Renders one [NoteStaffComp] per non-empty line of [text].
-     *
-     * Uses atom [MnNode.Atom.sourceRange] positions to assign each atom to its
-     * visual line — so linebreaks inside groups or alternations (`<a\nb>`) split
-     * the display correctly without requiring top-level [MnNode.Linebreak] nodes.
-     */
     private fun FlowContent.renderStaves() {
         val p = pattern ?: return
         val allItems = MnNodeOps.collectStaffItems(p)
@@ -313,7 +298,6 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                     if (staffRendered) div { css { height = 8.px } }
 
                     val linePattern = MnPattern(lineItems)
-                    // Preserve tree structure for bracket rendering by filtering top-level nodes
                     val lineStructuralPattern = MnPattern(
                         p.items.mapNotNull { extractLineSubtree(it, lineStart, lineEnd) }
                     )
@@ -335,69 +319,72 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                         scaleName = keySignatureScaleName(),
                         structuralPattern = lineStructuralPattern,
                         selection = lineSelection,
-                        onAction = { action ->
-                            when (action) {
-                                is NoteStaffEditor.Action.Select -> when (val sel = action.selection) {
-                                    is MnSelection.Atom -> {
-                                        cursorOffset = sel.node.sourceRange?.first ?: cursorOffset
-                                        lastAtom = sel.node; lastRest = null
-                                    }
-
-                                    is MnSelection.Rest -> {
-                                        cursorOffset = sel.node.sourceRange?.first ?: cursorOffset
-                                        lastRest = sel.node; lastAtom = null
-                                    }
-                                }
-
-                                is NoteStaffEditor.Action.Remove -> removeNode(action.node)
-                                is NoteStaffEditor.Action.InsertBetween -> insertBetween(
-                                    action.leftNode,
-                                    action.rightNode,
-                                    action.staffPos,
-                                    action.skipOpeningBrackets,
-                                    action.exitBrackets
-                                )
-                                is NoteStaffEditor.Action.InsertAt -> insertAt(action.existingNode, action.staffPos)
-                                is NoteStaffEditor.Action.Replace -> updateNode(action.old, action.new)
-                            }
-                        },
+                        onAction = { action -> handleStaffAction(action) },
                     )
 
                     staffRendered = true
                 }
             }
 
-            lineStart += line.length + 1 // +1 for the '\n'
+            lineStart += line.length + 1
         }
     }
 
-    private fun removeNode(node: MnNode) {
-        pushUndo()
-        val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).removeNode(node)
-        text = result.text
-        val range = node.sourceRange
-        cursorOffset = (range?.first ?: text.length).coerceAtMost(text.length)
-        lastAtom = null
-    }
+    private fun handleStaffAction(action: NoteStaffEditor.Action) {
+        when (action) {
+            is NoteStaffEditor.Action.Select -> when (val sel = action.selection) {
+                is MnSelection.Atom -> {
+                    cursorOffset = sel.node.sourceRange?.first ?: cursorOffset
+                    lastAtom = sel.node; lastRest = null
+                }
 
-    private fun insertBetween(leftNode: MnNode?, rightNode: MnNode?, staffPos: Int, skipOpeningBrackets: Int = 0, exitBrackets: Int = 0) {
-        pushUndo()
-        val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).insertBetween(
-            leftNode,
-            rightNode,
-            staffPos,
-            skipOpeningBrackets,
-            exitBrackets
-        )
-        text = result.text
-        cursorOffset = text.length
-    }
+                is MnSelection.Rest -> {
+                    cursorOffset = sel.node.sourceRange?.first ?: cursorOffset
+                    lastRest = sel.node; lastAtom = null
+                }
+            }
 
-    private fun insertAt(existingNode: MnNode, staffPos: Int) {
-        pushUndo()
-        val result = MnPatternTextEditor(text, ::staffPositionToAtomValue).insertAt(existingNode, staffPos)
-        text = result.text
-        cursorOffset = text.length
+            is NoteStaffEditor.Action.Remove -> removeNode(action.nodeId)
+
+            is NoteStaffEditor.Action.InsertChild -> {
+                val p = pattern ?: return
+                val parent = p.findById(action.parentId) ?: return
+                val newAtom = MnNode.Atom(value = staffPositionToAtomValue(action.staffPos))
+                val newParent = when (parent) {
+                    is MnPattern -> parent.insertAt(action.index, newAtom)
+                    is MnNode.Group -> parent.insertAt(action.index, newAtom)
+                    is MnNode.Alternation -> parent.insertAt(action.index, newAtom)
+                    else -> return
+                }
+                replaceNode(parent.id, newParent)
+                cursorOffset = text.length
+            }
+
+            is NoteStaffEditor.Action.StackOnto -> {
+                val p = pattern ?: return
+                val node = p.findById(action.nodeId) ?: return
+                val newValue = staffPositionToAtomValue(action.staffPos)
+                when (node) {
+                    is MnNode.Atom -> {
+                        // Wrap in a stack: c4 → [c4,e4]
+                        val stack = MnNode.Group(
+                            items = listOf(MnNode.Stack(layers = listOf(listOf(node), listOf(MnNode.Atom(value = newValue)))))
+                        )
+                        replaceNode(node.id, stack)
+                    }
+
+                    is MnNode.Rest -> {
+                        // Replace rest with the new note
+                        replaceNode(node.id, MnNode.Atom(value = newValue))
+                    }
+
+                    else -> return
+                }
+                cursorOffset = text.length
+            }
+
+            is NoteStaffEditor.Action.Replace -> updateNode(action.old, action.new)
+        }
     }
 
     private fun extractLineSubtree(node: MnNode, start: Int, end: Int): MnNode? {
@@ -411,10 +398,10 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
             is MnNode.Alternation -> node.items.filterLineOrNull()?.let { node.copy(items = it) }
             is MnNode.Stack -> node.layers.map { it.filterLine() }.filter { it.isNotEmpty() }
                 .ifEmpty { null }?.let { node.copy(layers = it) }
-
             is MnNode.Choice -> node.options.filterLineOrNull()?.let { node.copy(options = it) }
             is MnNode.Repeat -> extractLineSubtree(node.node, start, end)?.let { node.copy(node = it) }
             is MnNode.Linebreak -> null
+            is MnPattern -> null
         }
     }
 }

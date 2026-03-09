@@ -181,7 +181,7 @@ class MiniNotationParser(
 
         match(TokenType.TILDE) -> MnNode.Rest(sourceRange = previous().start until previous().end)
 
-        match(TokenType.LINEBREAK) -> MnNode.Linebreak
+        match(TokenType.LINEBREAK) -> MnNode.Linebreak()
 
         match(TokenType.LITERAL) -> {
             val token = previous()
