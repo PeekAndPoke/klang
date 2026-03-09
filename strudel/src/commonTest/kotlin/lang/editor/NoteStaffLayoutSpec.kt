@@ -23,7 +23,9 @@ import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
 class NoteStaffLayoutSpec : StringSpec() {
 
     private fun parse(pattern: String) = parseMiniNotationMnPattern(pattern)!!
-    private fun layout(pattern: String) = NoteStaffLayout.buildLayoutItems(parse(pattern))
+    private fun fullRange(pattern: String) = 0..pattern.length
+    private fun layout(pattern: String) = NoteStaffLayout.buildLayoutItems(parse(pattern), fullRange(pattern))
+    private fun layoutOf(p: MnPattern, text: String) = NoteStaffLayout.buildLayoutItems(p, fullRange(text))
 
     /** Execute a Sequential insert target on the given pattern. */
     private fun executeSequential(p: MnPattern, target: InsertTarget.Sequential, value: String): String {
@@ -50,8 +52,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "layout: group [a b] c → bracket marks wrap the two notes" {
-            val p = parse("[a b] c")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "[a b] c"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val group = p.items[0] as MnNode.Group
 
             items shouldHaveSize 5
@@ -84,8 +87,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "layout: alternation <a b> → alternation bracket marks wrap two notes" {
-            val p = parse("<a b>")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "<a b>"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val alt = p.items[0] as MnNode.Alternation
 
             items shouldHaveSize 4
@@ -102,8 +106,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "layout: stack [a,b] → Group wraps Stack — bracket marks plus a single Stack item" {
-            val p = parse("[a,b]")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "[a,b]"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val group = p.items[0] as MnNode.Group
 
             items shouldHaveSize 3
@@ -122,8 +127,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "layout: [a,b] c → open-bracket, Stack, close-bracket, Note" {
-            val p = parse("[a,b] c")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "[a,b] c"
+            val p = parse(text)
+            val items = layoutOf(p, text)
 
             items shouldHaveSize 4
             items[0].shouldBeInstanceOf<LayoutItem.BracketMark>()
@@ -152,8 +158,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         // ── buildInsertTargets ──────────────────────────────────────────────
 
         "targets: flat sequence a b c — Notes produce Sequential and StackOnto targets" {
-            val p = parse("a b c")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "a b c"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
 
             // Each Note produces: left-push, center-overlay, right-push
@@ -175,8 +182,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "targets: [a,b] c — close bracket produces Sequential at pattern level" {
-            val p = parse("[a,b] c")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "[a,b] c"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
             val group = p.items[0] as MnNode.Group
 
@@ -194,8 +202,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "targets: <[a,b] [c,d]> — close bracket of first group targets alternation" {
-            val p = parse("<[a,b] [c,d]>")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "<[a,b] [c,d]>"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
             val alt = p.items[0] as MnNode.Alternation
 
@@ -207,8 +216,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "targets: [a b] c — right-push of Note(b) targets group, close bracket targets pattern" {
-            val p = parse("[a b] c")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "[a b] c"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
             val group = p.items[0] as MnNode.Group
 
@@ -228,8 +238,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         // ── Integration: layout → targets → execute ─────────────────────────
 
         "integration: [c4,e4] d4 — right-push after stack inserts between stack and d4" {
-            val p = parse("[c4,e4] d4")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "[c4,e4] d4"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
 
             // The close bracket of group is at layout index 2
@@ -243,9 +254,10 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "integration: [c4,e4] d4 — open bracket inserts at start of group" {
-            val p = parse("[c4,e4] d4")
+            val text = "[c4,e4] d4"
+            val p = parse(text)
             val group = p.items[0] as MnNode.Group
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
 
             val openTarget = targets.filter { it.isPush }
@@ -257,8 +269,9 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "integration: [c4,e4] d4 — insert before stack at top level" {
-            val p = parse("[c4,e4] d4")
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val text = "[c4,e4] d4"
+            val p = parse(text)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
 
             // Left push of the stack: Sequential(group.id, 0) — same as open bracket
@@ -282,9 +295,10 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "integration: <[a,b] [c,d]> — insert between the two stacks at alternation level" {
-            val p = parse("<[a,b] [c,d]>")
+            val text = "<[a,b] [c,d]>"
+            val p = parse(text)
             val alt = p.items[0] as MnNode.Alternation
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
 
             // Close bracket of [a,b] → Sequential(alt.id, 1)
@@ -297,9 +311,10 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "integration: <[a,b] [c,d]> — insert at start of alternation" {
-            val p = parse("<[a,b] [c,d]>")
+            val text = "<[a,b] [c,d]>"
+            val p = parse(text)
             val alt = p.items[0] as MnNode.Alternation
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
 
             val startTarget = targets.filter { it.isPush }
@@ -311,9 +326,10 @@ class NoteStaffLayoutSpec : StringSpec() {
         }
 
         "integration: <a [c d] [e f]> — insert between groups at alternation level" {
-            val p = parse("<a [c d] [e f]>")
+            val text = "<a [c d] [e f]>"
+            val p = parse(text)
             val alt = p.items[0] as MnNode.Alternation
-            val items = NoteStaffLayout.buildLayoutItems(p)
+            val items = layoutOf(p, text)
             val targets = NoteStaffLayout.buildInsertTargets(items)
 
             // Close bracket of [c d] → Sequential(alt.id, 2)

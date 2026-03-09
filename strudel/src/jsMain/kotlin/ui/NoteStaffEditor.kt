@@ -33,44 +33,44 @@ import kotlin.math.roundToInt
  *
  * - Drag a note head up/down to change pitch; emits [NoteStaffEditor.Action.Replace].
  * - Double-click a note or rest to delete it; emits [NoteStaffEditor.Action.Remove].
- * - Double-click empty staff area to insert a note; emits [NoteStaffEditor.Action.InsertBetween] or [NoteStaffEditor.Action.InsertAt].
+ * - Double-click empty staff area to insert a note; emits [NoteStaffEditor.Action.InsertChild] or [NoteStaffEditor.Action.StackOnto].
  * - Right-click a note/rest to toggle note ↔ rest; emits [NoteStaffEditor.Action.Replace].
  * - Single-click a note or rest to select it; emits [NoteStaffEditor.Action.Select].
  * - The [selection] node is highlighted with a blue stroke.
  */
 internal fun FlowContent.noteStaffSvg(
-    /** Flat pattern used to determine which atoms/rests to display. */
+    /** The full parsed pattern — used for both rendering and insert-target generation. */
     pattern: MnPattern?,
+    /** Character range in the source text that this staff line covers. */
+    lineRange: IntRange,
     /** Maps a raw atom value (e.g. "c4") to a staff position (C4=0, D4=1, …), or null if not renderable. */
     atomToPos: (String) -> Int?,
     /** Maps a staff position back to a raw atom value string (e.g. 6 → "b4"). */
     posToValue: (Int) -> String,
     /** Optional scale name used to draw a key signature on the staff. */
     scaleName: String? = null,
-    /** Hierarchical pattern used for bracket structure; falls back to [pattern] if null. */
-    structuralPattern: MnPattern? = null,
     /** Currently selected atom or rest — highlighted with a blue stroke. */
     selection: MnSelection? = null,
     /** Receives all user interactions with the staff. */
     onAction: (NoteStaffEditor.Action) -> Unit = {},
 ) {
     this@noteStaffSvg.NoteStaffComp(
-        pattern, atomToPos, posToValue, scaleName, structuralPattern, selection, onAction,
+        pattern, lineRange, atomToPos, posToValue, scaleName, selection, onAction,
     )
 }
 
 @Suppress("FunctionName")
 private fun Tag.NoteStaffComp(
     pattern: MnPattern?,
+    lineRange: IntRange,
     atomToPos: (String) -> Int?,
     posToValue: (Int) -> String,
     scaleName: String?,
-    structuralPattern: MnPattern?,
     selection: MnSelection?,
     onAction: (NoteStaffEditor.Action) -> Unit,
 ) = comp(
     NoteStaffEditor.Props(
-        pattern, atomToPos, posToValue, scaleName, structuralPattern, selection, onAction,
+        pattern, lineRange, atomToPos, posToValue, scaleName, selection, onAction,
     )
 ) { NoteStaffEditor(it) }
 
@@ -179,16 +179,16 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
     // ── Props ─────────────────────────────────────────────────────────────────
 
     data class Props(
-        /** Flat pattern used to determine which atoms/rests to display. */
+        /** The full parsed pattern — used for both rendering and insert-target generation. */
         val pattern: MnPattern?,
+        /** Character range in the source text that this staff line covers. */
+        val lineRange: IntRange,
         /** Maps a raw atom value (e.g. "c4") to a staff position (C4=0, D4=1, …). */
         val atomToPos: (String) -> Int?,
         /** Maps a staff position back to a raw atom value string. */
         val posToValue: (Int) -> String,
         /** Optional scale name used to draw a key signature. */
         val scaleName: String?,
-        /** Hierarchical pattern used for bracket structure. */
-        val structuralPattern: MnPattern?,
         /** Currently selected atom or rest — highlighted with a blue stroke. */
         val selection: MnSelection?,
         /** Receives all user interactions with the staff. */
@@ -225,7 +225,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
     /** All renderable MnNode instances from the layout — includes atoms/rests inside Stacks. */
     private val staffNodes: List<MnNode>
-        get() = props.pattern?.let { NoteStaffLayout.buildLayoutItems(it) }
+        get() = props.pattern?.let { NoteStaffLayout.buildLayoutItems(it, props.lineRange) }
             ?.flatMap { item ->
                 when (item) {
                     is LayoutItem.Note -> listOf(item.node)
@@ -234,9 +234,6 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                 }
             }
             ?: emptyList()
-
-    private fun buildLayoutItems(pattern: MnPattern): List<LayoutItem> =
-        NoteStaffLayout.buildLayoutItems(pattern)
 
     // ── Window drag handlers ──────────────────────────────────────────────────
 
@@ -425,8 +422,8 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val noteStartX = maxOf(LEFT_MARGIN, CLEF_END_X + keySigWidth)
 
         // Build interleaved layout: bracket marks get their own column alongside notes/rests
-        val layoutItems = (props.structuralPattern ?: props.pattern)
-            ?.let { buildLayoutItems(it) }
+        val layoutItems = props.pattern
+            ?.let { NoteStaffLayout.buildLayoutItems(it, props.lineRange) }
             ?: emptyList()
 
         // Dynamic layout: expand height for notes outside normal staff range

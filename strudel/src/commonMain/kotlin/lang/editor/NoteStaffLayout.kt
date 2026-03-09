@@ -65,18 +65,43 @@ object NoteStaffLayout {
 
     // ── Layout building ────────────────────────────────────────────────────────
 
-    /** Returns the flat list of layout items for [pattern]. */
-    fun buildLayoutItems(pattern: MnPattern): List<LayoutItem> = buildList {
+    /**
+     * Returns the flat list of layout items for [pattern], filtered to [lineRange].
+     *
+     * Only leaf nodes (Atom, Rest) whose [sourceRange] falls within [lineRange] are included.
+     * Container nodes (Group, Alternation) emit bracket marks only when they contribute
+     * at least one visible leaf — but their original IDs are always preserved, so insert
+     * targets reference the real tree.
+     */
+    fun buildLayoutItems(pattern: MnPattern, lineRange: IntRange): List<LayoutItem> = buildList {
         pattern.items.forEachIndexed { idx, node ->
-            buildLayoutItems(node, parentId = pattern.id, indexInParent = idx, result = this)
+            buildLayoutItems(node, parentId = pattern.id, indexInParent = idx, lineRange = lineRange, result = this)
         }
     }
 
-    private fun buildLayoutItems(node: MnNode, parentId: Int, indexInParent: Int, result: MutableList<LayoutItem>) {
+    /** Returns true if [node] has at least one Atom/Rest leaf whose sourceRange intersects [lineRange]. */
+    private fun hasVisibleLeaf(node: MnNode, lineRange: IntRange): Boolean = when (node) {
+        is MnNode.Atom -> node.sourceRange?.first?.let { it in lineRange } == true
+        is MnNode.Rest -> node.sourceRange?.first?.let { it in lineRange } == true
+        is MnNode.Linebreak -> false
+        else -> node.children().any { hasVisibleLeaf(it, lineRange) }
+    }
+
+    private fun buildLayoutItems(
+        node: MnNode,
+        parentId: Int,
+        indexInParent: Int,
+        lineRange: IntRange,
+        result: MutableList<LayoutItem>,
+    ) {
+        fun MnNode.inRange() = sourceRange?.first?.let { it in lineRange } == true
+
         when (node) {
-            is MnNode.Atom -> result.add(LayoutItem.Note(node, parentId, indexInParent))
-            is MnNode.Rest -> if (node.sourceRange != null) result.add(LayoutItem.Note(node, parentId, indexInParent))
+            is MnNode.Atom -> if (node.inRange()) result.add(LayoutItem.Note(node, parentId, indexInParent))
+            is MnNode.Rest -> if (node.sourceRange != null && node.inRange()) result.add(LayoutItem.Note(node, parentId, indexInParent))
+
             is MnNode.Group -> {
+                if (!hasVisibleLeaf(node, lineRange)) return
                 result.add(
                     LayoutItem.BracketMark(
                         BracketType.Group,
@@ -91,6 +116,7 @@ object NoteStaffLayout {
                         child,
                         parentId = node.id,
                         indexInParent = idx,
+                        lineRange = lineRange,
                         result = result
                     )
                 }
@@ -106,6 +132,7 @@ object NoteStaffLayout {
             }
 
             is MnNode.Alternation -> {
+                if (!hasVisibleLeaf(node, lineRange)) return
                 result.add(
                     LayoutItem.BracketMark(
                         BracketType.Alternation,
@@ -120,6 +147,7 @@ object NoteStaffLayout {
                         child,
                         parentId = node.id,
                         indexInParent = idx,
+                        lineRange = lineRange,
                         result = result
                     )
                 }
@@ -137,20 +165,20 @@ object NoteStaffLayout {
             is MnNode.Stack -> {
                 val stackNodes = buildList<MnNode> {
                     node.walk { n ->
-                        if ((n is MnNode.Atom) || (n is MnNode.Rest && n.sourceRange != null)) add(n)
+                        if ((n is MnNode.Atom || (n is MnNode.Rest && n.sourceRange != null)) && n.inRange()) add(n)
                     }
                 }
                 if (stackNodes.isNotEmpty()) result.add(LayoutItem.Stack(stackNodes, parentId, indexInParent))
             }
 
             is MnNode.Choice -> node.options.forEachIndexed { idx, child ->
-                buildLayoutItems(child, parentId = node.id, indexInParent = idx, result = result)
+                buildLayoutItems(child, parentId = node.id, indexInParent = idx, lineRange = lineRange, result = result)
             }
 
-            is MnNode.Repeat -> buildLayoutItems(node.node, parentId = node.id, indexInParent = 0, result = result)
+            is MnNode.Repeat -> buildLayoutItems(node.node, parentId = node.id, indexInParent = 0, lineRange = lineRange, result = result)
             is MnNode.Linebreak -> {}
             is MnPattern -> node.items.forEachIndexed { idx, child ->
-                buildLayoutItems(child, parentId = node.id, indexInParent = idx, result = result)
+                buildLayoutItems(child, parentId = node.id, indexInParent = idx, lineRange = lineRange, result = result)
             }
         }
     }
