@@ -15,3 +15,9 @@ Currently supported platforms:
 Currently supported live coding frameworks:
 
 - Strudel (pure Kotlin reimplementation)
+
+# Pre-Alpha-Demo
+
+There are still some rough edges ... For the best experience use a chrome-browser on a laptop or pc please.
+
+https://klang.finzo.de
