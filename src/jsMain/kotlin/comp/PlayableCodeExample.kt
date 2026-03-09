@@ -18,7 +18,6 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
-import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.dslEditorExtension
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -53,7 +52,6 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private val isPlaying get() = playback != null
 
     private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
-    private val highlightBuffer = CodeMirrorHighlightBuffer(editorRef)
 
     private var currentCode: String by value(props.code)
     private var playingCode: String? by value(null)
@@ -99,7 +97,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     }
 
     private fun play() {
-        highlightBuffer.cancelAll()
+        editorRef { it.cancelAllHighlights() }
 
         launch {
             withEditorErrorHandling(editorRef) {
@@ -143,7 +141,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
                                 is KlangPlaybackSignal.VoicesScheduled -> {
                                     signal.voices.forEach { voiceEvent ->
-                                        highlightBuffer.scheduleHighlight(voiceEvent)
+                                        editorRef { it.scheduleHighlight(voiceEvent) }
                                     }
                                 }
 
@@ -172,7 +170,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private fun stopPlayback() {
         playback?.stop()
         playback = null
-        highlightBuffer.cancelAll()
+        editorRef { it.cancelAllHighlights() }
         currentCycle = 0
         playingCode = null
     }

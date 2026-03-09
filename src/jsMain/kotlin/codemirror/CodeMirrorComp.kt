@@ -7,11 +7,18 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.utils.jsObject
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.OnChange
+import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.ast.SourceLocationChain
+import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.id
 import org.w3c.dom.HTMLDivElement
+import org.w3c.dom.HTMLElement
+import kotlin.js.Date
 
 @Suppress("FunctionName")
 fun Tag.CodeMirrorComp(
@@ -36,21 +43,28 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Highlight data structure
-    data class HighlightRange(
-        val from: Int,
-        val to: Int,
-        val id: String,
-        val durationMs: Double = 300.0,
-    )
-
-    // Define StateEffect types for managing highlights
-    private val addHighlightEffect: StateEffectType<HighlightRange> = StateEffect.define<HighlightRange>()
-    private val removeHighlightEffect: StateEffectType<String> = StateEffect.define()
-    private val clearHighlightsEffect: StateEffectType<Unit> = StateEffect.define()
-
     private val editorId = "codemirror-editor-${hashCode()}"
     private var editor: EditorView? by value(null)
+
+    // ── Overlay highlight state ─────────────────────────────────────────────
+
+    private val maxRefreshRatePerLocation: Int = 16
+    private val maxSimultaneousHighlights: Int = 100
+    var maxHighlightsPerEvent: Int = 10
+
+    private val minIntervalMs: Double get() = 1000.0 / maxRefreshRatePerLocation
+
+    /** Overlay container — lazily created inside the editor's scroll container. */
+    private var overlay: HTMLElement? = null
+
+    /** locationKey → mark element currently in the overlay. */
+    private val activeMarks = mutableMapOf<String, HTMLElement>()
+
+    /** locationKey → last highlight time for rate-limiting. */
+    private val lastHighlightTime = mutableMapOf<String, Double>()
+
+    /** All pending setTimeout IDs for bulk cancellation. */
+    private val pendingTimeouts = mutableSetOf<Int>()
 
     init {
         lifecycle {
@@ -59,82 +73,10 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
             }
 
             onUnmount {
+                cancelAllHighlights()
                 destroy()
             }
         }
-    }
-
-    // Create the highlight StateField extension
-    private fun createHighlightExtension(): Extension {
-        return StateField.define(
-            jsObject<StateFieldConfig<DecorationSet>> {
-                // Initialize with empty decorations
-                this.create = { Decoration.none }
-
-                // Update decorations based on transactions
-                this.update = { decorations, tr ->
-                    // Map existing decorations through document changes
-                    var updated = decorations.map(tr.changes)
-
-                    // Process state effects
-                    tr.effects.forEach { effect ->
-                        when {
-                            effect.`is`(addHighlightEffect) -> {
-                                val range = effect.value.unsafeCast<HighlightRange>()
-                                updated = updated.update(
-                                    jsObject {
-                                        this.add = arrayOf(
-                                            jsObject {
-                                                this.from = range.from
-                                                this.to = range.to
-                                                this.value = Decoration.mark(
-                                                    jsObject {
-                                                        this.`class` = "cm-highlight-playing"
-                                                        this.attributes = jsObject {
-                                                            this.`data-highlight-id` = range.id
-                                                            this.style = "animation-duration: ${range.durationMs}ms"
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        )
-                                    }
-                                )
-                            }
-
-                            effect.`is`(removeHighlightEffect) -> {
-                                val id = effect.value.unsafeCast<String>()
-                                val newRanges = mutableListOf<Range<Decoration>>()
-                                updated.between(0, tr.state.doc.length) { from, to, value ->
-                                    val attrs = value.asDynamic().spec?.attributes
-                                    if (attrs == null || attrs["data-highlight-id"] != id) {
-                                        newRanges.add(
-                                            jsObject {
-                                                this.from = from
-                                                this.to = to
-                                                this.value = value
-                                            }
-                                        )
-                                    }
-                                }
-                                updated = Decoration.set(newRanges.toTypedArray(), sort = true)
-                            }
-
-                            effect.`is`(clearHighlightsEffect) -> {
-                                updated = Decoration.none
-                            }
-                        }
-                    }
-
-                    updated
-                }
-
-                // Provide decorations to the editor view
-                this.provide = { field ->
-                    EditorView.decorations.from(field)
-                }
-            }
-        ).unsafeCast<Extension>()
     }
 
     private fun initialize() {
@@ -153,7 +95,6 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         val updateListenerExtension = EditorView.updateListener.of(updateFn)
 
         // Create a linter extension with autoPanel
-        // linter() takes TWO parameters: source function and config object
         val linterSource: (EditorView) -> Array<Diagnostic> = js("(function(view) { return []; })")
         val linterConfig = jsObject<dynamic> {
             autoPanel = true
@@ -165,9 +106,8 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
             arrayOf(
                 javascript(),
                 updateListenerExtension,
-                createHighlightExtension(),
-                linterExtension,  // Initialize lint state with autoPanel
-                lintGutter(),     // Add lint gutter for error markers
+                linterExtension,
+                lintGutter(),
                 *props.extraExtensions.toTypedArray(),
             )
         ).unsafeCast<Array<Extension>>()
@@ -189,8 +129,6 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
             this.root = null
             this.dispatch = null
         }
-
-        // console.log("viewConfig", viewConfig)
 
         // Create editor view
         try {
@@ -225,121 +163,175 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         )
     }
 
-    /**
-     * Add a highlight at the specified location
-     *
-     * @param line 1-based line number
-     * @param column 1-based column number
-     * @param length Length of the highlight in characters
-     * @param durationMs Duration of the highlight animation in milliseconds
-     * @return Highlight ID that can be used to remove it later
-     */
-    fun addHighlight(line: Int, column: Int, length: Int, durationMs: Double = 300.0): String {
-        val view = editor ?: return ""
+    // ── Overlay Highlight API ───────────────────────────────────────────────
 
-        // Check if window has focus - if not, clear all highlights and return immediately
+    /**
+     * Schedule overlay highlights for a voice event's source locations.
+     */
+    fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
+        val chain = event.sourceLocations as? SourceLocationChain ?: return
+        chain.locations.asReversed().take(maxHighlightsPerEvent).forEach { location ->
+            scheduleForLocation(location, event)
+        }
+    }
+
+    /**
+     * Cancel all pending and active highlights.
+     */
+    fun cancelAllHighlights() {
+        for (id in pendingTimeouts) window.clearTimeout(id)
+        pendingTimeouts.clear()
+        activeMarks.clear()
+        lastHighlightTime.clear()
+        overlay?.let { it.innerHTML = "" }
+    }
+
+    // ── Overlay Highlight Internals ─────────────────────────────────────────
+
+    private fun scheduleForLocation(
+        location: SourceLocation,
+        event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent,
+    ) {
+        val key = "${location.startLine}:${location.startColumn}:${location.endLine}:${location.endColumn}"
+        val now = Date.now()
+
+        val startTimeMs = event.startTime * 1000.0
+        val endTimeMs = event.endTime * 1000.0
+        val startFromNowMs = maxOf(1.0, startTimeMs - now)
+        val durationMs = maxOf(200.0, minOf(10000.0, endTimeMs - startTimeMs))
+
+        // Rate-limit
+        val projectedTime = now + startFromNowMs
+        val lastTime = lastHighlightTime[key]
+        if (lastTime != null && (projectedTime - lastTime) < minIntervalMs) return
+
+        // Max simultaneous
+        if (activeMarks.size >= maxSimultaneousHighlights) return
+
+        // Schedule start
+        scheduleTimeout(startFromNowMs.toInt()) {
+            showHighlight(key, location, durationMs)
+        }
+
+        // Schedule removal
+        val removeDelay = startFromNowMs + durationMs + 50.0
+        scheduleTimeout(removeDelay.toInt()) {
+            removeHighlight(key)
+        }
+    }
+
+    private fun scheduleTimeout(delayMs: Int, action: () -> Unit) {
+        var id = 0
+        id = window.setTimeout({
+            pendingTimeouts.remove(id)
+            action()
+        }, delayMs)
+        pendingTimeouts.add(id)
+    }
+
+    private fun showHighlight(key: String, location: SourceLocation, durationMs: Double) {
+        val view = editor ?: return
+
+        // Check if window has focus
         val hasFocus = js("document.hasFocus()") as Boolean
-        if (!hasFocus) {
-            return ""
+        if (!hasFocus) return
+
+        // Remove existing mark for this location (deduplication)
+        activeMarks.remove(key)?.let { it.parentNode?.removeChild(it) }
+
+        // Resolve document positions
+        val from = lineColToPos(view, location.startLine, location.startColumn) ?: return
+        val to = if (location.startLine == location.endLine) {
+            lineColToPos(view, location.endLine, location.endColumn) ?: return
+        } else {
+            // Multi-line: highlight to end of start line
+            lineColToPos(view, location.startLine, location.startColumn + 2) ?: return
         }
 
-        // Generate unique ID for this highlight
-        val timestamp = js("Date.now()") as Double
-        val random = js("Math.random()") as Double
-        val highlightId = "highlight-${timestamp.toLong()}-${(random * 1000).toInt()}"
+        // Get pixel coordinates relative to the content
+        val fromCoords = view.coordsAtPos(from) ?: return
+        val toCoords = view.coordsAtPos(to) ?: return
 
-        try {
-            // Convert line/column to position (CodeMirror uses 1-based line numbers)
+        // Get the overlay parent's bounding rect for relative positioning
+        // The overlay sits inside contentDOM.parentElement, so we must offset against that — not contentDOM itself
+        val containerRect = view.contentDOM.parentElement?.getBoundingClientRect() ?: return
+
+        val left = (fromCoords.left - containerRect.left)
+        val top = (fromCoords.top - containerRect.top) + 1
+        val width = (toCoords.right - fromCoords.left) + 5
+        val height = (fromCoords.bottom - fromCoords.top) + 2
+
+        if (width <= 0 || height <= 0) return
+
+        // Create mark element
+        val mark = document.createElement("mark") as HTMLElement
+        mark.className = "cm-highlight-playing"
+        mark.style.apply {
+            position = "absolute"
+            this.left = "${left}px"
+            this.top = "${top}px"
+            this.width = "${width}px"
+            this.height = "${height}px"
+            setProperty("animation-duration", "${durationMs}ms")
+            setProperty("pointer-events", "none")
+        }
+
+        ensureOverlay(view).appendChild(mark)
+        activeMarks[key] = mark
+        lastHighlightTime[key] = Date.now()
+    }
+
+    private fun removeHighlight(key: String) {
+        val mark = activeMarks.remove(key) ?: return
+        mark.parentNode?.removeChild(mark)
+    }
+
+    private fun ensureOverlay(view: EditorView): HTMLElement {
+        overlay?.let { return it }
+
+        val el = document.createElement("div") as HTMLElement
+        el.className = "cm-highlight-overlay"
+        el.style.apply {
+            position = "absolute"
+            this.top = "0"
+            this.left = "0"
+            this.right = "0"
+            this.bottom = "0"
+            setProperty("pointer-events", "none")
+            zIndex = "5"
+        }
+
+        // Insert into contentDOM's parent so it scrolls with the content
+        view.contentDOM.parentElement?.appendChild(el)
+        overlay = el
+        return el
+    }
+
+    private fun lineColToPos(view: EditorView, line: Int, column: Int): Int? {
+        return try {
             val lineObj = view.state.doc.line(line)
-            val from = lineObj.from + (column - 1)
-            val to = from + length
-
-            // Ensure positions are valid
-            if (from < 0 || to > view.state.doc.length) {
-                console.warn("Highlight position out of bounds: from=$from, to=$to, doc.length=${view.state.doc.length}")
-                return ""
-            }
-
-            // Create the highlight range and effect
-            val range = HighlightRange(from, to, highlightId, durationMs)
-            val effect = addHighlightEffect.of(range.unsafeCast<HighlightRange>())
-
-            // Dispatch transaction
-            val transaction = view.state.update(
-                jsObject {
-                    this.effects = effect
-                }
-            )
-            view.dispatch(transaction)
-        } catch (e: Throwable) {
-            console.error("Error adding highlight:", e)
-            return ""
-        }
-
-        return highlightId
-    }
-
-    /**
-     * Remove a specific highlight by ID
-     */
-    fun removeHighlight(highlightId: String) {
-        val view = editor ?: return
-
-        try {
-            // Create the remove effect
-            val effect = removeHighlightEffect.of(highlightId.unsafeCast<String>())
-
-            // Dispatch transaction
-            val transaction = view.state.update(
-                jsObject {
-                    this.effects = effect
-                }
-            )
-            view.dispatch(transaction)
-        } catch (e: Throwable) {
-            console.error("Error removing highlight:", e)
+            val pos = lineObj.from + (column - 1)
+            if (pos in 0..view.state.doc.length) pos else null
+        } catch (_: Throwable) {
+            null
         }
     }
 
-    /**
-     * Clear all highlights
-     */
-    fun clearHighlights() {
-        val view = editor ?: return
-
-        try {
-            // Create the clear effect
-            val effect = clearHighlightsEffect.of(Unit.unsafeCast<Unit>())
-
-            // Dispatch transaction
-            val transaction = view.state.update(
-                jsObject {
-                    this.effects = effect
-                }
-            )
-            view.dispatch(transaction)
-        } catch (e: Throwable) {
-            console.error("Error clearing highlights:", e)
-        }
-    }
+    // ── Error Diagnostics ───────────────────────────────────────────────────
 
     /**
      * Set errors to display in the editor
-     * Call this method to show error markers and the error panel
      */
     fun setErrors(errors: List<EditorError>) {
         val view = editor ?: return
 
         try {
-            // Convert EditorError list to CodeMirror Diagnostic array
             val diagnostics = errors.mapNotNull { error ->
                 try {
-                    // Get the line (1-based in EditorError, 1-based in CodeMirror's line() function)
                     val lineObj = view.state.doc.line(error.line)
                     val from = lineObj.from + (error.col - 1)
                     val to = from + error.len
 
-                    // Ensure positions are valid
                     if (from < 0 || to > view.state.doc.length) {
                         console.warn(
                             "Diagnostic position out of bounds: from=$from, to=$to, doc.length=${view.state.doc.length}"
@@ -347,7 +339,6 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                         return@mapNotNull null
                     }
 
-                    // Create diagnostic object using dynamic (since we don't have full external definitions)
                     jsObject<Diagnostic> {
                         this.from = from
                         this.to = to
@@ -360,8 +351,6 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                 }
             }.toTypedArray()
 
-            // setDiagnostics returns a TransactionSpec, not a StateEffect
-            // Dispatch it directly
             val transactionSpec = setDiagnostics(view.state, diagnostics)
             view.dispatch(transactionSpec.unsafeCast<dynamic>())
         } catch (e: Throwable) {

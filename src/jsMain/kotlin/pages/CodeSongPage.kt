@@ -29,7 +29,6 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
 import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
-import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.dslEditorExtension
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
@@ -111,9 +110,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private val currentModals by subscribingTo(modals)
 
-    private val highlightBuffer = CodeMirrorHighlightBuffer(codeEditorRef)
-    private var highlightPerEvent by value(highlightBuffer.maxHighlightsPerEvent) {
-        highlightBuffer.maxHighlightsPerEvent = it
+    private var highlightPerEvent by value(10) {
+        codeEditorRef { editor -> editor.maxHighlightsPerEvent = it }
     }
 
     private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
@@ -122,7 +120,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private var cps: Double by value(cpsStream()) {
         cpsStream(it)
-        highlightBuffer.cancelAll()
+        codeEditorRef { editor -> editor.cancelAllHighlights() }
         blocksHighlightBuffer.cancelAll()
         playback?.updateCyclesPerSecond(it)
     }
@@ -223,7 +221,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private fun onPlay() {
         codeStream(code)
         isCodeModified = false
-        highlightBuffer.cancelAll()
+        codeEditorRef { editor -> editor.cancelAllHighlights() }
         blocksHighlightBuffer.cancelAll()
 
         when (val s = playback) {
@@ -243,8 +241,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                         if (currentModals.isNotEmpty()) return@onSignal
 
                                         signal.voices.forEach { voiceEvent ->
-                                            // Update Code highlight buffer
-                                            highlightBuffer.scheduleHighlight(voiceEvent)
+                                            // Update Code highlights
+                                            codeEditorRef { editor -> editor.scheduleHighlight(voiceEvent) }
 
                                             // Update Blocks highlight buffer
                                             val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return@forEach
@@ -291,7 +289,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private fun onStop() {
         playback?.stop()
-        highlightBuffer.cancelAll()
+        codeEditorRef { editor -> editor.cancelAllHighlights() }
         blocksHighlightBuffer.cancelAll()
         playback = null
     }

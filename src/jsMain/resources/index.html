@@ -54,7 +54,16 @@
             min-height: 100vh;
         }
 
-        /* CodeMirror live code highlighting */
+        /* CodeMirror live code highlighting (overlay marks) */
+        .cm-highlight-overlay .cm-highlight-playing {
+            border-radius: 3px;
+            animation-name: pulse;
+            animation-timing-function: ease-out;
+            animation-fill-mode: forwards;
+            /* duration comes from inline style */
+        }
+
+        /* CodeMirror live code highlighting (inline decorations — legacy) */
         .cm-highlight-playing {
             background-color: rgba(0, 100, 200, 0.0);
             border: 1px solid rgba(0, 100, 200, 0.0);
@@ -62,7 +71,6 @@
             animation-name: pulse;
             animation-timing-function: ease-out;
             animation-fill-mode: forwards;
-            /* duration comes from inline style via CodeMirrorComp */
             padding: 1px;
             margin: -2px;
         }
