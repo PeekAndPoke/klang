@@ -1,5 +1,8 @@
 package io.peekandpoke.klang.audio_bridge.infra
 
+import io.peekandpoke.klang.common.infra.KlangLock
+import io.peekandpoke.klang.common.infra.withLock
+
 /**
  * A simple ring buffer to pass events from the fetcher (Main Thread) to the audio loop (Audio Thread).
  * Uses a fixed capacity.

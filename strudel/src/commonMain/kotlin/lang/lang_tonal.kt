@@ -26,7 +26,7 @@ import kotlin.math.pow
 var strudelLangTonalInit = false
 
 /** Cleans up the scale name */
-fun String.cleanScaleName() = replace(":", " ")
+fun String.cleanScaleName() = replace(":", " ").replace("_", " ")
 
 /**
  * Resolves the note and frequency based on the index and the current scale.
@@ -103,7 +103,8 @@ internal val PatternMapperFn._scale by dslPatternMapperExtension { m, args, call
  * e.g. `"c4:major"` or `"c4 minor"`. If no scale is set, numeric indices map to semitones.
  * When called with no argument, reinterprets the current event value as a scale name.
  *
- * @param name The scale name in `"root:mode"` or `"root mode"` format.
+ * @param name The scale name in `"root:mode"` or `"root mode"` format, e.g. `"c4:major"`.
+ * @param-tool name StrudelScaleEditor
  * @return A pattern with the scale context applied to each event.
  *
  * ```KlangScript
@@ -192,6 +193,8 @@ internal val String._note by dslStringExtension { p, args, callInfo -> p._note(a
  * note("<c3 e3 g3> b2")     // alternating chord tones with a bass note
  * ```
  *
+ * @param note The note pattern in mini-notation, e.g. `"c4 e4 g4"`.
+ * @param-tool note StrudelNoteEditor
  * @category tonal
  * @tags note, pitch, frequency, MIDI, note name, pattern-creator
  */
@@ -248,7 +251,7 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
 /**
  * Sets the sound index on this pattern.
  *
- * When param [n] is null, the sequence values will be reinterpreted as sound index.
+ * When param [index] is null, the sequence values will be reinterpreted as sound index.
  *
  * ```KlangScript
  * n("0 2 4").scale("c4:major").note()   // indices 0, 2, 4 → C4, E4, G4
@@ -258,7 +261,8 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
  * s("hh").n("0 1 2")                    // selects different hh samples by index
  * ```
  *
- * @param n The sound index to set, or null to reparse sequence values as sound index.
+ * @param index The sound index to set, or null to reparse sequence values as sound index.
+ * @param-tool index StrudelScaleDegreeEditor
  *
  * @category tonal
  * @tags n, note number, sample index, pitch index, pattern-creator
@@ -269,10 +273,14 @@ fun StrudelPattern.n(index: PatternLike? = null): StrudelPattern =
 
 /** Sets the sound index on this string pattern. */
 @StrudelDsl
-fun String.n(index: PatternLike): StrudelPattern = this._n(listOf(index).asStrudelDslArgs())
+fun String.n(index: PatternLike? = null): StrudelPattern =
+    this._n(listOfNotNull(index).asStrudelDslArgs())
 
 /**
  * Creates a pattern of sound indices.
+ *
+ * @param index The scale degree index pattern in mini-notation, e.g. `"0 1 2 3"`.
+ * @param-tool index StrudelScaleDegreeEditor
  */
 @StrudelDsl
 fun n(index: PatternLike): StrudelPattern = _n(listOf(index).asStrudelDslArgs())
@@ -369,7 +377,24 @@ fun String.sound(): StrudelPattern = this._sound(emptyList())
 @StrudelDsl
 fun sound(name: PatternLike): StrudelPattern = _sound(listOf(name).asStrudelDslArgs())
 
-/** Alias for [sound]. Sets the sound/instrument on this pattern. */
+/** Alias for [sound]. Creates a pattern selecting a sound (instrument or sample bank) by name.
+ *
+ * Each event's value selects the instrument or sample bank used during playback.
+ * The format `"name:index"` also sets the sample index, e.g. `"bd:2"` selects sample 2
+ * from the `bd` bank.
+ *
+ * ```KlangScript
+ * sound("bd sd hh")  // basic drum pattern
+ * ```
+ *
+ * ```KlangScript
+ * sound("bd bd bd bd ").n("0 1 2 3")  // changes the sound variants
+ * ```
+ *
+ * @alias sound
+ * @category tonal
+ * @tags sound, sample, instrument, s, pattern-creator
+ */
 @StrudelDsl
 fun StrudelPattern.s(name: PatternLike): StrudelPattern = this._s(listOf(name).asStrudelDslArgs())
 

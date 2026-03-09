@@ -26,7 +26,7 @@ class LangSuperimposeSpec : StringSpec({
 
     "superimpose() should layer a transformed pattern over the original" {
         // Given: a pattern "a" superposed with a version of itself that has note "b"
-        val p = note("a").superimpose { it.note("b") }
+        val p = note("a").superimpose({ it.note("b") })
 
         val events = p.queryArc(0.0, 1.0)
 
@@ -42,7 +42,7 @@ class LangSuperimposeSpec : StringSpec({
     }
 
     "superimpose() with fast(2) should create more events" {
-        val p = s("bd").superimpose { it.fast(2.0) }
+        val p = s("bd").superimpose({ it.fast(2.0) })
 
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
@@ -58,10 +58,10 @@ class LangSuperimposeSpec : StringSpec({
 
     "superimpose() works within compiled code" {
         // We compile code that uses superimpose with a transformation function
-        val p = StrudelPattern.Companion.compile(
+        val p = StrudelPattern.compile(
             """
-            note("a").superimpose(p => p.note("b"))
-        """.trimIndent()
+                note("a").superimpose(p => p.note("b"))
+            """.trimIndent()
         )
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()

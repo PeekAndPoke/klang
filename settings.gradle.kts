@@ -6,6 +6,12 @@ rootProject.name = "klang-engine"
 include(
     // Public entry point
     ":klang",
+    // Scripting language, parser, interpreter, typesystem
+    ":klangscript",
+    // Visual block editor
+    ":klangblocks",
+    // Shared UI utilities (kraft + klangscript, JS-only)
+    ":klangui",
 
     // Common
     ":common",
@@ -17,7 +23,6 @@ include(
     ":audio_jsworklet",
 
     // utils
-    ":klangscript",
     ":tones",
 
     // Sequencers

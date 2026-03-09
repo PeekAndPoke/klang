@@ -3,13 +3,16 @@ package io.peekandpoke.klang.script
 import io.peekandpoke.klang.script.stdlib.KlangStdLib
 import kotlin.reflect.KClass
 
+/** Singleton standard library instance. */
+val stdlibLib: KlangScriptLibrary = KlangStdLib.create()
+
 /**
  * Shorthand for using the [KlangScriptEngine.Builder]
  */
 fun klangScript(builder: KlangScriptEngine.Builder.() -> Unit = {}): KlangScriptEngine {
     val engineBuilder = KlangScriptEngine.Builder()
     // Always register the standard library
-    engineBuilder.registerLibrary(KlangStdLib.create())
+    engineBuilder.registerLibrary(stdlibLib)
     engineBuilder.apply(builder)
 
     return engineBuilder.build()

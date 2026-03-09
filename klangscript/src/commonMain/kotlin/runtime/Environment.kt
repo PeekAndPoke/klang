@@ -129,6 +129,45 @@ class Environment(
     }
 
     /**
+     * Assign (update) an existing variable in the scope chain
+     *
+     * Finds the variable in this environment or a parent scope and updates its value.
+     * Throws AssignmentError if the variable is declared as const (immutable).
+     * Throws ReferenceError if the variable doesn't exist in any scope.
+     *
+     * @param name The variable name to assign
+     * @param value The new runtime value
+     * @param location Optional source location for error reporting
+     * @param stackTrace Optional call stack for error reporting
+     * @throws AssignmentError if variable is const
+     * @throws ReferenceError if variable is not defined
+     */
+    fun assign(
+        name: String,
+        value: RuntimeValue,
+        location: SourceLocation? = null,
+        stackTrace: List<CallStackFrame> = emptyList(),
+    ): RuntimeValue {
+        return when {
+            values.containsKey(name) -> {
+                if (mutable[name] == false) {
+                    throw AssignmentError(
+                        variableName = name,
+                        message = "Cannot reassign constant variable '$name'",
+                        location = location,
+                        stackTrace = stackTrace,
+                    )
+                }
+                values[name] = value
+                value
+            }
+
+            parent != null -> parent.assign(name, value, location, stackTrace)
+            else -> throw ReferenceError(name, location = location, stackTrace = stackTrace)
+        }
+    }
+
+    /**
      * Check if a variable exists in this environment or parent chain
      *
      * @param name The variable name to check

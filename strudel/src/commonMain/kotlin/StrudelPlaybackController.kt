@@ -3,13 +3,13 @@ package io.peekandpoke.klang.strudel
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
-import io.peekandpoke.klang.audio_bridge.infra.KlangAtomicBool
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangLock
-import io.peekandpoke.klang.audio_bridge.infra.withLock
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
+import io.peekandpoke.klang.common.infra.KlangAtomicBool
+import io.peekandpoke.klang.common.infra.KlangLock
+import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.coroutines.*
@@ -146,12 +146,14 @@ internal class StrudelPlaybackController(
             }
 
             is KlangCommLink.Feedback.Diagnostics -> {
-                // Ignore - diagnostics are handled at player level
+                val rawOffset = (feedback.backendNowMs - klangTime.internalMsNow()) + feedback.outputLatencyMs
+                // EMA α=0.05: ~1 second convergence at 20 Hz; smooths message-transit jitter
+                backendLatencyMs = backendLatencyMs * 0.95 + rawOffset * 0.05
             }
 
             is KlangCommLink.Feedback.PlaybackLatency -> {
                 backendLatencyMs = feedback.backendTimestampMs - startTimeMs
-                backendLatencyMs = backendLatencyMs.coerceIn(0.0, 5000.0)
+                backendLatencyMs = backendLatencyMs.coerceIn(-5000.0, 5000.0)
             }
 
             is KlangCommLink.Feedback.SampleReceived -> {

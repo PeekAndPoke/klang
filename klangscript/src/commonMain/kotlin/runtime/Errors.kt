@@ -223,3 +223,25 @@ class StackOverflowError(
 internal class ReturnException(
     val value: RuntimeValue,
 ) : Exception("Return statement")
+
+/**
+ * BreakException - Control flow exception for break statements
+ *
+ * This is NOT an error but a control flow mechanism used internally by the interpreter.
+ * When a break statement is encountered inside a loop, this exception is thrown to
+ * immediately exit the enclosing loop.
+ *
+ * If break appears outside a loop, the exception propagates up uncaught (runtime error).
+ */
+internal class BreakException : Exception("Break statement")
+
+/**
+ * ContinueException - Control flow exception for continue statements
+ *
+ * This is NOT an error but a control flow mechanism used internally by the interpreter.
+ * When a continue statement is encountered inside a loop, this exception is thrown to
+ * skip to the next iteration of the enclosing loop.
+ *
+ * If continue appears outside a loop, the exception propagates up uncaught (runtime error).
+ */
+internal class ContinueException : Exception("Continue statement")

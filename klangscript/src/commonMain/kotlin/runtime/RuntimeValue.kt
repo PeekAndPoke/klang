@@ -112,7 +112,8 @@ data class NumberValue(
     override val value: Double,
     val location: SourceLocation? = null,
 ) : RuntimeValue {
-    override fun toDisplayString(): String = value.toString()
+    override fun toDisplayString(): String =
+        if (value.isFinite() && value % 1.0 == 0.0) value.toLong().toString() else value.toString()
 
     // Only compare value, not location
     override fun equals(other: Any?): Boolean {

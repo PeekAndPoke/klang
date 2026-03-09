@@ -18,6 +18,8 @@ data class ParsedKDoc(
     val tags: List<String>,
     /** @alias tag (custom, comma-separated alternative function names) */
     val aliases: List<String>,
+    /** @param-tool tags: parameter name -> list of UI tool names */
+    val paramTools: Map<String, List<String>>,
 )
 
 /**
@@ -35,27 +37,28 @@ object KDocParser {
                 category = null,
                 tags = emptyList(),
                 aliases = emptyList(),
+                paramTools = emptyMap(),
             )
         }
 
         // Phase 1: extract ```KlangScript...``` fenced code blocks as samples.
         // Build a cleaned line list that excludes the fenced blocks entirely.
-        // Note: raw (untrimmed) lines are used inside code blocks to preserve indentation;
-        // only non-code lines are trimmed before being passed to phase 2.
+        // Raw lines are preserved for non-code content so that description indentation
+        // and empty lines are retained (they matter for markdown rendering).
         val samples = mutableListOf<String>()
         val cleanedLines = mutableListOf<String>()
         var inCodeBlock = false
         val currentBlock = StringBuilder()
 
         for (rawLine in kdoc.lines()) {
-            val line = rawLine.trim()
+            val trimmed = rawLine.trim()
             when {
-                !inCodeBlock && line.startsWith("```KlangScript") -> {
+                !inCodeBlock && trimmed.startsWith("```KlangScript") -> {
                     inCodeBlock = true
                     currentBlock.clear()
                 }
 
-                inCodeBlock && line.startsWith("```") -> {
+                inCodeBlock && trimmed.startsWith("```") -> {
                     inCodeBlock = false
                     val s = currentBlock.toString().trimEnd().trimIndent()
                     if (s.isNotEmpty()) samples.add(s)
@@ -67,18 +70,19 @@ object KDocParser {
                     currentBlock.append(rawLine)  // preserve original indentation
                 }
 
-                else -> cleanedLines.add(line)
+                else -> cleanedLines.add(rawLine)  // preserve raw lines for description fidelity
             }
         }
 
         // Phase 2: parse cleaned lines (description + @param/@return/@category/@tags/@alias).
+        // Tag detection uses trimmed comparison so indented @-tags are handled correctly.
         val descriptionLines = mutableListOf<String>()
         val tagLines = mutableListOf<String>()
         var inTags = false
 
         for (line in cleanedLines) {
             when {
-                line.startsWith("@") -> {
+                line.trim().startsWith("@") -> {
                     inTags = true
                     tagLines.add(line)
                 }
@@ -89,8 +93,8 @@ object KDocParser {
         }
 
         val description = descriptionLines
-            .dropWhile { it.isEmpty() }
-            .dropLastWhile { it.isEmpty() }
+            .dropWhile { it.trim().isEmpty() }
+            .dropLastWhile { it.trim().isEmpty() }
             .joinToString("\n")
 
         val params = mutableMapOf<String, String>()
@@ -98,6 +102,7 @@ object KDocParser {
         var category: String? = null
         val tags = mutableListOf<String>()
         val aliases = mutableListOf<String>()
+        val paramTools = mutableMapOf<String, MutableList<String>>()
 
         var currentTag: String? = null
         var currentContent = StringBuilder()
@@ -130,47 +135,65 @@ object KDocParser {
                         if (trimmed.isNotEmpty()) aliases.add(trimmed)
                     }
                 }
+
+                tag.startsWith("param-tool:") -> {
+                    val paramName = tag.removePrefix("param-tool:")
+                    content.split(",").forEach { t ->
+                        val trimmed = t.trim()
+                        if (trimmed.isNotEmpty()) paramTools.getOrPut(paramName) { mutableListOf() }.add(trimmed)
+                    }
+                }
             }
         }
 
         for (line in tagLines) {
+            val t = line.trim()
             when {
-                line.startsWith("@param") -> {
+                t.startsWith("@param-tool") -> {
                     saveCurrentTag()
-                    val match = Regex("@param\\s+(\\w+)\\s*(.*)").matchEntire(line)
+                    val match = Regex("@param-tool\\s+(\\w+)\\s*(.*)").matchEntire(t)
+                    if (match != null) {
+                        currentTag = "param-tool:${match.groupValues[1]}"
+                        currentContent = StringBuilder(match.groupValues[2])
+                    }
+                }
+
+                t.startsWith("@param") -> {
+                    saveCurrentTag()
+                    val match = Regex("@param\\s+(\\w+)\\s*(.*)").matchEntire(t)
                     if (match != null) {
                         currentTag = "param:${match.groupValues[1]}"
                         currentContent = StringBuilder(match.groupValues[2])
                     }
                 }
 
-                line.startsWith("@return") -> {
+                t.startsWith("@return") -> {
                     saveCurrentTag()
                     currentTag = "return"
-                    currentContent = StringBuilder(line.removePrefix("@return").trim())
+                    currentContent = StringBuilder(t.removePrefix("@return").trim())
                 }
 
-                line.startsWith("@category") -> {
+                t.startsWith("@category") -> {
                     saveCurrentTag()
                     currentTag = "category"
-                    currentContent = StringBuilder(line.removePrefix("@category").trim())
+                    currentContent = StringBuilder(t.removePrefix("@category").trim())
                 }
 
-                line.startsWith("@tags") -> {
+                t.startsWith("@tags") -> {
                     saveCurrentTag()
                     currentTag = "tags"
-                    currentContent = StringBuilder(line.removePrefix("@tags").trim())
+                    currentContent = StringBuilder(t.removePrefix("@tags").trim())
                 }
 
-                line.startsWith("@alias") -> {
+                t.startsWith("@alias") -> {
                     saveCurrentTag()
                     currentTag = "alias"
-                    currentContent = StringBuilder(line.removePrefix("@alias").trim())
+                    currentContent = StringBuilder(t.removePrefix("@alias").trim())
                 }
 
                 else -> {
                     if (currentContent.isNotEmpty()) currentContent.append(" ")
-                    currentContent.append(line.trim())
+                    currentContent.append(t)
                 }
             }
         }
@@ -185,6 +208,7 @@ object KDocParser {
             category = category,
             tags = tags,
             aliases = aliases,
+            paramTools = paramTools,
         )
     }
 }

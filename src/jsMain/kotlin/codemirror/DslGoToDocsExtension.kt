@@ -1,23 +1,42 @@
 package io.peekandpoke.klang.codemirror
 
+import de.peekandpoke.kraft.popups.PopupsManager
+import de.peekandpoke.kraft.utils.Vector2D
 import de.peekandpoke.kraft.utils.jsObject
+import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.html.onMouseEnter
+import de.peekandpoke.ultra.html.onMouseLeave
+import de.peekandpoke.ultra.semanticui.SemanticIcon
+import de.peekandpoke.ultra.semanticui.icon
+import de.peekandpoke.ultra.semanticui.noui
+import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.codemirror.ext.*
-import io.peekandpoke.klang.script.docs.FunctionDoc
+import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
 import kotlinx.browser.document
 import kotlinx.browser.window
-import org.w3c.dom.HTMLElement
+import kotlinx.css.minWidth
+import kotlinx.css.px
+import kotlinx.html.FlowContent
+import org.w3c.dom.Element
 
 /**
- * CodeMirror extension that adds three doc-navigation gestures:
+ * Combined CodeMirror extension for DSL editor interactions:
  *
- * - Right-click on a known function → small context menu with "Go to docs" link
- * - Ctrl/Cmd + click              → navigate to docs page in the same tab
- * - Ctrl/Cmd + Shift + click      → navigate to docs page in a new tab
- * - Ctrl/Cmd held while hovering  → underline the function name
+ * - Hover over a known function  → show doc tooltip
+ * - Right-click on a function/argument → context menu popup
+ * - Ctrl/Cmd + click             → navigate to docs (same tab)
+ * - Ctrl/Cmd + Shift + click     → navigate to docs (new tab)
+ * - Ctrl/Cmd held while hovering → underline the function name
  */
-fun dslGoToDocsExtension(
-    docProvider: (String) -> FunctionDoc?,
-    onNavigate: (doc: FunctionDoc, event: dynamic) -> Unit,
+fun dslEditorExtension(
+    docProvider: (String) -> KlangSymbol?,
+    hoverPopup: KlangDocsHoverPopupCtrl,
+    popups: PopupsManager,
+    onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
+    onOpenTool: ((toolName: String, ctx: KlangUiToolContext, event: dynamic) -> Unit)? = null,
 ): Extension {
 
     // ── Underline decoration (CTRL/Cmd-hover) ─────────────────────────────
@@ -36,14 +55,14 @@ fun dslGoToDocsExtension(
                             val range = effect.value.unsafeCast<SelectionRange>()
                             updated = Decoration.set(
                                 arrayOf(
-                                jsObject {
-                                    this.from = range.from
-                                    this.to = range.to
-                                    this.value = Decoration.mark(jsObject {
-                                        this.`class` = "cm-dsl-link"
-                                    })
-                                }
-                            ))
+                                    jsObject {
+                                        this.from = range.from
+                                        this.to = range.to
+                                        this.value = Decoration.mark(jsObject {
+                                            this.`class` = "cm-dsl-link"
+                                        })
+                                    }
+                                ))
                         }
 
                         effect.`is`(clearUnderlineEffect) -> {
@@ -64,7 +83,7 @@ fun dslGoToDocsExtension(
         event.ctrlKey == true || event.metaKey == true
 
     /** Resolve the word under the mouse and look it up in the doc registry. */
-    fun wordDocAt(view: EditorView, event: dynamic): Pair<SelectionRange, FunctionDoc>? {
+    fun wordDocAt(view: EditorView, event: dynamic): Pair<SelectionRange, KlangSymbol>? {
         val coords = jsObject<dynamic> {
             this.x = event.clientX
             this.y = event.clientY
@@ -82,105 +101,300 @@ fun dslGoToDocsExtension(
         }))
     }
 
+    // ── Tool context factory ───────────────────────────────────────────────
+
+    /**
+     * Creates a [KlangUiToolContext] for the given argInfo that commits edits back into the view.
+     *
+     * argTo is tracked as a mutable local because the tool can commit multiple times
+     * (e.g. the user tweaks values and hits Update repeatedly without closing the modal).
+     * Each commit may insert a result of a different length than the previous one, shifting
+     * subsequent document positions. argFrom never moves (it is always the start of the
+     * argument), but argTo is updated to argFrom + result.length after every commit so the
+     * next commit replaces exactly the text that was just written.
+     */
+    /** Returns the [CallArgInfo] for the document position under [event], or null if none. */
+    fun argInfoAt(event: dynamic, view: EditorView): CallArgInfo? {
+        val source = view.state.doc.toString()
+        val coords = jsObject<dynamic> { this.x = event.clientX; this.y = event.clientY }.unsafeCast<Coords>()
+        val pos = view.posAtCoords(coords)
+        return if (pos != null) findCallArgAt(source, pos, docProvider) else null
+    }
+
+    fun makeToolContext(argInfo: CallArgInfo, view: EditorView): KlangUiToolContext {
+        var argTo = argInfo.argTo
+        return KlangUiToolContext(
+            symbol = argInfo.symbol,
+            paramName = argInfo.paramName,
+            currentValue = argInfo.argText,
+            onCommit = { result ->
+                view.dispatch(view.state.update(jsObject {
+                    this.changes = jsObject<dynamic> {
+                        this.from = argInfo.argFrom
+                        this.to = argTo
+                        this.insert = result
+                    }
+                }))
+                argTo = argInfo.argFrom + result.length
+            },
+            onCancel = {},
+        )
+    }
+
     // ── Context menu ───────────────────────────────────────────────────────
 
-    fun showContextMenu(event: dynamic, func: FunctionDoc) {
-        // Remove any stale menu from a previous right-click
-        document.getElementById("cm-dsl-ctx-menu")?.asDynamic()?.remove()
+    fun showContextMenu(event: dynamic, func: KlangSymbol?, argInfo: CallArgInfo?, view: EditorView) {
 
-        val menu = (document.createElement("div") as HTMLElement).also { el ->
-            el.id = "cm-dsl-ctx-menu"
-            el.style.cssText = """
-                position:fixed;left:${event.clientX}px;top:${event.clientY}px;
-                background:#fff;border:1px solid #ccc;border-radius:4px;
-                box-shadow:0 2px 8px rgba(0,0,0,.2);padding:4px 0;
-                z-index:9999;font-size:13px;font-family:inherit;min-width:160px;
-            """.trimIndent()
+        if (func == null && argInfo == null) return
+
+        val anchor = Vector2D(
+            x = event.clientX.unsafeCast<Double>(),
+            y = event.clientY.unsafeCast<Double>(),
+        )
+
+        popups.showContextMenu(anchor = anchor, positioning = PopupsManager.Positioning.BottomLeft) { handle ->
+
+            fun item(label: FlowContent.() -> Unit, action: () -> Unit) {
+                noui.link.item {
+                    onClick {
+                        it.stopPropagation()
+                        handle.close()
+                        action()
+                    }
+                    label()
+                }
+            }
+
+            ui.compact.vertical.menu {
+                css {
+                    minWidth = 200.px
+                }
+
+                onMouseEnter { hoverPopup.cancelClose() }
+                onMouseLeave { hoverPopup.scheduleClose() }
+
+                // ── Docs navigation items ──────────────────────────────────
+                if (func != null) {
+                    item({ icon.book(); +"Go to docs: ${func.name}" }) {
+                        onNavigate(func, event)
+                    }
+                }
+
+                // ── Tool items ─────────────────────────────────────────────
+                if (argInfo != null && onOpenTool != null) {
+                    if (func != null) noui.divider {}
+                    argInfo.tools.forEach { (toolName, tool) ->
+                        item({
+                            tool.run { icon.iconFn().render() }
+                            +(tool.title ?: toolName)
+                        }) {
+                            onOpenTool(toolName, makeToolContext(argInfo, view), event)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Hover state ────────────────────────────────────────────────────────
+
+    var lastHoveredWord: String? = null
+
+    // ── Tool-badge overlay ──────────────────────────────────────────────────
+
+    /** Lazily created floating container for tool-icon badge buttons. */
+    var badgeContainer: Element? = null
+
+    /** Key of the arg whose badges are currently rendered (prevents needless DOM rebuilds). */
+    var badgeCacheKey: String? = null
+
+    var badgesHideTimer: dynamic = null
+
+    fun cancelBadgesClose() {
+        if (badgesHideTimer != null) window.clearTimeout(badgesHideTimer.unsafeCast<Int>())
+        badgesHideTimer = null
+    }
+
+    fun hideBadges() {
+        val container = badgeContainer
+        if (container != null) container.asDynamic().style.display = "none"
+        badgeCacheKey = null
+    }
+
+    fun scheduleBadgesClose() {
+        cancelBadgesClose()
+        badgesHideTimer = window.setTimeout({ hideBadges() }, 120)
+    }
+
+    fun getOrCreateBadgeContainer(): Element {
+        return badgeContainer ?: run {
+            val div = document.createElement("div")
+            div.asDynamic().style.cssText =
+                "position:fixed;z-index:9999;display:none;flex-direction:row;gap:3px;pointer-events:auto;"
+            div.addEventListener("mouseenter", { cancelBadgesClose() })
+            div.addEventListener("mouseleave", { scheduleBadgesClose() })
+            document.body?.appendChild(div)
+            badgeContainer = div
+            div
+        }
+    }
+
+    fun showBadges(argInfo: CallArgInfo, view: EditorView) {
+        if (onOpenTool == null || argInfo.tools.isEmpty()) {
+            hideBadges(); return
         }
 
-        fun menuItem(label: String, onItemClick: (dynamic) -> Unit): HTMLElement =
-            (document.createElement("div") as HTMLElement).also { el ->
-                el.style.cssText = "padding:7px 14px;cursor:pointer;color:#333;white-space:nowrap;"
-                el.textContent = label
-                el.onmouseover = { el.style.backgroundColor = "#f0f4ff"; null }
-                el.onmouseout = { el.style.backgroundColor = ""; null }
-                el.onclick = { e: dynamic -> onItemClick(e); menu.asDynamic().remove(); null }
-            }
+        val rect = view.coordsAtPos(argInfo.argFrom) ?: run {
+            console.warn("[badges] coordsAtPos returned null for argFrom=${argInfo.argFrom}")
+            return
+        }
 
-        // Same tab: pass the actual click event (shiftKey will be false)
-        menu.appendChild(menuItem("Go to docs: ${func.name}") { e ->
-            onNavigate(func, e)
-        })
-        // New tab: synthesise an event-like object with shiftKey = true
-        menu.appendChild(menuItem("Open docs in new tab: ${func.name}") { e ->
-            onNavigate(func, jsObject<dynamic> { this.shiftKey = true; this.ctrlKey = e.ctrlKey; this.metaKey = e.metaKey })
-        })
+        // console.log("[badges] showing at left=${rect.left} top=${rect.top} tools=${argInfo.tools.map { it.first }}")
 
-        document.body?.appendChild(menu)
+        val container = getOrCreateBadgeContainer()
+        container.asDynamic().style.left = "${rect.left}px"
+        container.asDynamic().style.top = "${rect.top - 18}px"
+        container.asDynamic().style.display = "flex"
 
-        // Dismiss on the next click outside the menu.
-        // Deferred via setTimeout so the current right-click event doesn't immediately close it.
-        window.setTimeout({
-            var listener: ((dynamic) -> Unit)? = null
-            listener = { e: dynamic ->
-                if (menu.asDynamic().contains(e.target) != true) {
-                    menu.asDynamic().remove()
-                }
-                document.asDynamic().removeEventListener("click", listener)
-            }
-            document.asDynamic().addEventListener("click", listener)
-        }, 0)
+        val key = "${argInfo.argFrom}:${argInfo.tools.joinToString(",") { it.first }}"
+        if (key == badgeCacheKey) return
+        badgeCacheKey = key
+        container.innerHTML = ""
+
+        argInfo.tools.forEach { (toolName, tool) ->
+            val iconCss = SemanticIcon.cssClassOf(tool.iconFn)
+            val btn = document.createElement("button")
+            btn.asDynamic().title = tool.title ?: toolName
+            btn.asDynamic().style.cssText =
+                "cursor:pointer;background:#fff;border:1px solid #888;border-radius:3px;" +
+                        "padding:1px 5px;font-size:11px;line-height:1.4;color:#333;"
+            btn.innerHTML = """<i class="$iconCss icon" style="margin:0;font-size:11px;"></i>"""
+
+            btn.addEventListener("click", { event ->
+                event.asDynamic().preventDefault()
+                event.asDynamic().stopPropagation()
+                hideBadges()
+                onOpenTool(toolName, makeToolContext(argInfo, view), event.asDynamic())
+            })
+            container.appendChild(btn)
+        }
     }
 
     // ── DOM event handlers ─────────────────────────────────────────────────
 
-    val handlers = jsObject<dynamic> {
+    // Right-click → context menu
+    val onContextMenu: (event: dynamic, view: EditorView) -> Boolean = contextmenu@{ event, view ->
+        // console.log("onContextMenu", event)
 
-        // Right-click → context menu
-        this.contextmenu = contextmenu@{ event: dynamic, view: EditorView ->
-            val result = wordDocAt(view, event) ?: return@contextmenu false
+        try {
+            val wordDoc = wordDocAt(view, event)
+            val argInfo = argInfoAt(event, view)
+
+            // console.log("wordDoc", wordDoc, "argInfo", argInfo)
+
+            if (wordDoc == null && argInfo == null) return@contextmenu false
             event.preventDefault()
-            showContextMenu(event, result.second)
+            event.stopPropagation()
+            showContextMenu(event, wordDoc?.second, argInfo, view)
             true
+        } catch (e: Throwable) {
+            console.error("dslEditorExtension contextmenu error:", e)
+            false
         }
+    }
 
-        // Ctrl/Cmd + click → same tab  |  Ctrl/Cmd + Shift + click → new tab
-        this.click = click@{ event: dynamic, view: EditorView ->
-            if (!isModifier(event)) return@click false
-            val result = wordDocAt(view, event) ?: return@click false
-            event.preventDefault()
-            onNavigate(result.second, event)
-            true
-        }
+    // Ctrl/Cmd + click → same tab  |  Ctrl/Cmd + Shift + click → new tab
+    val onClick: (event: dynamic, view: EditorView) -> Boolean = click@{ event, view ->
+        if (!isModifier(event)) return@click false
+        val result = wordDocAt(view, event) ?: return@click false
+        event.preventDefault()
+        onNavigate(result.second, event)
+        true
+    }
 
-        // Ctrl/Cmd held while moving → underline the token under the cursor
-        this.mousemove = { event: dynamic, view: EditorView ->
-            if (isModifier(event)) {
-                val result = wordDocAt(view, event)
-                if (result != null) {
-                    view.dispatch(view.state.update(jsObject {
-                        this.effects = setUnderlineEffect.of(result.first)
-                    }))
-                } else {
-                    dispatchClear(view)
-                }
+    // Hover tooltip + Ctrl/Cmd underline
+    val onMouseMove: (event: dynamic, view: EditorView) -> Boolean = { event, view ->
+        val wordDoc = wordDocAt(view, event)
+        val word = wordDoc?.first
+        val doc = wordDoc?.second
+        val name = word?.let { view.state.doc.sliceString(it.from, it.to) }
+
+        // ── Ctrl/Cmd underline ─────────────────────────────────────────────
+        if (isModifier(event)) {
+            if (word != null) {
+                view.dispatch(view.state.update(jsObject {
+                    this.effects = setUnderlineEffect.of(word)
+                }))
             } else {
                 dispatchClear(view)
             }
-            false
-        }
-
-        // Mouse leaves editor → clear underline
-        this.mouseleave = { _: dynamic, view: EditorView ->
+        } else {
             dispatchClear(view)
-            false
         }
 
-        // Ctrl/Cmd released → clear underline
-        this.keyup = { event: dynamic, view: EditorView ->
-            if (event.key == "Control" || event.key == "Meta") dispatchClear(view)
-            false
+        // ── Hover tooltip ──────────────────────────────────────────────────
+        val currentWord = if (doc != null) name else null
+        if (currentWord != lastHoveredWord) {
+            @Suppress("AssignedValueIsNeverRead")
+            lastHoveredWord = currentWord
+            if (doc != null && word != null) {
+                val wordRect = view.coordsAtPos(word.from)
+                val anchor = Vector2D(
+                    x = wordRect?.left ?: event.clientX.unsafeCast<Double>(),
+                    y = wordRect?.top ?: event.clientY.unsafeCast<Double>(),
+                )
+                hoverPopup.scheduleShow(doc, anchor)
+            } else {
+                hoverPopup.scheduleClose()
+            }
+        } else if (currentWord != null) {
+            hoverPopup.cancelClose()
         }
+
+        // ── Tool-icon badge overlay ────────────────────────────────────────
+        if (onOpenTool != null) {
+            try {
+                val argInfo = argInfoAt(event, view)
+                if (argInfo != null && argInfo.tools.isNotEmpty()) {
+                    cancelBadgesClose()
+                    showBadges(argInfo, view)
+                } else {
+                    scheduleBadgesClose()
+                }
+            } catch (e: Throwable) {
+                console.error("dslEditorExtension badge overlay error:", e)
+            }
+        }
+
+        false
+    }
+
+    // Mouse leaves editor → clear underline + close hover tooltip + schedule badge close
+    val onMouseLeave: (event: dynamic, view: EditorView) -> Boolean = { _, view ->
+        lastHoveredWord = null
+        dispatchClear(view)
+        hoverPopup.scheduleClose()
+        scheduleBadgesClose()
+        false
+    }
+
+    // Ctrl/Cmd released → clear underline
+    val onKeyUp: (event: dynamic, view: EditorView) -> Boolean = { event, view ->
+        if (event.key == "Control" || event.key == "Meta") dispatchClear(view)
+        false
+    }
+
+    val handlers = jsObject<dynamic> {
+        // Right-click → context menu
+        this.contextmenu = onContextMenu
+        // Ctrl/Cmd + click → same tab  |  Ctrl/Cmd + Shift + click → new tab
+        this.click = onClick
+        // Ctrl/Cmd held while moving → underline the token under the cursor
+        this.mousemove = onMouseMove
+        // Mouse leaves editor → clear underline
+        this.mouseleave = onMouseLeave
+        // Ctrl/Cmd released → clear underline
+        this.keyup = onKeyUp
     }
 
     // ── Theme ──────────────────────────────────────────────────────────────

@@ -4,6 +4,9 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.modals.ModalsManager.Companion.modals
+import de.peekandpoke.kraft.popups.PopupsManager
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.utils.launch
@@ -22,23 +25,38 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.codemirror.CodeHighlightBuffer
+import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
+import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
-import io.peekandpoke.klang.codemirror.dslGoToDocsExtension
-import io.peekandpoke.klang.codemirror.dslHoverTooltipExtension
+import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
+import io.peekandpoke.klang.codemirror.dslEditorExtension
+import io.peekandpoke.klang.comp.FullscreenToggleButton
+import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
-import io.peekandpoke.klang.script.docs.DslDocsRegistry
-import io.peekandpoke.klang.script.docs.FunctionDoc
+import io.peekandpoke.klang.fs
+import io.peekandpoke.klang.script.ast.SourceLocationChain
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
-import io.peekandpoke.klang.strudel.lang.delay
+import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.playStrudel
-import kotlinx.browser.document
+import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolRegistry
+import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.p
+import kotlinx.html.title
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
+import kotlin.js.Date
+
+/** View mode for the editor panel. */
+enum class EditorMode { CODE, BLOCKS }
 
 @Suppress("FunctionName")
 fun Tag.CodeSongPage(
@@ -73,7 +91,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     val cpsStream = StreamSource(builtIn?.cps ?: 0.5)
         .persistInLocalStorage("song-$songId-cps", Double.serializer())
 
-    val titleStream = StreamSource(builtIn?.title ?: "New Song")
+    val songTitleStream = StreamSource(builtIn?.title ?: "New Song")
         .persistInLocalStorage("song-$songId-title", String.serializer())
 
     val codeStream = StreamSource(builtIn?.code ?: defaultCode)
@@ -85,20 +103,22 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private var playback: StrudelPlayback? by value(null)
     private val isPlaying get() = playback != null
 
-    private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
-    private val highlightBuffer = CodeHighlightBuffer(editorRef)
+    private val codeEditorRef = ComponentRef.Tracker<CodeMirrorComp>()
+    private val blocksEditorRef = ComponentRef.Tracker<KlangBlocksEditorComp>()
+
+    private val highlightBuffer = CodeMirrorHighlightBuffer(codeEditorRef)
     private var highlightPerEvent by value(highlightBuffer.maxHighlightsPerEvent) {
         highlightBuffer.maxHighlightsPerEvent = it
     }
 
-    private var title: String by value(titleStream()) { titleStream(it) }
+    private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
+
+    private var songTitle: String by value(songTitleStream()) { songTitleStream(it) }
 
     private var cps: Double by value(cpsStream()) {
-        // store cps
         cpsStream(it)
-        // clear highlight buffer
         highlightBuffer.cancelAll()
-        // Update the playback
+        blocksHighlightBuffer.cancelAll()
         playback?.updateCyclesPerSecond(it)
     }
 
@@ -108,8 +128,65 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private var isCodeModified by value(false)
 
+    val isBuiltInModified get() = builtIn != null && builtIn.code != code
+
+    /** Current view: text editor or visual block editor. */
+    private var editorMode by value(EditorMode.CODE)
+
+    private val hoverPopup: KlangDocsHoverPopupCtrl by lazy {
+        KlangDocsHoverPopupCtrl(popups = popups) { doc ->
+            KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
+        }
+    }
+
+    private fun openTool(toolName: String, ctx: KlangUiToolContext) {
+        val tool = KlangUiToolRegistry.get(toolName) ?: return
+
+        modals.show { handle ->
+            CodeToolModal(handle) {
+                tool.apply {
+                    render(
+                        ctx.copy(
+                            onCommit = {
+                                // Update the code
+                                ctx.onCommit(it)
+                                // update the playback if playing
+                                updatePlayback()
+                            },
+                            onCancel = { handle.close(); ctx.onCancel() }
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun navToDoc(doc: KlangSymbol, event: dynamic) {
+        val uri = Nav.docsStrudelSearch("function:${doc.name}")
+        val pointerEvent = event as? PointerEvent
+        if (pointerEvent?.shiftKey == true) {
+            router.navToUri(pointerEvent, uri)
+        } else {
+            router.navToUri(uri)
+        }
+    }
+
     private suspend fun getPlayer(): KlangPlayer {
         return Player.ensure().await()
+    }
+
+    private fun resetToOriginal() {
+        builtIn?.let { b ->
+            code = b.code
+            codeStream(b.code)
+            cps = b.cps
+            cpsStream(b.cps)
+            songTitle = b.title
+            songTitleStream(b.title)
+
+            codeEditorRef { it.setCode(b.code) }
+            blocksEditorRef { it.setCode(b.code) }
+        }
     }
 
     init {
@@ -122,32 +199,41 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private fun updatePlayback() {
+        if (isPlaying) {
+            onPlay()
+        }
+    }
+
     private fun onPlay() {
-        // Update the code
         codeStream(code)
-        // set as up to date
         isCodeModified = false
-        // clear the highlight buffer
         highlightBuffer.cancelAll()
+        blocksHighlightBuffer.cancelAll()
 
         when (val s = playback) {
             null -> launch {
                 if (!loading) {
-                    withEditorErrorHandling(editorRef) {
+                    withEditorErrorHandling(codeEditorRef) {
                         getPlayer().let { p ->
                             val pattern = StrudelPattern.compileRaw(code)
                                 ?: error("Failed to compile Strudel pattern from code")
 
                             playback = p.playStrudel(pattern)
 
-                            // Set up live code highlighting via signals
                             playback?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
                                 signal.voices.forEach { voiceEvent ->
                                     highlightBuffer.scheduleHighlight(voiceEvent)
+                                    val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return@forEach
+                                    val now = Date.now()
+                                    val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
+                                    val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
+                                    chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
+                                        blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
+                                    }
                                 }
                             }
 
-                            // Optional: Listen to other lifecycle signals
                             playback?.signals?.on<KlangPlaybackSignal.PreloadingSamples> { signal ->
                                 console.log("Preloading ${signal.count} samples...")
                             }
@@ -165,7 +251,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             }
 
             else -> launch {
-                withEditorErrorHandling(editorRef) {
+                withEditorErrorHandling(codeEditorRef) {
                     val pattern = StrudelPattern.compileRaw(code)
                         ?: error("Failed to compile Strudel pattern from code")
                     s.updatePattern(pattern)
@@ -178,36 +264,88 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         playback?.stop()
         playback?.signals?.clear()
         highlightBuffer.cancelAll()
+        blocksHighlightBuffer.cancelAll()
         playback = null
     }
+
+    /** True when the current code contains any comments (they would be lost on Code→Blocks). */
+    private fun codeHasComments(): Boolean = "//" in code || "/*" in code
+
+    /** Switch to Blocks mode — asks for confirmation first if the code has comments. */
+    private fun switchToBlocks(event: PointerEvent) {
+        if (codeHasComments()) {
+            popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomRight) { handle ->
+                ui.compact.segment {
+                    css {
+                        width = LinearDimension.maxContent
+                    }
+                    p { +"Comments will be lost when switching to Blocks mode." }
+                    ui.mini.basic.button {
+                        onClick { handle.close() }
+                        +"Cancel"
+                    }
+                    ui.mini.black.button {
+                        onClick { handle.close(); editorMode = EditorMode.BLOCKS }
+                        +"Switch anyway"
+                    }
+                }
+            }
+        } else {
+            editorMode = EditorMode.BLOCKS
+        }
+    }
+
+    /** Switch to Code mode. The code state already reflects the latest workspace contents. */
+    private fun switchToCode() {
+        editorMode = EditorMode.CODE
+    }
+
+    //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
 
         ui.fluid.container.with("noise-bg") {
             key = "make-song-page"
             css {
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                height = 100.vh
                 padding = Padding(0.px)
                 backgroundColor = Color.white
             }
             ui.form {
                 key = "dashboard-form"
+                css {
+                    display = Display.flex
+                    flexDirection = FlexDirection.column
+                    flex = Flex(1.0, 1.0, FlexBasis.auto)
+                    overflow = Overflow.hidden
+                }
                 ui.basic.segment {
                     key = "dashboard-form-segment"
 
                     css {
                         paddingBottom = 0.px
+                        flexShrink = 0.0
+                    }
+
+                    // Fullscreen toggle
+                    ui.right.floated.basic.fitted.segment {
+                        ui.horizontal.list {
+                            noui.item {
+                                FullscreenToggleButton(fs = fs)
+                            }
+                        }
                     }
 
                     ui.horizontal.list {
                         key = "dashboard-form-fields"
 
+                        // Play / Update / Stop controls
                         noui.item {
                             if (!isPlaying) {
                                 ui.large.circular.black.button {
-                                    onClick {
-                                        onPlay()
-                                    }
-
+                                    onClick { onPlay() }
                                     if (loading) {
                                         icon.loading.spinner()
                                         +"Loading"
@@ -218,84 +356,80 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                             } else {
                                 ui.large.circular.white.givenNot(isCodeModified) { disabled }.button {
-                                    onClick { onPlay() }
+                                    onClick { updatePlayback() }
                                     icon.black.redo_alternate()
                                     +"Update"
                                 }
                             }
 
-//                            ui.large.circular.icon.givenNot(isPlaying) { disabled }
-//                                .given(isPlaying) { white }.button {
-//                                            onClick {
-//                                                song?.stop()
-//                                                song = null
-//                                            }
-//
-//                                    icon.black.pause()
-//                                }
-
                             ui.large.circular.icon.givenNot(isPlaying) { disabled }
                                 .given(isPlaying) { white }.button {
                                     onClick { onStop() }
+                                    title = "Stop playback"
                                     icon.black.stop()
                                 }
                         }
 
+                        if (isBuiltInModified) {
+                            noui.item {
+                                ui.large.circular.white.icon.button {
+                                    onClick { resetToOriginal() }
+                                    title = "Reset to original code"
+                                    icon.undo()
+                                }
+                            }
+                        }
+
+                        // CPS field
                         noui.item {
                             UiInputField(cps, { cps = it }) {
                                 step(0.01)
-
                                 appear { large }
-
                                 leftLabel {
                                     ui.basic.label { icon.clock(); +"CPS" }
                                 }
                             }
                         }
 
+                        // Title field
                         noui.item {
-                            UiInputField(title, { title = it }) {
+                            UiInputField(songTitle, { songTitle = it }) {
                                 appear { large }
-
                                 leftLabel {
                                     ui.basic.label { icon.music(); +"Title" }
                                 }
                             }
                         }
 
+                        // Highlight-per-event field
                         noui.item {
                             UiInputField(highlightPerEvent, { highlightPerEvent = it }) {
                                 step(1)
-
                                 appear { large }
-
                                 leftLabel {
                                     ui.basic.label { icon.clock(); +"EVT" }
                                 }
                             }
                         }
 
+                        // Code / Blocks toggle
                         noui.item {
-                            ui.large.circular.icon.basic.black.button {
-                                if (document.fullscreenElement != null) {
-                                    onClick {
-                                        document.exitFullscreen()
-                                        launch {
-                                            delay(1000)
-                                            triggerRedraw()
-                                        }
+                            ui.large.buttons {
+                                ui.large.given(editorMode == EditorMode.CODE) { black }
+                                    .givenNot(editorMode == EditorMode.CODE) { basic }
+                                    .icon.button {
+                                        onClick { switchToCode() }
+                                        title = "Switch to code editor"
+                                        icon.code()
                                     }
-                                    icon.compress()
-                                } else {
-                                    onClick {
-                                        document.documentElement?.requestFullscreen()
-                                        launch {
-                                            delay(1000)
-                                            triggerRedraw()
-                                        }
+
+                                ui.large.given(editorMode == EditorMode.BLOCKS) { black }
+                                    .givenNot(editorMode == EditorMode.BLOCKS) { basic }
+                                    .icon.button {
+                                        onClick { switchToBlocks(it) }
+                                        title = "Switch to blocks editor"
+                                        icon.puzzle_piece()
                                     }
-                                    icon.expand()
-                                }
                             }
                         }
                     }
@@ -303,35 +437,48 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                 div {
                     key = "dashboard-form-code"
-
-                    fun navToDoc(doc: FunctionDoc, event: PointerEvent) {
-                        val uri = Nav.docsStrudelSearch("function:${doc.name}")
-                        if (event.shiftKey) {
-                            router.navToUri(event, uri)
-                        } else {
-                            router.navToUri(uri)
-                        }
+                    css {
+                        flex = Flex(1.0, 1.0, FlexBasis.auto)
+                        minHeight = 0.px
+                        overflowY = Overflow.auto
+                        overflowX = Overflow.hidden
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
                     }
 
-                    // CodeMirror editor container
-                    CodeMirrorComp(
-                        code = code,
-                        onCodeChanged = { newCode ->
-                            code = newCode
-                            // Clear errors when user types
-                            editorRef { it.setErrors(emptyList()) }
-                        },
-                        extraExtensions = listOf(
-                            dslHoverTooltipExtension(
-                                docProvider = { DslDocsRegistry.global.get(it) },
-                                onNavigate = ::navToDoc,
-                            ),
-                            dslGoToDocsExtension(
-                                docProvider = { DslDocsRegistry.global.get(it) },
-                                onNavigate = ::navToDoc,
-                            ),
-                        ),
-                    ).track(editorRef)
+                    when (editorMode) {
+                        EditorMode.CODE -> {
+                            CodeMirrorComp(
+                                code = code,
+                                onCodeChanged = { newCode ->
+                                    code = newCode
+                                    codeEditorRef { it.setErrors(emptyList()) }
+                                },
+                                extraExtensions = listOf(
+                                    dslEditorExtension(
+                                        docProvider = { KlangDocsRegistry.global.get(it) },
+                                        hoverPopup = hoverPopup,
+                                        popups = popups,
+                                        onNavigate = ::navToDoc,
+                                        onOpenTool = { toolName, ctx, _ ->
+                                            openTool(toolName = toolName, ctx = ctx)
+                                        },
+                                    ),
+                                ),
+                            ).track(codeEditorRef)
+                        }
+
+                        EditorMode.BLOCKS -> {
+                            KlangBlocksEditorComp(
+                                availableLibraries = listOf(stdlibLib, strudelLib),
+                                initialCode = code,
+                                onCodeChanged = { newCode -> code = newCode },
+                                onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
+                                highlights = blocksHighlightBuffer.highlights,
+                                hoverPopup = hoverPopup,
+                            ).track(blocksEditorRef)
+                        }
+                    }
                 }
             }
         }

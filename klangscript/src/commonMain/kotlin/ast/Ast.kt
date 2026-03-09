@@ -311,6 +311,105 @@ data class ReturnStatement(
     override val location: SourceLocation? = null,
 ) : Statement(location)
 
+/**
+ * A while loop statement
+ *
+ * Repeatedly executes the body as long as the condition evaluates to truthy.
+ *
+ * Example:
+ * ```javascript
+ * let i = 0
+ * while (i < 5) {
+ *   i = i + 1
+ * }
+ * ```
+ */
+data class WhileStatement(
+    val condition: Expression,
+    val body: List<Statement>,
+    override val location: SourceLocation? = null,
+) : Statement(location)
+
+/**
+ * A do-while loop statement
+ *
+ * Executes the body at least once, then continues as long as the condition is truthy.
+ *
+ * Example:
+ * ```javascript
+ * let i = 0
+ * do {
+ *   i = i + 1
+ * } while (i < 5)
+ * ```
+ */
+data class DoWhileStatement(
+    val body: List<Statement>,
+    val condition: Expression,
+    override val location: SourceLocation? = null,
+) : Statement(location)
+
+/**
+ * A classic for loop statement
+ *
+ * Supports optional init, condition, and update parts.
+ *
+ * Example:
+ * ```javascript
+ * for (let i = 0; i < 5; i = i + 1) {
+ *   print(i)
+ * }
+ * ```
+ *
+ * @param init Optional initializer statement (let i = 0 or expression)
+ * @param condition Optional loop condition (null = infinite loop)
+ * @param update Optional update expression (runs after each iteration)
+ * @param body Loop body statements
+ */
+data class ForStatement(
+    val init: Statement?,
+    val condition: Expression?,
+    val update: Expression?,
+    val body: List<Statement>,
+    override val location: SourceLocation? = null,
+) : Statement(location)
+
+/**
+ * A break statement for exiting loops
+ *
+ * When encountered inside a while, do-while, or for loop, immediately exits the loop.
+ * If used outside a loop, a runtime error occurs.
+ *
+ * Example:
+ * ```javascript
+ * while (true) {
+ *   break
+ * }
+ * ```
+ */
+data class BreakStatement(
+    override val location: SourceLocation? = null,
+) : Statement(location)
+
+/**
+ * A continue statement for skipping to the next loop iteration
+ *
+ * When encountered inside a while, do-while, or for loop, skips the rest of the
+ * loop body and proceeds to the next iteration.
+ * If used outside a loop, a runtime error occurs.
+ *
+ * Example:
+ * ```javascript
+ * for (let i = 0; i < 10; i = i + 1) {
+ *   if (i == 5) continue
+ *   print(i)
+ * }
+ * ```
+ */
+data class ContinueStatement(
+    override val location: SourceLocation? = null,
+) : Statement(location)
+
 // ============================================================
 // Expressions
 // ============================================================
@@ -419,11 +518,20 @@ enum class BinaryOperator {
     /** Modulo: a % b */
     MODULO,
 
+    /** Exponentiation: a ** b */
+    POWER,
+
     /** Equality: a == b */
     EQUAL,
 
     /** Inequality: a != b */
     NOT_EQUAL,
+
+    /** Strict equality: a === b (same type AND same value) */
+    STRICT_EQUAL,
+
+    /** Strict inequality: a !== b */
+    STRICT_NOT_EQUAL,
 
     /** Less than: a < b */
     LESS_THAN,
@@ -442,6 +550,9 @@ enum class BinaryOperator {
 
     /** Logical OR: a || b */
     OR,
+
+    /** In operator: "key" in obj */
+    IN,
 }
 
 /**
@@ -467,7 +578,7 @@ data class BinaryOperation(
 ) : Expression(location)
 
 /**
- * Unary operator types for prefix operations
+ * Unary operator types for prefix and postfix operations
  */
 enum class UnaryOperator {
     /** Negation: -x (arithmetic negation) */
@@ -478,6 +589,18 @@ enum class UnaryOperator {
 
     /** Logical NOT: !x (boolean negation) */
     NOT,
+
+    /** Prefix increment: ++x (add 1, return new value) */
+    PREFIX_INCREMENT,
+
+    /** Prefix decrement: --x (subtract 1, return new value) */
+    PREFIX_DECREMENT,
+
+    /** Postfix increment: x++ (add 1, return original value) */
+    POSTFIX_INCREMENT,
+
+    /** Postfix decrement: x-- (subtract 1, return original value) */
+    POSTFIX_DECREMENT,
 }
 
 /**
@@ -751,5 +874,154 @@ data class ObjectLiteral(
  */
 data class ArrayLiteral(
     val elements: List<Expression>,
+    override val location: SourceLocation? = null,
+) : Expression(location)
+
+/**
+ * An assignment expression: target = value
+ *
+ * Assigns a value to an assignable target.
+ * Target can be:
+ * - Identifier: x = expr
+ * - MemberAccess: obj.prop = expr
+ * - IndexAccess: arr[i] = expr
+ *
+ * Assignment is right-associative and has the lowest precedence (below ternary).
+ *
+ * @param target The left-hand side expression (must be assignable)
+ * @param value The right-hand side expression to assign
+ */
+data class AssignmentExpression(
+    val target: Expression,
+    val value: Expression,
+    override val location: SourceLocation? = null,
+) : Expression(location)
+
+/**
+ * A ternary conditional expression: condition ? thenExpr : elseExpr
+ *
+ * Evaluates condition; if truthy evaluates and returns thenExpr, otherwise elseExpr.
+ * Right-associative.
+ *
+ * @param condition The condition expression
+ * @param thenExpr Expression evaluated when condition is truthy
+ * @param elseExpr Expression evaluated when condition is falsy
+ */
+data class TernaryExpression(
+    val condition: Expression,
+    val thenExpr: Expression,
+    val elseExpr: Expression,
+    override val location: SourceLocation? = null,
+) : Expression(location)
+
+/**
+ * An index access expression: obj[index]
+ *
+ * Accesses an element of an array by numeric index,
+ * or a property of an object by string key.
+ *
+ * Examples:
+ * - arr[0]       → first element of array
+ * - arr[i]       → element at index i
+ * - obj["key"]   → property "key" on object
+ *
+ * @param obj The object/array expression
+ * @param index The index/key expression
+ */
+data class IndexAccess(
+    val obj: Expression,
+    val index: Expression,
+    override val location: SourceLocation? = null,
+) : Expression(location)
+
+// ============================================================
+// Control Flow Expressions
+// ============================================================
+
+/**
+ * Else branch for if expressions
+ *
+ * Either a block of statements or another if expression (for else-if chains).
+ */
+sealed class ElseBranch {
+    /** An else block: `else { statements }` */
+    data class Block(val statements: List<Statement>) : ElseBranch()
+
+    /** An else-if chain: `else if (cond) { ... }` */
+    data class If(val ifExpr: IfExpression) : ElseBranch()
+}
+
+/**
+ * An if expression (can also be used as a statement)
+ *
+ * `if/else` is an expression in KlangScript, meaning it can produce a value.
+ * When used as a statement, the value is discarded.
+ * When used as an expression (e.g. `let x = if (cond) { 1 } else { 2 }`), the
+ * value of the executed branch is the value of the if expression.
+ *
+ * The value of a branch is the value of the last ExpressionStatement in the block,
+ * or NullValue if the block is empty or ends with a non-expression statement.
+ *
+ * Examples:
+ * ```javascript
+ * // As statement
+ * if (x > 0) {
+ *   print("positive")
+ * } else {
+ *   print("non-positive")
+ * }
+ *
+ * // As expression
+ * let label = if (x > 0) { "positive" } else { "non-positive" }
+ *
+ * // Else-if chain
+ * if (x < 0) { "negative" } else if (x == 0) { "zero" } else { "positive" }
+ * ```
+ *
+ * @param condition The boolean condition to evaluate
+ * @param thenBranch Statements to execute if condition is truthy
+ * @param elseBranch Optional else branch (block or else-if)
+ */
+data class IfExpression(
+    val condition: Expression,
+    val thenBranch: List<Statement>,
+    val elseBranch: ElseBranch?,
+    override val location: SourceLocation? = null,
+) : Expression(location)
+
+// ============================================================
+// Template Literals
+// ============================================================
+
+/**
+ * A part of a template literal string
+ *
+ * Template literals consist of alternating text and interpolated expressions.
+ */
+sealed class TemplatePart {
+    /** A literal text segment */
+    data class Text(val value: String) : TemplatePart()
+
+    /** An interpolated expression: `${expr}` */
+    data class Interp(val expression: Expression) : TemplatePart()
+}
+
+/**
+ * A template literal expression
+ *
+ * Template literals (backtick strings) support expression interpolation using `${expr}`.
+ * They evaluate each part and concatenate the results into a string.
+ *
+ * Example:
+ * ```javascript
+ * let name = "World"
+ * let greeting = `Hello, ${name}!`  // "Hello, World!"
+ * let result = `The answer is ${40 + 2}`  // "The answer is 42"
+ * ```
+ *
+ * @param parts List of alternating text and interpolated expression parts
+ */
+data class TemplateLiteral(
+    val parts: List<TemplatePart>,
     override val location: SourceLocation? = null,
 ) : Expression(location)

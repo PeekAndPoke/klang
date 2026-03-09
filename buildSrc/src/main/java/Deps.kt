@@ -43,7 +43,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.100.0"
+        private const val ultra_version = "0.100.9"
 
         object Ultra {
             const val common = "io.peekandpoke.ultra:common:$ultra_version"
@@ -428,6 +428,7 @@ object Deps {
 
         // https://www.npmjs.com/package/@codemirror/lint
         fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.4")
+
     }
 
     // // Test dependencies ////////////////////////////////////////////////////////////////////////

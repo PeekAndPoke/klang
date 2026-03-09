@@ -7,12 +7,14 @@ import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
 
 /**
  * Create the Strudel DSL library for KlangScript.
  */
 val strudelLib = klangScriptLibrary("strudel") {
     registerStrudelDsl()
+    docs { registerStrudelDocs(this) }
 }
 
 /**

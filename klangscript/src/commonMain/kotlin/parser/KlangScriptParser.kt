@@ -56,20 +56,31 @@ class KlangScriptParser private constructor(
         NUMBER, STRING, BACKTICK_STRING, IDENTIFIER,
 
         // Keywords (must match before IDENTIFIER)
-        TRUE, FALSE, NULL, LET, CONST, IMPORT, EXPORT, FROM, AS, RETURN,
+        TRUE, FALSE, NULL, LET, CONST, IMPORT, EXPORT, FROM, AS, RETURN, IN,
+        IF, ELSE, WHILE, DO, FOR, BREAK, CONTINUE,
 
         // Punctuation
         LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
-        LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON, DOT,
+        LEFT_BRACKET, RIGHT_BRACKET, COMMA, COLON, DOT, QUESTION, SEMICOLON,
 
-        // Multi-char operators (MUST tokenize before single-char)
-        ARROW,           // =>
-        DOUBLE_EQUALS,   // ==
-        NOT_EQUALS,      // !=
-        LESS_EQUAL,      // <=
-        GREATER_EQUAL,   // >=
-        DOUBLE_AMP,      // &&
-        DOUBLE_PIPE,     // ||
+        // Multi-char operators (MUST tokenize before single-char — longer before shorter)
+        ARROW,               // =>
+        TRIPLE_EQUALS,       // ===  (before ==)
+        DOUBLE_EQUALS,       // ==   (before =)
+        NOT_DOUBLE_EQUALS,   // !==  (before !=)
+        NOT_EQUALS,          // !=   (before !)
+        LESS_EQUAL,          // <=   (before <)
+        GREATER_EQUAL,       // >=   (before >)
+        DOUBLE_AMP,          // &&   (before &)
+        DOUBLE_PIPE,         // ||   (before |)
+        DOUBLE_STAR,         // **   (before *)
+        PLUS_PLUS,           // ++   (before + and +=)
+        MINUS_MINUS,         // --   (before - and -=)
+        PLUS_EQUALS,         // +=   (before +)
+        MINUS_EQUALS,        // -=   (before -)
+        STAR_EQUALS,         // *=   (before * and **)
+        SLASH_EQUALS,        // /=   (before /)
+        PERCENT_EQUALS,      // %=   (before %)
 
         // Single-char operators
         EQUALS, PLUS, MINUS, STAR, SLASH, PERCENT,
@@ -181,19 +192,37 @@ class KlangScriptParser private constructor(
                     }
                 }
 
-                // Multi-char operators (MUST check before single-char)
+                // Multi-char operators (MUST check before single-char — longer before shorter)
+
+                // === (before == and =)
+                ch == '=' && i + 2 < source.length && source[i + 1] == '=' && source[i + 2] == '=' -> {
+                    addToken(TokenType.TRIPLE_EQUALS, "===", startColumn)
+                    i += 3
+                    column += 3
+                }
+
+                // => (before ==)
                 ch == '=' && i + 1 < source.length && source[i + 1] == '>' -> {
                     addToken(TokenType.ARROW, "=>", startColumn)
                     i += 2
                     column += 2
                 }
 
+                // == (before =)
                 ch == '=' && i + 1 < source.length && source[i + 1] == '=' -> {
                     addToken(TokenType.DOUBLE_EQUALS, "==", startColumn)
                     i += 2
                     column += 2
                 }
 
+                // !== (before != and !)
+                ch == '!' && i + 2 < source.length && source[i + 1] == '=' && source[i + 2] == '=' -> {
+                    addToken(TokenType.NOT_DOUBLE_EQUALS, "!==", startColumn)
+                    i += 3
+                    column += 3
+                }
+
+                // != (before !)
                 ch == '!' && i + 1 < source.length && source[i + 1] == '=' -> {
                     addToken(TokenType.NOT_EQUALS, "!=", startColumn)
                     i += 2
@@ -220,6 +249,62 @@ class KlangScriptParser private constructor(
 
                 ch == '|' && i + 1 < source.length && source[i + 1] == '|' -> {
                     addToken(TokenType.DOUBLE_PIPE, "||", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // ++ (before + and +=)
+                ch == '+' && i + 1 < source.length && source[i + 1] == '+' -> {
+                    addToken(TokenType.PLUS_PLUS, "++", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // += (before +)
+                ch == '+' && i + 1 < source.length && source[i + 1] == '=' -> {
+                    addToken(TokenType.PLUS_EQUALS, "+=", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // -- (before - and -=)
+                ch == '-' && i + 1 < source.length && source[i + 1] == '-' -> {
+                    addToken(TokenType.MINUS_MINUS, "--", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // -= (before -)
+                ch == '-' && i + 1 < source.length && source[i + 1] == '=' -> {
+                    addToken(TokenType.MINUS_EQUALS, "-=", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // ** (before * and *=)
+                ch == '*' && i + 1 < source.length && source[i + 1] == '*' -> {
+                    addToken(TokenType.DOUBLE_STAR, "**", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // *= (before *)
+                ch == '*' && i + 1 < source.length && source[i + 1] == '=' -> {
+                    addToken(TokenType.STAR_EQUALS, "*=", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // /= (before /)
+                ch == '/' && i + 1 < source.length && source[i + 1] == '=' -> {
+                    addToken(TokenType.SLASH_EQUALS, "/=", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // %= (before %)
+                ch == '%' && i + 1 < source.length && source[i + 1] == '=' -> {
+                    addToken(TokenType.PERCENT_EQUALS, "%=", startColumn)
                     i += 2
                     column += 2
                 }
@@ -275,6 +360,18 @@ class KlangScriptParser private constructor(
 
                 ch == '.' -> {
                     addToken(TokenType.DOT, ".", startColumn)
+                    i++
+                    column++
+                }
+
+                ch == '?' -> {
+                    addToken(TokenType.QUESTION, "?", startColumn)
+                    i++
+                    column++
+                }
+
+                ch == ';' -> {
+                    addToken(TokenType.SEMICOLON, ";", startColumn)
                     i++
                     column++
                 }
@@ -417,12 +514,25 @@ class KlangScriptParser private constructor(
                     addToken(TokenType.BACKTICK_STRING, sb.toString(), startLine, startColumn, line, column)
                 }
 
-                // Numbers
+                // Numbers (including scientific notation: 1e6, 2.5e-3, 1E+10)
                 ch.isDigit() -> {
                     val start = i
                     while (i < source.length && (source[i].isDigit() || source[i] == '.')) {
                         i++
                         column++
+                    }
+                    // Scientific notation: optional e/E followed by optional +/- and digits
+                    if (i < source.length && (source[i] == 'e' || source[i] == 'E')) {
+                        i++
+                        column++
+                        if (i < source.length && (source[i] == '+' || source[i] == '-')) {
+                            i++
+                            column++
+                        }
+                        while (i < source.length && source[i].isDigit()) {
+                            i++
+                            column++
+                        }
                     }
                     addToken(TokenType.NUMBER, source.substring(start, i), startColumn)
                 }
@@ -446,6 +556,14 @@ class KlangScriptParser private constructor(
                         "from" -> TokenType.FROM
                         "as" -> TokenType.AS
                         "return" -> TokenType.RETURN
+                        "in" -> TokenType.IN
+                        "if" -> TokenType.IF
+                        "else" -> TokenType.ELSE
+                        "while" -> TokenType.WHILE
+                        "do" -> TokenType.DO
+                        "for" -> TokenType.FOR
+                        "break" -> TokenType.BREAK
+                        "continue" -> TokenType.CONTINUE
                         else -> TokenType.IDENTIFIER
                     }
                     addToken(type, text, startColumn)
@@ -496,6 +614,13 @@ class KlangScriptParser private constructor(
         throw ParseException(ErrorResult(message, token.column, token.line))
     }
 
+    /** Skip any semicolons (used as optional statement terminators outside for-loop headers) */
+    private fun skipSemicolons() {
+        while (check(TokenType.SEMICOLON)) {
+            advance()
+        }
+    }
+
     private fun Token.toSourceLocation(): SourceLocation {
         return SourceLocation(
             source = currentSource,
@@ -534,7 +659,61 @@ class KlangScriptParser private constructor(
 
         // Not an arrow function - backtrack
         pos = checkpoint
-        return parseLogicalOr()
+        return parseAssignment()
+    }
+
+    /**
+     * Assignment expressions (=, +=, -=, *=, /=, %=)
+     * Right-associative, lower precedence than ternary.
+     * Compound assignments are desugared to AssignmentExpression(target, BinaryOperation(target, op, value))
+     */
+    private fun parseAssignment(): Expression {
+        val left = parseTernary()
+
+        // Check for assignment operators
+        val assignOp = when {
+            check(TokenType.EQUALS) -> null  // plain =
+            check(TokenType.PLUS_EQUALS) -> BinaryOperator.ADD
+            check(TokenType.MINUS_EQUALS) -> BinaryOperator.SUBTRACT
+            check(TokenType.STAR_EQUALS) -> BinaryOperator.MULTIPLY
+            check(TokenType.SLASH_EQUALS) -> BinaryOperator.DIVIDE
+            check(TokenType.PERCENT_EQUALS) -> BinaryOperator.MODULO
+            else -> return left  // Not an assignment
+        }
+
+        // Verify target is assignable
+        if (left !is Identifier && left !is MemberAccess && left !is IndexAccess) {
+            error("Invalid assignment target")
+        }
+
+        val opToken = advance()  // consume the assignment operator
+        val right = parseAssignment()  // right-associative
+
+        val value = if (assignOp != null) {
+            // Desugar compound assignment: x += y  →  x = x + y
+            BinaryOperation(left, assignOp, right, opToken.toSourceLocation())
+        } else {
+            right
+        }
+
+        return AssignmentExpression(left, value, opToken.toSourceLocation())
+    }
+
+    /**
+     * Ternary operator: condition ? thenExpr : elseExpr
+     * Right-associative.
+     */
+    private fun parseTernary(): Expression {
+        val condition = parseLogicalOr()
+
+        if (!match(TokenType.QUESTION)) return condition
+
+        val questionToken = previous()
+        val thenExpr = parseTernary()  // Right-associative
+        consume(TokenType.COLON, "Expected ':' in ternary expression")
+        val elseExpr = parseTernary()  // Right-associative
+
+        return TernaryExpression(condition, thenExpr, elseExpr, questionToken.toSourceLocation())
     }
 
     /**
@@ -612,10 +791,7 @@ class KlangScriptParser private constructor(
 
             // Block body: { statements }
             match(TokenType.LEFT_BRACE) -> {
-                val statements = mutableListOf<Statement>()
-                while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
-                    statements.add(parseStatement())
-                }
+                val statements = parseBlockStatements()
                 consume(TokenType.RIGHT_BRACE, "Expected '}' after block")
                 ArrowFunctionBody.BlockBody(statements)
             }
@@ -630,7 +806,7 @@ class KlangScriptParser private constructor(
 
     /**
      * Check if current position is start of an object literal
-     * Look ahead for pattern: { identifier :
+     * Look ahead for pattern: { identifier : OR { identifier , OR { identifier } (shorthand)
      */
     private fun isObjectLiteralStart(): Boolean {
         if (!check(TokenType.LEFT_BRACE)) return false
@@ -645,10 +821,13 @@ class KlangScriptParser private constructor(
             return true
         }
 
-        // Check for identifier or string followed by colon
+        // Check for identifier or string followed by colon (regular property)
+        val nextType = tokens.getOrNull(pos + 1)?.type
         val isObjLiteral =
             (check(TokenType.IDENTIFIER) || check(TokenType.STRING) || check(TokenType.BACKTICK_STRING)) &&
-                    tokens.getOrNull(pos + 1)?.type == TokenType.COLON
+                    (nextType == TokenType.COLON ||
+                            nextType == TokenType.COMMA ||
+                            nextType == TokenType.RIGHT_BRACE)
 
         pos = saved
         return isObjLiteral
@@ -685,24 +864,29 @@ class KlangScriptParser private constructor(
     }
 
     /**
-     * Comparison operators: ==, !=, <, <=, >, >=
+     * Comparison operators: ===, !==, ==, !=, <, <=, >, >=, in
      */
     private fun parseComparison(): Expression {
         var expr = parseAddition()
 
         while (match(
+                TokenType.TRIPLE_EQUALS, TokenType.NOT_DOUBLE_EQUALS,
                 TokenType.DOUBLE_EQUALS, TokenType.NOT_EQUALS,
                 TokenType.LESS_THAN, TokenType.LESS_EQUAL,
-                TokenType.GREATER_THAN, TokenType.GREATER_EQUAL
+                TokenType.GREATER_THAN, TokenType.GREATER_EQUAL,
+                TokenType.IN
             )
         ) {
             val operator = when (previous().type) {
+                TokenType.TRIPLE_EQUALS -> BinaryOperator.STRICT_EQUAL
+                TokenType.NOT_DOUBLE_EQUALS -> BinaryOperator.STRICT_NOT_EQUAL
                 TokenType.DOUBLE_EQUALS -> BinaryOperator.EQUAL
                 TokenType.NOT_EQUALS -> BinaryOperator.NOT_EQUAL
                 TokenType.LESS_THAN -> BinaryOperator.LESS_THAN
                 TokenType.LESS_EQUAL -> BinaryOperator.LESS_THAN_OR_EQUAL
                 TokenType.GREATER_THAN -> BinaryOperator.GREATER_THAN
                 TokenType.GREATER_EQUAL -> BinaryOperator.GREATER_THAN_OR_EQUAL
+                TokenType.IN -> BinaryOperator.IN
                 else -> error("Unexpected operator")
             }
             val opToken = previous()
@@ -736,7 +920,7 @@ class KlangScriptParser private constructor(
      * Multiplication, division, and modulo: *, /, %
      */
     private fun parseMultiplication(): Expression {
-        var expr = parseUnary()
+        var expr = parsePower()
 
         while (match(TokenType.STAR, TokenType.SLASH, TokenType.PERCENT)) {
             val operator = when (previous().type) {
@@ -746,7 +930,7 @@ class KlangScriptParser private constructor(
                 else -> error("Unexpected operator")
             }
             val opToken = previous()
-            val right = parseUnary()
+            val right = parsePower()
             expr = BinaryOperation(expr, operator, right, opToken.toSourceLocation())
         }
 
@@ -754,32 +938,93 @@ class KlangScriptParser private constructor(
     }
 
     /**
-     * Unary operators: -expr, +expr, !expr
+     * Exponentiation: a ** b  (right-associative, higher than multiplication)
+     */
+    private fun parsePower(): Expression {
+        val base = parseUnary()
+
+        if (match(TokenType.DOUBLE_STAR)) {
+            val opToken = previous()
+            val exponent = parsePower()  // Right-associative
+            return BinaryOperation(base, BinaryOperator.POWER, exponent, opToken.toSourceLocation())
+        }
+
+        return base
+    }
+
+    /**
+     * Unary operators: -expr, +expr, !expr, ++x, --x
+     *
+     * Note: ++ and -- are only treated as prefix increment/decrement when followed by
+     * an identifier. Otherwise (e.g. --10) they fall through to parseCallExpression.
      */
     private fun parseUnary(): Expression {
-        if (match(TokenType.MINUS, TokenType.PLUS, TokenType.EXCLAMATION)) {
-            val operator = when (previous().type) {
-                TokenType.MINUS -> UnaryOperator.NEGATE
-                TokenType.PLUS -> UnaryOperator.PLUS
-                TokenType.EXCLAMATION -> UnaryOperator.NOT
-                else -> error("Unexpected unary operator")
+        when {
+            match(TokenType.MINUS, TokenType.PLUS, TokenType.EXCLAMATION) -> {
+                val operator = when (previous().type) {
+                    TokenType.MINUS -> UnaryOperator.NEGATE
+                    TokenType.PLUS -> UnaryOperator.PLUS
+                    TokenType.EXCLAMATION -> UnaryOperator.NOT
+                    else -> error("Unexpected unary operator")
+                }
+                val opToken = previous()
+                val operand = parseUnary() // Right-associative
+                return UnaryOperation(operator, operand, opToken.toSourceLocation())
             }
-            val opToken = previous()
-            val operand = parseUnary() // Right-associative
-            return UnaryOperation(operator, operand, opToken.toSourceLocation())
+
+            // ++x — prefix increment when followed by an identifier
+            check(TokenType.PLUS_PLUS) && tokens.getOrNull(pos + 1)?.type == TokenType.IDENTIFIER -> {
+                advance() // consume ++
+                val opToken = previous()
+                val operand = parseCallExpression()
+                return UnaryOperation(UnaryOperator.PREFIX_INCREMENT, operand, opToken.toSourceLocation())
+            }
+
+            // ++expr (non-identifier) — desugar as +(+expr) for compatibility
+            check(TokenType.PLUS_PLUS) -> {
+                advance() // consume ++
+                val opToken = previous()
+                val operand = parseUnary() // right-associative
+                return UnaryOperation(
+                    UnaryOperator.PLUS,
+                    UnaryOperation(UnaryOperator.PLUS, operand, opToken.toSourceLocation()),
+                    opToken.toSourceLocation()
+                )
+            }
+
+            // --x — prefix decrement when followed by an identifier
+            check(TokenType.MINUS_MINUS) && tokens.getOrNull(pos + 1)?.type == TokenType.IDENTIFIER -> {
+                advance() // consume --
+                val opToken = previous()
+                val operand = parseCallExpression()
+                return UnaryOperation(UnaryOperator.PREFIX_DECREMENT, operand, opToken.toSourceLocation())
+            }
+
+            // --expr (non-identifier) — desugar as -(-expr) for backward compatibility with --10
+            check(TokenType.MINUS_MINUS) -> {
+                advance() // consume --
+                val opToken = previous()
+                val operand = parseUnary() // right-associative
+                return UnaryOperation(
+                    UnaryOperator.NEGATE,
+                    UnaryOperation(UnaryOperator.NEGATE, operand, opToken.toSourceLocation()),
+                    opToken.toSourceLocation()
+                )
+            }
         }
         return parseCallExpression()
     }
 
     /**
      * Call and member access (method chaining)
-     * CRITICAL: Allows alternating .prop and () in any order
+     * CRITICAL: Allows alternating .prop, (), [index] in any order
+     * Also handles postfix ++ and --
      * Fixes: sine2.fromBipolar().range(0.1, 0.9)
      */
     private fun parseCallExpression(): Expression {
         var expr = parsePrimary()
 
-        // Loop handles ANY sequence: .prop, (), .prop(), ().(), etc.
+        // Loop handles ANY sequence: .prop, (), [i], x++, x--, etc.
         while (true) {
             when {
                 match(TokenType.DOT) -> {
@@ -792,6 +1037,32 @@ class KlangScriptParser private constructor(
                     val args = parseArguments()
                     consume(TokenType.RIGHT_PAREN, "Expected ')' after arguments")
                     expr = CallExpression(expr, args, lparen.toSourceLocation())
+                }
+
+                // Only treat [ as index access when preceded by an indexable expression
+                // (identifier, call, member access, or another index access)
+                // This prevents parsing `5\n[1, 2, 3]` as `5[1, 2, 3]`
+                check(TokenType.LEFT_BRACKET) &&
+                        (expr is Identifier || expr is CallExpression || expr is MemberAccess || expr is IndexAccess) -> {
+                    advance()  // consume [
+                    val lbracket = previous()
+                    val index = parseExpression()
+                    consume(TokenType.RIGHT_BRACKET, "Expected ']' after index")
+                    expr = IndexAccess(expr, index, lbracket.toSourceLocation())
+                }
+
+                // Postfix ++ and -- only apply to assignable expressions (identifiers)
+                // to avoid ambiguity with prefix ++/-- on the next line/statement
+                check(TokenType.PLUS_PLUS) && expr is Identifier -> {
+                    advance()  // consume ++
+                    val opToken = previous()
+                    expr = UnaryOperation(UnaryOperator.POSTFIX_INCREMENT, expr, opToken.toSourceLocation())
+                }
+
+                check(TokenType.MINUS_MINUS) && expr is Identifier -> {
+                    advance()  // consume --
+                    val opToken = previous()
+                    expr = UnaryOperation(UnaryOperator.POSTFIX_DECREMENT, expr, opToken.toSourceLocation())
                 }
 
                 else -> break
@@ -827,9 +1098,14 @@ class KlangScriptParser private constructor(
                 NumberLiteral(token.text.toDouble(), token.toSourceLocation())
             }
 
-            match(TokenType.STRING, TokenType.BACKTICK_STRING) -> {
+            match(TokenType.STRING) -> {
                 val token = previous()
                 StringLiteral(token.text, token.toSourceLocation())
+            }
+
+            match(TokenType.BACKTICK_STRING) -> {
+                val token = previous()
+                parseTemplateLiteralFromRaw(token.text, token.toSourceLocation())
             }
 
             match(TokenType.TRUE) -> {
@@ -842,6 +1118,10 @@ class KlangScriptParser private constructor(
 
             match(TokenType.NULL) -> {
                 NullLiteral
+            }
+
+            match(TokenType.IF) -> {
+                parseIfExpression()
             }
 
             match(TokenType.IDENTIFIER) -> {
@@ -869,7 +1149,9 @@ class KlangScriptParser private constructor(
 
     /**
      * Parse object literal: { key: value, ... }
+     * Supports shorthand properties: { name } == { name: name }
      * Supports trailing commas
+     * Mixed shorthand and regular: { name, age: 30 }
      */
     private fun parseObjectLiteral(): ObjectLiteral {
         val startToken = previous() // LEFT_BRACE consumed
@@ -877,14 +1159,25 @@ class KlangScriptParser private constructor(
 
         while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
             // Key: identifier or string
-            val key = when {
-                match(TokenType.IDENTIFIER) -> previous().text
-                match(TokenType.STRING, TokenType.BACKTICK_STRING) -> previous().text
-                else -> error("Expected property key")
+            if (!match(TokenType.IDENTIFIER, TokenType.STRING, TokenType.BACKTICK_STRING)) {
+                error("Expected property key")
+            }
+            val keyToken = previous()
+            val key = keyToken.text
+
+            val value = if (check(TokenType.COLON)) {
+                // Regular property: key: value
+                advance() // consume ':'
+                parseExpression()
+            } else {
+                // Shorthand property: key  (same as key: key)
+                // Only valid for IDENTIFIER keys (shorthand means "use variable with same name")
+                if (keyToken.type != TokenType.IDENTIFIER) {
+                    error("Shorthand property notation requires an identifier key")
+                }
+                Identifier(key, keyToken.toSourceLocation())
             }
 
-            consume(TokenType.COLON, "Expected ':' after property key")
-            val value = parseExpression()
             properties.add(key to value)
 
             if (!match(TokenType.COMMA)) break
@@ -926,7 +1219,20 @@ class KlangScriptParser private constructor(
             match(TokenType.LET) -> parseLetDeclaration()
             match(TokenType.CONST) -> parseConstDeclaration()
             match(TokenType.RETURN) -> parseReturnStatement()
-            else -> ExpressionStatement(parseExpression())
+            match(TokenType.IF) -> ExpressionStatement(parseIfExpression())
+            match(TokenType.WHILE) -> parseWhileStatement()
+            match(TokenType.DO) -> parseDoWhileStatement()
+            match(TokenType.FOR) -> parseForStatement()
+            match(TokenType.BREAK) -> {
+                val tok = previous()
+                BreakStatement(tok.toSourceLocation())
+            }
+
+            match(TokenType.CONTINUE) -> {
+                val tok = previous()
+                ContinueStatement(tok.toSourceLocation())
+            }
+            else -> parseExpression().let { ExpressionStatement(it, it.location) }
         }
     }
 
@@ -1063,9 +1369,204 @@ class KlangScriptParser private constructor(
         val statements = mutableListOf<Statement>()
 
         while (!isAtEnd()) {
+            skipSemicolons()
+            if (isAtEnd()) break
             statements.add(parseStatement())
+            skipSemicolons()
         }
 
         return Program(statements)
+    }
+
+    /**
+     * Parse if expression: if ( condition ) { then } [ else { else } | else if ... ]
+     *
+     * `if` is an expression so it can produce a value.
+     * At statement level it becomes an ExpressionStatement(IfExpression(...)).
+     */
+    private fun parseIfExpression(): IfExpression {
+        val ifToken = previous() // IF consumed
+        consume(TokenType.LEFT_PAREN, "Expected '(' after 'if'")
+        val condition = parseExpression()
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after if condition")
+        consume(TokenType.LEFT_BRACE, "Expected '{' after if condition")
+        val thenBranch = parseBlockStatements()
+        consume(TokenType.RIGHT_BRACE, "Expected '}' after if body")
+
+        val elseBranch = if (match(TokenType.ELSE)) {
+            if (match(TokenType.IF)) {
+                // else if chain
+                ElseBranch.If(parseIfExpression())
+            } else {
+                // else block
+                consume(TokenType.LEFT_BRACE, "Expected '{' after 'else'")
+                val elseStmts = parseBlockStatements()
+                consume(TokenType.RIGHT_BRACE, "Expected '}' after else body")
+                ElseBranch.Block(elseStmts)
+            }
+        } else {
+            null
+        }
+
+        return IfExpression(condition, thenBranch, elseBranch, ifToken.toSourceLocation())
+    }
+
+    /**
+     * Parse statements inside a block (until RIGHT_BRACE or EOF)
+     * Skips semicolons between statements.
+     */
+    private fun parseBlockStatements(): List<Statement> {
+        val statements = mutableListOf<Statement>()
+        while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
+            skipSemicolons()
+            if (check(TokenType.RIGHT_BRACE) || isAtEnd()) break
+            statements.add(parseStatement())
+            skipSemicolons()
+        }
+        return statements
+    }
+
+    /**
+     * Parse template literal from raw backtick string content.
+     *
+     * Scans the raw string for `${...}` patterns and builds a TemplateLiteral node.
+     * If no interpolations exist, returns a plain StringLiteral for efficiency.
+     */
+    private fun parseTemplateLiteralFromRaw(raw: String, location: SourceLocation): Expression {
+        // Quick check: if no '${' in the string, return a plain StringLiteral
+        if (!raw.contains("\${")) {
+            return StringLiteral(raw, location)
+        }
+
+        val parts = mutableListOf<TemplatePart>()
+        var idx = 0
+
+        while (idx < raw.length) {
+            // Find next `${`
+            val interpStart = raw.indexOf("\${", idx)
+            if (interpStart < 0) {
+                // Rest is plain text
+                if (idx < raw.length) {
+                    parts.add(TemplatePart.Text(raw.substring(idx)))
+                }
+                break
+            }
+
+            // Add text before `${`
+            if (interpStart > idx) {
+                parts.add(TemplatePart.Text(raw.substring(idx, interpStart)))
+            }
+
+            // Find matching `}`, tracking string literals so braces inside strings are ignored.
+            val exprStart = interpStart + 2
+            var depth = 1
+            var j = exprStart
+            var inString: Char? = null   // current string delimiter (' or "), null if not in string
+            var escaped = false          // true if previous char was backslash inside a string
+            while (j < raw.length && depth > 0) {
+                val c = raw[j]
+                when {
+                    escaped -> escaped = false
+                    inString != null && c == '\\' -> escaped = true
+                    inString != null && c == inString -> inString = null
+                    inString == null && (c == '\'' || c == '"') -> inString = c
+                    inString == null && c == '{' -> depth++
+                    inString == null && c == '}' -> depth--
+                }
+                if (depth > 0) j++
+            }
+            if (depth != 0) {
+                error("Unterminated template literal interpolation")
+            }
+            val exprSource = raw.substring(exprStart, j)
+
+            // Parse the expression inside ${...} using a sub-parser
+            val subProgram = KlangScriptParser.parse(exprSource, currentSource)
+            if (subProgram.statements.isEmpty()) {
+                error("Empty expression in template literal interpolation")
+            }
+            val stmt = subProgram.statements.first()
+            val expr = when (stmt) {
+                is ExpressionStatement -> stmt.expression
+                else -> error("Template literal interpolation must be an expression")
+            }
+            parts.add(TemplatePart.Interp(expr))
+
+            idx = j + 1 // Skip past the closing `}`
+        }
+
+        // If only one text part, return StringLiteral
+        if (parts.size == 1 && parts[0] is TemplatePart.Text) {
+            return StringLiteral((parts[0] as TemplatePart.Text).value, location)
+        }
+
+        return TemplateLiteral(parts, location)
+    }
+
+    /**
+     * Parse while statement: while ( condition ) { body }
+     */
+    private fun parseWhileStatement(): WhileStatement {
+        val whileToken = previous() // WHILE consumed
+        consume(TokenType.LEFT_PAREN, "Expected '(' after 'while'")
+        val condition = parseExpression()
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after while condition")
+        consume(TokenType.LEFT_BRACE, "Expected '{' after while condition")
+        val body = parseBlockStatements()
+        consume(TokenType.RIGHT_BRACE, "Expected '}' after while body")
+        return WhileStatement(condition, body, whileToken.toSourceLocation())
+    }
+
+    /**
+     * Parse do-while statement: do { body } while ( condition )
+     */
+    private fun parseDoWhileStatement(): DoWhileStatement {
+        val doToken = previous() // DO consumed
+        consume(TokenType.LEFT_BRACE, "Expected '{' after 'do'")
+        val body = parseBlockStatements()
+        consume(TokenType.RIGHT_BRACE, "Expected '}' after do body")
+        consume(TokenType.WHILE, "Expected 'while' after do body")
+        consume(TokenType.LEFT_PAREN, "Expected '(' after 'while'")
+        val condition = parseExpression()
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after do-while condition")
+        return DoWhileStatement(body, condition, doToken.toSourceLocation())
+    }
+
+    /**
+     * Parse for statement: for ( [init] ; [condition] ; [update] ) { body }
+     *
+     * The for loop runs in its own scope (init let declarations are scoped to loop).
+     * Semicolons are used as separators in the for header (not statement terminators).
+     * The init can be a let declaration, an assignment expression, or empty.
+     */
+    private fun parseForStatement(): ForStatement {
+        val forToken = previous() // FOR consumed
+        consume(TokenType.LEFT_PAREN, "Expected '(' after 'for'")
+
+        // Parse init (optional)
+        val init: Statement? = when {
+            check(TokenType.SEMICOLON) -> null  // empty init
+            match(TokenType.LET) -> parseLetDeclaration()
+            match(TokenType.CONST) -> parseConstDeclaration()
+            else -> {
+                val expr = parseExpression()
+                ExpressionStatement(expr)
+            }
+        }
+        consume(TokenType.SEMICOLON, "Expected ';' after for init")
+
+        // Parse condition (optional)
+        val condition: Expression? = if (check(TokenType.SEMICOLON)) null else parseExpression()
+        consume(TokenType.SEMICOLON, "Expected ';' after for condition")
+
+        // Parse update (optional)
+        val update: Expression? = if (check(TokenType.RIGHT_PAREN)) null else parseExpression()
+        consume(TokenType.RIGHT_PAREN, "Expected ')' after for clauses")
+
+        consume(TokenType.LEFT_BRACE, "Expected '{' after for header")
+        val body = parseBlockStatements()
+        consume(TokenType.RIGHT_BRACE, "Expected '}' after for body")
+
+        return ForStatement(init, condition, update, body, forToken.toSourceLocation())
     }
 }

@@ -37,7 +37,7 @@ allprojects {
         // Snapshots
         // maven("https://oss.sonatype.org/content/repositories/snapshots")
         // Local
-        // mavenLocal()
+        mavenLocal()
     }
 }
 
@@ -76,6 +76,7 @@ kotlin {
 
                 api(project(":klang"))
                 api(project(":strudel"))
+                api(project(":klangblocks"))
             }
         }
 
@@ -89,6 +90,7 @@ kotlin {
 
         jsMain {
             dependencies {
+                api(project(":klangui"))
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)
                 api(Deps.KotlinLibs.Kraft.addons_browserdetect)

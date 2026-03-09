@@ -84,7 +84,7 @@ class StrudelDocsProcessor(
             appendLine()
             appendLine("package io.peekandpoke.klang.strudel.lang.docs")
             appendLine()
-            appendLine("import io.peekandpoke.klang.script.docs.*")
+            appendLine("import io.peekandpoke.klang.script.types.*")
             appendLine()
             appendLine("/**")
             appendLine(" * Auto-generated Strudel DSL function documentation.")
@@ -109,7 +109,7 @@ class StrudelDocsProcessor(
             }
 
             // The actual val just combines all chunk maps — keeps <clinit> tiny.
-            appendLine("actual val generatedStrudelFunctionDocs: Map<String, FunctionDoc> = buildMap {")
+            appendLine("actual val generatedStrudelKlangSymbols: Map<String, KlangSymbol> = buildMap {")
             chunks.forEachIndexed { chunkIdx, _ ->
                 appendLine("    putAll(generatedDocsChunk$chunkIdx())")
             }
@@ -176,7 +176,7 @@ class StrudelDocsProcessor(
 
         return buildString {
             appendLine()
-            appendLine("    \"$functionName\" to FunctionDoc(")
+            appendLine("    \"$functionName\" to KlangSymbol(")
             appendLine("        name = \"$functionName\",")
             appendLine("        category = \"$category\",")
             appendLine("        tags = listOf($tagsString),")
@@ -196,8 +196,10 @@ class StrudelDocsProcessor(
     }
 
     private fun generateVariantDoc(function: KSFunctionDeclaration, kdoc: ParsedKDoc): String {
+        val functionName = function.simpleName.asString()
         val isExtension = function.extensionReceiver != null
-        val variantType = if (isExtension) "DslType.EXTENSION_METHOD" else "DslType.TOP_LEVEL"
+        val receiverType = function.extensionReceiver?.resolve()
+        val returnType = function.returnType?.resolve()
 
         val description = kdoc.description
         val returnDoc = kdoc.returnDoc.replace("\n", " ")
@@ -211,11 +213,36 @@ class StrudelDocsProcessor(
         }
 
         return buildString {
-            appendLine("            VariantDoc(")
-            appendLine("                type = $variantType,")
-            append("                signatureModel = ")
-            append(generateFunctionSignatureModelCode(function, kdoc))
-            appendLine(",")
+            appendLine("            KlangCallable(")
+            appendLine("                name = \"$functionName\",")
+            if (isExtension && receiverType != null) {
+                appendLine("                receiver = ${generateTypeModelCode(receiverType)},")
+            }
+            val params = function.parameters
+            if (params.isNotEmpty()) {
+                appendLine("                params = listOf(")
+                params.forEach { param ->
+                    val paramName = param.name?.asString() ?: return@forEach
+                    val paramType = param.type.resolve()
+                    val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ")
+                    val paramUiTools = kdoc.paramTools[paramName] ?: emptyList()
+                    append("                    KlangParam(")
+                    append("name = \"$paramName\", ")
+                    append("type = ${generateTypeModelCode(paramType)}")
+                    if (param.isVararg) append(", isVararg = true")
+                    if (paramDesc.isNotEmpty()) append(", description = \"\"\"$paramDesc\"\"\"")
+                    if (paramUiTools.isNotEmpty()) {
+                        append(", uitools = listOf(${paramUiTools.joinToString(", ") { "\"$it\"" }})")
+                    }
+                    appendLine("),")
+                }
+                appendLine("                ),")
+            } else {
+                appendLine("                params = emptyList(),")
+            }
+            if (returnType != null) {
+                appendLine("                returnType = ${generateTypeModelCode(returnType)},")
+            }
             appendLine("                description = \"\"\"$description\"\"\",")
             appendLine("                returnDoc = \"\"\"$returnDoc\"\"\",")
 
@@ -231,47 +258,7 @@ class StrudelDocsProcessor(
         }
     }
 
-    /**
-     * Generates `SignatureModel(...)` code for a function declaration.
-     * The returned string starts with `SignatureModel(` and ends with `                )` (16-space indent).
-     */
-    private fun generateFunctionSignatureModelCode(function: KSFunctionDeclaration, kdoc: ParsedKDoc): String {
-        val functionName = function.simpleName.asString()
-        val receiverType = function.extensionReceiver?.resolve()
-        val returnType = function.returnType?.resolve()
-
-        return buildString {
-            appendLine("SignatureModel(")
-            appendLine("                    name = \"$functionName\",")
-            if (receiverType != null) {
-                appendLine("                    receiver = ${generateTypeModelCode(receiverType)},")
-            }
-            val params = function.parameters
-            if (params.isNotEmpty()) {
-                appendLine("                    params = listOf(")
-                params.forEach { param ->
-                    val paramName = param.name?.asString() ?: return@forEach
-                    val paramType = param.type.resolve()
-                    val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ")
-                    append("                        ParamModel(")
-                    append("name = \"$paramName\", ")
-                    append("type = ${generateTypeModelCode(paramType)}")
-                    if (param.isVararg) append(", isVararg = true")
-                    if (paramDesc.isNotEmpty()) append(", description = \"\"\"$paramDesc\"\"\"")
-                    appendLine("),")
-                }
-                appendLine("                    ),")
-            } else {
-                appendLine("                    params = emptyList(),")
-            }
-            if (returnType != null) {
-                appendLine("                    returnType = ${generateTypeModelCode(returnType)},")
-            }
-            append("                )")
-        }
-    }
-
-    /** Generates `TypeModel(...)` code for a resolved KSP type. */
+    /** Generates `KlangType(...)` code for a resolved KSP type. */
     private fun generateTypeModelCode(type: KSType): String {
         val declaration = type.declaration
         val simpleName = declaration.simpleName.asString()
@@ -279,7 +266,7 @@ class StrudelDocsProcessor(
         val isNullable = type.nullability == Nullability.NULLABLE
 
         return buildString {
-            append("TypeModel(simpleName = \"$simpleName\"")
+            append("KlangType(simpleName = \"$simpleName\"")
             if (isTypeAlias) append(", isTypeAlias = true")
             if (isNullable) append(", isNullable = true")
             append(")")
@@ -291,21 +278,10 @@ class StrudelDocsProcessor(
         val propertyType = property.type.resolve()
         val propertyTypeSimpleName = propertyType.declaration.simpleName.asString()
         val isExtension = property.extensionReceiver != null
+        val receiverType = if (isExtension) property.extensionReceiver!!.resolve() else null
 
         // DslFunction / DslPatternMethod are callable delegates — not plain objects
         val isDslCallable = propertyTypeSimpleName in setOf("DslFunction", "DslPatternMethod")
-        val variantType = when {
-            isExtension -> "DslType.EXTENSION_METHOD"
-            isDslCallable -> "DslType.TOP_LEVEL"
-            else -> "DslType.OBJECT"
-        }
-
-        val signatureModelCode = buildPropertySignatureModelCode(
-            propertyName = propertyName,
-            propertyType = propertyType,
-            isDslCallable = isDslCallable,
-            receiverType = if (isExtension) property.extensionReceiver!!.resolve() else null,
-        )
 
         val description = kdoc.description
 
@@ -318,13 +294,25 @@ class StrudelDocsProcessor(
         }
 
         return buildString {
-            appendLine("            VariantDoc(")
-            appendLine("                type = $variantType,")
-            append("                signatureModel = ")
-            append(signatureModelCode)
-            appendLine(",")
-            appendLine("                description = \"\"\"$description\"\"\",")
-            appendLine("                returnDoc = \"\",")
+            if (!isDslCallable && !isExtension) {
+                // Plain object / constant
+                appendLine("            KlangProperty(")
+                appendLine("                name = \"$propertyName\",")
+                appendLine("                type = ${generateTypeModelCode(propertyType)},")
+                appendLine("                description = \"\"\"$description\"\"\",")
+            } else {
+                // Callable delegate or extension — emit KlangCallable
+                appendLine("            KlangCallable(")
+                appendLine("                name = \"$propertyName\",")
+                if (receiverType != null) {
+                    appendLine("                receiver = ${generateTypeModelCode(receiverType)},")
+                }
+                // Callable delegate: empty params (no param info available from property)
+                appendLine("                params = emptyList(),")
+                appendLine("                returnType = KlangType(simpleName = \"StrudelPattern\"),")
+                appendLine("                description = \"\"\"$description\"\"\",")
+                appendLine("                returnDoc = \"\",")
+            }
             if (kdoc.samples.isNotEmpty()) {
                 appendLine("                samples = listOf(")
                 append(samplesString)
@@ -335,31 +323,5 @@ class StrudelDocsProcessor(
             }
             append("            )")
         }
-    }
-
-    /**
-     * Generates `SignatureModel(...)` code for a property declaration.
-     * The returned string starts with `SignatureModel(` and ends with `                )` (16-space indent).
-     */
-    private fun buildPropertySignatureModelCode(
-        propertyName: String,
-        propertyType: KSType,
-        isDslCallable: Boolean,
-        receiverType: KSType?,
-    ): String = buildString {
-        appendLine("SignatureModel(")
-        appendLine("                    name = \"$propertyName\",")
-        if (receiverType != null) {
-            appendLine("                    receiver = ${generateTypeModelCode(receiverType)},")
-        }
-        if (isDslCallable) {
-            // Callable delegate — show empty param list (we don't know the actual params from the property)
-            appendLine("                    params = emptyList(),")
-            appendLine("                    returnType = TypeModel(simpleName = \"StrudelPattern\"),")
-        } else {
-            // Plain object / constant — no parens in signature (params = null by default)
-            appendLine("                    returnType = ${generateTypeModelCode(propertyType)},")
-        }
-        append("                )")
     }
 }

@@ -28,6 +28,12 @@ kotlin {
     }
 
     sourceSets {
+        jsMain {
+            dependencies {
+                api(project(":klangui"))
+            }
+        }
+
         commonMain {
             dependencies {
                 implementation(Deps.KotlinX.coroutines_core)

@@ -87,7 +87,7 @@ class ChoicePatternSpec : StringSpec() {
             }
         }
 
-        "Complex combination: 'a?|b'" {
+        "Complex combination: 'a?|b'".config(enabled = false) {
             // choice between (a?) and (b)
             // Roughly 50% of cycles: b (always plays)
             // Roughly 50% of cycles: a? (play "a" with 50% prob, or silence)

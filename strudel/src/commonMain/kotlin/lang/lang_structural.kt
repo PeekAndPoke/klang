@@ -2075,10 +2075,10 @@ internal val PatternMapperFn._superimpose by dslPatternMapperExtension { m, args
 /**
  * Layers one or more transformed copies of this pattern on top of itself.
  *
- * Stacks the original pattern with the result of applying each [transform] to it.
+ * Stacks the original pattern with the result of applying each [transforms] to it.
  * Unlike [off], the copies are not time-shifted — all layers start at the same position.
  *
- * @param transform Function applied to produce the additional layer.
+ * @param transforms Functions applied to produce the additional layers.
  * @return The original pattern stacked with its transformed copy.
  *
  * ```KlangScript
@@ -2093,18 +2093,18 @@ internal val PatternMapperFn._superimpose by dslPatternMapperExtension { m, args
  * @tags superimpose, layer, stack, transform
  */
 @StrudelDsl
-fun StrudelPattern.superimpose(transform: PatternMapperFn): StrudelPattern =
-    this._superimpose(listOf(transform).asStrudelDslArgs())
+fun StrudelPattern.superimpose(vararg transforms: PatternMapperFn): StrudelPattern =
+    this._superimpose(transforms.toList().asStrudelDslArgs())
 
 /** Layers a transformed copy of this string pattern on top of itself. */
 @StrudelDsl
-fun String.superimpose(transform: PatternMapperFn): StrudelPattern =
-    this._superimpose(listOf(transform).asStrudelDslArgs())
+fun String.superimpose(vararg transforms: PatternMapperFn): StrudelPattern =
+    this._superimpose(transforms.toList().asStrudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that layers a transformed copy of the source on top of itself.
  *
- * @param transform Function applied to produce the additional layer.
+ * @param transforms Functions applied to produce the additional layers.
  * @return A [PatternMapperFn] that stacks the source with its transformed copy.
  *
  * ```KlangScript
@@ -2115,13 +2115,13 @@ fun String.superimpose(transform: PatternMapperFn): StrudelPattern =
  * @tags superimpose, layer, stack, transform
  */
 @StrudelDsl
-fun superimpose(transform: PatternMapperFn): PatternMapperFn =
-    _superimpose(listOf(transform).asStrudelDslArgs())
+fun superimpose(vararg transforms: PatternMapperFn): PatternMapperFn =
+    _superimpose(transforms.toList().asStrudelDslArgs())
 
 /** Chains a superimpose onto this [PatternMapperFn]; layers a transformed copy on top. */
 @StrudelDsl
-fun PatternMapperFn.superimpose(transform: PatternMapperFn): PatternMapperFn =
-    this._superimpose(listOf(transform).asStrudelDslArgs())
+fun PatternMapperFn.superimpose(vararg transforms: PatternMapperFn): PatternMapperFn =
+    this._superimpose(transforms.toList().asStrudelDslArgs())
 
 // -- layer() ----------------------------------------------------------------------------------------------------------
 

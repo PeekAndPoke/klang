@@ -265,4 +265,30 @@ class ArithmeticTest : StringSpec({
 
         receivedValue shouldBe 2.0
     }
+
+    // ---- String concatenation ----
+
+    "string + string concatenates" {
+        val engine = klangScript()
+        engine.execute(""""hello" + " world"""").toDisplayString() shouldBe "hello world"
+    }
+
+    "string + string: chained" {
+        val engine = klangScript()
+        engine.execute(""""a" + "b" + "c"""").toDisplayString() shouldBe "abc"
+    }
+
+    "number + string throws TypeError (no implicit coercion)" {
+        val engine = klangScript()
+        io.kotest.assertions.throwables.shouldThrow<io.peekandpoke.klang.script.runtime.TypeError> {
+            engine.execute("""5 + "hello"""")
+        }
+    }
+
+    "string + null throws TypeError (no implicit coercion)" {
+        val engine = klangScript()
+        io.kotest.assertions.throwables.shouldThrow<io.peekandpoke.klang.script.runtime.TypeError> {
+            engine.execute(""""hello" + null""")
+        }
+    }
 })

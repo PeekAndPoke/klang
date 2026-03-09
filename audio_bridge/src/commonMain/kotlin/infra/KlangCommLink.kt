@@ -173,6 +173,16 @@ class KlangCommLink(capacity: Int = 8192) {
              * State of all allocated orbits (mixing channels)
              */
             val orbits: List<OrbitState>,
+            /**
+             * Backend KlangTime.internalMsNow() at the moment this message was sent.
+             * Used by the frontend to continuously correct clock drift via EMA.
+             */
+            val backendNowMs: Double,
+            /**
+             * Audio device output latency in ms (hardware buffer → speakers).
+             * Set by the JS backend from the actual AudioContext; 0.0 on JVM.
+             */
+            val outputLatencyMs: Double = 0.0,
         ) : Feedback {
             @Serializable
             data class OrbitState(

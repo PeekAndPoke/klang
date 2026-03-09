@@ -3,6 +3,7 @@ package io.peekandpoke.klang.script.runtime
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.*
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import kotlin.math.pow
 
 /**
  * Interface for loading library source code
@@ -87,6 +88,53 @@ class Interpreter(
     }
 
     /**
+     * Execute a block of statements and return the value of the last ExpressionStatement.
+     *
+     * This is the mechanism by which if/else branches produce values.
+     * Returns NullValue if the block is empty or the last statement is not an ExpressionStatement.
+     *
+     * @param statements The block of statements to execute
+     * @return The value of the last ExpressionStatement, or NullValue
+     */
+    internal fun executeBlock(statements: List<Statement>): RuntimeValue {
+        var lastValue: RuntimeValue = NullValue
+        for (stmt in statements) {
+            lastValue = executeStatement(stmt)
+        }
+        return lastValue
+    }
+
+    /**
+     * Execute a block of statements in a fresh child scope.
+     *
+     * Used for loop bodies so that `let` declarations inside a loop do not
+     * leak into the enclosing scope and are re-bound on every iteration.
+     */
+    private fun executeBlockInChildScope(statements: List<Statement>): RuntimeValue {
+        val childEnv = Environment(parent = env)
+        val childInterp = Interpreter(env = childEnv, engine = engine, callStack = callStack, executionContext = executionContext)
+        return childInterp.executeBlock(statements)
+    }
+
+    /**
+     * Execute one loop-body iteration, handling break/continue signals.
+     *
+     * Returns true  → keep iterating (normal completion or `continue`)
+     * Returns false → stop the loop  (`break`)
+     * Throws        → propagate `ReturnException` (and any other exception) upward
+     */
+    private fun executeLoopBody(statements: List<Statement>): Boolean {
+        return try {
+            executeBlockInChildScope(statements)
+            true
+        } catch (e: BreakException) {
+            false
+        } catch (e: ContinueException) {
+            true
+        }
+    }
+
+    /**
      * Execute a single statement
      *
      * Statements represent actions in the program but may also produce values.
@@ -133,6 +181,40 @@ class Interpreter(
                 }
                 throw ReturnException(returnValue)
             }
+
+            // While loop: condition evaluated in outer scope, body in fresh child scope per iteration
+            is WhileStatement -> {
+                while (toBoolean(evaluate(statement.condition))) {
+                    if (!executeLoopBody(statement.body)) break
+                }
+                NullValue
+            }
+
+            // Do-while loop: body in fresh child scope per iteration, then condition in outer scope
+            is DoWhileStatement -> {
+                do {
+                    if (!executeLoopBody(statement.body)) break
+                } while (toBoolean(evaluate(statement.condition)))
+                NullValue
+            }
+
+            // For loop: init + condition + update in loop scope; body in fresh child scope per iteration
+            is ForStatement -> {
+                val loopEnv = Environment(parent = env)
+                val loopInterp = Interpreter(env = loopEnv, engine = engine, callStack = callStack, executionContext = executionContext)
+                statement.init?.let { loopInterp.executeStatement(it) }
+                loop@ while (statement.condition == null || loopInterp.toBoolean(loopInterp.evaluate(statement.condition))) {
+                    if (!loopInterp.executeLoopBody(statement.body)) break@loop
+                    statement.update?.let { loopInterp.evaluate(it) }
+                }
+                NullValue
+            }
+
+            // Break statement - throws BreakException to exit enclosing loop
+            is BreakStatement -> throw BreakException()
+
+            // Continue statement - throws ContinueException to skip to next loop iteration
+            is ContinueStatement -> throw ContinueException()
         }
     }
 
@@ -327,6 +409,43 @@ class Interpreter(
 
             // Array literals create array values
             is ArrayLiteral -> evaluateArrayLiteral(expression)
+
+            // Assignment expressions: x = value, obj.prop = value, arr[i] = value
+            is AssignmentExpression -> evaluateAssignment(expression)
+
+            // Ternary: condition ? thenExpr : elseExpr
+            is TernaryExpression -> evaluateTernary(expression)
+
+            // Index access: arr[i], obj["key"]
+            is IndexAccess -> evaluateIndexAccess(expression)
+
+            // If expression: if (cond) { ... } else { ... }
+            // Each branch runs in its own child scope so that `let`/`const` declarations
+            // inside a branch do not leak into the enclosing scope.
+            is IfExpression -> {
+                val cond = evaluate(expression.condition)
+                if (toBoolean(cond)) {
+                    executeBlockInChildScope(expression.thenBranch)
+                } else {
+                    when (val eb = expression.elseBranch) {
+                        is ElseBranch.Block -> executeBlockInChildScope(eb.statements)
+                        is ElseBranch.If -> evaluate(eb.ifExpr)
+                        null -> NullValue
+                    }
+                }
+            }
+
+            // Template literal: `Hello ${name}!`
+            is TemplateLiteral -> {
+                val sb = StringBuilder()
+                for (part in expression.parts) {
+                    when (part) {
+                        is TemplatePart.Text -> sb.append(part.value)
+                        is TemplatePart.Interp -> sb.append(evaluate(part.expression).toDisplayString())
+                    }
+                }
+                StringValue(sb.toString())
+            }
         }
     }
 
@@ -484,7 +603,7 @@ class Interpreter(
      * @param value The runtime value to convert
      * @return true if the value is truthy, false if falsy
      */
-    private fun toBoolean(value: RuntimeValue): Boolean {
+    internal fun toBoolean(value: RuntimeValue): Boolean {
         return when (value) {
             is BooleanValue -> value.value
             is NullValue -> false
@@ -520,10 +639,9 @@ class Interpreter(
      * - !null → BooleanValue(true)
      */
     private fun evaluateUnaryOp(unaryOp: UnaryOperation): RuntimeValue {
-        val operandValue = evaluate(unaryOp.operand)
-
         return when (unaryOp.operator) {
             UnaryOperator.NEGATE -> {
+                val operandValue = evaluate(unaryOp.operand)
                 if (operandValue !is NumberValue) {
                     throw TypeError(
                         "Negation operator requires a number, got ${operandValue.toDisplayString()}",
@@ -536,6 +654,7 @@ class Interpreter(
             }
 
             UnaryOperator.PLUS -> {
+                val operandValue = evaluate(unaryOp.operand)
                 if (operandValue !is NumberValue) {
                     throw TypeError(
                         "Unary plus operator requires a number, got ${operandValue.toDisplayString()}",
@@ -548,8 +667,107 @@ class Interpreter(
             }
 
             UnaryOperator.NOT -> {
+                val operandValue = evaluate(unaryOp.operand)
                 val boolValue = toBoolean(operandValue)
                 BooleanValue(!boolValue)
+            }
+
+            UnaryOperator.PREFIX_INCREMENT -> {
+                // ++x: add 1, assign back, return new value
+                val target = unaryOp.operand
+                if (target !is Identifier) {
+                    throw TypeError(
+                        "Prefix increment (++) requires an identifier target",
+                        operation = "prefix ++",
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                val current = evaluate(target)
+                if (current !is NumberValue) {
+                    throw TypeError(
+                        "Prefix increment (++) requires a number, got ${current.toDisplayString()}",
+                        operation = "prefix ++",
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                val newValue = NumberValue(current.value + 1.0)
+                env.assign(target.name, newValue, unaryOp.location, getStackTrace())
+                newValue
+            }
+
+            UnaryOperator.PREFIX_DECREMENT -> {
+                // --x: subtract 1, assign back, return new value
+                val target = unaryOp.operand
+                if (target !is Identifier) {
+                    throw TypeError(
+                        "Prefix decrement (--) requires an identifier target",
+                        operation = "prefix --",
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                val current = evaluate(target)
+                if (current !is NumberValue) {
+                    throw TypeError(
+                        "Prefix decrement (--) requires a number, got ${current.toDisplayString()}",
+                        operation = "prefix --",
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                val newValue = NumberValue(current.value - 1.0)
+                env.assign(target.name, newValue, unaryOp.location, getStackTrace())
+                newValue
+            }
+
+            UnaryOperator.POSTFIX_INCREMENT -> {
+                // x++: save original, add 1, assign back, return original
+                val target = unaryOp.operand
+                if (target !is Identifier) {
+                    throw TypeError(
+                        "Postfix increment (++) requires an identifier target",
+                        operation = "postfix ++",
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                val current = evaluate(target)
+                if (current !is NumberValue) {
+                    throw TypeError(
+                        "Postfix increment (++) requires a number, got ${current.toDisplayString()}",
+                        operation = "postfix ++",
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                env.assign(target.name, NumberValue(current.value + 1.0), unaryOp.location, getStackTrace())
+                current  // Return original value
+            }
+
+            UnaryOperator.POSTFIX_DECREMENT -> {
+                // x--: save original, subtract 1, assign back, return original
+                val target = unaryOp.operand
+                if (target !is Identifier) {
+                    throw TypeError(
+                        "Postfix decrement (--) requires an identifier target",
+                        operation = "postfix --",
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                val current = evaluate(target)
+                if (current !is NumberValue) {
+                    throw TypeError(
+                        "Postfix decrement (--) requires a number, got ${current.toDisplayString()}",
+                        operation = "postfix --",
+                        location = unaryOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                env.assign(target.name, NumberValue(current.value - 1.0), unaryOp.location, getStackTrace())
+                current  // Return original value
             }
         }
     }
@@ -632,6 +850,36 @@ class Interpreter(
                 return BooleanValue(!valuesEqual(leftValue, rightValue))
             }
 
+            BinaryOperator.STRICT_EQUAL -> {
+                // Strict equality: same type AND same value; objects/arrays by reference
+                return BooleanValue(valuesStrictEqual(leftValue, rightValue))
+            }
+
+            BinaryOperator.STRICT_NOT_EQUAL -> {
+                return BooleanValue(!valuesStrictEqual(leftValue, rightValue))
+            }
+
+            BinaryOperator.IN -> {
+                // "key" in obj — left must be StringValue, right must be ObjectValue
+                if (leftValue !is StringValue) {
+                    throw TypeError(
+                        "Left operand of 'in' must be a string, got ${leftValue.toDisplayString()}",
+                        operation = "in",
+                        location = binOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                if (rightValue !is ObjectValue) {
+                    throw TypeError(
+                        "Right operand of 'in' must be an object, got ${rightValue.toDisplayString()}",
+                        operation = "in",
+                        location = binOp.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                return BooleanValue(leftValue.value in rightValue.properties)
+            }
+
             BinaryOperator.LESS_THAN,
             BinaryOperator.LESS_THAN_OR_EQUAL,
             BinaryOperator.GREATER_THAN,
@@ -658,6 +906,15 @@ class Interpreter(
             }
 
             else -> {
+                // String concatenation: only when BOTH operands are strings.
+                // KlangScript does NOT do implicit type coercion (number + string, null + string, etc.).
+                // Use template literals `Hello ${name}` for mixed-type string building.
+                if (binOp.operator == BinaryOperator.ADD &&
+                    leftValue is StringValue && rightValue is StringValue
+                ) {
+                    return StringValue(leftValue.value + rightValue.value)
+                }
+
                 // Arithmetic operators - ensure both operands are numbers
                 if (leftValue !is NumberValue || rightValue !is NumberValue) {
                     throw TypeError(
@@ -674,6 +931,7 @@ class Interpreter(
                     BinaryOperator.ADD -> leftValue.value + rightValue.value
                     BinaryOperator.SUBTRACT -> leftValue.value - rightValue.value
                     BinaryOperator.MULTIPLY -> leftValue.value * rightValue.value
+                    BinaryOperator.POWER -> leftValue.value.pow(rightValue.value)
                     BinaryOperator.DIVIDE -> {
                         // Check for division by zero
                         if (rightValue.value == 0.0) {
@@ -739,6 +997,24 @@ class Interpreter(
             // Different types or values
             else -> false
         }
+    }
+
+    /**
+     * Compare two runtime values for strict equality (===)
+     *
+     * Strict equality requires both same type and same value.
+     * No type coercion is performed.
+     * Objects and arrays are equal only if they are the same reference.
+     *
+     * @param left First value
+     * @param right Second value
+     * @return true if values are strictly equal, false otherwise
+     */
+    private fun valuesStrictEqual(left: RuntimeValue, right: RuntimeValue): Boolean {
+        // Types must match exactly
+        if (left::class != right::class) return false
+        // Same type - use value equality (which already does reference equality for objects/arrays)
+        return valuesEqual(left, right)
     }
 
     /**
@@ -938,6 +1214,162 @@ class Interpreter(
         }
 
         return ArrayValue(elements)
+    }
+
+    /**
+     * Evaluate an assignment expression: target = value, obj.prop = value, arr[i] = value
+     *
+     * @param assignment The assignment expression AST node
+     * @return The assigned value
+     */
+    private fun evaluateAssignment(assignment: AssignmentExpression): RuntimeValue {
+        val value = evaluate(assignment.value)
+
+        return when (val target = assignment.target) {
+            is Identifier -> {
+                // Simple variable assignment: x = value
+                env.assign(target.name, value, assignment.location, getStackTrace())
+            }
+
+            is MemberAccess -> {
+                // Object property assignment: obj.prop = value
+                val objValue = evaluate(target.obj)
+                if (objValue !is ObjectValue) {
+                    throw TypeError(
+                        "Cannot assign property '${target.property}' on non-object value: ${objValue.toDisplayString()}",
+                        operation = "member assignment",
+                        location = assignment.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                objValue.setProperty(target.property, value)
+                value
+            }
+
+            is IndexAccess -> {
+                // Index assignment: arr[i] = value or obj["key"] = value
+                val objValue = evaluate(target.obj)
+                val indexValue = evaluate(target.index)
+
+                when (objValue) {
+                    is ArrayValue -> {
+                        if (indexValue !is NumberValue) {
+                            throw TypeError(
+                                "Array index must be a number, got ${indexValue.toDisplayString()}",
+                                operation = "index assignment",
+                                location = assignment.location,
+                                stackTrace = getStackTrace()
+                            )
+                        }
+                        val idx = indexValue.value.toInt()
+                        if (idx < 0 || idx >= objValue.elements.size) {
+                            throw TypeError(
+                                "Array index $idx is out of bounds (size: ${objValue.elements.size})",
+                                operation = "index assignment",
+                                location = assignment.location,
+                                stackTrace = getStackTrace()
+                            )
+                        }
+                        objValue.elements[idx] = value
+                        value
+                    }
+
+                    is ObjectValue -> {
+                        if (indexValue !is StringValue) {
+                            throw TypeError(
+                                "Object key must be a string, got ${indexValue.toDisplayString()}",
+                                operation = "index assignment",
+                                location = assignment.location,
+                                stackTrace = getStackTrace()
+                            )
+                        }
+                        objValue.setProperty(indexValue.value, value)
+                        value
+                    }
+
+                    else -> throw TypeError(
+                        "Cannot index-assign on value: ${objValue.toDisplayString()}",
+                        operation = "index assignment",
+                        location = assignment.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+            }
+
+            else -> throw TypeError(
+                "Invalid assignment target",
+                operation = "assignment",
+                location = assignment.location,
+                stackTrace = getStackTrace()
+            )
+        }
+    }
+
+    /**
+     * Evaluate a ternary expression: condition ? thenExpr : elseExpr
+     *
+     * @param ternary The ternary expression AST node
+     * @return The value of the then or else branch depending on condition
+     */
+    private fun evaluateTernary(ternary: TernaryExpression): RuntimeValue {
+        val condition = evaluate(ternary.condition)
+        return if (toBoolean(condition)) {
+            evaluate(ternary.thenExpr)
+        } else {
+            evaluate(ternary.elseExpr)
+        }
+    }
+
+    /**
+     * Evaluate an index access expression: arr[i] or obj["key"]
+     *
+     * - ArrayValue: index must be NumberValue → returns element or NullValue if out of range
+     * - ObjectValue: index must be StringValue → returns property or NullValue if missing
+     *
+     * @param indexAccess The index access AST node
+     * @return The value at the given index/key
+     */
+    private fun evaluateIndexAccess(indexAccess: IndexAccess): RuntimeValue {
+        val objValue = evaluate(indexAccess.obj)
+        val indexValue = evaluate(indexAccess.index)
+
+        return when (objValue) {
+            is ArrayValue -> {
+                if (indexValue !is NumberValue) {
+                    throw TypeError(
+                        "Array index must be a number, got ${indexValue.toDisplayString()}",
+                        operation = "index access",
+                        location = indexAccess.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                val idx = indexValue.value.toInt()
+                if (idx < 0 || idx >= objValue.elements.size) {
+                    NullValue
+                } else {
+                    objValue.elements[idx]
+                }
+            }
+
+            is ObjectValue -> {
+                if (indexValue !is StringValue) {
+                    throw TypeError(
+                        "Object key must be a string, got ${indexValue.toDisplayString()}",
+                        operation = "index access",
+                        location = indexAccess.location,
+                        stackTrace = getStackTrace()
+                    )
+                }
+                objValue.getProperty(indexValue.value)
+            }
+
+            else -> throw TypeError(
+                "Cannot index into value: ${objValue.toDisplayString()}",
+                operation = "index access",
+                location = indexAccess.location,
+                stackTrace = getStackTrace()
+            )
+        }
     }
 
     /**

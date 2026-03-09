@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script
 
 import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 
 /**
  * Immutable library definition for KlangScript
@@ -39,6 +40,7 @@ class KlangScriptLibrary internal constructor(
     val name: String,
     val sourceCode: String,
     val native: KlangScriptExtension,
+    val docs: KlangDocsRegistry,
 ) {
     companion object {
         /**
@@ -73,7 +75,12 @@ class KlangScriptLibrary internal constructor(
         /** The KlangScript source code for this library (optional) */
         private val sourceCode = mutableListOf<String>()
 
+        /** Per-library documentation registry */
+        private val docs = KlangDocsRegistry()
+
         fun source(sourceCode: String) = apply { this.sourceCode.add(sourceCode) }
+
+        fun docs(block: KlangDocsRegistry.() -> Unit) = apply { docs.block() }
 
         /**
          * Build an immutable KlangScriptLibrary from this builder's configuration
@@ -88,6 +95,7 @@ class KlangScriptLibrary internal constructor(
                 name = name,
                 sourceCode = sourceCode.joinToString("\n\n"),
                 native = registry.buildNativeRegistry(),
+                docs = docs,
             )
         }
     }

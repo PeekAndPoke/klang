@@ -1,0 +1,699 @@
+package io.peekandpoke.klang.strudel.ui
+
+import de.peekandpoke.kraft.components.Component
+import de.peekandpoke.kraft.components.Ctx
+import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.onContextMenu
+import de.peekandpoke.ultra.html.onMouseDown
+import de.peekandpoke.ultra.html.onMouseLeave
+import de.peekandpoke.ultra.html.onMouseMove
+import io.peekandpoke.klang.strudel.lang.parser.MnNode
+import io.peekandpoke.klang.ui.DblClickCtrl
+import io.peekandpoke.klang.strudel.lang.parser.MnPattern
+import io.peekandpoke.klang.tones.note.Note
+import io.peekandpoke.klang.tones.scale.Scale
+import kotlinx.browser.window
+import kotlinx.css.Overflow
+import kotlinx.css.UserSelect
+import kotlinx.css.overflowX
+import kotlinx.css.userSelect
+import kotlinx.html.*
+import org.w3c.dom.events.Event
+import org.w3c.dom.events.MouseEvent
+import kotlin.math.roundToInt
+
+// ── Entry point ───────────────────────────────────────────────────────────────
+
+/**
+ * Renders an interactive treble-clef staff SVG for editing note atoms and rests.
+ *
+ * - Drag a note head up/down to change pitch; emits [NoteStaffEditor.Action.Replace].
+ * - Double-click a note or rest to delete it; emits [NoteStaffEditor.Action.Remove].
+ * - Double-click empty staff area to insert a note; emits [NoteStaffEditor.Action.Add].
+ * - Right-click a note/rest to toggle note ↔ rest; emits [NoteStaffEditor.Action.Replace].
+ * - Single-click a note or rest to select it; emits [NoteStaffEditor.Action.Select].
+ * - The [selection] node is highlighted with a blue stroke.
+ */
+internal fun FlowContent.noteStaffSvg(
+    /** Flat pattern used to determine which atoms/rests to display. */
+    pattern: MnPattern?,
+    /** Maps a raw atom value (e.g. "c4") to a staff position (C4=0, D4=1, …), or null if not renderable. */
+    atomToPos: (String) -> Int?,
+    /** Maps a staff position back to a raw atom value string (e.g. 6 → "b4"). */
+    posToValue: (Int) -> String,
+    /** Optional scale name used to draw a key signature on the staff. */
+    scaleName: String? = null,
+    /** Hierarchical pattern used for bracket structure; falls back to [pattern] if null. */
+    structuralPattern: MnPattern? = null,
+    /** Currently selected atom or rest — highlighted with a blue stroke. */
+    selection: MnSelection? = null,
+    /** Receives all user interactions with the staff. */
+    onAction: (NoteStaffEditor.Action) -> Unit = {},
+) {
+    this@noteStaffSvg.NoteStaffComp(
+        pattern, atomToPos, posToValue, scaleName, structuralPattern, selection, onAction,
+    )
+}
+
+@Suppress("FunctionName")
+private fun Tag.NoteStaffComp(
+    pattern: MnPattern?,
+    atomToPos: (String) -> Int?,
+    posToValue: (Int) -> String,
+    scaleName: String?,
+    structuralPattern: MnPattern?,
+    selection: MnSelection?,
+    onAction: (NoteStaffEditor.Action) -> Unit,
+) = comp(
+    NoteStaffEditor.Props(
+        pattern, atomToPos, posToValue, scaleName, structuralPattern, selection, onAction,
+    )
+) { NoteStaffEditor(it) }
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Props>(ctx) {
+
+    // ── Action type ───────────────────────────────────────────────────────────
+
+    /** Actions emitted by the note staff editor. */
+    sealed interface Action {
+        /** User clicked a note or rest to select it. */
+        data class Select(val selection: MnSelection) : Action
+
+        /** User double-clicked a note or rest to delete it. */
+        data class Remove(val node: MnNode) : Action
+
+        /** User double-clicked an empty staff area to insert a note.
+         *  [insertAfterAtomId] is the id of the atom to insert after, or null to append at the start. */
+        data class Add(val insertAfterAtomId: Int?, val staffPos: Int) : Action
+
+        /** User dragged a note to a new pitch, or right-clicked to toggle note ↔ rest. */
+        data class Replace(val old: MnNode, val new: MnNode) : Action
+    }
+
+    // ── Layout constants ──────────────────────────────────────────────────────
+
+    companion object {
+        private const val HALF_STEP = 4.8       // px per diatonic step
+        private const val NOTE_RADIUS_X = 4.8   // half-width of note head ellipse
+        private const val NOTE_RADIUS_Y = 3.6   // half-height
+        private const val LEFT_MARGIN = 38.0    // px reserved for clef (no key sig)
+        private const val NOTE_COL_W = 22.0     // px per note column
+        private const val BRACKET_COL_W = 10.0 // px per bracket mark column
+        private const val STAFF_TOP = 29.0      // top of staff (top line Y)
+        private const val CLEF_END_X = 30.0    // approx x where clef glyph ends
+        private const val KEY_SIG_ACC_W = 9.0  // px per key-signature accidental
+        private const val NOTE_GAP = 16.0      // gap between last key-sig acc and first note
+
+        // Staff lines are at treble positions 2=E4, 4=G4, 6=B4, 8=D5, 10=F5
+        private val STAFF_LINE_POSITIONS = listOf(2, 4, 6, 8, 10)
+
+        /** Convert a staff position to SVG Y coordinate. C4=0, D4=1, … F5=10 is top line. */
+        private fun staffPosToY(pos: Int, topY: Double): Double = topY + (10 - pos) * HALF_STEP
+
+        /** Staff positions for sharps in treble clef (FCGDAEB order). */
+        private val SHARP_KEY_POSITIONS = linkedMapOf(
+            "F" to 10, "C" to 7, "G" to 11, "D" to 8, "A" to 5, "E" to 9, "B" to 6
+        )
+
+        /** Staff positions for flats in treble clef (BEADGCF order). */
+        private val FLAT_KEY_POSITIONS = linkedMapOf(
+            "B" to 6, "E" to 9, "A" to 5, "D" to 8, "G" to 4, "C" to 7, "F" to 10
+        )
+
+        enum class BracketType { Group, Alternation }
+
+        sealed class LayoutItem {
+            data class Note(val node: MnNode) : LayoutItem()
+            data class BracketMark(val type: BracketType, val isOpen: Boolean) : LayoutItem()
+        }
+
+        private data class KeySignature(val symbol: String, val staffPositions: List<Int>)
+
+        private fun buildKeySignature(scaleName: String?): KeySignature? {
+            scaleName ?: return null
+            val scale = Scale.get(scaleName)
+            if (scale.empty) return null
+
+            val sharpLetters = scale.notes
+                .map { Note.get(it) }
+                .filter { !it.empty && it.acc.contains('#') }
+                .map { it.letter }
+                .toSet()
+            val flatLetters = scale.notes
+                .map { Note.get(it) }
+                .filter { !it.empty && it.acc.isNotEmpty() && !it.acc.contains('#') }
+                .map { it.letter }
+                .toSet()
+
+            return when {
+                sharpLetters.isNotEmpty() -> {
+                    val positions = SHARP_KEY_POSITIONS.entries.filter { it.key in sharpLetters }.map { it.value }
+                    if (positions.isEmpty()) null else KeySignature("♯", positions)
+                }
+
+                flatLetters.isNotEmpty() -> {
+                    val positions = FLAT_KEY_POSITIONS.entries.filter { it.key in flatLetters }.map { it.value }
+                    if (positions.isEmpty()) null else KeySignature("♭", positions)
+                }
+
+                else -> null
+            }
+        }
+    }
+
+    // ── Props ─────────────────────────────────────────────────────────────────
+
+    data class Props(
+        /** Flat pattern used to determine which atoms/rests to display. */
+        val pattern: MnPattern?,
+        /** Maps a raw atom value (e.g. "c4") to a staff position (C4=0, D4=1, …). */
+        val atomToPos: (String) -> Int?,
+        /** Maps a staff position back to a raw atom value string. */
+        val posToValue: (Int) -> String,
+        /** Optional scale name used to draw a key signature. */
+        val scaleName: String?,
+        /** Hierarchical pattern used for bracket structure. */
+        val structuralPattern: MnPattern?,
+        /** Currently selected atom or rest — highlighted with a blue stroke. */
+        val selection: MnSelection?,
+        /** Receives all user interactions with the staff. */
+        val onAction: (Action) -> Unit,
+    )
+
+    // ── Drag / click state ────────────────────────────────────────────────────
+
+    private var dragAtomId: Int? = null
+    private var dragStartY: Double = 0.0
+    private var dragStartPos: Int = 0
+    private var dragPreviewPos: Int? = null
+
+    private val dblClick = DblClickCtrl()
+
+    /** Set to true when a double-click removal was handled in onMouseDown, so onDblClick skips insertion. */
+    private var doubleClickHandled: Boolean = false
+
+    // ── Layout snapshot (updated each render, used for click-to-insert) ────────
+
+    /** topY of the last rendered staff, used to map click Y → staff position. */
+    private var lastTopY: Double = STAFF_TOP
+
+    /** (atomId, svgX-center) for each note atom in the last rendered layout, in order. */
+    private var lastAtomCenters: List<Pair<Int, Double>> = emptyList()
+
+    // ── Ghost note state ──────────────────────────────────────────────────────
+
+    /** SVG-relative x of the mouse, or null when not hovering over the staff area. */
+    private var ghostSvgX: Double? = null
+
+    /** Snapped staff position under the mouse cursor. */
+    private var ghostStaffPos: Int? = null
+
+    // ── Derived ───────────────────────────────────────────────────────────────
+
+    private val staffItems: List<MnNode>
+        get() = props.pattern?.let { p ->
+            buildList { p.items.forEach { collectStaffNodes(it, this) } }
+        } ?: emptyList()
+
+    private fun collectStaffNodes(node: MnNode, items: MutableList<MnNode>) {
+        when (node) {
+            is MnNode.Atom -> items.add(node)
+            is MnNode.Rest -> if (node.sourceRange != null) items.add(node)
+            is MnNode.Group -> node.items.forEach { collectStaffNodes(it, items) }
+            is MnNode.Alternation -> node.items.forEach { collectStaffNodes(it, items) }
+            is MnNode.Stack -> node.layers.firstOrNull()?.forEach { collectStaffNodes(it, items) }
+            is MnNode.Choice -> node.options.forEach { collectStaffNodes(it, items) }
+            is MnNode.Repeat -> collectStaffNodes(node.node, items)
+            is MnNode.Linebreak -> {}
+        }
+    }
+
+    private fun buildLayoutItems(node: MnNode, result: MutableList<LayoutItem>) {
+        when (node) {
+            is MnNode.Atom -> result.add(LayoutItem.Note(node))
+            is MnNode.Rest -> if (node.sourceRange != null) result.add(LayoutItem.Note(node))
+            is MnNode.Group -> {
+                result.add(LayoutItem.BracketMark(BracketType.Group, isOpen = true))
+                node.items.forEach { buildLayoutItems(it, result) }
+                result.add(LayoutItem.BracketMark(BracketType.Group, isOpen = false))
+            }
+
+            is MnNode.Alternation -> {
+                result.add(LayoutItem.BracketMark(BracketType.Alternation, isOpen = true))
+                node.items.forEach { buildLayoutItems(it, result) }
+                result.add(LayoutItem.BracketMark(BracketType.Alternation, isOpen = false))
+            }
+
+            is MnNode.Stack -> node.layers.firstOrNull()?.forEach { buildLayoutItems(it, result) }
+            is MnNode.Choice -> node.options.forEach { buildLayoutItems(it, result) }
+            is MnNode.Repeat -> buildLayoutItems(node.node, result)
+            is MnNode.Linebreak -> {}
+        }
+    }
+
+    // ── Window drag handlers ──────────────────────────────────────────────────
+
+    private val onMouseMoveWindow: (Event) -> Unit = moveHandler@{ e ->
+        val me = e as? MouseEvent ?: return@moveHandler
+        val startPos = dragStartPos
+        val delta = ((dragStartY - me.clientY) / HALF_STEP).roundToInt()
+        dragPreviewPos = startPos + delta
+        triggerRedraw()
+    }
+
+    private val onMouseUpWindow: (Event) -> Unit = upHandler@{ e ->
+        val me = e as? MouseEvent ?: return@upHandler
+        val atomId = dragAtomId ?: return@upHandler
+        val delta = ((dragStartY - me.clientY) / HALF_STEP).roundToInt()
+        val newPos = dragStartPos + delta
+        val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
+        if (atom != null) {
+            if (delta == 0) props.onAction(Action.Select(MnSelection.Atom(atom)))
+            else props.onAction(Action.Replace(atom, atom.copy(value = props.posToValue(newPos))))
+        }
+        dragAtomId = null
+        dragPreviewPos = null
+        window.removeEventListener("mousemove", onMouseMoveWindow)
+        window.removeEventListener("mouseup", onMouseUpWindow)
+        triggerRedraw()
+    }
+
+    init {
+        lifecycle.onUnmount {
+            window.removeEventListener("mousemove", onMouseMoveWindow)
+            window.removeEventListener("mouseup", onMouseUpWindow)
+        }
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
+
+    override fun VDom.render() {
+        div {
+            css {
+                overflowX = Overflow.auto
+                userSelect = UserSelect.none
+            }
+            onMouseDown { e ->
+                val element = e.target as? org.w3c.dom.Element
+                doubleClickHandled = false
+
+                // Rest click
+                val restEl = element?.closest("[data-rest-range-start]")
+                if (restEl != null) {
+                    val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onMouseDown
+                    val rest = staffItems.filterIsInstance<MnNode.Rest>()
+                        .find { it.sourceRange?.first == rangeStart } ?: return@onMouseDown
+                    dblClick(rangeStart) {
+                        doubleClickHandled = true
+                        props.onAction(Action.Remove(rest))
+                    }
+                    if (!doubleClickHandled) props.onAction(Action.Select(MnSelection.Rest(rest)))
+                    return@onMouseDown
+                }
+
+                // Note click → double-click removes, single click starts drag
+                val noteEl = element?.closest("[data-atom-id]") ?: return@onMouseDown
+                val atomIdStr = noteEl.getAttribute("data-atom-id") ?: return@onMouseDown
+                val posStr = noteEl.getAttribute("data-staff-pos") ?: return@onMouseDown
+                val atomId = atomIdStr.toIntOrNull() ?: return@onMouseDown
+                val pos = posStr.toIntOrNull() ?: return@onMouseDown
+                val atom = staffItems.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
+
+                if (atom != null) {
+                    dblClick(atomId) {
+                        doubleClickHandled = true
+                        props.onAction(Action.Remove(atom))
+                    }
+                }
+                if (doubleClickHandled) return@onMouseDown
+
+                e.preventDefault()
+                dragAtomId = atomId
+                dragStartY = e.clientY.toDouble()
+                dragStartPos = pos
+                dragPreviewPos = pos
+                window.addEventListener("mousemove", onMouseMoveWindow)
+                window.addEventListener("mouseup", onMouseUpWindow)
+                triggerRedraw()
+            }
+
+            // Double-click on empty staff area → insert a note.
+            // Removal is handled in onMouseDown via DblClickCtrl (timestamp-based detection),
+            // which avoids the detached-DOM problem that prevents the dblclick event from firing.
+            onDblClick { e ->
+                // Removal is handled in onMouseDown (double-click detection by timestamp).
+                // Here we only handle double-click on empty staff area → insert a note.
+                if (doubleClickHandled) { doubleClickHandled = false; return@onDblClick }
+
+                val container = e.currentTarget as? org.w3c.dom.Element
+                val svg = container?.querySelector("svg") ?: return@onDblClick
+                val rect = svg.getBoundingClientRect()
+                val svgX = e.clientX - rect.left
+                val svgY = e.clientY - rect.top
+                val (afterId, staffPos) = computeInsertionPoint(svgX, svgY)
+                props.onAction(Action.Add(afterId, staffPos))
+            }
+
+            // Right-click: toggle note ↔ rest
+            onContextMenu { e ->
+                e.preventDefault()
+                val element = e.target as? org.w3c.dom.Element
+
+                // Note → rest
+                val noteEl = element?.closest("[data-atom-id]")
+                if (noteEl != null) {
+                    val atomId = noteEl.getAttribute("data-atom-id")?.toIntOrNull() ?: return@onContextMenu
+                    val atom = staffItems.filterIsInstance<MnNode.Atom>()
+                        .find { it.id == atomId } ?: return@onContextMenu
+                    props.onAction(Action.Replace(atom, MnNode.Rest(atom.sourceRange)))
+                    return@onContextMenu
+                }
+
+                // Rest → note (at the clicked pitch)
+                val restEl = element?.closest("[data-rest-range-start]")
+                if (restEl != null) {
+                    val rangeStart = restEl.getAttribute("data-rest-range-start")?.toIntOrNull() ?: return@onContextMenu
+                    val rest = staffItems.filterIsInstance<MnNode.Rest>()
+                        .find { it.sourceRange?.first == rangeStart } ?: return@onContextMenu
+                    val svg = restEl.closest("svg")
+                    val staffPos = if (svg != null) {
+                        val rect = svg.getBoundingClientRect()
+                        computeInsertionPoint(e.clientX - rect.left, e.clientY - rect.top).second
+                    } else 6
+                    props.onAction(Action.Replace(rest, MnNode.Atom(value = props.posToValue(staffPos))))
+                }
+            }
+            // Mouse move over staff area: update ghost note position
+            onMouseMove { e ->
+                if (dragAtomId != null) return@onMouseMove
+                val element = e.target as? org.w3c.dom.Element
+                val onNote = element?.closest("[data-atom-id]") != null ||
+                        element?.closest("[data-rest-range-start]") != null
+                val svg = element?.closest("svg")
+                if (onNote || svg == null) {
+                    if (ghostSvgX != null) {
+                        ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+                    }
+                    return@onMouseMove
+                }
+                val rect = svg.getBoundingClientRect()
+                val svgX = e.clientX - rect.left
+                val snapped = ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
+                if (svgX != ghostSvgX || snapped != ghostStaffPos) {
+                    ghostSvgX = svgX; ghostStaffPos = snapped; triggerRedraw()
+                }
+            }
+
+            onMouseLeave {
+                if (ghostSvgX != null) {
+                    ghostSvgX = null; ghostStaffPos = null; triggerRedraw()
+                }
+            }
+
+            unsafe {
+                +buildSvg()
+            }
+        }
+    }
+
+    // ── SVG builder ───────────────────────────────────────────────────────────
+
+    private fun buildSvg(): String {
+        // Key signature
+        val keySig = buildKeySignature(props.scaleName)
+        val keySigWidth = if (keySig != null) {
+            keySig.staffPositions.size * KEY_SIG_ACC_W + NOTE_GAP
+        } else {
+            NOTE_GAP
+        }
+        val noteStartX = maxOf(LEFT_MARGIN, CLEF_END_X + keySigWidth)
+
+        // Build interleaved layout: bracket marks get their own column alongside notes/rests
+        val layoutItems = buildList {
+            (props.structuralPattern ?: props.pattern)?.items?.forEach {
+                buildLayoutItems(it, this)
+            }
+        }
+
+        // Dynamic layout: expand height for notes outside normal staff range
+        // Also account for key sig accidentals that may go above the top staff line (e.g. G5=11)
+        val notePositions = layoutItems.filterIsInstance<LayoutItem.Note>()
+            .mapNotNull { (it.node as? MnNode.Atom)?.let { a -> props.atomToPos(a.value) } }
+        val keySigMaxPos = keySig?.staffPositions?.maxOrNull() ?: 10
+        val maxPos = (notePositions.maxOrNull() ?: 10).coerceAtLeast(keySigMaxPos).coerceAtLeast(10)
+        val minPos = (notePositions.minOrNull() ?: 0).coerceAtMost(0)
+        val topExtra = maxOf(0.0, (maxPos - 10) * HALF_STEP + HALF_STEP * 1.5)
+        val bottomExtra = maxOf(0.0, (-minPos) * HALF_STEP + HALF_STEP * 2)
+        val topY = STAFF_TOP + topExtra
+        val height = 104.0 + topExtra + bottomExtra
+
+        val totalItemsWidth = layoutItems.sumOf { if (it is LayoutItem.Note) NOTE_COL_W else BRACKET_COL_W }
+        val svgWidth = (noteStartX + totalItemsWidth + NOTE_COL_W).coerceAtLeast(160.0)
+
+        val sb = StringBuilder()
+        sb.append("""<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth.toInt()}" height="${height.toInt()}" style="display:block;font-family:serif;">""")
+
+        // Brackets first (behind everything)
+        var x = noteStartX
+        for (item in layoutItems) {
+            when (item) {
+                is LayoutItem.Note -> x += NOTE_COL_W
+                is LayoutItem.BracketMark -> {
+                    renderBracketMark(sb, item, x + BRACKET_COL_W / 2, topY)
+                    x += BRACKET_COL_W
+                }
+            }
+        }
+
+        // Staff lines
+        val lineWidth = svgWidth - 8.0
+        for (linePos in STAFF_LINE_POSITIONS) {
+            val y = staffPosToY(linePos, topY)
+            sb.append("""<line x1="4" y1="$y" x2="${lineWidth.toInt()}" y2="$y" stroke="#333" stroke-width="1.2"/>""")
+        }
+
+        // Treble clef
+        sb.append(
+            """<text x="4" y="${
+                staffPosToY(
+                    4,
+                    topY
+                ) + NOTE_RADIUS_Y * 4
+            }" font-size="42" fill="#333" style="user-select:none;line-height:1">&#119070;</text>"""
+        )
+
+        // Key signature accidentals
+        if (keySig != null) {
+            keySig.staffPositions.forEachIndexed { idx, pos ->
+                val x = CLEF_END_X + idx * KEY_SIG_ACC_W + KEY_SIG_ACC_W / 2
+                val y = staffPosToY(pos, topY)
+                sb.append("""<text x="$x" y="${y + 4}" text-anchor="middle" font-size="15" font-weight="bold" fill="#333" style="user-select:none">${keySig.symbol}</text>""")
+            }
+        }
+
+        // Notes and rests (on top of staff lines and brackets)
+        // Also build layout snapshot for click-to-insert and ghost preview
+        val atomCenters = mutableListOf<Pair<Int, Double>>()
+        x = noteStartX
+        for (item in layoutItems) {
+            when (item) {
+                is LayoutItem.Note -> {
+                    val cx = x + NOTE_COL_W / 2
+                    when (val node = item.node) {
+                        is MnNode.Atom -> {
+                            renderAtomSvg(sb, node, cx, topY); atomCenters.add(node.id to cx)
+                        }
+
+                        is MnNode.Rest -> renderRestSvg(sb, node, cx, topY, node.sourceRange == props.selection.rest?.sourceRange)
+                        else -> {}
+                    }
+                    x += NOTE_COL_W
+                }
+                is LayoutItem.BracketMark -> x += BRACKET_COL_W
+            }
+        }
+        lastTopY = topY
+        lastAtomCenters = atomCenters
+
+        // Ghost note preview (topmost layer so it's always visible)
+        val gx = ghostSvgX
+        val gpos = ghostStaffPos
+        if (gx != null && gpos != null) {
+            val gy = staffPosToY(gpos, topY)
+            renderLedgerLines(sb, gpos, gx, topY)
+            sb.append("""<ellipse cx="$gx" cy="$gy" rx="$NOTE_RADIUS_X" ry="$NOTE_RADIUS_Y" fill="#2266cc" opacity="0.35" style="pointer-events:none"/>""")
+        }
+
+        sb.append("</svg>")
+        return sb.toString()
+    }
+
+    /** Maps SVG coordinates to an insertion point: (insertAfterAtomId, staffPosition). */
+    private fun computeInsertionPoint(svgX: Double, svgY: Double): Pair<Int?, Int> {
+        val staffPos = ((lastTopY + 10 * HALF_STEP - svgY) / HALF_STEP).roundToInt()
+        val insertAfterAtomId = lastAtomCenters
+            .filter { (_, cx) -> cx <= svgX }
+            .maxByOrNull { (_, cx) -> cx }
+            ?.first
+        return insertAfterAtomId to staffPos
+    }
+
+    private fun renderBracketMark(sb: StringBuilder, mark: LayoutItem.BracketMark, x: Double, topY: Double) {
+        val ext = 4.0
+        val yTop = topY - ext
+        val yBottom = topY + 8 * HALF_STEP + ext
+        val yMid = (yTop + yBottom) / 2
+        val tickW = 5.0
+        val sw = "2"
+        val color = "#AAA"
+
+        when (mark.type) {
+            BracketType.Group -> {
+                sb.append("""<line x1="$x" y1="$yTop" x2="$x" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                if (mark.isOpen) {
+                    sb.append("""<line x1="$x" y1="$yTop"    x2="${x + tickW}" y2="$yTop"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x" y1="$yBottom" x2="${x + tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                } else {
+                    sb.append("""<line x1="${x - tickW}" y1="$yTop"    x2="$x" y2="$yTop"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="${x - tickW}" y1="$yBottom" x2="$x" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                }
+            }
+
+            BracketType.Alternation -> {
+                if (mark.isOpen) {
+                    sb.append("""<line x1="${x + tickW}" y1="$yTop"    x2="$x"           y2="$yMid"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x"           y1="$yMid"    x2="${x + tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                } else {
+                    sb.append("""<line x1="${x - tickW}" y1="$yTop"    x2="$x"           y2="$yMid"    stroke="$color" stroke-width="$sw"/>""")
+                    sb.append("""<line x1="$x"           y1="$yMid"    x2="${x - tickW}" y2="$yBottom" stroke="$color" stroke-width="$sw"/>""")
+                }
+            }
+        }
+    }
+
+    private fun renderRestSvg(sb: StringBuilder, rest: MnNode.Rest, x: Double, topY: Double, isActive: Boolean = false) {
+        val rangeStart = rest.sourceRange?.first ?: return
+        val lineY = staffPosToY(6, topY)
+        val w = NOTE_RADIUS_X * 2.4
+        val h = HALF_STEP * 0.75
+        val stroke = if (isActive) """ stroke="#2266cc" stroke-width="2"""" else ""
+        sb.append("""<g data-rest-range-start="$rangeStart" style="cursor:default">""")
+        sb.append(
+            """<rect x="${x - w / 2}" y="${lineY - h}" width="$w" height="$h" rx="1" """ +
+                    """fill="${if (isActive) "#3355aa" else "#444"}"$stroke/>"""
+        )
+        sb.append("</g>")
+    }
+
+    private fun renderAtomSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, topY: Double) {
+        val isActive = atom.id == props.selection.atom?.id
+        val isDragging = dragAtomId == atom.id
+        val pos = if (isDragging) dragPreviewPos ?: dragStartPos else props.atomToPos(atom.value)
+
+        if (pos == null) {
+            renderUnknownSvg(sb, atom, x, isActive, topY)
+            return
+        }
+
+        val y = staffPosToY(pos, topY)
+        val noteColor = when {
+            isDragging -> "#2266cc"
+            isActive -> "#3355aa"
+            else -> "#222"
+        }
+        val strokeColor = when {
+            isActive || isDragging -> "#2266cc"
+            else -> "#333"
+        }
+        val strokeWidth = if (isActive || isDragging) 2.0 else 1.2
+
+        // Wrap all parts in a <g> so `closest("[data-atom-id]")` works from stem, accidental, etc.
+        sb.append("""<g data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:default">""")
+
+        renderLedgerLines(sb, pos, x, topY)
+
+        val stemUp = pos < 6
+        if (stemUp) {
+            val stemX = x + NOTE_RADIUS_X - 0.5
+            val stemTop = y - HALF_STEP * 3.5
+            sb.append("""<line x1="$stemX" y1="${y - NOTE_RADIUS_Y + 2}" x2="$stemX" y2="$stemTop" stroke="$noteColor" stroke-width="1.2"/>""")
+        } else {
+            val stemX = x - NOTE_RADIUS_X + 0.5
+            val stemBottom = y + HALF_STEP * 3.5
+            sb.append("""<line x1="$stemX" y1="${y + NOTE_RADIUS_Y - 2}" x2="$stemX" y2="$stemBottom" stroke="$noteColor" stroke-width="1.2"/>""")
+        }
+
+        sb.append(
+            """<ellipse cx="$x" cy="$y" rx="$NOTE_RADIUS_X" ry="$NOTE_RADIUS_Y" """ +
+                    """fill="$noteColor" stroke="$strokeColor" stroke-width="$strokeWidth"/>"""
+        )
+
+        renderAccidental(sb, atom.value, x, y)
+
+        sb.append("</g>")
+    }
+
+    private fun renderUnknownSvg(sb: StringBuilder, atom: MnNode.Atom, x: Double, isActive: Boolean, topY: Double) {
+        val pos = 0 // C4
+        val y = staffPosToY(pos, topY)
+        renderLedgerLines(sb, pos, x, topY)
+        val color = if (isActive) "#2266cc" else "#999"
+        sb.append(
+            """<text x="$x" y="${y + 3}" text-anchor="middle" font-size="11" fill="$color" """ +
+                    """data-atom-id="${atom.id}" data-staff-pos="$pos" style="cursor:default;user-select:none">?</text>"""
+        )
+    }
+
+    private fun renderLedgerLines(sb: StringBuilder, pos: Int, x: Double, topY: Double) {
+        val ledgerHalfW = NOTE_RADIUS_X + 2.5
+        // Below staff: pos <= 0, every even position gets a ledger line
+        var p = 0
+        while (p >= pos) {
+            val y = staffPosToY(p, topY)
+            sb.append("""<line x1="${x - ledgerHalfW}" y1="$y" x2="${x + ledgerHalfW}" y2="$y" stroke="#555" stroke-width="1.2"/>""")
+            p -= 2
+        }
+        // Above staff: pos >= 12, every even position gets a ledger line
+        p = 12
+        while (p <= pos) {
+            val y = staffPosToY(p, topY)
+            sb.append("""<line x1="${x - ledgerHalfW}" y1="$y" x2="${x + ledgerHalfW}" y2="$y" stroke="#555" stroke-width="1.2"/>""")
+            p += 2
+        }
+    }
+
+    private fun renderAccidental(sb: StringBuilder, value: String, x: Double, y: Double) {
+        // Detect sharps and flats in note names like "c#4", "db3", "f##5"
+        val acc = extractAccidental(value) ?: return
+        val accText = when {
+            acc.startsWith("##") || acc.startsWith("x") -> "𝄪"
+            acc.startsWith("#") -> "♯"
+            acc.startsWith("bb") || acc.startsWith("ff") -> "𝄫"
+            acc.startsWith("b") || acc.startsWith("f") -> "♭"
+            else -> return
+        }
+        val ax = x - NOTE_RADIUS_X - 6.0
+        sb.append(
+            """<text x="$ax" y="${y + 3}" text-anchor="middle" font-size="10" fill="#333" style="user-select:none">$accText</text>"""
+        )
+    }
+
+    private fun extractAccidental(value: String): String? {
+        // value examples: "c4", "c#4", "db3", "f##5", "bb4", "2", "~"
+        if (value.isEmpty() || value == "~") return null
+        val firstChar = value[0].lowercaseChar()
+        if (firstChar !in 'a'..'g') return null
+        val rest = value.drop(1).takeWhile { it == '#' || it == 'b' || it == 'x' || it == 'f' || it == 's' }
+        return rest.ifEmpty { null }
+    }
+}
+
+// ── Event helpers ─────────────────────────────────────────────────────────────
+
+private fun CommonAttributeGroupFacade.onDblClick(handler: (MouseEvent) -> Unit) {
+    consumer.onTagEvent(this, "ondblclick", handler.asDynamic())
+}

@@ -112,8 +112,16 @@ class JsAudioBackend(
                 // We pass all feedback through to the frontend
                 val decoded = WorkletContract.decodeFeed(message)
 
+                // Augment Diagnostics with real output latency from the actual AudioContext.
+                // The worklet has no access to AudioContext properties, so we enrich here.
+                val enriched = if (decoded is KlangCommLink.Feedback.Diagnostics) {
+                    decoded.copy(outputLatencyMs = (ctx.outputLatency + ctx.baseLatency) * 1000.0)
+                } else {
+                    decoded
+                }
+
                 // Forward
-                commLink.feedback.send(decoded)
+                commLink.feedback.send(enriched)
 
                 // console.log("JsAudioBackend received message from Worklet:", decoded::class.simpleName)
             }

@@ -26,7 +26,7 @@ class LangSynthesisSpec : FunSpec({
     }
 
     test("fmh() should work as standalone function") {
-        val pat = compile("""fmh(2.5)""")!!
+        val pat = compile("""note("a").apply(fmh(2.5))""")!!
         val events = pat.queryArc(0.0, 1.0)
 
         events.first().data.fmh shouldBe 2.5

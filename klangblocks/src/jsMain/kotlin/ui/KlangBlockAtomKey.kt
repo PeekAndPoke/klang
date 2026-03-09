@@ -1,0 +1,4 @@
+package io.peekandpoke.klang.blocks.ui
+
+/** Identifies a unique active atom by its slot and char range. */
+data class KlangBlockAtomKey(val slotIndex: Int?, val atomStart: Int?, val atomEnd: Int?)

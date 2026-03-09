@@ -1,0 +1,68 @@
+@file:Suppress("PropertyName")
+
+import Deps.Test.configureJvmTests
+
+plugins {
+    idea
+    kotlin("multiplatform")
+}
+
+val GROUP: String by project
+val VERSION_NAME: String by project
+
+group = GROUP
+version = VERSION_NAME
+
+kotlin {
+    js {
+        browser {
+            commonWebpackConfig { devtool = "source-map" }
+        }
+        compilations.all {
+            compileTaskProvider.configure {
+                compilerOptions.freeCompilerArgs.addAll(
+                    "-Xir-property-lazy-initialization=false",
+                    "-Xir-minimized-member-names=false",
+                )
+            }
+        }
+    }
+
+    jvmToolchain(Deps.jvmTargetVersion)
+    jvm {}
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                api(project(":common"))
+                api(project(":klangscript"))
+            }
+        }
+
+        commonTest {
+            dependencies {
+                Deps.Test { commonTestDeps() }
+            }
+        }
+
+        jsMain {
+            dependencies {
+                api(project(":klangui"))
+                api(Deps.KotlinLibs.Kraft.core)
+                api(Deps.KotlinLibs.Kraft.semanticui)
+            }
+        }
+
+        jvmMain { dependencies {} }
+
+        jvmTest {
+            dependencies {
+                Deps.Test { jvmTestDeps() }
+            }
+        }
+    }
+}
+
+tasks {
+    configureJvmTests()
+}
