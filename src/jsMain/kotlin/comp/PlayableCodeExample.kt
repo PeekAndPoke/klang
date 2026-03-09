@@ -135,7 +135,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         currentCycle = 0
 
                         // Set up cycle counter and code highlighting
-                        playback?.signals?.subscribeToStream { signal ->
+                        playback?.onSignal { signal ->
                             when (signal) {
                                 is KlangPlaybackSignal.CycleCompleted -> {
                                     currentCycle = signal.cycleIndex + 1

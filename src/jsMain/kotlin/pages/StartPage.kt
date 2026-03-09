@@ -217,10 +217,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             val playback = Player.get()?.playStrudelOnce(song)
 
             // Wait for the song to finish before navigating
-            var unsubscribe: (() -> Unit)? = null
-            unsubscribe = playback?.signals?.subscribeToStream { signal ->
+            playback?.onSignal { signal ->
                 if (signal is PlaybackStopped) {
-                    unsubscribe?.invoke()
                     launch {
                         delay(1000.milliseconds)
                         console.log("Playback stopped, navigating to new song page")

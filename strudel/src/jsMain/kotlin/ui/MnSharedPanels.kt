@@ -23,12 +23,31 @@ fun FlowContent.mnPatternTextInput(
     text: String,
     atom: MnNode.Atom?,
     parseError: Boolean,
+    highlightedRanges: Set<IntRange> = emptySet(),
     onChange: (newText: String, cursor: Int) -> Unit,
 ) {
-    val highlightStart = atom?.sourceRange?.first
-    val highlightEnd = if (atom != null && highlightStart != null)
-        (highlightStart + MnRenderer.renderNode(atom).length).coerceAtMost(text.length)
+    // Selection highlight (blue)
+    val selStart = atom?.sourceRange?.first
+    val selEnd = if (atom != null && selStart != null)
+        (selStart + MnRenderer.renderNode(atom).length).coerceAtMost(text.length)
     else null
+
+    // Build sorted, non-overlapping highlight spans combining selection + playback
+    data class Span(val start: Int, val end: Int, val type: String) // "sel" or "play"
+
+    val spans = mutableListOf<Span>()
+    if (selStart != null && selEnd != null && selStart < selEnd) {
+        spans.add(Span(selStart, selEnd, "sel"))
+    }
+    for (range in highlightedRanges) {
+        val s = range.first.coerceAtLeast(0)
+        val e = (range.last + 1).coerceAtMost(text.length)
+        // Skip playback highlights that overlap with the selection
+        if (s < e && (selStart == null || selEnd == null || e <= selStart || s >= selEnd)) {
+            spans.add(Span(s, e, "play"))
+        }
+    }
+    spans.sortBy { it.start }
 
     div {
         div {
@@ -54,20 +73,24 @@ fun FlowContent.mnPatternTextInput(
                     overflow = Overflow.hidden
                     color = Color("transparent")
                 }
-                if (highlightStart != null && highlightEnd != null && highlightStart < highlightEnd) {
-                    +text.substring(0, highlightStart)
-                    mark {
-                        css {
-                            val col = Color("#CCF")
-                            backgroundColor = col.withAlpha(0.5)
-                            color = Color("transparent")
-                            borderRadius = 2.px
-                            // box-shadow instead of border so it doesn't affect line height
-                            put("box-shadow", "0 0 0 1px ${col.withAlpha(0.8)}")
+                if (spans.isNotEmpty()) {
+                    var cursor = 0
+                    for (span in spans) {
+                        if (span.start > cursor) +text.substring(cursor, span.start)
+                        mark {
+                            css {
+                                val col = if (span.type == "play") Color("#e67e22") else Color("#CCF")
+                                val alpha = if (span.type == "play") 0.4 else 0.5
+                                backgroundColor = col.withAlpha(alpha)
+                                color = Color("transparent")
+                                borderRadius = 2.px
+                                put("box-shadow", "0 0 0 1px ${col.withAlpha(alpha + 0.3)}")
+                            }
+                            +text.substring(span.start, span.end)
                         }
-                        +text.substring(highlightStart, highlightEnd)
+                        cursor = span.end
                     }
-                    +text.substring(highlightEnd)
+                    if (cursor < text.length) +text.substring(cursor)
                 } else {
                     +text
                 }

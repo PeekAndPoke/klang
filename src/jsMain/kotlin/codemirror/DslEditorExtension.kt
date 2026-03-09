@@ -36,7 +36,7 @@ fun dslEditorExtension(
     hoverPopup: KlangDocsHoverPopupCtrl,
     popups: PopupsManager,
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
-    onOpenTool: ((toolName: String, ctx: KlangUiToolContext, event: dynamic) -> Unit)? = null,
+    onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
 ): Extension {
 
     // ── Underline decoration (CTRL/Cmd-hover) ─────────────────────────────
@@ -188,7 +188,7 @@ fun dslEditorExtension(
                             tool.run { icon.iconFn().render() }
                             +(tool.title ?: toolName)
                         }) {
-                            onOpenTool(toolName, makeToolContext(argInfo, view), event)
+                            onOpenTool(toolName, makeToolContext(argInfo, view), argInfo.argFrom, event)
                         }
                     }
                 }
@@ -256,7 +256,7 @@ fun dslEditorExtension(
         val container = getOrCreateBadgeContainer()
         // Center horizontally on mouse X, above the text line
         container.asDynamic().style.left = "${mouseX}px"
-        container.asDynamic().style.top = "${rect.top - 18}px"
+        container.asDynamic().style.top = "${rect.top - 20}px"
         container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
 
@@ -279,7 +279,7 @@ fun dslEditorExtension(
                 event.asDynamic().preventDefault()
                 event.asDynamic().stopPropagation()
                 hideBadges()
-                onOpenTool(toolName, makeToolContext(argInfo, view), event.asDynamic())
+                onOpenTool(toolName, makeToolContext(argInfo, view), argInfo.argFrom, event.asDynamic())
             })
             container.appendChild(btn)
         }

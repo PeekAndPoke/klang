@@ -7,6 +7,8 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
+import de.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
@@ -14,12 +16,15 @@ import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.PlaybackVoice
 import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.div
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
+import kotlin.js.Date
 
 /**
  * Abstract base component containing all shared state and logic for mini-notation editors.
@@ -86,10 +91,49 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         }
     }
 
+    // ── Playback highlight ────────────────────────────────────────────────────
+
+    /** The voice event stream (null if playback is not active). */
+    protected val voiceStream: Stream<List<PlaybackVoice>>?
+        get() = props.toolCtx.attrs[KlangUiToolContext.PlaybackVoices]
+
+    /** Base source location of the opening quote — used to match voice locations against atoms. */
+    protected val baseSourceLocation: SourceLocation?
+        get() = props.toolCtx.attrs[KlangUiToolContext.BaseSourceLocation]
+
+    /** Source ranges currently highlighted — used for the text input overlay and staff. */
+    protected val highlightedRanges = mutableSetOf<IntRange>()
+
+    private var highlightUnsub: (() -> Unit)? = null
+
+    private fun subscribeToHighlights() {
+        val stream = voiceStream ?: return
+        val base = baseSourceLocation ?: return
+        highlightUnsub = stream.subscribeToStream { voices ->
+            if (voices.isEmpty()) return@subscribeToStream
+            val now = Date.now()
+            for (voice in voices) {
+                val range = voiceToSourceRange(voice, base) ?: continue
+                val startDelay = maxOf(1, (voice.startTime * 1000.0 - now).toInt())
+                val endDelay = maxOf(1, (voice.endTime * 1000.0 - now).toInt())
+                window.setTimeout({ if (highlightedRanges.add(range)) triggerRedraw() }, startDelay)
+                window.setTimeout({ if (highlightedRanges.remove(range)) triggerRedraw() }, endDelay)
+            }
+        }
+    }
+
     init {
         lifecycle {
-            onMount { document.addEventListener("keydown", keydownListener) }
-            onUnmount { document.removeEventListener("keydown", keydownListener) }
+            onMount {
+                document.addEventListener("keydown", keydownListener)
+                subscribeToHighlights()
+            }
+            onUnmount {
+                document.removeEventListener("keydown", keydownListener)
+                highlightUnsub?.invoke()
+                highlightUnsub = null
+                highlightedRanges.clear()
+            }
         }
     }
 
@@ -203,6 +247,51 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     }
 }
 
+// ── Voice → source-range matching ────────────────────────────────────────────
+
+/**
+ * Converts a [PlaybackVoice]'s innermost [SourceLocation] to an [IntRange] within the
+ * mini-notation string, using the [base] source location (position of the opening quote).
+ *
+ * This reverses the formula in `MnPatternToStrudelPattern.toLocation()`:
+ * - For line 1:  `absoluteCol = base.startColumn + (sourceRange.first + 1)`
+ * - For line N:  `absoluteCol = sourceColumn` (column within that line of the MN string)
+ *
+ * Returns `null` if the voice has no source location or the location doesn't match.
+ */
+internal fun voiceToSourceRange(voice: PlaybackVoice, base: SourceLocation): IntRange? {
+    val chain = voice.sourceLocations ?: return null
+    // Check all locations in the chain, not just innermost — more robust
+    for (loc in chain.locations.asReversed()) {
+        val range = locationToSourceRange(loc, base) ?: continue
+        return range
+    }
+    return null
+}
+
+/**
+ * Converts a single [SourceLocation] to a mini-notation string [IntRange]
+ * given the [base] location of the opening quote.
+ */
+private fun locationToSourceRange(loc: SourceLocation, base: SourceLocation): IntRange? {
+    if (loc.source != base.source) return null
+
+    val mnLine = loc.startLine - base.startLine + 1
+    if (mnLine < 1) return null
+
+    return if (mnLine == 1) {
+        // Single-line: pure arithmetic, no string scanning
+        val from = loc.startColumn - base.startColumn - 1
+        val to = loc.endColumn - base.startColumn - 2
+        if (from >= 0 && to >= from) from..to else null
+    } else {
+        // Multi-line: column is absolute within that line of the MN string.
+        // We'd need the full MN text to compute the offset, which this function doesn't have.
+        // For now return null — multi-line MN strings are rare in practice.
+        null
+    }
+}
+
 // ── Note staff editor base ────────────────────────────────────────────────────
 
 /**
@@ -237,7 +326,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 flexDirection = FlexDirection.column
             }
 
-            mnPatternTextInput(text, atom, parseError) { newText, cursor ->
+            mnPatternTextInput(text, atom, parseError, highlightedRanges) { newText, cursor ->
                 text = newText
                 cursorOffset = cursor
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
@@ -307,6 +396,8 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
             posToValue = ::staffPositionToAtomValue,
             scaleName = keySignatureScaleName(),
             selection = selection,
+            voiceStream = voiceStream,
+            baseSourceLocation = baseSourceLocation,
             onAction = { action -> handleStaffAction(action) },
         )
     }

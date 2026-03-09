@@ -27,7 +27,6 @@ internal class StrudelPlaybackController(
     private val playbackId: String,
     private var pattern: StrudelPattern,
     context: KlangPlaybackContext,
-    private val onStopped: () -> Unit,
     private val signals: StreamSource<KlangPlaybackSignal>,
 ) {
     // Extract dependencies from context for convenience
@@ -131,9 +130,6 @@ internal class StrudelPlaybackController(
 
         // Emit stopped signal
         signals(KlangPlaybackSignal.PlaybackStopped)
-
-        // Notify owner
-        onStopped()
     }
 
     /**

@@ -50,7 +50,7 @@ class KlangPlayer(
     private val _activePlaybacks = mutableListOf<KlangPlayback>()
 
     // Signal stream for system-wide signals (diagnostics, etc.)
-    private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.PlaybackStopped)
+    private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
     val signals = _signals.readonly
     private var feedbackDispatcherJob: Job? = null
 

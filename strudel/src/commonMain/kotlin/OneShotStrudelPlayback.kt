@@ -2,7 +2,6 @@ package io.peekandpoke.klang.strudel
 
 import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_engine.KlangPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.strudel.lang.filterWhen
@@ -17,12 +16,10 @@ internal class OneShotStrudelPlayback internal constructor(
     override val playbackId: String,
     pattern: StrudelPattern,
     context: KlangPlaybackContext,
-    private val onStopped: (KlangPlayback) -> Unit = {},
     private val cyclesToPlay: Int = 1,
 ) : StrudelPlayback {
 
-    private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.PlaybackStopped)
-    override val signals = _signals.readonly
+    private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
 
     // Wrap the pattern to only return events within the target cycle range
     private val limitedPattern = pattern.filterWhen { it < cyclesToPlay }
@@ -31,11 +28,21 @@ internal class OneShotStrudelPlayback internal constructor(
         playbackId = playbackId,
         pattern = limitedPattern,
         context = context,
-        onStopped = { handleControllerStopped() },
         signals = _signals,
     )
 
-    private var unsubscribe: (() -> Unit)? = null
+    init {
+        // Auto-stop after N cycles
+        _signals.subscribeToStream { signal ->
+            if (signal is KlangPlaybackSignal.CycleCompleted && signal.cycleIndex >= cyclesToPlay - 1) {
+                stop()
+            }
+        }
+    }
+
+    override fun onSignal(listener: (KlangPlaybackSignal) -> Unit): () -> Unit {
+        return _signals.subscribeToStream(listener)
+    }
 
     override fun updatePattern(pattern: StrudelPattern) {
         controller.updatePattern(pattern)
@@ -50,49 +57,15 @@ internal class OneShotStrudelPlayback internal constructor(
     }
 
     override fun start(options: StrudelPlayback.Options) {
-        // Dispose old subscription before creating new one (if start called while running)
-        unsubscribe?.invoke()
-
-        // Subscribe to CycleCompleted signal to stop after N cycles
-        unsubscribe = _signals.subscribeToStream { signal ->
-            if (signal is KlangPlaybackSignal.CycleCompleted) {
-                // Stop when we've completed the target number of cycles (0-based index)
-                if (signal.cycleIndex >= cyclesToPlay - 1) {
-                    stop()
-                }
-            }
-        }
-
-        // Use standard options with adjusted prefetch
-        // The pattern is already wrapped with withTimeClip to prevent events beyond cyclesToPlay
-        val oneShotOptions = options.copy(
-            // Set prefetch to match cyclesToPlay
-            prefetchCycles = cyclesToPlay,
-        )
-
-        // Start the controller with adjusted options
-        controller.start(oneShotOptions)
+        controller.start(options.copy(prefetchCycles = cyclesToPlay))
     }
 
     override fun stop() {
-        // Unsubscribe from cycle completed signal
-        unsubscribe?.invoke()
-        unsubscribe = null
-
-        // Stop the controller
         controller.stop()
+        _signals.removeAllSubscriptions()
     }
 
     override fun handleFeedback(feedback: KlangCommLink.Feedback) {
         controller.handleFeedback(feedback)
-    }
-
-    private fun handleControllerStopped() {
-        // Ensure our own subscription is cleaned up
-        unsubscribe?.invoke()
-        unsubscribe = null
-
-        // Notify owner
-        onStopped(this)
     }
 }

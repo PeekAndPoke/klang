@@ -17,6 +17,7 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
+import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
 import de.peekandpoke.ultra.streams.ops.map
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
@@ -34,6 +35,7 @@ import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.fs
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.stdlibLib
@@ -45,6 +47,7 @@ import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
+import io.peekandpoke.klang.ui.PlaybackVoice
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -106,6 +109,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val codeEditorRef = ComponentRef.Tracker<CodeMirrorComp>()
     private val blocksEditorRef = ComponentRef.Tracker<KlangBlocksEditorComp>()
 
+    private val currentModals by subscribingTo(modals)
+
     private val highlightBuffer = CodeMirrorHighlightBuffer(codeEditorRef)
     private var highlightPerEvent by value(highlightBuffer.maxHighlightsPerEvent) {
         highlightBuffer.maxHighlightsPerEvent = it
@@ -139,14 +144,24 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
-    private fun openTool(toolName: String, ctx: KlangUiToolContext) {
+    private fun openTool(toolName: String, ctx: KlangUiToolContext, argFrom: Int) {
         val tool = KlangUiToolRegistry.get(toolName) ?: return
+
+        // Base source location of the opening quote — used by editors to match voice events
+        val baseLoc = offsetToSourceLocation(code, argFrom)
+        var attrs = ctx.attrs.plus(KlangUiToolContext.BaseSourceLocation, baseLoc)
+
+        // If playback is active, attach a voice event stream
+        playback?.let { pb ->
+            attrs = attrs.plus(KlangUiToolContext.PlaybackVoices, createVoiceStream(pb))
+        }
 
         modals.show { handle ->
             CodeToolModal(handle) {
                 tool.apply {
                     render(
                         ctx.copy(
+                            attrs = attrs,
                             onCommit = {
                                 // Update the code
                                 ctx.onCommit(it)
@@ -221,16 +236,23 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                             playback = p.playStrudel(pattern)
 
-                            playback?.signals?.subscribeToStream { signal ->
+                            playback?.onSignal { signal ->
                                 when (signal) {
                                     is KlangPlaybackSignal.VoicesScheduled -> {
+                                        // When there is a modal dialog open, we stop highlighting
+                                        if (currentModals.isNotEmpty()) return@onSignal
+
                                         signal.voices.forEach { voiceEvent ->
+                                            // Update Code highlight buffer
                                             highlightBuffer.scheduleHighlight(voiceEvent)
+
+                                            // Update Blocks highlight buffer
                                             val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return@forEach
                                             val now = Date.now()
                                             val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
                                             val durationMs =
                                                 maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
+
                                             chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
                                                 blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
                                             }
@@ -304,6 +326,32 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     /** Switch to Code mode. The code state already reflects the latest workspace contents. */
     private fun switchToCode() {
         editorMode = EditorMode.CODE
+    }
+
+    //  HIGHLIGHT ADAPTER  /////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Creates a stream of scheduled voice batches from playback signals.
+     *
+     * No offset conversion is done here — raw timing and source location data
+     * is passed through. Consumers (editors) match against their own atoms.
+     */
+    private fun createVoiceStream(playback: StrudelPlayback): Stream<List<PlaybackVoice>> {
+        val source = StreamSource<List<PlaybackVoice>>(emptyList())
+
+        playback.onSignal { signal ->
+            if (signal is KlangPlaybackSignal.VoicesScheduled) {
+                source(signal.voices.map { voice ->
+                    PlaybackVoice(
+                        startTime = voice.startTime,
+                        endTime = voice.endTime,
+                        sourceLocations = voice.sourceLocations as? SourceLocationChain,
+                    )
+                })
+            }
+        }
+
+        return source.readonly
     }
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -466,8 +514,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                         hoverPopup = hoverPopup,
                                         popups = popups,
                                         onNavigate = ::navToDoc,
-                                        onOpenTool = { toolName, ctx, _ ->
-                                            openTool(toolName = toolName, ctx = ctx)
+                                        onOpenTool = { toolName, ctx, argFrom, _ ->
+                                            openTool(toolName = toolName, ctx = ctx, argFrom = argFrom)
                                         },
                                     ),
                                 ),
@@ -489,4 +537,22 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             }
         }
     }
+}
+
+/**
+ * Converts a 0-based document [offset] to a [SourceLocation] pointing at that character.
+ *
+ * Used once when opening a tool to record the base position of the opening quote.
+ */
+private fun offsetToSourceLocation(source: String, offset: Int): SourceLocation {
+    var line = 1
+    var col = 1
+    for (i in 0 until offset.coerceAtMost(source.length)) {
+        if (source[i] == '\n') {
+            line++; col = 1
+        } else {
+            col++
+        }
+    }
+    return SourceLocation(source = null, startLine = line, startColumn = col, endLine = line, endColumn = col)
 }

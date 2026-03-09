@@ -5,6 +5,8 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
+import de.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.BracketType
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.InsertTarget
@@ -24,6 +26,7 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
+import kotlin.js.Date
 import kotlin.math.roundToInt
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -51,11 +54,23 @@ internal fun FlowContent.noteStaffSvg(
     scaleName: String? = null,
     /** Currently selected atom or rest — highlighted with a blue stroke. */
     selection: MnSelection? = null,
+    /** Stream of scheduled voice batches for playback highlighting. */
+    voiceStream: Stream<List<PlaybackVoice>>? = null,
+    /** Base source location of the opening quote — for matching voice events to atoms. */
+    baseSourceLocation: SourceLocation? = null,
     /** Receives all user interactions with the staff. */
     onAction: (NoteStaffEditor.Action) -> Unit = {},
 ) {
     this@noteStaffSvg.NoteStaffComp(
-        pattern, lineRange, atomToPos, posToValue, scaleName, selection, onAction,
+        pattern = pattern,
+        lineRange = lineRange,
+        atomToPos = atomToPos,
+        posToValue = posToValue,
+        scaleName = scaleName,
+        selection = selection,
+        voiceStream = voiceStream,
+        baseSourceLocation = baseSourceLocation,
+        onAction = onAction,
     )
 }
 
@@ -67,10 +82,20 @@ private fun Tag.NoteStaffComp(
     posToValue: (Int) -> String,
     scaleName: String?,
     selection: MnSelection?,
+    voiceStream: Stream<List<PlaybackVoice>>?,
+    baseSourceLocation: SourceLocation?,
     onAction: (NoteStaffEditor.Action) -> Unit,
 ) = comp(
     NoteStaffEditor.Props(
-        pattern, lineRange, atomToPos, posToValue, scaleName, selection, onAction,
+        pattern = pattern,
+        lineRange = lineRange,
+        atomToPos = atomToPos,
+        posToValue = posToValue,
+        scaleName = scaleName,
+        selection = selection,
+        voiceStream = voiceStream,
+        baseSourceLocation = baseSourceLocation,
+        onAction = onAction,
     )
 ) { NoteStaffEditor(it) }
 
@@ -191,6 +216,10 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val scaleName: String?,
         /** Currently selected atom or rest — highlighted with a blue stroke. */
         val selection: MnSelection?,
+        /** Stream of scheduled voice batches for playback highlighting. */
+        val voiceStream: Stream<List<PlaybackVoice>>?,
+        /** Base source location of the opening quote — for matching voice events to atoms. */
+        val baseSourceLocation: SourceLocation?,
         /** Receives all user interactions with the staff. */
         val onAction: (Action) -> Unit,
     )
@@ -262,10 +291,33 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         triggerRedraw()
     }
 
+    // ── Playback highlight (independent subscription) ──────────────────────
+
+    private val highlightedRanges = mutableSetOf<IntRange>()
+
     init {
-        lifecycle.onUnmount {
-            window.removeEventListener("mousemove", onMouseMoveWindow)
-            window.removeEventListener("mouseup", onMouseUpWindow)
+        lifecycle {
+            onMount {
+                val stream = props.voiceStream ?: return@onMount
+                val base = props.baseSourceLocation ?: return@onMount
+
+                stream.subscribe { voices ->
+                    if (voices.isEmpty()) return@subscribe
+                    val now = Date.now()
+                    for (voice in voices) {
+                        val range = voiceToSourceRange(voice, base) ?: continue
+                        val startDelay = maxOf(1, (voice.startTime * 1000.0 - now).toInt())
+                        val endDelay = maxOf(1, (voice.endTime * 1000.0 - now).toInt())
+                        window.setTimeout({ if (highlightedRanges.add(range)) triggerRedraw() }, startDelay)
+                        window.setTimeout({ if (highlightedRanges.remove(range)) triggerRedraw() }, endDelay)
+                    }
+                }
+            }
+            onUnmount {
+                highlightedRanges.clear()
+                window.removeEventListener("mousemove", onMouseMoveWindow)
+                window.removeEventListener("mouseup", onMouseUpWindow)
+            }
         }
     }
 
@@ -644,6 +696,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
     private fun FlowContent.renderAtomSvg(atom: MnNode.Atom, x: Double, topY: Double) {
         val isActive = atom.id == props.selection.atom?.id
         val isDragging = dragAtomId == atom.id
+        val isHighlighted = atom.sourceRange in highlightedRanges
         val pos = if (isDragging) dragPreviewPos ?: dragStartPos else props.atomToPos(atom.value)
 
         if (pos == null) {
@@ -654,11 +707,20 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val y = staffPosToY(pos, topY)
         val noteColor = when {
             isDragging -> "#2266cc"
+            isHighlighted -> "#e67e22"
             isActive -> "#3355aa"
             else -> "#222"
         }
-        val strokeColor = if (isActive || isDragging) "#2266cc" else "#333"
-        val strokeWidth = if (isActive || isDragging) "2" else "1.2"
+        val strokeColor = when {
+            isHighlighted -> "#d35400"
+            isActive || isDragging -> "#2266cc"
+            else -> "#333"
+        }
+        val strokeWidth = when {
+            isHighlighted -> "2.5"
+            isActive || isDragging -> "2"
+            else -> "1.2"
+        }
 
         svgG(key = "atom-${atom.id}", style = "cursor:default") {
             attributes["data-atom-id"] = atom.id.toString()
