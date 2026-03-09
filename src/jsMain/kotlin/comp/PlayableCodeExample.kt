@@ -134,16 +134,20 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         // Reset cycle counter
                         currentCycle = 0
 
-                        // Set up cycle counter
-                        playback?.signals?.on<KlangPlaybackSignal.CycleCompleted> { signal ->
-                            currentCycle =
-                                signal.cycleIndex + 1 // +1 because we want to show the current cycle being played
-                        }
+                        // Set up cycle counter and code highlighting
+                        playback?.signals?.subscribeToStream { signal ->
+                            when (signal) {
+                                is KlangPlaybackSignal.CycleCompleted -> {
+                                    currentCycle = signal.cycleIndex + 1
+                                }
 
-                        // Set up code highlighting
-                        playback?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
-                            signal.voices.forEach { voiceEvent ->
-                                highlightBuffer.scheduleHighlight(voiceEvent)
+                                is KlangPlaybackSignal.VoicesScheduled -> {
+                                    signal.voices.forEach { voiceEvent ->
+                                        highlightBuffer.scheduleHighlight(voiceEvent)
+                                    }
+                                }
+
+                                else -> {}
                             }
                         }
 

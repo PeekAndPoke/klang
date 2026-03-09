@@ -217,11 +217,16 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             val playback = Player.get()?.playStrudelOnce(song)
 
             // Wait for the song to finish before navigating
-            playback?.signals?.on<PlaybackStopped> {
-                playback.signals.clear()
-                delay(1000.milliseconds)
-                console.log("Playback stopped, navigating to new song page")
-                router.navToUri(Nav.editSongCode(BuiltInSongs.tetris.id))
+            var unsubscribe: (() -> Unit)? = null
+            unsubscribe = playback?.signals?.subscribeToStream { signal ->
+                if (signal is PlaybackStopped) {
+                    unsubscribe?.invoke()
+                    launch {
+                        delay(1000.milliseconds)
+                        console.log("Playback stopped, navigating to new song page")
+                        router.navToUri(Nav.editSongCode(BuiltInSongs.tetris.id))
+                    }
+                }
             }
 
             playback?.start(StrudelPlayback.Options(cyclesPerSecond = 1.0))

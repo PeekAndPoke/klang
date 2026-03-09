@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.strudel
 
+import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
@@ -28,7 +28,7 @@ internal class StrudelPlaybackController(
     private var pattern: StrudelPattern,
     context: KlangPlaybackContext,
     private val onStopped: () -> Unit,
-    private val signals: KlangPlaybackSignals,
+    private val signals: StreamSource<KlangPlaybackSignal>,
 ) {
     // Extract dependencies from context for convenience
     private val playerOptions = context.playerOptions
@@ -130,7 +130,7 @@ internal class StrudelPlaybackController(
         cleanUpBackend()
 
         // Emit stopped signal
-        signals.emit(KlangPlaybackSignal.PlaybackStopped)
+        signals(KlangPlaybackSignal.PlaybackStopped)
 
         // Notify owner
         onStopped()
@@ -234,7 +234,7 @@ internal class StrudelPlaybackController(
         }
 
         // Emit started signal
-        signals.emit(KlangPlaybackSignal.PlaybackStarted)
+        signals(KlangPlaybackSignal.PlaybackStarted)
 
         while (scope.isActive) {
             // Update local frame counter based on elapsed time
@@ -285,7 +285,7 @@ internal class StrudelPlaybackController(
                     val latencyOffsetSec = backendLatencyMs / 1000.0
                     val boundaryTimeSec = playbackStartTimeSec + ((cycle + 1) * secPerCycle) + latencyOffsetSec
 
-                    signals.emit(
+                    signals(
                         KlangPlaybackSignal.CycleCompleted(
                             cycleIndex = cycle,
                             atTimeSec = boundaryTimeSec,
@@ -359,7 +359,7 @@ internal class StrudelPlaybackController(
         // Fire signals on separate dispatcher
         if (sendSignals && signalEvents.isNotEmpty()) {
             scope.launch(callbackDispatcher) {
-                signals.emit(
+                signals(
                     KlangPlaybackSignal.VoicesScheduled(voices = signalEvents)
                 )
             }

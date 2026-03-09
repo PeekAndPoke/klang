@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.strudel
 
+import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
 import io.peekandpoke.klang.strudel.lang.filterWhen
 
 /**
@@ -21,7 +21,8 @@ internal class OneShotStrudelPlayback internal constructor(
     private val cyclesToPlay: Int = 1,
 ) : StrudelPlayback {
 
-    override val signals = KlangPlaybackSignals()
+    private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.PlaybackStopped)
+    override val signals = _signals.readonly
 
     // Wrap the pattern to only return events within the target cycle range
     private val limitedPattern = pattern.filterWhen { it < cyclesToPlay }
@@ -31,7 +32,7 @@ internal class OneShotStrudelPlayback internal constructor(
         pattern = limitedPattern,
         context = context,
         onStopped = { handleControllerStopped() },
-        signals = signals,
+        signals = _signals,
     )
 
     private var unsubscribe: (() -> Unit)? = null
@@ -53,7 +54,7 @@ internal class OneShotStrudelPlayback internal constructor(
         unsubscribe?.invoke()
 
         // Subscribe to CycleCompleted signal to stop after N cycles
-        unsubscribe = signals.subscribe { signal ->
+        unsubscribe = _signals.subscribeToStream { signal ->
             if (signal is KlangPlaybackSignal.CycleCompleted) {
                 // Stop when we've completed the target number of cycles (0-based index)
                 if (signal.cycleIndex >= cyclesToPlay - 1) {
@@ -87,12 +88,9 @@ internal class OneShotStrudelPlayback internal constructor(
     }
 
     private fun handleControllerStopped() {
-        // Ensure unsubscribe is called before clearing all signals
+        // Ensure our own subscription is cleaned up
         unsubscribe?.invoke()
         unsubscribe = null
-
-        // Clear signal listeners
-        signals.clear()
 
         // Notify owner
         onStopped(this)

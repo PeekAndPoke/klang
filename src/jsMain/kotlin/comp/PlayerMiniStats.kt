@@ -39,8 +39,10 @@ class PlayerMiniStats(ctx: NoProps) : PureComponent(ctx) {
             // Unsubscribe
             playerDiagnosticsSubscription?.invoke()
             // Resubscribe
-            playerDiagnosticsSubscription = player.signals.on<KlangPlaybackSignal.Diagnostics> { signal ->
-                playerDiagnostics = signal
+            playerDiagnosticsSubscription = player.signals.subscribeToStream { signal ->
+                if (signal is KlangPlaybackSignal.Diagnostics) {
+                    playerDiagnostics = signal
+                }
             }
         }
     }

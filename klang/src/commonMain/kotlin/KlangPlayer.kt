@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_engine
 
+import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_be.AudioBackend
 import io.peekandpoke.klang.audio_be.AudioVisualizer
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -48,8 +49,9 @@ class KlangPlayer(
     private val lock = KlangLock()
     private val _activePlaybacks = mutableListOf<KlangPlayback>()
 
-    // Signal bus for system-wide signals (diagnostics, etc.)
-    val signals = KlangPlaybackSignals()
+    // Signal stream for system-wide signals (diagnostics, etc.)
+    private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.PlaybackStopped)
+    val signals = _signals.readonly
     private var feedbackDispatcherJob: Job? = null
 
     // Centralized sample preloader (shared across all playbacks)
@@ -117,7 +119,7 @@ class KlangPlayer(
                     is KlangCommLink.Feedback.Diagnostics -> {
                         if (feedback.playbackId == KlangCommLink.SYSTEM_PLAYBACK_ID) {
                             withContext(callbackDispatcher) {
-                                signals.emit(KlangPlaybackSignal.Diagnostics(feedback))
+                                _signals(KlangPlaybackSignal.Diagnostics(feedback))
                             }
                         }
                     }
@@ -196,7 +198,7 @@ class KlangPlayer(
             samplePreloader.clear()
 
             // Clear signal listeners
-            signals.clear()
+            _signals.removeAllSubscriptions()
         }
     }
 }

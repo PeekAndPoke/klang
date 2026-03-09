@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_engine
 
+import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
@@ -13,9 +14,9 @@ interface KlangPlayback {
     val playbackId: String
 
     /**
-     * Signal bus for subscribing to playback lifecycle signals.
+     * Signal stream for subscribing to playback lifecycle signals.
      */
-    val signals: KlangPlaybackSignals
+    val signals: Stream<KlangPlaybackSignal>
 
     /**
      * Called by the player to deliver feedback messages to this playback.

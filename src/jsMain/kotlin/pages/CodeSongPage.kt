@@ -221,25 +221,32 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                             playback = p.playStrudel(pattern)
 
-                            playback?.signals?.on<KlangPlaybackSignal.VoicesScheduled> { signal ->
-                                signal.voices.forEach { voiceEvent ->
-                                    highlightBuffer.scheduleHighlight(voiceEvent)
-                                    val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return@forEach
-                                    val now = Date.now()
-                                    val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
-                                    val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
-                                    chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
-                                        blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
+                            playback?.signals?.subscribeToStream { signal ->
+                                when (signal) {
+                                    is KlangPlaybackSignal.VoicesScheduled -> {
+                                        signal.voices.forEach { voiceEvent ->
+                                            highlightBuffer.scheduleHighlight(voiceEvent)
+                                            val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return@forEach
+                                            val now = Date.now()
+                                            val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
+                                            val durationMs =
+                                                maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
+                                            chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
+                                                blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
+                                            }
+                                        }
                                     }
+
+                                    is KlangPlaybackSignal.PreloadingSamples -> {
+                                        console.log("Preloading ${signal.count} samples...")
+                                    }
+
+                                    is KlangPlaybackSignal.SamplesPreloaded -> {
+                                        console.log("Samples loaded in ${signal.durationMs}ms")
+                                    }
+
+                                    else -> {}
                                 }
-                            }
-
-                            playback?.signals?.on<KlangPlaybackSignal.PreloadingSamples> { signal ->
-                                console.log("Preloading ${signal.count} samples...")
-                            }
-
-                            playback?.signals?.on<KlangPlaybackSignal.SamplesPreloaded> { signal ->
-                                console.log("Samples loaded in ${signal.durationMs}ms")
                             }
 
                             playback?.start(
@@ -262,7 +269,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private fun onStop() {
         playback?.stop()
-        playback?.signals?.clear()
         highlightBuffer.cancelAll()
         blocksHighlightBuffer.cancelAll()
         playback = null

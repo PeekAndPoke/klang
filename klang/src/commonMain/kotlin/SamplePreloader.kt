@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_engine
 
+import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -40,11 +41,11 @@ class SamplePreloader(
      * Use this for initial preload where caller needs to wait for backend confirmation.
      *
      * @param requests Set of sample requests to ensure are loaded
-     * @param signals Optional signal bus to emit preloading progress signals
+     * @param signals Optional signal source to emit preloading progress signals
      */
     fun ensureLoadedDeferred(
         requests: Set<SampleRequest>,
-        signals: KlangPlaybackSignals? = null,
+        signals: StreamSource<KlangPlaybackSignal>? = null,
     ): Deferred<Unit> = scope.async(dispatcher) {
         // Find which samples are not yet sent
         val newRequests = lock.withLock {
@@ -57,7 +58,7 @@ class SamplePreloader(
         }
 
         // Emit preloading signal
-        signals?.emit(
+        signals?.invoke(
             KlangPlaybackSignal.PreloadingSamples(
                 count = newRequests.size,
                 samples = newRequests.map { "${it.bank ?: ""}/${it.sound ?: ""}:${it.index ?: 0}" },
@@ -86,7 +87,7 @@ class SamplePreloader(
         val durationMs = (klangTime.internalMsNow() - startTimeMs).toLong()
 
         // Emit completion signal
-        signals?.emit(
+        signals?.invoke(
             KlangPlaybackSignal.SamplesPreloaded(
                 count = newRequests.size,
                 durationMs = durationMs,

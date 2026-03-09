@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.ui
 
+import de.peekandpoke.ultra.common.TypedAttributes
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.html.FlowContent
@@ -12,6 +13,7 @@ import kotlinx.html.FlowContent
  * @param currentValue Raw source text of the argument at the cursor (null if no arg is present yet).
  * @param onCommit     Call with the replacement source text to commit the edit back to the editor.
  * @param onCancel     Call to dismiss without making any change.
+ * @param attrs        Extensible typed attributes for passing module-specific data (e.g. playback signals).
  */
 data class KlangUiToolContext(
     val symbol: KlangSymbol,
@@ -19,6 +21,7 @@ data class KlangUiToolContext(
     val currentValue: String?,
     val onCommit: (String) -> Unit,
     val onCancel: () -> Unit,
+    val attrs: TypedAttributes = TypedAttributes.empty,
 )
 
 /**
