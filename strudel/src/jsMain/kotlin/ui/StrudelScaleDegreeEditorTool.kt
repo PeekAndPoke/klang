@@ -43,7 +43,7 @@ private class StrudelScaleDegreeEditorComp(ctx: Ctx<Props>) : MnEditorBase<Strud
 
     // ── Scale state ───────────────────────────────────────────────────────────
 
-    private var scaleName by value("C major")
+    private var scaleName by value("C4 major")
 
     private val scaleNotes: List<String>
         get() = Scale.get(scaleName).notes

@@ -666,15 +666,6 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
             renderLedgerLines(pos, x, topY)
 
-            val stemUp = pos < 6
-            if (stemUp) {
-                val stemX = x + NOTE_RADIUS_X - 0.5
-                svgLine(stemX, y - NOTE_RADIUS_Y + 2, stemX, y - HALF_STEP * 3.5, stroke = noteColor)
-            } else {
-                val stemX = x - NOTE_RADIUS_X + 0.5
-                svgLine(stemX, y + NOTE_RADIUS_Y - 2, stemX, y + HALF_STEP * 3.5, stroke = noteColor)
-            }
-
             svgEllipse(x, y, NOTE_RADIUS_X, NOTE_RADIUS_Y, fill = noteColor, stroke = strokeColor, strokeWidth = strokeWidth)
 
             renderAccidental(atom.value, x, y)

@@ -6,6 +6,11 @@ import io.peekandpoke.klang.tones.chord.ChordTypeDictionary
 import io.peekandpoke.klang.tones.distance.Distance
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.pcset.PcSet
+import io.peekandpoke.klang.tones.scale.Scale.Companion.NoScale
+import io.peekandpoke.klang.tones.scale.Scale.Companion.degrees
+import io.peekandpoke.klang.tones.scale.Scale.Companion.getNoteNameOf
+import io.peekandpoke.klang.tones.scale.Scale.Companion.notes
+import io.peekandpoke.klang.tones.scale.Scale.Companion.rangeOfScale
 import io.peekandpoke.klang.tones.utils.TonesArray
 
 /**
@@ -23,27 +28,48 @@ sealed class NoteInput {
 }
 
 /**
- * Represents a musical musical scale.
+ * Represents a musical scale — a [ScaleType] anchored to a specific [tonic] note.
+ *
+ * A scale is the combination of a scale formula (intervals / chroma) and a root note.
+ * For example `Scale.get("C4 major")` produces a C major scale rooted at C4 with
+ * concrete note names: `["C4", "D4", "E4", "F4", "G4", "A4", "B4"]`.
+ *
+ * When no tonic is provided the scale carries only the type information (intervals, chroma)
+ * and [notes] is empty.
  */
 data class Scale(
-    /** The [ScaleType] properties. */
+    /** The underlying scale type (intervals, chroma, name, aliases). */
     val scaleType: ScaleType,
-    /** The tonic note of the scale, if applicable. */
+    /** The tonic (root) note including octave, e.g. `"C4"`, or `null` if tonic-less. */
     val tonic: String?,
-    /** The type of the scale (e.g., "major"). */
+    /** The scale type name, e.g. `"major"`, `"minor pentatonic"`. */
     val type: String,
-    /** The list of notes in the scale. */
+    /** Concrete note names derived by transposing each interval from [tonic], e.g. `["C4","D4",…]`. Empty when [tonic] is null. */
     val notes: List<String>,
 ) {
+    /** `true` when this scale could not be resolved (sentinel value). */
     val empty: Boolean get() = scaleType.empty
+
+    /** Full display name: `"<tonic> <type>"`, e.g. `"C4 major"`. Falls back to just [type] when tonic-less. */
     val name: String = if (!tonic.isNullOrEmpty()) "$tonic $type" else type
+
+    /** Numeric set representation of the pitch-class set (Fort number encoding). */
     val setNum: Int get() = scaleType.setNum
+
+    /** 12-character binary chroma string where `1` = pitch class present, e.g. `"101011010101"` for major. */
     val chroma: String get() = scaleType.chroma
+
+    /** Normalized (most compact rotation) chroma — used for equivalence comparisons. */
     val normalized: String get() = scaleType.normalized
+
+    /** Alternative names for this scale type, e.g. `["ionian"]` for major. */
     val aliases: List<String> get() = scaleType.aliases
+
+    /** Interval names from the tonic, e.g. `["1P","2M","3M","4P","5P","6M","7M"]` for major. */
     val intervals: List<String> get() = scaleType.intervals
 
     companion object {
+        /** Sentinel for unresolved / empty scales. */
         val NoScale = Scale(
             scaleType = ScaleType.NoScaleType,
             tonic = null,
@@ -51,14 +77,19 @@ data class Scale(
             notes = emptyList()
         )
 
-        /** Cache for tokenized scale names. */
         private val tokenizeCache = mutableMapOf<String, Pair<String, String>>()
-
-        /** Cache for parsed scales. */
         private val scaleCache = mutableMapOf<String, Scale>()
 
         /**
-         * Tokenizes a scale name into [tonic, type].
+         * Splits a scale name string into a `(tonic, type)` pair.
+         *
+         * Examples:
+         * - `"C4 major"` → `("C4", "major")`
+         * - `"major"` → `("", "major")`
+         * - `"C4"` → `("C4", "")`
+         *
+         * @param name The scale name to tokenize, e.g. `"Db3 minor pentatonic"`.
+         * @return Pair of `(tonicName, typeName)`. Either part may be empty.
          */
         fun tokenize(name: String): Pair<String, String> = tokenizeCache.getOrPut(name) {
             if (name.isEmpty()) return@getOrPut Pair("", "")
@@ -87,7 +118,13 @@ data class Scale(
         }
 
         /**
-         * Get a Scale from a scale name.
+         * Parses a scale name and returns the corresponding [Scale].
+         *
+         * Accepts formats like `"C4 major"`, `"Db minor pentatonic"`, or `"C:major"`.
+         * When the tonic has no explicit octave it defaults to octave 3.
+         * Returns [NoScale] if the scale type cannot be found in the dictionary.
+         *
+         * @param src Scale name string, e.g. `"C4 major"`.
          */
         fun get(src: String): Scale = scaleCache.getOrPut(src) {
             val cleanSrc = src.replace(":", " ")
@@ -120,7 +157,15 @@ data class Scale(
         }
 
         /**
-         * Given a list of notes, detect the scales that match.
+         * Detects scales that match the given set of notes.
+         *
+         * Returns scale names ordered by match quality: exact matches first, then
+         * superset matches (scales that contain all given notes plus more).
+         *
+         * @param notes List of note names, e.g. `["C4", "D4", "E4", "G4", "A4"]`.
+         * @param tonic Optional forced tonic. When `null` the first note is used as tonic.
+         * @param matchExact When `true`, only return exact matches (no superset scales).
+         * @return Scale names, e.g. `["C major pentatonic", "C major", …]`.
          */
         fun detect(
             notes: List<String>,
@@ -159,7 +204,10 @@ data class Scale(
         }
 
         /**
-         * Get all scales names that are a superset of the given one.
+         * Returns all scale type names that are a superset of the given scale or chroma.
+         *
+         * @param name A scale name (e.g. `"C major pentatonic"`) or a 12-char chroma string.
+         * @return Type names of scales that contain all pitch classes of the input.
          */
         fun extended(name: String): List<String> {
             val chroma = if (PcSet.isChroma(name)) name else get(name).chroma
@@ -172,7 +220,10 @@ data class Scale(
         }
 
         /**
-         * Find all scales names that are a subset of the given one.
+         * Returns all scale type names that are a subset of the given scale.
+         *
+         * @param name A scale name, e.g. `"C major"`.
+         * @return Type names of scales whose pitch classes are all contained in the input.
          */
         fun reduced(name: String): List<String> {
             val isSubset = PcSet.isSubsetOf(get(name).chroma)
@@ -182,7 +233,13 @@ data class Scale(
         }
 
         /**
-         * Given an array of notes, return the scale: a pitch class set starting from the first note.
+         * Normalizes a list of note names into a sorted pitch-class set starting from the first note.
+         *
+         * Duplicates are removed and notes are sorted by chroma, then rotated so the
+         * first input note comes first. Octave information is stripped.
+         *
+         * @param notes Note names, e.g. `["E4", "C4", "G4"]`.
+         * @return Pitch classes in scale order, e.g. `["C", "E", "G"]`.
          */
         fun notes(notes: List<String>): List<String> {
             val pcset = notes.map { Note.get(it).pc }.filter { it.isNotEmpty() }
@@ -196,7 +253,13 @@ data class Scale(
         }
 
         /**
-         * Find mode names of a scale.
+         * Returns the modes of the given scale as `(tonic, modeName)` pairs.
+         *
+         * Each pair maps a scale degree's note to the mode name that starts on that degree.
+         * For example `modeNames("C major")` → `[("C","major"), ("D","dorian"), …]`.
+         *
+         * @param name Scale name, e.g. `"C4 major"`.
+         * @return List of `(tonic, modeName)` pairs, one per degree that has a named mode.
          */
         fun modeNames(name: String): List<Pair<String, String>> {
             val s = get(name)
@@ -212,7 +275,12 @@ data class Scale(
         }
 
         /**
-         * Returns a function to get a note name from a scale by a note input (MIDI, name, or Note object).
+         * Returns a function that maps a [NoteInput] to its enharmonic name within the given scale.
+         *
+         * If the input note's pitch class is not in the scale, returns `null`.
+         *
+         * @param scale List of pitch-class names defining the scale, e.g. `["C", "D", "E", "F", "G", "A", "B"]`.
+         * @return Mapping function `(NoteInput) -> String?`.
          */
         fun getNoteNameOf(scale: List<String>): (NoteInput) -> String? {
             val notes = notes(scale)
@@ -242,7 +310,10 @@ data class Scale(
         }
 
         /**
-         * Returns a function to get a note name from a scale name by a note input (MIDI, name, or Note object).
+         * Like [getNoteNameOf] but accepts a scale name instead of a note list.
+         *
+         * @param scaleName Scale name, e.g. `"C4 major"`.
+         * @return Mapping function `(NoteInput) -> String?`.
          */
         fun getNoteNameOf(scaleName: String): (NoteInput) -> String? {
             val s = get(scaleName)
@@ -273,7 +344,10 @@ data class Scale(
         }
 
         /**
-         * Returns a range of notes from a scale.
+         * Returns a function that generates all notes of the given scale within a MIDI range.
+         *
+         * @param scale List of pitch-class names defining the scale.
+         * @return Function `(fromNote, toNote) -> List<String>` producing note names in ascending order.
          */
         fun rangeOfScale(scale: List<String>): (String, String) -> List<String> {
             val getName = getNoteNameOf(scale)
@@ -290,7 +364,10 @@ data class Scale(
         }
 
         /**
-         * Returns a range of notes from a scale name.
+         * Like [rangeOfScale] but accepts a scale name instead of a note list.
+         *
+         * @param scaleName Scale name, e.g. `"C4 major"`.
+         * @return Function `(fromNote, toNote) -> List<String>`.
          */
         fun rangeOfScale(scaleName: String): (String, String) -> List<String> {
             val getName = getNoteNameOf(scaleName)
@@ -308,7 +385,13 @@ data class Scale(
         }
 
         /**
-         * Returns a function to get a note name from the scale degree.
+         * Returns a function that maps a 1-based scale degree to a note name.
+         *
+         * Degree 1 = tonic, 2 = second, etc. Negative degrees go downward.
+         * Degree 0 returns an empty string.
+         *
+         * @param scaleName Scale name, e.g. `"C4 major"`.
+         * @return Function `(degree) -> noteName`.
          */
         fun degrees(scaleName: String): (Int) -> String {
             val s = get(scaleName)
@@ -320,7 +403,10 @@ data class Scale(
         }
 
         /**
-         * Same as degrees but with 0-based index.
+         * Like [degrees] but with 0-based indexing (step 0 = tonic, 1 = second, …).
+         *
+         * @param scaleName Scale name, e.g. `"C4 major"`.
+         * @return Function `(step) -> noteName`.
          */
         fun steps(scaleName: String): (Int) -> String {
             val cleanName = scaleName.replace(":", " ")
@@ -329,7 +415,10 @@ data class Scale(
         }
 
         /**
-         * Find all chords that fits a given scale.
+         * Returns all chord type symbols whose pitch classes are a subset of the given scale.
+         *
+         * @param scaleName Scale name, e.g. `"C4 major"`.
+         * @return Chord symbols, e.g. `["M", "m", "dim", …]`.
          */
         fun chords(scaleName: String): List<String> {
             val s = get(scaleName)

@@ -159,6 +159,8 @@ fun FlowContent.mnModifierPanel(
     atom: MnNode.Atom,
     disabled: Boolean = false,
     onToggleRest: (() -> Unit)? = null,
+    repeatCount: Int? = null,
+    onRepeatChange: ((Int?) -> Unit)? = null,
     onAtomChange: (MnNode.Atom) -> Unit,
 ) {
     val mods = atom.mods
@@ -195,6 +197,9 @@ fun FlowContent.mnModifierPanel(
             }
         }
 
+        if (onRepeatChange != null) {
+            mnRepeatChip(repeatCount, onRepeatChange)
+        }
         mnModChip(symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->
             onAtomChange(atom.copy(mods = mods.copy(multiplier = v)))
         }
@@ -296,6 +301,61 @@ fun FlowContent.mnModifierPanel(
 }
 
 // ── Private chip helpers ──────────────────────────────────────────────────────
+
+private fun FlowContent.mnRepeatChip(current: Int?, onChange: (Int?) -> Unit) {
+    div {
+        css {
+            display = Display.flex
+            alignItems = Align.center
+            gap = 4.px
+            backgroundColor = Color("#f5f5f5")
+            borderRadius = 6.px
+            padding = Padding(4.px, 8.px)
+        }
+        span {
+            css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+            attributes["title"] = "Repeat — duplicate this step n times"
+            +"!"
+        }
+        if (current != null) {
+            mnStepButton("-") {
+                val next = current - 1
+                onChange(if (next < 2) null else next)
+            }
+            input {
+                type = InputType.number
+                value = current.toString()
+                attributes["min"] = "2"
+                attributes["step"] = "1"
+                css {
+                    width = 50.px
+                    fontSize = 13.px
+                    padding = Padding(2.px, 4.px)
+                    borderRadius = 4.px
+                    put("border", "1px solid #ccc")
+                }
+                onInput { e ->
+                    val v = (e.target?.asDynamic()?.value as? String)?.toIntOrNull() ?: return@onInput
+                    onChange(if (v < 2) null else v)
+                }
+            }
+            mnStepButton("+") { onChange(current + 1) }
+            span {
+                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                attributes["title"] = "Remove repeat"
+                onClick { onChange(null) }
+                +"×"
+            }
+        } else {
+            span {
+                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                attributes["title"] = "Add repeat"
+                onClick { onChange(2) }
+                +"+"
+            }
+        }
+    }
+}
 
 private fun FlowContent.mnModChip(
     symbol: String,

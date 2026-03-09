@@ -30,6 +30,7 @@ object NoteStaffLayout {
 
         /** A chord — simultaneous notes from MnNode.Stack. */
         data class Stack(
+            val nodeId: Int,
             val items: List<MnNode>,
             val parentId: Int,
             val indexInParent: Int,
@@ -168,7 +169,7 @@ object NoteStaffLayout {
                         if ((n is MnNode.Atom || (n is MnNode.Rest && n.sourceRange != null)) && n.inRange()) add(n)
                     }
                 }
-                if (stackNodes.isNotEmpty()) result.add(LayoutItem.Stack(stackNodes, parentId, indexInParent))
+                if (stackNodes.isNotEmpty()) result.add(LayoutItem.Stack(node.id, stackNodes, parentId, indexInParent))
             }
 
             is MnNode.Choice -> node.options.forEachIndexed { idx, child ->
@@ -211,16 +212,18 @@ object NoteStaffLayout {
                 is LayoutItem.Stack -> {
                     // Left push: insert before this stack in its parent
                     add(SlotTarget(InsertTarget.Sequential(item.parentId, item.indexInParent), idx, isPush = true))
-                    // Center overlay: stack onto this node
-                    add(SlotTarget(InsertTarget.StackOnto(item.items.first().id), idx, isPush = false))
+                    // Center overlay: add layer to this stack
+                    add(SlotTarget(InsertTarget.StackOnto(item.nodeId), idx, isPush = false))
                     // Right push: insert after this stack in its parent
                     add(SlotTarget(InsertTarget.Sequential(item.parentId, item.indexInParent + 1), idx + 1, isPush = true))
                 }
 
                 is LayoutItem.BracketMark -> {
                     if (item.isOpen) {
-                        // Push slot at start of container: insert at index 0 inside the container
-                        add(SlotTarget(InsertTarget.Sequential(item.containerId, 0), idx, isPush = true))
+                        // Push slot before container in parent (left edge of bracket)
+                        add(SlotTarget(InsertTarget.Sequential(item.containerParentId, item.containerIndexInParent), idx, isPush = true))
+                        // Push slot at start of container (right edge of bracket = left edge of next item)
+                        add(SlotTarget(InsertTarget.Sequential(item.containerId, 0), idx + 1, isPush = true))
                     } else {
                         // Push slot after container: insert after the container in its parent
                         add(

@@ -138,12 +138,12 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         lastAtom = lastAtom?.let { a -> pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) } }
     }
 
-    /** Removes the node with [targetId] from the tree. */
+    /** Removes the node with [targetId] from the tree, normalizing wrapper groups afterward. */
     protected fun removeNode(targetId: Int) {
         val p = pattern ?: return
         pushUndo()
         val newRoot = p.removeById(targetId) as? MnPattern ?: return
-        text = MnRenderer.render(newRoot)
+        text = MnRenderer.render(MnNodeOps.normalizeGroups(newRoot))
         cursorOffset = cursorOffset.coerceAtMost(text.length)
         lastAtom = null
     }
@@ -251,9 +251,24 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
             ui.divider {}
             if (atom != null) {
-                mnModifierPanel(atom, onToggleRest = {
-                    updateNode(atom, MnNode.Rest(atom.sourceRange))
-                }) { updated -> updateNode(atom, updated) }
+                val parentRepeat = pattern?.let { MnNodeOps.findParentRepeat(it, atom.id) }
+                mnModifierPanel(
+                    atom,
+                    onToggleRest = { updateNode(atom, MnNode.Rest(atom.sourceRange)) },
+                    repeatCount = parentRepeat?.count,
+                    onRepeatChange = { newCount ->
+                        if (newCount != null && parentRepeat != null) {
+                            // Update existing repeat count
+                            replaceNode(parentRepeat.id, parentRepeat.copy(count = newCount))
+                        } else if (newCount != null && parentRepeat == null) {
+                            // Wrap atom in a new Repeat
+                            replaceNode(atom.id, MnNode.Repeat(node = atom, count = newCount))
+                        } else if (newCount == null && parentRepeat != null) {
+                            // Remove repeat — unwrap to just the inner node
+                            replaceNode(parentRepeat.id, parentRepeat.node)
+                        }
+                    },
+                ) { updated -> updateNode(atom, updated) }
             } else if (rest != null) {
                 mnModifierPanel(rest, onToggleNote = {
                     updateNode(rest, MnNode.Atom(value = staffPositionToAtomValue(6)))
@@ -318,7 +333,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 val newAtom = MnNode.Atom(value = staffPositionToAtomValue(action.staffPos))
                 val newParent = when (parent) {
                     is MnPattern -> parent.insertAt(action.index, newAtom)
-                    is MnNode.Group -> parent.insertAt(action.index, newAtom)
+                    is MnNode.Group -> MnNodeOps.groupInsertAt(parent, action.index, newAtom)
                     is MnNode.Alternation -> parent.insertAt(action.index, newAtom)
                     else -> return
                 }
@@ -337,6 +352,11 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                             items = listOf(MnNode.Stack(layers = listOf(listOf(node), listOf(MnNode.Atom(value = newValue)))))
                         )
                         replaceNode(node.id, stack)
+                    }
+
+                    is MnNode.Stack -> {
+                        // Add layer to existing stack: [c4,e4] → [c4,e4,g4]
+                        replaceNode(node.id, node.addLayer(MnNode.Atom(value = newValue)))
                     }
 
                     is MnNode.Rest -> {
