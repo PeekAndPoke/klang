@@ -111,7 +111,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private val currentModals by subscribingTo(modals)
 
     private var highlightPerEvent by value(10) {
-        codeEditorRef { editor -> editor.maxHighlightsPerEvent = it }
+        codeEditorRef { editor -> editor.highlightBuffer.maxHighlightsPerEvent = it }
     }
 
     private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
@@ -204,6 +204,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     init {
         lifecycle {
+            onMount {
+                codeEditorRef { editor -> editor.highlightBuffer.maxHighlightsPerEvent = highlightPerEvent }
+            }
             onUnmount {
                 onStop()
             }
@@ -459,7 +462,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 step(1)
                                 appear { large }
                                 leftLabel {
-                                    ui.basic.label { icon.clock(); +"EVT" }
+                                    ui.basic.label { icon.bolt(); +"EVT" }
                                 }
                             }
                         }
