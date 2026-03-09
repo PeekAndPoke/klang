@@ -1,6 +1,10 @@
 package io.peekandpoke.klang.ui
 
+import de.peekandpoke.ultra.common.TypedAttributes
+import de.peekandpoke.ultra.common.TypedKey
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
+import de.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.html.FlowContent
 
@@ -12,6 +16,7 @@ import kotlinx.html.FlowContent
  * @param currentValue Raw source text of the argument at the cursor (null if no arg is present yet).
  * @param onCommit     Call with the replacement source text to commit the edit back to the editor.
  * @param onCancel     Call to dismiss without making any change.
+ * @param attrs        Extensible typed attributes for passing module-specific data (e.g. playback signals).
  */
 data class KlangUiToolContext(
     val symbol: KlangSymbol,
@@ -19,7 +24,16 @@ data class KlangUiToolContext(
     val currentValue: String?,
     val onCommit: (String) -> Unit,
     val onCancel: () -> Unit,
-)
+    val attrs: TypedAttributes = TypedAttributes.empty,
+) {
+    companion object {
+        /** Typed key for the stream of scheduled voice batches (raw timing + source locations). */
+        val PlaybackVoiceEvents = TypedKey<Stream<List<PlaybackVoiceEvent>>>("PlaybackVoices")
+
+        /** Typed key for the base source location of the edited string literal (opening-quote position). */
+        val BaseSourceLocation = TypedKey<SourceLocation>("BaseSourceLocation")
+    }
+}
 
 /**
  * A UI tool that can edit a function argument interactively.

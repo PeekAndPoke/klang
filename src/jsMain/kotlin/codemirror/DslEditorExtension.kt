@@ -36,7 +36,7 @@ fun dslEditorExtension(
     hoverPopup: KlangDocsHoverPopupCtrl,
     popups: PopupsManager,
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
-    onOpenTool: ((toolName: String, ctx: KlangUiToolContext, event: dynamic) -> Unit)? = null,
+    onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
 ): Extension {
 
     // ── Underline decoration (CTRL/Cmd-hover) ─────────────────────────────
@@ -188,7 +188,7 @@ fun dslEditorExtension(
                             tool.run { icon.iconFn().render() }
                             +(tool.title ?: toolName)
                         }) {
-                            onOpenTool(toolName, makeToolContext(argInfo, view), event)
+                            onOpenTool(toolName, makeToolContext(argInfo, view), argInfo.argFrom, event)
                         }
                     }
                 }
@@ -208,6 +208,9 @@ fun dslEditorExtension(
     /** Key of the arg whose badges are currently rendered (prevents needless DOM rebuilds). */
     var badgeCacheKey: String? = null
 
+    /** The [CallArgInfo] whose badges are currently rendered. */
+    var badgeArgInfo: CallArgInfo? = null
+
     var badgesHideTimer: dynamic = null
 
     fun cancelBadgesClose() {
@@ -219,11 +222,12 @@ fun dslEditorExtension(
         val container = badgeContainer
         if (container != null) container.asDynamic().style.display = "none"
         badgeCacheKey = null
+        badgeArgInfo = null
     }
 
     fun scheduleBadgesClose() {
         cancelBadgesClose()
-        badgesHideTimer = window.setTimeout({ hideBadges() }, 120)
+        badgesHideTimer = window.setTimeout({ hideBadges() }, 300)
     }
 
     fun getOrCreateBadgeContainer(): Element {
@@ -239,7 +243,7 @@ fun dslEditorExtension(
         }
     }
 
-    fun showBadges(argInfo: CallArgInfo, view: EditorView) {
+    fun showBadges(argInfo: CallArgInfo, view: EditorView, mouseX: Double) {
         if (onOpenTool == null || argInfo.tools.isEmpty()) {
             hideBadges(); return
         }
@@ -249,16 +253,17 @@ fun dslEditorExtension(
             return
         }
 
-        // console.log("[badges] showing at left=${rect.left} top=${rect.top} tools=${argInfo.tools.map { it.first }}")
-
         val container = getOrCreateBadgeContainer()
-        container.asDynamic().style.left = "${rect.left}px"
-        container.asDynamic().style.top = "${rect.top - 18}px"
+        // Center horizontally on mouse X, above the text line
+        container.asDynamic().style.left = "${mouseX}px"
+        container.asDynamic().style.top = "${rect.top - 20}px"
+        container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
 
         val key = "${argInfo.argFrom}:${argInfo.tools.joinToString(",") { it.first }}"
         if (key == badgeCacheKey) return
         badgeCacheKey = key
+        badgeArgInfo = argInfo
         container.innerHTML = ""
 
         argInfo.tools.forEach { (toolName, tool) ->
@@ -274,7 +279,7 @@ fun dslEditorExtension(
                 event.asDynamic().preventDefault()
                 event.asDynamic().stopPropagation()
                 hideBadges()
-                onOpenTool(toolName, makeToolContext(argInfo, view), event.asDynamic())
+                onOpenTool(toolName, makeToolContext(argInfo, view), argInfo.argFrom, event.asDynamic())
             })
             container.appendChild(btn)
         }
@@ -354,10 +359,14 @@ fun dslEditorExtension(
         // ── Tool-icon badge overlay ────────────────────────────────────────
         if (onOpenTool != null) {
             try {
+                val mouseX = event.clientX.unsafeCast<Double>()
                 val argInfo = argInfoAt(event, view)
                 if (argInfo != null && argInfo.tools.isNotEmpty()) {
                     cancelBadgesClose()
-                    showBadges(argInfo, view)
+                    showBadges(argInfo, view, mouseX)
+                } else if (badgeArgInfo != null) {
+                    // Mouse left the current param but badges are visible —
+                    // keep them alive so the user can reach them.
                 } else {
                     scheduleBadgesClose()
                 }

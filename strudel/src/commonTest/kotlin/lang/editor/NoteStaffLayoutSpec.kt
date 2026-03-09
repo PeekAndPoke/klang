@@ -27,13 +27,13 @@ class NoteStaffLayoutSpec : StringSpec() {
     private fun layout(pattern: String) = NoteStaffLayout.buildLayoutItems(parse(pattern), fullRange(pattern))
     private fun layoutOf(p: MnPattern, text: String) = NoteStaffLayout.buildLayoutItems(p, fullRange(text))
 
-    /** Execute a Sequential insert target on the given pattern. */
+    /** Execute a Sequential insert target on the given pattern (mirrors real UI logic). */
     private fun executeSequential(p: MnPattern, target: InsertTarget.Sequential, value: String): String {
         val container = p.findById(target.parentId) ?: error("Container not found")
         val newAtom = MnNode.Atom(value)
         val newContainer = when (container) {
             is MnPattern -> container.insertAt(target.index, newAtom)
-            is MnNode.Group -> container.insertAt(target.index, newAtom)
+            is MnNode.Group -> MnNodeOps.groupInsertAt(container, target.index, newAtom)
             is MnNode.Alternation -> container.insertAt(target.index, newAtom)
             else -> error("Cannot insert into ${container::class.simpleName}")
         }
@@ -188,6 +188,12 @@ class NoteStaffLayoutSpec : StringSpec() {
             val targets = NoteStaffLayout.buildInsertTargets(items)
             val group = p.items[0] as MnNode.Group
 
+            // Open bracket → Sequential(p.id, 0) (insert before group in pattern)
+            val beforeTarget = targets.filter { it.target is InsertTarget.Sequential }
+                .map { it.target as InsertTarget.Sequential }
+                .first { it.parentId == p.id && it.index == 0 }
+            beforeTarget.parentId shouldBe p.id
+
             // Open bracket → Sequential(group.id, 0) (insert at start of group)
             val openTarget =
                 targets.first { it.target is InsertTarget.Sequential && (it.target as InsertTarget.Sequential).parentId == group.id }
@@ -235,6 +241,33 @@ class NoteStaffLayoutSpec : StringSpec() {
             closeBracket.isNotEmpty() shouldBe true
         }
 
+        "targets: <[a,b]> — open bracket of alternation targets pattern level" {
+            val text = "<[a,b]>"
+            val p = parse(text)
+            val items = layoutOf(p, text)
+            val targets = NoteStaffLayout.buildInsertTargets(items)
+
+            // The open bracket of the alternation should produce Sequential(p.id, 0)
+            val beforeAlt = targets.filter { it.target is InsertTarget.Sequential }
+                .map { it.target as InsertTarget.Sequential }
+                .filter { it.parentId == p.id && it.index == 0 }
+            beforeAlt.isNotEmpty() shouldBe true
+        }
+
+        "integration: <[a,b]> — insert before alternation at pattern level" {
+            val text = "<[a,b]>"
+            val p = parse(text)
+            val items = layoutOf(p, text)
+            val targets = NoteStaffLayout.buildInsertTargets(items)
+
+            val beforeTarget = targets.filter { it.isPush }
+                .map { it.target }
+                .filterIsInstance<InsertTarget.Sequential>()
+                .first { it.parentId == p.id && it.index == 0 }
+
+            executeSequential(p, beforeTarget, "n0") shouldBe "n0 <[a,b]>"
+        }
+
         // ── Integration: layout → targets → execute ─────────────────────────
 
         "integration: [c4,e4] d4 — right-push after stack inserts between stack and d4" {
@@ -265,7 +298,7 @@ class NoteStaffLayoutSpec : StringSpec() {
                 .filterIsInstance<InsertTarget.Sequential>()
                 .first { it.parentId == group.id && it.index == 0 }
 
-            executeSequential(p, openTarget, "n0") shouldBe "[n0 c4,e4] d4"
+            executeSequential(p, openTarget, "n0") shouldBe "[n0 [c4,e4]] d4"
         }
 
         "integration: [c4,e4] d4 — insert before stack at top level" {

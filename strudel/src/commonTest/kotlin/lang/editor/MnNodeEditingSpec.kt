@@ -23,18 +23,25 @@ class MnNodeEditingSpec : StringSpec() {
     private fun stacks(p: MnPattern): List<MnNode.Stack> = MnNodeOps.collectStacks(p)
     private fun atomByValue(p: MnPattern, value: String): MnNode.Atom? = atoms(p).firstOrNull { it.value == value }
 
-    /** Insert a new atom into the container with [containerId] at [index], return re-rendered text. */
+    /** Insert a new atom into the container with [containerId] at [index], return re-rendered text.
+     *  Uses [MnNodeOps.groupInsertAt] for Groups to wrap Stacks in sub-Groups. */
     private fun insertChild(p: MnPattern, containerId: Int, index: Int, value: String): String {
         val container = p.findById(containerId) ?: error("Container not found")
         val newAtom = MnNode.Atom(value)
         val newContainer = when (container) {
             is MnPattern -> container.insertAt(index, newAtom)
-            is MnNode.Group -> container.insertAt(index, newAtom)
+            is MnNode.Group -> MnNodeOps.groupInsertAt(container, index, newAtom)
             is MnNode.Alternation -> container.insertAt(index, newAtom)
             else -> error("Cannot insert into ${container::class.simpleName}")
         }
         val newRoot = p.replaceById(containerId, newContainer) as? MnPattern ?: error("replaceById failed")
         return render(newRoot)
+    }
+
+    /** Remove a node and normalize wrapper groups afterward. */
+    private fun removeAndNormalize(p: MnPattern, targetId: Int): String {
+        val newRoot = p.removeById(targetId) as? MnPattern ?: error("removeById failed")
+        return render(MnNodeOps.normalizeGroups(newRoot))
     }
 
     /** Stack a new atom onto [nodeId]. Wraps atom in Group+Stack or adds layer to existing Stack. */
@@ -469,7 +476,7 @@ class MnNodeEditingSpec : StringSpec() {
             val p = parse("<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>")
             val alt = p.items[0] as MnNode.Alternation
             val grp0 = alt.items[0] as MnNode.Group
-            insertChild(p, grp0.id, 0, "n0") shouldBe "<[n0 0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
+            insertChild(p, grp0.id, 0, "n0") shouldBe "<[n0 [0,7,12]] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13]]>"
         }
 
         "deep: add layer to first stack" {
@@ -501,7 +508,7 @@ class MnNodeEditingSpec : StringSpec() {
             val alt = p.items[0] as MnNode.Alternation
             val grp2 = alt.items[2] as MnNode.Group
             val innerGrp0 = grp2.items[0] as MnNode.Group
-            insertChild(p, innerGrp0.id, 0, "n0") shouldBe "<[0,7,12] [12,19,24] [[n0 1,8,13] [1,8,13]] [[1,8,13]]>"
+            insertChild(p, innerGrp0.id, 0, "n0") shouldBe "<[0,7,12] [12,19,24] [[n0 [1,8,13]] [1,8,13]] [[1,8,13]]>"
         }
 
         "deep: add layer to first inner stack of third group" {
@@ -538,7 +545,7 @@ class MnNodeEditingSpec : StringSpec() {
             val p = parse("<[0,7,12] [12,19,24]>")
             val alt = p.items[0] as MnNode.Alternation
             val grp0 = alt.items[0] as MnNode.Group
-            insertChild(p, grp0.id, 1, "n0") shouldBe "<[0,7,12 n0] [12,19,24]>"
+            insertChild(p, grp0.id, 1, "n0") shouldBe "<[[0,7,12] n0] [12,19,24]>"
         }
 
         "insertAt: after inner group inside outer" {
@@ -546,6 +553,140 @@ class MnNodeEditingSpec : StringSpec() {
             val alt = p.items[0] as MnNode.Alternation
             val grp2 = alt.items[2] as MnNode.Group
             insertChild(p, grp2.id, grp2.items.size, "n0") shouldBe "<[0,7,12] [12,19,24] [[1,8,13] [1,8,13] n0] [[1,8,13]]>"
+        }
+
+        // ── groupInsertAt: Stack wrapping ───────────────────────────────────
+
+        "groupInsertAt: insert before stack wraps it in sub-group" {
+            val p = parse("[0,7,12]")
+            val group = p.items[0] as MnNode.Group
+            insertChild(p, group.id, 0, "x") shouldBe "[x [0,7,12]]"
+        }
+
+        "groupInsertAt: insert after stack wraps it in sub-group" {
+            val p = parse("[0,7,12]")
+            val group = p.items[0] as MnNode.Group
+            insertChild(p, group.id, 1, "x") shouldBe "[[0,7,12] x]"
+        }
+
+        "groupInsertAt: insert into group without stacks does not wrap" {
+            val p = parse("[a b c]")
+            val group = p.items[0] as MnNode.Group
+            insertChild(p, group.id, 1, "x") shouldBe "[a x b c]"
+        }
+
+        "groupInsertAt: <[0,7,12]> insert before stack inside group" {
+            val p = parse("<[0,7,12]>")
+            val alt = p.items[0] as MnNode.Alternation
+            val group = alt.items[0] as MnNode.Group
+            insertChild(p, group.id, 0, "x") shouldBe "<[x [0,7,12]]>"
+        }
+
+        // ── normalizeGroups: unwrapping ─────────────────────────────────────
+
+        "normalizeGroups: [[0,7,12]] collapses to [0,7,12]" {
+            val p = parse("[[0,7,12]]")
+            render(MnNodeOps.normalizeGroups(p)) shouldBe "[0,7,12]"
+        }
+
+        "normalizeGroups: [a [0,7,12]] stays unchanged" {
+            val p = parse("[a [0,7,12]]")
+            render(MnNodeOps.normalizeGroups(p)) shouldBe "[a [0,7,12]]"
+        }
+
+        "normalizeGroups: <[[0,7,12]]> collapses inner group" {
+            val p = parse("<[[0,7,12]]>")
+            render(MnNodeOps.normalizeGroups(p)) shouldBe "<[0,7,12]>"
+        }
+
+        "normalizeGroups: deeply nested [[1,8,13]] inside group collapses" {
+            val p = parse("[a [[1,8,13]]]")
+            render(MnNodeOps.normalizeGroups(p)) shouldBe "[a [1,8,13]]"
+        }
+
+        // ── Round-trip: insert then remove restores original ────────────────
+
+        "round-trip: insert before stack then remove restores [0,7,12]" {
+            val p = parse("[0,7,12]")
+            val group = p.items[0] as MnNode.Group
+
+            // Insert → [x [0,7,12]]
+            val inserted = insertChild(p, group.id, 0, "x")
+            inserted shouldBe "[x [0,7,12]]"
+
+            // Remove x → normalize → [0,7,12]
+            val p2 = parse(inserted)
+            val x = atomByValue(p2, "x")!!
+            removeAndNormalize(p2, x.id) shouldBe "[0,7,12]"
+        }
+
+        "round-trip: insert after stack then remove restores [0,7,12]" {
+            val p = parse("[0,7,12]")
+            val group = p.items[0] as MnNode.Group
+
+            // Insert → [[0,7,12] x]
+            val inserted = insertChild(p, group.id, 1, "x")
+            inserted shouldBe "[[0,7,12] x]"
+
+            // Remove x → normalize → [0,7,12]
+            val p2 = parse(inserted)
+            val x = atomByValue(p2, "x")!!
+            removeAndNormalize(p2, x.id) shouldBe "[0,7,12]"
+        }
+
+        "round-trip: <[0,7,12]> insert then remove restores original" {
+            val p = parse("<[0,7,12]>")
+            val alt = p.items[0] as MnNode.Alternation
+            val group = alt.items[0] as MnNode.Group
+
+            // Insert → <[x [0,7,12]]>
+            val inserted = insertChild(p, group.id, 0, "x")
+            inserted shouldBe "<[x [0,7,12]]>"
+
+            // Remove x → normalize → <[0,7,12]>
+            val p2 = parse(inserted)
+            val x = atomByValue(p2, "x")!!
+            removeAndNormalize(p2, x.id) shouldBe "<[0,7,12]>"
+        }
+
+        // ── normalizeGroups: Stack normalization ────────────────────────────
+
+        "normalizeGroups: [a,b] remove a → normalize → [b]" {
+            val p = parse("[a,b]")
+            val a = atomByValue(p, "a")!!
+            removeAndNormalize(p, a.id) shouldBe "[b]"
+        }
+
+        "normalizeGroups: [a,b] remove b → normalize → [a]" {
+            val p = parse("[a,b]")
+            val b = atomByValue(p, "b")!!
+            removeAndNormalize(p, b.id) shouldBe "[a]"
+        }
+
+        "normalizeGroups: [a,b,c] remove a → normalize → [b,c]" {
+            val p = parse("[a,b,c]")
+            val a = atomByValue(p, "a")!!
+            removeAndNormalize(p, a.id) shouldBe "[b,c]"
+        }
+
+        "normalizeGroups: c [a,b] d remove a → normalize → c [b] d" {
+            val p = parse("c [a,b] d")
+            val a = atomByValue(p, "a")!!
+            removeAndNormalize(p, a.id) shouldBe "c [b] d"
+        }
+
+        // ── StackOnto: adding layer to existing stack ───────────────────────
+
+        "stackOnto: add layer to stack via Stack node" {
+            val p = parse("[0,7,12]")
+            val stack = stacks(p).first()
+            stackOnto(p, stack.id, "n0") shouldBe "[0,7,12,n0]"
+        }
+
+        "stackOnto: <[0,7,12]> add layer to stack" {
+            val p = parse("<[0,7,12]>")
+            val stack = stacks(p).first()
+            stackOnto(p, stack.id, "n0") shouldBe "<[0,7,12,n0]>"
         }
     }
 }

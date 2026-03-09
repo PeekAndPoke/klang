@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.strudel.ui
 
 import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
 import io.peekandpoke.klang.strudel.lang.editor.sourceRange
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
@@ -23,6 +24,7 @@ internal fun FlowContent.noteStaffSheet(
     posToValue: (Int) -> String,
     scaleName: String? = null,
     selection: MnSelection? = null,
+    resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>? = null,
     onAction: (NoteStaffEditor.Action) -> Unit = {},
 ) {
     if (pattern == null) return
@@ -68,6 +70,7 @@ internal fun FlowContent.noteStaffSheet(
                     posToValue = posToValue,
                     scaleName = scaleName,
                     selection = lineSelection,
+                    resolvedHighlightStream = resolvedHighlightStream,
                     onAction = onAction,
                 )
 

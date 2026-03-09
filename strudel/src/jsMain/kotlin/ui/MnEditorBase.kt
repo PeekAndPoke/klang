@@ -7,6 +7,9 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
+import de.peekandpoke.ultra.streams.Stream
+import de.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
@@ -14,12 +17,15 @@ import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.PlaybackVoiceEvent
 import kotlinx.browser.document
+import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.div
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
+import kotlin.js.Date
 
 /**
  * Abstract base component containing all shared state and logic for mini-notation editors.
@@ -86,10 +92,48 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         }
     }
 
+    // ── Playback highlight ────────────────────────────────────────────────────
+
+    /**
+     * Voice stream mapped to resolved highlights (timing + IntRange within the MN string).
+     */
+    protected val resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>? by lazy {
+        val stream = props.toolCtx.attrs[KlangUiToolContext.PlaybackVoiceEvents] ?: return@lazy null
+        val base = props.toolCtx.attrs[KlangUiToolContext.BaseSourceLocation] ?: return@lazy null
+        stream.map { voices ->
+            voices.mapNotNull { voice ->
+                val range = voiceToSourceRange(voice, base, text) ?: return@mapNotNull null
+                ResolvedVoiceHighlight(voice.startTime, voice.endTime, range)
+            }
+        }
+    }
+
+    /** Source ranges currently highlighted — used for the text input overlay and staff. */
+    protected val highlightedRanges = mutableSetOf<IntRange>()
+
+    private fun subscribeToHighlights() {
+        resolvedHighlightStream?.subscribe { highlights ->
+            if (highlights.isEmpty()) return@subscribe
+            val now = Date.now()
+            for (h in highlights) {
+                val startDelay = maxOf(1, (h.startTime * 1000.0 - now).toInt())
+                val endDelay = maxOf(1, (h.endTime * 1000.0 - now).toInt())
+                window.setTimeout({ if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }, startDelay)
+                window.setTimeout({ if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }, endDelay)
+            }
+        }
+    }
+
     init {
         lifecycle {
-            onMount { document.addEventListener("keydown", keydownListener) }
-            onUnmount { document.removeEventListener("keydown", keydownListener) }
+            onMount {
+                document.addEventListener("keydown", keydownListener)
+                subscribeToHighlights()
+            }
+            onUnmount {
+                document.removeEventListener("keydown", keydownListener)
+                highlightedRanges.clear()
+            }
         }
     }
 
@@ -122,8 +166,6 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     protected fun collectAtoms(p: MnPattern): List<MnNode.Atom> = MnNodeOps.collectAtoms(p)
 
-    protected fun collectStaffItems(p: MnPattern): List<MnNode> = MnNodeOps.collectStaffItems(p)
-
     protected fun findAtomById(p: MnPattern, id: Int): MnNode.Atom? = MnNodeOps.findAtomById(p, id)
 
     // ── Core edit operation ───────────────────────────────────────────────────
@@ -135,15 +177,17 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         val newRoot = p.replaceById(targetId, replacement) as? MnPattern ?: return
         text = MnRenderer.render(newRoot)
         // Try to re-find the atom near the cursor position
-        lastAtom = lastAtom?.let { a -> pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) } }
+        lastAtom = lastAtom?.let { _ ->
+            pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) }
+        }
     }
 
-    /** Removes the node with [targetId] from the tree. */
+    /** Removes the node with [targetId] from the tree, normalizing wrapper groups afterward. */
     protected fun removeNode(targetId: Int) {
         val p = pattern ?: return
         pushUndo()
         val newRoot = p.removeById(targetId) as? MnPattern ?: return
-        text = MnRenderer.render(newRoot)
+        text = MnRenderer.render(MnNodeOps.normalizeGroups(newRoot))
         cursorOffset = cursorOffset.coerceAtMost(text.length)
         lastAtom = null
     }
@@ -203,6 +247,76 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     }
 }
 
+// ── Resolved voice highlight ─────────────────────────────────────────────────
+
+/** A voice highlight with timing and a resolved source range within the MN string. */
+data class ResolvedVoiceHighlight(
+    val startTime: Double,
+    val endTime: Double,
+    val sourceRange: IntRange,
+)
+
+// ── Voice → source-range matching ────────────────────────────────────────────
+
+/**
+ * Converts a [PlaybackVoiceEvent]'s innermost [SourceLocation] to an [IntRange] within the
+ * mini-notation string, using the [base] source location (position of the opening quote).
+ *
+ * This reverses the formula in `MnPatternToStrudelPattern.toLocation()`:
+ * - For line 1:  `absoluteCol = base.startColumn + (sourceRange.first + 1)`
+ * - For line N:  `absoluteCol = sourceColumn` (column within that line of the MN string)
+ *
+ * @param mnText The mini-notation string — needed for multi-line offset calculation.
+ * Returns `null` if the voice has no source location or the location doesn't match.
+ */
+internal fun voiceToSourceRange(voice: PlaybackVoiceEvent, base: SourceLocation, mnText: String): IntRange? {
+    val chain = voice.sourceLocations ?: return null
+    // Check all locations in the chain, not just innermost — more robust
+    for (loc in chain.locations.asReversed()) {
+        val range = locationToSourceRange(loc, base, mnText) ?: continue
+        return range
+    }
+    return null
+}
+
+/**
+ * Converts a single [SourceLocation] to a mini-notation string [IntRange]
+ * given the [base] location of the opening quote.
+ *
+ * @param mnText The mini-notation string — used for multi-line line-start offsets.
+ */
+private fun locationToSourceRange(loc: SourceLocation, base: SourceLocation, mnText: String): IntRange? {
+    val mnLine = loc.startLine - base.startLine + 1
+    if (mnLine < 1) return null
+
+    return if (mnLine == 1) {
+        // Single-line: pure arithmetic, no string scanning
+        val from = loc.startColumn - base.startColumn - 1
+        val to = loc.endColumn - base.startColumn - 2
+        if (from >= 0 && to >= from) from..to else null
+    } else {
+        // Multi-line: find the character offset of the start of mnLine in the MN string,
+        // then add the 1-based column offset.
+        val lineStartOffset = mnText.nthLineOffset(mnLine) ?: return null
+        val from = lineStartOffset + loc.startColumn - 1
+        val to = lineStartOffset + loc.endColumn - 2
+        if (from >= 0 && to >= from && to < mnText.length) from..to else null
+    }
+}
+
+/** Returns the 0-based character offset of the start of the [n]-th line (1-based). */
+private fun String.nthLineOffset(n: Int): Int? {
+    if (n == 1) return 0
+    var line = 1
+    for (i in indices) {
+        if (this[i] == '\n') {
+            line++
+            if (line == n) return i + 1
+        }
+    }
+    return null
+}
+
 // ── Note staff editor base ────────────────────────────────────────────────────
 
 /**
@@ -237,7 +351,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 flexDirection = FlexDirection.column
             }
 
-            mnPatternTextInput(text, atom, parseError) { newText, cursor ->
+            mnPatternTextInput(text, atom, parseError, highlightedRanges) { newText, cursor ->
                 text = newText
                 cursorOffset = cursor
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
@@ -251,9 +365,24 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
 
             ui.divider {}
             if (atom != null) {
-                mnModifierPanel(atom, onToggleRest = {
-                    updateNode(atom, MnNode.Rest(atom.sourceRange))
-                }) { updated -> updateNode(atom, updated) }
+                val parentRepeat = pattern?.let { MnNodeOps.findParentRepeat(it, atom.id) }
+                mnModifierPanel(
+                    atom,
+                    onToggleRest = { updateNode(atom, MnNode.Rest(atom.sourceRange)) },
+                    repeatCount = parentRepeat?.count,
+                    onRepeatChange = { newCount ->
+                        if (newCount != null && parentRepeat != null) {
+                            // Update existing repeat count
+                            replaceNode(parentRepeat.id, parentRepeat.copy(count = newCount))
+                        } else if (newCount != null && parentRepeat == null) {
+                            // Wrap atom in a new Repeat
+                            replaceNode(atom.id, MnNode.Repeat(node = atom, count = newCount))
+                        } else if (newCount == null && parentRepeat != null) {
+                            // Remove repeat — unwrap to just the inner node
+                            replaceNode(parentRepeat.id, parentRepeat.node)
+                        }
+                    },
+                ) { updated -> updateNode(atom, updated) }
             } else if (rest != null) {
                 mnModifierPanel(rest, onToggleNote = {
                     updateNode(rest, MnNode.Atom(value = staffPositionToAtomValue(6)))
@@ -292,6 +421,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
             posToValue = ::staffPositionToAtomValue,
             scaleName = keySignatureScaleName(),
             selection = selection,
+            resolvedHighlightStream = resolvedHighlightStream,
             onAction = { action -> handleStaffAction(action) },
         )
     }
@@ -318,7 +448,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 val newAtom = MnNode.Atom(value = staffPositionToAtomValue(action.staffPos))
                 val newParent = when (parent) {
                     is MnPattern -> parent.insertAt(action.index, newAtom)
-                    is MnNode.Group -> parent.insertAt(action.index, newAtom)
+                    is MnNode.Group -> MnNodeOps.groupInsertAt(parent, action.index, newAtom)
                     is MnNode.Alternation -> parent.insertAt(action.index, newAtom)
                     else -> return
                 }
@@ -337,6 +467,11 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                             items = listOf(MnNode.Stack(layers = listOf(listOf(node), listOf(MnNode.Atom(value = newValue)))))
                         )
                         replaceNode(node.id, stack)
+                    }
+
+                    is MnNode.Stack -> {
+                        // Add layer to existing stack: [c4,e4] → [c4,e4,g4]
+                        replaceNode(node.id, node.addLayer(MnNode.Atom(value = newValue)))
                     }
 
                     is MnNode.Rest -> {

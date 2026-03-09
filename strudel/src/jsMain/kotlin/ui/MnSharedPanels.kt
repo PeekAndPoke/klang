@@ -23,12 +23,31 @@ fun FlowContent.mnPatternTextInput(
     text: String,
     atom: MnNode.Atom?,
     parseError: Boolean,
+    highlightedRanges: Set<IntRange> = emptySet(),
     onChange: (newText: String, cursor: Int) -> Unit,
 ) {
-    val highlightStart = atom?.sourceRange?.first
-    val highlightEnd = if (atom != null && highlightStart != null)
-        (highlightStart + MnRenderer.renderNode(atom).length).coerceAtMost(text.length)
+    // Selection highlight (blue)
+    val selStart = atom?.sourceRange?.first
+    val selEnd = if (atom != null && selStart != null)
+        (selStart + MnRenderer.renderNode(atom).length).coerceAtMost(text.length)
     else null
+
+    // Build sorted, non-overlapping highlight spans combining selection + playback
+    data class Span(val start: Int, val end: Int, val type: String) // "sel" or "play"
+
+    val spans = mutableListOf<Span>()
+    if (selStart != null && selEnd != null && selStart < selEnd) {
+        spans.add(Span(selStart, selEnd, "sel"))
+    }
+    for (range in highlightedRanges) {
+        val s = range.first.coerceAtLeast(0)
+        val e = (range.last + 1).coerceAtMost(text.length)
+        // Skip playback highlights that overlap with the selection
+        if (s < e && (selStart == null || selEnd == null || e <= selStart || s >= selEnd)) {
+            spans.add(Span(s, e, "play"))
+        }
+    }
+    spans.sortBy { it.start }
 
     div {
         div {
@@ -54,20 +73,24 @@ fun FlowContent.mnPatternTextInput(
                     overflow = Overflow.hidden
                     color = Color("transparent")
                 }
-                if (highlightStart != null && highlightEnd != null && highlightStart < highlightEnd) {
-                    +text.substring(0, highlightStart)
-                    mark {
-                        css {
-                            val col = Color("#CCF")
-                            backgroundColor = col.withAlpha(0.5)
-                            color = Color("transparent")
-                            borderRadius = 2.px
-                            // box-shadow instead of border so it doesn't affect line height
-                            put("box-shadow", "0 0 0 1px ${col.withAlpha(0.8)}")
+                if (spans.isNotEmpty()) {
+                    var cursor = 0
+                    for (span in spans) {
+                        if (span.start > cursor) +text.substring(cursor, span.start)
+                        mark {
+                            css {
+                                val col = if (span.type == "play") Color("#e67e22") else Color("#CCF")
+                                val alpha = if (span.type == "play") 0.4 else 0.5
+                                backgroundColor = col.withAlpha(alpha)
+                                color = Color("transparent")
+                                borderRadius = 2.px
+                                put("box-shadow", "0 0 0 1px ${col.withAlpha(alpha + 0.3)}")
+                            }
+                            +text.substring(span.start, span.end)
                         }
-                        +text.substring(highlightStart, highlightEnd)
+                        cursor = span.end
                     }
-                    +text.substring(highlightEnd)
+                    if (cursor < text.length) +text.substring(cursor)
                 } else {
                     +text
                 }
@@ -159,6 +182,8 @@ fun FlowContent.mnModifierPanel(
     atom: MnNode.Atom,
     disabled: Boolean = false,
     onToggleRest: (() -> Unit)? = null,
+    repeatCount: Int? = null,
+    onRepeatChange: ((Int?) -> Unit)? = null,
     onAtomChange: (MnNode.Atom) -> Unit,
 ) {
     val mods = atom.mods
@@ -195,6 +220,9 @@ fun FlowContent.mnModifierPanel(
             }
         }
 
+        if (onRepeatChange != null) {
+            mnRepeatChip(repeatCount, onRepeatChange)
+        }
         mnModChip(symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->
             onAtomChange(atom.copy(mods = mods.copy(multiplier = v)))
         }
@@ -296,6 +324,61 @@ fun FlowContent.mnModifierPanel(
 }
 
 // ── Private chip helpers ──────────────────────────────────────────────────────
+
+private fun FlowContent.mnRepeatChip(current: Int?, onChange: (Int?) -> Unit) {
+    div {
+        css {
+            display = Display.flex
+            alignItems = Align.center
+            gap = 4.px
+            backgroundColor = Color("#f5f5f5")
+            borderRadius = 6.px
+            padding = Padding(4.px, 8.px)
+        }
+        span {
+            css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+            attributes["title"] = "Repeat — duplicate this step n times"
+            +"!"
+        }
+        if (current != null) {
+            mnStepButton("-") {
+                val next = current - 1
+                onChange(if (next < 2) null else next)
+            }
+            input {
+                type = InputType.number
+                value = current.toString()
+                attributes["min"] = "2"
+                attributes["step"] = "1"
+                css {
+                    width = 50.px
+                    fontSize = 13.px
+                    padding = Padding(2.px, 4.px)
+                    borderRadius = 4.px
+                    put("border", "1px solid #ccc")
+                }
+                onInput { e ->
+                    val v = (e.target?.asDynamic()?.value as? String)?.toIntOrNull() ?: return@onInput
+                    onChange(if (v < 2) null else v)
+                }
+            }
+            mnStepButton("+") { onChange(current + 1) }
+            span {
+                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                attributes["title"] = "Remove repeat"
+                onClick { onChange(null) }
+                +"×"
+            }
+        } else {
+            span {
+                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+                attributes["title"] = "Add repeat"
+                onClick { onChange(2) }
+                +"+"
+            }
+        }
+    }
+}
 
 private fun FlowContent.mnModChip(
     symbol: String,

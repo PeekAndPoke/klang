@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.strudel
 
+import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_engine.KlangPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignals
+import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 
 /**
  * Continuous Strudel playback that runs indefinitely until explicitly stopped.
@@ -13,18 +13,20 @@ internal class ContinuousStrudelPlayback internal constructor(
     override val playbackId: String,
     pattern: StrudelPattern,
     context: KlangPlaybackContext,
-    private val onStopped: (KlangPlayback) -> Unit = {},
 ) : StrudelPlayback {
 
-    override val signals = KlangPlaybackSignals()
+    private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
 
     private val controller = StrudelPlaybackController(
         playbackId = playbackId,
         pattern = pattern,
         context = context,
-        onStopped = { handleControllerStopped() },
-        signals = signals,
+        signals = _signals,
     )
+
+    override fun onSignal(listener: (KlangPlaybackSignal) -> Unit): () -> Unit {
+        return _signals.subscribeToStream(listener)
+    }
 
     override fun updatePattern(pattern: StrudelPattern) {
         controller.updatePattern(pattern)
@@ -44,16 +46,10 @@ internal class ContinuousStrudelPlayback internal constructor(
 
     override fun stop() {
         controller.stop()
+        _signals.removeAllSubscriptions()
     }
 
     override fun handleFeedback(feedback: KlangCommLink.Feedback) {
         controller.handleFeedback(feedback)
-    }
-
-    private fun handleControllerStopped() {
-        // Clear signal listeners
-        signals.clear()
-        // Notify owner
-        onStopped(this)
     }
 }

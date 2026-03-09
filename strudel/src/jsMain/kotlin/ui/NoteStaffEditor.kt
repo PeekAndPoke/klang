@@ -5,6 +5,7 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
+import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.BracketType
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.InsertTarget
@@ -24,6 +25,7 @@ import kotlinx.html.Tag
 import kotlinx.html.div
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
+import kotlin.js.Date
 import kotlin.math.roundToInt
 
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -51,11 +53,20 @@ internal fun FlowContent.noteStaffSvg(
     scaleName: String? = null,
     /** Currently selected atom or rest — highlighted with a blue stroke. */
     selection: MnSelection? = null,
+    /** Pre-resolved highlight stream (timing + IntRange within MN string). */
+    resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>? = null,
     /** Receives all user interactions with the staff. */
     onAction: (NoteStaffEditor.Action) -> Unit = {},
 ) {
     this@noteStaffSvg.NoteStaffComp(
-        pattern, lineRange, atomToPos, posToValue, scaleName, selection, onAction,
+        pattern = pattern,
+        lineRange = lineRange,
+        atomToPos = atomToPos,
+        posToValue = posToValue,
+        scaleName = scaleName,
+        selection = selection,
+        resolvedHighlightStream = resolvedHighlightStream,
+        onAction = onAction,
     )
 }
 
@@ -67,10 +78,18 @@ private fun Tag.NoteStaffComp(
     posToValue: (Int) -> String,
     scaleName: String?,
     selection: MnSelection?,
+    resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>?,
     onAction: (NoteStaffEditor.Action) -> Unit,
 ) = comp(
     NoteStaffEditor.Props(
-        pattern, lineRange, atomToPos, posToValue, scaleName, selection, onAction,
+        pattern = pattern,
+        lineRange = lineRange,
+        atomToPos = atomToPos,
+        posToValue = posToValue,
+        scaleName = scaleName,
+        selection = selection,
+        resolvedHighlightStream = resolvedHighlightStream,
+        onAction = onAction,
     )
 ) { NoteStaffEditor(it) }
 
@@ -191,6 +210,8 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val scaleName: String?,
         /** Currently selected atom or rest — highlighted with a blue stroke. */
         val selection: MnSelection?,
+        /** Pre-resolved highlight stream (timing + IntRange within MN string). */
+        val resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>?,
         /** Receives all user interactions with the staff. */
         val onAction: (Action) -> Unit,
     )
@@ -262,10 +283,29 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         triggerRedraw()
     }
 
+    // ── Playback highlight (independent subscription) ──────────────────────
+
+    private val highlightedRanges = mutableSetOf<IntRange>()
+
     init {
-        lifecycle.onUnmount {
-            window.removeEventListener("mousemove", onMouseMoveWindow)
-            window.removeEventListener("mouseup", onMouseUpWindow)
+        lifecycle {
+            onMount {
+                props.resolvedHighlightStream?.subscribe { highlights ->
+                    if (highlights.isEmpty()) return@subscribe
+                    val now = Date.now()
+                    for (h in highlights) {
+                        val startDelay = maxOf(1, (h.startTime * 1000.0 - now).toInt())
+                        val endDelay = maxOf(1, (h.endTime * 1000.0 - now).toInt())
+                        window.setTimeout({ if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }, startDelay)
+                        window.setTimeout({ if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }, endDelay)
+                    }
+                }
+            }
+            onUnmount {
+                highlightedRanges.clear()
+                window.removeEventListener("mousemove", onMouseMoveWindow)
+                window.removeEventListener("mouseup", onMouseUpWindow)
+            }
         }
     }
 
@@ -644,6 +684,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
     private fun FlowContent.renderAtomSvg(atom: MnNode.Atom, x: Double, topY: Double) {
         val isActive = atom.id == props.selection.atom?.id
         val isDragging = dragAtomId == atom.id
+        val isHighlighted = atom.sourceRange in highlightedRanges
         val pos = if (isDragging) dragPreviewPos ?: dragStartPos else props.atomToPos(atom.value)
 
         if (pos == null) {
@@ -654,26 +695,26 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val y = staffPosToY(pos, topY)
         val noteColor = when {
             isDragging -> "#2266cc"
+            isHighlighted -> "#e67e22"
             isActive -> "#3355aa"
             else -> "#222"
         }
-        val strokeColor = if (isActive || isDragging) "#2266cc" else "#333"
-        val strokeWidth = if (isActive || isDragging) "2" else "1.2"
+        val strokeColor = when {
+            isHighlighted -> "#d35400"
+            isActive || isDragging -> "#2266cc"
+            else -> "#333"
+        }
+        val strokeWidth = when {
+            isHighlighted -> "2.5"
+            isActive || isDragging -> "2"
+            else -> "1.2"
+        }
 
         svgG(key = "atom-${atom.id}", style = "cursor:default") {
             attributes["data-atom-id"] = atom.id.toString()
             attributes["data-staff-pos"] = pos.toString()
 
             renderLedgerLines(pos, x, topY)
-
-            val stemUp = pos < 6
-            if (stemUp) {
-                val stemX = x + NOTE_RADIUS_X - 0.5
-                svgLine(stemX, y - NOTE_RADIUS_Y + 2, stemX, y - HALF_STEP * 3.5, stroke = noteColor)
-            } else {
-                val stemX = x - NOTE_RADIUS_X + 0.5
-                svgLine(stemX, y + NOTE_RADIUS_Y - 2, stemX, y + HALF_STEP * 3.5, stroke = noteColor)
-            }
 
             svgEllipse(x, y, NOTE_RADIUS_X, NOTE_RADIUS_Y, fill = noteColor, stroke = strokeColor, strokeWidth = strokeWidth)
 

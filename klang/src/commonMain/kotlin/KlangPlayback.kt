@@ -13,9 +13,11 @@ interface KlangPlayback {
     val playbackId: String
 
     /**
-     * Signal bus for subscribing to playback lifecycle signals.
+     * Subscribe to playback signals. Returns an unsubscribe function.
+     *
+     * All subscriptions are automatically cleaned up when the playback stops.
      */
-    val signals: KlangPlaybackSignals
+    fun onSignal(listener: (KlangPlaybackSignal) -> Unit): () -> Unit
 
     /**
      * Called by the player to deliver feedback messages to this playback.

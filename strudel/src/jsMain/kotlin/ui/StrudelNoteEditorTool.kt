@@ -53,7 +53,17 @@ private class StrudelNoteEditorComp(ctx: Ctx<Props>) : MnEditorBase<StrudelNoteE
             val atoms = pattern?.let { collectAtoms(it) } ?: return ""
             val noteNames = atoms.map { it.value }.filter { !Note.get(it).empty }
             if (noteNames.isEmpty()) return ""
-            return Scale.detect(noteNames).firstOrNull() ?: ""
+            val scaleName = Scale.detect(noteNames).firstOrNull() ?: return ""
+            // Inject the median octave from the actual notes so the scale's tonic
+            // matches the octave range of the pattern (keeps the staff display tight).
+            val octaves = noteNames.mapNotNull { Note.get(it).oct }
+            if (octaves.isEmpty()) return scaleName
+            val medianOct = octaves.sorted()[octaves.size / 2]
+            val (tonic, type) = Scale.tokenize(scaleName)
+            if (tonic.isEmpty()) return scaleName
+            val tonicNote = Note.get(tonic)
+            // Replace or add octave on the tonic
+            return "${tonicNote.pc}$medianOct $type"
         }
 
     /** Effective scale: manual override (if valid) → auto-detected → "C chromatic". */
@@ -62,7 +72,7 @@ private class StrudelNoteEditorComp(ctx: Ctx<Props>) : MnEditorBase<StrudelNoteE
             if (manualScaleName.isNotEmpty() && !Scale.get(manualScaleName).empty) return manualScaleName
             val detected = detectedScaleName
             if (detected.isNotEmpty()) return detected
-            return "C chromatic"
+            return "C4 chromatic"
         }
 
     // ── Position mapping ──────────────────────────────────────────────────────
