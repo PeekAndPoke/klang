@@ -1,196 +1,238 @@
 package io.peekandpoke.klang.codemirror
 
-import de.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
+import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
+import kotlinx.browser.document
 import kotlinx.browser.window
+import org.w3c.dom.HTMLElement
 import kotlin.js.Date
 
 /**
- * Buffers and manages code highlights with deduplication, rate-limiting, and concurrency control.
+ * Overlay-based playback highlight buffer for CodeMirror.
  *
- * Features:
- * - Deduplication: Removes existing highlight for same location before adding new one
- * - Rate limiting: Max [maxRefreshRatePerLocation] updates per second per location
- * - Concurrency cap: Max [maxSimultaneousHighlights] active highlights
- * - Dynamic duration: Highlight animation matches voice duration
- * - Clean cancellation: All pending timeouts can be cleared
- * - Stack depth limit: Max [maxHighlightsPerEvent] locations from each event's source location chain
+ * Renders absolutely-positioned `<mark>` elements in an overlay div inside
+ * the editor's scroll container. Only lightweight DOM mutations are performed —
+ * the CodeMirror state is never touched.
+ *
+ * Pending show/remove operations are batched into a single `requestAnimationFrame`
+ * loop so that highlights due at the same time appear in the same paint frame.
+ *
+ * Owned by [CodeMirrorComp]; call [attachTo] once the EditorView is ready.
  */
 class CodeMirrorHighlightBuffer(
-    private val editorRef: ComponentRef.Tracker<CodeMirrorComp>,
-    private val maxRefreshRatePerLocation: Int = 16,
-    private val maxSimultaneousHighlights: Int = 100,
-    var maxHighlightsPerEvent: Int = 10,
+    private val maxRefreshRatePerLocation: Int = 60,
+    private val maxSimultaneousHighlights: Int = 500,
+    var maxHighlightsPerEvent: Int = 100,
 ) {
-    /**
-     * Active highlight information for tracking and cancellation.
-     */
-    private data class ActiveHighlight(
-        val locationKey: String,
-        val highlightId: String,
-        val startTimeoutId: Int?,
-        val removeTimeoutId: Int?,
-    )
-
-    // Location key → currently active highlight
-    private val activeHighlights = mutableMapOf<String, ActiveHighlight>()
-
-    // All setTimeout IDs for bulk cancellation
-    private val pendingTimeouts = mutableSetOf<Int>()
-
-    // Location key → last time (Date.now()) a highlight was applied
-    private val lastHighlightTime = mutableMapOf<String, Double>()
-
-    // Computed minimum interval between highlights for the same location
     private val minIntervalMs: Double get() = 1000.0 / maxRefreshRatePerLocation
 
-    /**
-     * Schedule highlights for a voice event.
-     * Automatically handles source locations in the event's location chain,
-     * limited to the first [maxHighlightsPerEvent] locations.
-     */
-    fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
-        try {
-            // Cast to SourceLocationChain - if not, nothing to highlight
-            val chain = event.sourceLocations as? SourceLocationChain ?: return
+    private var view: EditorView? = null
 
-            // Schedule each location in the chain (limited by maxHighlightsPerEvent)
-            chain.locations.asReversed().take(maxHighlightsPerEvent).forEach { location ->
-                scheduleForLocation(location, event)
-            }
-        } catch (e: Exception) {
-            console.error("CodeHighlightBuffer: Failed to schedule highlight", e)
+    /** Overlay container — lazily created inside the editor's scroll container. */
+    private var overlay: HTMLElement? = null
+
+    /** locationKey → mark element currently in the overlay. */
+    private val activeMarks = mutableMapOf<String, HTMLElement>()
+
+    /** locationKey → last highlight time for rate-limiting. */
+    private val lastHighlightTime = mutableMapOf<String, Double>()
+
+    // ── Batched scheduling ──────────────────────────────────────────────────
+
+    private sealed class PendingOp(val timeMs: Double) {
+        class Show(timeMs: Double, val key: String, val location: SourceLocation, val durationMs: Double) :
+            PendingOp(timeMs)
+
+        class Remove(timeMs: Double, val key: String) : PendingOp(timeMs)
+    }
+
+    /** All pending operations sorted by target time. */
+    private val pendingOps = mutableListOf<PendingOp>()
+
+    /** Whether the frame loop is currently running. */
+    private var frameLoopActive = false
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────
+
+    fun attachTo(editorView: EditorView) {
+        view = editorView
+    }
+
+    fun detach() {
+        cancelAll()
+        overlay?.parentNode?.removeChild(overlay!!)
+        overlay = null
+        view = null
+    }
+
+    // ── Public API ──────────────────────────────────────────────────────────
+
+    fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
+        val chain = event.sourceLocations as? SourceLocationChain ?: return
+        chain.locations.asReversed().take(maxHighlightsPerEvent).forEach { location ->
+            scheduleForLocation(location, event)
         }
     }
 
-    /**
-     * Schedule a highlight for a specific source location.
-     */
+    fun cancelAll() {
+        pendingOps.clear()
+        frameLoopActive = false
+        activeMarks.clear()
+        lastHighlightTime.clear()
+        overlay?.let { it.innerHTML = "" }
+    }
+
+    // ── Internals ───────────────────────────────────────────────────────────
+
     private fun scheduleForLocation(
         location: SourceLocation,
         event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent,
     ) {
-        val key = location.toKey()
+        val key = "${location.startLine}:${location.startColumn}:${location.endLine}:${location.endColumn}"
         val now = Date.now()
 
-        // Compute timing (convert times from seconds to milliseconds)
         val startTimeMs = event.startTime * 1000.0
         val endTimeMs = event.endTime * 1000.0
-        val startFromNowMs = maxOf(1.0, (startTimeMs - now))
+        val showAtMs = now + maxOf(1.0, startTimeMs - now)
         val durationMs = maxOf(200.0, minOf(10000.0, endTimeMs - startTimeMs))
 
-        // Rate-limit check: Use projected time (when highlight will actually fire)
-        val projectedTime = now + startFromNowMs
+        // Rate-limit
         val lastTime = lastHighlightTime[key]
-        if (lastTime != null && (projectedTime - lastTime) < minIntervalMs) {
-            return // Skip - too soon after last highlight for this location
-        }
+        if (lastTime != null && (showAtMs - lastTime) < minIntervalMs) return
 
-        // Max simultaneous check
-        if (activeHighlights.size >= maxSimultaneousHighlights) {
-            return // Drop - too many active highlights
-        }
+        // Max simultaneous
+        if (activeMarks.size >= maxSimultaneousHighlights) return
 
-        // Schedule the start
-        var startTimeoutId = 0
+        // Enqueue show + remove
+        pendingOps.add(PendingOp.Show(showAtMs, key, location, durationMs))
+        pendingOps.add(PendingOp.Remove(showAtMs + durationMs + 150.0, key))
 
-        startTimeoutId = window.setTimeout({
-            try {
-                // Deduplication: Remove existing highlight for this location
-                activeHighlights[key]?.let { existing ->
-                    // Cancel removal timeout
-                    existing.removeTimeoutId?.let { id ->
-                        window.clearTimeout(id)
-                        pendingTimeouts.remove(id)
-                    }
-                    // Remove from editor
-                    editorRef { it.removeHighlight(existing.highlightId) }
-                    // Remove from tracking
-                    activeHighlights.remove(key)
-                }
-
-                // Add new highlight
-                var highlightId = ""
-                editorRef { editor ->
-                    highlightId = editor.addHighlight(
-                        line = location.startLine,
-                        column = location.startColumn,
-                        length = if (location.startLine == location.endLine) {
-                            location.endColumn - location.startColumn
-                        } else {
-                            2 // multiline fallback
-                        },
-                        durationMs = durationMs,
-                    )
-                }
-
-                // If editor didn't create highlight (empty ID), cleanup and return
-                if (highlightId.isEmpty()) {
-                    pendingTimeouts.remove(startTimeoutId)
-                    return@setTimeout
-                }
-
-                // Record last highlight time
-                lastHighlightTime[key] = Date.now()
-
-                // Schedule removal (durationMs + 50ms buffer for animation to finish)
-                var removeTimeoutId = 0
-
-                removeTimeoutId = window.setTimeout({
-                    try {
-                        editorRef { it.removeHighlight(highlightId) }
-                        activeHighlights.remove(key)
-                        pendingTimeouts.remove(removeTimeoutId)
-                    } catch (e: Exception) {
-                        console.error("CodeHighlightBuffer: Failed to remove highlight", e)
-                    }
-                }, (durationMs + 50.0).toInt())
-
-                pendingTimeouts.add(removeTimeoutId)
-
-                // Store active highlight
-                activeHighlights[key] = ActiveHighlight(
-                    locationKey = key,
-                    highlightId = highlightId,
-                    startTimeoutId = startTimeoutId,
-                    removeTimeoutId = removeTimeoutId,
-                )
-            } catch (e: Exception) {
-                console.error("CodeHighlightBuffer: Failed to add highlight", e)
-                pendingTimeouts.remove(startTimeoutId)
-            }
-        }, startFromNowMs.toInt())
-
-        pendingTimeouts.add(startTimeoutId)
+        ensureFrameLoop()
     }
 
-    /**
-     * Cancel all pending highlights and clear all active highlights from the editor.
-     * Call this when playback stops.
-     */
-    fun cancelAll() {
-        try {
-            // 1. Cancel all pending timeouts
-            for (id in pendingTimeouts) {
-                window.clearTimeout(id)
+    private fun ensureFrameLoop() {
+        if (frameLoopActive) return
+        frameLoopActive = true
+        window.requestAnimationFrame { tick() }
+    }
+
+    private fun tick() {
+        if (!frameLoopActive) return
+        if (pendingOps.isEmpty()) {
+            frameLoopActive = false
+            return
+        }
+
+        val now = Date.now()
+
+        // Process all ops that are due
+        val iter = pendingOps.iterator()
+        while (iter.hasNext()) {
+            val op = iter.next()
+            if (op.timeMs <= now) {
+                iter.remove()
+                when (op) {
+                    is PendingOp.Show -> showHighlight(op.key, op.location, op.durationMs)
+                    is PendingOp.Remove -> removeHighlight(op.key)
+                }
             }
-            pendingTimeouts.clear()
+        }
 
-            // 2. Clear all active highlights from editor
-            editorRef { it.clearHighlights() }
-
-            // 3. Reset state
-            activeHighlights.clear()
-            lastHighlightTime.clear()
-        } catch (e: Exception) {
-            console.error("CodeHighlightBuffer: Failed to cancel highlights", e)
+        // Continue loop if there's more pending
+        if (pendingOps.isNotEmpty()) {
+            window.requestAnimationFrame { tick() }
+        } else {
+            frameLoopActive = false
         }
     }
 
-    /**
-     * Convert a SourceLocation to a unique key for deduplication.
-     */
-    private fun SourceLocation.toKey(): String = "$startLine:$startColumn:$endLine:$endColumn"
+    private fun showHighlight(key: String, location: SourceLocation, durationMs: Double) {
+        val view = this.view ?: return
+
+        // Check if window has focus
+        val hasFocus = js("document.hasFocus()") as Boolean
+        if (!hasFocus) return
+
+        // Remove existing mark for this location (deduplication)
+        activeMarks.remove(key)?.let { it.parentNode?.removeChild(it) }
+
+        // Resolve document positions
+        val from = lineColToPos(view, location.startLine, location.startColumn) ?: return
+        val to = if (location.startLine == location.endLine) {
+            lineColToPos(view, location.endLine, location.endColumn) ?: return
+        } else {
+            // Multi-line: highlight to end of start line
+            lineColToPos(view, location.startLine, location.startColumn + 2) ?: return
+        }
+
+        // Get pixel coordinates relative to the content
+        val fromCoords = view.coordsAtPos(from) ?: return
+        val toCoords = view.coordsAtPos(to) ?: return
+
+        // Get the overlay parent's bounding rect for relative positioning
+        // The overlay sits inside contentDOM.parentElement, so we must offset against that — not contentDOM itself
+        val containerRect = view.contentDOM.parentElement?.getBoundingClientRect() ?: return
+
+        val left = (fromCoords.left - containerRect.left)
+        val top = (fromCoords.top - containerRect.top) + 1
+        val width = (toCoords.right - fromCoords.left) + 5
+        val height = (fromCoords.bottom - fromCoords.top) + 2
+
+        if (width <= 0 || height <= 0) return
+
+        // Create mark element
+        val mark = document.createElement("mark") as HTMLElement
+        mark.className = "cm-highlight-playing"
+        mark.style.apply {
+            position = "absolute"
+            this.left = "${left}px"
+            this.top = "${top}px"
+            this.width = "${width}px"
+            this.height = "${height}px"
+            setProperty("animation-duration", "${durationMs}ms")
+            setProperty("pointer-events", "none")
+        }
+
+        ensureOverlay(view).appendChild(mark)
+        activeMarks[key] = mark
+        lastHighlightTime[key] = Date.now()
+    }
+
+    private fun removeHighlight(key: String) {
+        val mark = activeMarks.remove(key) ?: return
+        mark.parentNode?.removeChild(mark)
+    }
+
+    private fun ensureOverlay(view: EditorView): HTMLElement {
+        overlay?.let { return it }
+
+        val el = document.createElement("div") as HTMLElement
+        el.className = "cm-highlight-overlay"
+        el.style.apply {
+            position = "absolute"
+            this.top = "0"
+            this.left = "0"
+            this.right = "0"
+            this.bottom = "0"
+            setProperty("pointer-events", "none")
+            zIndex = "5"
+        }
+
+        // Insert into contentDOM's parent so it scrolls with the content
+        view.contentDOM.parentElement?.appendChild(el)
+        overlay = el
+        return el
+    }
+
+    private fun lineColToPos(view: EditorView, line: Int, column: Int): Int? {
+        return try {
+            val lineObj = view.state.doc.line(line)
+            val pos = lineObj.from + (column - 1)
+            if (pos in 0..view.state.doc.length) pos else null
+        } catch (_: Throwable) {
+            null
+        }
+    }
 }
