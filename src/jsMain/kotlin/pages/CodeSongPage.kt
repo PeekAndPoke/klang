@@ -47,7 +47,7 @@ import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
-import io.peekandpoke.klang.ui.PlaybackVoice
+import io.peekandpoke.klang.ui.PlaybackVoiceEvent
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -153,7 +153,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
         // If playback is active, attach a voice event stream
         playback?.let { pb ->
-            attrs = attrs.plus(KlangUiToolContext.PlaybackVoices, createVoiceStream(pb))
+            attrs = attrs.plus(KlangUiToolContext.PlaybackVoiceEvents, createVoiceStream(pb))
         }
 
         modals.show { handle ->
@@ -336,13 +336,13 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
      * No offset conversion is done here — raw timing and source location data
      * is passed through. Consumers (editors) match against their own atoms.
      */
-    private fun createVoiceStream(playback: StrudelPlayback): Stream<List<PlaybackVoice>> {
-        val source = StreamSource<List<PlaybackVoice>>(emptyList())
+    private fun createVoiceStream(playback: StrudelPlayback): Stream<List<PlaybackVoiceEvent>> {
+        val source = StreamSource<List<PlaybackVoiceEvent>>(emptyList())
 
         playback.onSignal { signal ->
             if (signal is KlangPlaybackSignal.VoicesScheduled) {
                 source(signal.voices.map { voice ->
-                    PlaybackVoice(
+                    PlaybackVoiceEvent(
                         startTime = voice.startTime,
                         endTime = voice.endTime,
                         sourceLocations = voice.sourceLocations as? SourceLocationChain,

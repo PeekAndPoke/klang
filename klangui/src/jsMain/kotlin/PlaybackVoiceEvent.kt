@@ -9,7 +9,7 @@ import io.peekandpoke.klang.script.ast.SourceLocationChain
  * Consumers (editors) match voice events against their own atoms using the
  * [SourceLocationChain] and a base [io.peekandpoke.klang.script.ast.SourceLocation].
  */
-data class PlaybackVoice(
+data class PlaybackVoiceEvent(
     /** Absolute start time in seconds (wall-clock). */
     val startTime: Double,
     /** Absolute end time in seconds (wall-clock). */

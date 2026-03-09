@@ -8,6 +8,7 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.Stream
+import de.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
@@ -16,7 +17,7 @@ import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
-import io.peekandpoke.klang.ui.PlaybackVoice
+import io.peekandpoke.klang.ui.PlaybackVoiceEvent
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -93,31 +94,32 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     // ── Playback highlight ────────────────────────────────────────────────────
 
-    /** The voice event stream (null if playback is not active). */
-    protected val voiceStream: Stream<List<PlaybackVoice>>?
-        get() = props.toolCtx.attrs[KlangUiToolContext.PlaybackVoices]
-
-    /** Base source location of the opening quote — used to match voice locations against atoms. */
-    protected val baseSourceLocation: SourceLocation?
-        get() = props.toolCtx.attrs[KlangUiToolContext.BaseSourceLocation]
+    /**
+     * Voice stream mapped to resolved highlights (timing + IntRange within the MN string).
+     */
+    protected val resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>? by lazy {
+        val stream = props.toolCtx.attrs[KlangUiToolContext.PlaybackVoiceEvents] ?: return@lazy null
+        val base = props.toolCtx.attrs[KlangUiToolContext.BaseSourceLocation] ?: return@lazy null
+        stream.map { voices ->
+            voices.mapNotNull { voice ->
+                val range = voiceToSourceRange(voice, base, text) ?: return@mapNotNull null
+                ResolvedVoiceHighlight(voice.startTime, voice.endTime, range)
+            }
+        }
+    }
 
     /** Source ranges currently highlighted — used for the text input overlay and staff. */
     protected val highlightedRanges = mutableSetOf<IntRange>()
 
-    private var highlightUnsub: (() -> Unit)? = null
-
     private fun subscribeToHighlights() {
-        val stream = voiceStream ?: return
-        val base = baseSourceLocation ?: return
-        highlightUnsub = stream.subscribeToStream { voices ->
-            if (voices.isEmpty()) return@subscribeToStream
+        resolvedHighlightStream?.subscribe { highlights ->
+            if (highlights.isEmpty()) return@subscribe
             val now = Date.now()
-            for (voice in voices) {
-                val range = voiceToSourceRange(voice, base) ?: continue
-                val startDelay = maxOf(1, (voice.startTime * 1000.0 - now).toInt())
-                val endDelay = maxOf(1, (voice.endTime * 1000.0 - now).toInt())
-                window.setTimeout({ if (highlightedRanges.add(range)) triggerRedraw() }, startDelay)
-                window.setTimeout({ if (highlightedRanges.remove(range)) triggerRedraw() }, endDelay)
+            for (h in highlights) {
+                val startDelay = maxOf(1, (h.startTime * 1000.0 - now).toInt())
+                val endDelay = maxOf(1, (h.endTime * 1000.0 - now).toInt())
+                window.setTimeout({ if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }, startDelay)
+                window.setTimeout({ if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }, endDelay)
             }
         }
     }
@@ -130,8 +132,6 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
             }
             onUnmount {
                 document.removeEventListener("keydown", keydownListener)
-                highlightUnsub?.invoke()
-                highlightUnsub = null
                 highlightedRanges.clear()
             }
         }
@@ -166,8 +166,6 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     protected fun collectAtoms(p: MnPattern): List<MnNode.Atom> = MnNodeOps.collectAtoms(p)
 
-    protected fun collectStaffItems(p: MnPattern): List<MnNode> = MnNodeOps.collectStaffItems(p)
-
     protected fun findAtomById(p: MnPattern, id: Int): MnNode.Atom? = MnNodeOps.findAtomById(p, id)
 
     // ── Core edit operation ───────────────────────────────────────────────────
@@ -179,7 +177,9 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         val newRoot = p.replaceById(targetId, replacement) as? MnPattern ?: return
         text = MnRenderer.render(newRoot)
         // Try to re-find the atom near the cursor position
-        lastAtom = lastAtom?.let { a -> pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) } }
+        lastAtom = lastAtom?.let { _ ->
+            pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) }
+        }
     }
 
     /** Removes the node with [targetId] from the tree, normalizing wrapper groups afterward. */
@@ -247,23 +247,33 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     }
 }
 
+// ── Resolved voice highlight ─────────────────────────────────────────────────
+
+/** A voice highlight with timing and a resolved source range within the MN string. */
+data class ResolvedVoiceHighlight(
+    val startTime: Double,
+    val endTime: Double,
+    val sourceRange: IntRange,
+)
+
 // ── Voice → source-range matching ────────────────────────────────────────────
 
 /**
- * Converts a [PlaybackVoice]'s innermost [SourceLocation] to an [IntRange] within the
+ * Converts a [PlaybackVoiceEvent]'s innermost [SourceLocation] to an [IntRange] within the
  * mini-notation string, using the [base] source location (position of the opening quote).
  *
  * This reverses the formula in `MnPatternToStrudelPattern.toLocation()`:
  * - For line 1:  `absoluteCol = base.startColumn + (sourceRange.first + 1)`
  * - For line N:  `absoluteCol = sourceColumn` (column within that line of the MN string)
  *
+ * @param mnText The mini-notation string — needed for multi-line offset calculation.
  * Returns `null` if the voice has no source location or the location doesn't match.
  */
-internal fun voiceToSourceRange(voice: PlaybackVoice, base: SourceLocation): IntRange? {
+internal fun voiceToSourceRange(voice: PlaybackVoiceEvent, base: SourceLocation, mnText: String): IntRange? {
     val chain = voice.sourceLocations ?: return null
     // Check all locations in the chain, not just innermost — more robust
     for (loc in chain.locations.asReversed()) {
-        val range = locationToSourceRange(loc, base) ?: continue
+        val range = locationToSourceRange(loc, base, mnText) ?: continue
         return range
     }
     return null
@@ -272,10 +282,10 @@ internal fun voiceToSourceRange(voice: PlaybackVoice, base: SourceLocation): Int
 /**
  * Converts a single [SourceLocation] to a mini-notation string [IntRange]
  * given the [base] location of the opening quote.
+ *
+ * @param mnText The mini-notation string — used for multi-line line-start offsets.
  */
-private fun locationToSourceRange(loc: SourceLocation, base: SourceLocation): IntRange? {
-    if (loc.source != base.source) return null
-
+private fun locationToSourceRange(loc: SourceLocation, base: SourceLocation, mnText: String): IntRange? {
     val mnLine = loc.startLine - base.startLine + 1
     if (mnLine < 1) return null
 
@@ -285,11 +295,26 @@ private fun locationToSourceRange(loc: SourceLocation, base: SourceLocation): In
         val to = loc.endColumn - base.startColumn - 2
         if (from >= 0 && to >= from) from..to else null
     } else {
-        // Multi-line: column is absolute within that line of the MN string.
-        // We'd need the full MN text to compute the offset, which this function doesn't have.
-        // For now return null — multi-line MN strings are rare in practice.
-        null
+        // Multi-line: find the character offset of the start of mnLine in the MN string,
+        // then add the 1-based column offset.
+        val lineStartOffset = mnText.nthLineOffset(mnLine) ?: return null
+        val from = lineStartOffset + loc.startColumn - 1
+        val to = lineStartOffset + loc.endColumn - 2
+        if (from >= 0 && to >= from && to < mnText.length) from..to else null
     }
+}
+
+/** Returns the 0-based character offset of the start of the [n]-th line (1-based). */
+private fun String.nthLineOffset(n: Int): Int? {
+    if (n == 1) return 0
+    var line = 1
+    for (i in indices) {
+        if (this[i] == '\n') {
+            line++
+            if (line == n) return i + 1
+        }
+    }
+    return null
 }
 
 // ── Note staff editor base ────────────────────────────────────────────────────
@@ -396,8 +421,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
             posToValue = ::staffPositionToAtomValue,
             scaleName = keySignatureScaleName(),
             selection = selection,
-            voiceStream = voiceStream,
-            baseSourceLocation = baseSourceLocation,
+            resolvedHighlightStream = resolvedHighlightStream,
             onAction = { action -> handleStaffAction(action) },
         )
     }

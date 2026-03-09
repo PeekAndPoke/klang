@@ -28,7 +28,7 @@ data class KlangUiToolContext(
 ) {
     companion object {
         /** Typed key for the stream of scheduled voice batches (raw timing + source locations). */
-        val PlaybackVoices = TypedKey<Stream<List<PlaybackVoice>>>("PlaybackVoices")
+        val PlaybackVoiceEvents = TypedKey<Stream<List<PlaybackVoiceEvent>>>("PlaybackVoices")
 
         /** Typed key for the base source location of the edited string literal (opening-quote position). */
         val BaseSourceLocation = TypedKey<SourceLocation>("BaseSourceLocation")

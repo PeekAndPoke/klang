@@ -6,7 +6,6 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.*
 import de.peekandpoke.ultra.streams.Stream
-import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.BracketType
 import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.InsertTarget
@@ -54,10 +53,8 @@ internal fun FlowContent.noteStaffSvg(
     scaleName: String? = null,
     /** Currently selected atom or rest — highlighted with a blue stroke. */
     selection: MnSelection? = null,
-    /** Stream of scheduled voice batches for playback highlighting. */
-    voiceStream: Stream<List<PlaybackVoice>>? = null,
-    /** Base source location of the opening quote — for matching voice events to atoms. */
-    baseSourceLocation: SourceLocation? = null,
+    /** Pre-resolved highlight stream (timing + IntRange within MN string). */
+    resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>? = null,
     /** Receives all user interactions with the staff. */
     onAction: (NoteStaffEditor.Action) -> Unit = {},
 ) {
@@ -68,8 +65,7 @@ internal fun FlowContent.noteStaffSvg(
         posToValue = posToValue,
         scaleName = scaleName,
         selection = selection,
-        voiceStream = voiceStream,
-        baseSourceLocation = baseSourceLocation,
+        resolvedHighlightStream = resolvedHighlightStream,
         onAction = onAction,
     )
 }
@@ -82,8 +78,7 @@ private fun Tag.NoteStaffComp(
     posToValue: (Int) -> String,
     scaleName: String?,
     selection: MnSelection?,
-    voiceStream: Stream<List<PlaybackVoice>>?,
-    baseSourceLocation: SourceLocation?,
+    resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>?,
     onAction: (NoteStaffEditor.Action) -> Unit,
 ) = comp(
     NoteStaffEditor.Props(
@@ -93,8 +88,7 @@ private fun Tag.NoteStaffComp(
         posToValue = posToValue,
         scaleName = scaleName,
         selection = selection,
-        voiceStream = voiceStream,
-        baseSourceLocation = baseSourceLocation,
+        resolvedHighlightStream = resolvedHighlightStream,
         onAction = onAction,
     )
 ) { NoteStaffEditor(it) }
@@ -216,10 +210,8 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val scaleName: String?,
         /** Currently selected atom or rest — highlighted with a blue stroke. */
         val selection: MnSelection?,
-        /** Stream of scheduled voice batches for playback highlighting. */
-        val voiceStream: Stream<List<PlaybackVoice>>?,
-        /** Base source location of the opening quote — for matching voice events to atoms. */
-        val baseSourceLocation: SourceLocation?,
+        /** Pre-resolved highlight stream (timing + IntRange within MN string). */
+        val resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>?,
         /** Receives all user interactions with the staff. */
         val onAction: (Action) -> Unit,
     )
@@ -298,18 +290,14 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
     init {
         lifecycle {
             onMount {
-                val stream = props.voiceStream ?: return@onMount
-                val base = props.baseSourceLocation ?: return@onMount
-
-                stream.subscribe { voices ->
-                    if (voices.isEmpty()) return@subscribe
+                props.resolvedHighlightStream?.subscribe { highlights ->
+                    if (highlights.isEmpty()) return@subscribe
                     val now = Date.now()
-                    for (voice in voices) {
-                        val range = voiceToSourceRange(voice, base) ?: continue
-                        val startDelay = maxOf(1, (voice.startTime * 1000.0 - now).toInt())
-                        val endDelay = maxOf(1, (voice.endTime * 1000.0 - now).toInt())
-                        window.setTimeout({ if (highlightedRanges.add(range)) triggerRedraw() }, startDelay)
-                        window.setTimeout({ if (highlightedRanges.remove(range)) triggerRedraw() }, endDelay)
+                    for (h in highlights) {
+                        val startDelay = maxOf(1, (h.startTime * 1000.0 - now).toInt())
+                        val endDelay = maxOf(1, (h.endTime * 1000.0 - now).toInt())
+                        window.setTimeout({ if (highlightedRanges.add(h.sourceRange)) triggerRedraw() }, startDelay)
+                        window.setTimeout({ if (highlightedRanges.remove(h.sourceRange)) triggerRedraw() }, endDelay)
                     }
                 }
             }
