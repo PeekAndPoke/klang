@@ -3,13 +3,13 @@ package io.peekandpoke.klang.comp
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.utils.onResize
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.semanticIcon
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.externals.ResizeObserver
 import io.peekandpoke.klang.feel.ValueToColorMixer
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -73,7 +73,6 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
-    private var resizeObserver: ResizeObserver? = null
 
     private var logicalWidth = 0.0
     private var logicalHeight = 0.0
@@ -89,28 +88,27 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                 dom?.let { container ->
                     canvas = container.querySelector("canvas") as? HTMLCanvasElement
                     ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
+                }
+            }
 
-                    resizeObserver = ResizeObserver { entries, _ ->
-                        for (entry in entries) {
-                            val rect = (entry.target as? org.w3c.dom.HTMLElement)
-                                ?.getBoundingClientRect()
+            onResize { entries ->
+                for (entry in entries) {
+                    val rect = (entry.target as? org.w3c.dom.HTMLElement)
+                        ?.getBoundingClientRect()
 
-                            val width = rect?.width ?: entry.contentRect.width
-                            val height = rect?.height ?: entry.contentRect.height
-                            val dpr = window.devicePixelRatio
+                    val width = rect?.width ?: entry.contentRect.width
+                    val height = rect?.height ?: entry.contentRect.height
+                    val dpr = window.devicePixelRatio
 
-                            logicalWidth = width
-                            logicalHeight = height
+                    logicalWidth = width
+                    logicalHeight = height
 
-                            canvas?.width = (width * dpr).toInt()
-                            canvas?.height = (height * dpr).toInt()
+                    canvas?.width = (width * dpr).toInt()
+                    canvas?.height = (height * dpr).toInt()
 
-                            ctx2d?.setTransform(dpr, 0.0, 0.0, dpr, 0.0, 0.0)
+                    ctx2d?.setTransform(dpr, 0.0, 0.0, dpr, 0.0, 0.0)
 
-                            draw()
-                        }
-                    }
-                    resizeObserver?.observe(container)
+                    draw()
                 }
             }
 
@@ -126,10 +124,6 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                 }
 
                 draw()
-            }
-
-            onUnmount {
-                resizeObserver?.disconnect()
             }
         }
     }
