@@ -303,7 +303,7 @@ private fun Expression.toSourceString(): String = when (this) {
 
     is IndexAccess -> "${obj.toSourceString()}[${index.toSourceString()}]"
     is AssignmentExpression -> "${target.toSourceString()} = ${value.toSourceString()}"
-    is MemberAccess -> "${obj.toSourceString()}.${property}"
+    is MemberAccess -> "${obj.toSourceString()}.$property"
     is CallExpression ->
         "${callee.toSourceString()}(${arguments.joinToString(", ") { it.toSourceString() }})"
 
