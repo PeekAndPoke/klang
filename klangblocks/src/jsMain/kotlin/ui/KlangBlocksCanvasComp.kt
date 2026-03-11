@@ -138,7 +138,6 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
             }
         }
     }
-
 }
 
 /** Inline × to remove a non-chain statement (import, let, const). */
