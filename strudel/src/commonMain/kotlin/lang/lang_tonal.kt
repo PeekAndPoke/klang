@@ -414,7 +414,6 @@ fun String.s(): StrudelPattern = this._s(emptyList())
 @StrudelDsl
 fun s(name: PatternLike): StrudelPattern = _s(listOf(name).asStrudelDslArgs())
 
-
 // -- bank() -----------------------------------------------------------------------------------------------------------
 
 fun applyBank(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {

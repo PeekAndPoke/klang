@@ -53,7 +53,6 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.docsKlangScript) { KlangScriptDocsPage() }
     }
 
-
     layout({ FullscreenLayout { it() } }) {
         catchAll {
             NotFoundPage()

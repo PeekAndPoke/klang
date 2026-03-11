@@ -194,7 +194,6 @@ fun patternMapper(mapper: Any?): PatternMapperFn? {
     }
 }
 
-
 fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPattern>> {
     val args = this
 

@@ -3169,4 +3169,3 @@ fun bpe(depth: PatternLike? = null): PatternMapperFn = _bpe(listOfNotNull(depth)
 @StrudelDsl
 fun PatternMapperFn.bpe(depth: PatternLike? = null): PatternMapperFn =
     _bpe(listOfNotNull(depth).asStrudelDslArgs())
-
