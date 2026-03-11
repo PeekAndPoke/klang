@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 
@@ -17,13 +16,14 @@ fun strudelPlayer(
 fun KlangPlayer.playStrudel(
     pattern: StrudelPattern,
 ): StrudelPlayback {
-    val playback = StrudelPlayback.continuous(
+    lateinit var playback: StrudelPlayback
+    playback = StrudelPlayback.continuous(
         playbackId = generatePlaybackId(),
         pattern = pattern,
         context = playbackContext,
+        onStarted = { registerPlayback(playback) },
+        onStopped = { unregisterPlayback(playback) },
     )
-    registerPlayback(playback)
-    playback.onSignal { if (it is KlangPlaybackSignal.PlaybackStopped) unregisterPlayback(playback) }
     return playback
 }
 
@@ -38,13 +38,14 @@ fun KlangPlayer.playStrudelOnce(
     pattern: StrudelPattern,
     cycles: Int = 1,
 ): StrudelPlayback {
-    val playback = StrudelPlayback.oneShot(
+    lateinit var playback: StrudelPlayback
+    playback = StrudelPlayback.oneShot(
         playbackId = generatePlaybackId(),
         pattern = pattern,
         context = playbackContext,
         cycles = cycles,
+        onStarted = { registerPlayback(playback) },
+        onStopped = { unregisterPlayback(playback) },
     )
-    registerPlayback(playback)
-    playback.onSignal { if (it is KlangPlaybackSignal.PlaybackStopped) unregisterPlayback(playback) }
     return playback
 }

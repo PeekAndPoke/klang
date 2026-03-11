@@ -22,10 +22,14 @@ interface StrudelPlayback : KlangPlayback {
             playbackId: String,
             pattern: StrudelPattern,
             context: KlangPlaybackContext,
+            onStarted: () -> Unit = {},
+            onStopped: () -> Unit = {},
         ): StrudelPlayback = ContinuousStrudelPlayback(
             playbackId = playbackId,
             pattern = pattern,
             context = context,
+            onStarted = onStarted,
+            onStopped = onStopped,
         )
 
         /**
@@ -37,11 +41,15 @@ interface StrudelPlayback : KlangPlayback {
             pattern: StrudelPattern,
             context: KlangPlaybackContext,
             cycles: Int = 1,
+            onStarted: () -> Unit = {},
+            onStopped: () -> Unit = {},
         ): StrudelPlayback = OneShotStrudelPlayback(
             playbackId = playbackId,
             pattern = pattern,
             context = context,
             cyclesToPlay = cycles,
+            onStarted = onStarted,
+            onStopped = onStopped,
         )
     }
 

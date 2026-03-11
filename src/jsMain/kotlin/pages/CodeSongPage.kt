@@ -21,9 +21,7 @@ import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
 import de.peekandpoke.ultra.streams.ops.map
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
-import io.peekandpoke.klang.BuiltInSongs
-import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.*
 import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
@@ -33,7 +31,6 @@ import io.peekandpoke.klang.codemirror.dslEditorExtension
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
-import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
@@ -237,11 +234,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                             playback = p.playStrudel(pattern)
 
-                            playback?.onSignal { signal ->
+                            playback?.signals?.invoke { signal ->
                                 when (signal) {
                                     is KlangPlaybackSignal.VoicesScheduled -> {
                                         // When there is a modal dialog open, we stop highlighting
-                                        if (currentModals.isNotEmpty()) return@onSignal
+                                        if (currentModals.isNotEmpty()) return@invoke
 
                                         signal.voices.forEach { voiceEvent ->
                                             // Update Code highlights
@@ -338,21 +335,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
      * is passed through. Consumers (editors) match against their own atoms.
      */
     private fun createVoiceStream(playback: StrudelPlayback): Stream<List<PlaybackVoiceEvent>> {
-        val source = StreamSource<List<PlaybackVoiceEvent>>(emptyList())
-
-        playback.onSignal { signal ->
-            if (signal is KlangPlaybackSignal.VoicesScheduled) {
-                source(signal.voices.map { voice ->
-                    PlaybackVoiceEvent(
-                        startTime = voice.startTime,
-                        endTime = voice.endTime,
-                        sourceLocations = voice.sourceLocations as? SourceLocationChain,
-                    )
-                })
-            }
-        }
-
-        return source.readonly
+        return playback.signals.asPlaybackVoiceEvents()
     }
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////

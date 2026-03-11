@@ -5,10 +5,9 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 
 /**
  * Signals emitted during playback lifecycle.
- * Subscribe via [KlangPlayback.onSignal].
+ * Subscribe via [KlangPlayback.signals].
  */
 sealed class KlangPlaybackSignal {
-
     /**
      * Initial state of a playback signal stream before any lifecycle events have occurred.
      */

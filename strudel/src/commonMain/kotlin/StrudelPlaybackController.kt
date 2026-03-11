@@ -28,6 +28,8 @@ internal class StrudelPlaybackController(
     private var pattern: StrudelPattern,
     context: KlangPlaybackContext,
     private val signals: StreamSource<KlangPlaybackSignal>,
+    private val onStarted: () -> Unit = {},
+    private val onStopped: () -> Unit = {},
 ) {
     // Extract dependencies from context for convenience
     private val playerOptions = context.playerOptions
@@ -99,6 +101,8 @@ internal class StrudelPlaybackController(
             return
         }
 
+        onStarted()
+
         // Update playback parameters
         this.cyclesPerSecond = options.cyclesPerSecond
         this.lookaheadCycles = options.lookaheadCycles
@@ -130,6 +134,8 @@ internal class StrudelPlaybackController(
 
         // Emit stopped signal
         signals(KlangPlaybackSignal.PlaybackStopped)
+
+        onStopped()
     }
 
     /**

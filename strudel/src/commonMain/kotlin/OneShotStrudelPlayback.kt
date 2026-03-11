@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.strudel
 
+import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
@@ -17,9 +18,13 @@ internal class OneShotStrudelPlayback internal constructor(
     pattern: StrudelPattern,
     context: KlangPlaybackContext,
     private val cyclesToPlay: Int = 1,
+    onStarted: () -> Unit = {},
+    onStopped: () -> Unit = {},
 ) : StrudelPlayback {
 
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
+
+    override val signals: Stream<KlangPlaybackSignal> = _signals.readonly
 
     // Wrap the pattern to only return events within the target cycle range
     private val limitedPattern = pattern.filterWhen { it < cyclesToPlay }
@@ -29,6 +34,8 @@ internal class OneShotStrudelPlayback internal constructor(
         pattern = limitedPattern,
         context = context,
         signals = _signals,
+        onStarted = onStarted,
+        onStopped = onStopped,
     )
 
     init {
@@ -38,10 +45,6 @@ internal class OneShotStrudelPlayback internal constructor(
                 stop()
             }
         }
-    }
-
-    override fun onSignal(listener: (KlangPlaybackSignal) -> Unit): () -> Unit {
-        return _signals.subscribeToStream(listener)
     }
 
     override fun updatePattern(pattern: StrudelPattern) {
