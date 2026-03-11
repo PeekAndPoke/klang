@@ -20,6 +20,7 @@ kotlin {
     sourceSets {
         jsMain {
             dependencies {
+                api(project(":audio_bridge"))
                 api(project(":klangscript"))
                 api(project(":tones"))
                 api(Deps.KotlinLibs.Kraft.core)

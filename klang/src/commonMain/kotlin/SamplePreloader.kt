@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_engine
 
 import de.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink

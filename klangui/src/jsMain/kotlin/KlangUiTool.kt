@@ -4,6 +4,7 @@ import de.peekandpoke.ultra.common.TypedAttributes
 import de.peekandpoke.ultra.common.TypedKey
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.html.FlowContent
@@ -27,8 +28,8 @@ data class KlangUiToolContext(
     val attrs: TypedAttributes = TypedAttributes.empty,
 ) {
     companion object {
-        /** Typed key for the stream of scheduled voice batches (raw timing + source locations). */
-        val PlaybackVoiceEvents = TypedKey<Stream<List<PlaybackVoiceEvent>>>("PlaybackVoices")
+        /** Typed key for the raw playback signal stream. UI components filter what they need. */
+        val PlaybackVoiceEvents = TypedKey<Stream<KlangPlaybackSignal>>("PlaybackVoices")
 
         /** Typed key for the base source location of the edited string literal (opening-quote position). */
         val BaseSourceLocation = TypedKey<SourceLocation>("BaseSourceLocation")

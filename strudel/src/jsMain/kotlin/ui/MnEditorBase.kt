@@ -8,8 +8,11 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.Stream
+import de.peekandpoke.ultra.streams.ops.filterIsInstance
 import de.peekandpoke.ultra.streams.ops.map
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
@@ -17,7 +20,6 @@ import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
-import io.peekandpoke.klang.ui.PlaybackVoiceEvent
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -100,12 +102,15 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     protected val resolvedHighlightStream: Stream<List<ResolvedVoiceHighlight>>? by lazy {
         val stream = props.toolCtx.attrs[KlangUiToolContext.PlaybackVoiceEvents] ?: return@lazy null
         val base = props.toolCtx.attrs[KlangUiToolContext.BaseSourceLocation] ?: return@lazy null
-        stream.map { voices ->
-            voices.mapNotNull { voice ->
-                val range = voiceToSourceRange(voice, base, text) ?: return@mapNotNull null
-                ResolvedVoiceHighlight(voice.startTime, voice.endTime, range)
+        stream
+            .filterIsInstance<KlangPlaybackSignal.VoicesScheduled, KlangPlaybackSignal>()
+            .map { signal ->
+                val voices = signal?.voices ?: return@map emptyList()
+                voices.mapNotNull { voice ->
+                    val range = voiceToSourceRange(voice, base, text) ?: return@mapNotNull null
+                    ResolvedVoiceHighlight(voice.startTime, voice.endTime, range)
+                }
             }
-        }
     }
 
     /** Source ranges currently highlighted — used for the text input overlay and staff. */
@@ -259,7 +264,7 @@ data class ResolvedVoiceHighlight(
 // ── Voice → source-range matching ────────────────────────────────────────────
 
 /**
- * Converts a [PlaybackVoiceEvent]'s innermost [SourceLocation] to an [IntRange] within the
+ * Converts a [KlangPlaybackSignal.VoicesScheduled.VoiceEvent]'s innermost [SourceLocation] to an [IntRange] within the
  * mini-notation string, using the [base] source location (position of the opening quote).
  *
  * This reverses the formula in `MnPatternToStrudelPattern.toLocation()`:
@@ -269,8 +274,8 @@ data class ResolvedVoiceHighlight(
  * @param mnText The mini-notation string — needed for multi-line offset calculation.
  * Returns `null` if the voice has no source location or the location doesn't match.
  */
-internal fun voiceToSourceRange(voice: PlaybackVoiceEvent, base: SourceLocation, mnText: String): IntRange? {
-    val chain = voice.sourceLocations ?: return null
+internal fun voiceToSourceRange(voice: KlangPlaybackSignal.VoicesScheduled.VoiceEvent, base: SourceLocation, mnText: String): IntRange? {
+    val chain = voice.sourceLocations as? SourceLocationChain ?: return null
     // Check all locations in the chain, not just innermost — more robust
     for (loc in chain.locations.asReversed()) {
         val range = locationToSourceRange(loc, base, mnText) ?: continue

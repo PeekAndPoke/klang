@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.codemirror
 
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain

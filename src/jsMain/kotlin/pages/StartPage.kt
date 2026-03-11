@@ -20,8 +20,8 @@ import de.peekandpoke.ultra.streams.ops.ticker
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.comp.*
 import io.peekandpoke.klang.feel.KlangStudioColors
 import io.peekandpoke.klang.strudel.StrudelPlayback

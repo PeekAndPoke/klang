@@ -2,9 +2,9 @@ package io.peekandpoke.klang.strudel
 
 import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 
 /**
  * Continuous Strudel playback that runs indefinitely until explicitly stopped.
