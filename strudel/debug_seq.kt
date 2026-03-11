@@ -1,4 +1,3 @@
-import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.initStrudelLang
 import io.peekandpoke.klang.strudel.lang.note
 import io.peekandpoke.klang.strudel.lang.seq

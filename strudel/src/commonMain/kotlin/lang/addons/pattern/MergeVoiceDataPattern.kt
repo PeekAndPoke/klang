@@ -38,7 +38,6 @@ internal class MergePattern(
                 else -> srcEvt.copy(
                     data = srcEvt.data.merge(ctrlEvt.data),
                 ).prependLocations(ctrlEvt.sourceLocations)
-
             }
 
             result.add(toAdd)
