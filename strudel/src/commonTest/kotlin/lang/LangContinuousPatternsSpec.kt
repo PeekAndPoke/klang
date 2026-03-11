@@ -1204,5 +1204,4 @@ class LangContinuousPatternsSpec : StringSpec({
             }
         }
     }
-
 })

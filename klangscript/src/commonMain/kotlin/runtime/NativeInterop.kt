@@ -65,8 +65,7 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
         is FunctionValue -> this.convertFunctionToKotlin()
 
         is NativeFunctionValue -> {
-            @Suppress("RedundantLambdaArrow")
-            { ->
+            @Suppress("RedundantLambdaArrow") { ->
                 val result = function(emptyList(), null)
                 result.value
             }
@@ -115,8 +114,7 @@ fun <T : Any> FunctionValue.convertFunctionToKotlin(): T {
     val fn = when (func.parameters.size) {
         0 -> run {
             // NOTICE: The -> is important. It defines a Function0
-            @Suppress("UNCHECKED_CAST")
-            { -> callFunction(listOf(Unit)) } as T
+            @Suppress("UNCHECKED_CAST") { -> callFunction(listOf(Unit)) } as T
         }
 
         1 -> { a1: Any? ->
