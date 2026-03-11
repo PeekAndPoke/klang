@@ -1,3 +1,5 @@
+@file:Suppress("Detekt")
+
 package io.peekandpoke.klang.strudel.compat
 
 object JsCompatTestData {
