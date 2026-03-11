@@ -47,8 +47,11 @@ object MnPatternToStrudelPattern {
 
     /** Expands a [MnNode.Repeat] with empty mods into its constituent copies; leaves other nodes as-is. */
     private fun expandRepeat(node: MnNode): List<MnNode> =
-        if (node is MnNode.Repeat && node.mods.isEmpty) List(node.count) { node.node }
-        else listOf(node)
+        if (node is MnNode.Repeat && node.mods.isEmpty) {
+            List(node.count) { node.node }
+        } else {
+            listOf(node)
+        }
 
     // ── Node → pattern ────────────────────────────────────────────────────
 
@@ -88,8 +91,11 @@ object MnPatternToStrudelPattern {
         baseLocation: SourceLocation?,
         atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
     ): StrudelPattern {
-        val base = if (node.items.isEmpty()) silence
-        else layerToPattern(node.items, baseLocation, atomFactory)
+        val base = if (node.items.isEmpty()) {
+            silence
+        } else {
+            layerToPattern(node.items, baseLocation, atomFactory)
+        }
         return applyMods(base, node.mods)
     }
 

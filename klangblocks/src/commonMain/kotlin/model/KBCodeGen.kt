@@ -234,9 +234,13 @@ private fun KBChainStmt.appendTo(builder: CodeBuilder) {
     when (val head = steps.firstOrNull()) {
         is KBStringLiteralItem -> {
             val multiline = '\n' in head.value || '\r' in head.value
-            val escaped = if (multiline) head.value else head.value
+            val escaped = if (multiline) {
+                head.value
+            } else {
+                head.value
                 .replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "\\r")
+            }
             builder.trackBlock(id) {
                 append(if (multiline) "`" else "\"")
                 val contentStart = length

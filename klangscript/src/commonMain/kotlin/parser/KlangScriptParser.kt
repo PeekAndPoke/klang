@@ -904,10 +904,11 @@ class KlangScriptParser private constructor(
         var expr = parseMultiplication()
 
         while (match(TokenType.PLUS, TokenType.MINUS)) {
-            val operator = if (previous().type == TokenType.PLUS)
+            val operator = if (previous().type == TokenType.PLUS) {
                 BinaryOperator.ADD
-            else
+            } else {
                 BinaryOperator.SUBTRACT
+            }
             val opToken = previous()
             val right = parseMultiplication()
             expr = BinaryOperation(expr, operator, right, opToken.toSourceLocation())

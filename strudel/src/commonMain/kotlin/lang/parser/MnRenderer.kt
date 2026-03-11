@@ -74,8 +74,11 @@ object MnRenderer {
             // Order matches phase-2 application: euclidean → multiplier → divisor → probability → weight
             mods.euclidean?.let { e ->
                 append(
-                    if (e.rotation != 0) "(${e.pulses},${e.steps},${e.rotation})"
-                    else "(${e.pulses},${e.steps})"
+                    if (e.rotation != 0) {
+                        "(${e.pulses},${e.steps},${e.rotation})"
+                    } else {
+                        "(${e.pulses},${e.steps})"
+                    }
                 )
             }
             mods.multiplier?.let { append("*${renderNumber(it)}") }

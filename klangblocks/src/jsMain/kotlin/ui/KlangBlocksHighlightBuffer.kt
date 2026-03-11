@@ -48,7 +48,9 @@ class KlangBlocksHighlightBuffer {
             location.startLine == location.endLine
         ) {
             hit.offsetInSlot + (location.endColumn - location.startColumn)
-        } else null
+        } else {
+            null
+        }
 
         var timeoutId = 0
         timeoutId = window.setTimeout({

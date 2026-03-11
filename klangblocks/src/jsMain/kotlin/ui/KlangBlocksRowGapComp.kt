@@ -68,8 +68,11 @@ class KlangBlocksRowGapComp(ctx: Ctx<Props>) : Component<KlangBlocksRowGapComp.P
                     div(classes = styles.rowDropLine()) {
                         css {
                             backgroundColor = Color(
-                                if (isDropHovered) props.ctx.theme.rowDropLineHover
-                                else props.ctx.theme.rowDropLineIdle
+                                if (isDropHovered) {
+                                    props.ctx.theme.rowDropLineHover
+                                } else {
+                                    props.ctx.theme.rowDropLineIdle
+                                }
                             )
                         }
                     }

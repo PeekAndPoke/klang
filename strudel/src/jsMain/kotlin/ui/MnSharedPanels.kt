@@ -28,9 +28,11 @@ fun FlowContent.mnPatternTextInput(
 ) {
     // Selection highlight (blue)
     val selStart = atom?.sourceRange?.first
-    val selEnd = if (atom != null && selStart != null)
+    val selEnd = if (atom != null && selStart != null) {
         (selStart + MnRenderer.renderNode(atom).length).coerceAtMost(text.length)
-    else null
+    } else {
+        null
+    }
 
     // Build sorted, non-overlapping highlight spans combining selection + playback
     data class Span(val start: Int, val end: Int, val type: String) // "sel" or "play"
