@@ -127,9 +127,9 @@ class Interpreter(
         return try {
             executeBlockInChildScope(statements)
             true
-        } catch (e: BreakException) {
+        } catch (_: BreakException) {
             false
-        } catch (e: ContinueException) {
+        } catch (_: ContinueException) {
             true
         }
     }
@@ -900,7 +900,7 @@ class Interpreter(
                     BinaryOperator.LESS_THAN_OR_EQUAL -> leftValue.value <= rightValue.value
                     BinaryOperator.GREATER_THAN -> leftValue.value > rightValue.value
                     BinaryOperator.GREATER_THAN_OR_EQUAL -> leftValue.value >= rightValue.value
-                    else -> error("Unexpected comparison operator: ${binOp.operator}")
+//                    else -> error("Unexpected comparison operator: ${binOp.operator}")
                 }
                 return BooleanValue(result)
             }
@@ -957,7 +957,7 @@ class Interpreter(
                         leftValue.value % rightValue.value
                     }
 
-                    else -> error("Unexpected arithmetic operator: ${binOp.operator}")
+//                    else -> error("Unexpected arithmetic operator: ${binOp.operator}")
                 }
 
                 return NumberValue(result)
@@ -1217,7 +1217,7 @@ class Interpreter(
     }
 
     /**
-     * Evaluate an assignment expression: target = value, obj.prop = value, arr[i] = value
+     * Evaluate an assignment expression: target = value, obj.prop = value, arr[ i ] = value
      *
      * @param assignment The assignment expression AST node
      * @return The assigned value
@@ -1321,7 +1321,7 @@ class Interpreter(
     }
 
     /**
-     * Evaluate an index access expression: arr[i] or obj["key"]
+     * Evaluate an index access expression: arr[ i ] or obj["key"]
      *
      * - ArrayValue: index must be NumberValue → returns element or NullValue if out of range
      * - ObjectValue: index must be StringValue → returns property or NullValue if missing

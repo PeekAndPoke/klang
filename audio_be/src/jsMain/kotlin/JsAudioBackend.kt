@@ -10,6 +10,7 @@ import kotlinx.coroutines.await
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.w3c.dom.MessageEvent
+import org.w3c.dom.get
 
 class JsAudioBackend(
     private val config: AudioBackend.Config,
@@ -67,9 +68,13 @@ class JsAudioBackend(
         try {
             console.log("JsAudioBackend loading worklet")
 
-            // 2. Load the compiled DSP module
-            // This file "dsp.js" must contain the AudioWorkletProcessor registration
-            ctx.audioWorklet.addModule("/klang-worklet.js").await()
+            // 2. Load the audio worklet module with cache busting
+            val cacheBusterHash = getCacheBusterHash()
+            val uri = when {
+                cacheBusterHash.isBlank() -> "/klang-worklet.js"
+                else -> "/klang-worklet.js?c=$cacheBusterHash"
+            }
+            ctx.audioWorklet.addModule(uri).await()
 
             // 2. Create the Node (this instantiates the Processor in the Audio Thread)
             // We need to explicitly request 2 output channels, otherwise it defaults to 1 (Mono)
@@ -193,5 +198,24 @@ class JsAudioBackend(
                 console.error("Error closing AudioContext", e)
             }
         }
+    }
+
+    /**
+     * Calculates the cache buster hash for the current script.
+     */
+    private fun getCacheBusterHash(): String {
+        var hash = ""
+        val scripts = window.document.scripts
+        for (i in 0 until scripts.length) {
+            val src = (scripts[i] as? org.w3c.dom.HTMLScriptElement)?.src ?: continue
+            // Look for a typical bundler hash: a dot, followed by at least 8 hex characters, ending in .js
+            val match = Regex("""\.([a-fA-F0-9]{8,})\.js$""").find(src)
+            if (match != null) {
+                hash = match.groupValues[1]
+                break
+            }
+        }
+
+        return hash
     }
 }

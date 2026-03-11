@@ -14,6 +14,24 @@ import org.w3c.dom.MessagePort
 @Suppress("OPT_IN_USAGE")
 object WorkletContract {
 
+    const val PROP_TYPE = "type"
+
+    const val PROP_CHUNK_OFFSET = "chunkOffset"
+    const val PROP_CLEAR_SCHEDULED = "clearScheduled"
+    const val PROP_DATA = "data"
+    const val PROP_IS_LAST_CHUNK = "isLastChunk"
+    const val PROP_META = "meta"
+    const val PROP_NOTE = "note"
+    const val PROP_PCM = "pcm"
+    const val PROP_PITCH_HZ = "pitchHz"
+    const val PROP_PLAYBACK_ID = "playbackId"
+    const val PROP_REQ = "req"
+    const val PROP_SAMPLE = "sample"
+    const val PROP_SAMPLE_RATE = "sampleRate"
+    const val PROP_TOTAL_SIZE = "totalSize"
+    const val PROP_VOICE = "voice"
+    const val PROP_VOICES = "voices"
+
     private val codec = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
@@ -48,100 +66,98 @@ object WorkletContract {
     private fun KlangCommLink.Cmd.encode(): dynamic {
         return when (this) {
             is KlangCommLink.Cmd.Cleanup -> jsObject {
-                it.type = KlangCommLink.Cmd.Cleanup.SERIAL_NAME
-                it[KlangCommLink.Cmd::playbackId.name] = playbackId
+                it[PROP_TYPE] = KlangCommLink.Cmd.Cleanup.SERIAL_NAME
+                it[PROP_PLAYBACK_ID] = playbackId
             }
 
             is KlangCommLink.Cmd.ClearScheduled -> jsObject {
-                it.type = KlangCommLink.Cmd.ClearScheduled.SERIAL_NAME
-                it[KlangCommLink.Cmd::playbackId.name] = playbackId
+                it[PROP_TYPE] = KlangCommLink.Cmd.ClearScheduled.SERIAL_NAME
+                it[PROP_PLAYBACK_ID] = playbackId
             }
 
             is KlangCommLink.Cmd.ReplaceVoices -> jsObject {
-                it.type = KlangCommLink.Cmd.ReplaceVoices.SERIAL_NAME
-                it[KlangCommLink.Cmd::playbackId.name] = playbackId
-                it[KlangCommLink.Cmd.ReplaceVoices::voices.name] = voices.map { v -> v.encode() }.toTypedArray()
+                it[PROP_TYPE] = KlangCommLink.Cmd.ReplaceVoices.SERIAL_NAME
+                it[PROP_PLAYBACK_ID] = playbackId
+                it[PROP_VOICES] = voices.map { v -> v.encode() }.toTypedArray()
             }
 
             is KlangCommLink.Cmd.ScheduleVoice -> jsObject {
-                it.type = KlangCommLink.Cmd.ScheduleVoice.SERIAL_NAME
-                it[KlangCommLink.Cmd::playbackId.name] = playbackId
-                it[KlangCommLink.Cmd.ScheduleVoice::voice.name] = voice.encode()
-                it[KlangCommLink.Cmd.ScheduleVoice::clearScheduled.name] = clearScheduled
+                it[PROP_TYPE] = KlangCommLink.Cmd.ScheduleVoice.SERIAL_NAME
+                it[PROP_PLAYBACK_ID] = playbackId
+                it[PROP_VOICE] = voice.encode()
+                it[PROP_CLEAR_SCHEDULED] = clearScheduled
             }
 
             is KlangCommLink.Cmd.Sample.NotFound -> jsObject {
-                it.type = KlangCommLink.Cmd.Sample.NotFound.SERIAL_NAME
-                it[KlangCommLink.Cmd.Sample.NotFound::req.name] = req.encode()
+                it[PROP_TYPE] = KlangCommLink.Cmd.Sample.NotFound.SERIAL_NAME
+                it[PROP_REQ] = req.encode()
             }
 
             is KlangCommLink.Cmd.Sample.Complete -> jsObject {
-                it.type = KlangCommLink.Cmd.Sample.Complete.SERIAL_NAME
-                it[KlangCommLink.Cmd.Sample.Complete::req.name] = req.encode()
-                it[KlangCommLink.Cmd.Sample.Complete::note.name] = note
-                it[KlangCommLink.Cmd.Sample.Complete::pitchHz.name] = pitchHz
-                it[KlangCommLink.Cmd.Sample.Complete::sample.name] = sample.encode()
+                it[PROP_TYPE] = KlangCommLink.Cmd.Sample.Complete.SERIAL_NAME
+                it[PROP_REQ] = req.encode()
+                it[PROP_NOTE] = note
+                it[PROP_PITCH_HZ] = pitchHz
+                it[PROP_SAMPLE] = sample.encode()
             }
 
             is KlangCommLink.Cmd.Sample.Chunk -> jsObject {
-                it.type = KlangCommLink.Cmd.Sample.Chunk.SERIAL_NAME
-                it[KlangCommLink.Cmd.Sample.Chunk::req.name] = req.encode()
-                it[KlangCommLink.Cmd.Sample.Chunk::note.name] = note
-                it[KlangCommLink.Cmd.Sample.Chunk::pitchHz.name] = pitchHz
-                it[KlangCommLink.Cmd.Sample.Chunk::sampleRate.name] = sampleRate
-                it[KlangCommLink.Cmd.Sample.Chunk::meta.name] = meta.encode()
-                it[KlangCommLink.Cmd.Sample.Chunk::totalSize.name] = totalSize
-                it[KlangCommLink.Cmd.Sample.Chunk::isLastChunk.name] = isLastChunk
-                it[KlangCommLink.Cmd.Sample.Chunk::chunkOffset.name] = chunkOffset
-                it[KlangCommLink.Cmd.Sample.Chunk::data.name] = data
+                it[PROP_TYPE] = KlangCommLink.Cmd.Sample.Chunk.SERIAL_NAME
+                it[PROP_REQ] = req.encode()
+                it[PROP_NOTE] = note
+                it[PROP_PITCH_HZ] = pitchHz
+                it[PROP_SAMPLE_RATE] = sampleRate
+                it[PROP_META] = meta.encode()
+                it[PROP_TOTAL_SIZE] = totalSize
+                it[PROP_IS_LAST_CHUNK] = isLastChunk
+                it[PROP_CHUNK_OFFSET] = chunkOffset
+                it[PROP_DATA] = data
             }
         }
     }
 
     private fun decodeCmd(msg: dynamic): KlangCommLink.Cmd {
-        return when (val type = msg.type) {
+        return when (val type = msg[PROP_TYPE]) {
             KlangCommLink.Cmd.Cleanup.SERIAL_NAME -> KlangCommLink.Cmd.Cleanup(
-                playbackId = msg[KlangCommLink.Cmd::playbackId.name],
+                playbackId = msg[PROP_PLAYBACK_ID],
             )
 
             KlangCommLink.Cmd.ClearScheduled.SERIAL_NAME -> KlangCommLink.Cmd.ClearScheduled(
-                playbackId = msg[KlangCommLink.Cmd::playbackId.name],
+                playbackId = msg[PROP_PLAYBACK_ID],
             )
 
             KlangCommLink.Cmd.ReplaceVoices.SERIAL_NAME -> KlangCommLink.Cmd.ReplaceVoices(
-                playbackId = msg[KlangCommLink.Cmd::playbackId.name],
-                voices = (msg[KlangCommLink.Cmd.ReplaceVoices::voices.name] as Array<*>).map {
-                    decodeScheduledVoice(it!!)
-                }
+                playbackId = msg[PROP_PLAYBACK_ID],
+                voices = (msg[PROP_VOICES] as Array<*>).map { decodeScheduledVoice(it!!) }
             )
 
             KlangCommLink.Cmd.ScheduleVoice.SERIAL_NAME -> KlangCommLink.Cmd.ScheduleVoice(
-                playbackId = msg[KlangCommLink.Cmd::playbackId.name],
-                voice = decodeScheduledVoice(msg[KlangCommLink.Cmd.ScheduleVoice::voice.name]),
-                clearScheduled = msg[KlangCommLink.Cmd.ScheduleVoice::clearScheduled.name] as? Boolean ?: false
+                playbackId = msg[PROP_PLAYBACK_ID],
+                voice = decodeScheduledVoice(msg[PROP_VOICE]),
+                clearScheduled = msg[PROP_CLEAR_SCHEDULED] as? Boolean ?: false
             )
 
             KlangCommLink.Cmd.Sample.NotFound.SERIAL_NAME -> KlangCommLink.Cmd.Sample.NotFound(
-                req = decodeSampleRequest(msg[KlangCommLink.Cmd.Sample.NotFound::req.name])
+                req = decodeSampleRequest(msg[PROP_REQ])
             )
 
             KlangCommLink.Cmd.Sample.Complete.SERIAL_NAME -> KlangCommLink.Cmd.Sample.Complete(
-                req = decodeSampleRequest(msg[KlangCommLink.Cmd.Sample.Complete::req.name]),
-                note = msg[KlangCommLink.Cmd.Sample.Complete::note.name],
-                pitchHz = msg[KlangCommLink.Cmd.Sample.Complete::pitchHz.name],
-                sample = decodeMonoSamplePcm(msg[KlangCommLink.Cmd.Sample.Complete::sample.name])
+                req = decodeSampleRequest(msg[PROP_REQ]),
+                note = msg[PROP_NOTE],
+                pitchHz = msg[PROP_PITCH_HZ],
+                sample = decodeMonoSamplePcm(msg[PROP_SAMPLE])
             )
 
             KlangCommLink.Cmd.Sample.Chunk.SERIAL_NAME -> KlangCommLink.Cmd.Sample.Chunk(
-                req = decodeSampleRequest(msg[KlangCommLink.Cmd.Sample.Chunk::req.name]),
-                note = msg[KlangCommLink.Cmd.Sample.Chunk::note.name],
-                pitchHz = msg[KlangCommLink.Cmd.Sample.Chunk::pitchHz.name],
-                sampleRate = msg[KlangCommLink.Cmd.Sample.Chunk::sampleRate.name],
-                meta = decodeSampleMetadata(msg[KlangCommLink.Cmd.Sample.Chunk::meta.name]),
-                totalSize = msg[KlangCommLink.Cmd.Sample.Chunk::totalSize.name],
-                isLastChunk = msg[KlangCommLink.Cmd.Sample.Chunk::isLastChunk.name],
-                chunkOffset = msg[KlangCommLink.Cmd.Sample.Chunk::chunkOffset.name],
-                data = msg[KlangCommLink.Cmd.Sample.Chunk::data.name],
+                req = decodeSampleRequest(msg[PROP_REQ]),
+                note = msg[PROP_NOTE],
+                pitchHz = msg[PROP_PITCH_HZ],
+                sampleRate = msg[PROP_SAMPLE_RATE],
+                meta = decodeSampleMetadata(msg[PROP_META]),
+                totalSize = msg[PROP_TOTAL_SIZE],
+                isLastChunk = msg[PROP_IS_LAST_CHUNK],
+                chunkOffset = msg[PROP_CHUNK_OFFSET],
+                data = msg[PROP_DATA],
             )
 
             else -> error("Unknown cmd type: $type")
@@ -149,16 +165,16 @@ object WorkletContract {
     }
 
     private fun MonoSamplePcm.encode(): dynamic = jsObject {
-        it[MonoSamplePcm::sampleRate.name] = sampleRate
-        it[MonoSamplePcm::pcm.name] = pcm
-        it[MonoSamplePcm::meta.name] = meta.encode()
+        it[PROP_SAMPLE_RATE] = sampleRate
+        it[PROP_PCM] = pcm
+        it[PROP_META] = meta.encode()
     }
 
     private fun decodeMonoSamplePcm(obj: dynamic): MonoSamplePcm {
         return MonoSamplePcm(
-            sampleRate = obj[MonoSamplePcm::sampleRate.name],
-            pcm = obj[MonoSamplePcm::pcm.name],
-            meta = decodeSampleMetadata(obj[MonoSamplePcm::meta.name])
+            sampleRate = obj[PROP_SAMPLE_RATE],
+            pcm = obj[PROP_PCM],
+            meta = decodeSampleMetadata(obj[PROP_META])
         )
     }
 

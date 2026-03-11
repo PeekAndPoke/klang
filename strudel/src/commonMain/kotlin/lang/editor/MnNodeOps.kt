@@ -121,11 +121,15 @@ object MnNodeOps {
         }?.let { return it }
         // Pass 2: modifier tail — cursor is past the value token with no separator in between
         val nearest = collectAtoms(pattern)
-            .filter { it.sourceRange != null && it.sourceRange!!.last < offset }
+            .filter { it.sourceRange != null && it.sourceRange.last < offset }
             .maxByOrNull { it.sourceRange!!.last }
             ?: return null
         val atomEnd = nearest.sourceRange!!.last + 1
-        val between = text.substring(atomEnd.coerceAtMost(text.length), offset.coerceAtMost(text.length))
+        val between = text.substring(
+            atomEnd.coerceAtMost(text.length),
+            offset.coerceAtMost(text.length),
+        )
+
         return if (between.none { it.isWhitespace() || it in "[]<>," }) nearest else null
     }
 }

@@ -11,8 +11,11 @@ import org.khronos.webgl.Float32Array
 import org.khronos.webgl.set
 import kotlin.js.Date
 
+@Suppress("NON_EXPORTABLE_TYPE")
+@OptIn(ExperimentalJsExport::class)
+@JsExport
 @JsName("KlangAudioWorklet")
-class KlangAudioWorklet : AudioWorkletProcessor {
+class KlangAudioWorklet : AudioWorkletProcessor() {
 
     class Ctx(
         val sampleRate: Int,
