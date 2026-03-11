@@ -1,4 +1,4 @@
-@file:Suppress("DuplicatedCode", "unused", "ObjectPropertyName")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 
 package io.peekandpoke.klang.strudel.lang
 
@@ -179,7 +179,7 @@ internal val StrudelPattern._pick by dslPatternExtension { p, args, callInfo ->
 
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-    val lookupLocation = args.firstOrNull()?.location
+    // TODO: Fix location tracking
 
     dispatchPick(lookup = lookup, pat = p, modulo = false, baseLocation = callInfo?.receiverLocation)
 }
@@ -989,7 +989,7 @@ private fun dispatchInhabit(
     }
 }
 
-internal val _inhabit by dslPatternMapper { args, callInfo ->
+internal val _inhabit by dslPatternMapper { args, /* callInfo */ _ ->
     if (args.size < 2) {
         val fn: PatternMapperFn = { silence }
         return@dslPatternMapper fn
@@ -1216,7 +1216,7 @@ fun PatternMapperFn.pickSqueeze(lookup: Map<String, Any>): PatternMapperFn =
 
 // -- inhabitmod() -----------------------------------------------------------------------------------------------------
 
-internal val _inhabitmod by dslPatternMapper { args, callInfo ->
+internal val _inhabitmod by dslPatternMapper { args, /* callInfo */ _ ->
     if (args.size < 2) {
         val fn: PatternMapperFn = { silence }
         return@dslPatternMapper fn

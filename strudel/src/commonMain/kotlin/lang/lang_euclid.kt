@@ -1,3 +1,5 @@
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+
 package io.peekandpoke.klang.strudel.lang
 
 import io.peekandpoke.klang.strudel.StrudelPattern

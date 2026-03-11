@@ -1,5 +1,4 @@
-// strudel/src/commonMain/kotlin/lang/lang_conditional.kt
-@file:Suppress("DuplicatedCode", "ObjectPropertyName")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 
 package io.peekandpoke.klang.strudel.lang
 

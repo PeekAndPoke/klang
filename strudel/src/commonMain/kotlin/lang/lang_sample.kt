@@ -1,4 +1,4 @@
-@file:Suppress("ObjectPropertyName")
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 
 package io.peekandpoke.klang.strudel.lang
 
