@@ -308,8 +308,11 @@ private fun Expression.toSourceString(): String = when (this) {
         "${callee.toSourceString()}(${arguments.joinToString(", ") { it.toSourceString() }})"
 
     is ArrowFunction -> {
-        val params = if (parameters.size == 1) parameters[0]
-        else "(${parameters.joinToString(", ")})"
+        val params = if (parameters.size == 1) {
+            parameters[0]
+        } else {
+            "(${parameters.joinToString(", ")})"
+        }
         "$params => ${body.toSourceString()}"
     }
 

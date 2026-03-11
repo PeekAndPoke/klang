@@ -447,8 +447,11 @@ class KBProgramEditingCtx(
             when (stmt) {
                 is KBChainStmt -> {
                     val newSteps = removeBlockFromItems(stmt.steps, blockId).fixHeads()
-                    if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) null
-                    else stmt.copy(steps = newSteps)
+                    if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) {
+                        null
+                    } else {
+                        stmt.copy(steps = newSteps)
+                    }
                 }
                 is KBLetStmt -> stmt.copy(value = stmt.value.inArgs { removeBlockFromArgs(it, blockId) })
                 is KBConstStmt -> stmt.copy(value = stmt.value.inArgs { removeBlockFromArgs(it, blockId) } ?: stmt.value)
@@ -474,7 +477,9 @@ class KBProgramEditingCtx(
                     if (newSteps.filterIsInstance<KBCallBlock>().isEmpty()) {
                         val literalHead = newSteps.filterIsInstance<KBStringLiteralItem>().firstOrNull()
                         if (literalHead != null) KBStringArg(literalHead.value) else KBEmptyArg("")
-                    } else argValue.copy(chain = argValue.chain.copy(steps = newSteps))
+                    } else {
+                        argValue.copy(chain = argValue.chain.copy(steps = newSteps))
+                    }
                 }
 
                 else -> argValue
@@ -535,8 +540,11 @@ class KBProgramEditingCtx(
     }
 
     private fun insertIndexFor(steps: List<KBChainItem>, insertBeforeBlockId: String?): Int =
-        if (insertBeforeBlockId == null) steps.size
-        else steps.indexOfFirst { it is KBCallBlock && it.id == insertBeforeBlockId }.takeIf { it >= 0 } ?: steps.size
+        if (insertBeforeBlockId == null) {
+            steps.size
+        } else {
+            steps.indexOfFirst { it is KBCallBlock && it.id == insertBeforeBlockId }.takeIf { it >= 0 } ?: steps.size
+        }
 
     private fun appendBlockToChain(stmts: List<KBStmt>, chainId: String, block: KBCallBlock): List<KBStmt> =
         stmts.map { stmt ->
@@ -640,10 +648,11 @@ class KBProgramEditingCtx(
     private fun updateStringLiteralItemInStmts(stmts: List<KBStmt>, chainId: String, newValue: String): List<KBStmt> =
         stmts.map { stmt ->
             when (stmt) {
-                is KBChainStmt -> if (stmt.id == chainId)
+                is KBChainStmt -> if (stmt.id == chainId) {
                     stmt.copy(steps = applyStringLiteralChange(stmt.steps, newValue))
-                else
+                } else {
                     stmt.copy(steps = updateStringLiteralItemInItems(stmt.steps, chainId, newValue))
+                }
                 is KBLetStmt ->
                     stmt.copy(value = stmt.value.inArgs { updateStringLiteralItemInArgs(it, chainId, newValue) })
 
@@ -676,8 +685,11 @@ class KBProgramEditingCtx(
 
     private fun applyStringLiteralChange(steps: List<KBChainItem>, newValue: String): List<KBChainItem> {
         if (steps.firstOrNull() !is KBStringLiteralItem) return steps
-        return if (newValue.isEmpty()) steps.drop(1).fixHeads()
-        else listOf(KBStringLiteralItem(newValue)) + steps.drop(1)
+        return if (newValue.isEmpty()) {
+            steps.drop(1).fixHeads()
+        } else {
+            listOf(KBStringLiteralItem(newValue)) + steps.drop(1)
+        }
     }
 
     // ---- Layout / newline helpers -------------------------------------------
@@ -696,8 +708,11 @@ class KBProgramEditingCtx(
         items.map { item ->
             when {
                 item is KBCallBlock && item.id == blockId -> {
-                    val newLayout = if (item.pocketLayout == KBPocketLayout.VERTICAL)
-                        KBPocketLayout.HORIZONTAL else KBPocketLayout.VERTICAL
+                    val newLayout = if (item.pocketLayout == KBPocketLayout.VERTICAL) {
+                        KBPocketLayout.HORIZONTAL
+                    } else {
+                        KBPocketLayout.VERTICAL
+                    }
                     item.copy(pocketLayout = newLayout)
                 }
 
@@ -789,10 +804,13 @@ class KBProgramEditingCtx(
     private fun List<KBChainItem>.fixHeads(): List<KBChainItem> {
         var isFirst = true
         return map { item ->
-            if (item !is KBCallBlock) item
-            else if (isFirst) {
+            if (item !is KBCallBlock) {
+                item
+            } else if (isFirst) {
                 isFirst = false; item.copy(isHead = true)
-            } else item.copy(isHead = false)
+            } else {
+                item.copy(isHead = false)
+            }
         }
     }
 }

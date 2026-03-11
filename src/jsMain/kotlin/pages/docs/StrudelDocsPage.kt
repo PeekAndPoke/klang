@@ -325,8 +325,11 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             // Variant type badge
             ui.label {
                 +when (decl) {
-                    is KlangCallable -> if (decl.receiver == null) "Top Level Function"
-                    else "${decl.receiver} Extension Function"
+                    is KlangCallable -> if (decl.receiver == null) {
+                        "Top Level Function"
+                    } else {
+                        "${decl.receiver} Extension Function"
+                    }
 
                     is KlangProperty -> when (decl.mutability) {
                         KlangMutability.READ_ONLY -> "Read-only Property"

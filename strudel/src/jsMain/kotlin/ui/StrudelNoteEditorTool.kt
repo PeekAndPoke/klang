@@ -86,7 +86,9 @@ private class StrudelNoteEditorComp(ctx: Ctx<Props>) : MnEditorBase<StrudelNoteE
         val scale = Scale.get(activeScaleName)
         val acc = if (!scale.empty) {
             scale.notes.find { Note.get(it).letter == letter }?.let { Note.get(it).acc } ?: ""
-        } else ""
+        } else {
+            ""
+        }
         return "${letter.lowercase()}$acc$octave"
     }
 
