@@ -1,4 +1,4 @@
-@file:Suppress("Detekt")
+@file:Suppress("detekt.all")
 
 package io.peekandpoke.klang.strudel.compat
 
