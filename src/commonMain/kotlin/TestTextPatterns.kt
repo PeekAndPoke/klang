@@ -1,4 +1,4 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "detekt.all")
 
 package io.peekandpoke.klang
 

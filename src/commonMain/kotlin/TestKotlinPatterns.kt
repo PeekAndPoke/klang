@@ -1,8 +1,11 @@
+@file:Suppress("detekt.all")
+
 package io.peekandpoke.klang
 
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.lang.addons.flipSign
 
+@Suppress("unused")
 object TestKotlinPatterns {
 
     val tetris = stack(
