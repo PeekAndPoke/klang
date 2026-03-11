@@ -119,7 +119,6 @@ fun notchf(freq: PatternLike? = null): PatternMapperFn = _notchf(listOfNotNull(f
 fun PatternMapperFn.notchf(freq: PatternLike? = null): PatternMapperFn =
     _notchf(listOfNotNull(freq).asStrudelDslArgs())
 
-
 // -- nresonance() / nres() - Notch Filter resonance ------------------------------------------------------------------
 
 private val nresonanceMutation = voiceModifier { copy(nresonance = it?.asDoubleOrNull()) }
@@ -306,7 +305,6 @@ fun notchq(q: PatternLike? = null): PatternMapperFn = _notchq(listOfNotNull(q).a
 @StrudelDsl
 fun PatternMapperFn.notchq(q: PatternLike? = null): PatternMapperFn =
     _notchq(listOfNotNull(q).asStrudelDslArgs())
-
 
 // -- nfattack() / nfa() - Notch Filter Envelope Attack -----------------------------------------------------------------
 

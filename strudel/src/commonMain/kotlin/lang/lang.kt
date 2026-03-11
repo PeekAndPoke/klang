@@ -236,7 +236,6 @@ class DslPatternExtensionProvider(private val handler: StrudelDslPatternExtFn<St
     }
 }
 
-
 /**
  * Provider that registers the method name and creates bound delegates for Strings.
  */
@@ -311,7 +310,6 @@ class DslPatternMapperFunctionProvider(private val handler: StrudelDslTopLevelFn
     }
 }
 
-
 /**
  * Provider that registers the function name and creates bound delegates.
  */
@@ -360,4 +358,3 @@ class DslPatternMapperExtensionFunctionProvider(private val handler: StrudelDslP
         }
     }
 }
-

@@ -145,7 +145,6 @@ tasks {
         include("klang-worklet.js", "klang-worklet.js.map")
     }
 
-
     // Force the worklet to be built and copied before resources are processed
     named<ProcessResources>("jsProcessResources") {
         // NOTICE: For now always dev, as the production build does not work yet

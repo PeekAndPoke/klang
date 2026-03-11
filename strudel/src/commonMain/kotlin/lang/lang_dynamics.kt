@@ -175,7 +175,6 @@ fun pan(amount: PatternLike? = null): PatternMapperFn =
 fun PatternMapperFn.pan(amount: PatternLike? = null): PatternMapperFn =
     _pan(listOfNotNull(amount).asStrudelDslArgs())
 
-
 // -- velocity() / vel() -----------------------------------------------------------------------------------------------
 
 private val velocityMutation = voiceModifier { copy(velocity = it?.asDoubleOrNull()) }
@@ -272,7 +271,6 @@ fun velocity(amount: PatternLike? = null): PatternMapperFn =
 fun PatternMapperFn.velocity(amount: PatternLike? = null): PatternMapperFn =
     _velocity(listOfNotNull(amount).asStrudelDslArgs())
 
-
 /**
  * Alias for [velocity]. Sets the gain 'velocity'. It is multiplied with the gain of the events.
  *
@@ -332,7 +330,6 @@ fun vel(amount: PatternLike? = null): PatternMapperFn =
 @StrudelDsl
 fun PatternMapperFn.vel(amount: PatternLike? = null): PatternMapperFn =
     _vel(listOfNotNull(amount).asStrudelDslArgs())
-
 
 // -- postgain() -------------------------------------------------------------------------------------------------------
 
@@ -600,7 +597,6 @@ fun comp(params: PatternLike? = null): PatternMapperFn =
 fun PatternMapperFn.comp(params: PatternLike? = null): PatternMapperFn =
     _comp(listOfNotNull(params).asStrudelDslArgs())
 
-
 // -- unison() / uni() -------------------------------------------------------------------------------------------------
 
 private val unisonMutation = voiceModifier { copy(voices = it?.asDoubleOrNull()) }
@@ -690,7 +686,6 @@ fun unison(voices: PatternLike? = null): PatternMapperFn =
 fun PatternMapperFn.unison(voices: PatternLike? = null): PatternMapperFn =
     _unison(listOfNotNull(voices).asStrudelDslArgs())
 
-
 /**
  * Alias for [unison]. Sets the number of unison voices for oscillator stacking effects.
  *
@@ -723,7 +718,6 @@ fun StrudelPattern.uni(voices: PatternLike? = null): StrudelPattern =
 fun String.uni(voices: PatternLike? = null): StrudelPattern =
     this._uni(listOfNotNull(voices).asStrudelDslArgs())
 
-
 /**
  * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
@@ -750,7 +744,6 @@ fun uni(voices: PatternLike? = null): PatternMapperFn =
 @StrudelDsl
 fun PatternMapperFn.uni(voices: PatternLike? = null): PatternMapperFn =
     _uni(listOfNotNull(voices).asStrudelDslArgs())
-
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
@@ -830,7 +823,6 @@ fun detune(amount: PatternLike? = null): PatternMapperFn =
 @StrudelDsl
 fun PatternMapperFn.detune(amount: PatternLike? = null): PatternMapperFn =
     _detune(listOfNotNull(amount).asStrudelDslArgs())
-
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
@@ -1577,7 +1569,6 @@ fun orbit(index: PatternLike? = null): PatternMapperFn =
 fun PatternMapperFn.orbit(index: PatternLike? = null): PatternMapperFn =
     _orbit(listOfNotNull(index).asStrudelDslArgs())
 
-
 /**
  * Alias for [orbit]. Routes the pattern to an audio output orbit for independent effect processing.
  *
@@ -1719,7 +1710,6 @@ fun duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
 @StrudelDsl
 fun PatternMapperFn.duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
     _duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
-
 
 /**
  * Alias for [duckorbit]. Sets the target orbit to listen to for sidechain ducking.
@@ -1869,7 +1859,6 @@ fun duckattack(time: PatternLike? = null): PatternMapperFn =
 @StrudelDsl
 fun PatternMapperFn.duckattack(time: PatternLike? = null): PatternMapperFn =
     _duckattack(listOfNotNull(time).asStrudelDslArgs())
-
 
 /**
  * Alias for [duckattack]. Sets the duck release (return-to-normal) time in seconds.

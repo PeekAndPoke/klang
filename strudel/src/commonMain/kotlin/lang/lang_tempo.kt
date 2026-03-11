@@ -117,7 +117,6 @@ fun slow(factor: PatternLike): PatternMapperFn = _slow(listOf(factor).asStrudelD
 @StrudelDsl
 fun PatternMapperFn.slow(factor: PatternLike): PatternMapperFn = this._slow(listOf(factor).asStrudelDslArgs())
 
-
 // -- fast() -----------------------------------------------------------------------------------------------------------
 
 fun applyFast(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
@@ -196,7 +195,6 @@ fun fast(factor: PatternLike): PatternMapperFn = _fast(listOf(factor).asStrudelD
 @StrudelDsl
 fun PatternMapperFn.fast(factor: PatternLike): PatternMapperFn = this._fast(listOf(factor).asStrudelDslArgs())
 
-
 // -- rev() ------------------------------------------------------------------------------------------------------------
 
 fun applyRev(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
@@ -258,7 +256,6 @@ fun rev(n: PatternLike = 1): PatternMapperFn = _rev(listOf(n).asStrudelDslArgs()
 /** Chains a rev operation onto this [PatternMapperFn]. */
 @StrudelDsl
 fun PatternMapperFn.rev(n: PatternLike = 1): PatternMapperFn = this._rev(listOf(n).asStrudelDslArgs())
-
 
 // -- revv() -----------------------------------------------------------------------------------------------------------
 
@@ -325,7 +322,6 @@ fun revv(): PatternMapperFn = _revv(emptyList())
 @StrudelDsl
 fun PatternMapperFn.revv(): PatternMapperFn = this._revv(emptyList())
 
-
 // -- palindrome() -----------------------------------------------------------------------------------------------------
 
 fun applyPalindrome(pattern: StrudelPattern): StrudelPattern {
@@ -390,7 +386,6 @@ fun palindrome(): PatternMapperFn = _palindrome(emptyList())
 /** Chains a palindrome operation onto this [PatternMapperFn]. */
 @StrudelDsl
 fun PatternMapperFn.palindrome(): PatternMapperFn = this._palindrome(emptyList())
-
 
 // -- early() ----------------------------------------------------------------------------------------------------------
 
@@ -603,7 +598,6 @@ fun compress(start: PatternLike, end: PatternLike): PatternMapperFn =
 fun PatternMapperFn.compress(start: PatternLike, end: PatternLike): PatternMapperFn =
     this._compress(listOf(start, end).asStrudelDslArgs())
 
-
 // -- focus() ----------------------------------------------------------------------------------------------------------
 
 fun applyFocus(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
@@ -689,7 +683,6 @@ fun focus(start: PatternLike, end: PatternLike): PatternMapperFn =
 @StrudelDsl
 fun PatternMapperFn.focus(start: PatternLike, end: PatternLike): PatternMapperFn =
     this._focus(listOf(start, end).asStrudelDslArgs())
-
 
 // -- ply() ------------------------------------------------------------------------------------------------------------
 
@@ -780,7 +773,6 @@ fun ply(n: PatternLike): PatternMapperFn = _ply(listOf(n).asStrudelDslArgs())
 /** Chains a ply operation onto this [PatternMapperFn]. */
 @StrudelDsl
 fun PatternMapperFn.ply(n: PatternLike): PatternMapperFn = this._ply(listOf(n).asStrudelDslArgs())
-
 
 // -- plyWith() --------------------------------------------------------------------------------------------------------
 
@@ -902,7 +894,6 @@ fun plyWith(factor: Int, transform: PatternMapperFn): PatternMapperFn =
 fun PatternMapperFn.plyWith(factor: Int, transform: PatternMapperFn): PatternMapperFn =
     this._plyWith(listOf(factor, transform).asStrudelDslArgs())
 
-
 /**
  * Alias for `plyWith`.
  *
@@ -928,7 +919,6 @@ fun plywith(factor: Int, transform: PatternMapperFn): PatternMapperFn =
 @StrudelDsl
 fun PatternMapperFn.plywith(factor: Int, transform: PatternMapperFn): PatternMapperFn =
     this._plywith(listOf(factor, transform).asStrudelDslArgs())
-
 
 // -- plyForEach() -----------------------------------------------------------------------------------------------------
 
@@ -1038,7 +1028,6 @@ fun plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern):
 fun PatternMapperFn.plyForEach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): PatternMapperFn =
     this._plyForEach(listOf(factor, transform).asStrudelDslArgs())
 
-
 /**
  * Alias for `plyForEach`.
  *
@@ -1065,7 +1054,6 @@ fun plyforeach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern):
 @StrudelDsl
 fun PatternMapperFn.plyforeach(factor: Int, transform: (StrudelPattern, Int) -> StrudelPattern): PatternMapperFn =
     this._plyforeach(listOf(factor, transform).asStrudelDslArgs())
-
 
 // -- hurry() ----------------------------------------------------------------------------------------------------------
 
