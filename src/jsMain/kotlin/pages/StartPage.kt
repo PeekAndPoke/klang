@@ -272,7 +272,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 textAlign = TextAlign.center
             }
 
-
             renderContent()
         }
     }

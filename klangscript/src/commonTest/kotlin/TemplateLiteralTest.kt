@@ -47,7 +47,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let name = "World"
-            `Hello, ${dollar}{name}!`
+            `Hello, $dollar{name}!`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "Hello, World!"
@@ -59,7 +59,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let name = "Alice"
-            `${dollar}{name} is here`
+            `$dollar{name} is here`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "Alice is here"
@@ -71,7 +71,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let name = "Bob"
-            `Hello ${dollar}{name}`
+            `Hello $dollar{name}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "Hello Bob"
@@ -84,7 +84,7 @@ class TemplateLiteralTest : StringSpec({
             """
             let first = "John"
             let last = "Doe"
-            `${dollar}{first} ${dollar}{last}`
+            `$dollar{first} $dollar{last}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "John Doe"
@@ -97,7 +97,7 @@ class TemplateLiteralTest : StringSpec({
             """
             let a = 40
             let b = 2
-            `The answer is ${dollar}{a + b}`
+            `The answer is $dollar{a + b}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "The answer is 42"
@@ -109,7 +109,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let x = 42
-            `x = ${dollar}{x}`
+            `x = $dollar{x}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "x = 42"
@@ -121,7 +121,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let flag = true
-            `flag is ${dollar}{flag}`
+            `flag is $dollar{flag}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "flag is true"
@@ -133,7 +133,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let x = null
-            `x is ${dollar}{x}`
+            `x is $dollar{x}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "x is null"
@@ -149,7 +149,7 @@ class TemplateLiteralTest : StringSpec({
         val dollar = "\$"
         val result = engine.execute(
             """
-            `${dollar}{greet("World")} from template`
+            `$dollar{greet("World")} from template`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "Hello, World from template"
@@ -161,7 +161,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let x = "pure"
-            `${dollar}{x}`
+            `$dollar{x}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "pure"
@@ -173,7 +173,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let x = 10
-            `x > 5 is ${dollar}{x > 5}`
+            `x > 5 is $dollar{x > 5}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "x > 5 is true"
@@ -185,7 +185,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let name = "KlangScript"
-            let greeting = `Welcome to ${dollar}{name}!`
+            let greeting = `Welcome to $dollar{name}!`
             greeting
             """.trimIndent()
         )
@@ -204,7 +204,7 @@ class TemplateLiteralTest : StringSpec({
         engine.execute(
             """
             let version = "1.0"
-            log(`Version ${dollar}{version} loaded`)
+            log(`Version $dollar{version} loaded`)
             """.trimIndent()
         )
         received shouldBe listOf("Version 1.0 loaded")
@@ -216,7 +216,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let score = 85
-            let grade = if (score >= 90) { `A: ${dollar}{score}` } else { `B: ${dollar}{score}` }
+            let grade = if (score >= 90) { `A: $dollar{score}` } else { `B: $dollar{score}` }
             grade
             """.trimIndent()
         )
@@ -236,7 +236,7 @@ class TemplateLiteralTest : StringSpec({
             """
             let i = 1
             while (i <= 3) {
-                log(`item ${dollar}{i}`)
+                log(`item $dollar{i}`)
                 i = i + 1
             }
             """.trimIndent()
@@ -252,7 +252,7 @@ class TemplateLiteralTest : StringSpec({
             let a = "one"
             let b = "two"
             let c = "three"
-            `${dollar}{a}-${dollar}{b}-${dollar}{c}`
+            `$dollar{a}-$dollar{b}-$dollar{c}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "one-two-three"
@@ -268,7 +268,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let x = "{"
-            `value: ${dollar}{x}`
+            `value: $dollar{x}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "value: {"
@@ -280,7 +280,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let pick = (a, b) => a
-            `result: ${dollar}{pick("{yes}", "{no}")}`
+            `result: $dollar{pick("{yes}", "{no}")}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "result: {yes}"
@@ -292,7 +292,7 @@ class TemplateLiteralTest : StringSpec({
         val result = engine.execute(
             """
             let s = "hello"
-            `got: ${dollar}{s}`
+            `got: $dollar{s}`
             """.trimIndent()
         )
         (result as StringValue).value shouldBe "got: hello"

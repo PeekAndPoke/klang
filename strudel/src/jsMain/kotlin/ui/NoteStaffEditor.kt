@@ -273,8 +273,11 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val newPos = dragStartPos + delta
         val atom = staffNodes.filterIsInstance<MnNode.Atom>().find { it.id == atomId }
         if (atom != null) {
-            if (delta == 0) props.onAction(Action.Select(MnSelection.Atom(atom)))
-            else props.onAction(Action.Replace(atom, atom.copy(value = props.posToValue(newPos))))
+            if (delta == 0) {
+                props.onAction(Action.Select(MnSelection.Atom(atom)))
+            } else {
+                props.onAction(Action.Replace(atom, atom.copy(value = props.posToValue(newPos))))
+            }
         }
         dragAtomId = null
         dragPreviewPos = null
@@ -417,7 +420,9 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         val staffPos = if (svg != null) {
             val rect = svg.getBoundingClientRect()
             ((lastTopY + 10 * HALF_STEP - (e.clientY - rect.top)) / HALF_STEP).roundToInt()
-        } else 6
+        } else {
+            6
+        }
         props.onAction(Action.Replace(rest, MnNode.Atom(value = props.posToValue(staffPos))))
     }
 

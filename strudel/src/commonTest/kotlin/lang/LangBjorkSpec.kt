@@ -24,7 +24,6 @@ class LangBjorkSpec : StringSpec({
         }
     }
 
-
     "bjork([3, 8]) works like euclid(3, 8)" {
         val p = note("a").bjork(pulses = 3, steps = 8)
         val events = p.queryArc(0.0, 1.0)

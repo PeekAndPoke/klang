@@ -1016,8 +1016,10 @@ fun StrudelPattern._liftOrReinterpretNumericalField(
     args: List<StrudelDslArg<Any?>>,
     update: StrudelVoiceData.(Double?) -> StrudelVoiceData,
 ): StrudelPattern {
-    if (args.isEmpty()) return this.reinterpretVoice {
+    if (args.isEmpty()) {
+        return this.reinterpretVoice {
         it.update(it.value?.asDouble)
+    }
     }
 
     return this._liftNumericField(args, update)
@@ -1059,8 +1061,10 @@ fun StrudelPattern._liftOrReinterpretStringField(
     args: List<StrudelDslArg<Any?>>,
     update: StrudelVoiceData.(String?) -> StrudelVoiceData,
 ): StrudelPattern {
-    if (args.isEmpty()) return this.reinterpretVoice {
+    if (args.isEmpty()) {
+        return this.reinterpretVoice {
         it.update(it.value?.asString)
+    }
     }
 
     return this._liftStringField(args, update)

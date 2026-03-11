@@ -30,7 +30,6 @@ fun dslInterfaceTests(
     }
 }
 
-
 fun List<List<Any?>>.formatAsTable(lineBreak: String = "\n"): String {
 
     val maxLengths = mutableMapOf<Int, Int>()

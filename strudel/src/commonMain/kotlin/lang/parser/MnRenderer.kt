@@ -38,19 +38,19 @@ object MnRenderer {
 
         is MnNode.Group -> {
             val inner = renderLayer(node.items)
-            "[${inner}]${renderMods(node.mods)}"
+            "[$inner]${renderMods(node.mods)}"
         }
 
         is MnNode.Alternation -> {
             val inner = node.items.joinToString(" ") { renderNode(it) }
-            "<${inner}>${renderMods(node.mods)}"
+            "<$inner>${renderMods(node.mods)}"
         }
 
         is MnNode.Choice -> {
             // Choices may not have mods themselves (mods sit on the individual options).
             // If the Choice has mods we wrap it in a group to apply them.
             val inner = node.options.joinToString(" | ") { renderNode(it) }
-            if (node.mods.isEmpty) inner else "[${inner}]${renderMods(node.mods)}"
+            if (node.mods.isEmpty) inner else "[$inner]${renderMods(node.mods)}"
         }
 
         is MnNode.Stack -> {
@@ -74,8 +74,11 @@ object MnRenderer {
             // Order matches phase-2 application: euclidean → multiplier → divisor → probability → weight
             mods.euclidean?.let { e ->
                 append(
-                    if (e.rotation != 0) "(${e.pulses},${e.steps},${e.rotation})"
-                    else "(${e.pulses},${e.steps})"
+                    if (e.rotation != 0) {
+                        "(${e.pulses},${e.steps},${e.rotation})"
+                    } else {
+                        "(${e.pulses},${e.steps})"
+                    }
                 )
             }
             mods.multiplier?.let { append("*${renderNumber(it)}") }

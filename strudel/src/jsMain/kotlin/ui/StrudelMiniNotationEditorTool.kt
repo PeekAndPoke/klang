@@ -161,4 +161,3 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
         }
     }
 }
-
