@@ -20,8 +20,8 @@ import de.peekandpoke.ultra.streams.ops.ticker
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.comp.*
 import io.peekandpoke.klang.feel.KlangStudioColors
 import io.peekandpoke.klang.strudel.StrudelPlayback
@@ -202,7 +202,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    @Suppress("RedundantInnerClassModifier") // false positive
     private inner class StateBenchmarkComplete(val result: KlangBenchmark.Result) : State {
         override fun update() {
             // noop
@@ -217,7 +216,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             val playback = Player.get()?.playStrudelOnce(song)
 
             // Wait for the song to finish before navigating
-            playback?.onSignal { signal ->
+            playback?.signals?.invoke { signal ->
                 if (signal is PlaybackStopped) {
                     launch {
                         delay(1000.milliseconds)

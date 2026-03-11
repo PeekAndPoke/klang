@@ -21,5 +21,3 @@ if (devServer) {
         stats: 'none'    // Disables webpack build stats
     }
 }
-
-console.log(config)

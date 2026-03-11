@@ -176,10 +176,10 @@ stack(
   , s("<hh!8!8 [oh hh!5 cr hh]!2!8>").adsr("0.00:0.1:0.5:0.1").hpf(200).postgain(1.25) // .solo()
   // Drums 2
   , s(`<[[bd sd]!2]!4 [bd [bd,sd] bd [bd,sd]]!3 [bd bd [bd,sd] bd  [sd!2]!4]!1
-        [[bd sd]!16]!8>`).n("<7!8 0!8>").adsr("0.00:0.3:0.2:0.1").gain(0.8).hpf(30)  // . solo()
+        [[bd sd]!16]!8>`).n("<7!8 0!8>").adsr("0.00:0.3:0.5:0.1").gain(0.8).hpf(30)  // . solo()
 )
   .room(0.025).rsize(5)
-            """.trimIndent(),
+        """.trimIndent(),
             icon = "guitar",
         )
     )

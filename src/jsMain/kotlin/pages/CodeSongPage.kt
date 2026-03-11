@@ -17,14 +17,13 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
-import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
 import de.peekandpoke.ultra.streams.ops.map
 import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
 import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
@@ -46,7 +45,6 @@ import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
-import io.peekandpoke.klang.ui.PlaybackVoiceEvent
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -149,9 +147,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         val baseLoc = offsetToSourceLocation(code, argFrom)
         var attrs = ctx.attrs.plus(KlangUiToolContext.BaseSourceLocation, baseLoc)
 
-        // If playback is active, attach a voice event stream
+        // If playback is active, attach the raw signal stream
         playback?.let { pb ->
-            attrs = attrs.plus(KlangUiToolContext.PlaybackVoiceEvents, createVoiceStream(pb))
+            attrs = attrs.plus(KlangUiToolContext.PlaybackVoiceEvents, pb.signals)
         }
 
         modals.show { handle ->
@@ -237,11 +235,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                             playback = p.playStrudel(pattern)
 
-                            playback?.onSignal { signal ->
+                            playback?.signals?.invoke { signal ->
                                 when (signal) {
                                     is KlangPlaybackSignal.VoicesScheduled -> {
                                         // When there is a modal dialog open, we stop highlighting
-                                        if (currentModals.isNotEmpty()) return@onSignal
+                                        if (currentModals.isNotEmpty()) return@invoke
 
                                         signal.voices.forEach { voiceEvent ->
                                             // Update Code highlights
@@ -327,32 +325,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     /** Switch to Code mode. The code state already reflects the latest workspace contents. */
     private fun switchToCode() {
         editorMode = EditorMode.CODE
-    }
-
-    //  HIGHLIGHT ADAPTER  /////////////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Creates a stream of scheduled voice batches from playback signals.
-     *
-     * No offset conversion is done here — raw timing and source location data
-     * is passed through. Consumers (editors) match against their own atoms.
-     */
-    private fun createVoiceStream(playback: StrudelPlayback): Stream<List<PlaybackVoiceEvent>> {
-        val source = StreamSource<List<PlaybackVoiceEvent>>(emptyList())
-
-        playback.onSignal { signal ->
-            if (signal is KlangPlaybackSignal.VoicesScheduled) {
-                source(signal.voices.map { voice ->
-                    PlaybackVoiceEvent(
-                        startTime = voice.startTime,
-                        endTime = voice.endTime,
-                        sourceLocations = voice.sourceLocations as? SourceLocationChain,
-                    )
-                })
-            }
-        }
-
-        return source.readonly
     }
 
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////

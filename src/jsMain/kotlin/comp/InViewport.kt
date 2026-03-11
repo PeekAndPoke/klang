@@ -3,9 +3,9 @@ package io.peekandpoke.klang.comp
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.ext.IntersectionObserver
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
-import io.peekandpoke.klang.externals.IntersectionObserver
 import kotlinx.css.minHeight
 import kotlinx.css.px
 import kotlinx.html.DIV

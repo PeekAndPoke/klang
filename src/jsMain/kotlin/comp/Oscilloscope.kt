@@ -3,12 +3,12 @@ package io.peekandpoke.klang.comp
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.utils.onResize
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import io.peekandpoke.klang.audio_bridge.createVisualizerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.externals.ResizeObserver
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -69,15 +69,14 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     private var visualizerAnimFrame: Int? = null
     private val visualizerBuffer = createVisualizerBuffer(2048)
 
-    private var resizeObserver: ResizeObserver? = null
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
 
     private var expanded: Boolean by value(false)
-    private var overlayCanvas: HTMLCanvasElement? by value(null)
-    private var overlayCtx2d: CanvasRenderingContext2D? by value(null)
-    private var overlayContainer: HTMLDivElement? by value(null)
-    private var windowResizeListener: ((Event) -> Unit)? by value(null)
+    private var overlayCanvas: HTMLCanvasElement? = null
+    private var overlayCtx2d: CanvasRenderingContext2D? = null
+    private var overlayContainer: HTMLDivElement? = null
+    private var windowResizeListener: ((Event) -> Unit)? = null
 
     // Cache for deflection multipliers to avoid recalculating every frame
     private var deflectionCache: DoubleArray? = null
@@ -96,27 +95,39 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                     }
 
                     ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
-
-                    resizeObserver = ResizeObserver { entries, _ ->
-                        for (entry in entries) {
-                            // 'target' is the element being observed
-                            val width = entry.contentRect.width
-                            val height = entry.contentRect.height
-
-                            canvas?.let {
-                                it.width = width.toInt()
-                                it.height = height.toInt()
-                            }
-                        }
-                    }
-                    resizeObserver?.observe(container)
                 }
             }
 
             onUnmount {
                 visualizerAnimFrame?.let { window.cancelAnimationFrame(it) }
-                resizeObserver?.disconnect()
                 cleanupOverlay()
+            }
+
+            onResize { entries ->
+                for (entry in entries) {
+                    // 'target' is the element being observed
+                    val width = entry.contentRect.width
+                    val height = entry.contentRect.height
+
+                    canvas?.let {
+                        it.width = width.toInt()
+                        it.height = height.toInt()
+                    }
+
+                    if (expanded) {
+                        overlayContainer?.let { container ->
+                            val newRect = dom?.getBoundingClientRect()
+                            if (newRect != null) {
+                                container.style.top = "${newRect.top}px"
+                                container.style.left = "${newRect.right}px"
+                                container.style.width = "calc(100vw - ${newRect.right}px)"
+                                container.style.height = "${newRect.height}px"
+                                overlayCanvas?.width = (window.innerWidth - newRect.right).toInt()
+                                overlayCanvas?.height = newRect.height.toInt()
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -430,60 +441,17 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val canvas = document.createElement("canvas") as HTMLCanvasElement
         canvas.style.width = "100%"
         canvas.style.height = "100%"
-        canvas.width = container.clientWidth
-        canvas.height = container.clientHeight
 
         container.appendChild(canvas)
         document.body?.appendChild(container)
 
+        // Read dimensions after container is in the DOM
+        canvas.width = container.clientWidth
+        canvas.height = container.clientHeight
+
         overlayContainer = container
         overlayCanvas = canvas
         overlayCtx2d = canvas.getContext("2d") as? CanvasRenderingContext2D
-
-        // Add window resize listener to reposition overlay
-        val resizeListener: (Event) -> Unit = {
-            val newRect = dom?.getBoundingClientRect()
-            if (newRect != null) {
-                container.style.top = "${newRect.top}px"
-                container.style.left = "${newRect.right}px"
-                container.style.width = "calc(100vw - ${newRect.right}px)"
-                container.style.height = "${newRect.height}px"
-                canvas.width = container.clientWidth
-                canvas.height = container.clientHeight
-            }
-        }
-        window.addEventListener("resize", resizeListener)
-        windowResizeListener = resizeListener
-
-        // Update existing resize observer to also update overlay position
-        resizeObserver?.disconnect()
-        dom?.let { containerElement ->
-            resizeObserver = ResizeObserver { entries, _ ->
-                for (entry in entries) {
-                    val width = entry.contentRect.width
-                    val height = entry.contentRect.height
-
-                    this.canvas?.let {
-                        it.width = width.toInt()
-                        it.height = height.toInt()
-                    }
-
-                    // Update overlay position when oscilloscope resizes
-                    if (expanded) {
-                        val newRect = dom?.getBoundingClientRect()
-                        if (newRect != null) {
-                            container.style.top = "${newRect.top}px"
-                            container.style.left = "${newRect.right}px"
-                            container.style.width = "calc(100vw - ${newRect.right}px)"
-                            container.style.height = "${newRect.height}px"
-                            canvas.width = container.clientWidth
-                            canvas.height = container.clientHeight
-                        }
-                    }
-                }
-            }
-            resizeObserver?.observe(containerElement)
-        }
     }
 
     private fun cleanupOverlay() {
@@ -498,23 +466,6 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         // Invalidate deflection cache when exiting expanded mode
         deflectionCache = null
         cachedTotalWidth = 0.0
-
-        // Restore original resize observer
-        dom?.let { containerElement ->
-            resizeObserver?.disconnect()
-            resizeObserver = ResizeObserver { entries, _ ->
-                for (entry in entries) {
-                    val width = entry.contentRect.width
-                    val height = entry.contentRect.height
-
-                    canvas?.let {
-                        it.width = width.toInt()
-                        it.height = height.toInt()
-                    }
-                }
-            }
-            resizeObserver?.observe(containerElement)
-        }
     }
 
     override fun VDom.render() {

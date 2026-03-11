@@ -7,7 +7,7 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.utils.jsObject
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.OnChange
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.*
 import kotlinx.html.Tag
 import kotlinx.html.div

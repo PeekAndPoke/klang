@@ -15,7 +15,7 @@ import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.dslEditorExtension
@@ -133,7 +133,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         currentCycle = 0
 
                         // Set up cycle counter and code highlighting
-                        playback?.onSignal { signal ->
+                        playback?.signals?.invoke { signal ->
                             when (signal) {
                                 is KlangPlaybackSignal.CycleCompleted -> {
                                     currentCycle = signal.cycleIndex + 1

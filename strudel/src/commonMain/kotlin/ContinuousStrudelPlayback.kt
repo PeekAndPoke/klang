@@ -1,9 +1,10 @@
 package io.peekandpoke.klang.strudel
 
+import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 
 /**
  * Continuous Strudel playback that runs indefinitely until explicitly stopped.
@@ -13,20 +14,22 @@ internal class ContinuousStrudelPlayback internal constructor(
     override val playbackId: String,
     pattern: StrudelPattern,
     context: KlangPlaybackContext,
+    onStarted: () -> Unit = {},
+    onStopped: () -> Unit = {},
 ) : StrudelPlayback {
 
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
+
+    override val signals: Stream<KlangPlaybackSignal> = _signals.readonly
 
     private val controller = StrudelPlaybackController(
         playbackId = playbackId,
         pattern = pattern,
         context = context,
         signals = _signals,
+        onStarted = onStarted,
+        onStopped = onStopped,
     )
-
-    override fun onSignal(listener: (KlangPlaybackSignal) -> Unit): () -> Unit {
-        return _signals.subscribeToStream(listener)
-    }
 
     override fun updatePattern(pattern: StrudelPattern) {
         controller.updatePattern(pattern)

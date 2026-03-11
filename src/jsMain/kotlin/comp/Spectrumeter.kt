@@ -3,12 +3,12 @@ package io.peekandpoke.klang.comp
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.utils.onResize
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import io.peekandpoke.klang.audio_bridge.createVisualizerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.externals.ResizeObserver
 import io.peekandpoke.klang.feel.KlangStudioColors
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -90,7 +90,6 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         }
     }
 
-    private var resizeObserver: ResizeObserver? = null
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
 
@@ -107,25 +106,23 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
                     }
 
                     ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
-
-                    resizeObserver = ResizeObserver { entries, _ ->
-                        for (entry in entries) {
-                            val width = entry.contentRect.width
-                            val height = entry.contentRect.height
-
-                            canvas?.let {
-                                it.width = width.toInt()
-                                it.height = height.toInt()
-                            }
-                        }
-                    }
-                    resizeObserver?.observe(container)
                 }
             }
 
             onUnmount {
                 visualizerAnimFrame?.let { window.cancelAnimationFrame(it) }
-                resizeObserver?.disconnect()
+            }
+
+            onResize { entries ->
+                for (entry in entries) {
+                    val width = entry.contentRect.width
+                    val height = entry.contentRect.height
+
+                    canvas?.let {
+                        it.width = width.toInt()
+                        it.height = height.toInt()
+                    }
+                }
             }
         }
     }

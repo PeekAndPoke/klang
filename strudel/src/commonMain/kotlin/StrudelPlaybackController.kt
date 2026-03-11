@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.strudel
 
 import de.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
@@ -28,6 +28,8 @@ internal class StrudelPlaybackController(
     private var pattern: StrudelPattern,
     context: KlangPlaybackContext,
     private val signals: StreamSource<KlangPlaybackSignal>,
+    private val onStarted: () -> Unit = {},
+    private val onStopped: () -> Unit = {},
 ) {
     // Extract dependencies from context for convenience
     private val playerOptions = context.playerOptions
@@ -99,6 +101,8 @@ internal class StrudelPlaybackController(
             return
         }
 
+        onStarted()
+
         // Update playback parameters
         this.cyclesPerSecond = options.cyclesPerSecond
         this.lookaheadCycles = options.lookaheadCycles
@@ -130,6 +134,8 @@ internal class StrudelPlaybackController(
 
         // Emit stopped signal
         signals(KlangPlaybackSignal.PlaybackStopped)
+
+        onStopped()
     }
 
     /**

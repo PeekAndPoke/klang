@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.codemirror
 
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.EditorView
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
@@ -54,10 +54,14 @@ class CodeMirrorHighlightBuffer(
     /** Whether the frame loop is currently running. */
     private var frameLoopActive = false
 
+    /** Max age for a Show op before it is silently dropped (ms). */
+    private val maxOverdueMs = 300.0
+
     // ── Lifecycle ───────────────────────────────────────────────────────────
 
     fun attachTo(editorView: EditorView) {
         view = editorView
+        window.addEventListener("blur", { cancelAll() })
     }
 
     fun detach() {
@@ -90,6 +94,8 @@ class CodeMirrorHighlightBuffer(
         location: SourceLocation,
         event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent,
     ) {
+        if (!document.hasFocus()) return
+
         val key = "${location.startLine}:${location.startColumn}:${location.endLine}:${location.endColumn}"
         val now = Date.now()
 
@@ -134,7 +140,12 @@ class CodeMirrorHighlightBuffer(
             if (op.timeMs <= now) {
                 iter.remove()
                 when (op) {
-                    is PendingOp.Show -> showHighlight(op.key, op.location, op.durationMs)
+                    is PendingOp.Show -> {
+                        // Drop Show ops that are more than 1s overdue — they accumulated while backgrounded
+                        if (now - op.timeMs <= maxOverdueMs) {
+                            showHighlight(op.key, op.location, op.durationMs)
+                        }
+                    }
                     is PendingOp.Remove -> removeHighlight(op.key)
                 }
             }
@@ -151,9 +162,7 @@ class CodeMirrorHighlightBuffer(
     private fun showHighlight(key: String, location: SourceLocation, durationMs: Double) {
         val view = this.view ?: return
 
-        // Check if window has focus
-        val hasFocus = js("document.hasFocus()") as Boolean
-        if (!hasFocus) return
+        if (!document.hasFocus()) return
 
         // Remove existing mark for this location (deduplication)
         activeMarks.remove(key)?.let { it.parentNode?.removeChild(it) }

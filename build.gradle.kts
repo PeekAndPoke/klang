@@ -90,6 +90,9 @@ kotlin {
 
         jsMain {
             dependencies {
+                // Automatically inject Webpack bundles (with hashes!) into index.html
+                implementation(devNpm("html-webpack-plugin", "5.6.0"))
+
                 api(project(":klangui"))
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)
@@ -128,23 +131,6 @@ kotlin {
 }
 
 tasks {
-//    named("jsProcessResources") {
-//        val taskNames = gradle.startParameter.taskNames
-//        // Determine if we are in a production flow based on the requested tasks
-//        val isProduction = taskNames.any {
-//            it.contains("Distribution", ignoreCase = true) ||
-//                    it.contains("Production", ignoreCase = true) ||
-//                    it.endsWith("build") ||
-//                    it.endsWith("assemble")
-//        }
-//
-//        if (isProduction) {
-//            dependsOn(":audio_jsworklet:copyWorkletToResources")
-//        } else {
-//            dependsOn(":audio_jsworklet:copyWorkletToResourcesDev")
-//        }
-//    }
-
     val copyWorkletDev by registering(Copy::class) {
         dependsOn(":audio_jsworklet:jsBrowserDevelopmentWebpack")
         from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/developmentExecutable"))
@@ -163,9 +149,16 @@ tasks {
     // Force the worklet to be built and copied before resources are processed
     named<ProcessResources>("jsProcessResources") {
         // NOTICE: For now always dev, as the production build does not work yet
-        dependsOn(copyWorkletDev)
+//        dependsOn(copyWorkletDev)
+        dependsOn(copyWorkletProd)
 
         // Ensure we don't accidentally cache an old version of the worklet
         outputs.upToDateWhen { false }
+    }
+
+    // Specifically target the production Webpack task to add the content hash
+    // This leaves the development server completely untouched!
+    named<org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack>("jsBrowserProductionWebpack") {
+        mainOutputFileName.set("klang-engine.[contenthash].js")
     }
 }

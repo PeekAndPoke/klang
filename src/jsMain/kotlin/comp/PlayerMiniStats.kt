@@ -9,7 +9,7 @@ import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.ops.ticker
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.audio_engine.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import kotlinx.css.px
 import kotlinx.html.Tag
