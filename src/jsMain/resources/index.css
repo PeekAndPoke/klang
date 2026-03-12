@@ -202,6 +202,18 @@ pre, code {
     border-color: var(--klang-text-tertiary) !important;
 }
 
+/* ── Textarea ─────────────────────────────────────────────────────────────── */
+textarea {
+    border: 1px solid var(--klang-bg-overlay) !important;
+    caret-color: var(--klang-gold) !important;
+    transition: border-color var(--klang-transition), box-shadow var(--klang-transition) !important;
+}
+textarea:focus {
+    border-color: var(--klang-gold) !important;
+    box-shadow: 0 0 0 1px var(--klang-gold) inset !important;
+    outline: none !important;
+}
+
 /* ── Dropdown ─────────────────────────────────────────────────────────────── */
 .ui.selection.dropdown {
     background: rgba(255, 255, 255, 0.1) !important;
@@ -253,6 +265,7 @@ pre, code {
 .ui.form input[type="url"] {
     background: rgba(255, 255, 255, 0.1) !important;
     color: var(--klang-text-primary) !important;
+    caret-color: var(--klang-gold) !important;
     border: 1px solid var(--klang-bg-overlay) !important;
     transition: border-color var(--klang-transition), box-shadow var(--klang-transition) !important;
 }
