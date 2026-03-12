@@ -90,6 +90,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
                 div {
                     css {
                         whiteSpace = WhiteSpace.nowrap
+                        put("text-shadow", "0 0 5px #000")
                     }
 
                     onClick { router.navToUri(Nav.tour()) }
