@@ -36,6 +36,10 @@ data class KlangLookAndFeel(
 
     val accent: String = "#528bff",
 
+    // ── Gold — code highlights, links ─────────────────────────────────────────
+
+    val gold: String = "#e8b84b",
+
     // ── Status scale (5 levels) ───────────────────────────────────────────────
 
     val excellent: String = "#56b6c2",
@@ -61,6 +65,7 @@ data class KlangLookAndFeel(
                 textSecondary = v("--klang-text-secondary"),
                 textTertiary = v("--klang-text-tertiary"),
                 accent = v("--klang-accent"),
+                gold = v("--klang-gold"),
                 excellent = v("--klang-excellent"),
                 good = v("--klang-good"),
                 moderate = v("--klang-moderate"),
@@ -86,7 +91,31 @@ data class KlangLookAndFeel(
      * [KlangTheme] mounts/unmounts this when the active look-and-feel changes.
      */
     inner class Styles : StyleSheet("klang-theme") {
-        // Rules go here as we migrate inline styling
+
+        /**
+         * Dark-themed docs hover popup.
+         * Applied to the segment container; overrides Semantic UI descendant colors.
+         */
+        /** Overlays a 20 % dark tint — use on code blocks, inset panels, etc. */
+        val darken20 by rule {
+            put("background-color", "rgba(0,0,0,0.2) !important")
+        }
+
+        val docsPopup by rule {
+            rule(" .ui.header") {
+                put("color", "$textSecondary !important")
+            }
+            rule(" .ui.list > .item > .content") {
+                put("color", "$textPrimary !important")
+            }
+            rule(" .ui.divider") {
+                put("border-top-color", "$appBackground !important")
+                put("border-bottom-color", "transparent !important")
+            }
+            rule(" pre") {
+                put("color", "$textPrimary !important")
+            }
+        }
     }
 
     val styles = Styles()

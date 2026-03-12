@@ -66,6 +66,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
     val textTertiary: Color get() = Color(invoke().textTertiary)
 
     val accent: Color get() = Color(invoke().accent)
+    val gold: Color get() = Color(invoke().gold)
 
     val excellent: Color get() = Color(invoke().excellent)
     val good: Color get() = Color(invoke().good)
@@ -101,6 +102,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         val textTertiary: String get() = KlangTheme().textTertiary
 
         val accent: String get() = KlangTheme().accent
+        val gold: String get() = KlangTheme().gold
 
         val excellent: String get() = KlangTheme().excellent
         val good: String get() = KlangTheme().good
@@ -128,6 +130,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         style.setProperty("--klang-text-secondary", laf.textSecondary)
         style.setProperty("--klang-text-tertiary", laf.textTertiary)
         style.setProperty("--klang-accent", laf.accent)
+        style.setProperty("--klang-gold", laf.gold)
         style.setProperty("--klang-excellent", laf.excellent)
         style.setProperty("--klang-good", laf.good)
         style.setProperty("--klang-moderate", laf.moderate)

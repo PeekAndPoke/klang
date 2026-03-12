@@ -6,6 +6,7 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.html.onContextMenu
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
@@ -60,14 +61,19 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             ?.samples?.firstOrNull()
             ?.takeIf { it.isNotBlank() }
 
-        ui.segment {
+        (ui.segment + laf.styles.docsPopup()) {
             css {
                 width = LinearDimension.fitContent
                 minWidth = 20.vw
                 maxWidth = 50.vw
+                backgroundColor = Color(laf.overlayBackground)
+                color = Color(laf.textPrimary)
+                borderColor = Color(laf.textTertiary)
+                put("box-shadow", "none")
             }
 
             onClick { event -> event.stopPropagation() }
+            onContextMenu { event -> event.stopPropagation() }
 
             ui.list {
                 // ── Description ───────────────────────────────────────────────────
@@ -124,7 +130,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                     css {
                         cursor = Cursor.pointer
                         fontSize = 12.px
-                        color = Color("#333")
+                        color = Color(laf.gold)
                     }
                     onClick { event ->
                         event.stopPropagation()
@@ -142,7 +148,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
     }
 
     private fun FlowContent.codeBlock(text: String, copyToClipboard: Boolean = false) {
-        div {
+        div(classes = laf.styles.darken20()) {
             css {
                 display = Display.flex
                 flexDirection = FlexDirection.row
@@ -150,8 +156,8 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                 gap = 8.px
                 padding = Padding(6.px, 8.px)
                 margin = Margin(0.px)
-                backgroundColor = Color(laf.cardBackground)
-                border = Border(1.px, BorderStyle.solid, Color("#ddd"))
+                border = Border(1.px, BorderStyle.solid, Color(laf.textTertiary))
+                put("border-radius", "var(--klang-border-radius)")
             }
 
             // Copy button
@@ -161,9 +167,9 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                         flexShrink = 0.0
                         cursor = Cursor.pointer
                         color = if (copiedIndex == 0) {
-                            Color("#27ae60")
+                            Color(laf.good)
                         } else {
-                            Color("#999")
+                            Color(laf.textTertiary)
                         }
                     }
                     onClick { event ->

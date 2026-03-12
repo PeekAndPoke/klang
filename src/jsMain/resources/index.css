@@ -11,6 +11,9 @@
     --klang-text-tertiary:  #5c6370;
 
     --klang-accent:         #528bff;
+    --klang-gold:           #e8b84b;
+
+    --klang-border-radius:  4px;
 
     --klang-excellent:      #56b6c2;
     --klang-good:           #98c379;
@@ -20,6 +23,13 @@
 }
 
 /* ── Fomantic UI dark overrides ───────────────────────────────────────────── */
+.ui.basic.popup {
+    background: var(--klang-bg-overlay) !important;
+    border-color: var(--klang-text-tertiary) !important;
+    border-radius: var(--klang-border-radius) !important;
+    box-shadow: 0 0 3px var(--klang-text-tertiary) !important;
+}
+
 .ui.menu {
     background: var(--klang-bg-menu) !important;
     border-color: var(--klang-bg-panel) !important;
@@ -133,8 +143,8 @@ body {
 
 /* CodeMirror live code highlighting (inline decorations — legacy) */
 .cm-highlight-playing {
-    background-color: rgba(0, 100, 200, 0.0);
-    border: 1px solid rgba(0, 100, 200, 0.0);
+    background-color: rgba(232, 184, 75, 0.0);
+    border: 1px solid rgba(232, 184, 75, 0.0);
     border-radius: 3px;
     animation-name: pulse;
     animation-timing-function: ease-out;
@@ -145,16 +155,16 @@ body {
 
 @keyframes pulse {
     0% {
-        background-color: rgba(0, 100, 255, 0.05);
-        border-color: rgba(0, 100, 255, 0.8);
+        background-color: rgba(232, 184, 75, 0.1);
+        border-color: rgba(255, 220, 100, 1.0);
     }
     70% {
-        background-color: rgba(0, 100, 255, 0.02);
-        border-color: rgba(0, 100, 255, 0.3);
+        background-color: rgba(232, 184, 75, 0.03);
+        border-color: rgba(255, 220, 100, 0.4);
     }
     100% {
-        background-color: rgba(0, 100, 255, 0.0);
-        border-color: rgba(0, 100, 255, 0.0);
+        background-color: rgba(232, 184, 75, 0.0);
+        border-color: rgba(232, 184, 75, 0.0);
     }
 }
 
