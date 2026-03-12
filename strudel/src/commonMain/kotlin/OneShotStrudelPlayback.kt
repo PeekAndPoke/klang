@@ -55,6 +55,10 @@ internal class OneShotStrudelPlayback internal constructor(
         controller.updateCyclesPerSecond(cps)
     }
 
+    override fun reemitVoiceSignals() {
+        controller.reemitVoiceSignals()
+    }
+
     override fun start() {
         start(StrudelPlayback.Options())
     }

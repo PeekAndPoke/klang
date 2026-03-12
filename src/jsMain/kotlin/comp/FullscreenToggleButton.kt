@@ -4,18 +4,23 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
-import de.peekandpoke.ultra.semanticui.SemanticFn
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.utils.FullscreenController
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.cursor
+import kotlinx.css.display
 import kotlinx.html.Tag
+import kotlinx.html.div
 import kotlinx.html.title
 
 @Suppress("FunctionName")
 fun Tag.FullscreenToggleButton(
     fs: FullscreenController,
-    style: SemanticFn = { large.circular.white },
+    style: SemanticIconFn = { circular },
 ) = comp(
     FullscreenToggleButton.Props(fs = fs, style = style)
 ) {
@@ -28,7 +33,7 @@ class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton
 
     data class Props(
         val fs: FullscreenController,
-        val style: SemanticFn,
+        val style: SemanticIconFn,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -43,22 +48,24 @@ class FullscreenToggleButton(ctx: Ctx<Props>) : Component<FullscreenToggleButton
 
     override fun VDom.render() {
         val styleFn = props.style
-        ui.styleFn()
-            .givenNot(state.canExitWithClick) { disabled }
-            .icon.button {
-                onClick { toggle() }
-
-                title = if (state.canExitWithClick) {
-                    "Toggle fullscreen"
-                } else {
-                    "Press ESC to exit fullscreen"
-                }
-
-                if (state.isFullscreen) {
-                    icon.compress()
-                } else {
-                    icon.expand()
-                }
+        div {
+            css {
+                cursor = Cursor.pointer
+                display = Display.inlineBlock
             }
+            onClick { toggle() }
+
+            title = if (state.canExitWithClick) {
+                "Toggle fullscreen"
+            } else {
+                "Press ESC to exit fullscreen"
+            }
+
+            if (state.isFullscreen) {
+                icon.styleFn().compress()
+            } else {
+                icon.styleFn().expand()
+            }
+        }
     }
 }

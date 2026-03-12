@@ -90,18 +90,18 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
             // ── Treble staff lines: E4(2) G4(4) B4(6) D5(8) F5(10) ──────────
 
             for (pos in listOf(2, 4, 6, 8, 10)) {
-                svgLine(staffX1, y(pos), staffX2, y(pos), stroke = "#999", strokeWidth = "1")
+                svgLine(staffX1, y(pos), staffX2, y(pos), stroke = "#555", strokeWidth = "1")
             }
 
             // ── Bass staff lines: G2(-10) B2(-8) D3(-6) F3(-4) A3(-2) ────────
 
             for (pos in listOf(-10, -8, -6, -4, -2)) {
-                svgLine(staffX1, y(pos), staffX2, y(pos), stroke = "#999", strokeWidth = "1")
+                svgLine(staffX1, y(pos), staffX2, y(pos), stroke = "#555", strokeWidth = "1")
             }
 
             // ── Vertical bar connecting both staves on the left ───────────────
 
-            svgLine(staffX1, y(10), staffX1, y(-10), stroke = "#777", strokeWidth = "2")
+            svgLine(staffX1, y(10), staffX1, y(-10), stroke = "#666", strokeWidth = "2")
 
             // ── Clef glyphs ───────────────────────────────────────────────────
 
@@ -141,14 +141,14 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
                     val glyph = note.acc
                         .replace("##", "\uD834\uDD2A").replace("bb", "\uD834\uDD2B") // 𝄪 𝄫
                         .replace("#", "♯").replace("b", "♭")
-                    svgText(cx - noteRx - 2, cy + 4, text = glyph, fill = "#555", fontSize = "11", textAnchor = "end")
+                    svgText(cx - noteRx - 2, cy + 4, text = glyph, fill = "#aaa", fontSize = "11", textAnchor = "end")
                 }
 
                 // Note head
-                svgEllipse(cx, cy, noteRx, noteRy, fill = if (isRoot) "#1565c0" else "#2185d0")
+                svgEllipse(cx, cy, noteRx, noteRy, fill = if (isRoot) "#e8b84b" else "#2185d0")
 
                 // Labels: note name (line 1) + step index (line 2)
-                val labelFill = if (isRoot) "#1565c0" else "#999"
+                val labelFill = if (isRoot) "#e8b84b" else "#aaa"
                 svgText(cx, svgH - padB + 14, text = note.name, fill = labelFill, fontSize = "9", textAnchor = "middle")
                 svgText(cx, svgH - padB + 26, text = note.step.toString(), fill = labelFill, fontSize = "10", textAnchor = "middle")
             }
@@ -163,7 +163,7 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
      * Anchor point is G4 (pos=4); baseline adjusted to pos=3.
      */
     private fun FlowContent.renderGClef(cx: Double, s: Double, y: (Int) -> Double) {
-        svgText(cx, y(3), text = "\uD834\uDD1E", fontSize = (8 * s).toString(), fill = "#555", textAnchor = "middle")
+        svgText(cx, y(3), text = "\uD834\uDD1E", fontSize = (8 * s).toString(), fill = "#aaa", textAnchor = "middle")
     }
 
     // ── F clef (bass clef) ────────────────────────────────────────────────────
@@ -173,12 +173,12 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
      * Font-size = 8 × halfSp. Baseline adjusted to pos=−11 − 2px.
      */
     private fun FlowContent.renderFClef(cx: Double, s: Double, y: (Int) -> Double) {
-        svgText(cx, y(-11) - 2, text = "\uD834\uDD22", fontSize = (8 * s).toString(), fill = "#555", textAnchor = "middle")
+        svgText(cx, y(-11) - 2, text = "\uD834\uDD22", fontSize = (8 * s).toString(), fill = "#aaa", textAnchor = "middle")
     }
 
     // ── Ledger line ───────────────────────────────────────────────────────────
 
     private fun FlowContent.renderLedgerLine(cx: Double, ly: Double, noteRx: Double) {
-        svgLine(cx - noteRx - 4, ly, cx + noteRx + 4, ly, stroke = "#999", strokeWidth = "1")
+        svgLine(cx - noteRx - 4, ly, cx + noteRx + 4, ly, stroke = "#555", strokeWidth = "1")
     }
 }

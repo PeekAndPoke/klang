@@ -18,6 +18,7 @@ import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.*
 import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.*
 
@@ -185,6 +186,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private val laf by subscribingTo(KlangTheme)
     private var searchQuery: String by urlParam(name = PARAM_SEARCH, default = "")
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
@@ -216,27 +218,38 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             div {
                 ui.form {
                     // Search box
-                    div {
-                        UiInputField(value = searchQuery, onChange = { searchQuery = it }) {
-                            placeholder(
-                                "Search: plain text, category:structural, tag:timing, function:seq"
-                            )
+                    ui.two.column.stackable.grid {
+                        noui.column {
+                            UiInputField(value = searchQuery, onChange = { searchQuery = it }) {
+                                placeholder(
+                                    "Search: plain text, category:structural, tag:timing, function:seq"
+                                )
 
-                            rightClearingIcon()
+                                rightClearingIcon()
 
-                            leftLabel {
-                                ui.basic.label { icon.search(); +"Search" }
+                                leftLabel {
+                                    ui.grey.label { icon.search(); +"Search" }
+                                }
+                            }
+                        }
+                        noui.column {
+                            // Results count
+                            ui.message {
+                                css {
+                                    paddingTop = 0.px
+                                    paddingBottom = 0.px
+
+                                    height = 100.pct
+                                    display = Display.flex
+                                    alignItems = Align.center
+                                }
+                                +"Found ${filteredSymbols.size} entries"
                             }
                         }
                     }
                 }
             }
 
-            // Results count
-            ui.message {
-                css { marginTop = 1.rem }
-                +"Found ${filteredSymbols.size} entries"
-            }
 
             // Symbol list
             filteredSymbols.forEach { symbol ->
@@ -342,7 +355,8 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             // Signature (code block)
             pre {
                 css {
-                    backgroundColor = Color("#f4f4f4")
+                    backgroundColor = Color(laf.cardBackground)
+                    color = Color(laf.textPrimary)
                     padding = Padding(0.75.rem)
                     borderRadius = 4.px
                     overflow = Overflow.auto

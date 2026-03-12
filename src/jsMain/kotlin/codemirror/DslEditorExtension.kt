@@ -15,6 +15,7 @@ import io.peekandpoke.klang.codemirror.ext.*
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.minWidth
@@ -271,8 +272,8 @@ fun dslEditorExtension(
             val btn = document.createElement("button")
             btn.asDynamic().title = tool.title ?: toolName
             btn.asDynamic().style.cssText =
-                "cursor:pointer;background:#fff;border:1px solid #888;border-radius:3px;" +
-                        "padding:1px 5px;font-size:11px;line-height:1.4;color:#333;"
+                "cursor:pointer;background:${KlangTheme.Hex.cardBackground};border:1px solid ${KlangTheme.Hex.textTertiary};border-radius:3px;" +
+                        "padding:1px 5px;font-size:11px;line-height:1.4;color:${KlangTheme.Hex.textPrimary};"
             btn.innerHTML = """<i class="$iconCss icon" style="margin:0;font-size:11px;"></i>"""
 
             btn.addEventListener("click", { event ->
@@ -409,15 +410,13 @@ fun dslEditorExtension(
     // ── Theme ──────────────────────────────────────────────────────────────
 
     val theme = EditorView.baseTheme(
-        js(
-            """({
-            ".cm-dsl-link": {
-                textDecoration: "underline",
-                cursor: "pointer",
-                color: "#0060df"
+        jsObject<dynamic> {
+            this[".cm-dsl-link"] = jsObject<dynamic> {
+                textDecoration = "underline"
+                cursor = "pointer"
+                color = KlangTheme.Hex.gold
             }
-        })"""
-        )
+        }
     )
 
     return arrayOf(

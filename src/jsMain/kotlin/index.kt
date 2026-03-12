@@ -5,6 +5,7 @@ import de.peekandpoke.kraft.semanticui.semanticUI
 import de.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 import io.peekandpoke.klang.strudel.lang.initStrudelLang
 import io.peekandpoke.klang.strudel.ui.registerStrudelUiTools
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.utils.FullscreenController
 
 val kraft = kraftApp {
@@ -20,6 +21,9 @@ val kraft = kraftApp {
 val fs = FullscreenController()
 
 fun main() {
+    // Read CSS custom properties and establish the active look-and-feel before render
+    KlangTheme.initialize()
+
     // Initialize Strudel DSL and register documentation
     initStrudelLang()
 

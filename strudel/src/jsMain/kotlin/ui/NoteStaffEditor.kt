@@ -15,6 +15,7 @@ import io.peekandpoke.klang.strudel.lang.parser.MnPattern
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.*
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.window
 import kotlinx.css.Overflow
 import kotlinx.css.UserSelect
@@ -215,6 +216,10 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         /** Receives all user interactions with the staff. */
         val onAction: (Action) -> Unit,
     )
+
+    // ── Theme ─────────────────────────────────────────────────────────────────
+
+    private val laf by subscribingTo(KlangTheme)
 
     // ── Drag / click state ────────────────────────────────────────────────────
 
@@ -516,7 +521,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             val lineWidth = svgWidth - 8.0
             for ((idx, linePos) in STAFF_LINE_POSITIONS.withIndex()) {
                 val y = staffPosToY(linePos, topY)
-                svgLine(4, y, lineWidth.toInt(), y, key = "staff-$idx")
+                svgLine(4, y, lineWidth.toInt(), y, stroke = "#ddd", key = "staff-$idx")
             }
 
             // Treble clef
@@ -524,6 +529,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                 4, staffPosToY(4, topY) + NOTE_RADIUS_Y * 4,
                 text = "\uD834\uDD1E", // 𝄞
                 fontSize = "42",
+                fill = "#ddd",
                 style = "user-select:none;line-height:1",
                 key = "clef",
             )
@@ -535,6 +541,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
                 svgText(
                     ax, ay + 4, text = keySig.symbol,
                     fontSize = "15", fontWeight = "bold",
+                    fill = "#ddd",
                     textAnchor = "middle",
                     style = "user-select:none",
                     key = "keysig-$idx",
@@ -631,7 +638,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         if (staffPos == null) return
         val gy = staffPosToY(staffPos, topY)
         renderLedgerLines(staffPos, cx, topY)
-        svgEllipse(cx, gy, NOTE_RADIUS_X, NOTE_RADIUS_Y, fill = "#2266cc", opacity = "0.35", style = "pointer-events:none")
+        svgEllipse(cx, gy, NOTE_RADIUS_X, NOTE_RADIUS_Y, fill = laf.accent, opacity = "0.35", style = "pointer-events:none")
     }
 
     private fun FlowContent.renderBracketMark(mark: LayoutItem.BracketMark, x: Double, topY: Double) {
@@ -678,9 +685,9 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
             attributes["data-rest-range-start"] = rangeStart.toString()
             svgRect(
                 x - w / 2, lineY - h, w, h,
-                fill = if (isActive) "#3355aa" else "#444",
+                fill = if (isActive) laf.accent else "#ddd",
                 rx = "1",
-                stroke = if (isActive) "#2266cc" else null,
+                stroke = if (isActive) laf.accent else null,
                 strokeWidth = if (isActive) "2" else null,
             )
         }
@@ -699,15 +706,15 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
 
         val y = staffPosToY(pos, topY)
         val noteColor = when {
-            isDragging -> "#2266cc"
-            isHighlighted -> "#e67e22"
-            isActive -> "#3355aa"
-            else -> "#222"
+            isDragging -> laf.accent
+            isHighlighted -> laf.gold
+            isActive -> laf.accent
+            else -> "#eee"
         }
         val strokeColor = when {
-            isHighlighted -> "#d35400"
-            isActive || isDragging -> "#2266cc"
-            else -> "#333"
+            isHighlighted -> laf.gold
+            isActive || isDragging -> laf.accent
+            else -> "#ddd"
         }
         val strokeWidth = when {
             isHighlighted -> "2.5"
@@ -730,7 +737,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
     private fun FlowContent.renderUnknownSvg(atom: MnNode.Atom, x: Double, isActive: Boolean, topY: Double) {
         val pos = 0 // C4
         val y = staffPosToY(pos, topY)
-        val color = if (isActive) "#2266cc" else "#999"
+        val color = if (isActive) laf.accent else "#999"
         svgG(key = "atom-${atom.id}", style = "cursor:default;user-select:none") {
             attributes["data-atom-id"] = atom.id.toString()
             attributes["data-staff-pos"] = pos.toString()
@@ -744,13 +751,13 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         // Below staff: pos <= 0, every even position gets a ledger line
         var p = 0
         while (p >= pos) {
-            svgLine(x - ledgerHalfW, staffPosToY(p, topY), x + ledgerHalfW, staffPosToY(p, topY), stroke = "#555")
+            svgLine(x - ledgerHalfW, staffPosToY(p, topY), x + ledgerHalfW, staffPosToY(p, topY), stroke = "#ddd")
             p -= 2
         }
         // Above staff: pos >= 12, every even position gets a ledger line
         p = 12
         while (p <= pos) {
-            svgLine(x - ledgerHalfW, staffPosToY(p, topY), x + ledgerHalfW, staffPosToY(p, topY), stroke = "#555")
+            svgLine(x - ledgerHalfW, staffPosToY(p, topY), x + ledgerHalfW, staffPosToY(p, topY), stroke = "#ddd")
             p += 2
         }
     }
@@ -766,7 +773,7 @@ internal class NoteStaffEditor(ctx: Ctx<Props>) : Component<NoteStaffEditor.Prop
         }
         svgText(
             x - NOTE_RADIUS_X - 6.0, y + 3, text = accText,
-            fontSize = "10", textAnchor = "middle", style = "user-select:none",
+            fontSize = "10", textAnchor = "middle", fill = "#ddd", style = "user-select:none",
         )
     }
 

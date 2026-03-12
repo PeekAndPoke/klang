@@ -153,7 +153,7 @@ stack(
     n(`<[[0,7]!4 [0,7]@4]!8 [[0,6]!4 [0,6]@4]!4 [[0,7]!4 [0,7]@4]!4 [[0,7]!4 [0,7]@4]!9 [[0,7]!4 [0,8]@4]!7>`)
   )
   .fast(4).scale("e2:chromatic").clip(0.99).hpf(60).lpf(3000).pan(0.5).adsr("0.01:0.1:0.3:0.05")
-  .s("supersaw").unison(6).detune(0.025).gain(1.0).distort(5).postgain(0.175).warmth(0.5)
+  .s("supersaw").unison(6).detune(0.025).gain(1.0).distort(5).postgain(0.175).warmth(0.2)
   .superimpose(
     x => x.bandf(120).bandq(1.5).crush(6).sound("pulse").adsr("0.01:0.05:0.25:0.0"),
     x => x.bandf(1920).bandq(1.25).crush(6).sound("pulse").adsr("0.01:0.05:0.25:0.0"),
@@ -168,7 +168,7 @@ stack(
     >`),
   )
   .fast(4).scale("e2:chromatic").clip(0.5).hpf(200).lpf(5000).pan(0.5).adsr("0.05:0.1:0.1:0.02")
-  .s("pulse").unison(12).detune(0.01).gain(1.0).distort(5).postgain(0.15).warmth(0.5)
+  .s("pulse").unison(12).detune(0.01).gain(1.0).distort(5).postgain(0.175).warmth(0.5)
   .superimpose(x => x.bandf(960).bandq(1))
    // .mute()
 
@@ -176,7 +176,7 @@ stack(
   , s("<hh!8!8 [oh hh!5 cr hh]!2!8>").adsr("0.00:0.1:0.5:0.1").hpf(200).postgain(1.25) // .solo()
   // Drums 2
   , s(`<[[bd sd]!2]!4 [bd [bd,sd] bd [bd,sd]]!3 [bd bd [bd,sd] bd  [sd!2]!4]!1
-        [[bd sd]!16]!8>`).n("<7!8 0!8>").adsr("0.00:0.3:0.5:0.1").gain(0.8).hpf(30)  // . solo()
+        [[bd sd]!16]!8>`).n("<7!8 0!8>").adsr("0.00:0.3:0.5:0.1").gain(1.0).hpf(30)  // . solo()
 )
   .room(0.025).rsize(5)
         """.trimIndent(),

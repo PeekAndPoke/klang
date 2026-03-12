@@ -14,6 +14,7 @@ import de.peekandpoke.ultra.common.maths.Ease.timed
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.ops.ticker
@@ -23,10 +24,10 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.comp.*
-import io.peekandpoke.klang.feel.KlangStudioColors
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.playStrudelOnce
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.css.properties.scaleX
@@ -53,57 +54,65 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         val message: String,
         val showWarning: Boolean,
         val color: Color,
+        val icon: SemanticIconFn,
     )
 
     private fun getPerformanceRating(voiceCount: Int): PerformanceRating {
         return when {
             voiceCount >= 140 -> PerformanceRating(
                 tier = "God-Tier",
-                message = "Your machine is a god among mortals! 🚀",
+                message = "Your machine is a god among mortals!",
                 showWarning = false,
-                color = Color("#00D9FF")  // Cyan
+                color = Color(laf.excellent),
+                icon = { rocket },
             )
 
             voiceCount >= 120 -> PerformanceRating(
                 tier = "Excellent",
-                message = "Your machine is a true work-horse! 💪",
+                message = "Your machine is a true work-horse!",
                 showWarning = false,
-                color = Color("#4CAF50")  // Green
+                color = Color(laf.excellent),
+                icon = { dumbbell },
             )
 
             voiceCount >= 100 -> PerformanceRating(
                 tier = "Great",
                 message = "Your machine handles this like a champ!",
                 showWarning = false,
-                color = Color("#8BC34A")  // Light Green
+                color = Color(laf.good),
+                icon = { thumbs_up },
             )
 
             voiceCount >= 80 -> PerformanceRating(
                 tier = "Good",
                 message = "Your machine is ready to make some music!",
                 showWarning = false,
-                color = Color("#CDDC39")  // Lime
+                color = Color(laf.good),
+                icon = { check_circle },
             )
 
             voiceCount >= 60 -> PerformanceRating(
                 tier = "Fair",
                 message = "Your machine is doing okay. Nothing fancy, but it'll work.",
                 showWarning = false,
-                color = Color("#FFC107")  // Amber
+                color = Color(laf.moderate),
+                icon = { check },
             )
 
             voiceCount >= 40 -> PerformanceRating(
                 tier = "Limited",
-                message = "C'mon, it's 2026... maybe consider an upgrade? 🤔",
+                message = "C'mon, it's 2026... maybe consider an upgrade?",
                 showWarning = true,
-                color = Color("#FF9800")  // Orange
+                color = Color(laf.warning),
+                icon = { question_circle },
             )
 
             else -> PerformanceRating(
                 tier = "Struggling",
-                message = "Seriously? Get a real computer! This thing is running on hopes and dreams. 💀",
+                message = "Seriously? Get a real computer! This thing is running on hopes and dreams.",
                 showWarning = true,
-                color = Color("#F44336")  // Red
+                color = Color(laf.critical),
+                icon = { skull_crossbones },
             )
         }
     }
@@ -232,6 +241,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         fun getResult() = result
     }
 
+    private val laf by subscribingTo(KlangTheme)
     private var state: State by value(StateOffline())
 
     private val benchmark = KlangBenchmark()
@@ -267,7 +277,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 flexDirection = FlexDirection.column
                 alignItems = Align.center
                 justifyContent = JustifyContent.center
-                backgroundColor = Color.black
+                backgroundColor = Color(laf.appBackground)
                 color = Color.white
                 textAlign = TextAlign.center
             }
@@ -357,7 +367,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     height = spectHeight.px
                     width = 100.pct
 
-                    opacity = 0.5
+                    opacity = 0.66
                 }
 
                 Spectrumeter { Player.get() }
@@ -457,7 +467,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             RoundButton(
                 icon = { power_off },
-                color = KlangStudioColors.excellent,
+                color = KlangTheme.excellent,
                 onClick = {
                     state.gotoNext()
                 },
@@ -570,7 +580,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "Round",
                     range = 0.0..totalRounds,
                     icon = { redo },
-                    colors = KlangStudioColors.rangedMixer(0, totalRounds),
+                    colors = KlangTheme.rangedMixer(0, totalRounds),
                     disabled = false,
                     size = 70.px
                 )
@@ -596,7 +606,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "CPU",
                     range = 0.0..100.0,
                     icon = { microchip },
-                    colors = KlangStudioColors.rangedMixer(0.0, 100.0),
+                    colors = KlangTheme.rangedMixer(0.0, 100.0),
                     disabled = false,
                     size = 90.px
                 )
@@ -616,7 +626,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "Active Voices",
                     range = 0.0..200.0,
                     icon = { music },
-                    colors = KlangStudioColors.rangedMixer(0.0, 200.0),
+                    colors = KlangTheme.rangedMixer(0.0, 200.0),
                     disabled = false,
                     size = 70.px
                 )
@@ -664,15 +674,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 paddingRight = 20.px
             }
 
-            div {
-                css {
-                    fontSize = 1.2.em
-                    marginBottom = 24.px
-                    color = Color.white
-                }
-                +"Benchmark Complete ✓"
-            }
-
             val result = completeState.getResult()
 
             // Show the same gauges as during benchmarking
@@ -683,6 +684,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
             div {
                 css {
+                    position = Position.relative
                     marginTop = 24.px
                     paddingTop = 20.px
                     paddingBottom = 20.px
@@ -692,8 +694,30 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     border = Border(
                         width = 1.px,
                         style = BorderStyle.dashed,
-                        color = if (rating.showWarning) KlangStudioColors.critical else Color.white
+                        color = if (rating.showWarning) Color(laf.critical) else Color.white
                     )
+                }
+
+                // Top-left corner icon
+                icon.(rating.icon)().then {
+                    css {
+                        position = Position.absolute
+                        top = 8.px
+                        left = 8.px
+                        color = rating.color
+                        fontSize = 1.2.em
+                    }
+                }
+
+                // Top-right corner icon
+                icon.(rating.icon)().then {
+                    css {
+                        position = Position.absolute
+                        top = 8.px
+                        right = 8.px
+                        color = rating.color
+                        fontSize = 1.2.em
+                    }
                 }
 
                 // Tier badge
@@ -802,7 +826,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     css {
                         val glow = 0.6 + 0.4 * sin(Kronos.systemUtc.millisNow() * PI / 610.0)
 
-                        color = KlangStudioColors.critical.darken((100 - glow * 100).toInt())
+                        color = Color(laf.critical).darken((100 - glow * 100).toInt())
                         put("text-shadow", "0 0 ${glow * 3}px")
                     }
                 }

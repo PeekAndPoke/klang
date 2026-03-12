@@ -39,6 +39,10 @@ internal class ContinuousStrudelPlayback internal constructor(
         controller.updateCyclesPerSecond(cps)
     }
 
+    override fun reemitVoiceSignals() {
+        controller.reemitVoiceSignals()
+    }
+
     override fun start() {
         start(StrudelPlayback.Options())
     }

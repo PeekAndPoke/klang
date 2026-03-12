@@ -46,6 +46,7 @@ import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -99,6 +100,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private val laf by subscribingTo(KlangTheme)
     private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
     private var playback: StrudelPlayback? by value(null)
     private val isPlaying get() = playback != null
@@ -110,6 +112,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private var highlightPerEvent by value(10) {
         codeEditorRef { editor -> editor.highlightBuffer.maxHighlightsPerEvent = it }
+        cancelHighlights()
+        playback?.reemitVoiceSignals()
     }
 
     private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
@@ -118,8 +122,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private var cps: Double by value(cpsStream()) {
         cpsStream(it)
-        codeEditorRef { editor -> editor.cancelAllHighlights() }
-        blocksHighlightBuffer.cancelAll()
+        cancelHighlights()
         playback?.updateCyclesPerSecond(it)
     }
 
@@ -219,11 +222,26 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
+    private fun cancelHighlights() {
+        codeEditorRef { editor -> editor.cancelAllHighlights() }
+        blocksHighlightBuffer.cancelAll()
+    }
+
+    private fun scheduleVoiceHighlights(voiceEvent: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
+        codeEditorRef { editor -> editor.scheduleHighlight(voiceEvent) }
+        val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return
+        val now = Date.now()
+        val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
+        val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
+        chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
+            blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
+        }
+    }
+
     private fun onPlay() {
         codeStream(code)
         isCodeModified = false
-        codeEditorRef { editor -> editor.cancelAllHighlights() }
-        blocksHighlightBuffer.cancelAll()
+        cancelHighlights()
 
         when (val s = playback) {
             null -> launch {
@@ -241,21 +259,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                         // When there is a modal dialog open, we stop highlighting
                                         if (currentModals.isNotEmpty()) return@invoke
 
-                                        signal.voices.forEach { voiceEvent ->
-                                            // Update Code highlights
-                                            codeEditorRef { editor -> editor.scheduleHighlight(voiceEvent) }
-
-                                            // Update Blocks highlight buffer
-                                            val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return@forEach
-                                            val now = Date.now()
-                                            val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
-                                            val durationMs =
-                                                maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
-
-                                            chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
-                                                blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
-                                            }
-                                        }
+                                        signal.voices.forEach { scheduleVoiceHighlights(it) }
                                     }
 
                                     is KlangPlaybackSignal.PreloadingSamples -> {
@@ -290,8 +294,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private fun onStop() {
         playback?.stop()
-        codeEditorRef { editor -> editor.cancelAllHighlights() }
-        blocksHighlightBuffer.cancelAll()
+        cancelHighlights()
         playback = null
     }
 
@@ -301,19 +304,24 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     /** Switch to Blocks mode — asks for confirmation first if the code has comments. */
     private fun switchToBlocks(event: PointerEvent) {
         if (codeHasComments()) {
-            popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomRight) { handle ->
+            popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomCenter) { handle ->
                 ui.compact.segment {
                     css {
                         width = LinearDimension.maxContent
                     }
                     p { +"Comments will be lost when switching to Blocks mode." }
-                    ui.mini.basic.button {
-                        onClick { handle.close() }
-                        +"Cancel"
-                    }
-                    ui.mini.black.button {
-                        onClick { handle.close(); editorMode = EditorMode.BLOCKS }
-                        +"Switch anyway"
+
+                    ui.right.aligned.basic.fitted.segment {
+                        ui.mini.basic.inverted.button {
+                            onClick { handle.close() }
+                            icon.times()
+                            +"Cancel"
+                        }
+                        ui.mini.positive.button {
+                            onClick { handle.close(); editorMode = EditorMode.BLOCKS }
+                            icon.check()
+                            +"Switch anyway"
+                        }
                     }
                 }
             }
@@ -338,7 +346,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 flexDirection = FlexDirection.column
                 height = 100.vh
                 padding = Padding(0.px)
-                backgroundColor = Color.white
             }
             ui.form {
                 key = "dashboard-form"
@@ -371,26 +378,28 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // Play / Update / Stop controls
                         noui.item {
                             if (!isPlaying) {
-                                ui.large.circular.black.button {
+                                ui.large.circular.white.button {
                                     onClick { onPlay() }
                                     if (loading) {
-                                        icon.loading.spinner()
+                                        icon.black.loading.spinner()
                                         +"Loading"
                                     } else {
-                                        icon.play()
+                                        icon.black.play()
                                         +"Play"
                                     }
                                 }
                             } else {
-                                ui.large.circular.white.givenNot(isCodeModified) { disabled }.button {
-                                    onClick { updatePlayback() }
-                                    icon.black.redo_alternate()
-                                    +"Update"
-                                }
+                                ui.large.circular.white
+                                    .givenNot(isCodeModified) { disabled }.button {
+                                        onClick { updatePlayback() }
+                                        icon.black.redo_alternate()
+                                        +"Update"
+                                    }
                             }
 
-                            ui.large.circular.icon.givenNot(isPlaying) { disabled }
-                                .given(isPlaying) { white }.button {
+                            ui.large.circular.white
+                                .givenNot(isPlaying) { disabled }
+                                .given(isPlaying) { white }.icon.button {
                                     onClick { onStop() }
                                     title = "Stop playback"
                                     icon.black.stop()
@@ -402,7 +411,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 ui.large.circular.white.icon.button {
                                     onClick { resetToOriginal() }
                                     title = "Reset to original code"
-                                    icon.undo()
+                                    icon.black.undo()
                                 }
                             }
                         }
@@ -411,9 +420,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         noui.item {
                             UiInputField(cps, { cps = it }) {
                                 step(0.01)
-                                appear { large }
+                                appear { large.inverted }
                                 leftLabel {
-                                    ui.basic.label { icon.clock(); +"CPS" }
+                                    ui.grey.label {
+                                        icon.clock(); +"CPS"
+                                    }
                                 }
                             }
                         }
@@ -423,7 +434,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             UiInputField(songTitle, { songTitle = it }) {
                                 appear { large }
                                 leftLabel {
-                                    ui.basic.label { icon.music(); +"Title" }
+                                    ui.grey.label { icon.music(); +"Title" }
                                 }
                             }
                         }
@@ -434,30 +445,36 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 step(1)
                                 appear { large }
                                 leftLabel {
-                                    ui.basic.label { icon.bolt(); +"EVT" }
+                                    ui.grey.label { icon.bolt(); +"EVT" }
                                 }
                             }
                         }
 
                         // Code / Blocks toggle
                         noui.item {
-                            ui.large.buttons {
-                                ui.large.given(editorMode == EditorMode.CODE) { black }
-                                    .givenNot(editorMode == EditorMode.CODE) { basic }
-                                    .icon.button {
-                                        onClick { switchToCode() }
-                                        title = "Switch to code editor"
-                                        icon.code()
-                                    }
-
-                                ui.large.given(editorMode == EditorMode.BLOCKS) { black }
-                                    .givenNot(editorMode == EditorMode.BLOCKS) { basic }
-                                    .icon.button {
-                                        onClick { switchToBlocks(it) }
-                                        title = "Switch to blocks editor"
-                                        icon.puzzle_piece()
-                                    }
+                            val isCode = editorMode == EditorMode.CODE
+                            css {
+                                cursor = Cursor.pointer
+                                display = Display.inlineBlock
                             }
+                            onClick { switchToCode() }
+                            title = "Switch to code editor"
+                            icon.given(isCode) { inverted.white }
+                                .givenNot(isCode) { grey }
+                                .code()
+                        }
+
+                        noui.item {
+                            val isBlocks = editorMode == EditorMode.BLOCKS
+                            css {
+                                cursor = Cursor.pointer
+                                display = Display.inlineBlock
+                            }
+                            onClick { switchToBlocks(it) }
+                            title = "Switch to blocks editor"
+                            icon.given(isBlocks) { inverted.white }
+                                .givenNot(isBlocks) { grey }
+                                .puzzle_piece()
                         }
                     }
                 }
@@ -471,6 +488,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         overflowX = Overflow.hidden
                         display = Display.flex
                         flexDirection = FlexDirection.column
+                        paddingLeft = 12.px
                     }
 
                     when (editorMode) {

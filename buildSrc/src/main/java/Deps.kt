@@ -421,6 +421,8 @@ object Deps {
 
         // https://www.npmjs.com/package/@codemirror/lint
         fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.4")
+        // https://www.npmjs.com/package/@lezer/highlight
+        fun KotlinDependencyHandler.lezerHighlight() = npm("@lezer/highlight", "1.2.3")
     }
 
     // // Test dependencies ////////////////////////////////////////////////////////////////////////

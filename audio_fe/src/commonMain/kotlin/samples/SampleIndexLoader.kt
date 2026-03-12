@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.audio_fe.samples
 
-import io.ktor.util.*
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_fe.samples.Samples.ResolvedSample
 import io.peekandpoke.klang.audio_fe.samples.Samples.Sample
@@ -9,6 +8,7 @@ import io.peekandpoke.klang.audio_fe.utils.isUrlWithProtocol
 import io.peekandpoke.klang.tones.Tones
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.*
+import kotlin.io.encoding.Base64
 
 class SampleIndexLoader(
     loader: AssetLoader,
@@ -102,7 +102,7 @@ class SampleIndexLoader(
                     .firstOrNull { Tones.midiToFreq(it.originalPitch / 100.0) >= requestedPitch }
                     ?: zones.last()
 
-                val bytes = selected.file.decodeBase64Bytes()
+                val bytes = Base64.decode(selected.file)
 
                 val sample = Sample.FromBytes(
                     note = request.note,

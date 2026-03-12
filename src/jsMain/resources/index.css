@@ -1,0 +1,412 @@
+/* ── Klang Design Tokens ──────────────────────────────────────────────────── */
+:root {
+    --klang-bg-app:         #191C22;
+    --klang-bg-menu:        #000000;
+    --klang-bg-panel:       #21252b;
+    --klang-bg-card:        #2c313a;
+    --klang-bg-overlay:     #353a42;
+
+    --klang-text-primary:   #D7DADF;
+    --klang-text-secondary: #abb2bf;
+    --klang-text-tertiary:  #5c6370;
+
+    --klang-accent:         #528bff;
+    --klang-gold:           #EBC773;
+
+    --klang-border-radius:  4px;
+    --klang-transition:     200ms ease;
+
+    --klang-excellent:      #56b6c2;
+    --klang-good:           #98c379;
+    --klang-moderate:       #e5c07b;
+    --klang-warning:        #d19a66;
+    --klang-critical:       #e06c75;
+}
+
+/* ── Text selection ───────────────────────────────────────────────────────── */
+::selection,
+input::selection,
+textarea::selection,
+*::selection {
+    background-color: var(--klang-gold) !important;
+    color: #000000 !important;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.ui.positive.button {
+    background-color: var(--klang-gold) !important;
+    color: #000000 !important;
+}
+.ui.positive.button:hover {
+    background-color: #f0c55a !important;
+}
+
+/* ── Dimmer ───────────────────────────────────────────────────────────────── */
+.ui.page.dimmer {
+    background: rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(0.5px) !important;
+    -webkit-backdrop-filter: blur(0.5px) !important;
+}
+
+/* ── Fomantic UI dark overrides ───────────────────────────────────────────── */
+.ui.basic.popup {
+    background: var(--klang-bg-overlay) !important;
+    border-color: var(--klang-text-tertiary) !important;
+    border-radius: var(--klang-border-radius) !important;
+    box-shadow: 0 0 3px var(--klang-text-tertiary) !important;
+}
+
+.ui.menu {
+    background: var(--klang-bg-menu) !important;
+    border-color: var(--klang-bg-panel) !important;
+}
+.ui.menu .item {
+    color: var(--klang-text-primary) !important;
+}
+.ui.menu .active.item {
+    color: #ffffff !important;
+    background: var(--klang-bg-panel) !important;
+}
+
+.ui.modal {
+    background: var(--klang-bg-card) !important;
+    color: var(--klang-text-primary) !important;
+    border: 1px solid var(--klang-text-tertiary) !important;
+    border-radius: var(--klang-border-radius) !important;
+    box-shadow: 0 0 3px var(--klang-text-tertiary) !important;
+}
+.ui.modal .ui.header {
+    color: var(--klang-text-secondary) !important;
+    background: transparent !important;
+}
+.ui.modal .ui.divider {
+    border-top-color: var(--klang-bg-app) !important;
+    border-bottom-color: transparent !important;
+}
+.ui.modal .ui.form .field > label {
+    color: var(--klang-text-secondary) !important;
+}
+.ui.modal .ui.basic.button {
+    color: var(--klang-text-primary) !important;
+    box-shadow: 0 0 0 1px var(--klang-text-tertiary) inset !important;
+}
+.ui.modal .ui.basic.button:hover {
+    color: #ffffff !important;
+    box-shadow: 0 0 0 1px var(--klang-text-secondary) inset !important;
+    background: transparent !important;
+}
+.ui.modal .ui.basic.label {
+    background: transparent !important;
+    color: var(--klang-text-secondary) !important;
+    border-color: var(--klang-text-tertiary) !important;
+}
+
+/* ── Headers ──────────────────────────────────────────────────────────────── */
+.ui.header {
+    color: var(--klang-text-primary) !important;
+}
+
+.ui.segment {
+    background: var(--klang-bg-card) !important;
+    color: var(--klang-text-primary) !important;
+}
+.ui.basic.segment {
+    background: transparent !important;
+    color: white !important;
+}
+.ui.secondary.segment {
+    background: var(--klang-bg-panel) !important;
+}
+.ui.placeholder.segment {
+    background: var(--klang-bg-card) !important;
+}
+.ui.placeholder.segment .header {
+    color: var(--klang-text-secondary) !important;
+}
+
+/* ── Segments group ───────────────────────────────────────────────────────── */
+.ui.segments {
+    border-color: var(--klang-bg-overlay) !important;
+    box-shadow: none !important;
+}
+.ui.segments .segment {
+    border-color: var(--klang-bg-overlay) !important;
+}
+
+/* ── Messages ─────────────────────────────────────────────────────────────── */
+.ui.message {
+    background: var(--klang-bg-overlay) !important;
+    color: var(--klang-text-primary) !important;
+    box-shadow: none !important;
+}
+.ui.message .header {
+    color: var(--klang-text-primary) !important;
+}
+
+/* ── Labels ───────────────────────────────────────────────────────────────── */
+.ui.label:not(.basic) {
+    background: var(--klang-bg-overlay) !important;
+    color: var(--klang-text-secondary) !important;
+    border-color: var(--klang-bg-overlay) !important;
+}
+
+/* ── Lists ────────────────────────────────────────────────────────────────── */
+.ui.list .item {
+    color: var(--klang-text-primary) !important;
+}
+
+/* ── Code blocks ──────────────────────────────────────────────────────────── */
+pre, code {
+    color: var(--klang-text-primary) !important;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.ui.cards > .card,
+.ui.card {
+    background: var(--klang-bg-overlay) !important;
+    color: var(--klang-text-primary) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+}
+.ui.cards > .card .content,
+.ui.card .content {
+    border-top-color: var(--klang-bg-card) !important;
+}
+.ui.cards > .card .header,
+.ui.card .header {
+    color: var(--klang-text-primary) !important;
+}
+.ui.cards > .card .meta,
+.ui.card .meta {
+    color: var(--klang-text-secondary) !important;
+}
+
+/* ── Basic buttons (global) ───────────────────────────────────────────────── */
+.ui.basic.button,
+.ui.basic.buttons .button {
+    color: var(--klang-text-primary) !important;
+    box-shadow: 0 0 0 1px var(--klang-text-tertiary) inset !important;
+    background: transparent !important;
+    transition: color var(--klang-transition), box-shadow var(--klang-transition) !important;
+}
+.ui.basic.button:hover,
+.ui.basic.buttons .button:hover {
+    color: #ffffff !important;
+    box-shadow: 0 0 0 1px var(--klang-text-secondary) inset !important;
+    background: transparent !important;
+}
+
+/* ── Basic labels (global) ────────────────────────────────────────────────── */
+.ui.basic.label {
+    background: transparent !important;
+    color: var(--klang-text-secondary) !important;
+    border-color: var(--klang-text-tertiary) !important;
+}
+
+/* ── Textarea ─────────────────────────────────────────────────────────────── */
+textarea {
+    border: 1px solid var(--klang-bg-overlay) !important;
+    caret-color: var(--klang-gold) !important;
+    transition: border-color var(--klang-transition), box-shadow var(--klang-transition) !important;
+}
+textarea:focus {
+    border-color: var(--klang-gold) !important;
+    box-shadow: 0 0 0 1px var(--klang-gold) inset !important;
+    outline: none !important;
+}
+
+/* ── Dropdown ─────────────────────────────────────────────────────────────── */
+.ui.selection.dropdown {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--klang-text-primary) !important;
+    border: 1px solid var(--klang-bg-overlay) !important;
+    transition: border-color var(--klang-transition), box-shadow var(--klang-transition), color var(--klang-transition) !important;
+}
+.ui.selection.dropdown:hover,
+.ui.selection.active.dropdown {
+    border-color: var(--klang-gold) !important;
+    box-shadow: 0 0 0 1px var(--klang-gold) inset !important;
+    color: #ffffff !important;
+}
+.ui.selection.dropdown > .dropdown.icon {
+    color: var(--klang-text-secondary) !important;
+    transition: color var(--klang-transition) !important;
+}
+.ui.selection.dropdown:hover > .dropdown.icon,
+.ui.selection.active.dropdown > .dropdown.icon {
+    color: var(--klang-gold) !important;
+}
+.ui.selection.dropdown .menu {
+    background: var(--klang-bg-overlay) !important;
+    border-color: var(--klang-bg-overlay) !important;
+}
+.ui.selection.dropdown .menu > .item {
+    color: var(--klang-text-primary) !important;
+    border-top-color: var(--klang-bg-card) !important;
+}
+.ui.selection.dropdown .menu > .item:hover {
+    background: var(--klang-bg-card) !important;
+    color: #ffffff !important;
+}
+.ui.selection.dropdown .menu > .item.selected,
+.ui.selection.dropdown .menu > .item.active {
+    background: var(--klang-bg-card) !important;
+    color: var(--klang-gold) !important;
+    font-weight: normal !important;
+}
+
+/* ── Input fields ─────────────────────────────────────────────────────────── */
+.ui.input > input,
+.ui.form input:not([type]),
+.ui.form input[type="text"],
+.ui.form input[type="number"],
+.ui.form input[type="email"],
+.ui.form input[type="password"],
+.ui.form input[type="search"],
+.ui.form input[type="url"] {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--klang-text-primary) !important;
+    caret-color: var(--klang-gold) !important;
+    border: 1px solid var(--klang-bg-overlay) !important;
+    transition: border-color var(--klang-transition), box-shadow var(--klang-transition) !important;
+}
+
+.ui.input > input[type="number"]::-webkit-inner-spin-button,
+.ui.form input[type="number"]::-webkit-inner-spin-button {
+    opacity: 0.2;
+    filter: invert(1);
+    transition: opacity var(--klang-transition);
+}
+
+.ui.input > input[type="number"]:focus::-webkit-inner-spin-button,
+.ui.form input[type="number"]:focus::-webkit-inner-spin-button {
+    opacity: 1;
+    filter: invert(1) sepia(1) saturate(4) hue-rotate(5deg) brightness(1.1);
+}
+
+.ui.input > input:focus,
+.ui.form input:focus {
+    background: rgba(0, 0, 0, 0.7) !important;
+    color: #ffffff !important;
+    border-color: var(--klang-gold) !important;
+    box-shadow: 0 0 0 1px var(--klang-gold) inset !important;
+}
+
+.ui.input > input::placeholder,
+.ui.form input::placeholder {
+    color: var(--klang-text-secondary) !important;
+}
+
+.ui.input .ui.label,
+.ui.form .ui.label {
+    padding-top: 12px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--klang-text-secondary) !important;
+}
+
+/* ── Custom Scrollbar Styling ─────────────────────────────────────────────── */
+/* Custom Scrollbar Styling */
+/* For Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* For WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+/* Aggressively hide all scrollbar arrows (buttons) and corners */
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-corner {
+    display: none !important;
+    width: 0px !important;
+    height: 0px !important;
+    background-color: transparent !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+body {
+    background-color: var(--klang-bg-app);
+    min-height: 100vh;
+}
+
+/* CodeMirror live code highlighting (overlay marks) */
+.cm-highlight-overlay .cm-highlight-playing {
+    border-radius: 3px;
+    animation-name: pulse;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
+    /* duration comes from inline style */
+}
+
+/* CodeMirror live code highlighting (inline decorations — legacy) */
+.cm-highlight-playing {
+    background-color: rgba(232, 184, 75, 0.0);
+    border: 1px solid rgba(232, 184, 75, 0.0);
+    border-radius: 3px;
+    animation-name: pulse;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
+    padding: 1px;
+    margin: -2px;
+}
+
+@keyframes pulse {
+    0% {
+        background-color: rgba(232, 184, 75, 0.1);
+        border-color: rgba(255, 220, 100, 1.0);
+    }
+    70% {
+        background-color: rgba(232, 184, 75, 0.03);
+        border-color: rgba(255, 220, 100, 0.4);
+    }
+    100% {
+        background-color: rgba(232, 184, 75, 0.0);
+        border-color: rgba(232, 184, 75, 0.0);
+    }
+}
+
+.fade-out {
+    animation: fadeOut 300ms linear forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.noise-bg {
+    /* Set background to transparent as requested */
+    background-color: transparent;
+
+    /*
+       Updated SVG:
+       1. Added <feColorMatrix>: Forces pixels to black (RGB=0) and maps noise intensity to Alpha.
+       2. Opacity controls the strength of the black dust.
+    */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+}
+
+#spa {
+    min-height: 100vh;
+}

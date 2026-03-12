@@ -1752,16 +1752,16 @@ internal val String._chord by dslStringExtension { p, args, callInfo -> p._chord
 /**
  * Sets the chord name for each event, establishing harmonic context for [voicing].
  *
- * Chord names follow the format `"root quality"` (e.g. `"C major"`, `"Am"`, `"Gmaj7"`).
+ * Chord names follow the format `"root quality"` (e.g. `"C"`, `"Am"`, `"Gmaj7"`).
  * The chord root is also set as the event's note. Use [voicing] to expand into voiced
  * notes, or [rootNotes] to extract just the bass note.
  *
  * ```KlangScript
- * chord("C:major Am:minor F:major G:major").voicing()  // I-vi-IV-V with voice leading
+ * chord("<C Am F G>").voicing()         // voiced I-vi-IV-V
  * ```
  *
  * ```KlangScript
- * chord("<Cmaj7 Am7>").voicing()                       // jazzy chord alternation per cycle
+ * chord("<Cmaj7 Am7>").voicing()        // jazzy chord alternation per cycle
  * ```
  *
  * @category tonal

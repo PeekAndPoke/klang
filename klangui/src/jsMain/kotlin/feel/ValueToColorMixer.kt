@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.feel
+package io.peekandpoke.klang.ui.feel
 
 import kotlinx.css.Color
 import kotlin.math.floor

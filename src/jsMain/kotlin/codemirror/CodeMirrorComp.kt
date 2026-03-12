@@ -40,6 +40,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
     private val editorId = "codemirror-editor-${hashCode()}"
     private var editor: EditorView? by value(null)
 
+    private val theme = CodeMirrorTheme()
     val highlightBuffer = CodeMirrorHighlightBuffer()
 
     init {
@@ -80,6 +81,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         // Create extensions array - combine basicSetup with our custom extensions
         val allExtensions = basicSetup.asDynamic().concat(
             arrayOf(
+                theme.extension,
                 javascript(),
                 updateListenerExtension,
                 linterExtension,

@@ -88,8 +88,15 @@ internal class StrudelPlaybackController(
      * Update the cycles per second (tempo)
      */
     fun updateCyclesPerSecond(cps: Double) {
+        // Capture cycle position under the old tempo before changing it
+        val currentCycle = getNowCycle()
         // Update tempo
         this.cyclesPerSecond = cps
+        // Recalculate startTimeMs so the playhead position is preserved:
+        //   getNowCycle() = ((nowMs - startTimeMs) - backendLatencyMs) / 1000.0 * cyclesPerSecond
+        //   solving for startTimeMs given currentCycle must remain unchanged:
+        val nowMs = klangTime.internalMsNow()
+        startTimeMs = nowMs - backendLatencyMs - (currentCycle / cyclesPerSecond) * 1000.0
         // Re-request current cycle with new tempo
         resyncCurrentCycle()
     }
@@ -287,12 +294,7 @@ internal class StrudelPlaybackController(
                     val latencyOffsetSec = backendLatencyMs / 1000.0
                     val boundaryTimeSec = playbackStartTimeSec + ((cycle + 1) * secPerCycle) + latencyOffsetSec
 
-                    signals(
-                        KlangPlaybackSignal.CycleCompleted(
-                            cycleIndex = cycle,
-                            atTimeSec = boundaryTimeSec,
-                        )
-                    )
+                    signals(KlangPlaybackSignal.CycleCompleted(cycleIndex = cycle, atTimeSec = boundaryTimeSec))
                 }
             }
 
@@ -428,6 +430,23 @@ internal class StrudelPlaybackController(
                 if (t is CancellationException) throw t
                 t.printStackTrace()
             }
+        }
+    }
+
+    /**
+     * Re-emits VoicesScheduled signals for all events in the current lookahead window.
+     * Does not touch the audio backend — only fires UI signals.
+     */
+    fun reemitVoiceSignals() {
+        if (!running.get()) return
+        val nowCycle = getNowCycle()
+        val from = floor(nowCycle)
+        val to = queryCursorCycles
+        if (from >= to) return
+        try {
+            queryEvents(from = from, to = to, sendSignals = true)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
