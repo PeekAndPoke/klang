@@ -32,6 +32,7 @@ import io.peekandpoke.klang.codemirror.dslEditorExtension
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
+import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
@@ -99,6 +100,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private val laf by subscribingTo(KlangTheme)
     private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
     private var playback: StrudelPlayback? by value(null)
     private val isPlaying get() = playback != null
@@ -338,7 +340,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 flexDirection = FlexDirection.column
                 height = 100.vh
                 padding = Padding(0.px)
-                backgroundColor = Color("#282c34")
+                backgroundColor = Color(laf.appBackground)
             }
             ui.form {
                 key = "dashboard-form"
@@ -415,7 +417,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 step(0.01)
                                 appear { large.inverted }
                                 leftLabel {
-                                    ui.basic.label { icon.clock(); +"CPS" }
+                                    ui.grey.label {
+                                        icon.clock(); +"CPS"
+                                    }
                                 }
                             }
                         }
@@ -425,7 +429,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             UiInputField(songTitle, { songTitle = it }) {
                                 appear { large }
                                 leftLabel {
-                                    ui.basic.label { icon.music(); +"Title" }
+                                    ui.grey.label { icon.music(); +"Title" }
                                 }
                             }
                         }
@@ -436,7 +440,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 step(1)
                                 appear { large }
                                 leftLabel {
-                                    ui.basic.label { icon.bolt(); +"EVT" }
+                                    ui.grey.label { icon.bolt(); +"EVT" }
                                 }
                             }
                         }
@@ -473,6 +477,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         overflowX = Overflow.hidden
                         display = Display.flex
                         flexDirection = FlexDirection.column
+                        paddingLeft = 12.px
                     }
 
                     when (editorMode) {

@@ -9,6 +9,7 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -37,6 +38,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
         val onNavigate: (KlangSymbol, dynamic) -> Unit,
     )
 
+    private val laf by subscribingTo(KlangTheme)
     private var copiedIndex: Int? by value(null)
 
     override fun VDom.render() {
@@ -148,7 +150,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                 gap = 8.px
                 padding = Padding(6.px, 8.px)
                 margin = Margin(0.px)
-                backgroundColor = Color("#f8f8f8")
+                backgroundColor = Color(laf.cardBackground)
                 border = Border(1.px, BorderStyle.solid, Color("#ddd"))
             }
 

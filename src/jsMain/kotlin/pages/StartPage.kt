@@ -24,6 +24,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.comp.*
 import io.peekandpoke.klang.feel.KlangStudioColors
+import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.playStrudelOnce
@@ -61,49 +62,49 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 tier = "God-Tier",
                 message = "Your machine is a god among mortals! 🚀",
                 showWarning = false,
-                color = Color("#00D9FF")  // Cyan
+                color = Color(laf.excellent),
             )
 
             voiceCount >= 120 -> PerformanceRating(
                 tier = "Excellent",
                 message = "Your machine is a true work-horse! 💪",
                 showWarning = false,
-                color = Color("#4CAF50")  // Green
+                color = Color(laf.excellent),
             )
 
             voiceCount >= 100 -> PerformanceRating(
                 tier = "Great",
                 message = "Your machine handles this like a champ!",
                 showWarning = false,
-                color = Color("#8BC34A")  // Light Green
+                color = Color(laf.good),
             )
 
             voiceCount >= 80 -> PerformanceRating(
                 tier = "Good",
                 message = "Your machine is ready to make some music!",
                 showWarning = false,
-                color = Color("#CDDC39")  // Lime
+                color = Color(laf.good),
             )
 
             voiceCount >= 60 -> PerformanceRating(
                 tier = "Fair",
                 message = "Your machine is doing okay. Nothing fancy, but it'll work.",
                 showWarning = false,
-                color = Color("#FFC107")  // Amber
+                color = Color(laf.moderate),
             )
 
             voiceCount >= 40 -> PerformanceRating(
                 tier = "Limited",
                 message = "C'mon, it's 2026... maybe consider an upgrade? 🤔",
                 showWarning = true,
-                color = Color("#FF9800")  // Orange
+                color = Color(laf.warning),
             )
 
             else -> PerformanceRating(
                 tier = "Struggling",
                 message = "Seriously? Get a real computer! This thing is running on hopes and dreams. 💀",
                 showWarning = true,
-                color = Color("#F44336")  // Red
+                color = Color(laf.critical),
             )
         }
     }
@@ -232,6 +233,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         fun getResult() = result
     }
 
+    private val laf by subscribingTo(KlangTheme)
     private var state: State by value(StateOffline())
 
     private val benchmark = KlangBenchmark()
@@ -267,7 +269,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 flexDirection = FlexDirection.column
                 alignItems = Align.center
                 justifyContent = JustifyContent.center
-                backgroundColor = Color.black
+                backgroundColor = Color(laf.appBackground)
                 color = Color.white
                 textAlign = TextAlign.center
             }
@@ -692,7 +694,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     border = Border(
                         width = 1.px,
                         style = BorderStyle.dashed,
-                        color = if (rating.showWarning) KlangStudioColors.critical else Color.white
+                        color = if (rating.showWarning) Color(laf.critical) else Color.white
                     )
                 }
 
@@ -802,7 +804,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     css {
                         val glow = 0.6 + 0.4 * sin(Kronos.systemUtc.millisNow() * PI / 610.0)
 
-                        color = KlangStudioColors.critical.darken((100 - glow * 100).toInt())
+                        color = Color(laf.critical).darken((100 - glow * 100).toInt())
                         put("text-shadow", "0 0 ${glow * 3}px")
                     }
                 }

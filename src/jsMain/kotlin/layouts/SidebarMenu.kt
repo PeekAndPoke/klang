@@ -14,6 +14,7 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.Motoer
+import io.peekandpoke.klang.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.DIV
 import kotlinx.html.Tag
@@ -29,6 +30,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private val laf by subscribingTo(KlangTheme)
     private val currentRoute by subscribingTo(router.current)
 
     private sealed interface State {
@@ -53,7 +55,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         div {
             key = "sidebar-menu"
             css {
-                backgroundColor = Color.black
+                backgroundColor = Color(laf.menuBackground)
                 color = Color.white
                 height = 100.pct
                 display = Display.flex
@@ -102,7 +104,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 backgroundColor = Color.white
                 color = Color.black
             } else {
-                backgroundColor = Color.black
+                backgroundColor = Color(laf.menuBackground)
                 color = Color.white
 
                 borderRadius = 0.px

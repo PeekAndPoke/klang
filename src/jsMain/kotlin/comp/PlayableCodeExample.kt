@@ -19,6 +19,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.dslEditorExtension
+import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -64,6 +65,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
     private var currentCycle: Long by value(0)
 
+    private val laf by subscribingTo(KlangTheme)
     private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
 
     private val hoverPopup: KlangDocsHoverPopupCtrl by lazy {
@@ -190,7 +192,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
             // Control bar
             div {
                 css {
-                    backgroundColor = Color("#f8f8f8")
+                    backgroundColor = Color(laf.cardBackground)
                     borderBottom = Border(1.px, BorderStyle.solid, Color("#ddd"))
                     padding = Padding(0.5.rem)
                     display = Display.flex

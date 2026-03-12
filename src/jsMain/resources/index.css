@@ -1,3 +1,85 @@
+/* ── Klang Design Tokens ──────────────────────────────────────────────────── */
+:root {
+    --klang-bg-app:         #191C22;
+    --klang-bg-menu:        #000000;
+    --klang-bg-panel:       #21252b;
+    --klang-bg-card:        #2c313a;
+    --klang-bg-overlay:     #353a42;
+
+    --klang-text-primary:   #D7DADF;
+    --klang-text-secondary: #abb2bf;
+    --klang-text-tertiary:  #5c6370;
+
+    --klang-accent:         #528bff;
+
+    --klang-excellent:      #56b6c2;
+    --klang-good:           #98c379;
+    --klang-moderate:       #e5c07b;
+    --klang-warning:        #d19a66;
+    --klang-critical:       #e06c75;
+}
+
+/* ── Fomantic UI dark overrides ───────────────────────────────────────────── */
+.ui.menu {
+    background: var(--klang-bg-menu) !important;
+    border-color: var(--klang-bg-panel) !important;
+}
+.ui.menu .item {
+    color: var(--klang-text-primary) !important;
+}
+.ui.menu .active.item {
+    color: #ffffff !important;
+    background: var(--klang-bg-panel) !important;
+}
+
+.ui.modal {
+    background: var(--klang-bg-card) !important;
+    color: var(--klang-text-primary) !important;
+}
+
+.ui.segment {
+    background: var(--klang-bg-card) !important;
+    color: var(--klang-text-primary) !important;
+}
+.ui.basic.segment {
+    background: transparent !important;
+    color: white !important;
+}
+
+/* ── Input fields ─────────────────────────────────────────────────────────── */
+.ui.input > input,
+.ui.form input:not([type]),
+.ui.form input[type="text"],
+.ui.form input[type="number"],
+.ui.form input[type="email"],
+.ui.form input[type="password"],
+.ui.form input[type="search"],
+.ui.form input[type="url"] {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--klang-text-primary) !important;
+    border-color: var(--klang-bg-overlay) !important;
+}
+
+.ui.input > input:focus,
+.ui.form input:focus {
+    background: rgba(0, 0, 0, 0.7) !important;
+    color: #ffffff !important;
+    border-color: var(--klang-accent) !important;
+}
+
+.ui.input > input::placeholder,
+.ui.form input::placeholder {
+    color: var(--klang-text-secondary) !important;
+}
+
+.ui.input .ui.label,
+.ui.form .ui.label {
+    padding-top: 12px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--klang-text-secondary) !important;
+}
+
+/* ── Custom Scrollbar Styling ─────────────────────────────────────────────── */
 /* Custom Scrollbar Styling */
 /* For Firefox */
 * {

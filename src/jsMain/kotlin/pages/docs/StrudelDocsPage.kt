@@ -15,6 +15,7 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.MarkdownDisplay
 import io.peekandpoke.klang.comp.PlayableCodeExample
+import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.*
 import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
@@ -185,6 +186,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private val laf by subscribingTo(KlangTheme)
     private var searchQuery: String by urlParam(name = PARAM_SEARCH, default = "")
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
@@ -342,7 +344,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
             // Signature (code block)
             pre {
                 css {
-                    backgroundColor = Color("#f4f4f4")
+                    backgroundColor = Color(laf.cardBackground)
                     padding = Padding(0.75.rem)
                     borderRadius = 4.px
                     overflow = Overflow.auto

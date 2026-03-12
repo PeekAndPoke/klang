@@ -2,27 +2,28 @@ package io.peekandpoke.klang.codemirror
 
 import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.klang.feel.KlangColors
 
 class CodeMirrorTheme {
 
     // ── Palette ───────────────────────────────────────────────────────────────
 
-    val chalky = "#e5c07b"
-    val coral = "#e06c75"
-    val cyan = "#56b6c2"
+    val chalky get() = KlangColors.Hex.moderate
+    val coral get() = KlangColors.Hex.critical
+    val cyan get() = KlangColors.Hex.excellent
     val invalid = "#ffffff"
-    val ivory = "#abb2bf"
-    val stone = "#7d8799"
+    val ivory get() = KlangColors.Hex.textPrimary
+    val stone get() = KlangColors.Hex.textSecondary
     val malibu = "#61afef"
-    val sage = "#98c379"
-    val whiskey = "#d19a66"
+    val sage get() = KlangColors.Hex.good
+    val whiskey get() = KlangColors.Hex.warning
     val violet = "#c678dd"
-    val darkBackground = "#21252b"
-    val highlightBackground = "#2c313a"
-    val background = "#282c34"
-    val tooltipBackground = "#353a42"
+    val darkBackground get() = KlangColors.Hex.panelBackground
+    val highlightBackground get() = KlangColors.Hex.cardBackground
+    val background get() = KlangColors.Hex.appBackground
+    val tooltipBackground get() = KlangColors.Hex.overlayBackground
     val selection = "#3E4451"
-    val cursor = "#528bff"
+    val cursor get() = KlangColors.Hex.accent
 
     // ── Editor chrome ─────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ class CodeMirrorTheme {
             }
             this[".cm-gutters"] = jsObject<dynamic> {
                 backgroundColor = background
-                color = stone
+                color = KlangColors.Hex.textTertiary
                 border = "none"
             }
             this[".cm-activeLineGutter"] = jsObject<dynamic> {
