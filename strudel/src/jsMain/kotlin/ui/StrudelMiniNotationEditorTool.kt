@@ -67,7 +67,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
 
             ui.small.header { +"Mini Notation" }
 
-            mnPatternTextInput(text, atom, parseError) { newText, cursor ->
+            mnPatternTextInput(laf, text, atom, parseError) { newText, cursor ->
                 text = newText
                 cursorOffset = cursor
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
@@ -75,11 +75,11 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
 
             ui.divider {}
             if (atom != null) {
-                mnModifierPanel(atom) { updated -> updateNode(atom, updated) }
+                mnModifierPanel(laf, atom) { updated -> updateNode(atom, updated) }
                 ui.divider {}
                 renderAtomPanel(atom)
             } else {
-                mnModifierPanelDisabled()
+                mnModifierPanelDisabled(laf)
             }
 
             div { css { flexGrow = 1.0 } }

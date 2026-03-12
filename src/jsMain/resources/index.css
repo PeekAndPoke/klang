@@ -11,15 +11,41 @@
     --klang-text-tertiary:  #5c6370;
 
     --klang-accent:         #528bff;
-    --klang-gold:           #e8b84b;
+    --klang-gold:           #EBC773;
 
     --klang-border-radius:  4px;
+    --klang-transition:     200ms ease;
 
     --klang-excellent:      #56b6c2;
     --klang-good:           #98c379;
     --klang-moderate:       #e5c07b;
     --klang-warning:        #d19a66;
     --klang-critical:       #e06c75;
+}
+
+/* ── Text selection ───────────────────────────────────────────────────────── */
+::selection,
+input::selection,
+textarea::selection,
+*::selection {
+    background-color: var(--klang-gold) !important;
+    color: #000000 !important;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.ui.positive.button {
+    background-color: var(--klang-gold) !important;
+    color: #000000 !important;
+}
+.ui.positive.button:hover {
+    background-color: #f0c55a !important;
+}
+
+/* ── Dimmer ───────────────────────────────────────────────────────────────── */
+.ui.page.dimmer {
+    background: rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(0.5px) !important;
+    -webkit-backdrop-filter: blur(0.5px) !important;
 }
 
 /* ── Fomantic UI dark overrides ───────────────────────────────────────────── */
@@ -45,6 +71,34 @@
 .ui.modal {
     background: var(--klang-bg-card) !important;
     color: var(--klang-text-primary) !important;
+    border: 1px solid var(--klang-text-tertiary) !important;
+    border-radius: var(--klang-border-radius) !important;
+    box-shadow: 0 0 3px var(--klang-text-tertiary) !important;
+}
+.ui.modal .ui.header {
+    color: var(--klang-text-secondary) !important;
+    background: transparent !important;
+}
+.ui.modal .ui.divider {
+    border-top-color: var(--klang-bg-app) !important;
+    border-bottom-color: transparent !important;
+}
+.ui.modal .ui.form .field > label {
+    color: var(--klang-text-secondary) !important;
+}
+.ui.modal .ui.basic.button {
+    color: var(--klang-text-primary) !important;
+    box-shadow: 0 0 0 1px var(--klang-text-tertiary) inset !important;
+}
+.ui.modal .ui.basic.button:hover {
+    color: #ffffff !important;
+    box-shadow: 0 0 0 1px var(--klang-text-secondary) inset !important;
+    background: transparent !important;
+}
+.ui.modal .ui.basic.label {
+    background: transparent !important;
+    color: var(--klang-text-secondary) !important;
+    border-color: var(--klang-text-tertiary) !important;
 }
 
 .ui.segment {
@@ -54,6 +108,46 @@
 .ui.basic.segment {
     background: transparent !important;
     color: white !important;
+}
+
+/* ── Dropdown ─────────────────────────────────────────────────────────────── */
+.ui.selection.dropdown {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--klang-text-primary) !important;
+    border: 1px solid var(--klang-bg-overlay) !important;
+    transition: border-color var(--klang-transition), box-shadow var(--klang-transition), color var(--klang-transition) !important;
+}
+.ui.selection.dropdown:hover,
+.ui.selection.active.dropdown {
+    border-color: var(--klang-gold) !important;
+    box-shadow: 0 0 0 1px var(--klang-gold) inset !important;
+    color: #ffffff !important;
+}
+.ui.selection.dropdown > .dropdown.icon {
+    color: var(--klang-text-secondary) !important;
+    transition: color var(--klang-transition) !important;
+}
+.ui.selection.dropdown:hover > .dropdown.icon,
+.ui.selection.active.dropdown > .dropdown.icon {
+    color: var(--klang-gold) !important;
+}
+.ui.selection.dropdown .menu {
+    background: var(--klang-bg-overlay) !important;
+    border-color: var(--klang-bg-overlay) !important;
+}
+.ui.selection.dropdown .menu > .item {
+    color: var(--klang-text-primary) !important;
+    border-top-color: var(--klang-bg-card) !important;
+}
+.ui.selection.dropdown .menu > .item:hover {
+    background: var(--klang-bg-card) !important;
+    color: #ffffff !important;
+}
+.ui.selection.dropdown .menu > .item.selected,
+.ui.selection.dropdown .menu > .item.active {
+    background: var(--klang-bg-card) !important;
+    color: var(--klang-gold) !important;
+    font-weight: normal !important;
 }
 
 /* ── Input fields ─────────────────────────────────────────────────────────── */
@@ -67,14 +161,29 @@
 .ui.form input[type="url"] {
     background: rgba(255, 255, 255, 0.1) !important;
     color: var(--klang-text-primary) !important;
-    border-color: var(--klang-bg-overlay) !important;
+    border: 1px solid var(--klang-bg-overlay) !important;
+    transition: border-color var(--klang-transition), box-shadow var(--klang-transition) !important;
+}
+
+.ui.input > input[type="number"]::-webkit-inner-spin-button,
+.ui.form input[type="number"]::-webkit-inner-spin-button {
+    opacity: 0.2;
+    filter: invert(1);
+    transition: opacity var(--klang-transition);
+}
+
+.ui.input > input[type="number"]:focus::-webkit-inner-spin-button,
+.ui.form input[type="number"]:focus::-webkit-inner-spin-button {
+    opacity: 1;
+    filter: invert(1) sepia(1) saturate(4) hue-rotate(5deg) brightness(1.1);
 }
 
 .ui.input > input:focus,
 .ui.form input:focus {
     background: rgba(0, 0, 0, 0.7) !important;
     color: #ffffff !important;
-    border-color: var(--klang-accent) !important;
+    border-color: var(--klang-gold) !important;
+    box-shadow: 0 0 0 1px var(--klang-gold) inset !important;
 }
 
 .ui.input > input::placeholder,

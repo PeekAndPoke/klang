@@ -14,7 +14,7 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.Motoer
-import io.peekandpoke.klang.feel.KlangTheme
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.DIV
 import kotlinx.html.Tag

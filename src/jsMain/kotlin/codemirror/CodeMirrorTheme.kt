@@ -2,7 +2,7 @@ package io.peekandpoke.klang.codemirror
 
 import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.*
-import io.peekandpoke.klang.feel.KlangTheme
+import io.peekandpoke.klang.ui.feel.KlangTheme
 
 
 class CodeMirrorTheme {
@@ -23,7 +23,7 @@ class CodeMirrorTheme {
     val highlightBackground get() = KlangTheme.Hex.cardBackground
     val background get() = KlangTheme.Hex.appBackground
     val tooltipBackground get() = KlangTheme.Hex.overlayBackground
-    val selection = "#3E4451"
+    val selection get() = KlangTheme.Hex.gold
     val cursor get() = KlangTheme.Hex.accent
 
     // ── Editor chrome ─────────────────────────────────────────────────────────
@@ -43,6 +43,7 @@ class CodeMirrorTheme {
             this["&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection"] =
                 jsObject<dynamic> {
                     backgroundColor = selection
+                    color = "#000000"
                 }
             this[".cm-panels"] = jsObject<dynamic> {
                 backgroundColor = darkBackground

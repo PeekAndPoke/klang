@@ -24,10 +24,10 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.comp.*
-import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.playStrudelOnce
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.css.properties.scaleX
@@ -367,7 +367,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     height = spectHeight.px
                     width = 100.pct
 
-                    opacity = 0.5
+                    opacity = 0.66
                 }
 
                 Spectrumeter { Player.get() }

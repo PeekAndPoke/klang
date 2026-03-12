@@ -10,7 +10,7 @@ import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.semanticIcon
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.feel.ValueToColorMixer
+import io.peekandpoke.klang.ui.feel.ValueToColorMixer
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.Tag

@@ -32,7 +32,6 @@ import io.peekandpoke.klang.codemirror.dslEditorExtension
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
-import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
@@ -47,6 +46,7 @@ import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -303,19 +303,24 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     /** Switch to Blocks mode — asks for confirmation first if the code has comments. */
     private fun switchToBlocks(event: PointerEvent) {
         if (codeHasComments()) {
-            popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomRight) { handle ->
+            popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomCenter) { handle ->
                 ui.compact.segment {
                     css {
                         width = LinearDimension.maxContent
                     }
                     p { +"Comments will be lost when switching to Blocks mode." }
-                    ui.mini.basic.button {
-                        onClick { handle.close() }
-                        +"Cancel"
-                    }
-                    ui.mini.black.button {
-                        onClick { handle.close(); editorMode = EditorMode.BLOCKS }
-                        +"Switch anyway"
+
+                    ui.right.aligned.basic.fitted.segment {
+                        ui.mini.basic.inverted.button {
+                            onClick { handle.close() }
+                            icon.times()
+                            +"Cancel"
+                        }
+                        ui.mini.positive.button {
+                            onClick { handle.close(); editorMode = EditorMode.BLOCKS }
+                            icon.check()
+                            +"Switch anyway"
+                        }
                     }
                 }
             }
@@ -373,7 +378,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // Play / Update / Stop controls
                         noui.item {
                             if (!isPlaying) {
-                                ui.large.circular.white.button {
+                                ui.large.circular.positive.button {
                                     onClick { onPlay() }
                                     if (loading) {
                                         icon.black.loading.spinner()

@@ -6,6 +6,7 @@ import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.html.onKeyUp
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
+import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
 import kotlinx.css.*
 import kotlinx.html.*
 
@@ -20,6 +21,7 @@ import kotlinx.html.*
  * @param onChange Called when the text or cursor position changes.
  */
 fun FlowContent.mnPatternTextInput(
+    laf: KlangLookAndFeel,
     text: String,
     atom: MnNode.Atom?,
     parseError: Boolean,
@@ -52,36 +54,17 @@ fun FlowContent.mnPatternTextInput(
     spans.sortBy { it.start }
 
     div {
-        div {
-            css {
-                position = Position.relative
-                backgroundColor = Color.white
-                borderRadius = 4.px
-            }
+        div(classes = "${laf.styles.darken20()} ${laf.styles.mnPatternInput()}") {
 
             // Highlight layer behind the textarea
-            div {
-                css {
-                    position = Position.absolute
-                    top = 0.px; left = 0.px; right = 0.px; bottom = 0.px
-                    fontFamily = "monospace"
-                    fontSize = 15.px
-                    put("line-height", "1.4") // we need this explicitly, dsl function does not work
-                    padding = Padding(8.px, 10.px)
-                    whiteSpace = WhiteSpace.pre
-                    pointerEvents = PointerEvents.none
-                    boxSizing = BoxSizing.borderBox
-                    border = Border(1.px, BorderStyle.solid, Color.transparent)
-                    overflow = Overflow.hidden
-                    color = Color("transparent")
-                }
+            div(classes = laf.styles.mnPatternInputOverlay()) {
                 if (spans.isNotEmpty()) {
                     var cursor = 0
                     for (span in spans) {
                         if (span.start > cursor) +text.substring(cursor, span.start)
                         mark {
                             css {
-                                val col = if (span.type == "play") Color("#e67e22") else Color("#CCF")
+                                val col = if (span.type == "play") Color(laf.gold) else Color("#CCF")
                                 val alpha = if (span.type == "play") 0.4 else 0.5
                                 backgroundColor = col.withAlpha(alpha)
                                 color = Color("transparent")
@@ -99,31 +82,19 @@ fun FlowContent.mnPatternTextInput(
             }
 
             // Editable textarea on top of highlight layer
-            textArea {
+            val textareaClasses = buildString {
+                append(laf.styles.mnPatternInputTextarea())
+                append(" ${laf.styles.mnPatternInputTextareaFocus()}")
+                if (parseError) append(" ${laf.styles.mnPatternInputTextareaError()}")
+            }
+            textArea(classes = textareaClasses) {
                 placeholder = "e.g. bd sd [hh cp] ~ bd*2"
                 attributes["value"] = text
-                attributes["spellcheck"] = "false"
+                attributes["spellcheck"] = "off"
+                attributes["autocomplete"] = "off"
+                attributes["autocorrect"] = "off"
+                attributes["autocapitalize"] = "off"
                 rows = (text.count { it == '\n' } + 1).toString()
-                css {
-                    position = Position.relative
-                    width = 100.pct
-                    fontFamily = "monospace"
-                    fontSize = 15.px
-                    put("line-height", "1.4")
-                    padding = Padding(8.px, 10.px)
-                    borderRadius = 4.px
-                    put("border", if (parseError) "1px solid #e03131" else "1px solid #ccc")
-                    outline = Outline.none
-                    put("box-sizing", "border-box")
-                    put("resize", "none")
-                    put("white-space", "pre")
-                    put("overflow-x", "auto")
-                    put("overflow-y", "hidden")
-                    put("min-height", "38px")
-                    backgroundColor = Color("transparent")
-                    put("background", "transparent")
-                    put("caret-color", "#000")
-                }
                 onInput { e ->
                     val el = e.target?.asDynamic()
                     val newText = el?.value as? String ?: text
@@ -153,18 +124,21 @@ fun FlowContent.mnPatternTextInput(
 
         if (parseError) {
             div {
-                css { color = Color("#e03131"); fontSize = 12.px; marginTop = 4.px }
+                css { color = Color(laf.critical); fontSize = 12.px; marginTop = 4.px }
                 +"Invalid pattern"
             }
         } else if (atom != null) {
             div {
-                css { color = Color("#888"); fontSize = 12.px; marginTop = 4.px }
+                css { color = Color(laf.textTertiary); fontSize = 12.px; marginTop = 4.px }
                 +"Editing: "
-                span { css { fontFamily = "monospace"; color = Color("#333"); fontWeight = FontWeight.bold }; +atom.value }
+                span {
+                    css { fontFamily = "monospace"; color = Color(laf.gold); fontWeight = FontWeight.bold }
+                    +atom.value
+                }
             }
         } else {
             div {
-                css { color = Color("#999"); fontSize = 12.px; marginTop = 4.px }
+                css { color = Color(laf.textTertiary); fontSize = 12.px; marginTop = 4.px }
                 +"Click inside an atom token to edit its value and modifiers"
             }
         }
@@ -181,6 +155,7 @@ fun FlowContent.mnPatternTextInput(
  * @param onAtomChange Called when the atom (with updated mods) should replace the original.
  */
 fun FlowContent.mnModifierPanel(
+    laf: KlangLookAndFeel,
     atom: MnNode.Atom,
     disabled: Boolean = false,
     onToggleRest: (() -> Unit)? = null,
@@ -200,22 +175,12 @@ fun FlowContent.mnModifierPanel(
                 pointerEvents = PointerEvents.none
             }
         }
-        span {
-            css { fontSize = 12.px; color = Color("#666"); fontWeight = FontWeight.w600; minWidth = 60.px }
+        span(classes = laf.styles.mnChipLabel()) {
             +"Mods"
         }
 
         if (onToggleRest != null) {
-            span {
-                css {
-                    cursor = Cursor.pointer
-                    fontFamily = "monospace"
-                    fontSize = 13.px
-                    color = Color("#888")
-                    backgroundColor = Color("#f5f5f5")
-                    borderRadius = 6.px
-                    padding = Padding(4.px, 10.px)
-                }
+            span(classes = laf.styles.mnChipToggle()) {
                 attributes["title"] = "Convert to rest"
                 onClick { onToggleRest() }
                 +"~ rest"
@@ -223,18 +188,19 @@ fun FlowContent.mnModifierPanel(
         }
 
         if (onRepeatChange != null) {
-            mnRepeatChip(repeatCount, onRepeatChange)
+            mnRepeatChip(laf, repeatCount, onRepeatChange)
         }
-        mnModChip(symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->
+        mnModChip(laf, symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->
             onAtomChange(atom.copy(mods = mods.copy(multiplier = v)))
         }
-        mnModChip(symbol = "/", tooltip = "Divisor — play slower", current = mods.divisor, default = 2.0, min = 1.0, step = 1.0) { v ->
+        mnModChip(laf, symbol = "/", tooltip = "Divisor — play slower", current = mods.divisor, default = 2.0, min = 1.0, step = 1.0) { v ->
             onAtomChange(atom.copy(mods = mods.copy(divisor = v)))
         }
-        mnModChip(symbol = "@", tooltip = "Weight — relative time weight", current = mods.weight, default = 2.0, step = 0.5) { v ->
+        mnModChip(laf, symbol = "@", tooltip = "Weight — relative time weight", current = mods.weight, default = 2.0, step = 0.5) { v ->
             onAtomChange(atom.copy(mods = mods.copy(weight = v)))
         }
         mnModChip(
+            laf,
             symbol = "?",
             tooltip = "Probability — chance of playing",
             current = mods.probability,
@@ -245,7 +211,7 @@ fun FlowContent.mnModifierPanel(
         ) { v ->
             onAtomChange(atom.copy(mods = mods.copy(probability = v)))
         }
-        mnEuclideanChip(atom, mods, onAtomChange)
+        mnEuclideanChip(laf, atom, mods, onAtomChange)
     }
 }
 
@@ -253,9 +219,9 @@ fun FlowContent.mnModifierPanel(
  * Renders a disabled placeholder modifier panel when no node is selected.
  * Shows the same chip layout but dimmed and non-interactive.
  */
-fun FlowContent.mnModifierPanelDisabled() {
+fun FlowContent.mnModifierPanelDisabled(laf: KlangLookAndFeel) {
     val emptyAtom = MnNode.Atom(value = "")
-    mnModifierPanel(atom = emptyAtom, disabled = true) {}
+    mnModifierPanel(laf, atom = emptyAtom, disabled = true) {}
 }
 
 /**
@@ -267,6 +233,7 @@ fun FlowContent.mnModifierPanelDisabled() {
  * @param onRestChange Called when the rest (with updated mods) should replace the original.
  */
 fun FlowContent.mnModifierPanel(
+    laf: KlangLookAndFeel,
     rest: MnNode.Rest,
     onToggleNote: (() -> Unit)? = null,
     onRestChange: (MnNode.Rest) -> Unit,
@@ -279,38 +246,29 @@ fun FlowContent.mnModifierPanel(
             alignItems = Align.center
             gap = 6.px
         }
-        span {
-            css { fontSize = 12.px; color = Color("#666"); fontWeight = FontWeight.w600; minWidth = 60.px }
+        span(classes = laf.styles.mnChipLabel()) {
             +"Mods"
         }
 
         if (onToggleNote != null) {
-            span {
-                css {
-                    cursor = Cursor.pointer
-                    fontFamily = "monospace"
-                    fontSize = 13.px
-                    color = Color("#888")
-                    backgroundColor = Color("#f5f5f5")
-                    borderRadius = 6.px
-                    padding = Padding(4.px, 10.px)
-                }
+            span(classes = laf.styles.mnChipToggle()) {
                 attributes["title"] = "Convert to note"
                 onClick { onToggleNote() }
                 +"♩ note"
             }
         }
 
-        mnModChip(symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->
+        mnModChip(laf, symbol = "*", tooltip = "Multiplier — play faster", current = mods.multiplier, default = 2.0, step = 0.5) { v ->
             onRestChange(rest.copy(mods = mods.copy(multiplier = v)))
         }
-        mnModChip(symbol = "/", tooltip = "Divisor — play slower", current = mods.divisor, default = 2.0, min = 1.0, step = 1.0) { v ->
+        mnModChip(laf, symbol = "/", tooltip = "Divisor — play slower", current = mods.divisor, default = 2.0, min = 1.0, step = 1.0) { v ->
             onRestChange(rest.copy(mods = mods.copy(divisor = v)))
         }
-        mnModChip(symbol = "@", tooltip = "Weight — relative time weight", current = mods.weight, default = 2.0, step = 0.5) { v ->
+        mnModChip(laf, symbol = "@", tooltip = "Weight — relative time weight", current = mods.weight, default = 2.0, step = 0.5) { v ->
             onRestChange(rest.copy(mods = mods.copy(weight = v)))
         }
         mnModChip(
+            laf,
             symbol = "?",
             tooltip = "Probability — chance of playing",
             current = mods.probability,
@@ -321,59 +279,47 @@ fun FlowContent.mnModifierPanel(
         ) { v ->
             onRestChange(rest.copy(mods = mods.copy(probability = v)))
         }
-        mnEuclideanChipForRest(rest, mods, onRestChange)
+        mnEuclideanChipForRest(laf, rest, mods, onRestChange)
     }
 }
 
 // ── Private chip helpers ──────────────────────────────────────────────────────
 
-private fun FlowContent.mnRepeatChip(current: Int?, onChange: (Int?) -> Unit) {
-    div {
-        css {
-            display = Display.flex
-            alignItems = Align.center
-            gap = 4.px
-            backgroundColor = Color("#f5f5f5")
-            borderRadius = 6.px
-            padding = Padding(4.px, 8.px)
-        }
-        span {
-            css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+private fun FlowContent.mnRepeatChip(laf: KlangLookAndFeel, current: Int?, onChange: (Int?) -> Unit) {
+    div(classes = laf.styles.mnChip()) {
+        span(classes = laf.styles.mnChipSymbol()) {
             attributes["title"] = "Repeat — duplicate this step n times"
             +"!"
         }
         if (current != null) {
-            mnStepButton("-") {
+            mnStepButton(laf, "-") {
                 val next = current - 1
                 onChange(if (next < 2) null else next)
             }
-            input {
-                type = InputType.number
+            input(classes = laf.styles.mnChipInput()) {
+                type = InputType.text
+                attributes["inputmode"] = "numeric"
                 value = current.toString()
                 attributes["min"] = "2"
                 attributes["step"] = "1"
                 css {
-                    width = 50.px
+                    width = 36.px
                     fontSize = 13.px
-                    padding = Padding(2.px, 4.px)
-                    borderRadius = 4.px
-                    put("border", "1px solid #ccc")
+                    padding = Padding(0.px, 4.px)
                 }
                 onInput { e ->
                     val v = (e.target?.asDynamic()?.value as? String)?.toIntOrNull() ?: return@onInput
                     onChange(if (v < 2) null else v)
                 }
             }
-            mnStepButton("+") { onChange(current + 1) }
-            span {
-                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+            mnStepButton(laf, "+") { onChange(current + 1) }
+            span(classes = laf.styles.mnChipAction()) {
                 attributes["title"] = "Remove repeat"
                 onClick { onChange(null) }
                 +"×"
             }
         } else {
-            span {
-                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+            span(classes = laf.styles.mnChipAction()) {
                 attributes["title"] = "Add repeat"
                 onClick { onChange(2) }
                 +"+"
@@ -383,6 +329,7 @@ private fun FlowContent.mnRepeatChip(current: Int?, onChange: (Int?) -> Unit) {
 }
 
 private fun FlowContent.mnModChip(
+    laf: KlangLookAndFeel,
     symbol: String,
     tooltip: String,
     current: Double?,
@@ -392,61 +339,49 @@ private fun FlowContent.mnModChip(
     step: Double,
     onChange: (Double?) -> Unit,
 ) {
-    div {
-        css {
-            display = Display.flex
-            alignItems = Align.center
-            gap = 4.px
-            backgroundColor = Color("#f5f5f5")
-            borderRadius = 6.px
-            padding = Padding(4.px, 8.px)
-        }
-        span {
-            css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+    div(classes = laf.styles.mnChip()) {
+        span(classes = laf.styles.mnChipSymbol()) {
             attributes["title"] = tooltip
             +symbol
         }
         if (current != null) {
             val decimals = step.decimalPlaces()
-            mnStepButton("-") {
+            mnStepButton(laf, "-") {
                 val next = (current - step).roundTo(decimals)
                     .let { if (max != null) it.coerceAtMost(max) else it }
                     .coerceAtLeast(min)
                 onChange(if (next <= min) null else next)
             }
-            input {
-                type = InputType.number
+            input(classes = laf.styles.mnChipInput()) {
+                type = InputType.text
+                attributes["inputmode"] = "numeric"
                 value = current.toFixed(4)
                 attributes["min"] = min.toString()
                 if (max != null) attributes["max"] = max.toString()
                 attributes["step"] = step.toString()
                 css {
-                    width = 65.px
+                    width = 46.px
                     fontSize = 13.px
-                    padding = Padding(2.px, 4.px)
-                    borderRadius = 4.px
-                    put("border", "1px solid #ccc")
+                    padding = Padding(0.px, 4.px)
                 }
                 onInput { e ->
                     val v = (e.target?.asDynamic()?.value as? String)?.toDoubleOrNull() ?: return@onInput
                     onChange(if (v <= min) null else v)
                 }
             }
-            mnStepButton("+") {
+            mnStepButton(laf, "+") {
                 val next = (current + step).roundTo(decimals)
                     .let { if (max != null) it.coerceAtMost(max) else it }
                     .coerceAtLeast(min)
                 onChange(next)
             }
-            span {
-                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+            span(classes = laf.styles.mnChipAction()) {
                 attributes["title"] = "Remove"
                 onClick { onChange(null) }
                 +"×"
             }
         } else {
-            span {
-                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+            span(classes = laf.styles.mnChipAction()) {
                 attributes["title"] = "Add — $tooltip"
                 onClick { onChange(default) }
                 +"+"
@@ -456,46 +391,36 @@ private fun FlowContent.mnModChip(
 }
 
 private fun FlowContent.mnEuclideanChip(
+    laf: KlangLookAndFeel,
     atom: MnNode.Atom,
     mods: MnNode.Mods,
     onAtomChange: (MnNode.Atom) -> Unit,
 ) {
     val e = mods.euclidean
-    div {
-        css {
-            display = Display.flex
-            alignItems = Align.center
-            gap = 4.px
-            backgroundColor = Color("#f5f5f5")
-            borderRadius = 6.px
-            padding = Padding(4.px, 8.px)
-        }
-        span {
-            css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+    div(classes = laf.styles.mnChip()) {
+        span(classes = laf.styles.mnChipSymbol()) {
             attributes["title"] = "Euclidean rhythm (pulses, steps, rotation)"
             +"(,)"
         }
         if (e != null) {
-            mnEuclideanInput("pulses", e.pulses, 1) { v ->
+            mnEuclideanInput(laf, "pulses", e.pulses, 1) { v ->
                 onAtomChange(atom.copy(mods = mods.copy(euclidean = e.copy(pulses = v))))
             }
-            span { css { color = Color("#999"); fontSize = 12.px }; +"," }
-            mnEuclideanInput("steps", e.steps, 1) { v ->
+            span(classes = laf.styles.mnChipSeparator()) { +"," }
+            mnEuclideanInput(laf, "steps", e.steps, 1) { v ->
                 onAtomChange(atom.copy(mods = mods.copy(euclidean = e.copy(steps = v))))
             }
-            span { css { color = Color("#999"); fontSize = 12.px }; +"," }
-            mnEuclideanInput("rotation", e.rotation, 0) { v ->
+            span(classes = laf.styles.mnChipSeparator()) { +"," }
+            mnEuclideanInput(laf, "rotation", e.rotation, 0) { v ->
                 onAtomChange(atom.copy(mods = mods.copy(euclidean = e.copy(rotation = v))))
             }
-            span {
-                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+            span(classes = laf.styles.mnChipAction()) {
                 attributes["title"] = "Remove euclidean"
                 onClick { onAtomChange(atom.copy(mods = mods.copy(euclidean = null))) }
                 +"×"
             }
         } else {
-            span {
-                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+            span(classes = laf.styles.mnChipAction()) {
                 attributes["title"] = "Add euclidean rhythm"
                 onClick { onAtomChange(atom.copy(mods = mods.copy(euclidean = MnNode.Euclidean(3, 8)))) }
                 +"+"
@@ -505,46 +430,36 @@ private fun FlowContent.mnEuclideanChip(
 }
 
 private fun FlowContent.mnEuclideanChipForRest(
+    laf: KlangLookAndFeel,
     rest: MnNode.Rest,
     mods: MnNode.Mods,
     onRestChange: (MnNode.Rest) -> Unit,
 ) {
     val e = mods.euclidean
-    div {
-        css {
-            display = Display.flex
-            alignItems = Align.center
-            gap = 4.px
-            backgroundColor = Color("#f5f5f5")
-            borderRadius = 6.px
-            padding = Padding(4.px, 8.px)
-        }
-        span {
-            css { fontFamily = "monospace"; fontWeight = FontWeight.bold; fontSize = 14.px; color = Color("#444") }
+    div(classes = laf.styles.mnChip()) {
+        span(classes = laf.styles.mnChipSymbol()) {
             attributes["title"] = "Euclidean rhythm (pulses, steps, rotation)"
             +"(,)"
         }
         if (e != null) {
-            mnEuclideanInput("pulses", e.pulses, 1) { v ->
+            mnEuclideanInput(laf, "pulses", e.pulses, 1) { v ->
                 onRestChange(rest.copy(mods = mods.copy(euclidean = e.copy(pulses = v))))
             }
-            span { css { color = Color("#999"); fontSize = 12.px }; +"," }
-            mnEuclideanInput("steps", e.steps, 1) { v ->
+            span(classes = laf.styles.mnChipSeparator()) { +"," }
+            mnEuclideanInput(laf, "steps", e.steps, 1) { v ->
                 onRestChange(rest.copy(mods = mods.copy(euclidean = e.copy(steps = v))))
             }
-            span { css { color = Color("#999"); fontSize = 12.px }; +"," }
-            mnEuclideanInput("rotation", e.rotation, 0) { v ->
+            span(classes = laf.styles.mnChipSeparator()) { +"," }
+            mnEuclideanInput(laf, "rotation", e.rotation, 0) { v ->
                 onRestChange(rest.copy(mods = mods.copy(euclidean = e.copy(rotation = v))))
             }
-            span {
-                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+            span(classes = laf.styles.mnChipAction()) {
                 attributes["title"] = "Remove euclidean"
                 onClick { onRestChange(rest.copy(mods = mods.copy(euclidean = null))) }
                 +"×"
             }
         } else {
-            span {
-                css { cursor = Cursor.pointer; color = Color("#aaa"); fontSize = 14.px; padding = Padding(0.px, 2.px) }
+            span(classes = laf.styles.mnChipAction()) {
                 attributes["title"] = "Add euclidean rhythm"
                 onClick { onRestChange(rest.copy(mods = mods.copy(euclidean = MnNode.Euclidean(3, 8)))) }
                 +"+"
@@ -553,39 +468,29 @@ private fun FlowContent.mnEuclideanChipForRest(
     }
 }
 
-private fun FlowContent.mnEuclideanInput(tooltip: String, value: Int, min: Int, onChange: (Int) -> Unit) {
-    mnStepButton("-") { if (value - 1 >= min) onChange(value - 1) }
-    input {
+private fun FlowContent.mnEuclideanInput(laf: KlangLookAndFeel, tooltip: String, value: Int, min: Int, onChange: (Int) -> Unit) {
+    mnStepButton(laf, "-") { if (value - 1 >= min) onChange(value - 1) }
+    input(classes = laf.styles.mnChipInput()) {
         type = InputType.number
         this.value = value.toString()
         attributes["min"] = min.toString()
         attributes["step"] = "1"
         attributes["title"] = tooltip
         css {
-            width = 45.px
+            width = 32.px
             fontSize = 13.px
             padding = Padding(2.px, 4.px)
-            borderRadius = 4.px
-            put("border", "1px solid #ccc")
         }
         onInput { e ->
             val v = (e.target?.asDynamic()?.value as? String)?.toIntOrNull() ?: return@onInput
             onChange(v)
         }
     }
-    mnStepButton("+") { onChange(value + 1) }
+    mnStepButton(laf, "+") { onChange(value + 1) }
 }
 
-private fun FlowContent.mnStepButton(label: String, onClick: () -> Unit) {
-    span {
-        css {
-            cursor = Cursor.pointer
-            color = Color("#555")
-            fontSize = 14.px
-            fontWeight = FontWeight.bold
-            padding = Padding(0.px, 3.px)
-            userSelect = UserSelect.none
-        }
+private fun FlowContent.mnStepButton(laf: KlangLookAndFeel, label: String, onClick: () -> Unit) {
+    span(classes = laf.styles.mnChipStep()) {
         onClick { onClick() }
         +label
     }

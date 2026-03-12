@@ -126,7 +126,7 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
                             icon.undo()
                             +"Reset"
                         }
-                        ui.black.givenNot(isCurrentModified) { disabled }.button {
+                        ui.positive.givenNot(isCurrentModified) { disabled }.button {
                             onClick { onCommit() }
                             icon.check()
                             +"Update"

@@ -20,6 +20,8 @@ import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -39,6 +41,10 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     interface BaseProps {
         val toolCtx: KlangUiToolContext
     }
+
+    // ── Theme ─────────────────────────────────────────────────────────────────
+
+    protected val laf: KlangLookAndFeel by subscribingTo(KlangTheme)
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -243,7 +249,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
                 icon.undo()
                 +"Reset"
             }
-            ui.black.givenNot(hasUncommittedChanges) { disabled }.button {
+            ui.positive.givenNot(hasUncommittedChanges) { disabled }.button {
                 onClick { if (hasUncommittedChanges) onCommit() }
                 icon.check()
                 +"Update"
@@ -356,7 +362,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 flexDirection = FlexDirection.column
             }
 
-            mnPatternTextInput(text, atom, parseError, highlightedRanges) { newText, cursor ->
+            mnPatternTextInput(laf, text, atom, parseError, highlightedRanges) { newText, cursor ->
                 text = newText
                 cursorOffset = cursor
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
@@ -372,6 +378,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
             if (atom != null) {
                 val parentRepeat = pattern?.let { MnNodeOps.findParentRepeat(it, atom.id) }
                 mnModifierPanel(
+                    laf,
                     atom,
                     onToggleRest = { updateNode(atom, MnNode.Rest(atom.sourceRange)) },
                     repeatCount = parentRepeat?.count,
@@ -389,7 +396,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                     },
                 ) { updated -> updateNode(atom, updated) }
             } else if (rest != null) {
-                mnModifierPanel(rest, onToggleNote = {
+                mnModifierPanel(laf, rest, onToggleNote = {
                     updateNode(rest, MnNode.Atom(value = staffPositionToAtomValue(6)))
                     lastRest = null
                 }) { updated ->
@@ -400,7 +407,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                     }
                 }
             } else {
-                mnModifierPanelDisabled()
+                mnModifierPanelDisabled(laf)
             }
 
             div { css { flexGrow = 1.0 } }

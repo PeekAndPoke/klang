@@ -12,10 +12,10 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.codemirror.ext.*
-import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.minWidth

@@ -9,7 +9,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import io.peekandpoke.klang.audio_bridge.createVisualizerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.feel.KlangTheme
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.Tag

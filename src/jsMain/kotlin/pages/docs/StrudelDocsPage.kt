@@ -15,10 +15,10 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.MarkdownDisplay
 import io.peekandpoke.klang.comp.PlayableCodeExample
-import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.*
 import io.peekandpoke.klang.strudel.lang.docs.registerStrudelDocs
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.*
 

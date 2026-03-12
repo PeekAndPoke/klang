@@ -10,10 +10,10 @@ import de.peekandpoke.ultra.html.onContextMenu
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.FlowContent
