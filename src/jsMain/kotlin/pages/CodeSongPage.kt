@@ -338,7 +338,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 flexDirection = FlexDirection.column
                 height = 100.vh
                 padding = Padding(0.px)
-                backgroundColor = Color.white
+                backgroundColor = Color("#282c34")
             }
             ui.form {
                 key = "dashboard-form"
@@ -371,26 +371,28 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // Play / Update / Stop controls
                         noui.item {
                             if (!isPlaying) {
-                                ui.large.circular.black.button {
+                                ui.large.circular.white.button {
                                     onClick { onPlay() }
                                     if (loading) {
-                                        icon.loading.spinner()
+                                        icon.black.loading.spinner()
                                         +"Loading"
                                     } else {
-                                        icon.play()
+                                        icon.black.play()
                                         +"Play"
                                     }
                                 }
                             } else {
-                                ui.large.circular.white.givenNot(isCodeModified) { disabled }.button {
-                                    onClick { updatePlayback() }
-                                    icon.black.redo_alternate()
-                                    +"Update"
-                                }
+                                ui.large.circular.white
+                                    .givenNot(isCodeModified) { disabled }.button {
+                                        onClick { updatePlayback() }
+                                        icon.black.redo_alternate()
+                                        +"Update"
+                                    }
                             }
 
-                            ui.large.circular.icon.givenNot(isPlaying) { disabled }
-                                .given(isPlaying) { white }.button {
+                            ui.large.circular.white
+                                .givenNot(isPlaying) { disabled }
+                                .given(isPlaying) { white }.icon.button {
                                     onClick { onStop() }
                                     title = "Stop playback"
                                     icon.black.stop()
@@ -402,7 +404,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 ui.large.circular.white.icon.button {
                                     onClick { resetToOriginal() }
                                     title = "Reset to original code"
-                                    icon.undo()
+                                    icon.black.undo()
                                 }
                             }
                         }
@@ -411,7 +413,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         noui.item {
                             UiInputField(cps, { cps = it }) {
                                 step(0.01)
-                                appear { large }
+                                appear { large.inverted }
                                 leftLabel {
                                     ui.basic.label { icon.clock(); +"CPS" }
                                 }

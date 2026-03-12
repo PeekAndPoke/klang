@@ -111,10 +111,11 @@ fun <T : Any> FunctionValue.convertFunctionToKotlin(): T {
 
     val func = this
 
+    @Suppress("UNCHECKED_CAST")
     val fn = when (func.parameters.size) {
         0 -> run {
             // NOTICE: The -> is important. It defines a Function0
-            @Suppress("UNCHECKED_CAST") { -> callFunction(listOf(Unit)) } as T
+            { -> callFunction(listOf(Unit)) } as T
         }
 
         1 -> { a1: Any? ->
