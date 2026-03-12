@@ -88,8 +88,15 @@ internal class StrudelPlaybackController(
      * Update the cycles per second (tempo)
      */
     fun updateCyclesPerSecond(cps: Double) {
+        // Capture cycle position under the old tempo before changing it
+        val currentCycle = getNowCycle()
         // Update tempo
         this.cyclesPerSecond = cps
+        // Recalculate startTimeMs so the playhead position is preserved:
+        //   getNowCycle() = ((nowMs - startTimeMs) - backendLatencyMs) / 1000.0 * cyclesPerSecond
+        //   solving for startTimeMs given currentCycle must remain unchanged:
+        val nowMs = klangTime.internalMsNow()
+        startTimeMs = nowMs - backendLatencyMs - (currentCycle / cyclesPerSecond) * 1000.0
         // Re-request current cycle with new tempo
         resyncCurrentCycle()
     }
