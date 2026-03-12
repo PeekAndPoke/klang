@@ -287,12 +287,7 @@ internal class StrudelPlaybackController(
                     val latencyOffsetSec = backendLatencyMs / 1000.0
                     val boundaryTimeSec = playbackStartTimeSec + ((cycle + 1) * secPerCycle) + latencyOffsetSec
 
-                    signals(
-                        KlangPlaybackSignal.CycleCompleted(
-                            cycleIndex = cycle,
-                            atTimeSec = boundaryTimeSec,
-                        )
-                    )
+                    signals(KlangPlaybackSignal.CycleCompleted(cycleIndex = cycle, atTimeSec = boundaryTimeSec))
                 }
             }
 
@@ -428,6 +423,23 @@ internal class StrudelPlaybackController(
                 if (t is CancellationException) throw t
                 t.printStackTrace()
             }
+        }
+    }
+
+    /**
+     * Re-emits VoicesScheduled signals for all events in the current lookahead window.
+     * Does not touch the audio backend — only fires UI signals.
+     */
+    fun reemitVoiceSignals() {
+        if (!running.get()) return
+        val nowCycle = getNowCycle()
+        val from = floor(nowCycle)
+        val to = queryCursorCycles
+        if (from >= to) return
+        try {
+            queryEvents(from = from, to = to, sendSignals = true)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

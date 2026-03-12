@@ -76,6 +76,12 @@ interface StrudelPlayback : KlangPlayback {
     fun updateCyclesPerSecond(cps: Double)
 
     /**
+     * Re-emits VoicesScheduled signals for all events currently in the lookahead window.
+     * Does not touch the audio backend — use this to refresh UI highlights instantly.
+     */
+    fun reemitVoiceSignals()
+
+    /**
      * Start playback with the given options
      */
     fun start(options: Options = Options())

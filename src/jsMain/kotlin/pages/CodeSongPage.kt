@@ -112,6 +112,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private var highlightPerEvent by value(10) {
         codeEditorRef { editor -> editor.highlightBuffer.maxHighlightsPerEvent = it }
+        cancelHighlights()
+        playback?.reemitVoiceSignals()
     }
 
     private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
@@ -120,8 +122,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private var cps: Double by value(cpsStream()) {
         cpsStream(it)
-        codeEditorRef { editor -> editor.cancelAllHighlights() }
-        blocksHighlightBuffer.cancelAll()
+        cancelHighlights()
         playback?.updateCyclesPerSecond(it)
     }
 
@@ -221,11 +222,26 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
+    private fun cancelHighlights() {
+        codeEditorRef { editor -> editor.cancelAllHighlights() }
+        blocksHighlightBuffer.cancelAll()
+    }
+
+    private fun scheduleVoiceHighlights(voiceEvent: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
+        codeEditorRef { editor -> editor.scheduleHighlight(voiceEvent) }
+        val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return
+        val now = Date.now()
+        val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
+        val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
+        chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
+            blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
+        }
+    }
+
     private fun onPlay() {
         codeStream(code)
         isCodeModified = false
-        codeEditorRef { editor -> editor.cancelAllHighlights() }
-        blocksHighlightBuffer.cancelAll()
+        cancelHighlights()
 
         when (val s = playback) {
             null -> launch {
@@ -243,21 +259,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                         // When there is a modal dialog open, we stop highlighting
                                         if (currentModals.isNotEmpty()) return@invoke
 
-                                        signal.voices.forEach { voiceEvent ->
-                                            // Update Code highlights
-                                            codeEditorRef { editor -> editor.scheduleHighlight(voiceEvent) }
-
-                                            // Update Blocks highlight buffer
-                                            val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return@forEach
-                                            val now = Date.now()
-                                            val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
-                                            val durationMs =
-                                                maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
-
-                                            chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
-                                                blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
-                                            }
-                                        }
+                                        signal.voices.forEach { scheduleVoiceHighlights(it) }
                                     }
 
                                     is KlangPlaybackSignal.PreloadingSamples -> {
@@ -292,8 +294,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private fun onStop() {
         playback?.stop()
-        codeEditorRef { editor -> editor.cancelAllHighlights() }
-        blocksHighlightBuffer.cancelAll()
+        cancelHighlights()
         playback = null
     }
 
