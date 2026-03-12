@@ -171,11 +171,15 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
 
                 // Controls section
                 ui.basic.segment {
+                    css {
+                        paddingBottom = 0.px
+                    }
+
                     ui.form {
                         ui.two.fields {
                             UiInputField(searchText, { searchText = it }) {
                                 leftLabel {
-                                    ui.basic.label { icon.search(); +"Search" }
+                                    ui.grey.label { icon.search(); +"Search" }
                                 }
                             }
 
@@ -221,7 +225,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             // Scrollable results section
-            div {
+            ui.basic.segment {
                 css {
                     flexGrow = 1.0
                     overflowY = Overflow.auto
@@ -231,6 +235,10 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
                 when {
                     samples == null -> {
                         ui.segment {
+                            css {
+                                backgroundColor = Color.transparent
+                                minHeight = 200.px
+                            }
                             ui.active.loader {}
                         }
                     }

@@ -345,7 +345,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 flexDirection = FlexDirection.column
                 height = 100.vh
                 padding = Padding(0.px)
-                backgroundColor = Color(laf.appBackground)
             }
             ui.form {
                 key = "dashboard-form"
@@ -378,7 +377,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // Play / Update / Stop controls
                         noui.item {
                             if (!isPlaying) {
-                                ui.large.circular.positive.button {
+                                ui.large.circular.white.button {
                                     onClick { onPlay() }
                                     if (loading) {
                                         icon.black.loading.spinner()

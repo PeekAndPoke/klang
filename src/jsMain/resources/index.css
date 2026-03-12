@@ -101,6 +101,11 @@ textarea::selection,
     border-color: var(--klang-text-tertiary) !important;
 }
 
+/* ── Headers ──────────────────────────────────────────────────────────────── */
+.ui.header {
+    color: var(--klang-text-primary) !important;
+}
+
 .ui.segment {
     background: var(--klang-bg-card) !important;
     color: var(--klang-text-primary) !important;
@@ -108,6 +113,57 @@ textarea::selection,
 .ui.basic.segment {
     background: transparent !important;
     color: white !important;
+}
+.ui.secondary.segment {
+    background: var(--klang-bg-panel) !important;
+}
+.ui.placeholder.segment {
+    background: var(--klang-bg-card) !important;
+}
+.ui.placeholder.segment .header {
+    color: var(--klang-text-secondary) !important;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.ui.cards > .card,
+.ui.card {
+    background: var(--klang-bg-overlay) !important;
+    color: var(--klang-text-primary) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+}
+.ui.cards > .card .content,
+.ui.card .content {
+    border-top-color: var(--klang-bg-card) !important;
+}
+.ui.cards > .card .header,
+.ui.card .header {
+    color: var(--klang-text-primary) !important;
+}
+.ui.cards > .card .meta,
+.ui.card .meta {
+    color: var(--klang-text-secondary) !important;
+}
+
+/* ── Basic buttons (global) ───────────────────────────────────────────────── */
+.ui.basic.button,
+.ui.basic.buttons .button {
+    color: var(--klang-text-primary) !important;
+    box-shadow: 0 0 0 1px var(--klang-text-tertiary) inset !important;
+    background: transparent !important;
+    transition: color var(--klang-transition), box-shadow var(--klang-transition) !important;
+}
+.ui.basic.button:hover,
+.ui.basic.buttons .button:hover {
+    color: #ffffff !important;
+    box-shadow: 0 0 0 1px var(--klang-text-secondary) inset !important;
+    background: transparent !important;
+}
+
+/* ── Basic labels (global) ────────────────────────────────────────────────── */
+.ui.basic.label {
+    background: transparent !important;
+    color: var(--klang-text-secondary) !important;
+    border-color: var(--klang-text-tertiary) !important;
 }
 
 /* ── Dropdown ─────────────────────────────────────────────────────────────── */
@@ -203,7 +259,7 @@ textarea::selection,
 /* For Firefox */
 * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* For WebKit (Chrome, Edge, Safari) */
@@ -228,16 +284,17 @@ textarea::selection,
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(255, 255, 255, 0.4);
 }
 
 body {
-    background-color: white;
+    background-color: var(--klang-bg-app);
+    color: var(--klang-text-primary);
     min-height: 100vh;
 }
 

@@ -227,7 +227,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                             rightClearingIcon()
 
                             leftLabel {
-                                ui.basic.label { icon.search(); +"Search" }
+                                ui.grey.label { icon.search(); +"Search" }
                             }
                         }
                     }
