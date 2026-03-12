@@ -124,6 +124,42 @@ textarea::selection,
     color: var(--klang-text-secondary) !important;
 }
 
+/* ── Segments group ───────────────────────────────────────────────────────── */
+.ui.segments {
+    border-color: var(--klang-bg-overlay) !important;
+    box-shadow: none !important;
+}
+.ui.segments .segment {
+    border-color: var(--klang-bg-overlay) !important;
+}
+
+/* ── Messages ─────────────────────────────────────────────────────────────── */
+.ui.message {
+    background: var(--klang-bg-overlay) !important;
+    color: var(--klang-text-primary) !important;
+    box-shadow: none !important;
+}
+.ui.message .header {
+    color: var(--klang-text-primary) !important;
+}
+
+/* ── Labels ───────────────────────────────────────────────────────────────── */
+.ui.label:not(.basic) {
+    background: var(--klang-bg-overlay) !important;
+    color: var(--klang-text-secondary) !important;
+    border-color: var(--klang-bg-overlay) !important;
+}
+
+/* ── Lists ────────────────────────────────────────────────────────────────── */
+.ui.list .item {
+    color: var(--klang-text-primary) !important;
+}
+
+/* ── Code blocks ──────────────────────────────────────────────────────────── */
+pre, code {
+    color: var(--klang-text-primary) !important;
+}
+
 /* ── Cards ────────────────────────────────────────────────────────────────── */
 .ui.cards > .card,
 .ui.card {
@@ -294,7 +330,6 @@ textarea::selection,
 
 body {
     background-color: var(--klang-bg-app);
-    color: var(--klang-text-primary);
     min-height: 100vh;
 }
 

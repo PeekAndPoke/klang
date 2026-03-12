@@ -180,9 +180,9 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
-        div {
+        div(classes = laf.styles.darken10()) {
             css {
-                border = Border(1.px, BorderStyle.solid, Color("#ddd"))
+                border = Border(1.px, BorderStyle.solid, Color(laf.textTertiary))
                 borderRadius = 4.px
                 overflow = Overflow.hidden
                 marginTop = 0.5.rem
@@ -192,8 +192,8 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
             // Control bar
             div {
                 css {
-                    backgroundColor = Color(laf.cardBackground)
-                    borderBottom = Border(1.px, BorderStyle.solid, Color("#ddd"))
+//                    backgroundColor = Color(laf.cardBackground)
+                    borderBottom = Border(1.px, BorderStyle.solid, Color(laf.textTertiary))
                     padding = Padding(0.5.rem)
                     display = Display.flex
                     gap = 0.5.rem
@@ -201,7 +201,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
                 // Play / Update button
                 if (!isPlaying) {
-                    ui.mini.circular.black.button {
+                    ui.mini.circular.white.button {
                         onClick { play() }
                         if (loading) {
                             icon.loading.spinner()
@@ -220,8 +220,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 }
 
                 // Stop button
-                ui.mini.circular.icon.givenNot(isPlaying) { disabled }
-                    .given(isPlaying) { white }.button {
+                ui.mini.circular.icon.givenNot(isPlaying) { disabled }.button {
                         onClick { stopPlayback() }
                         icon.black.stop()
                     }
