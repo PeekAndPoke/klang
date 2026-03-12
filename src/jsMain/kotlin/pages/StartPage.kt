@@ -23,7 +23,6 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.comp.*
-import io.peekandpoke.klang.feel.KlangStudioColors
 import io.peekandpoke.klang.feel.KlangTheme
 import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.*
@@ -459,7 +458,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             RoundButton(
                 icon = { power_off },
-                color = KlangStudioColors.excellent,
+                color = KlangTheme.excellent,
                 onClick = {
                     state.gotoNext()
                 },
@@ -572,7 +571,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "Round",
                     range = 0.0..totalRounds,
                     icon = { redo },
-                    colors = KlangStudioColors.rangedMixer(0, totalRounds),
+                    colors = KlangTheme.rangedMixer(0, totalRounds),
                     disabled = false,
                     size = 70.px
                 )
@@ -598,7 +597,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "CPU",
                     range = 0.0..100.0,
                     icon = { microchip },
-                    colors = KlangStudioColors.rangedMixer(0.0, 100.0),
+                    colors = KlangTheme.rangedMixer(0.0, 100.0),
                     disabled = false,
                     size = 90.px
                 )
@@ -618,7 +617,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     title = "Active Voices",
                     range = 0.0..200.0,
                     icon = { music },
-                    colors = KlangStudioColors.rangedMixer(0.0, 200.0),
+                    colors = KlangTheme.rangedMixer(0.0, 200.0),
                     disabled = false,
                     size = 70.px
                 )

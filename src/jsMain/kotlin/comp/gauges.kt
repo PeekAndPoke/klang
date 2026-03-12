@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.comp
 
 import de.peekandpoke.ultra.common.toFixed
-import io.peekandpoke.klang.feel.KlangStudioColors
+import io.peekandpoke.klang.feel.KlangTheme
 import kotlinx.css.LinearDimension
 import kotlinx.html.Tag
 import kotlin.math.round
@@ -16,7 +16,7 @@ fun Tag.roundOrbitsGauge(
     title = "Active Orbits",
     range = 0.0..32.0,
     icon = { small.satellite },
-    colors = KlangStudioColors.rangedMixer(0, 32),
+    colors = KlangTheme.rangedMixer(0, 32),
     disabled = value == null
 )
 
@@ -30,7 +30,7 @@ fun Tag.renderHeadroomGauge(
     title = "Render Headroom",
     range = 0.0..1.0,
     icon = { small.microchip },
-    colors = KlangStudioColors.rangedMixer(0.0, 1.0),
+    colors = KlangTheme.rangedMixer(0.0, 1.0),
     disabled = value == null
 )
 
@@ -46,6 +46,6 @@ fun Tag.activeVoicesGauge(
     title = "Active Voices",
     range = 0.0..100.0,
     icon = { small.music },
-    colors = KlangStudioColors.rangedMixer(0, 100),
+    colors = KlangTheme.rangedMixer(0, 100),
     disabled = value == null
 )

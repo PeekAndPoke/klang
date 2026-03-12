@@ -447,23 +447,29 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                         // Code / Blocks toggle
                         noui.item {
-                            ui.large.buttons {
-                                ui.large.given(editorMode == EditorMode.CODE) { black }
-                                    .givenNot(editorMode == EditorMode.CODE) { basic }
-                                    .icon.button {
-                                        onClick { switchToCode() }
-                                        title = "Switch to code editor"
-                                        icon.code()
-                                    }
-
-                                ui.large.given(editorMode == EditorMode.BLOCKS) { black }
-                                    .givenNot(editorMode == EditorMode.BLOCKS) { basic }
-                                    .icon.button {
-                                        onClick { switchToBlocks(it) }
-                                        title = "Switch to blocks editor"
-                                        icon.puzzle_piece()
-                                    }
+                            val isCode = editorMode == EditorMode.CODE
+                            css {
+                                cursor = Cursor.pointer
+                                display = Display.inlineBlock
                             }
+                            onClick { switchToCode() }
+                            title = "Switch to code editor"
+                            icon.given(isCode) { inverted.white }
+                                .givenNot(isCode) { grey }
+                                .code()
+                        }
+
+                        noui.item {
+                            val isBlocks = editorMode == EditorMode.BLOCKS
+                            css {
+                                cursor = Cursor.pointer
+                                display = Display.inlineBlock
+                            }
+                            onClick { switchToBlocks(it) }
+                            title = "Switch to blocks editor"
+                            icon.given(isBlocks) { inverted.white }
+                                .givenNot(isBlocks) { grey }
+                                .puzzle_piece()
                         }
                     }
                 }

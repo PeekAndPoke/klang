@@ -9,7 +9,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import io.peekandpoke.klang.audio_bridge.createVisualizerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.feel.KlangStudioColors
+import io.peekandpoke.klang.feel.KlangTheme
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -23,11 +23,11 @@ import org.w3c.dom.HTMLCanvasElement
 @Suppress("FunctionName")
 fun Tag.Spectrumeter(
     colors: List<Color> = listOf(
-        KlangStudioColors.excellent,
-        KlangStudioColors.good,
-        KlangStudioColors.moderate,
-        KlangStudioColors.warning,
-        KlangStudioColors.critical,
+        KlangTheme.excellent,
+        KlangTheme.good,
+        KlangTheme.moderate,
+        KlangTheme.warning,
+        KlangTheme.critical,
     ),
 //    colors: List<Color> = listOf(Color.white),
     gap: Double = 1.0,

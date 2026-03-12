@@ -2,28 +2,29 @@ package io.peekandpoke.klang.codemirror
 
 import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.*
-import io.peekandpoke.klang.feel.KlangColors
+import io.peekandpoke.klang.feel.KlangTheme
+
 
 class CodeMirrorTheme {
 
     // ── Palette ───────────────────────────────────────────────────────────────
 
-    val chalky get() = KlangColors.Hex.moderate
-    val coral get() = KlangColors.Hex.critical
-    val cyan get() = KlangColors.Hex.excellent
+    val chalky get() = KlangTheme.Hex.moderate
+    val coral get() = KlangTheme.Hex.critical
+    val cyan get() = KlangTheme.Hex.excellent
     val invalid = "#ffffff"
-    val ivory get() = KlangColors.Hex.textPrimary
-    val stone get() = KlangColors.Hex.textSecondary
+    val ivory get() = KlangTheme.Hex.textPrimary
+    val stone get() = KlangTheme.Hex.textSecondary
     val malibu = "#61afef"
-    val sage get() = KlangColors.Hex.good
-    val whiskey get() = KlangColors.Hex.warning
+    val sage get() = KlangTheme.Hex.good
+    val whiskey get() = KlangTheme.Hex.warning
     val violet = "#c678dd"
-    val darkBackground get() = KlangColors.Hex.panelBackground
-    val highlightBackground get() = KlangColors.Hex.cardBackground
-    val background get() = KlangColors.Hex.appBackground
-    val tooltipBackground get() = KlangColors.Hex.overlayBackground
+    val darkBackground get() = KlangTheme.Hex.panelBackground
+    val highlightBackground get() = KlangTheme.Hex.cardBackground
+    val background get() = KlangTheme.Hex.appBackground
+    val tooltipBackground get() = KlangTheme.Hex.overlayBackground
     val selection = "#3E4451"
-    val cursor get() = KlangColors.Hex.accent
+    val cursor get() = KlangTheme.Hex.accent
 
     // ── Editor chrome ─────────────────────────────────────────────────────────
 
@@ -71,7 +72,7 @@ class CodeMirrorTheme {
             }
             this[".cm-gutters"] = jsObject<dynamic> {
                 backgroundColor = background
-                color = KlangColors.Hex.textTertiary
+                color = KlangTheme.Hex.textTertiary
                 border = "none"
             }
             this[".cm-activeLineGutter"] = jsObject<dynamic> {
