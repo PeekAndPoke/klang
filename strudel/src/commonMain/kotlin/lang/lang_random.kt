@@ -135,11 +135,11 @@ fun PatternMapperFn.withSeed(n: PatternLike): PatternMapperFn = this._withSeed(l
  * directly to parameters that accept patterns.
  *
  * ```KlangScript
- * s("hh*8").pan(rand)                 // random panning for each hit
+ * s("hh*8").pan(rand)  // random panning for each hit
  * ```
  *
  * ```KlangScript
- * note("c d e f").gain(rand.range(0.5, 1.0))   // random velocity in 0.5–1.0
+ * note("c d e f").gain(rand.range(0.5, 1.0))  // random gain in 0.5–1.0
  * ```
  *
  * @category random
@@ -149,6 +149,9 @@ internal val _rand by dslObject {
     ContinuousPattern { from, _, ctx -> ctx.getSeededRandom(from, "rand").nextDouble() }
 }
 
+/**
+ * Continuous random pattern producing values in the range 0–1.
+ */
 @StrudelDsl
 val rand: StrudelPattern get() = _rand
 
@@ -159,11 +162,11 @@ val rand: StrudelPattern get() = _rand
  * around zero (e.g., pitch detune, stereo panning centred at 0).
  *
  * ```KlangScript
- * s("hh*8").pan(rand2)                // bipolar random panning around centre
+ * s("hh*8").pan(rand2)   // bipolar random panning around centre
  * ```
  *
  * ```KlangScript
- * note("c4").detune(rand2.range(-10, 10))   // slight random detune
+ * note("c4").sound("supersaw").detune(rand2.range(-10, 10))   // slight random detune
  * ```
  *
  * @category random
@@ -171,6 +174,9 @@ val rand: StrudelPattern get() = _rand
  */
 internal val _rand2 by dslObject { rand.range(-1.0, 1.0) }
 
+/**
+ * Continuous random pattern producing values in the range -1–1 (bipolar).
+ */
 @StrudelDsl
 val rand2: StrudelPattern get() = _rand2
 
@@ -194,6 +200,9 @@ internal val _randCycle by dslObject {
     }
 }
 
+/**
+ * Continuous random pattern that holds a constant value for each full cycle.
+ */
 @StrudelDsl
 val randCycle: StrudelPattern get() = _randCycle
 
@@ -267,6 +276,9 @@ fun brandBy(prob: PatternLike): StrudelPattern = _brandBy(listOf(prob).asStrudel
  */
 internal val _brand by dslObject { brandBy(0.5) }
 
+/**
+ * Binary random pattern with 50% probability — outputs 0 or 1 with equal chance.
+ */
 @StrudelDsl
 val brand: StrudelPattern get() = _brand
 

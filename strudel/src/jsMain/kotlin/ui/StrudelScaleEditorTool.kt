@@ -11,6 +11,7 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.tones.scale.Scale
+import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.comp.NoteStaffComp
@@ -18,31 +19,48 @@ import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 
-// ── Tool singleton ────────────────────────────────────────────────────────────
+// ── Public tool singleton ─────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing a single scale string (e.g. `"c4:major"`). */
-object StrudelScaleEditorTool : KlangUiToolEmbeddable {
+/**
+ * [KlangUiTool] for editing a mini-notation scale pattern string (e.g. `"c4:major d4:dorian"`).
+ *
+ * Acts as a mini-notation editor; when an atom is selected the embedded
+ * [StrudelSingleScaleEditorTool] is shown for editing that atom's scale value.
+ */
+object StrudelScaleEditorTool : KlangUiTool {
     override val title: String = "Scale Editor"
+    override val iconFn: SemanticIconFn = { music }
 
+    private val inner = StrudelMiniNotationEditorTool(atomTool = StrudelSingleScaleEditorTool)
+
+    override fun FlowContent.render(ctx: KlangUiToolContext) = with(inner) { render(ctx) }
+}
+
+// ── Single-value scale editor (embedded atom tool) ────────────────────────────
+
+/** Embeddable tool for editing a single scale value such as `"c4:major"`. Used as atom tool inside [StrudelScaleEditorTool]. */
+private object StrudelSingleScaleEditorTool : KlangUiToolEmbeddable {
+    override val title: String = "Scale"
     override val iconFn: SemanticIconFn = { music }
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
-        StrudelScaleEditorComp(ctx, embedded = false)
+        StrudelSingleScaleEditorComp(ctx, embedded = false)
     }
 
     override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) {
-        StrudelScaleEditorComp(ctx, embedded = true)
+        StrudelSingleScaleEditorComp(ctx, embedded = true)
     }
 }
 
 // ── Entry-point helpers ───────────────────────────────────────────────────────
+
 @Suppress("FunctionName")
-private fun Tag.StrudelScaleEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
-    comp(StrudelScaleEditorComp.Props(toolCtx, embedded)) { StrudelScaleEditorComp(it) }
+private fun Tag.StrudelSingleScaleEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
+    comp(StrudelSingleScaleEditorComp.Props(toolCtx, embedded)) { StrudelSingleScaleEditorComp(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEditorComp.Props>(ctx) {
+private class StrudelSingleScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelSingleScaleEditorComp.Props>(ctx) {
 
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
@@ -142,7 +160,6 @@ private class StrudelScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelScaleEd
 
         ui.divider {}
 
-        // ── Staff notation ────────────────────────────────────────────────────
         val notes = currentScaleNotes()
         if (notes.isNotEmpty()) {
             NoteStaffComp(scaleName = pickedScaleName, range = (-notes.size)..notes.size)

@@ -12,7 +12,6 @@ fun registerStrudelUiTools(registry: KlangUiToolRegistry = KlangUiToolRegistry) 
     registry.register("StrudelAdsrSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelAdsrEditorTool))
 
     registry.register("StrudelScaleEditor", StrudelScaleEditorTool)
-    registry.register("StrudelScaleSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelScaleEditorTool))
 
     registry.register("StrudelMiniNotationEditor", StrudelMiniNotationEditorTool())
 

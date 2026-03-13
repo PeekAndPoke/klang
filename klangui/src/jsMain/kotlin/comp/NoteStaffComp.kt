@@ -60,12 +60,12 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
 
         // ── Layout ───────────────────────────────────────────────────────────
 
-        val s = 7.0          // halfSp: pixels per staff-position step (half a staff space)
-        val noteW = 40.0     // horizontal slot per note
-        val noteRx = 6.5     // note-head horizontal radius
-        val noteRy = 4.5     // note-head vertical radius
+        val s = 4.8          // halfSp: pixels per staff-position step (half a staff space) — matches NoteStaffEditor HALF_STEP
+        val noteW = 26.0     // horizontal slot per note — matches NoteStaffEditor NOTE_COL_W
+        val noteRx = 4.8     // note-head horizontal radius — matches NoteStaffEditor NOTE_RADIUS_X
+        val noteRy = 3.6     // note-head vertical radius — matches NoteStaffEditor NOTE_RADIUS_Y
         val padL = 8.0       // small left margin; staff lines begin here
-        val clefAreaW = 52.0 // width reserved for the clef glyphs on the staff
+        val clefAreaW = 38.0 // width reserved for the clef glyphs on the staff — matches NoteStaffEditor LEFT_MARGIN
         val padR = 16.0
         val padT = 16.0
         val padB = 34.0      // two-line labels (note name + step index)
@@ -85,7 +85,7 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
         val clefCx = padL + clefAreaW / 2   // centre of the clef area
         val notesX0 = padL + clefAreaW       // x origin for the first note column
 
-        svgRoot(viewBox = "0 0 $svgW $svgH") {
+        svgRoot(svgW.toInt(), svgH.toInt()) {
 
             // ── Treble staff lines: E4(2) G4(4) B4(6) D5(8) F5(10) ──────────
 
@@ -145,7 +145,7 @@ class NoteStaffComp(ctx: Ctx<Props>) : Component<NoteStaffComp.Props>(ctx) {
                 }
 
                 // Note head
-                svgEllipse(cx, cy, noteRx, noteRy, fill = if (isRoot) "#e8b84b" else "#2185d0")
+                svgEllipse(cx, cy, noteRx, noteRy, fill = if (isRoot) "#e8b84b" else "#ddd")
 
                 // Labels: note name (line 1) + step index (line 2)
                 val labelFill = if (isRoot) "#e8b84b" else "#aaa"

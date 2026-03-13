@@ -58,6 +58,9 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     /** Last rest selected in the staff — cleared when an atom is selected. */
     protected var lastRest: MnNode.Rest? = null
 
+    /** Incremented on every reset — used to force embedded atom tools to remount. */
+    protected var resetVersion by value(0)
+
     // ── Undo / redo ───────────────────────────────────────────────────────────
 
     private val undoStack = ArrayDeque<String>()
@@ -227,6 +230,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         text = initialText()
         cursorOffset = 0
         lastAtom = null
+        resetVersion++
     }
 
     protected fun onCommit() {

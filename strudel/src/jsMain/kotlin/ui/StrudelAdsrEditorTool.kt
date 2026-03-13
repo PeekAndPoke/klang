@@ -8,12 +8,14 @@ import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
 import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -51,14 +53,17 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
 
     // ── Parse current value from raw source text ──────────────────────────────
 
+    private val laf by subscribingTo(KlangTheme)
+
     private val formCtrl = formController()
 
-    private val parsed = run {
-        val raw = props.toolCtx.currentValue
-            ?.trim()
-            ?.removePrefix("\"")
-            ?.removeSuffix("\"")
-            ?: ""
+    private val initialValue = props.toolCtx.currentValue ?: ""
+    private var currentValue by value(initialValue)
+
+    private val parsed
+        get() = run {
+            val raw = currentValue.trim().removePrefix("\"").removeSuffix("\"")
+
         val parts = raw.split(":").mapNotNull { it.toDoubleOrNull() }
         listOf(
             parts.getOrNull(0) ?: 0.01,   // attack
@@ -73,8 +78,7 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     private var sustain by value(parsed[2])
     private var release by value(parsed[3])
 
-    private val initialValue = props.toolCtx.currentValue ?: ""
-    private var currentValue by value(initialValue)
+    private var resetCounter by value(0)
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -99,6 +103,7 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     }
 
     private fun onReset() {
+        console.log("resetting")
         currentValue = initialValue
         attack = parsed[0]
         decay = parsed[1]
@@ -106,6 +111,7 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
         release = parsed[3]
         formCtrl.resetAllFields()
         props.toolCtx.onCommit(currentValue)
+        resetCounter++
     }
 
     private fun onCommit() {
@@ -120,6 +126,7 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
             renderContent()
         } else {
             ui.segment {
+                key = "adsr-editor"
                 css { minWidth = 600.px }
                 ui.small.header { +"ADSR Envelope" }
                 renderContent()
@@ -151,18 +158,29 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     }
 
     private fun FlowContent.renderContent() {
-        ui.form {
-            ui.four.stackable.fields {
-                adsrRow("Attack", "sec", attack, 0.001) { attack = it; liveUpdate() }
-                adsrRow("Decay", "sec", decay, 0.001) { decay = it; liveUpdate() }
-                adsrRow("Sustain", "", sustain, 0.01) { sustain = it; liveUpdate() }
-                adsrRow("Release", "sec", release, 0.001) { release = it; liveUpdate() }
-            }
-        }
-        ui.divider {}
         div {
-            css { if (!props.embedded) marginBottom = 1.rem }
-            unsafe { raw(buildAdsrSvg()) }
+            key = "adsr-editor-content-$resetCounter"
+
+            console.log("resetCounter: $resetCounter")
+
+            ui.form {
+                key = "adsr-editor-form"
+                ui.four.stackable.fields {
+                    key = "adsr-editor-fields"
+                    adsrRow("Attack", "sec", attack, 0.001) { attack = it; liveUpdate() }
+                    adsrRow("Decay", "sec", decay, 0.001) { decay = it; liveUpdate() }
+                    adsrRow("Sustain", "", sustain, 0.01) { sustain = it; liveUpdate() }
+                    adsrRow("Release", "sec", release, 0.001) { release = it; liveUpdate() }
+                }
+            }
+            ui.divider {
+                key = "adsr-editor-divider"
+            }
+            div {
+                key = "adsr-editor-curve"
+                css { if (!props.embedded) marginBottom = 1.rem }
+                unsafe { raw(buildAdsrSvg()) }
+            }
         }
     }
 
@@ -203,8 +221,8 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $w $h" width="100%" style="display:block">
               ${lx(x1)} ${lx(x2)} ${lx(x3)}
               <line x1="$x0" y1="$ySus" x2="$x4" y2="$ySus" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4"/>
-              <path d="$fill" fill="rgba(33,133,208,0.12)" stroke="none"/>
-              <polyline points="$pts" fill="none" stroke="#2185d0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <path d="$fill" fill="${laf.gold}26" stroke="none"/>
+              <polyline points="$pts" fill="none" stroke="${laf.gold}" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
               ${label((x0 + x1) / 2, "A")}
               ${label((x1 + x2) / 2, "D")}
               ${label((x2 + x3) / 2, "S")}
@@ -221,6 +239,7 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
         onChange: (Double) -> Unit,
     ) {
         UiInputField(value, onChange) {
+            domKey(label)
             step(step)
             label(label)
             if (unit.isNotEmpty()) rightLabel { ui.basic.label { +unit } }

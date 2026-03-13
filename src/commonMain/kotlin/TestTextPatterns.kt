@@ -75,21 +75,20 @@ stack(                                                              ////////    
     .filterWhen(x => x >= 31.4) // .solo()                                                                                ////////
   ,                                                                                                                       
   sound(`<
-    [[bd:2,cr,cr]  hh  sd       hh]       [bd  hh  sd    oh]  [bd       hh  sd  hh]       [bd  hh       sd             hh        ]
-    [[bd,hh]       hh  sd       hh]       [bd  hh  sd    oh]  [bd       hh  sd  hh]       [bd  hh       [mt mt,sd]     [ht ht,oh]]
-    [[bd:2,cr]     hh  sd       hh]       [bd  hh  sd    oh]  [bd       hh  sd  hh]       [bd  hh       sd             hh        ]
-    [[bd,hh]       hh  [sd,hh]  oh]       [bd  hh  sd    oh]  [bd       hh  sd  hh]       [bd  hh       [sd sd]        [sd sd]   ]
+    [[bd:2,cr,cr] hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [mt mt,sd]    [ht ht,oh]]
+    [[bd:2,cr]    hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh [sd,hh] oh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [sd sd]       [sd sd]   ]
                                                                            
-    [[bd:2,cr,cr]  hh  sd       sd]       [bd  hh  sd    oh]  [bd       hh  sd  hh]       [bd  hh       sd             hh        ]
-    [[bd,hh]       hh  sd       [hh sd]]  [bd  hh  sd    oh]  [bd       hh  sd  hh]       [bd  hh       [lt lt,sd sd]  ~         ]
-    [[bd:2,cr]     hh  sd       [sd,hh]]  [bd  hh  sd:8  oh]  [bd       hh  sd  hh]       [bd  hh       sd             [bd,oh]   ]
-    [[bd,cr]       hh  [sd,hh]  cr]       [cr  hh  cr    hh]  [[sd,oh]  bd  sd  [bd,hh]]  [sd  [bd,hh]  [bd bd]        [bd bd,hh]]
+    [[bd:2,cr,cr] hh sd      sd     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd,hh]      hh sd      [hh sd]]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [lt lt,sd sd] ~         ]
+    [[bd:2,cr]    hh sd      [sd,hh]]  [bd      hh sd:8    oh]  [bd      hh sd hh]       [bd hh      sd            [bd,oh]   ]
+    [[bd,cr]      hh [sd,hh] cr     ]  [[bd,cr] hh [bd,cr] hh]  [[sd,oh] bd sd [bd,hh]]  [sd [bd,hh] [bd bd]       [bd bd,hh]]
   >`)
     .orbit(2).gain("0.8".add(berlin.range(-0.1, 0.0).fast(16))).adsr("0.01:0.2:0.8:0.5")
     .fast(2) // .solo()
   ,
 ).room(0.1).rsize(2.0).compressor("-6:1.2:8:0.03:0.2")
-    
     
     
     

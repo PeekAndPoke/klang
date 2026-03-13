@@ -5,6 +5,7 @@ import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
@@ -136,7 +137,10 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
         val subCtx = atomSubCtx(atom, onCancel = {}, onCommit = { newVal ->
             updateNode(atom, atom.copy(value = newVal.trim().removeSurrounding("\"")))
         })
-        with(atomTool) { renderEmbedded(subCtx) }
+        div {
+            key = "atom-tool-$resetVersion"
+            with(atomTool) { renderEmbedded(subCtx) }
+        }
     }
 
     private fun FlowContent.renderAtomModalButton(atom: MnNode.Atom, atomTool: KlangUiTool) {
