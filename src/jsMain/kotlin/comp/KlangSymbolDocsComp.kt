@@ -16,10 +16,7 @@ import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.window
 import kotlinx.css.*
-import kotlinx.html.FlowContent
-import kotlinx.html.Tag
-import kotlinx.html.div
-import kotlinx.html.pre
+import kotlinx.html.*
 
 @Suppress("FunctionName")
 fun Tag.KlangSymbolDocsComp(
@@ -75,7 +72,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             onClick { event -> event.stopPropagation() }
             onContextMenu { event -> event.stopPropagation() }
 
-            ui.list {
+            ui.relaxed.list {
                 // ── Description ───────────────────────────────────────────────────
                 if (description != null) {
                     noui.item {
@@ -144,7 +141,10 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
     }
 
     private fun FlowContent.sectionLabel(text: String) {
-        ui.small.header { +text }
+        ui.small.header {
+            css { marginBottom = 4.px }
+            b { +text }
+        }
     }
 
     private fun FlowContent.codeBlock(text: String, copyToClipboard: Boolean = false) {

@@ -13,6 +13,7 @@ import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.coroutines.*
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -68,6 +69,7 @@ internal class StrudelPlaybackController(
     // ===== Latency Compensation =====
     /** Measured transport latency in milliseconds. Applied to signals. */
     private var backendLatencyMs: Double = 0.0
+    private val largeDriftThresholdMs = 500.0
 
     // ===== Public API =====
     val isRunning: Boolean get() = running.get()
@@ -156,8 +158,16 @@ internal class StrudelPlaybackController(
 
             is KlangCommLink.Feedback.Diagnostics -> {
                 val rawOffset = (feedback.backendNowMs - klangTime.internalMsNow()) + feedback.outputLatencyMs
-                // EMA α=0.05: ~1 second convergence at 20 Hz; smooths message-transit jitter
-                backendLatencyMs = backendLatencyMs * 0.95 + rawOffset * 0.05
+                val drift = abs(rawOffset - backendLatencyMs)
+                if (drift > largeDriftThresholdMs) {
+                    // Large clock discontinuity (hibernate, AudioContext suspension, etc.)
+                    // Snap immediately rather than waiting for EMA to slowly converge
+                    backendLatencyMs = rawOffset
+                    resyncCurrentCycle()
+                } else {
+                    // Normal case: EMA α=0.05: ~1 second convergence at 20 Hz; smooths message-transit jitter
+                    backendLatencyMs = backendLatencyMs * 0.95 + rawOffset * 0.05
+                }
             }
 
             is KlangCommLink.Feedback.PlaybackLatency -> {
