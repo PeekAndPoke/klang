@@ -378,7 +378,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // Play / Update / Stop controls
                         noui.item {
                             if (!isPlaying) {
-                                ui.large.circular.white.button {
+                                ui.circular.white.button {
                                     onClick { onPlay() }
                                     if (loading) {
                                         icon.black.loading.spinner()
@@ -389,7 +389,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                     }
                                 }
                             } else {
-                                ui.large.circular.white
+                                ui.circular.white
                                     .givenNot(isCodeModified) { disabled }.button {
                                         onClick { updatePlayback() }
                                         icon.black.redo_alternate()
@@ -397,7 +397,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                     }
                             }
 
-                            ui.large.circular.white
+                            ui.circular.white
                                 .givenNot(isPlaying) { disabled }
                                 .given(isPlaying) { white }.icon.button {
                                     onClick { onStop() }
@@ -408,7 +408,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                         if (isBuiltInModified) {
                             noui.item {
-                                ui.large.circular.white.icon.button {
+                                ui.circular.white.icon.button {
                                     onClick { resetToOriginal() }
                                     title = "Reset to original code"
                                     icon.black.undo()
@@ -418,12 +418,32 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                         // CPS field
                         noui.item {
+                            css { width = 140.px }
                             UiInputField(cps, { cps = it }) {
                                 step(0.01)
-                                appear { large.inverted }
+                                appear { large }
+                                wrapFieldWith { fluid }
                                 leftLabel {
                                     ui.grey.label {
-                                        icon.clock(); +"CPS"
+                                        title = "Cycles per second"
+                                        +"CPS"
+                                    }
+                                }
+                            }
+                        }
+
+
+                        // Highlight-per-event field
+                        noui.item {
+                            css { width = 140.px }
+                            UiInputField(highlightPerEvent, { highlightPerEvent = it }) {
+                                step(1)
+                                appear { large }
+                                wrapFieldWith { fluid }
+                                leftLabel {
+                                    ui.grey.label {
+                                        title = "Max highlights per audio event"
+                                        +"EVT"
                                     }
                                 }
                             }
@@ -431,21 +451,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                         // Title field
                         noui.item {
+                            css { width = 300.px }
                             UiInputField(songTitle, { songTitle = it }) {
+                                placeholder("Song title")
                                 appear { large }
+                                wrapFieldWith { fluid }
                                 leftLabel {
-                                    ui.grey.label { icon.music(); +"Title" }
-                                }
-                            }
-                        }
-
-                        // Highlight-per-event field
-                        noui.item {
-                            UiInputField(highlightPerEvent, { highlightPerEvent = it }) {
-                                step(1)
-                                appear { large }
-                                leftLabel {
-                                    ui.grey.label { icon.bolt(); +"EVT" }
+                                    title = "Song title"
+                                    ui.grey.label { +"Title" }
                                 }
                             }
                         }
