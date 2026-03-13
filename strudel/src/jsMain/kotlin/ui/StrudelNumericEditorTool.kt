@@ -62,6 +62,333 @@ object StrudelDelayFeedbackEditorTool : KlangUiToolEmbeddable by StrudelNumericE
     centerValue = null,
 )
 
+// ── Filter frequency editors ─────────────────────────────────────────────────
+
+/** Editor for LP filter cutoff frequency (20–20000 Hz). */
+object StrudelLpCutoffEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Low-Pass Cutoff Editor",
+    iconFn = { filter },
+    fieldLabel = "Cutoff (Hz)",
+    maxValue = 20000.0,
+    defaultValue = 2000.0,
+    step = 10.0,
+    centerValue = null,
+)
+
+/** Editor for HP filter cutoff frequency (20–20000 Hz). */
+object StrudelHpCutoffEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "High-Pass Cutoff Editor",
+    iconFn = { filter },
+    fieldLabel = "Cutoff (Hz)",
+    maxValue = 20000.0,
+    defaultValue = 200.0,
+    step = 10.0,
+    centerValue = null,
+)
+
+/** Editor for BP filter centre frequency (20–20000 Hz). */
+object StrudelBpFreqEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Band-Pass Frequency Editor",
+    iconFn = { filter },
+    fieldLabel = "Frequency (Hz)",
+    maxValue = 20000.0,
+    defaultValue = 1000.0,
+    step = 10.0,
+    centerValue = null,
+)
+
+/** Editor for notch filter centre frequency (20–20000 Hz). */
+object StrudelNotchFreqEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Notch Frequency Editor",
+    iconFn = { filter },
+    fieldLabel = "Frequency (Hz)",
+    maxValue = 20000.0,
+    defaultValue = 1000.0,
+    step = 10.0,
+    centerValue = null,
+)
+
+// ── Filter resonance/Q editors ───────────────────────────────────────────────
+
+/** Editor for LP filter resonance (Q factor, 0–50). */
+object StrudelLpResonanceEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Low-Pass Resonance Editor",
+    iconFn = { filter },
+    fieldLabel = "Resonance (Q)",
+    maxValue = 50.0,
+    defaultValue = 1.0,
+    step = 0.1,
+    centerValue = null,
+)
+
+/** Editor for HP filter resonance (Q factor, 0–50). */
+object StrudelHpResonanceEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "High-Pass Resonance Editor",
+    iconFn = { filter },
+    fieldLabel = "Resonance (Q)",
+    maxValue = 50.0,
+    defaultValue = 1.0,
+    step = 0.1,
+    centerValue = null,
+)
+
+/** Editor for BP filter Q (0–50). */
+object StrudelBpQEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Band-Pass Resonance Editor",
+    iconFn = { filter },
+    fieldLabel = "Resonance (Q)",
+    maxValue = 50.0,
+    defaultValue = 1.0,
+    step = 0.1,
+    centerValue = null,
+)
+
+/** Editor for notch filter Q (0–50). */
+object StrudelNotchQEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Notch Resonance Editor",
+    iconFn = { filter },
+    fieldLabel = "Resonance (Q)",
+    maxValue = 50.0,
+    defaultValue = 1.0,
+    step = 0.1,
+    centerValue = null,
+)
+
+/** Editor for normalized resonance (0–1). */
+object StrudelNResonanceEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Normalized Resonance Editor",
+    iconFn = { filter },
+    fieldLabel = "Resonance",
+    maxValue = 1.0,
+    defaultValue = 0.5,
+    step = 0.01,
+    centerValue = null,
+)
+
+// ── Filter envelope depth editors ────────────────────────────────────────────
+
+/** Editor for LP filter envelope depth in Hz (0–20000). */
+object StrudelLpEnvEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Low-Pass Env Depth Editor",
+    iconFn = { filter },
+    fieldLabel = "Depth (Hz)",
+    maxValue = 20000.0,
+    defaultValue = 4000.0,
+    step = 100.0,
+    centerValue = null,
+)
+
+/** Editor for HP filter envelope depth in Hz (0–20000). */
+object StrudelHpEnvEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "High-Pass Env Depth Editor",
+    iconFn = { filter },
+    fieldLabel = "Depth (Hz)",
+    maxValue = 20000.0,
+    defaultValue = 4000.0,
+    step = 100.0,
+    centerValue = null,
+)
+
+/** Editor for BP filter envelope depth in Hz (0–20000). */
+object StrudelBpEnvEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Band-Pass Env Depth Editor",
+    iconFn = { filter },
+    fieldLabel = "Depth (Hz)",
+    maxValue = 20000.0,
+    defaultValue = 4000.0,
+    step = 100.0,
+    centerValue = null,
+)
+
+/** Editor for notch filter envelope depth in Hz (0–20000). */
+object StrudelNfEnvEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Notch Env Depth Editor",
+    iconFn = { filter },
+    fieldLabel = "Depth (Hz)",
+    maxValue = 20000.0,
+    defaultValue = 4000.0,
+    step = 100.0,
+    centerValue = null,
+)
+
+// ── Filter individual ADSR param editors ─────────────────────────────────────
+
+/** Editor for LP filter attack time (0–5 seconds). */
+object StrudelLpAttackEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Low-Pass Attack Editor",
+    iconFn = { filter },
+    fieldLabel = "Attack (s)",
+    maxValue = 5.0,
+    defaultValue = 0.01,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for LP filter decay time (0–5 seconds). */
+object StrudelLpDecayEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Low-Pass Decay Editor",
+    iconFn = { filter },
+    fieldLabel = "Decay (s)",
+    maxValue = 5.0,
+    defaultValue = 0.1,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for LP filter sustain level (0–1). */
+object StrudelLpSustainEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Low-Pass Sustain Editor",
+    iconFn = { filter },
+    fieldLabel = "Sustain",
+    maxValue = 1.0,
+    defaultValue = 0.8,
+    step = 0.01,
+    centerValue = null,
+)
+
+/** Editor for LP filter release time (0–5 seconds). */
+object StrudelLpReleaseEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Low-Pass Release Editor",
+    iconFn = { filter },
+    fieldLabel = "Release (s)",
+    maxValue = 5.0,
+    defaultValue = 0.3,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for HP filter attack time (0–5 seconds). */
+object StrudelHpAttackEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "High-Pass Attack Editor",
+    iconFn = { filter },
+    fieldLabel = "Attack (s)",
+    maxValue = 5.0,
+    defaultValue = 0.01,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for HP filter decay time (0–5 seconds). */
+object StrudelHpDecayEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "High-Pass Decay Editor",
+    iconFn = { filter },
+    fieldLabel = "Decay (s)",
+    maxValue = 5.0,
+    defaultValue = 0.1,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for HP filter sustain level (0–1). */
+object StrudelHpSustainEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "High-Pass Sustain Editor",
+    iconFn = { filter },
+    fieldLabel = "Sustain",
+    maxValue = 1.0,
+    defaultValue = 0.8,
+    step = 0.01,
+    centerValue = null,
+)
+
+/** Editor for HP filter release time (0–5 seconds). */
+object StrudelHpReleaseEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "High-Pass Release Editor",
+    iconFn = { filter },
+    fieldLabel = "Release (s)",
+    maxValue = 5.0,
+    defaultValue = 0.3,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for BP filter attack time (0–5 seconds). */
+object StrudelBpAttackEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Band-Pass Attack Editor",
+    iconFn = { filter },
+    fieldLabel = "Attack (s)",
+    maxValue = 5.0,
+    defaultValue = 0.01,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for BP filter decay time (0–5 seconds). */
+object StrudelBpDecayEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Band-Pass Decay Editor",
+    iconFn = { filter },
+    fieldLabel = "Decay (s)",
+    maxValue = 5.0,
+    defaultValue = 0.1,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for BP filter sustain level (0–1). */
+object StrudelBpSustainEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Band-Pass Sustain Editor",
+    iconFn = { filter },
+    fieldLabel = "Sustain",
+    maxValue = 1.0,
+    defaultValue = 0.8,
+    step = 0.01,
+    centerValue = null,
+)
+
+/** Editor for BP filter release time (0–5 seconds). */
+object StrudelBpReleaseEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Band-Pass Release Editor",
+    iconFn = { filter },
+    fieldLabel = "Release (s)",
+    maxValue = 5.0,
+    defaultValue = 0.3,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for notch filter attack time (0–5 seconds). */
+object StrudelNfAttackEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Notch Attack Editor",
+    iconFn = { filter },
+    fieldLabel = "Attack (s)",
+    maxValue = 5.0,
+    defaultValue = 0.01,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for notch filter decay time (0–5 seconds). */
+object StrudelNfDecayEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Notch Decay Editor",
+    iconFn = { filter },
+    fieldLabel = "Decay (s)",
+    maxValue = 5.0,
+    defaultValue = 0.1,
+    step = 0.001,
+    centerValue = null,
+)
+
+/** Editor for notch filter sustain level (0–1). */
+object StrudelNfSustainEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Notch Sustain Editor",
+    iconFn = { filter },
+    fieldLabel = "Sustain",
+    maxValue = 1.0,
+    defaultValue = 0.8,
+    step = 0.01,
+    centerValue = null,
+)
+
+/** Editor for notch filter release time (0–5 seconds). */
+object StrudelNfReleaseEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Notch Release Editor",
+    iconFn = { filter },
+    fieldLabel = "Release (s)",
+    maxValue = 5.0,
+    defaultValue = 0.3,
+    step = 0.001,
+    centerValue = null,
+)
+
 // ── Configurable tool ────────────────────────────────────────────────────────
 
 /**

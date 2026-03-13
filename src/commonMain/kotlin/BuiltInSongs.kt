@@ -98,7 +98,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0003",
             title = "A Synth Worth Lying For",
-            cps = 0.50,
+            cps = 0.51,
             code = TestTextPatterns.aTruthWorthLyingFor,
             icon = "guitar",
         )
