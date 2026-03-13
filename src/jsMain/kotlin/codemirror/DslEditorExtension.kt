@@ -257,7 +257,7 @@ fun dslEditorExtension(
         val container = getOrCreateBadgeContainer()
         // Center horizontally on mouse X, above the text line
         container.asDynamic().style.left = "${mouseX}px"
-        container.asDynamic().style.top = "${rect.top - 20}px"
+        container.asDynamic().style.top = "${rect.top - 21}px"
         container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
 
@@ -272,9 +272,11 @@ fun dslEditorExtension(
             val btn = document.createElement("button")
             btn.asDynamic().title = tool.title ?: toolName
             btn.asDynamic().style.cssText =
-                "cursor:pointer;background:${KlangTheme.Hex.cardBackground};border:1px solid ${KlangTheme.Hex.textTertiary};border-radius:3px;" +
-                        "padding:1px 5px;font-size:11px;line-height:1.4;color:${KlangTheme.Hex.textPrimary};"
-            btn.innerHTML = """<i class="$iconCss icon" style="margin:0;font-size:11px;"></i>"""
+                "cursor:pointer;background:${KlangTheme.Hex.cardBackground};" +
+                        "border:1px solid ${KlangTheme.Hex.textTertiary};border-radius:3px;" +
+                        "padding:1px 5px;font-size:12px;line-height:1.5;color:${KlangTheme.Hex.textPrimary};"
+
+            btn.innerHTML = """<i class="$iconCss icon" style="margin:0;font-size:12px;"></i>"""
 
             btn.addEventListener("click", { event ->
                 event.asDynamic().preventDefault()
@@ -340,9 +342,10 @@ fun dslEditorExtension(
 
         // ── Hover tooltip ──────────────────────────────────────────────────
         val currentWord = if (doc != null) name else null
+
         if (currentWord != lastHoveredWord) {
-            @Suppress("AssignedValueIsNeverRead")
             lastHoveredWord = currentWord
+
             if (doc != null && word != null) {
                 val wordRect = view.coordsAtPos(word.from)
                 val anchor = Vector2D(
@@ -410,8 +413,8 @@ fun dslEditorExtension(
     // ── Theme ──────────────────────────────────────────────────────────────
 
     val theme = EditorView.baseTheme(
-        jsObject<dynamic> {
-            this[".cm-dsl-link"] = jsObject<dynamic> {
+        jsObject {
+            this[".cm-dsl-link"] = jsObject {
                 textDecoration = "underline"
                 cursor = "pointer"
                 color = KlangTheme.Hex.gold

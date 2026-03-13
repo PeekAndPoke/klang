@@ -467,6 +467,7 @@ internal val PatternMapperFn._room by dslPatternMapperExtension { m, args, callI
  * seq("0 0.5 1.0").room()                           // reinterpret values as room mix
  * ```
  *
+ * @param-tool amount StrudelGainSequenceEditor
  * @category effects
  * @tags room, reverb, wet, mix, space
  */
@@ -592,6 +593,7 @@ internal val PatternMapperFn._size by dslPatternMapperExtension { m, args, callI
  * seq("1 2 4 8").roomsize()                       // reinterpret values as room size
  * ```
  *
+ * @param-tool amount StrudelGainSequenceEditor
  * @alias rsize, sz, size
  * @category effects
  * @tags roomsize, rsize, sz, size, reverb, room, tail
@@ -670,6 +672,7 @@ fun PatternMapperFn.roomsize(amount: PatternLike? = null): PatternMapperFn =
  * note("c3 e3").clip(0.5).room(0.5).rsize(4)   // long reverb tail
  * ```
  *
+ * @param-tool amount StrudelGainSequenceEditor
  * @alias roomsize, sz, size
  * @category effects
  * @tags rsize, roomsize, sz, size, reverb, room, tail
@@ -736,6 +739,7 @@ fun PatternMapperFn.rsize(amount: PatternLike? = null): PatternMapperFn =
  * note("c3 e3").clip(0.5).room(0.5).sz(4)   // long reverb tail
  * ```
  *
+ * @param-tool amount StrudelGainSequenceEditor
  * @alias roomsize, rsize, size
  * @category effects
  * @tags sz, roomsize, rsize, size, reverb, room, tail
@@ -1644,6 +1648,7 @@ internal val PatternMapperFn._delay by dslPatternMapperExtension { m, args, call
  * seq("0 0.25 0.5 1.0").delay()   // reinterpret values as delay mix
  * ```
  *
+ * @param-tool amount StrudelGainSequenceEditor
  * @category effects
  * @tags delay, echo, wet, mix
  */
@@ -1746,6 +1751,7 @@ internal val PatternMapperFn._delaytime by dslPatternMapperExtension { m, args, 
  * seq("0.125 0.25 0.5").delaytime()   // reinterpret values as delay time
  * ```
  *
+ * @param-tool time StrudelGainSequenceEditor
  * @category effects
  * @tags delaytime, delay, echo, time, interval
  */
@@ -1866,6 +1872,7 @@ internal val PatternMapperFn._dfb by dslPatternMapperExtension { m, args, callIn
  * seq("0.2 0.4 0.6 0.8").delayfeedback()   // reinterpret values as feedback
  * ```
  *
+ * @param-tool amount StrudelGainSequenceEditor
  * @alias delayfb, dfb
  * @category effects
  * @tags delayfeedback, delayfb, dfb, delay, echo, feedback, repeats
@@ -1952,6 +1959,7 @@ fun PatternMapperFn.delayfeedback(amount: PatternLike? = null): PatternMapperFn 
  * seq("0.2 0.4 0.6 0.8").delayfb()   // reinterpret values as feedback
  * ```
  *
+ * @param-tool amount StrudelGainSequenceEditor
  * @alias delayfeedback, dfb
  * @category effects
  * @tags delayfb, delayfeedback, dfb, delay, echo, feedback, repeats

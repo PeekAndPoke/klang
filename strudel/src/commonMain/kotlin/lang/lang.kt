@@ -44,6 +44,7 @@ fun initStrudelLang() {
     // register strudel addon functions, that are not part of the original strudel impl
     strudelLangArithmeticAddonsInit = true
     strudelLangContinuousAddonsInit = true
+    strudelLangEffectsAddonsInit = true
     strudelLangFiltersAddonsInit = true
     strudelLangOscAddonsInit = true
     strudelLangStructuralAddonsInit = true

@@ -1,8 +1,12 @@
 package io.peekandpoke.klang.strudel.lang
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.strudel.lang.addons.reverb
 
 class LangReverbSpec : StringSpec({
 
@@ -227,5 +231,126 @@ class LangReverbSpec : StringSpec({
         events[0].data.roomFade shouldBe 0.5
         events[0].data.roomLp shouldBe 1000.0
         events[0].data.iResponse shouldBe "hall"
+    }
+
+    // -- reverb() addon (combined) ----------------------------------------------------------------------------------------
+
+    "reverb() addon dsl interface" {
+        val pat = "0 1"
+        val ctrl = "0.8:2:0.5:8000:6000"
+
+        dslInterfaceTests(
+            "pattern.reverb(ctrl)" to
+                    seq(pat).reverb(ctrl),
+            "script pattern.reverb(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").reverb("$ctrl")"""),
+            "string.reverb(ctrl)" to
+                    pat.reverb(ctrl),
+            "script string.reverb(ctrl)" to
+                    StrudelPattern.compile(""""$pat".reverb("$ctrl")"""),
+            "reverb(ctrl)" to
+                    seq(pat).apply(reverb(ctrl)),
+            "script reverb(ctrl)" to
+                    StrudelPattern.compile("""seq("$pat").apply(reverb("$ctrl"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            assertSoftly {
+                events[0].data.room shouldBe 0.8
+                events[0].data.roomSize shouldBe 2.0
+                events[0].data.roomFade shouldBe 0.5
+                events[0].data.roomLp shouldBe 8000.0
+                events[0].data.roomDim shouldBe 6000.0
+            }
+        }
+    }
+
+    "reverb() addon sets all five VoiceData fields" {
+        val p = note("c").reverb("0.5:4:0.3:10000:5000")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            room shouldBe 0.5
+            roomSize shouldBe 4.0
+            roomFade shouldBe 0.3
+            roomLp shouldBe 10000.0
+            roomDim shouldBe 5000.0
+        }
+    }
+
+    "reverb() addon with partial params sets only specified fields" {
+        val p = note("c").reverb("0.8:2")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            room shouldBe 0.8
+            roomSize shouldBe 2.0
+            roomFade shouldBe null
+            roomLp shouldBe null
+            roomDim shouldBe null
+        }
+    }
+
+    "reverb() addon with single param sets only room" {
+        val p = note("c").reverb("0.6")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            room shouldBe 0.6
+            roomSize shouldBe null
+            roomFade shouldBe null
+        }
+    }
+
+    "reverb() addon works as string extension" {
+        val p = "c".reverb("0.5:3")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            room shouldBe 0.5
+            roomSize shouldBe 3.0
+        }
+    }
+
+    "reverb() addon works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").reverb("0.8:2:0.5")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        with(events[0].data) {
+            room shouldBe 0.8
+            roomSize shouldBe 2.0
+            roomFade shouldBe 0.5
+        }
+    }
+
+    "reverb() addon works with mini-notation patterns" {
+        val p = note("c3 e3").reverb("<0.3:1 0.8:4>")
+        val cycle0 = p.queryArc(0.0, 1.0)
+        val cycle1 = p.queryArc(1.0, 2.0)
+
+        assertSoftly {
+            cycle0.size shouldBe 2
+            cycle0[0].data.room shouldBe 0.3
+            cycle0[0].data.roomSize shouldBe 1.0
+
+            cycle1.size shouldBe 2
+            cycle1[0].data.room shouldBe 0.8
+            cycle1[0].data.roomSize shouldBe 4.0
+        }
+    }
+
+    "reverb() addon works chained with other effects" {
+        val p = note("c").apply(gain(0.8).reverb("0.5:2"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            gain shouldBe 0.8
+            room shouldBe 0.5
+            roomSize shouldBe 2.0
+        }
     }
 })

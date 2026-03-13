@@ -35,7 +35,7 @@ class LangPickmodOutListPatternSpec : StringSpec({
                             "$index: value=${event.data.value?.asString} | " +
                                     "onset=${event.isOnset} | " +
                                     "part=[${event.part.begin}, ${event.part.end}) | " +
-                                    "whole=${event.whole?.let { "[${it.begin}, ${it.end})" } ?: "null"}"
+                                    "whole=${event.whole.let { "[${it.begin}, ${it.end})" }}"
                         )
                     }
 
@@ -47,7 +47,7 @@ class LangPickmodOutListPatternSpec : StringSpec({
                         println(
                             "$index: value=${event.data.value?.asString} | " +
                                     "part=[${event.part.begin}, ${event.part.end}) | " +
-                                    "whole=[${event.whole!!.begin}, ${event.whole!!.end})"
+                                    "whole=[${event.whole.begin}, ${event.whole.end})"
                         )
                     }
 
@@ -74,24 +74,24 @@ class LangPickmodOutListPatternSpec : StringSpec({
                     events[0].data.value?.asString shouldBe "bd"
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
-                    events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
+                    events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].whole.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
                     events[0].isOnset shouldBe true
 
                     // Event 1: "sd" from second pattern (index 1)
                     events[1].data.value?.asString shouldBe "sd"
                     events[1].part.begin.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
-                    events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
+                    events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
+                    events[1].whole.end.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
                     events[1].isOnset shouldBe true
 
                     // Event 2: "hh" from first pattern (index 2 % 2 = 0, wraps to "bd hh")
                     events[2].data.value?.asString shouldBe "hh"
                     events[2].part.begin.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
                     events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
-                    events[2].whole!!.begin.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
-                    events[2].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
+                    events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                     events[2].isOnset shouldBe true
                 }
             }

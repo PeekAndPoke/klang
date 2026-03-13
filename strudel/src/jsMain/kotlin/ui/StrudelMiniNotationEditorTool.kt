@@ -66,7 +66,23 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
                 flexDirection = FlexDirection.column
             }
 
-            ui.small.header { +"Mini Notation" }
+            ui.small.header {
+                val atomTitle = props.atomTool?.title
+                if (atomTitle != null) {
+                    +atomTitle
+                    span {
+                        css {
+                            fontWeight = FontWeight.normal
+                            fontSize = 1.em
+                            color = Color(laf.textSecondary)
+                            marginLeft = 12.px
+                        }
+                        +"Mini Notation"
+                    }
+                } else {
+                    +"Mini Notation"
+                }
+            }
 
             mnPatternTextInput(laf, text, atom, parseError) { newText, cursor ->
                 text = newText

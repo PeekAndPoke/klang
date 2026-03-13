@@ -158,6 +158,25 @@ fun FlowContent.svgRect(
  * For more complex text (e.g. `<tspan>` children), use [svgG] with a raw
  * `custom("text") { }` block instead.
  */
+/** Renders a `<path>` element. */
+fun FlowContent.svgPath(
+    d: String,
+    fill: String = "none",
+    stroke: String? = null,
+    strokeWidth: String? = null,
+    opacity: String? = null,
+    key: String? = null,
+) {
+    custom("path") {
+        if (key != null) attributes["key"] = key
+        attributes["d"] = d
+        attributes["fill"] = fill
+        if (stroke != null) attributes["stroke"] = stroke
+        if (strokeWidth != null) attributes["stroke-width"] = strokeWidth
+        if (opacity != null) attributes["opacity"] = opacity
+    }
+}
+
 fun FlowContent.svgText(
     x: Number, y: Number,
     text: String,
@@ -165,6 +184,7 @@ fun FlowContent.svgText(
     fontSize: String = "12",
     textAnchor: String? = null,
     fontWeight: String? = null,
+    transform: String? = null,
     style: String? = null,
     key: String? = null,
 ) {
@@ -176,6 +196,7 @@ fun FlowContent.svgText(
         attributes["fill"] = fill
         if (textAnchor != null) attributes["text-anchor"] = textAnchor
         if (fontWeight != null) attributes["font-weight"] = fontWeight
+        if (transform != null) attributes["transform"] = transform
         if (style != null) attributes["style"] = style
         +text
     }

@@ -13,19 +13,17 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.ui.KlangUiToolContext
-import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.*
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.unsafe
 import kotlin.math.exp
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing a reverb room:wet string. */
+/** [KlangUiToolEmbeddable] for editing reverb parameters: room:size:fade:lowpass:dim. */
 object StrudelReverbEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Reverb Editor"
 
@@ -60,18 +58,19 @@ private class StrudelReverbEditorComp(ctx: Ctx<Props>) : Component<StrudelReverb
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private val parsed
-        get() = run {
-            val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
-            val parts = raw.split(":").map { it.toDoubleOrNull() }
-            Pair(
-                parts.getOrNull(0) ?: 0.8,   // room
-                parts.getOrNull(1) ?: 0.3,   // wet
-            )
-        }
+    private fun parseInput(): List<Double?> {
+        val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
+        if (raw.isBlank()) return emptyList()
+        return raw.split(":").map { it.trim().toDoubleOrNull() }
+    }
 
-    private var room by value(parsed.first)
-    private var wet by value(parsed.second)
+    private val parsedParts = parseInput()
+
+    private var room by value(parsedParts.getOrNull(0) ?: 0.5)
+    private var size by value(parsedParts.getOrNull(1) ?: 1.0)
+    private var fade by value(parsedParts.getOrNull(2))
+    private var lowpass by value(parsedParts.getOrNull(3))
+    private var dim by value(parsedParts.getOrNull(4))
 
     private var resetCounter by value(0)
 
@@ -80,7 +79,21 @@ private class StrudelReverbEditorComp(ctx: Ctx<Props>) : Component<StrudelReverb
     private fun Double.fmt(): String =
         toFixed(3).trimEnd('0').trimEnd('.')
 
-    private fun buildValue(): String = "\"${room.fmt()}:${wet.fmt()}\""
+    private fun buildValue(): String {
+        val parts = mutableListOf(room.fmt(), size.fmt())
+
+        // Only include trailing optional fields if they are set
+        val optionals = listOf(fade, lowpass, dim)
+        val lastSetIndex = optionals.indexOfLast { it != null }
+
+        if (lastSetIndex >= 0) {
+            for (i in 0..lastSetIndex) {
+                parts.add(optionals[i]?.fmt() ?: "")
+            }
+        }
+
+        return "\"${parts.joinToString(":")}\""
+    }
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
@@ -96,8 +109,12 @@ private class StrudelReverbEditorComp(ctx: Ctx<Props>) : Component<StrudelReverb
     }
 
     private fun onReset() {
-        room = parsed.first
-        wet = parsed.second
+        val p = parseInput()
+        room = p.getOrNull(0) ?: 0.5
+        size = p.getOrNull(1) ?: 1.0
+        fade = p.getOrNull(2)
+        lowpass = p.getOrNull(3)
+        dim = p.getOrNull(4)
         formCtrl.resetAllFields()
         props.toolCtx.onCommit(initialValue)
         resetCounter++
@@ -149,64 +166,137 @@ private class StrudelReverbEditorComp(ctx: Ctx<Props>) : Component<StrudelReverb
             key = "reverb-editor-content-$resetCounter"
 
             ui.form {
-                ui.two.stackable.fields {
+                ui.five.stackable.fields {
                     UiInputField(room, { room = it; liveUpdate() }) {
                         domKey("room")
                         step(0.01)
-                        label("Room")
+                        label("Room (wet/dry)")
                     }
-                    UiInputField(wet, { wet = it; liveUpdate() }) {
-                        domKey("wet")
-                        step(0.01)
-                        label("Wet")
+                    UiInputField(size, { size = it; liveUpdate() }) {
+                        domKey("size")
+                        step(0.1)
+                        label("Size (0–10)")
                     }
+                    nullableField("fade", "Fade (s)", 0.01, fade) { fade = it; liveUpdate() }
+                    nullableField("lowpass", "Lowpass (Hz)", 100.0, lowpass) { lowpass = it; liveUpdate() }
+                    nullableField("dim", "Dim (Hz)", 100.0, dim) { dim = it; liveUpdate() }
                 }
             }
             ui.divider {}
             div {
                 css { if (!props.embedded) marginBottom = 1.rem }
-                unsafe { raw(buildReverbSvg()) }
+                renderReverbCurve()
             }
         }
     }
 
-    // ── SVG ───────────────────────────────────────────────────────────────────
-
-    private fun buildReverbSvg(): String {
-        val w = 400.0
-        val h = 80.0
-        val padL = 10.0
-        val padR = 10.0
-        val padT = 8.0
-        val padB = 8.0
-        val drawW = w - padL - padR
-        val drawH = h - padT - padB
-
-        val numBars = 40
-        val barW = drawW / numBars - 1.0
-        val clampedRoom = room.coerceIn(0.0, 1.0)
-        val clampedWet = wet.coerceIn(0.0, 1.0)
-        val decay = (1.0 - clampedRoom) * 0.2
-
-        val bars = buildString {
-            for (i in 0 until numBars) {
-                val barH = (drawH * clampedWet * exp(-i * decay)).coerceIn(0.0, drawH)
-                val barX = padL + i * (drawW / numBars)
-                val barY = padT + (drawH - barH)
-
-                // Background bar
-                append("""<rect x="$barX" y="$padT" width="$barW" height="$drawH" fill="#e8e8e8" rx="1"/>""")
-                // Filled bar
-                if (barH > 0.5) {
-                    append("""<rect x="$barX" y="$barY" width="$barW" height="$barH" fill="${laf.gold}99" rx="1"/>""")
+    private fun FlowContent.nullableField(
+        key: String,
+        labelText: String,
+        stepVal: Double,
+        current: Double?,
+        onChange: (Double?) -> Unit,
+    ) {
+        UiInputField.nullable(current, { onChange(it) }) {
+            domKey(key)
+            step(stepVal)
+            label(labelText)
+            if (current == null) {
+                placeholder("default")
+            }
+            rightLabel {
+                ui.basic.icon.label {
+                    css { cursor = Cursor.pointer }
+                    onClick {
+                        if (current != null) onChange(null) else onChange(0.0)
+                    }
+                    if (current != null) icon.times() else icon.plus()
                 }
             }
         }
+    }
 
-        return """
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $w $h" width="100%" style="display:block">
-              $bars
-            </svg>
-        """.trimIndent()
+    // ── SVG curve ─────────────────────────────────────────────────────────────
+
+    private fun FlowContent.renderReverbCurve() {
+        val w = 400
+        val h = 90
+        val padL = 22.0
+        val padR = 6.0
+        val padT = 6.0
+        val padB = 24.0
+        val drawW = w - padL - padR
+        val drawH = h - padT - padB
+
+        val clampedRoom = room.coerceIn(0.0, 1.0)
+        val clampedSize = size.coerceIn(0.1, 10.0)
+        val effectiveFade = (fade ?: (clampedSize * 0.5)).coerceIn(0.01, 20.0)
+        val decay = 3.0 / effectiveFade
+
+        val numPoints = 100
+        val points = (0..numPoints).map { i ->
+            val t = i.toDouble() / numPoints
+            val x = padL + t * drawW
+            val y = padT + drawH - drawH * clampedRoom * exp(-t * numPoints / 10.0 * decay)
+            x to y
+        }
+
+        val pathData = points.mapIndexed { i, (x, y) ->
+            if (i == 0) "M $x $y" else "L $x $y"
+        }.joinToString(" ")
+
+        val fillPath = "$pathData L ${padL + drawW} ${padT + drawH} L $padL ${padT + drawH} Z"
+
+        svgRoot(viewBox = "0 0 $w $h") {
+            // Background
+            svgRect(padL, padT, drawW, drawH, fill = "rgba(0,0,0,0.2)", rx = "2")
+
+            // Y-axis grid lines and tick labels
+            for (v in listOf(0.0, 0.5, 1.0)) {
+                val y = padT + drawH - drawH * v
+                svgLine(padL, y, padL + drawW, y, stroke = "rgba(255,255,255,0.2)", strokeWidth = "0.5")
+                svgText(padL - 3, y + 2, v.fmt(), fill = "#ccc", fontSize = "5", textAnchor = "end")
+            }
+
+            // X-axis tick marks and labels
+            for (i in 0..10) {
+                val t = i / 10.0
+                val x = padL + t * drawW
+                val tickH = if (i % 5 == 0) 4.0 else 2.0
+                svgLine(
+                    x1 = x,
+                    y1 = padT + drawH,
+                    x2 = x,
+                    y2 = padT + drawH + tickH,
+                    stroke = if (i % 5 == 0) "#bbb" else "#ddd",
+                    strokeWidth = "0.5"
+                )
+                if (i % 5 == 0) {
+                    val label = when (i) {
+                        0 -> "0"
+                        5 -> "0.5"
+                        10 -> "1"
+                        else -> ""
+                    }
+                    svgText(x = x, y = padT + drawH + 10, text = label, fill = "#ccc", fontSize = "5", textAnchor = "middle")
+                }
+            }
+
+            // Fill under curve
+            svgPath(d = fillPath, fill = "${laf.gold}33")
+
+            // Curve line
+            svgPath(d = pathData, stroke = laf.gold, strokeWidth = "1")
+
+            // Y-axis label (rotated)
+            svgText(
+                x = 4, y = padT + drawH / 2,
+                text = "Level", fill = "#ccc", fontSize = "5", textAnchor = "middle",
+                transform = "rotate(-90, 4, ${padT + drawH / 2})",
+            )
+
+            // X-axis label
+            svgText(x = padL + drawW / 2, y = h - 2, text = "Time", fill = "#ccc", fontSize = "5", textAnchor = "middle")
+        }
     }
 }
