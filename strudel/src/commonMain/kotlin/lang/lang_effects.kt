@@ -452,22 +452,21 @@ internal val PatternMapperFn._room by dslPatternMapperExtension { m, args, callI
  * multiple patterns to separate reverb buses.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room mix.
  *
+ * ```KlangScript
+ * note("c3 e3 g3").clip(0.5).s("sine").room(0.5)   // 50% reverb
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").clip(0.5).room("<0 0.3 0.6 0.9>").roomsize(4)   // increasing wet mix
+ * ```
+ *
+ * ```KlangScript
+ * seq("0 0.5 1.0").room()   // reinterpret values as room mix
+ * ```
+ *
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
+ * @param-tool amount StrudelReverbSequenceEditor
  * @return A new pattern with reverb wet/dry mix applied.
- *
- * ```KlangScript
- * note("c3 e3 g3").clip(0.5).s("sine").room(0.5)              // 50% reverb
- * ```
- *
- * ```KlangScript
- * note("c3*4").clip(0.5).room("<0 0.3 0.6 0.9>").roomsize(4)  // increasing wet mix
- * ```
- *
- * ```KlangScript
- * seq("0 0.5 1.0").room()                           // reinterpret values as room mix
- * ```
- *
- * @param-tool amount StrudelGainSequenceEditor
  * @category effects
  * @tags room, reverb, wet, mix, space
  */
@@ -593,7 +592,7 @@ internal val PatternMapperFn._size by dslPatternMapperExtension { m, args, callI
  * seq("1 2 4 8").roomsize()                       // reinterpret values as room size
  * ```
  *
- * @param-tool amount StrudelGainSequenceEditor
+ * @param-tool amount StrudelRoomSizeSequenceEditor
  * @alias rsize, sz, size
  * @category effects
  * @tags roomsize, rsize, sz, size, reverb, room, tail
@@ -672,7 +671,7 @@ fun PatternMapperFn.roomsize(amount: PatternLike? = null): PatternMapperFn =
  * note("c3 e3").clip(0.5).room(0.5).rsize(4)   // long reverb tail
  * ```
  *
- * @param-tool amount StrudelGainSequenceEditor
+ * @param-tool amount StrudelRoomSizeSequenceEditor
  * @alias roomsize, sz, size
  * @category effects
  * @tags rsize, roomsize, sz, size, reverb, room, tail
@@ -739,7 +738,7 @@ fun PatternMapperFn.rsize(amount: PatternLike? = null): PatternMapperFn =
  * note("c3 e3").clip(0.5).room(0.5).sz(4)   // long reverb tail
  * ```
  *
- * @param-tool amount StrudelGainSequenceEditor
+ * @param-tool amount StrudelRoomSizeSequenceEditor
  * @alias roomsize, rsize, size
  * @category effects
  * @tags sz, roomsize, rsize, size, reverb, room, tail
@@ -1611,10 +1610,34 @@ fun PatternMapperFn.ir(name: PatternLike): PatternMapperFn = _ir(listOf(name).as
 
 // -- delay() ----------------------------------------------------------------------------------------------------------
 
-private val delayMutation = voiceModifier { copy(delay = it?.asDoubleOrNull()) }
+// Supports both single value (wet/dry mix) and combined "wet:time:feedback" format.
+private val delayMutation = voiceModifier {
+    val str = it?.toString() ?: return@voiceModifier this
+    if (":" in str) {
+        val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
+        copy(
+            delay = parts.getOrNull(0) ?: delay,
+            delayTime = parts.getOrNull(1) ?: delayTime,
+            delayFeedback = parts.getOrNull(2) ?: delayFeedback,
+        )
+    } else {
+        copy(delay = str.toDoubleOrNull() ?: delay)
+    }
+}
 
-fun applyDelay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftOrReinterpretNumericalField(args, delayMutation)
+private fun applyDelay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    val str = args.firstOrNull()?.value?.toString() ?: ""
+    return if (":" in str) {
+        source._applyControlFromParams(args, delayMutation) { src, ctrl ->
+            src.copy(
+                delay = ctrl.delay ?: src.delay,
+                delayTime = ctrl.delayTime ?: src.delayTime,
+                delayFeedback = ctrl.delayFeedback ?: src.delayFeedback,
+            )
+        }
+    } else {
+        source._liftOrReinterpretNumericalField(args, delayMutation)
+    }
 }
 
 internal val _delay by dslPatternMapper { args, callInfo -> { p -> p._delay(args, callInfo) } }
@@ -1627,30 +1650,36 @@ internal val PatternMapperFn._delay by dslPatternMapperExtension { m, args, call
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Sets the delay wet/dry mix for this pattern (0 = dry, 1 = full wet).
+ * Sets the delay effect for this pattern.
  *
- * Use with `delaytime` to set the delay interval and `delayfeedback` to control
- * the number of repeats.
+ * Accepts either a single value (wet/dry mix 0–1) or a colon-separated string
+ * `"wet:time:feedback"` to set all delay parameters at once.
+ * Trailing fields can be omitted.
+ *
+ * - **wet**: wet/dry mix (0–1)
+ * - **time**: delay interval in seconds
+ * - **feedback**: feedback amount (0–1), higher = more repeats
+ *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as delay mix.
  *
- * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as delay mix.
- * @return A new pattern with the delay mix applied.
+ * @param amount The delay parameters: a single value (wet/dry mix) or `"wet:time:feedback"`.
+ * @return A new pattern with the delay applied.
  *
  * ```KlangScript
  * note("c3 e3").delay(0.4)                         // 40% delay mix
  * ```
  *
  * ```KlangScript
- * note("c3*4").delay(0.5).delaytime(0.25).delayfeedback(0.6)  // dotted-eighth delay
+ * note("c3*4").delay("0.5:0.25:0.6")               // wet=0.5, time=0.25s, feedback=0.6
  * ```
  *
  * ```KlangScript
- * seq("0 0.25 0.5 1.0").delay()   // reinterpret values as delay mix
+ * note("c3*4").delay("<0.3:0.125 0.6:0.25:0.8>")   // alternating delay per cycle
  * ```
  *
- * @param-tool amount StrudelGainSequenceEditor
+ * @param-tool amount StrudelDelaySequenceEditor
  * @category effects
- * @tags delay, echo, wet, mix
+ * @tags delay, echo, wet, mix, delaytime, delayfeedback
  */
 @StrudelDsl
 fun StrudelPattern.delay(amount: PatternLike? = null): StrudelPattern =
@@ -1751,7 +1780,7 @@ internal val PatternMapperFn._delaytime by dslPatternMapperExtension { m, args, 
  * seq("0.125 0.25 0.5").delaytime()   // reinterpret values as delay time
  * ```
  *
- * @param-tool time StrudelGainSequenceEditor
+ * @param-tool time StrudelDelayTimeSequenceEditor
  * @category effects
  * @tags delaytime, delay, echo, time, interval
  */
@@ -1872,7 +1901,7 @@ internal val PatternMapperFn._dfb by dslPatternMapperExtension { m, args, callIn
  * seq("0.2 0.4 0.6 0.8").delayfeedback()   // reinterpret values as feedback
  * ```
  *
- * @param-tool amount StrudelGainSequenceEditor
+ * @param-tool amount StrudelDelayFeedbackSequenceEditor
  * @alias delayfb, dfb
  * @category effects
  * @tags delayfeedback, delayfb, dfb, delay, echo, feedback, repeats
@@ -1959,7 +1988,7 @@ fun PatternMapperFn.delayfeedback(amount: PatternLike? = null): PatternMapperFn 
  * seq("0.2 0.4 0.6 0.8").delayfb()   // reinterpret values as feedback
  * ```
  *
- * @param-tool amount StrudelGainSequenceEditor
+ * @param-tool amount StrudelDelayFeedbackSequenceEditor
  * @alias delayfeedback, dfb
  * @category effects
  * @tags delayfb, delayfeedback, dfb, delay, echo, feedback, repeats

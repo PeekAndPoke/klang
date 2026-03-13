@@ -27,7 +27,7 @@ import kotlin.math.exp
 object StrudelReverbEditorTool : KlangUiToolEmbeddable {
     override val title: String = "Reverb Editor"
 
-    override val iconFn: SemanticIconFn = { microphone }
+    override val iconFn: SemanticIconFn = { sync_alternate }
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         StrudelReverbEditorComp(ctx, embedded = false)

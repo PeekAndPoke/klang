@@ -137,6 +137,7 @@ fun FlowContent.svgRect(
     rx: String? = null,
     stroke: String? = null,
     strokeWidth: String? = null,
+    opacity: String? = null,
     key: String? = null,
 ) {
     custom("rect") {
@@ -149,6 +150,7 @@ fun FlowContent.svgRect(
         if (rx != null) attributes["rx"] = rx
         if (stroke != null) attributes["stroke"] = stroke
         if (strokeWidth != null) attributes["stroke-width"] = strokeWidth
+        if (opacity != null) attributes["opacity"] = opacity
     }
 }
 

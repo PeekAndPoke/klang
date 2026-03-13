@@ -140,9 +140,8 @@ stack(
     .gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(64)).bandq(sine.range(-0.05, 5.0).slow(12))
   ,
-).delay(0.15).delaytime(pure(1/8).div(cps)).delayfeedback(0.33)
-  .room(0.05).rsize(5.0) 
-
+).delay("0.15::0.33").delaytime(pure(1/8).div(cps))
+  .room("0.05:5.0") 
 
 
 

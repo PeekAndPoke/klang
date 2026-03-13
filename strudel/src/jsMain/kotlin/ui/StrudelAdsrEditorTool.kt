@@ -214,13 +214,16 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
         val pts = "$x0,$yBot $x1,$yTop $x2,$ySus $x3,$ySus $x4,$yBot"
         val fill = "M$x0 ${yBot}L$x1 ${yTop}L$x2 ${ySus}L$x3 ${ySus}L$x4 ${yBot}Z"
 
-        fun lx(x: Double) = """<line x1="$x" y1="$yBot" x2="$x" y2="$yTop" stroke="#e8e8e8" stroke-width="1" stroke-dasharray="3,3"/>"""
-        fun label(x: Double, txt: String) = """<text x="$x" y="${h - 5}" text-anchor="middle" font-size="10" fill="#aaa">$txt</text>"""
+        fun lx(x: Double) =
+            """<line x1="$x" y1="$yBot" x2="$x" y2="$yTop" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="3,3"/>"""
+
+        fun label(x: Double, txt: String) = """<text x="$x" y="${h - 5}" text-anchor="middle" font-size="10" fill="#ccc">$txt</text>"""
 
         return """
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $w $h" width="100%" style="display:block">
+              <rect x="$padL" y="$padT" width="$drawW" height="$drawH" fill="rgba(0,0,0,0.2)" rx="2"/>
               ${lx(x1)} ${lx(x2)} ${lx(x3)}
-              <line x1="$x0" y1="$ySus" x2="$x4" y2="$ySus" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="4,4"/>
+              <line x1="$x0" y1="$ySus" x2="$x4" y2="$ySus" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
               <path d="$fill" fill="${laf.gold}26" stroke="none"/>
               <polyline points="$pts" fill="none" stroke="${laf.gold}" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>
               ${label((x0 + x1) / 2, "A")}
