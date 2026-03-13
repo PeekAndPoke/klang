@@ -17,4 +17,29 @@ fun registerStrudelUiTools(registry: KlangUiToolRegistry = KlangUiToolRegistry) 
 
     registry.register("StrudelNoteEditor", StrudelNoteEditorTool)
     registry.register("StrudelScaleDegreeEditor", StrudelScaleDegreeEditorTool)
+
+    // New tools
+    registry.register("StrudelGainEditor", StrudelGainEditorTool)
+    registry.register("StrudelGainSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelGainEditorTool))
+
+    registry.register("StrudelPanEditor", StrudelPanEditorTool)
+    registry.register("StrudelPanSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelPanEditorTool))
+
+    registry.register("StrudelEuclidEditor", StrudelEuclidEditorTool)
+    registry.register("StrudelEuclidSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelEuclidEditorTool))
+
+    registry.register("StrudelFilterEditor", StrudelFilterEditorTool)
+    registry.register("StrudelFilterSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelFilterEditorTool))
+
+    registry.register("StrudelDelayEditor", StrudelDelayEditorTool)
+    registry.register("StrudelDelaySequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelDelayEditorTool))
+
+    registry.register("StrudelReverbEditor", StrudelReverbEditorTool)
+    registry.register("StrudelReverbSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelReverbEditorTool))
+
+    registry.register("StrudelWaveformEditor", StrudelWaveformEditorTool)
+    registry.register("StrudelWaveformSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelWaveformEditorTool))
+
+    registry.register("StrudelSampleEditor", StrudelSampleEditorTool)
+    registry.register("StrudelSampleSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelSampleEditorTool))
 }

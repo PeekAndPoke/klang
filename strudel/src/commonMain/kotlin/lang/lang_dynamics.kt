@@ -45,6 +45,7 @@ internal val PatternMapperFn._gain by dslPatternMapperExtension { m, args, callI
  * ```
  *
  * @param amount The control value to use for gain.
+ * @param-tool amount StrudelGainSequenceEditor
  *
  * @category dynamics
  * @tags gain, volume, amplitude, dynamics
@@ -130,6 +131,7 @@ internal val PatternMapperFn._pan by dslPatternMapperExtension { m, args, callIn
  * ```
  *
  * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
+ * @param-tool amount StrudelPanSequenceEditor
  *
  * @category dynamics
  * @tags pan, stereo, panning, position

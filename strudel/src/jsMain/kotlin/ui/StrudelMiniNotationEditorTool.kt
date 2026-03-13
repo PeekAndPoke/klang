@@ -138,7 +138,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
             updateNode(atom, atom.copy(value = newVal.trim().removeSurrounding("\"")))
         })
         div {
-            key = "atom-tool-$resetVersion"
+            key = "atom-tool-$resetVersion-$cursorOffset"
             with(atomTool) { renderEmbedded(subCtx) }
         }
     }

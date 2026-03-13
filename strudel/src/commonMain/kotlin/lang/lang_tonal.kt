@@ -348,6 +348,8 @@ internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(arg
  * sound("bd bd bd bd ").n("0 1 2 3")  // changes the sound variants
  * ```
  *
+ * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
+ * @param-tool name StrudelSampleSequenceEditor
  * @alias s
  * @category tonal
  * @tags sound, sample, instrument, s, pattern-creator
@@ -373,7 +375,12 @@ fun String.sound(name: PatternLike): StrudelPattern = this._sound(listOf(name).a
 @StrudelDsl
 fun String.sound(): StrudelPattern = this._sound(emptyList())
 
-/** Creates a pattern of sounds */
+/**
+ * Creates a pattern of sounds.
+ *
+ * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
+ * @param-tool name StrudelSampleSequenceEditor
+ */
 @StrudelDsl
 fun sound(name: PatternLike): StrudelPattern = _sound(listOf(name).asStrudelDslArgs())
 
@@ -391,6 +398,8 @@ fun sound(name: PatternLike): StrudelPattern = _sound(listOf(name).asStrudelDslA
  * sound("bd bd bd bd ").n("0 1 2 3")  // changes the sound variants
  * ```
  *
+ * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
+ * @param-tool name StrudelSampleSequenceEditor
  * @alias sound
  * @category tonal
  * @tags sound, sample, instrument, s, pattern-creator
@@ -410,7 +419,12 @@ fun String.s(name: PatternLike): StrudelPattern = this._s(listOf(name).asStrudel
 @StrudelDsl
 fun String.s(): StrudelPattern = this._s(emptyList())
 
-/** Alias for [sound]. Creates a sound pattern. */
+/**
+ * Alias for [sound]. Creates a sound pattern.
+ *
+ * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
+ * @param-tool name StrudelSampleSequenceEditor
+ */
 @StrudelDsl
 fun s(name: PatternLike): StrudelPattern = _s(listOf(name).asStrudelDslArgs())
 
