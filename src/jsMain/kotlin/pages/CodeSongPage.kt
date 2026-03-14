@@ -27,15 +27,13 @@ import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
 import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
-import io.peekandpoke.klang.codemirror.CodeMirrorComp
-import io.peekandpoke.klang.codemirror.dslEditorExtension
+import io.peekandpoke.klang.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationChain
-import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -105,7 +103,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private var playback: StrudelPlayback? by value(null)
     private val isPlaying get() = playback != null
 
-    private val codeEditorRef = ComponentRef.Tracker<CodeMirrorComp>()
+    private val codeEditorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
     private val blocksEditorRef = ComponentRef.Tracker<KlangBlocksEditorComp>()
 
     private val currentModals by subscribingTo(modals)
@@ -506,23 +504,19 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                     when (editorMode) {
                         EditorMode.CODE -> {
-                            CodeMirrorComp(
+                            KlangScriptEditorComp(
                                 code = code,
                                 onCodeChanged = { newCode ->
                                     code = newCode
                                     codeEditorRef { it.setErrors(emptyList()) }
                                 },
-                                extraExtensions = listOf(
-                                    dslEditorExtension(
-                                        docProvider = { KlangDocsRegistry.global.get(it) },
-                                        hoverPopup = hoverPopup,
-                                        popups = popups,
-                                        onNavigate = ::navToDoc,
-                                        onOpenTool = { toolName, ctx, argFrom, _ ->
-                                            openTool(toolName = toolName, ctx = ctx, argFrom = argFrom)
-                                        },
-                                    ),
-                                ),
+                                availableLibraries = listOf(stdlibLib, strudelLib),
+                                hoverPopup = hoverPopup,
+                                popups = popups,
+                                onNavigate = ::navToDoc,
+                                onOpenTool = { toolName, ctx, argFrom, _ ->
+                                    openTool(toolName = toolName, ctx = ctx, argFrom = argFrom)
+                                },
                             ).track(codeEditorRef)
                         }
 

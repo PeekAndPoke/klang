@@ -17,12 +17,12 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.codemirror.CodeMirrorComp
-import io.peekandpoke.klang.codemirror.dslEditorExtension
-import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.codemirror.KlangScriptEditorComp
+import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPlayback
+import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -52,7 +52,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private var playback: StrudelPlayback? by value(null)
     private val isPlaying get() = playback != null
 
-    private val editorRef = ComponentRef.Tracker<CodeMirrorComp>()
+    private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
 
     private var currentCode: String by value(props.code)
     private var playingCode: String? by value(null)
@@ -252,20 +252,16 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
             }
 
             // Code editor
-            CodeMirrorComp(
+            KlangScriptEditorComp(
                 code = currentCode,
                 onCodeChanged = { newCode ->
                     currentCode = newCode
                     editorRef { it.setErrors(emptyList()) }
                 },
-                extraExtensions = listOf(
-                    dslEditorExtension(
-                        docProvider = { KlangDocsRegistry.global.get(it) },
-                        hoverPopup = hoverPopup,
-                        popups = popups,
-                        onNavigate = ::navToDoc,
-                    ),
-                ),
+                availableLibraries = listOf(stdlibLib, strudelLib),
+                hoverPopup = hoverPopup,
+                popups = popups,
+                onNavigate = ::navToDoc,
             ).track(editorRef)
         }
     }

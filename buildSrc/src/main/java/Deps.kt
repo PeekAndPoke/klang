@@ -43,7 +43,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.101.2"
+        private const val ultra_version = "0.101.3"
 
         object Ultra {
             const val common = "io.peekandpoke.ultra:common:$ultra_version"
@@ -402,25 +402,21 @@ object Deps {
 
         // CodeMirror 6
         // https://www.npmjs.com/package/@codemirror/state
-        fun KotlinDependencyHandler.codemirrorState() = npm("@codemirror/state", "6.5.4")
-
+        fun KotlinDependencyHandler.codemirrorState() = npm("@codemirror/state", "6.6.0")
         // https://www.npmjs.com/package/@codemirror/view
-        fun KotlinDependencyHandler.codemirrorView() = npm("@codemirror/view", "6.39.11")
-
+        fun KotlinDependencyHandler.codemirrorView() = npm("@codemirror/view", "6.40.0")
         // https://www.npmjs.com/package/@codemirror/commands
-        fun KotlinDependencyHandler.codemirrorCommands() = npm("@codemirror/commands", "6.10.1")
-
+        fun KotlinDependencyHandler.codemirrorCommands() = npm("@codemirror/commands", "6.10.3")
         // https://www.npmjs.com/package/@codemirror/language
-        fun KotlinDependencyHandler.codemirrorLanguage() = npm("@codemirror/language", "6.12.1")
-
+        fun KotlinDependencyHandler.codemirrorLanguage() = npm("@codemirror/language", "6.12.2")
         // https://www.npmjs.com/package/@codemirror/lang-javascript
-        fun KotlinDependencyHandler.codemirrorLangJavascript() = npm("@codemirror/lang-javascript", "6.2.4")
-
+        fun KotlinDependencyHandler.codemirrorLangJavascript() = npm("@codemirror/lang-javascript", "6.2.5")
         // https://www.npmjs.com/package/codemirror
-        fun KotlinDependencyHandler.codemirrorBasicSetup() = npm("codemirror", "6.0.1")
-
+        fun KotlinDependencyHandler.codemirrorBasicSetup() = npm("codemirror", "6.0.2")
+        // https://www.npmjs.com/package/@codemirror/autocomplete
+        fun KotlinDependencyHandler.codemirrorAutocomplete() = npm("@codemirror/autocomplete", "6.20.1")
         // https://www.npmjs.com/package/@codemirror/lint
-        fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.4")
+        fun KotlinDependencyHandler.codemirrorLint() = npm("@codemirror/lint", "6.9.5")
         // https://www.npmjs.com/package/@lezer/highlight
         fun KotlinDependencyHandler.lezerHighlight() = npm("@lezer/highlight", "1.2.3")
     }

@@ -33,7 +33,7 @@ class LangPickListPatternSpec : StringSpec({
                             "$index: value=${event.data.value?.asString} | " +
                                     "onset=${event.isOnset} | " +
                                     "part=[${event.part.begin}, ${event.part.end}) | " +
-                                    "whole=${event.whole?.let { "[${it.begin}, ${it.end})" } ?: "null"}"
+                                    "whole=${event.whole.let { "[${it.begin}, ${it.end})" }}"
                         )
                     }
 
@@ -45,7 +45,7 @@ class LangPickListPatternSpec : StringSpec({
                         println(
                             "$index: value=${event.data.value?.asString} | " +
                                     "part=[${event.part.begin}, ${event.part.end}) | " +
-                                    "whole=[${event.whole!!.begin}, ${event.whole!!.end})"
+                                    "whole=[${event.whole.begin}, ${event.whole.end})"
                         )
                     }
 
@@ -69,16 +69,16 @@ class LangPickListPatternSpec : StringSpec({
                     events[0].data.value?.asString shouldBe "bd"
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[0].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
-                    events[0].whole!!.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                    events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[0].isOnset shouldBe true
 
                     // Event 1: "cp" from second pattern
                     events[1].data.value?.asString shouldBe "cp"
                     events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
-                    events[1].whole!!.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
-                    events[1].whole!!.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+                    events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                    events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                     events[1].isOnset shouldBe true
                 }
             }

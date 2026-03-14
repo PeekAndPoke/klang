@@ -4,35 +4,60 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.popups.PopupsManager
 import de.peekandpoke.kraft.utils.jsObject
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.OnChange
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.klang.script.KlangScriptLibrary
+import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.id
 import org.w3c.dom.HTMLDivElement
 
+/** Backward-compatible alias. */
+@Suppress("unused")
+typealias CodeMirrorComp = KlangScriptEditorComp
+
 @Suppress("FunctionName")
-fun Tag.CodeMirrorComp(
+fun Tag.KlangScriptEditorComp(
     code: String,
     onCodeChanged: OnChange<String>,
-    extraExtensions: List<Extension> = emptyList(),
-): ComponentRef<CodeMirrorComp> = comp(
-    CodeMirrorComp.Props(code = code, onCodeChanged = onCodeChanged, extraExtensions = extraExtensions)
+    availableLibraries: List<KlangScriptLibrary> = emptyList(),
+    hoverPopup: KlangDocsHoverPopupCtrl? = null,
+    popups: PopupsManager? = null,
+    onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
+    onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
+): ComponentRef<KlangScriptEditorComp> = comp(
+    KlangScriptEditorComp.Props(
+        code = code,
+        onCodeChanged = onCodeChanged,
+        availableLibraries = availableLibraries,
+        hoverPopup = hoverPopup,
+        popups = popups,
+        onNavigate = onNavigate,
+        onOpenTool = onOpenTool,
+    )
 ) {
-    CodeMirrorComp(it)
+    KlangScriptEditorComp(it)
 }
 
-class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
+class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.Props>(ctx) {
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     data class Props(
         val code: String,
         val onCodeChanged: OnChange<String>,
-        val extraExtensions: List<Extension> = emptyList(),
+        val availableLibraries: List<KlangScriptLibrary> = emptyList(),
+        val hoverPopup: KlangDocsHoverPopupCtrl? = null,
+        val popups: PopupsManager? = null,
+        val onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
+        val onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -42,6 +67,11 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
 
     private val theme = CodeMirrorTheme()
     val highlightBuffer = CodeMirrorHighlightBuffer()
+
+    /** Import-aware documentation context — owns hover docs + completion data. */
+    private val docContext = EditorDocContext(
+        availableLibraries = props.availableLibraries,
+    ).also { it.processCodeImmediate(props.code) }
 
     init {
         lifecycle {
@@ -62,9 +92,9 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         // Set up callback for editor changes
         val updateFn = { update: dynamic ->
             if (update.docChanged) {
-                if (update.docChanged) {
-                    props.onCodeChanged(update.state.doc.toString())
-                }
+                val newCode = update.state.doc.toString()
+                docContext.onCodeChanged(newCode)
+                props.onCodeChanged(newCode)
             }
         }
 
@@ -78,6 +108,9 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         }
         val linterExtension = linter(linterSource, linterConfig)
 
+        // Build DSL extensions (hover, completion) if libraries are available
+        val dslExtensions = buildDslExtensions()
+
         // Create extensions array - combine basicSetup with our custom extensions
         val allExtensions = basicSetup.asDynamic().concat(
             arrayOf(
@@ -86,7 +119,7 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
                 updateListenerExtension,
                 linterExtension,
                 lintGutter(),
-                *props.extraExtensions.toTypedArray(),
+                *dslExtensions.toTypedArray(),
             )
         ).unsafeCast<Array<Extension>>()
 
@@ -116,6 +149,39 @@ class CodeMirrorComp(ctx: Ctx<Props>) : Component<CodeMirrorComp.Props>(ctx) {
         } catch (e: Throwable) {
             console.error("Error initializing CodeMirror:", e)
         }
+    }
+
+    /** Builds DSL-aware extensions (hover docs, code completion) when libraries are configured. */
+    private fun buildDslExtensions(): List<Extension> {
+        if (props.availableLibraries.isEmpty()) return emptyList()
+
+        val extensions = mutableListOf<Extension>()
+
+        val hoverPopup = props.hoverPopup
+        val popups = props.popups
+
+        // Hover docs + context menu + tool badges
+        if (hoverPopup != null && popups != null) {
+            extensions.add(
+                dslEditorExtension(
+                    docProvider = { docContext.docProvider(it) },
+                    hoverPopup = hoverPopup,
+                    popups = popups,
+                    onNavigate = props.onNavigate ?: { _, _ -> },
+                    onOpenTool = props.onOpenTool,
+                )
+            )
+        }
+
+        // Code completion
+        extensions.add(
+            autocompletion(jsObject {
+                this.override = arrayOf(dslCompletionSource(docContext))
+                this.activateOnTyping = true
+            })
+        )
+
+        return extensions
     }
 
     fun destroy() {

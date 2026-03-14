@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.comp
 
 import de.peekandpoke.kraft.components.ComponentRef
-import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.EditorError
+import io.peekandpoke.klang.codemirror.KlangScriptEditorComp
 
 /**
  * Parses a Throwable into an EditorError, extracting line/column information from the exception message.
@@ -49,7 +49,7 @@ fun mapToEditorError(e: Throwable): EditorError {
  * Clears editor errors, runs [block], and on failure maps the exception to an EditorError.
  */
 suspend fun withEditorErrorHandling(
-    editorRef: ComponentRef.Tracker<CodeMirrorComp>,
+    editorRef: ComponentRef.Tracker<KlangScriptEditorComp>,
     block: suspend () -> Unit,
 ) {
     editorRef { it.setErrors(emptyList()) }

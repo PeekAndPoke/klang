@@ -29,81 +29,90 @@ class CodeMirrorTheme {
     // ── Editor chrome ─────────────────────────────────────────────────────────
 
     val editorTheme: Extension = EditorView.theme(
-        jsObject<dynamic> {
-            this["&"] = jsObject<dynamic> {
+        jsObject {
+            this["&"] = jsObject {
                 color = ivory
                 backgroundColor = background
             }
-            this[".cm-content"] = jsObject<dynamic> {
+            this[".cm-content"] = jsObject {
                 caretColor = cursor
             }
-            this[".cm-cursor, .cm-dropCursor"] = jsObject<dynamic> {
+            this[".cm-cursor, .cm-dropCursor"] = jsObject {
                 borderLeftColor = cursor
             }
-            this["&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection"] =
-                jsObject<dynamic> {
+            this["&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, " +
+                    ".cm-selectionBackground, .cm-content ::selection"] =
+                jsObject {
                     backgroundColor = selection
                     color = "#000000"
                 }
-            this[".cm-panels"] = jsObject<dynamic> {
+            this[".cm-panels"] = jsObject {
                 backgroundColor = darkBackground
                 color = ivory
             }
-            this[".cm-panels.cm-panels-top"] = jsObject<dynamic> {
+            this[".cm-panels.cm-panels-top"] = jsObject {
                 borderBottom = "2px solid black"
             }
-            this[".cm-panels.cm-panels-bottom"] = jsObject<dynamic> {
+            this[".cm-panels.cm-panels-bottom"] = jsObject {
                 borderTop = "2px solid black"
             }
-            this[".cm-searchMatch"] = jsObject<dynamic> {
+            this[".cm-searchMatch"] = jsObject {
                 backgroundColor = "#72a1ff59"
                 outline = "1px solid #457dff"
             }
-            this[".cm-searchMatch.cm-searchMatch-selected"] = jsObject<dynamic> {
+            this[".cm-searchMatch.cm-searchMatch-selected"] = jsObject {
                 backgroundColor = "#6199ff2f"
             }
-            this[".cm-activeLine"] = jsObject<dynamic> {
+            this[".cm-activeLine"] = jsObject {
                 backgroundColor = "#6699ff0b"
             }
-            this[".cm-selectionMatch"] = jsObject<dynamic> {
+            this[".cm-selectionMatch"] = jsObject {
                 backgroundColor = "#aafe661a"
             }
-            this["&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket"] = jsObject<dynamic> {
+            this["&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket"] = jsObject {
                 backgroundColor = "#bad0f847"
             }
-            this[".cm-gutters"] = jsObject<dynamic> {
+            this[".cm-gutters"] = jsObject {
                 backgroundColor = background
                 color = KlangTheme.Hex.textTertiary
                 border = "none"
             }
-            this[".cm-activeLineGutter"] = jsObject<dynamic> {
+            this[".cm-activeLineGutter"] = jsObject {
                 backgroundColor = highlightBackground
             }
-            this[".cm-foldPlaceholder"] = jsObject<dynamic> {
+            this[".cm-foldPlaceholder"] = jsObject {
                 backgroundColor = "transparent"
                 border = "none"
                 color = "#ddd"
             }
-            this[".cm-tooltip"] = jsObject<dynamic> {
-                border = "none"
+            this[".cm-tooltip"] = jsObject {
+                border = "1px solid ${KlangTheme.Hex.textTertiary}"
+                borderRadius = "4px"
                 backgroundColor = tooltipBackground
             }
-            this[".cm-tooltip .cm-tooltip-arrow:before"] = jsObject<dynamic> {
+            this[".cm-tooltip .cm-tooltip-arrow:before"] = jsObject {
                 borderTopColor = "transparent"
                 borderBottomColor = "transparent"
             }
-            this[".cm-tooltip .cm-tooltip-arrow:after"] = jsObject<dynamic> {
+            this[".cm-tooltip .cm-tooltip-arrow:after"] = jsObject {
                 borderTopColor = tooltipBackground
                 borderBottomColor = tooltipBackground
             }
-            this[".cm-tooltip-autocomplete"] = jsObject<dynamic> {
-                this["& > ul > li[aria-selected]"] = jsObject<dynamic> {
+            this[".cm-tooltip-autocomplete"] = jsObject {
+                this["& > ul > li"] = jsObject {
+                    color = stone
+                }
+                this["& > ul > li[aria-selected]"] = jsObject {
                     backgroundColor = highlightBackground
                     color = ivory
                 }
             }
+            this[".cm-completionInfo"] = jsObject {
+                color = stone
+                padding = "8px 12px"
+            }
         },
-        jsObject<dynamic> {
+        jsObject {
             dark = true
         },
     )

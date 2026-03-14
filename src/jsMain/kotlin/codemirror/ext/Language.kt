@@ -146,43 +146,6 @@ external interface BlockCommentTokens {
 }
 
 /**
- * Completion context
- */
-external interface CompletionContext {
-    val state: EditorState
-    val pos: Int
-    val explicit: Boolean
-    val aborted: Boolean
-
-    fun matchBefore(regexp: dynamic): dynamic
-    val abortListeners: Array<() -> Unit>
-}
-
-/**
- * Completion result
- */
-external interface CompletionResult {
-    var from: Int
-    var to: Int?
-    var options: Array<Completion>
-    var span: dynamic
-    var filter: Boolean?
-    var validFor: dynamic
-}
-
-/**
- * Single completion
- */
-external interface Completion {
-    var label: String
-    var detail: String?
-    var info: Any? // string or function
-    var apply: Any? // string or function
-    var type: String?
-    var boost: Int?
-}
-
-/**
  * Syntax highlighting
  */
 external class HighlightStyle {

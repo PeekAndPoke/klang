@@ -89,11 +89,6 @@ external val lineUncomment: Command
 external val blockComment: Command
 external val blockUncomment: Command
 
-// Completion commands
-external val acceptCompletion: Command
-external val startCompletion: Command
-external val closeCompletion: Command
-
 // Search commands
 external val openSearchPanel: Command
 external val closeSearchPanel: Command
@@ -129,19 +124,6 @@ external val indentWithTabKeymap: Array<KeyBinding>
 external val history: (config: dynamic) -> Extension
 external val historyField: dynamic
 
-// Completion
-external interface CompletionConfig {
-    var activateOnTyping: Boolean?
-    var override: Array<dynamic>?
-    var maxRenderedOptions: Int?
-    var defaultKeymap: Boolean?
-    var aboveCursor: Boolean?
-    var icons: Boolean?
-    var addToOptions: Array<dynamic>?
-    var compareCompletions: ((a: dynamic, b: dynamic) -> Int)?
-    var selectOnOpen: Boolean?
-}
-
 // Comment config
 external interface CommentConfig {
     var lineComment: String?
@@ -150,7 +132,6 @@ external interface CommentConfig {
 }
 
 external val commentKeymap: Array<KeyBinding>
-external val completionKeymap: Array<KeyBinding>
 external val searchKeymap: Array<KeyBinding>
 external val foldKeymap: Array<KeyBinding>
 
