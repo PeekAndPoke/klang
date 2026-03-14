@@ -72,7 +72,7 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
             SampleEntry("dust"),
             SampleEntry("crackle"),
         ),
-        "Drums" to listOf("bd", "sd", "hh", "oh", "cp", "mt", "ht", "lt", "cr", "cb").map { SampleEntry(it) },
+        "Drums" to listOf("bd", "sd", "hh", "oh", "cr", "rd", "cp", "mt", "ht", "lt", "cb").map { SampleEntry(it) },
         "GM" to listOf("gm_recorder", "gm_xylophone", "gm_piano", "gm_violin", "gm_trumpet").map { SampleEntry(it) },
     )
 

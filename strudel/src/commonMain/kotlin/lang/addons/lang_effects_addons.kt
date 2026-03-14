@@ -441,6 +441,124 @@ fun bpadsr(params: PatternLike? = null): PatternMapperFn = _bpadsr(listOfNotNull
 fun PatternMapperFn.bpadsr(params: PatternLike? = null): PatternMapperFn =
     _bpadsr(listOfNotNull(params).asStrudelDslArgs())
 
+// -- tremolo() --------------------------------------------------------------------------------------------------------
+
+private val tremoloMutation = voiceModifier {
+    val parts = it?.toString()?.split(":") ?: emptyList()
+
+    copy(
+        tremoloDepth = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: tremoloDepth,
+        tremoloSync = parts.getOrNull(1)?.trim()?.toDoubleOrNull() ?: tremoloSync,
+        tremoloShape = parts.getOrNull(2)?.trim()?.takeIf { s -> s.isNotEmpty() } ?: tremoloShape,
+        tremoloSkew = parts.getOrNull(3)?.trim()?.toDoubleOrNull() ?: tremoloSkew,
+        tremoloPhase = parts.getOrNull(4)?.trim()?.toDoubleOrNull() ?: tremoloPhase,
+    )
+}
+
+private fun applyTremolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source._applyControlFromParams(args, tremoloMutation) { src, ctrl ->
+        src.copy(
+            tremoloDepth = ctrl.tremoloDepth ?: src.tremoloDepth,
+            tremoloSync = ctrl.tremoloSync ?: src.tremoloSync,
+            tremoloShape = ctrl.tremoloShape ?: src.tremoloShape,
+            tremoloSkew = ctrl.tremoloSkew ?: src.tremoloSkew,
+            tremoloPhase = ctrl.tremoloPhase ?: src.tremoloPhase,
+        )
+    }
+}
+
+internal val _tremolo by dslPatternMapper { args, callInfo -> { p -> p._tremolo(args, callInfo) } }
+internal val StrudelPattern._tremolo by dslPatternExtension { p, args, /* callInfo */ _ -> applyTremolo(p, args) }
+internal val String._tremolo by dslStringExtension { p, args, callInfo -> p._tremolo(args, callInfo) }
+internal val PatternMapperFn._tremolo by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_tremolo(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets all tremolo parameters at once via a colon-separated string
+ * `"depth:rate:shape:skew:phase"`.
+ *
+ * Each field is optional — trailing fields can be omitted.
+ * - **depth**: modulation intensity (0–1)
+ * - **rate**: LFO speed in cycles per pattern cycle
+ * - **shape**: LFO waveform (`sine`, `triangle`, `square`, `saw`)
+ * - **skew**: waveform skew (0–1)
+ * - **phase**: LFO start phase offset in cycles
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").tremolo("0.5:4")   // depth=0.5, rate=4
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").tremolo("0.8:8:square")   // choppy tremolo
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").tremolo("<0.3:2 0.8:8>")   // alternating tremolo per cycle
+ * ```
+ *
+ * @param params The tremolo parameters as a colon-separated string `"depth:rate:shape:skew:phase"`.
+ * @param-tool params StrudelTremoloSequenceEditor
+ * @return A new pattern with all specified tremolo parameters applied.
+ * @category effects
+ * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
+ */
+@StrudelDsl
+fun StrudelPattern.tremolo(params: PatternLike? = null): StrudelPattern =
+    this._tremolo(listOfNotNull(params).asStrudelDslArgs())
+
+/**
+ * Parses this string as a pattern and sets all tremolo parameters.
+ *
+ * ```KlangScript
+ * "c3*4".tremolo("0.5:4:sine").note()   // tremolo on string pattern
+ * ```
+ *
+ * @param params The tremolo parameters as a colon-separated string `"depth:rate:shape:skew:phase"`.
+ * @return A new pattern with all specified tremolo parameters applied.
+ * @category effects
+ * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
+ */
+@StrudelDsl
+fun String.tremolo(params: PatternLike? = null): StrudelPattern =
+    this._tremolo(listOfNotNull(params).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets all tremolo parameters.
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").apply(tremolo("0.5:4"))   // tremolo via mapper
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").every(4, tremolo("0.8:8:square"))   // choppy tremolo every 4th cycle
+ * ```
+ *
+ * @param params The tremolo parameters as a colon-separated string `"depth:rate:shape:skew:phase"`.
+ * @return A [PatternMapperFn] that sets tremolo parameters.
+ * @category effects
+ * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
+ */
+@StrudelDsl
+fun tremolo(params: PatternLike? = null): PatternMapperFn = _tremolo(listOfNotNull(params).asStrudelDslArgs())
+
+/**
+ * Creates a chained [PatternMapperFn] that sets all tremolo parameters after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c3 e3").apply(gain(0.8).tremolo("0.5:4"))   // gain then tremolo
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").every(4, delay(0.5).tremolo("0.8:8"))   // delay + tremolo every 4th cycle
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.tremolo(params: PatternLike? = null): PatternMapperFn =
+    _tremolo(listOfNotNull(params).asStrudelDslArgs())
+
 // -- nfadsr() ---------------------------------------------------------------------------------------------------------
 
 private val nfadsrMutation = voiceModifier {

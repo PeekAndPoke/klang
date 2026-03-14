@@ -173,14 +173,48 @@ stack(
    // .mute()
 
   // Drums 1 
-  , s("<hh!8!8 [oh hh!5 cr hh]!2!8>").adsr("0.00:0.1:0.5:0.1").hpf(200).postgain(1.25) // .solo()
+  , s("<rd!8!8 [oh hh!5 cr hh]!2!8>").adsr("0.00:0.1:0.5:0.1").hpf(200).postgain(1.15) // .solo()
   // Drums 2
   , s(`<[[bd sd]!2]!4 [bd [bd,sd] bd [bd,sd]]!3 [bd bd [bd,sd] bd  [sd!2]!4]!1
         [[bd sd]!16]!8>`).n("<7!8 0!8>").adsr("0.00:0.3:0.5:0.1").gain(1.0).hpf(30)  // . solo()
 )
-  .room(0.025).rsize(5)
+  .room(0.025).rsize(5).compressor("-15:2:6:0.01:0.2")
         """.trimIndent(),
             icon = "guitar",
         )
     )
+
+    val drunkenSailor = add(
+        Song(
+            id = "$PREFIX-0008",
+            title = "Drunken Synthlor",
+            cps = 0.65,
+            code = """
+import * from "stdlib"
+import * from "strudel"
+
+stack(
+  // Melody
+  n(`<[8@2 8 8 8@2 8 8] [8 4  6  8]  [7@2 7 7 7@2 7 7] [7 3  5  7]
+      [8@2 8 8 8@2 8 8] [8 9 10 11]  [10 8 7 5]        [4@2 4@2  ]
+  >`).sound("tri").clip(0.8).scale("c3:dorian").gain(0.8).lpf("100:1:100").lpadsr("0.01:0.1:0.2:0.1")
+ .tremolosync(8).tremolodepth(0.33).tremoloshape("sine")
+  //. solo("<0.99>".slow(4)) 
+  
+  // Bass
+  , n(`<[8 15 13 15]!2  [7 14 10 14]!2
+        [8 15 13 15]!2  [7 14 10 14] [6 7 8 9]
+>`).scale("C1:minor").sound("tri").adsr("0.01:0.2:0.5:0.1").clip(0.5).distort(0.1).warmth(0.2).postgain(0.5) 
+  // Drums 1 
+  , s("hh!8").adsr("0.01:0.1:0.1:1.0").gain(0.8) // .solo()
+  // Drums 2
+  , s("<[[bd sd]!2]!8>").adsr("0.02:0.1:0.7:1.0").gain(0.75) // . solo()
+)
+  .room(0.02).rsize(3)                
+                
+            """,
+            icon = "glass cheers",
+        )
+    )
+
 }

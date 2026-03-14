@@ -10,24 +10,24 @@ multi-field editors with SVG visualizations. The compressor editor includes pres
 
 ## Review Status
 
-| # | Editor Tool                     | Implemented | Reviewed |
-|---|---------------------------------|-------------|----------|
-| 1 | `StrudelGainEditorTool`         | yes         | yes      |
-| 2 | `StrudelPanEditorTool`          | yes         | yes      |
-| 3 | `StrudelCompressorEditorTool`   | yes         | yes      |
-| 4 | `StrudelAdsrEditorTool`         | yes         | yes      |
-| 5 | `StrudelDelayEditorTool`        | yes         | yes      |
-| 6 | `StrudelReverbEditorTool`       | yes         | yes      |
-| 7 | `StrudelFilterEditorTool`       | yes         | yes      |
-| 8 | `StrudelFilterAdsrEditorTool`   | yes         | yes      |
-| 9 | `StrudelNumericEditorTool`      | yes         | yes      |
-| 10 | `StrudelNoteEditorTool`        | yes         | yes      |
-| 11 | `StrudelScaleEditorTool`       | yes         | yes      |
-| 12 | `StrudelScaleDegreeEditorTool` | yes         | yes      |
-| 13 | `StrudelWaveformEditorTool`    | yes         | yes      |
-| 14 | `StrudelSampleEditorTool`      | yes         | **no**   |
-| 15 | `StrudelEuclidEditorTool`      | yes         | **no**   |
-| 16 | `StrudelMiniNotationEditorTool`| yes         | yes      |
+| #  | Editor Tool                     | Implemented | Reviewed         |
+|----|---------------------------------|-------------|------------------|
+| 1  | `StrudelGainEditorTool`         | yes         | yes              |
+| 2  | `StrudelPanEditorTool`          | yes         | yes              |
+| 3  | `StrudelCompressorEditorTool`   | yes         | yes              |
+| 4  | `StrudelAdsrEditorTool`         | yes         | yes              |
+| 5  | `StrudelDelayEditorTool`        | yes         | yes              |
+| 6  | `StrudelReverbEditorTool`       | yes         | yes              |
+| 7  | `StrudelFilterEditorTool`       | yes         | yes              |
+| 8  | `StrudelFilterAdsrEditorTool`   | yes         | yes              |
+| 9  | `StrudelNumericEditorTool`      | yes         | yes              |
+| 10 | `StrudelNoteEditorTool`         | yes         | yes              |
+| 11 | `StrudelScaleEditorTool`        | yes         | yes              |
+| 12 | `StrudelScaleDegreeEditorTool`  | yes         | yes              |
+| 13 | `StrudelWaveformEditorTool`     | yes         | yes              |
+| 14 | `StrudelSampleEditorTool`       | yes         | needs refinement |
+| 15 | `StrudelEuclidEditorTool`       | yes         | **no**           |
+| 16 | `StrudelMiniNotationEditorTool` | yes         | yes              |
 
 ## Proposed New Tools
 

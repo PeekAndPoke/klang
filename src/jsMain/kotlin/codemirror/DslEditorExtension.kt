@@ -93,6 +93,22 @@ fun dslEditorExtension(
         val word = view.state.wordAt(pos) ?: return null
         val name = view.state.doc.sliceString(word.from, word.to)
         val doc = docProvider(name) ?: return null
+
+        // Skip words inside string literals: count unescaped quotes from line start
+        // to word start. An odd count means we are inside a string.
+        val line = view.state.doc.lineAt(word.from)
+        val prefix = view.state.doc.sliceString(line.from, word.from)
+        var quoteCount = 0
+        var i = 0
+        while (i < prefix.length) {
+            if (prefix[i] == '\\') {
+                i += 2; continue
+            }
+            if (prefix[i] == '"') quoteCount++
+            i++
+        }
+        if (quoteCount % 2 != 0) return null
+
         return word to doc
     }
 

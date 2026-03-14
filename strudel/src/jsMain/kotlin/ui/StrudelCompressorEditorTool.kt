@@ -211,6 +211,8 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
                 }
             }
 
+            ui.divider()
+
             ui.form {
                 key = "compressor-editor-form"
                 ui.five.stackable.fields {
