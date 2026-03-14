@@ -25,6 +25,7 @@ extracts DSL documentation from KDoc blocks on `@StrudelDsl`-annotated items.
 | Adding or documenting DSL functions in `lang_*.kt`                | `strudel/ref/dsl-conventions.md`  |
 | Adding addon functions in `lang/addons/`                          | `strudel/ref/dsl-addons.md`       |
 | Running or writing tests                                          | `strudel/ref/testing.md`          |
+| Building or modifying UI editor tools                             | `strudel/ref/uitools.md`          |
 
 ## Testing
 

@@ -26,6 +26,7 @@ Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measu
 | Adding/documenting DSL functions, KDoc format, KSP                   | `ref/dsl-conventions.md`  |
 | Addon functions in `lang/addons/` (non-strudel extensions)           | `ref/dsl-addons.md`       |
 | Running tests, 12-cycle rule, isOnset, JS compat                     | `ref/testing.md`          |
+| Building or modifying UI editor tools, registry, @param-tool         | `ref/uitools.md`          |
 
 ## Build & Test
 

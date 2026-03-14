@@ -3791,6 +3791,7 @@ internal val PatternMapperFn._tremshape by dslPatternMapperExtension { m, args, 
  * Different shapes produce different tremolo characters — sine is smooth, square is choppy.
  *
  * @param shape The LFO waveform shape name.
+ * @param-tool shape StrudelWaveformSequenceEditor
  * @return A new pattern with the tremolo shape applied.
  *
  * ```KlangScript
@@ -3865,6 +3866,7 @@ fun PatternMapperFn.tremoloshape(shape: PatternLike): PatternMapperFn = _tremolo
  * Alias for [tremoloshape]. Sets the tremolo LFO waveform shape for this pattern.
  *
  * @param shape The LFO waveform shape name.
+ * @param-tool shape StrudelWaveformSequenceEditor
  * @return A new pattern with the tremolo shape applied.
  *
  * ```KlangScript

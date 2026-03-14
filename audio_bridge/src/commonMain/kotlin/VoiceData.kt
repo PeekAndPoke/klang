@@ -134,7 +134,7 @@ data class VoiceData(
     val compressor: String?,
 
     // Solo
-    /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. Frontend defaults to 0.95. */
+    /** Solo amount: 1.0 = full solo (mute others), 0.0 = no solo. */
     val solo: Double?,
 
     /** Unique source ID for tracking which audio source this voice came from (e.g., pattern, track, instrument) */

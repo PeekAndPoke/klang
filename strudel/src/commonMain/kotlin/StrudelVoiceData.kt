@@ -227,8 +227,8 @@ data class StrudelVoiceData(
     val compressor: String?,
 
     // Playback control
-    /** Solo flag - when true, mutes all non-soloed patterns */
-    val solo: Boolean?,
+    /** Solo value - 0.0 = disabled, 0.0..1.0 = enabled (amount), null = not set */
+    val solo: Double?,
 
     /** Unique pattern ID for tracking solo state across pattern changes */
     val patternId: String? = null,
@@ -650,7 +650,7 @@ data class StrudelVoiceData(
             loopBegin = loopBegin,
             loopEnd = loopEnd,
             compressor = compressor,
-            solo = if (solo == true) 0.975 else 0.0,
+            solo = solo,
             sourceId = patternId,
         )
     }

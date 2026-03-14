@@ -10,14 +10,12 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.ui.KlangUiToolContext
-import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.*
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.unsafe
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -25,9 +23,9 @@ import kotlin.math.sin
 
 /** [KlangUiToolEmbeddable] for selecting a waveform. */
 object StrudelWaveformEditorTool : KlangUiToolEmbeddable {
-    override val title: String = "Waveform Editor"
+    override val title: String = "Waveform"
 
-    override val iconFn: SemanticIconFn = { music }
+    override val iconFn: SemanticIconFn = { wave_square }
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
         StrudelWaveformEditorComp(ctx, embedded = false)
@@ -154,14 +152,14 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
             ui.divider {}
             div {
                 css { if (!props.embedded) marginBottom = 1.rem }
-                unsafe { raw(buildWaveformSvg()) }
+                renderWaveformSvg()
             }
         }
     }
 
     // ── SVG ───────────────────────────────────────────────────────────────────
 
-    private fun buildWaveformSvg(): String {
+    private fun FlowContent.renderWaveformSvg() {
         val w = 400.0
         val h = 80.0
         val padL = 10.0
@@ -182,11 +180,7 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
                     "triangle" -> if (t < 0.5) (4.0 * t - 1.0) else (3.0 - 4.0 * t)
                     "sawtooth" -> 2.0 * t - 1.0
                     "square" -> if (t < 0.5) 1.0 else -1.0
-                    "noise" -> {
-                        // Deterministic pseudo-random
-                        sin(i.toDouble() * 127.1) * sin(i.toDouble() * 311.7)
-                    }
-
+                    "noise" -> sin(i.toDouble() * 127.1) * sin(i.toDouble() * 311.7)
                     else -> 0.0
                 }
                 val x = padL + i.toDouble()
@@ -196,11 +190,16 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
             }
         }
 
-        return """
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $w $h" width="100%" style="display:block">
-              <line x1="$padL" y1="$midY" x2="${padL + drawW}" y2="$midY" stroke="#e8e8e8" stroke-width="1"/>
-              <polyline points="$points" fill="none" stroke="${laf.gold}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-            </svg>
-        """.trimIndent()
+        svgRoot(viewBox = "0 0 $w $h") {
+            svgRect(padL, padT, drawW, drawH, fill = "rgba(0,0,0,0.2)", rx = "2")
+            svgLine(padL, midY, padL + drawW, midY, stroke = "rgba(255,255,255,0.15)", strokeWidth = "0.5")
+            svgPolyline(
+                points = points,
+                stroke = laf.gold,
+                strokeWidth = "1",
+                strokeLinejoin = "round",
+                strokeLinecap = "round",
+            )
+        }
     }
 }

@@ -8,6 +8,68 @@ Every DSL function that accepts parameters now has a dedicated editor tool with 
 Combined-format functions (`freq:resonance:env`, `threshold:ratio:knee:attack:release`, etc.) have
 multi-field editors with SVG visualizations. The compressor editor includes preset buttons.
 
+## Review Status
+
+| # | Editor Tool                     | Implemented | Reviewed |
+|---|---------------------------------|-------------|----------|
+| 1 | `StrudelGainEditorTool`         | yes         | yes      |
+| 2 | `StrudelPanEditorTool`          | yes         | yes      |
+| 3 | `StrudelCompressorEditorTool`   | yes         | yes      |
+| 4 | `StrudelAdsrEditorTool`         | yes         | yes      |
+| 5 | `StrudelDelayEditorTool`        | yes         | yes      |
+| 6 | `StrudelReverbEditorTool`       | yes         | yes      |
+| 7 | `StrudelFilterEditorTool`       | yes         | yes      |
+| 8 | `StrudelFilterAdsrEditorTool`   | yes         | yes      |
+| 9 | `StrudelNumericEditorTool`      | yes         | yes      |
+| 10 | `StrudelNoteEditorTool`        | yes         | yes      |
+| 11 | `StrudelScaleEditorTool`       | yes         | yes      |
+| 12 | `StrudelScaleDegreeEditorTool` | yes         | yes      |
+| 13 | `StrudelWaveformEditorTool`    | yes         | yes      |
+| 14 | `StrudelSampleEditorTool`      | yes         | **no**   |
+| 15 | `StrudelEuclidEditorTool`      | yes         | **no**   |
+| 16 | `StrudelMiniNotationEditorTool`| yes         | yes      |
+
+## Proposed New Tools
+
+### Tier 1 — High Impact (commonly used DSL functions)
+
+| # | DSL Function                     | Proposed Editor               | Format / UI Idea                        |
+|---|----------------------------------|-------------------------------|-----------------------------------------|
+| 17 | `speed()`                       | `StrudelSpeedEditorTool`      | numeric slider (0.25–4.0), negative = reverse |
+| 18 | `begin()` / `end()`             | `StrudelSampleRangeEditorTool`| dual slider or range bar (0–1)          |
+| 19 | `crush()`                       | `StrudelCrushEditorTool`      | numeric slider (1–16 bits)              |
+| 20 | `coarse()`                      | `StrudelCoarseEditorTool`     | numeric slider (1–64)                   |
+| 21 | `velocity()` / `vel()`          | `StrudelVelocityEditorTool`   | numeric slider (0–1)                    |
+| 22 | `orbit()` / `o()`               | `StrudelOrbitEditorTool`      | channel picker (0–11)                   |
+| 23 | `cut()`                         | `StrudelCutEditorTool`        | integer picker (cut group index)        |
+| 24 | `legato()`                      | `StrudelLegatoEditorTool`     | numeric slider (0–2), note duration vis |
+
+### Tier 2 — Medium Impact (synthesis, pitch, rhythm)
+
+| # | DSL Function                     | Proposed Editor               | Format / UI Idea                        |
+|---|----------------------------------|-------------------------------|-----------------------------------------|
+| 25 | `fmh()`                         | `StrudelFmHarmonicityEditorTool` | numeric slider with harmonic ratio presets |
+| 26 | `fmenv()`                       | `StrudelFmEnvEditorTool`      | numeric slider (0–5000 Hz depth)        |
+| 27 | `fmattack()` / `fmdecay()` / `fmsustain()` | reuse `StrudelNumericEditorTool` | individual ADSR component sliders |
+| 28 | `unison()` / `uni()`            | `StrudelUnisonEditorTool`     | integer picker (1–8 voices)             |
+| 29 | `detune()`                      | `StrudelDetuneEditorTool`     | numeric slider (0–50 cents)             |
+| 30 | `transpose()`                   | `StrudelTransposeEditorTool`  | semitone slider (-24 to +24)            |
+| 31 | `swing()`                       | `StrudelSwingEditorTool`      | numeric slider (0–1) with timing diagram |
+| 32 | `distort()` / `dist()`          | `StrudelDistortEditorTool`    | numeric slider (0–1)                    |
+| 33 | `shape()`                       | `StrudelShapeEditorTool`      | numeric slider (0–1) waveshaper         |
+
+### Tier 3 — Lower Priority (advanced / less frequent)
+
+| # | DSL Function                     | Proposed Editor               | Format / UI Idea                        |
+|---|----------------------------------|-------------------------------|-----------------------------------------|
+| 34 | `degrade()` / `degradeBy()`    | `StrudelDegradeEditorTool`    | probability slider (0–100%)             |
+| 35 | `vowel()`                       | `StrudelVowelEditorTool`      | vowel picker (a, e, i, o, u)            |
+| 36 | `loop()` / `loopBegin()` / `loopEnd()` | `StrudelLoopEditorTool` | toggle + range bar                      |
+| 37 | `phaser*()` family              | `StrudelPhaserEditorTool`     | combined center/depth/sweep editor      |
+| 38 | `tremolo*()` family             | `StrudelTremoloEditorTool`    | combined depth/rate/shape editor        |
+| 39 | `spread()`                      | `StrudelSpreadEditorTool`     | numeric slider (0–1) stereo width       |
+| 40 | `freq()`                        | `StrudelFreqEditorTool`       | frequency slider (20–20000 Hz, log)     |
+
 ## Tool Registry
 
 All tools are registered in `strudel/src/jsMain/kotlin/ui/StrudelUiTools.kt`.
@@ -42,7 +104,7 @@ All tools are registered in `strudel/src/jsMain/kotlin/ui/StrudelUiTools.kt`.
 | DSL Function                            | Editor                     | Sequence Editor                    | Format               |
 |-----------------------------------------|----------------------------|------------------------------------|----------------------|
 | `lpf()` / `lp()` / `cutoff()` / `ctf()` | `StrudelLpFilterEditor`    | `StrudelLpFilterSequenceEditor`    | `freq:resonance:env` |
-| `resonance()` / `lpq()`                 | `StrudelLpResonanceEditor` | `StrudelLpResonanceSequenceEditor` | single value         |
+| `resonance()` / `res()` / `lpq()`       | `StrudelLpResonanceEditor` | `StrudelLpResonanceSequenceEditor` | single value         |
 | `lpenv()` / `lpe()`                     | `StrudelLpEnvEditor`       | `StrudelLpEnvSequenceEditor`       | single value         |
 | `lpattack()` / `lpa()`                  | `StrudelLpAttackEditor`    | `StrudelLpAttackSequenceEditor`    | single value         |
 | `lpdecay()` / `lpd()`                   | `StrudelLpDecayEditor`     | `StrudelLpDecaySequenceEditor`     | single value         |
@@ -52,21 +114,21 @@ All tools are registered in `strudel/src/jsMain/kotlin/ui/StrudelUiTools.kt`.
 
 ## High Pass Filter
 
-| DSL Function                   | Editor                     | Sequence Editor                    | Format               |
-|--------------------------------|----------------------------|------------------------------------|----------------------|
-| `hpf()` / `hp()` / `hcutoff()` | `StrudelHpFilterEditor`    | `StrudelHpFilterSequenceEditor`    | `freq:resonance:env` |
-| `hresonance()` / `hpq()`       | `StrudelHpResonanceEditor` | `StrudelHpResonanceSequenceEditor` | single value         |
-| `hpenv()` / `hpe()`            | `StrudelHpEnvEditor`       | `StrudelHpEnvSequenceEditor`       | single value         |
-| `hpattack()` / `hpa()`         | `StrudelHpAttackEditor`    | `StrudelHpAttackSequenceEditor`    | single value         |
-| `hpdecay()` / `hpd()`          | `StrudelHpDecayEditor`     | `StrudelHpDecaySequenceEditor`     | single value         |
-| `hpsustain()` / `hps()`        | `StrudelHpSustainEditor`   | `StrudelHpSustainSequenceEditor`   | single value         |
-| `hprelease()` / `hpr()`        | `StrudelHpReleaseEditor`   | `StrudelHpReleaseSequenceEditor`   | single value         |
-| `hpadsr()`                     | `StrudelHpAdsrEditor`      | `StrudelHpAdsrSequenceEditor`      | `a:d:s:r`            |
+| DSL Function                         | Editor                     | Sequence Editor                    | Format               |
+|--------------------------------------|----------------------------|------------------------------------|----------------------|
+| `hpf()` / `hp()` / `hcutoff()`      | `StrudelHpFilterEditor`    | `StrudelHpFilterSequenceEditor`    | `freq:resonance:env` |
+| `hresonance()` / `hres()` / `hpq()` | `StrudelHpResonanceEditor` | `StrudelHpResonanceSequenceEditor` | single value         |
+| `hpenv()` / `hpe()`                 | `StrudelHpEnvEditor`       | `StrudelHpEnvSequenceEditor`       | single value         |
+| `hpattack()` / `hpa()`              | `StrudelHpAttackEditor`    | `StrudelHpAttackSequenceEditor`    | single value         |
+| `hpdecay()` / `hpd()`               | `StrudelHpDecayEditor`     | `StrudelHpDecaySequenceEditor`     | single value         |
+| `hpsustain()` / `hps()`             | `StrudelHpSustainEditor`   | `StrudelHpSustainSequenceEditor`   | single value         |
+| `hprelease()` / `hpr()`             | `StrudelHpReleaseEditor`   | `StrudelHpReleaseSequenceEditor`   | single value         |
+| `hpadsr()`                           | `StrudelHpAdsrEditor`      | `StrudelHpAdsrSequenceEditor`      | `a:d:s:r`            |
 
 ## Band Pass Filter
 
-| DSL Function                 | Editor                   | Sequence Editor                  | Format       |
-|------------------------------|--------------------------|----------------------------------|--------------|
+| DSL Function                  | Editor                   | Sequence Editor                  | Format       |
+|-------------------------------|--------------------------|----------------------------------|--------------|
 | `bandf()` / `bpf()` / `bp()` | `StrudelBpFilterEditor`  | `StrudelBpFilterSequenceEditor`  | `freq:q:env` |
 | `bandq()` / `bpq()`          | `StrudelBpQEditor`       | `StrudelBpQSequenceEditor`       | single value |
 | `bpenv()` / `bpe()`          | `StrudelBpEnvEditor`     | `StrudelBpEnvSequenceEditor`     | single value |
@@ -78,16 +140,16 @@ All tools are registered in `strudel/src/jsMain/kotlin/ui/StrudelUiTools.kt`.
 
 ## Notch Filter
 
-| DSL Function                           | Editor                                            | Sequence Editor                    | Format       |
-|----------------------------------------|---------------------------------------------------|------------------------------------|--------------|
-| `notchf()`                             | `StrudelNotchFilterEditor`                        | `StrudelNotchFilterSequenceEditor` | `freq:q:env` |
-| `nresonance()` / `notchq()` / `nres()` | `StrudelNResonanceEditor` / `StrudelNotchQEditor` | Sequence variants                  | single value |
-| `nfenv()` / `nfe()`                    | `StrudelNfEnvEditor`                              | `StrudelNfEnvSequenceEditor`       | single value |
-| `nfattack()` / `nfa()`                 | `StrudelNfAttackEditor`                           | `StrudelNfAttackSequenceEditor`    | single value |
-| `nfdecay()` / `nfd()`                  | `StrudelNfDecayEditor`                            | `StrudelNfDecaySequenceEditor`     | single value |
-| `nfsustain()` / `nfs()`                | `StrudelNfSustainEditor`                          | `StrudelNfSustainSequenceEditor`   | single value |
-| `nfrelease()` / `nfr()`                | `StrudelNfReleaseEditor`                          | `StrudelNfReleaseSequenceEditor`   | single value |
-| `nfadsr()`                             | `StrudelNfAdsrEditor`                             | `StrudelNfAdsrSequenceEditor`      | `a:d:s:r`    |
+| DSL Function                | Editor                                            | Sequence Editor                    | Format       |
+|-----------------------------|---------------------------------------------------|------------------------------------|--------------|
+| `notchf()`                  | `StrudelNotchFilterEditor`                        | `StrudelNotchFilterSequenceEditor` | `freq:q:env` |
+| `nresonance()` / `notchq()` | `StrudelNResonanceEditor` / `StrudelNotchQEditor` | Sequence variants                  | single value |
+| `nfenv()` / `nfe()`         | `StrudelNfEnvEditor`                              | `StrudelNfEnvSequenceEditor`       | single value |
+| `nfattack()` / `nfa()`      | `StrudelNfAttackEditor`                           | `StrudelNfAttackSequenceEditor`    | single value |
+| `nfdecay()` / `nfd()`       | `StrudelNfDecayEditor`                            | `StrudelNfDecaySequenceEditor`     | single value |
+| `nfsustain()` / `nfs()`     | `StrudelNfSustainEditor`                          | `StrudelNfSustainSequenceEditor`   | single value |
+| `nfrelease()` / `nfr()`     | `StrudelNfReleaseEditor`                          | `StrudelNfReleaseSequenceEditor`   | single value |
+| `nfadsr()`                  | `StrudelNfAdsrEditor`                             | `StrudelNfAdsrSequenceEditor`      | `a:d:s:r`    |
 
 ## Other
 

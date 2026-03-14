@@ -179,6 +179,47 @@ fun FlowContent.svgPath(
     }
 }
 
+/** Renders a `<circle>` element. */
+fun FlowContent.svgCircle(
+    cx: Number, cy: Number,
+    r: Number,
+    fill: String,
+    stroke: String? = null,
+    strokeWidth: String? = null,
+    key: String? = null,
+) {
+    custom("circle") {
+        if (key != null) attributes["key"] = key
+        attributes["cx"] = cx.toString()
+        attributes["cy"] = cy.toString()
+        attributes["r"] = r.toString()
+        attributes["fill"] = fill
+        if (stroke != null) attributes["stroke"] = stroke
+        if (strokeWidth != null) attributes["stroke-width"] = strokeWidth
+    }
+}
+
+/** Renders a `<polyline>` element. */
+fun FlowContent.svgPolyline(
+    points: String,
+    fill: String = "none",
+    stroke: String? = null,
+    strokeWidth: String? = null,
+    strokeLinejoin: String? = null,
+    strokeLinecap: String? = null,
+    key: String? = null,
+) {
+    custom("polyline") {
+        if (key != null) attributes["key"] = key
+        attributes["points"] = points
+        attributes["fill"] = fill
+        if (stroke != null) attributes["stroke"] = stroke
+        if (strokeWidth != null) attributes["stroke-width"] = strokeWidth
+        if (strokeLinejoin != null) attributes["stroke-linejoin"] = strokeLinejoin
+        if (strokeLinecap != null) attributes["stroke-linecap"] = strokeLinecap
+    }
+}
+
 fun FlowContent.svgText(
     x: Number, y: Number,
     text: String,

@@ -15,11 +15,12 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.svgCircle
+import io.peekandpoke.klang.ui.svgRoot
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlinx.html.unsafe
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -182,14 +183,14 @@ private class StrudelEuclidEditorComp(ctx: Ctx<Props>) : Component<StrudelEuclid
             ui.divider {}
             div {
                 css { if (!props.embedded) marginBottom = 1.rem }
-                unsafe { raw(buildEuclidSvg()) }
+                renderEuclidSvg()
             }
         }
     }
 
     // ── SVG ───────────────────────────────────────────────────────────────────
 
-    private fun buildEuclidSvg(): String {
+    private fun FlowContent.renderEuclidSvg() {
         val w = 220.0
         val h = 220.0
         val cx = 110.0
@@ -200,7 +201,8 @@ private class StrudelEuclidEditorComp(ctx: Ctx<Props>) : Component<StrudelEuclid
         val pattern = euclideanPattern(pulses, steps, rotation)
         val safeSteps = steps.coerceAtLeast(1)
 
-        val dots = buildString {
+        svgRoot(viewBox = "0 0 $w $h") {
+            svgCircle(cx, cy, circleR, fill = "none", stroke = "#e8e8e8", strokeWidth = "1")
             for (i in 0 until safeSteps) {
                 // Start at top (12 o'clock) = -PI/2, go clockwise
                 val angle = -PI / 2.0 + 2.0 * PI * i / safeSteps
@@ -209,15 +211,8 @@ private class StrudelEuclidEditorComp(ctx: Ctx<Props>) : Component<StrudelEuclid
                 val active = pattern.getOrElse(i) { false }
                 val fill = if (active) laf.gold else "#e8e8e8"
                 val stroke = if (active) laf.gold else "#ccc"
-                append("""<circle cx="$dx" cy="$dy" r="$dotR" fill="$fill" stroke="$stroke" stroke-width="1.5"/>""")
+                svgCircle(dx, dy, dotR, fill = fill, stroke = stroke, strokeWidth = "1.5")
             }
         }
-
-        return """
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $w $h" width="100%" style="display:block">
-              <circle cx="$cx" cy="$cy" r="$circleR" fill="none" stroke="#e8e8e8" stroke-width="1"/>
-              $dots
-            </svg>
-        """.trimIndent()
     }
 }

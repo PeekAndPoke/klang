@@ -552,7 +552,7 @@ fun PatternMapperFn.repeat(times: PatternLike): PatternMapperFn = _repeat(listOf
 // -- solo() -----------------------------------------------------------------------------------------------------------
 
 private fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(1.0)) }
+    val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(0.97)) }
     val soloControl = effectiveArgs.first().toPattern()
     return SoloPattern(source = source, soloControl = soloControl)
 }
@@ -565,112 +565,93 @@ internal val PatternMapperFn._solo by dslPatternMapperExtension { m, args, callI
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Solos this pattern so all non-soloed patterns are muted during playback.
+ * Solos this pattern, muting all non-soloed patterns during playback.
  *
- * When any pattern in the active set is soloed, all others are silenced.
- * Use the `enabled` overload to pass `0`/`false` to disable, or a control pattern for dynamic toggling.
+ * Pass a value between `0.0` (no solo) and `1.0` (full solo). Omit or pass `null` to use
+ * the default amount of `0.97`. Accepts control patterns for per-cycle dynamic toggling.
  *
  * ```KlangScript
  * stack(
- *   s("bd*4").solo(),              // only the kick is heard
- *   note("c3 e3")                  // muted because another pattern is soloed
+ *   s("bd*4").solo(),             // only the kick is heard (amount = 0.97)
+ *   note("c3 e3")                 // muted because another pattern is soloed
  * )
  * ```
  *
- * @category structural
- * @tags solo, mute, isolate, playback, addon
- */
-@StrudelDsl
-fun StrudelPattern.solo(): StrudelPattern = this._solo(emptyList())
-
-/**
- * Solos this pattern with an explicit enabled flag or control pattern.
- *
- * Pass `1`/`true` to enable soloing, `0`/`false` to disable. Accepts control patterns
- * for per-cycle dynamic toggling.
+ * ```KlangScript
+ * s("bd sd").solo(1)              // full solo
+ * ```
  *
  * ```KlangScript
- * s("bd sd").solo(1)              // same as .solo()
+ * s("bd sd").solo(0.5)            // half solo amount
  * ```
  *
  * ```KlangScript
  * s("hh*8").solo("<1 0>")         // toggle solo on/off every other cycle
  * ```
  *
- * @param enabled `1`/`true` to enable solo, `0`/`false` to disable. Accepts control patterns.
+ * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.97`. Accepts control patterns.
+ *
+ * @category structural
+ * @tags solo, mute, isolate, playback, addon
  */
 @StrudelDsl
-fun StrudelPattern.solo(enabled: PatternLike): StrudelPattern = this._solo(listOf(enabled).asStrudelDslArgs())
+fun StrudelPattern.solo(amount: PatternLike? = null): StrudelPattern =
+    this._solo(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Parses this string as a pattern and solos it so all non-soloed patterns are muted.
+ * Parses this string as a pattern and solos it, muting all non-soloed patterns.
  *
  * ```KlangScript
  * "bd sd".solo().s()              // solo this string pattern; everything else is muted
  * ```
- */
-@StrudelDsl
-fun String.solo(): StrudelPattern = this._solo(emptyList())
-
-/**
- * Parses this string as a pattern and solos it with an explicit enabled flag or control pattern.
  *
  * ```KlangScript
  * "bd sd".solo("<1 0>").s()       // toggle solo on/off every other cycle
  * ```
  *
- * @param enabled `1`/`true` to enable solo, `0`/`false` to disable. Accepts control patterns.
+ * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.97`. Accepts control patterns.
  */
 @StrudelDsl
-fun String.solo(enabled: PatternLike): StrudelPattern = this._solo(listOf(enabled).asStrudelDslArgs())
+fun String.solo(amount: PatternLike? = null): StrudelPattern =
+    this._solo(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapperFn] that solos the input pattern so all non-soloed patterns are muted.
+ * Creates a [PatternMapperFn] that solos the input pattern, muting all non-soloed patterns.
  *
  * ```KlangScript
- * s("bd*4").apply(solo())         // solo the kick via a mapper
+ * s("bd*4").apply(solo())         // solo the kick via a mapper (amount = 0.97)
+ * ```
+ *
+ * ```KlangScript
+ * s("hh*8").apply(solo("<1 0>"))  // toggle solo on/off every other cycle via a mapper
  * ```
  *
  * ```KlangScript
  * note("c3 e3 g3").apply(timeLoop(2).solo())   // loop then solo
  * ```
  *
+ * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.97`. Accepts control patterns.
+ *
  * @category structural
  * @tags solo, mute, isolate, playback, addon
  */
 @StrudelDsl
-fun solo(): PatternMapperFn = _solo(emptyList())
+fun solo(amount: PatternLike? = null): PatternMapperFn =
+    _solo(listOfNotNull(amount).asStrudelDslArgs())
 
 /**
- * Creates a [PatternMapperFn] that solos the input pattern with an explicit enabled flag.
+ * Chains a solo operation onto this [PatternMapperFn].
  *
  * ```KlangScript
- * s("hh*8").apply(solo("<1 0>"))  // toggle solo on/off every other cycle via a mapper
+ * s("bd*4").apply(timeLoop(2).solo())              // loop first 2 cycles, then solo
  * ```
- *
- * @param enabled `1`/`true` to enable solo, `0`/`false` to disable. Accepts control patterns.
- */
-@StrudelDsl
-fun solo(enabled: PatternLike): PatternMapperFn = _solo(listOf(enabled).asStrudelDslArgs())
-
-/**
- * Chains a solo operation onto this [PatternMapperFn], soloing the result.
  *
  * ```KlangScript
- * s("bd*4").apply(timeLoop(2).solo())   // loop first 2 cycles, then solo
- * ```
- */
-@StrudelDsl
-fun PatternMapperFn.solo(): PatternMapperFn = _solo(emptyList())
-
-/**
- * Chains a solo operation onto this [PatternMapperFn], soloing the result with an explicit enabled flag.
- *
- * ```KlangScript
- * s("hh*8").apply(timeLoop(1).solo("<1 0>"))   // loop then conditionally solo
+ * s("hh*8").apply(timeLoop(1).solo("<1 0>"))       // loop then conditionally solo
  * ```
  *
- * @param enabled `1`/`true` to enable solo, `0`/`false` to disable. Accepts control patterns.
+ * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.97`. Accepts control patterns.
  */
 @StrudelDsl
-fun PatternMapperFn.solo(enabled: PatternLike): PatternMapperFn = _solo(listOf(enabled).asStrudelDslArgs())
+fun PatternMapperFn.solo(amount: PatternLike? = null): PatternMapperFn =
+    _solo(listOfNotNull(amount).asStrudelDslArgs())

@@ -49,24 +49,23 @@ class SoloPattern(
         var cursor = from
 
         // Sample the solo control pattern at the given time
-        fun soloAt(time: Rational): Boolean? =
-            soloControl.sampleAt(time, ctx)?.data?.value?.asBoolean
+        fun soloSampleAt(time: Rational): StrudelPatternEvent? = soloControl.sampleAt(time, ctx)
 
         // Silent filler event: keeps the backend's solo-tracker alive during rests
-        fun filler(start: Rational, end: Rational, soloVal: Boolean?): StrudelPatternEvent {
+        fun filler(start: Rational, end: Rational, evt: StrudelPatternEvent?): StrudelPatternEvent {
             val span = TimeSpan(start, end)
             return StrudelPatternEvent(
                 part = span,
                 whole = span, // whole == part → isOnset = true, so the backend picks it up
-                data = StrudelVoiceData.Companion.empty.copy(
+                data = StrudelVoiceData.empty.copy(
                     note = "a",
                     freqHz = 440.0,
                     sound = "sine",
                     gain = 0.000001,
-                    solo = soloVal,
+                    solo = evt?.data?.value?.asDouble?.coerceIn(0.0, 1.0),
                     patternId = patternId,
                 ),
-            )
+            ).prependLocations(evt?.sourceLocations)
         }
 
         for (event in sourceEvents) {
@@ -74,15 +73,21 @@ class SoloPattern(
 
             // Fill any gap before this event
             if (evStart > cursor) {
-                result.add(filler(cursor, evStart, soloAt(cursor)))
+                result.add(
+                    filler(start = cursor, end = evStart, evt = soloSampleAt(evStart))
+                )
             }
 
             // Decorate the event with the solo value sampled at its onset time
-            val soloVal = soloAt(event.whole.begin)
+            val solo = soloSampleAt(event.whole.begin)
+
             result.add(
                 event.copy(
-                    data = event.data.copy(solo = soloVal, patternId = patternId)
-                )
+                    data = event.data.copy(
+                        solo = solo?.data?.value?.asDouble?.coerceIn(0.0, 1.0),
+                        patternId = patternId,
+                    )
+                ).prependLocations(solo?.sourceLocations),
             )
 
             cursor = maxOf(cursor, event.part.end)
@@ -90,7 +95,9 @@ class SoloPattern(
 
         // Fill any trailing gap after the last event
         if (cursor < to) {
-            result.add(filler(cursor, to, soloAt(cursor)))
+            result.add(
+                filler(start = cursor, end = to, evt = soloSampleAt(cursor))
+            )
         }
 
         return result

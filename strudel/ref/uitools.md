@@ -39,25 +39,7 @@ object KlangUiToolRegistry {
 }
 ```
 
-Registration happens at app startup in `StrudelUiTools.kt`, called from `index.kt`:
-
-```kotlin
-fun registerStrudelUiTools() {
-    KlangUiToolRegistry.register("StrudelAdsrEditor", StrudelAdsrEditorTool)
-    KlangUiToolRegistry.register(
-        "StrudelAdsrSequenceEditor",
-        StrudelMiniNotationEditorTool(atomTool = StrudelAdsrEditorTool)
-    )
-    KlangUiToolRegistry.register("StrudelScaleEditor", StrudelScaleEditorTool)
-    KlangUiToolRegistry.register(
-        "StrudelScaleSequenceEditor",
-        StrudelMiniNotationEditorTool(atomTool = StrudelScaleEditorTool)
-    )
-    KlangUiToolRegistry.register("StrudelMiniNotationEditor", StrudelMiniNotationEditorTool())
-    KlangUiToolRegistry.register("StrudelNoteEditor", StrudelNoteEditorTool)
-    KlangUiToolRegistry.register("StrudelScaleDegreeEditor", StrudelScaleDegreeEditorTool)
-}
-```
+Registration happens at app startup in `StrudelUiTools.kt`, called from `index.kt`.
 
 ## @param-tool KDoc Tag
 
@@ -82,34 +64,59 @@ fun StrudelPattern.scale(name: PatternLike? = null): StrudelPattern
 5. `CodeSongPage.openTool()` opens the tool in `CodeToolModal`.
 6. On commit: `onCommit(newValue)` replaces the argument text in the editor.
 
+## Implemented Editor Tools
+
+All tool source files are in `strudel/src/jsMain/kotlin/ui/`.
+
+| File                               | Description                                                             | Tool Instances                                                                                                                                        |
+|------------------------------------|-------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `StrudelNumericEditorTool.kt`      | Configurable numeric editor with drag bar                               | Gain, Pan, RoomSize, DelayTime, DelayFeedback, all individual filter params (cutoff, resonance, env, attack, decay, sustain, release per filter type) |
+| `StrudelAdsrEditorTool.kt`         | ADSR envelope editor with interactive SVG curve                         | `StrudelAdsrEditorTool`                                                                                                                               |
+| `StrudelFilterAdsrEditorTool.kt`   | Configurable filter ADSR editor, reuses ADSR SVG                        | LP/HP/BP/Notch ADSR instances                                                                                                                         |
+| `StrudelFilterEditorTool.kt`       | Combined filter editor (freq:resonance:env) with frequency response SVG | LP/HP/BP/Notch filter instances                                                                                                                       |
+| `StrudelCompressorEditorTool.kt`   | Compressor editor with transfer function SVG + 8 presets                | `StrudelCompressorEditorTool`                                                                                                                         |
+| `StrudelDelayEditorTool.kt`        | Delay editor (time:feedback) with decay curve SVG                       | `StrudelDelayEditorTool`                                                                                                                              |
+| `StrudelReverbEditorTool.kt`       | Reverb amount editor                                                    | `StrudelReverbEditorTool`                                                                                                                             |
+| `StrudelNoteEditorTool.kt`         | Note picker with staff visualization                                    | `StrudelNoteEditorTool`                                                                                                                               |
+| `StrudelScaleEditorTool.kt`        | Scale picker (root + mode)                                              | `StrudelScaleEditorTool`                                                                                                                              |
+| `StrudelScaleDegreeEditorTool.kt`  | Scale degree picker                                                     | `StrudelScaleDegreeEditorTool`                                                                                                                        |
+| `StrudelWaveformEditorTool.kt`     | Waveform selector (sine, saw, square, triangle, etc.)                   | `StrudelWaveformEditorTool`                                                                                                                           |
+| `StrudelSampleEditorTool.kt`       | Sample browser                                                          | `StrudelSampleEditorTool`                                                                                                                             |
+| `StrudelEuclidEditorTool.kt`       | Euclidean rhythm editor (pulses:steps:rotation)                         | `StrudelEuclidEditorTool`                                                                                                                             |
+| `StrudelMiniNotationEditorTool.kt` | Sequence editor — wraps any atom tool for mini-notation patterns        | Generic + all sequence variants                                                                                                                       |
+
+## Shared UI Components
+
+| File                | Role                                      |
+|---------------------|-------------------------------------------|
+| `MnSharedPanels.kt` | Modifier panel + text input for MN editor |
+| `MnEditorBase.kt`   | Abstract note editor base class           |
+| `NoteStaff.kt`      | SVG staff rendering + drag interaction    |
+
+## How to Add a New Tool
+
+1. Create a tool class implementing `KlangUiTool` (or `KlangUiToolEmbeddable` for inline use).
+  - For simple numeric params, configure `StrudelNumericEditorTool` with min/max/step/label.
+  - For complex multi-field params, create a dedicated tool file.
+2. Register in `StrudelUiTools.kt`:
+   ```kotlin
+   registry.register("StrudelMyEditor", StrudelMyEditorTool)
+   registry.register("StrudelMySequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelMyEditorTool))
+   ```
+3. Add `@param-tool` annotation to the DSL function KDoc:
+   ```kotlin
+   /** @param-tool amount StrudelMySequenceEditor */
+   ```
+4. The KSP processor picks it up automatically on next build.
+
 ## Key Files
 
-| File                                                            | Role                                        |
-|-----------------------------------------------------------------|---------------------------------------------|
-| `klangui/src/jsMain/kotlin/KlangUiTool.kt`                      | Interfaces + registry                       |
-| `strudel-ksp/src/main/kotlin/KDocParser.kt`                     | Parses `@param-tool` tags                   |
-| `klangscript/src/commonMain/kotlin/types/KlangParam.kt`         | `uitools` field                             |
-| `src/jsMain/kotlin/codemirror/ArgFinder.kt`                     | Finds arg under cursor                      |
-| `src/jsMain/kotlin/codemirror/DslGoToDocsExtension.kt`          | Right-click → tool launch                   |
-| `strudel/src/jsMain/kotlin/ui/StrudelUiTools.kt`                | Registration function                       |
-| `src/jsMain/kotlin/index.kt`                                    | Calls `registerStrudelUiTools()` at startup |
-| `strudel/src/jsMain/kotlin/ui/StrudelAdsrEditorTool.kt`         | Example: Embeddable tool                    |
-| `strudel/src/jsMain/kotlin/ui/StrudelScaleEditorTool.kt`        | Example: Embeddable tool                    |
-| `strudel/src/jsMain/kotlin/ui/StrudelMiniNotationEditorTool.kt` | Example: Tool with sub-tool                 |
-| `strudel/src/jsMain/kotlin/ui/MnSharedPanels.kt`                | Shared: modifier panel + text input         |
-| `strudel/src/jsMain/kotlin/ui/MnEditorBase.kt`                  | Shared: abstract note editor base           |
-| `strudel/src/jsMain/kotlin/ui/NoteStaff.kt`                     | Shared: SVG staff rendering + drag          |
-| `strudel/src/jsMain/kotlin/ui/StrudelNoteEditorTool.kt`         | `note()` editor                             |
-| `strudel/src/jsMain/kotlin/ui/StrudelScaleDegreeEditorTool.kt`  | `n()` editor                                |
-
-## Existing Tools
-
-| Registry Name                | Class                                                   | Embeddable | Used by                 |
-|------------------------------|---------------------------------------------------------|------------|-------------------------|
-| `StrudelAdsrEditor`          | `StrudelAdsrEditorTool`                                 | yes        | `adsr()` param directly |
-| `StrudelAdsrSequenceEditor`  | `StrudelMiniNotationEditorTool(StrudelAdsrEditorTool)`  | no         | `adsr()` pattern params |
-| `StrudelScaleEditor`         | `StrudelScaleEditorTool`                                | yes        | `scale()` param         |
-| `StrudelScaleSequenceEditor` | `StrudelMiniNotationEditorTool(StrudelScaleEditorTool)` | no         | sequence of scales      |
-| `StrudelMiniNotationEditor`  | `StrudelMiniNotationEditorTool()`                       | no         | generic pattern params  |
-| `StrudelNoteEditor`          | `StrudelNoteEditorTool`                                 | no         | `note()` param          |
-| `StrudelScaleDegreeEditor`   | `StrudelScaleDegreeEditorTool`                          | no         | `n()` param             |
+| File                                                    | Role                                        |
+|---------------------------------------------------------|---------------------------------------------|
+| `klangui/src/jsMain/kotlin/KlangUiTool.kt`              | Interfaces + registry                       |
+| `strudel-ksp/src/main/kotlin/KDocParser.kt`             | Parses `@param-tool` tags                   |
+| `klangscript/src/commonMain/kotlin/types/KlangParam.kt` | `uitools` field                             |
+| `src/jsMain/kotlin/codemirror/ArgFinder.kt`             | Finds arg under cursor                      |
+| `src/jsMain/kotlin/codemirror/DslGoToDocsExtension.kt`  | Right-click → tool launch                   |
+| `strudel/src/jsMain/kotlin/ui/StrudelUiTools.kt`        | Registration function                       |
+| `src/jsMain/kotlin/index.kt`                            | Calls `registerStrudelUiTools()` at startup |
