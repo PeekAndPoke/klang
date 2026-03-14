@@ -7,6 +7,8 @@ Ein Klang-Generator | A Sound-Generator
 
 This is the home of the Klang Audio Motör, a Kotlin multiplatform realtime audio generatör.
 
+![Klang Audio Motör](docs/media/klang-motör.png)
+
 Currently supported platforms:
 
 - JS / Web
