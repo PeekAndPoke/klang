@@ -363,12 +363,28 @@ fun dslEditorExtension(
             lastHoveredWord = currentWord
 
             if (doc != null && word != null) {
-                val wordRect = view.coordsAtPos(word.from)
-                val anchor = Vector2D(
-                    x = wordRect?.left ?: event.clientX.unsafeCast<Double>(),
-                    y = wordRect?.top ?: event.clientY.unsafeCast<Double>(),
-                )
-                hoverPopup.scheduleShow(doc, anchor)
+                val mouseY = event.clientY.unsafeCast<Double>()
+                val viewportH = window.innerHeight.toDouble()
+                val viewportW = window.innerWidth.toDouble()
+
+                // Use the scroll container's visible rect, clamped to viewport
+                val scrollRect = view.scrollDOM.getBoundingClientRect()
+                val visTop = maxOf(scrollRect.top, 0.0)
+                val visBottom = minOf(scrollRect.bottom, viewportH)
+                val visRight = minOf(scrollRect.right, viewportW)
+                val visMidY = (visTop + visBottom) / 2.0
+
+                val pad = 8.0
+                val (anchor, positioning) = if (mouseY < visMidY) {
+                    // Mouse in top half → show popup at bottom-right of visible editor
+                    Vector2D(x = visRight - pad, y = visBottom - pad) to
+                            PopupsManager.Positioning.BottomRight
+                } else {
+                    // Mouse in bottom half → show popup at top-right of visible editor
+                    Vector2D(x = visRight - pad, y = visTop + pad) to
+                            PopupsManager.Positioning.TopRight
+                }
+                hoverPopup.scheduleShow(doc, anchor, positioning)
             } else {
                 hoverPopup.scheduleClose()
             }
