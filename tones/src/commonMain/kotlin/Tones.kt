@@ -12,12 +12,14 @@ object Tones {
     /**
      * Converts a MIDI number to frequency in Hz.
      */
-    fun midiToFreq(m: Double): Double = Midi.midiToFreq(m)
+    fun midiToFreq(m: Double, tuning: Double = 432.0): Double =
+        Midi.midiToFreq(midi = m, tuning = tuning)
 
     /**
      * Converts a note name to frequency in Hz.
      */
-    fun noteToFreq(note: String): Double = midiToFreq(noteNameToMidi(note))
+    fun noteToFreq(note: String, tuning: Double = 432.0): Double =
+        midiToFreq(m = noteNameToMidi(note), tuning = tuning)
 
     /**
      * Converts a note name to MIDI number.

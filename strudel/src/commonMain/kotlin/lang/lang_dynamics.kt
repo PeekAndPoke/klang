@@ -491,6 +491,7 @@ internal val PatternMapperFn._comp by dslPatternMapperExtension { m, args, callI
  *
  * @param params The compression parameters as a colon-separated string.
  *
+ * @param-tool params StrudelCompressorSequenceEditor
  * @alias comp
  * @category dynamics
  * @tags compressor, comp, compression, threshold, ratio, dynamics
@@ -551,6 +552,7 @@ fun PatternMapperFn.compressor(params: PatternLike? = null): PatternMapperFn =
  *
  * @param params The compression parameters as a colon-separated string.
  *
+ * @param-tool params StrudelCompressorSequenceEditor
  * @alias compressor
  * @category dynamics
  * @tags comp, compressor, compression, threshold, ratio, dynamics
