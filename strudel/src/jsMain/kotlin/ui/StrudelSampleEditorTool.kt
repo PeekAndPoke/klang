@@ -48,17 +48,48 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
 
     // ── Sample groups ─────────────────────────────────────────────────────────
 
+    /** Entry with a canonical [name] shown as button, plus [aliases] that resolve to it. */
+    private data class SampleEntry(val name: String, val aliases: List<String> = emptyList()) {
+        val allNames get() = listOf(name) + aliases
+    }
+
     private val sampleGroups = listOf(
-        "Drums" to listOf("bd", "sd", "hh", "oh", "cp", "mt", "ht", "lt", "cr", "cy", "cb"),
-        "Percussion" to listOf("tabla", "tabla2", "casio", "diphone", "diphone2"),
-        "Bass" to listOf("bass", "bass2", "bass3", "bass0"),
-        "Synth" to listOf("sine", "triangle", "sawtooth", "square", "supersaw", "noise"),
-        "GM" to listOf("gm_recorder", "gm_xylophone", "gm_piano", "gm_violin", "gm_trumpet"),
-        "Other" to listOf("breaks", "reverbkick", "space", "voice", "pluck", "casio"),
+        "Synth" to listOf(
+            SampleEntry("sin", listOf("sine")),
+            SampleEntry("tri", listOf("triangle")),
+            SampleEntry("saw", listOf("sawtooth")),
+            SampleEntry("sqr", listOf("square", "pulse")),
+            SampleEntry("zaw", listOf("zawtooth")),
+            SampleEntry("supersaw"),
+            SampleEntry("pulze"),
+            SampleEntry("impulse"),
+            SampleEntry("silence"),
+        ),
+        "Noise" to listOf(
+            SampleEntry("white", listOf("whitenoise")),
+            SampleEntry("brown", listOf("brownnoise")),
+            SampleEntry("pink", listOf("pinknoise")),
+            SampleEntry("dust"),
+            SampleEntry("crackle"),
+        ),
+        "Drums" to listOf("bd", "sd", "hh", "oh", "cp", "mt", "ht", "lt", "cr", "cb").map { SampleEntry(it) },
+        "GM" to listOf("gm_recorder", "gm_xylophone", "gm_piano", "gm_violin", "gm_trumpet").map { SampleEntry(it) },
     )
+
+    /** Maps every alias to its canonical name. */
+    private val aliasToCanonical: Map<String, String> = buildMap {
+        for ((_, entries) in sampleGroups) {
+            for (entry in entries) {
+                for (alias in entry.aliases) {
+                    put(alias, entry.name)
+                }
+            }
+        }
+    }
 
     // ── Parse current value from raw source text ──────────────────────────────
 
+    @Suppress("unused")
     private val laf by subscribingTo(KlangTheme)
 
     private val initialValue = props.toolCtx.currentValue ?: ""
@@ -66,7 +97,8 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
     private val parsed
         get() = run {
             val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
-            raw.ifBlank { "bd" }
+            val name = raw.ifBlank { "bd" }
+            aliasToCanonical[name] ?: name
         }
 
     private var sample by value(parsed)
@@ -156,11 +188,13 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
 
             // Sample groups
             val searchTerm = search.trim().lowercase()
-            for ((groupName, samples) in sampleGroups) {
+            for ((groupName, entries) in sampleGroups) {
                 val filtered = if (searchTerm.isEmpty()) {
-                    samples
+                    entries
                 } else {
-                    samples.filter { it.contains(searchTerm, ignoreCase = true) }
+                    entries.filter { entry ->
+                        entry.allNames.any { it.contains(searchTerm, ignoreCase = true) }
+                    }
                 }
                 if (filtered.isEmpty()) continue
 
@@ -172,12 +206,12 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
                         gap = 4.px
                         marginBottom = 8.px
                     }
-                    for (name in filtered) {
-                        val isSelected = sample == name
+                    for (entry in filtered) {
+                        val isSelected = sample == entry.name
                         ui.mini.givenNot(isSelected) { basic }.button {
-                            key = name
-                            onClick { sample = name; liveUpdate() }
-                            +name
+                            key = entry.name
+                            onClick { sample = entry.name; liveUpdate() }
+                            +entry.name
                         }
                     }
                 }
