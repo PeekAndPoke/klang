@@ -73,6 +73,17 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             onContextMenu { event -> event.stopPropagation() }
 
             ui.relaxed.list {
+                noui.item {
+                    sectionLabel(symbol.name)
+                    noui.content {
+                        if (symbol.library.isBlank()) {
+                            +"Built-in"
+                        } else {
+                            +"Library: ${symbol.library}"
+                        }
+                    }
+                }
+
                 // ── Description ───────────────────────────────────────────────────
                 if (description != null) {
                     noui.item {
