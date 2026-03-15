@@ -68,7 +68,9 @@ class CallStack(
         if (frames.size >= maxDepth) {
             throw KlangScriptStackOverflowError(
                 message = "Stack overflow: maximum call depth of $maxDepth exceeded. " +
-                        "Possible infinite recursion in function '$functionName'"
+                        "Possible infinite recursion in function '$functionName'",
+                location = location,
+                callStackTrace = frames.toList(),
             )
         }
         frames.add(CallStackFrame(functionName, location))

@@ -274,7 +274,7 @@ class Interpreter(
         libraryInterpreter.execute(libraryProgram)
 
         // Import symbols from library environment into current environment
-        importSymbolsFromEnvironment(libraryEnv, importStmt.imports, importStmt.namespaceAlias, importStmt.libraryName)
+        importSymbolsFromEnvironment(libraryEnv, importStmt.imports, importStmt.namespaceAlias, importStmt.libraryName, importStmt.location)
 
         return NullValue  // Imports don't produce values
     }
@@ -295,6 +295,7 @@ class Interpreter(
         imports: List<Pair<String, String>>?,
         namespaceAlias: String?,
         libraryName: String,
+        importLocation: SourceLocation? = null,
     ) {
         // Get exported symbols from library
         val exports = libraryEnv.getExportedSymbols()
@@ -305,7 +306,7 @@ class Interpreter(
                 throw KlangScriptImportError(
                     libraryName = null,
                     message = "Cannot use namespace import with selective imports",
-                    location = null,
+                    location = importLocation,
                     callStackTrace = getStackTrace()
                 )
             }
@@ -324,7 +325,7 @@ class Interpreter(
                 throw KlangScriptImportError(
                     libraryName = libraryName,
                     message = "Cannot import non-exported symbols: ${missingExports.joinToString()}",
-                    location = null,
+                    location = importLocation,
                     callStackTrace = getStackTrace()
                 )
             }

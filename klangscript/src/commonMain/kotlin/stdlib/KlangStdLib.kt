@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.builder.registerType
 import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.klangScriptLibrary
@@ -139,20 +140,20 @@ object KlangStdLib {
             }
 
             // Object utility methods (need RuntimeValue parameters)
-            registerExtensionMethod(ObjectUtility::class, "keys") { _, args, _ ->
+            registerExtensionMethod(ObjectUtility::class, "keys") { _, args, callLocation ->
                 val obj = args[0] as? ObjectValue
-                    ?: throw IllegalArgumentException("Object.keys() expects an object argument")
+                    ?: throw KlangScriptTypeError("Object.keys() expects an object argument", location = callLocation)
                 val keys = obj.properties.keys.map { StringValue(it) }
                 ArrayValue(keys.toMutableList())
             }
-            registerExtensionMethod(ObjectUtility::class, "values") { _, args, _ ->
+            registerExtensionMethod(ObjectUtility::class, "values") { _, args, callLocation ->
                 val obj = args[0] as? ObjectValue
-                    ?: throw IllegalArgumentException("Object.values() expects an object argument")
+                    ?: throw KlangScriptTypeError("Object.values() expects an object argument", location = callLocation)
                 ArrayValue(obj.properties.values.toMutableList())
             }
-            registerExtensionMethod(ObjectUtility::class, "entries") { _, args, _ ->
+            registerExtensionMethod(ObjectUtility::class, "entries") { _, args, callLocation ->
                 val obj = args[0] as? ObjectValue
-                    ?: throw IllegalArgumentException("Object.entries() expects an object argument")
+                    ?: throw KlangScriptTypeError("Object.entries() expects an object argument", location = callLocation)
                 val entries = obj.properties.map { (key, value) ->
                     ArrayValue(mutableListOf(StringValue(key), value))
                 }
@@ -237,9 +238,9 @@ object KlangStdLib {
 
             // Array methods that need RuntimeValue parameters (registerFunctionRaw style)
             // These can't use type-safe registerMethod because they need to accept any RuntimeValue
-            registerExtensionMethod(ArrayValue::class, "concat") { arr, args, _ ->
+            registerExtensionMethod(ArrayValue::class, "concat") { arr, args, callLocation ->
                 val other = args[0] as? ArrayValue
-                    ?: throw IllegalArgumentException("concat() expects an array argument")
+                    ?: throw KlangScriptTypeError("concat() expects an array argument", location = callLocation)
                 ArrayValue((arr.elements + other.elements).toMutableList())
             }
             registerExtensionMethod(ArrayValue::class, "join") { arr, args, _ ->
@@ -265,19 +266,19 @@ object KlangStdLib {
             }
 
             // String Functions (kept as global functions)
-            registerFunctionRaw("length") { args, _ ->
-                requireExactly(args, 1, "length")
-                val str = toString(args[0], "length")
+            registerFunctionRaw("length") { args, callLocation ->
+                requireExactly(args, 1, "length", callLocation)
+                val str = toString(args[0], "length", callLocation)
                 NumberValue(str.length.toDouble())
             }
-            registerFunctionRaw("toUpperCase") { args, _ ->
-                requireExactly(args, 1, "toUpperCase")
-                val str = toString(args[0], "toUpperCase")
+            registerFunctionRaw("toUpperCase") { args, callLocation ->
+                requireExactly(args, 1, "toUpperCase", callLocation)
+                val str = toString(args[0], "toUpperCase", callLocation)
                 StringValue(str.uppercase())
             }
-            registerFunctionRaw("toLowerCase") { args, _ ->
-                requireExactly(args, 1, "toLowerCase")
-                val str = toString(args[0], "toLowerCase")
+            registerFunctionRaw("toLowerCase") { args, callLocation ->
+                requireExactly(args, 1, "toLowerCase", callLocation)
+                val str = toString(args[0], "toLowerCase", callLocation)
                 StringValue(str.lowercase())
             }
         }
@@ -288,10 +289,14 @@ object KlangStdLib {
     /**
      * Require exactly N arguments
      */
-    private fun requireExactly(args: List<RuntimeValue>, expected: Int, functionName: String) {
+    private fun requireExactly(args: List<RuntimeValue>, expected: Int, functionName: String, location: SourceLocation? = null) {
         if (args.size != expected) {
-            throw IllegalArgumentException(
-                "$functionName() expects exactly $expected argument(s), got ${args.size}"
+            throw KlangScriptArgumentError(
+                functionName = functionName,
+                message = "$functionName() expects exactly $expected argument(s), got ${args.size}",
+                expected = expected,
+                actual = args.size,
+                location = location,
             )
         }
     }
@@ -299,11 +304,12 @@ object KlangStdLib {
     /**
      * Convert RuntimeValue to String
      */
-    private fun toString(value: RuntimeValue, functionName: String): String {
+    private fun toString(value: RuntimeValue, functionName: String, location: SourceLocation? = null): String {
         return when (value) {
             is StringValue -> value.value
-            else -> throw IllegalArgumentException(
-                "$functionName() expects a string, got ${value.toDisplayString()}"
+            else -> throw KlangScriptTypeError(
+                message = "$functionName() expects a string, got ${value.toDisplayString()}",
+                location = location,
             )
         }
     }

@@ -29,13 +29,14 @@ data class NativeExtensionMethod(
 )
 
 /** Check if the number of arguments matches the expected count */
-fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int) {
+fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int, location: SourceLocation? = null) {
     if (args.size < expected) {
         throw KlangScriptArgumentError(
             functionName = fn,
             message = "Call to function $fn expected $expected arguments but got ${args.size}",
             expected = expected,
             actual = args.size,
+            location = location,
         )
     }
 }
@@ -43,7 +44,7 @@ fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int) {
 /**
  * Convert a RuntimeValue to a Kotlin type
  */
-fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
+fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, location: SourceLocation? = null): T {
     // println("Converting ${this::class.simpleName} to ${cls.simpleName}")
 
     val result = when (this) {
@@ -97,7 +98,8 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
                 true -> value
                 else -> throw KlangScriptTypeError(
                     message = "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
-                    operation = "parameter conversion"
+                    operation = "parameter conversion",
+                    location = location,
                 )
             }
         }
@@ -160,7 +162,8 @@ fun <T : Any> FunctionValue.convertFunctionToKotlin(): T {
 
         else -> throw KlangScriptTypeError(
             message = "Cannot convert script function to Kotlin. Only functions with up to 10 parameters are supported.",
-            operation = "parameter conversion"
+            operation = "parameter conversion",
+            // No location available for function conversion errors
         )
     }
 
@@ -210,15 +213,16 @@ private fun FunctionValue.callFunction(args: List<Any?>): Any? {
 }
 
 // ... existing code ...
-fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: Int, cls: KClass<T>): T {
+fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: Int, cls: KClass<T>, location: SourceLocation? = null): T {
     val arg = args.getOrNull(index) ?: throw KlangScriptArgumentError(
         functionName = fn,
         message = "Expected argument at index $index",
         expected = null,
-        actual = null
+        actual = null,
+        location = location,
     )
 
-    return arg.convertToKotlin(cls)
+    return arg.convertToKotlin(cls, location)
 }
 
 /**

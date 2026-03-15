@@ -6,6 +6,7 @@ import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.klangScript
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.StringValue
 
@@ -493,7 +494,7 @@ class StdLibTest : StringSpec({
             registerLibrary(KlangStdLib.create())
         }
 
-        shouldThrow<IllegalArgumentException> {
+        shouldThrow<KlangScriptTypeError> {
             engine.execute(
                 """
                 import * from "stdlib"

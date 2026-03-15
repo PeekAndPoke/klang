@@ -118,8 +118,8 @@ class LocationTrackingTest : StringSpec({
         error.functionName shouldBe "test"
         error.expected shouldBe 2
         error.actual shouldBe 1
-        // Location is null for native function errors (limitation)
-        error.location shouldBe null
+        // Location now points at the call site
+        error.location shouldNotBe null
     }
 
     "ImportError includes source location" {
