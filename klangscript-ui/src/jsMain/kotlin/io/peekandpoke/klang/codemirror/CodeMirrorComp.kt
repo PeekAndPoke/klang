@@ -8,7 +8,6 @@ import de.peekandpoke.kraft.popups.PopupsManager
 import de.peekandpoke.kraft.utils.jsObject
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.OnChange
-import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -65,8 +64,10 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
     private val editorId = "codemirror-editor-${hashCode()}"
     private var editor: EditorView? by value(null)
 
+    /** The underlying CodeMirror EditorView, exposed so the main app can attach external features (e.g. highlight buffer). */
+    val editorView: EditorView? get() = editor
+
     private val theme = CodeMirrorTheme()
-    val highlightBuffer = CodeMirrorHighlightBuffer()
 
     /** Import-aware documentation context — owns hover docs + completion data. */
     private val docContext = EditorDocContext(
@@ -80,7 +81,6 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             }
 
             onUnmount {
-                highlightBuffer.detach()
                 destroy()
             }
         }
@@ -145,7 +145,6 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         try {
             val view = EditorView(viewConfig)
             editor = view
-            highlightBuffer.attachTo(view)
         } catch (e: Throwable) {
             console.error("Error initializing CodeMirror:", e)
         }
@@ -207,16 +206,6 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
                 }
             )
         )
-    }
-
-    // ── Highlight API (delegates to buffer) ─────────────────────────────────
-
-    fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
-        highlightBuffer.scheduleHighlight(event)
-    }
-
-    fun cancelAllHighlights() {
-        highlightBuffer.cancelAll()
     }
 
     // ── Error Diagnostics ───────────────────────────────────────────────────

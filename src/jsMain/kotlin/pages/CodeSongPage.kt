@@ -27,6 +27,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
 import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
+import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
@@ -108,8 +109,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private val currentModals by subscribingTo(modals)
 
+    private val codeHighlightBuffer = CodeMirrorHighlightBuffer()
+
     private var highlightPerEvent by value(10) {
-        codeEditorRef { editor -> editor.highlightBuffer.maxHighlightsPerEvent = it }
+        codeHighlightBuffer.maxHighlightsPerEvent = it
         cancelHighlights()
         playback?.reemitVoiceSignals()
     }
@@ -204,10 +207,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     init {
         lifecycle {
             onMount {
-                codeEditorRef { editor -> editor.highlightBuffer.maxHighlightsPerEvent = highlightPerEvent }
+                codeEditorRef { editor -> editor.editorView?.let { codeHighlightBuffer.attachTo(it) } }
+                codeHighlightBuffer.maxHighlightsPerEvent = highlightPerEvent
             }
             onUnmount {
                 onStop()
+                codeHighlightBuffer.detach()
             }
         }
     }
@@ -221,12 +226,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     private fun cancelHighlights() {
-        codeEditorRef { editor -> editor.cancelAllHighlights() }
+        codeHighlightBuffer.cancelAll()
         blocksHighlightBuffer.cancelAll()
     }
 
     private fun scheduleVoiceHighlights(voiceEvent: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
-        codeEditorRef { editor -> editor.scheduleHighlight(voiceEvent) }
+        codeHighlightBuffer.scheduleHighlight(voiceEvent)
         val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return
         val now = Date.now()
         val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)

@@ -17,6 +17,7 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -53,6 +54,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private val isPlaying get() = playback != null
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
+    private val highlightBuffer = CodeMirrorHighlightBuffer()
 
     private var currentCode: String by value(props.code)
     private var playingCode: String? by value(null)
@@ -86,8 +88,12 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
     init {
         lifecycle {
+            onMount {
+                editorRef { editor -> editor.editorView?.let { highlightBuffer.attachTo(it) } }
+            }
             onUnmount {
                 stopPlayback()
+                highlightBuffer.detach()
             }
         }
     }
@@ -99,7 +105,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     }
 
     private fun play() {
-        editorRef { it.cancelAllHighlights() }
+        highlightBuffer.cancelAll()
 
         launch {
             withEditorErrorHandling(editorRef) {
@@ -143,7 +149,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
                                 is KlangPlaybackSignal.VoicesScheduled -> {
                                     signal.voices.forEach { voiceEvent ->
-                                        editorRef { it.scheduleHighlight(voiceEvent) }
+                                        highlightBuffer.scheduleHighlight(voiceEvent)
                                     }
                                 }
 
@@ -172,7 +178,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private fun stopPlayback() {
         playback?.stop()
         playback = null
-        editorRef { it.cancelAllHighlights() }
+        highlightBuffer.cancelAll()
         currentCycle = 0
         playingCode = null
     }

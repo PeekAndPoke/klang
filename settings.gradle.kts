@@ -12,6 +12,10 @@ include(
     ":klangblocks",
     // Shared UI utilities (kraft + klangscript, JS-only)
     ":klangui",
+    // External JS declarations (CodeMirror, etc.)
+    ":klangjs",
+    // CodeMirror editor for klangscript (JS-only)
+    ":klangscript-ui",
 
     // Common
     ":common",

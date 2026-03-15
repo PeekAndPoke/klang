@@ -94,20 +94,11 @@ kotlin {
                 implementation(devNpm("html-webpack-plugin", "5.6.0"))
 
                 api(project(":klangui"))
+                api(project(":klangscript-ui"))
                 api(Deps.KotlinLibs.Kraft.core)
                 api(Deps.KotlinLibs.Kraft.semanticui)
                 api(Deps.KotlinLibs.Kraft.addons_browserdetect)
                 api(Deps.KotlinLibs.Kraft.addons_marked)
-
-                // CodeMirror 6
-                api(Deps.Npm { codemirrorState() })
-                api(Deps.Npm { codemirrorView() })
-                api(Deps.Npm { codemirrorCommands() })
-                api(Deps.Npm { codemirrorLanguage() })
-                api(Deps.Npm { codemirrorLangJavascript() })
-                api(Deps.Npm { codemirrorBasicSetup() })
-                api(Deps.Npm { codemirrorLint() })
-                api(Deps.Npm { lezerHighlight() })
             }
         }
 
