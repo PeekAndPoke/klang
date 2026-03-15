@@ -38,7 +38,8 @@ class CodeMirrorTheme {
                 caretColor = cursor
             }
             this[".cm-cursor, .cm-dropCursor"] = jsObject {
-                borderLeftColor = cursor
+                borderLeftColor = "#ffffff"
+                borderLeftWidth = "2px"
             }
             // Selection background — focused editor
             this["&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground"] =

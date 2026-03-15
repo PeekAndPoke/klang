@@ -1,68 +1,38 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
-import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.builder.registerType
 import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.*
-import io.peekandpoke.klang.script.stdlib.KlangStdLib.ConsoleObject.printImpl
+import io.peekandpoke.klang.script.stdlib.KlangStdLib.defaultOutputHandler
 import kotlin.math.*
 
 /**
  * KlangScript Standard Library
  *
  * Provides commonly-used built-in functions for KlangScript programs.
- * This library follows JavaScript conventions, providing a `Math` object with methods.
- *
- * **Categories**:
- * - **I/O Functions**: `print()`, `console_log()` (global functions)
- * - **Math Object**: `Math.sqrt()`, `Math.abs()`, `Math.min()`, etc. (matches JavaScript API)
- * - **String Functions**: `length()`, `toUpperCase()`, `toLowerCase()` (global functions)
  *
  * **Usage**:
  * ```kotlin
  * val engine = klangScript {
  *     registerLibrary(KlangStdLib.create())
  * }
- *
- * engine.execute("""
- *     import * from "stdlib"
- *
- *     print("Hello, World!")
- *     let x = Math.sqrt(16)
- *     print("Square root of 16 is:", x)
- *     print("Max:", Math.max(5, 10))
- * """)
  * ```
- *
- * **Design Philosophy**:
- * - Follows JavaScript conventions where possible (Math object, console_log)
- * - Type-safe parameter conversion with helpful error messages
- * - Demonstrates native object with extension methods
- * - Minimal dependencies (only Kotlin stdlib)
  */
 object KlangStdLib {
 
-    /**
-     * Output handler for print functions
-     *
-     * By default, prints to stdout. Can be overridden for testing or custom output handling.
-     */
-    var outputHandler: (List<Any?>) -> Unit = {
-        println(it.joinToString(", "))
+    /** Default output handler — prints to stdout. */
+    val defaultOutputHandler: (List<Any?>) -> Unit = {
+        println(it.joinToString(" "))
     }
 
-    /**
-     * Math object - singleton for holding math operations (like JavaScript's Math)
-     */
+    /** Math object — singleton for holding math operations (like JavaScript's Math). */
     object MathObject {
         override fun toString(): String = "[Math object]"
 
-        /** Register the Math object and all its extension methods. */
         fun KlangScriptLibrary.Builder.register() {
             registerObject("Math", MathObject) {
-                // Math object methods - Single parameter
                 registerMethod(name = "sqrt") { x: Double -> sqrt(x) }
                 registerMethod(name = "abs") { x: Double -> abs(x) }
                 registerMethod(name = "floor") { x: Double -> floor(x) }
@@ -71,8 +41,6 @@ object KlangStdLib {
                 registerMethod(name = "sin") { x: Double -> sin(x) }
                 registerMethod(name = "cos") { x: Double -> cos(x) }
                 registerMethod(name = "tan") { x: Double -> tan(x) }
-
-                // Math object methods - Two parameters
                 registerMethod(name = "min") { a: Double, b: Double -> min(a, b) }
                 registerMethod(name = "max") { a: Double, b: Double -> max(a, b) }
                 registerMethod(name = "pow") { base: Double, exp: Double -> base.pow(exp) }
@@ -80,45 +48,26 @@ object KlangStdLib {
         }
     }
 
-    /**
-     * Object utility object - singleton for holding Object static methods (like JavaScript's Object)
-     */
+    /** Object utility — singleton for holding Object static methods. */
     object ObjectUtility {
         override fun toString(): String = "[Object utility]"
     }
 
-    /**
-     * Console object - singleton for holding console functions (like JavaScript's console)
-     */
+    /** Console object — singleton for holding console functions. */
     object ConsoleObject {
         override fun toString(): String = "[Console object]"
-
-        /** Register the console object and its log method. */
-        fun KlangScriptLibrary.Builder.register() {
-            registerObject("console", ConsoleObject) {
-                registerVarargMethod("log") { args ->
-                    outputHandler(args)
-                }
-            }
-        }
-
-        /**
-         * Implementation of print() and console_log()
-         *
-         * Prints all arguments separated by spaces
-         */
-        fun printImpl(args: List<Any?>): RuntimeValue {
-            outputHandler(args)
-            return NullValue
-        }
     }
 
     /**
-     * Create the standard library
+     * Create the standard library.
      *
+     * @param outputHandler Handler for `print()` and `console.log()` output.
+     *   Defaults to [defaultOutputHandler] (stdout). Override to capture output in a REPL or tests.
      * @return A KlangScriptLibrary instance containing all standard functions
      */
-    fun create(): KlangScriptLibrary {
+    fun create(
+        outputHandler: (List<Any?>) -> Unit = defaultOutputHandler,
+    ): KlangScriptLibrary {
         return klangScriptLibrary("stdlib") {
             source(
                 """
@@ -130,18 +79,19 @@ object KlangStdLib {
                 """.trimIndent()
             )
 
-            // Register console functions
-            with(ConsoleObject) { register() }
-
-            // Register Math functions
-            with(MathObject) { register() }
-
-            // Register Object utility functions
-            registerObject("Object", ObjectUtility) {
-                // Object methods need RuntimeValue parameters, so we register them manually
+            // Register console object with log method
+            registerObject("console", ConsoleObject) {
+                registerVarargMethod("log") { args ->
+                    outputHandler(args)
+                }
             }
 
-            // Object utility methods (need RuntimeValue parameters)
+            // Register Math object
+            with(MathObject) { register() }
+
+            // Register Object utility methods
+            registerObject("Object", ObjectUtility) {}
+
             registerExtensionMethod(ObjectUtility::class, "keys") { _, args, callLocation ->
                 val obj = args[0] as? ObjectValue
                     ?: throw KlangScriptTypeError("Object.keys() expects an object argument", location = callLocation)
@@ -167,164 +117,98 @@ object KlangStdLib {
                 registerMethod("length") { value.length.toDouble() }
                 registerMethod("charAt") { index: Double ->
                     val idx = index.toInt()
-                    if (idx in value.indices) value[idx].toString() else ""
+                    if (idx in value.indices) StringValue(value[idx].toString()) else StringValue("")
                 }
                 registerMethod("substring") { start: Double, end: Double ->
-                    val startIdx = start.toInt().coerceAtLeast(0)
-                    val endIdx = end.toInt().coerceAtMost(value.length)
-                    value.substring(startIdx, endIdx)
+                    val s = start.toInt().coerceIn(0, value.length)
+                    val e = end.toInt().coerceIn(0, value.length)
+                    StringValue(value.substring(s, e))
                 }
                 registerMethod("indexOf") { searchStr: String ->
                     value.indexOf(searchStr).toDouble()
                 }
                 registerMethod("split") { separator: String ->
-                    val parts = value.split(separator).map { StringValue(it) }
-                    ArrayValue(parts.toMutableList())
+                    ArrayValue(value.split(separator).map { StringValue(it) }.toMutableList())
                 }
-                registerMethod("toUpperCase") { value.uppercase() }
-                registerMethod("toLowerCase") { value.lowercase() }
-                registerMethod("trim") { value.trim() }
+                registerMethod("toUpperCase") { StringValue(value.uppercase()) }
+                registerMethod("toLowerCase") { StringValue(value.lowercase()) }
+                registerMethod("trim") { StringValue(value.trim()) }
                 registerMethod("startsWith") { prefix: String ->
-                    value.startsWith(prefix)
+                    BooleanValue(value.startsWith(prefix))
                 }
                 registerMethod("endsWith") { suffix: String ->
-                    value.endsWith(suffix)
+                    BooleanValue(value.endsWith(suffix))
                 }
                 registerMethod("replace") { search: String, replacement: String ->
-                    value.replace(search, replacement)
+                    StringValue(value.replace(search, replacement))
                 }
                 registerMethod("slice") { start: Double, end: Double ->
-                    val startIdx = start.toInt().coerceAtLeast(0)
-                    val endIdx = end.toInt().coerceAtMost(value.length)
-                    value.substring(startIdx, endIdx)
+                    val s = start.toInt().coerceIn(0, value.length)
+                    val e = end.toInt().coerceIn(0, value.length)
+                    StringValue(value.substring(s, e))
                 }
                 registerMethod("concat") { other: String ->
-                    value + other
+                    StringValue(value + other)
                 }
                 registerMethod("repeat") { count: Double ->
-                    value.repeat(count.toInt().coerceAtLeast(0))
+                    StringValue(value.repeat(count.toInt().coerceAtLeast(0)))
                 }
+                registerMethod("toString") { StringValue(value) }
             }
 
-            // Register Array extensions
+            // Register Number extensions
+            registerType<NumberValue> {
+                registerMethod("toString") { StringValue(toDisplayString()) }
+            }
+
+            // Register Boolean extensions
+            registerType<BooleanValue> {
+                registerMethod("toString") { StringValue(toDisplayString()) }
+            }
+
+            // Register Array extensions (Kotlin-style API)
             registerType<ArrayValue> {
-                // Property-like methods
-                registerMethod("length") { elements.size.toDouble() }
-
-                // Mutating methods
-                registerVarargMethod("push") { items: List<RuntimeValue> ->
-                    elements.addAll(items)
-                    elements.size.toDouble()
+                // Properties
+                registerMethod("size") { elements.size.toDouble() }
+                // Access
+                registerMethod("first") { if (elements.isNotEmpty()) elements.first() else NullValue }
+                registerMethod("last") { if (elements.isNotEmpty()) elements.last() else NullValue }
+                // Mutating
+                registerMethod("add") { item: Any -> elements.add(wrapAsRuntimeValue(item)); elements.size.toDouble() }
+                registerMethod("removeAt") { index: Double ->
+                    val idx = index.toInt()
+                    if (idx in elements.indices) elements.removeAt(idx) else NullValue
                 }
-                registerMethod("pop") {
-                    if (elements.isEmpty()) NullValue else elements.removeLast()
+                registerMethod("removeLast") { if (elements.isNotEmpty()) elements.removeLast() else NullValue }
+                registerMethod("removeFirst") { if (elements.isNotEmpty()) elements.removeFirst() else NullValue }
+                // Non-mutating (return new arrays)
+                registerMethod("reversed") { ArrayValue(elements.reversed().toMutableList()) }
+                registerMethod("drop") { n: Double -> ArrayValue(elements.drop(n.toInt()).toMutableList()) }
+                registerMethod("take") { n: Double -> ArrayValue(elements.take(n.toInt()).toMutableList()) }
+                registerMethod("subList") { start: Double, end: Double ->
+                    val s = start.toInt().coerceIn(0, elements.size)
+                    val e = end.toInt().coerceIn(0, elements.size)
+                    ArrayValue(elements.subList(s, e).toMutableList())
                 }
-                registerMethod("shift") {
-                    if (elements.isEmpty()) NullValue else elements.removeFirst()
+                registerMethod("joinToString") { separator: String ->
+                    StringValue(elements.joinToString(separator) { it.toDisplayString() })
                 }
-                registerVarargMethod("unshift") { items: List<RuntimeValue> ->
-                    elements.addAll(0, items)
-                    elements.size.toDouble()
+                registerMethod("indexOf") { item: Any ->
+                    val wrapped = wrapAsRuntimeValue(item)
+                    NumberValue(elements.indexOfFirst { it.value == wrapped.value }.toDouble())
                 }
-
-                // Non-mutating methods
-                registerMethod("slice") { start: Double, end: Double ->
-                    val startIdx = start.toInt().coerceAtLeast(0)
-                    val endIdx = end.toInt().coerceAtMost(elements.size)
-                    ArrayValue(elements.subList(startIdx, endIdx).toMutableList())
+                registerMethod("contains") { item: Any ->
+                    val wrapped = wrapAsRuntimeValue(item)
+                    BooleanValue(elements.any { it.value == wrapped.value })
                 }
-                registerMethod("reverse") {
-                    ArrayValue(elements.reversed().toMutableList())
-                }
+                registerMethod("isEmpty") { BooleanValue(elements.isEmpty()) }
+                registerMethod("isNotEmpty") { BooleanValue(elements.isNotEmpty()) }
             }
 
-            // Array methods that need RuntimeValue parameters (registerFunctionRaw style)
-            // These can't use type-safe registerMethod because they need to accept any RuntimeValue
-            registerExtensionMethod(ArrayValue::class, "concat") { arr, args, callLocation ->
-                val other = args[0] as? ArrayValue
-                    ?: throw KlangScriptTypeError("concat() expects an array argument", location = callLocation)
-                ArrayValue((arr.elements + other.elements).toMutableList())
-            }
-            registerExtensionMethod(ArrayValue::class, "join") { arr, args, _ ->
-                val sep = (args[0] as? StringValue)?.value ?: ", "
-                StringValue(arr.elements.joinToString(sep) { it.toDisplayString() })
-            }
-            registerExtensionMethod(ArrayValue::class, "indexOf") { arr, args, _ ->
-                val searchValue = args[0]
-                NumberValue(arr.elements.indexOfFirst { it.value == searchValue.value }.toDouble())
-            }
-            registerExtensionMethod(ArrayValue::class, "includes") { arr, args, _ ->
-                val searchValue = args[0]
-                BooleanValue(arr.elements.any { it.value == searchValue.value })
-            }
-
-            // Note: Higher-order methods (map, filter, forEach, find, some, every)
-            // require callback execution which needs interpreter context.
-            // These will be implemented in a future update with proper callback support.
-
-            // Output functions
+            // Output functions — use the captured outputHandler
             registerVarargFunction("print") { args ->
-                printImpl(args)
+                outputHandler(args)
             }
-
-            // String Functions (kept as global functions)
-            registerFunctionRaw("length") { args, callLocation ->
-                requireExactly(args, 1, "length", callLocation)
-                val str = toString(args[0], "length", callLocation)
-                NumberValue(str.length.toDouble())
-            }
-            registerFunctionRaw("toUpperCase") { args, callLocation ->
-                requireExactly(args, 1, "toUpperCase", callLocation)
-                val str = toString(args[0], "toUpperCase", callLocation)
-                StringValue(str.uppercase())
-            }
-            registerFunctionRaw("toLowerCase") { args, callLocation ->
-                requireExactly(args, 1, "toLowerCase", callLocation)
-                val str = toString(args[0], "toLowerCase", callLocation)
-                StringValue(str.lowercase())
-            }
-        }
-    }
-
-    // ===== Helper Functions =====
-
-    /**
-     * Require exactly N arguments.
-     *
-     * @param args Actual arguments received
-     * @param expected Required argument count
-     * @param functionName Function name for error reporting
-     * @param location Optional source location for error reporting
-     * @throws KlangScriptArgumentError if argument count does not match
-     */
-    private fun requireExactly(args: List<RuntimeValue>, expected: Int, functionName: String, location: SourceLocation? = null) {
-        if (args.size != expected) {
-            throw KlangScriptArgumentError(
-                functionName = functionName,
-                message = "$functionName() expects exactly $expected argument(s), got ${args.size}",
-                expected = expected,
-                actual = args.size,
-                location = location,
-            )
-        }
-    }
-
-    /**
-     * Convert a [RuntimeValue] to a Kotlin [String].
-     *
-     * @param value The runtime value (must be a [StringValue])
-     * @param functionName Function name for error reporting
-     * @param location Optional source location for error reporting
-     * @return The underlying string value
-     * @throws KlangScriptTypeError if the value is not a string
-     */
-    private fun toString(value: RuntimeValue, functionName: String, location: SourceLocation? = null): String {
-        return when (value) {
-            is StringValue -> value.value
-            else -> throw KlangScriptTypeError(
-                message = "$functionName() expects a string, got ${value.toDisplayString()}",
-                location = location,
-            )
         }
     }
 }

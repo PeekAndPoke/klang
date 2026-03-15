@@ -6,7 +6,6 @@ import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.klangScript
-import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.StringValue
 
@@ -26,10 +25,8 @@ class StdLibTest : StringSpec({
 
     "print() outputs single argument" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
-
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create())
+            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
         }
 
         engine.execute(
@@ -45,10 +42,8 @@ class StdLibTest : StringSpec({
 
     "print() outputs multiple arguments separated by spaces" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
-
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create())
+            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
         }
 
         engine.execute(
@@ -67,10 +62,8 @@ class StdLibTest : StringSpec({
 
     "print() with no arguments outputs empty line" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
-
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create())
+            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
         }
 
         engine.execute(
@@ -86,10 +79,8 @@ class StdLibTest : StringSpec({
 
     "console.log() works like print()" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
-
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create())
+            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
         }
 
         engine.execute(
@@ -322,7 +313,7 @@ class StdLibTest : StringSpec({
 
     // ===== String Functions =====
 
-    "length() returns string length" {
+    "String.length() returns string length" {
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
         }
@@ -330,14 +321,14 @@ class StdLibTest : StringSpec({
         val result = engine.execute(
             """
             import * from "stdlib"
-            length("hello")
+            "hello".length()
         """.trimIndent()
         )
 
         (result as NumberValue).value shouldBeExactly 5.0
     }
 
-    "length() with empty string" {
+    "String.length() with empty string" {
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
         }
@@ -345,7 +336,7 @@ class StdLibTest : StringSpec({
         val result = engine.execute(
             """
             import * from "stdlib"
-            length("")
+            "".length()
         """.trimIndent()
         )
 
@@ -360,7 +351,7 @@ class StdLibTest : StringSpec({
         val result = engine.execute(
             """
             import * from "stdlib"
-            toUpperCase("hello")
+            "hello".toUpperCase()
         """.trimIndent()
         )
 
@@ -375,7 +366,7 @@ class StdLibTest : StringSpec({
         val result = engine.execute(
             """
             import * from "stdlib"
-            toLowerCase("WORLD")
+            "WORLD".toLowerCase()
         """.trimIndent()
         )
 
@@ -410,7 +401,7 @@ class StdLibTest : StringSpec({
             """
             import * from "stdlib"
             let s = "Hello"
-            toUpperCase(toLowerCase(s))
+            s.toLowerCase().toUpperCase()
         """.trimIndent()
         )
 
@@ -419,10 +410,8 @@ class StdLibTest : StringSpec({
 
     "functions work with variables and expressions" {
         val output = mutableListOf<String>()
-        KlangStdLib.outputHandler = { output.add(it.joinToString()) }
-
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create())
+            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
         }
 
         engine.execute(
@@ -489,19 +478,19 @@ class StdLibTest : StringSpec({
         }
     }
 
-    "length() with non-string throws error" {
+    "String length() returns string length" {
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
         }
 
-        shouldThrow<KlangScriptTypeError> {
-            engine.execute(
-                """
-                import * from "stdlib"
-                length(42)
-            """.trimIndent()
-            )
-        }
+        val result = engine.execute(
+            """
+            import * from "stdlib"
+            "hello".length()
+        """.trimIndent()
+        )
+
+        (result as NumberValue).value shouldBe 5.0
     }
 
     // ===== Import Behavior =====
