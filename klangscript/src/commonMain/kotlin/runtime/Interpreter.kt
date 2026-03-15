@@ -521,8 +521,10 @@ class Interpreter(
                 executionContext.currentLocation = call.location
 
                 try {
-                    // Call native Kotlin function with location
-                    callee.function(args, call.location)
+                    // Call native Kotlin function with location, guarded
+                    guardNativeCall(callee.name, args, call.location) {
+                        callee.function(args, call.location)
+                    }
                 } finally {
                     executionContext.currentLocation = previousLocation
                     callStack.pop()
@@ -585,14 +587,17 @@ class Interpreter(
 
             is BoundNativeMethod -> {
                 // Call the bound native method
-                callStack.push("${callee.receiver.qualifiedName}.${callee.methodName}", call.location)
+                val fnName = "${callee.receiver.qualifiedName}.${callee.methodName}"
+                callStack.push(fnName, call.location)
 
                 // Update execution context with current call location
                 val previousLocation = executionContext.currentLocation
                 executionContext.currentLocation = call.location
 
                 try {
-                    callee.invoker(args, call.location)
+                    guardNativeCall(fnName, args, call.location) {
+                        callee.invoker(args, call.location)
+                    }
                 } finally {
                     executionContext.currentLocation = previousLocation
                     callStack.pop()

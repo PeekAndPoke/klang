@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.codemirror
+package io.peekandpoke.klang.ui.codemirror
 
 /**
  * Represents an error in the code editor

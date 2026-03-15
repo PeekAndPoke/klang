@@ -18,7 +18,6 @@ import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
-import io.peekandpoke.klang.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
@@ -26,6 +25,7 @@ import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.Tag
@@ -227,9 +227,9 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
                 // Stop button
                 ui.mini.circular.icon.givenNot(isPlaying) { disabled }.button {
-                        onClick { stopPlayback() }
-                        icon.black.stop()
-                    }
+                    onClick { stopPlayback() }
+                    icon.black.stop()
+                }
 
                 // Reset button (only show if modified from original)
                 ui.mini.circular.givenNot(isModifiedFromOriginal) { disabled }.button {

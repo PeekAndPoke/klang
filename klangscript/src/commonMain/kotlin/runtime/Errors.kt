@@ -15,6 +15,7 @@ enum class KlangScriptErrorType {
     ImportError,
     AssignmentError,
     StackOverflowError,
+    InternalError,
 }
 
 // ── Sealed Interface ─────────────────────────────────────────────────────────
@@ -235,6 +236,20 @@ class KlangScriptStackOverflowError(
     astNode: AstNode? = null,
     callStackTrace: List<CallStackFrame> = emptyList(),
 ) : KlangScriptRuntimeError(message, KlangScriptErrorType.StackOverflowError, location, astNode, callStackTrace)
+
+/**
+ * InternalError — unexpected failure in a native function call.
+ *
+ * Wraps exceptions thrown by Kotlin native functions with context about
+ * which function was called and what arguments were passed.
+ */
+class KlangScriptInternalError(
+    message: String,
+    val cause_: Throwable? = null,
+    location: SourceLocation? = null,
+    astNode: AstNode? = null,
+    callStackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptRuntimeError(message, KlangScriptErrorType.InternalError, location, astNode, callStackTrace)
 
 // ── Control Flow Exceptions (NOT errors) ─────────────────────────────────────
 

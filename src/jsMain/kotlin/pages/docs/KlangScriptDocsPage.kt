@@ -5,12 +5,15 @@ import de.peekandpoke.kraft.components.PureComponent
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.Padding
-import kotlinx.css.padding
-import kotlinx.css.rem
+import io.peekandpoke.klang.comp.InViewport
+import io.peekandpoke.klang.comp.KlangScriptReplComp
+import io.peekandpoke.klang.script.docs.klangScriptDocSections
+import io.peekandpoke.klang.ui.feel.KlangTheme
+import kotlinx.css.*
 import kotlinx.html.Tag
+import kotlinx.html.div
+import kotlinx.html.p
 
 @Suppress("FunctionName")
 fun Tag.KlangScriptDocsPage() = comp {
@@ -21,7 +24,9 @@ class KlangScriptDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+    private val laf by subscribingTo(KlangTheme)
+
+    //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
         ui.fluid.container {
@@ -30,12 +35,52 @@ class KlangScriptDocsPage(ctx: NoProps) : PureComponent(ctx) {
             }
 
             ui.segment {
-                ui.header { +"KlangScript Docs" }
+                ui.huge.header {
+                    css { put("color", "${laf.textPrimary} !important") }
+                    +"KlangScript Language Reference"
+                }
+                p {
+                    css { color = Color(laf.textSecondary) }
+                    +"Welcome to KlangScript! It's the dedicated scripting language for the Klang Audio Motór. "
+                    +"While it feels a lot like JavaScript in many ways, it has its own special flavor and unique "
+                    +"differences designed specifically for making music."
+                }
+                p {
+                    css { color = Color(laf.textSecondary) }
+                    +"Interactive examples — edit the code and press Run to see the output."
+                }
             }
 
-            ui.message {
-                icon.hammer()
-                +"Coming soon..."
+            for (section in klangScriptDocSections) {
+                div {
+                    css {
+                        marginBottom = 2.rem
+                    }
+
+                    ui.dividing.header {
+                        css { put("color", "${laf.textPrimary} !important") }
+                        +section.title
+                    }
+
+                    p {
+                        css { color = Color(laf.textSecondary) }
+                        +section.description
+                    }
+
+                    for (example in section.examples) {
+                        val exampleTitle = example.title
+                        if (exampleTitle != null) {
+                            ui.sub.header {
+                                css { put("color", "${laf.textSecondary} !important") }
+                                +exampleTitle
+                            }
+                        }
+
+                        InViewport {
+                            KlangScriptReplComp(initialCode = example.code)
+                        }
+                    }
+                }
             }
         }
     }

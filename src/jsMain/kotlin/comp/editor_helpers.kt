@@ -1,10 +1,11 @@
 package io.peekandpoke.klang.comp
 
 import de.peekandpoke.kraft.components.ComponentRef
-import io.peekandpoke.klang.codemirror.EditorError
-import io.peekandpoke.klang.codemirror.KlangScriptEditorComp
+import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.ast.SourceLocationAware
 import io.peekandpoke.klang.script.runtime.KlangScriptError
+import io.peekandpoke.klang.ui.codemirror.EditorError
+import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 
 /**
  * Maps a Throwable into an EditorError for display in the CodeMirror editor.

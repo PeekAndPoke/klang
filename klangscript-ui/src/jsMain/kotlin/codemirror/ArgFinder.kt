@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.codemirror
+package io.peekandpoke.klang.ui.codemirror
 
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol

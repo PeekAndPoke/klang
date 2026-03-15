@@ -19,7 +19,7 @@ import kotlin.js.Date
  * Pending show/remove operations are batched into a single `requestAnimationFrame`
  * loop so that highlights due at the same time appear in the same paint frame.
  *
- * Owned by [CodeMirrorComp]; call [attachTo] once the EditorView is ready.
+ * Owned by [codemirror.CodeMirrorComp]; call [attachTo] once the EditorView is ready.
  */
 class CodeMirrorHighlightBuffer(
     private val maxRefreshRatePerLocation: Int = 60,

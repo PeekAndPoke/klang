@@ -23,8 +23,8 @@ import kotlin.math.*
 object KlangStdLib {
 
     /** Default output handler — prints to stdout. */
-    val defaultOutputHandler: (List<Any?>) -> Unit = {
-        println(it.joinToString(" "))
+    val defaultOutputHandler: (List<String>) -> Unit = { args ->
+        println(args.joinToString(" "))
     }
 
     /** Math object — singleton for holding math operations (like JavaScript's Math). */
@@ -66,7 +66,7 @@ object KlangStdLib {
      * @return A KlangScriptLibrary instance containing all standard functions
      */
     fun create(
-        outputHandler: (List<Any?>) -> Unit = defaultOutputHandler,
+        outputHandler: (List<String>) -> Unit = defaultOutputHandler,
     ): KlangScriptLibrary {
         return klangScriptLibrary("stdlib") {
             source(
@@ -81,8 +81,8 @@ object KlangStdLib {
 
             // Register console object with log method
             registerObject("console", ConsoleObject) {
-                registerVarargMethod("log") { args ->
-                    outputHandler(args)
+                registerVarargMethod("log") { args: List<Any?> ->
+                    outputHandler(args.map { it?.toString() ?: "null" })
                 }
             }
 
@@ -206,8 +206,8 @@ object KlangStdLib {
             }
 
             // Output functions — use the captured outputHandler
-            registerVarargFunction("print") { args ->
-                outputHandler(args)
+            registerVarargFunction("print") { args: List<Any?> ->
+                outputHandler(args.map { it?.toString() ?: "null" })
             }
         }
     }

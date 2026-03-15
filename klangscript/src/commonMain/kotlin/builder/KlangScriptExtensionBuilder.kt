@@ -154,41 +154,37 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
  * Builder for registering extension methods on a native object or type
  */
 class NativeObjectExtensionsBuilder<T : Any>(
-    @PublishedApi
-    internal val builder: KlangScriptExtensionBuilder,
-    @PublishedApi
-    internal val cls: KClass<T>,
+    @PublishedApi internal val builder: KlangScriptExtensionBuilder,
+    @PublishedApi internal val cls: KClass<T>,
 ) {
-    /** Register a native extension function with variable number of parameters */
+    /** Register a native extension function with variable number of parameters. Null args are passed through. */
+    @Suppress("UNCHECKED_CAST")
     inline fun <reified P : Any, reified R : Any> registerVarargMethod(
         name: String, noinline fn: T.(List<P>) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
+        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
             val params = List(args.size) { index ->
-                convertArgToKotlin(name, args, index, P::class, callLocation)
-            }
+                convertArgToKotlin(fn = name, args = args, index = index, cls = P::class, nullable = true, loc = loc)
+            } as List<P>
+
             val result = receiver.fn(params)
+
             wrapAsRuntimeValue(result)
         }
     }
 
-    /**
-     * Register a native extension method with CallInfo for location tracking
-     *
-     * Extracts source locations from RuntimeValue parameters and receiver, and provides them via CallInfo.
-     */
+    /** Register a native extension method with CallInfo for location tracking. */
+    @Suppress("UNCHECKED_CAST")
     inline fun <reified P : Any, reified R> registerVarargMethodWithCallInfo(
         name: String, noinline fn: T.(List<P>, CallInfo) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
-            // Extract receiver location if it's a StringValue or NumberValue
+        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
             val receiverLocation = when (receiver) {
                 is StringValue -> receiver.location
                 is NumberValue -> receiver.location
                 else -> null
             }
 
-            // Extract parameter locations from RuntimeValue instances
             val paramLocations = args.map { arg ->
                 when (arg) {
                     is StringValue -> arg.location
@@ -198,17 +194,17 @@ class NativeObjectExtensionsBuilder<T : Any>(
             }
 
             val callInfo = CallInfo(
-                callLocation = callLocation,
+                callLocation = loc,
                 receiverLocation = receiverLocation,
-                paramLocations = paramLocations
+                paramLocations = paramLocations,
             )
 
-            // Convert arguments to target type
             val params = List(args.size) { index ->
-                convertArgToKotlin(name, args, index, P::class, callLocation)
-            }
+                convertArgToKotlin(fn = name, args = args, index = index, cls = P::class, nullable = true, loc = loc)
+            } as List<P>
 
             val result = receiver.fn(params, callInfo)
+
             wrapAsRuntimeValue(result)
         }
     }
@@ -225,80 +221,91 @@ class NativeObjectExtensionsBuilder<T : Any>(
     }
 
     /** Register a native extension method with one parameter */
+    @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified R : Any> registerMethod(
         name: String, noinline fn: T.(P1) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
-            checkArgsSize(name, args, 1, callLocation)
-            val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
+        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+            checkArgsSize(fn = name, args = args, expected = 1, location = loc)
+
+            val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+
             val result = receiver.fn(p1)
+
             wrapAsRuntimeValue(result)
         }
     }
 
-    /**
-     * Register a native extension method with two parameters
-     */
+    /** Register a native extension method with two parameters */
+    @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> registerMethod(
         name: String, noinline fn: T.(P1, P2) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
-            checkArgsSize(name, args, 2, callLocation)
-            val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-            val p2 = convertArgToKotlin(name, args, 1, P2::class, callLocation)
+        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+            checkArgsSize(fn = name, args = args, expected = 2, location = loc)
+
+            val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+            val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
+
             val result = receiver.fn(p1, p2)
+
             wrapAsRuntimeValue(result)
         }
     }
 
     /** Register a native extension method with three parameters */
+    @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any> registerMethod(
         name: String, noinline fn: T.(P1, P2, P3) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
-            checkArgsSize(name, args, 3, callLocation)
-            val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-            val p2 = convertArgToKotlin(name, args, 1, P2::class, callLocation)
-            val p3 = convertArgToKotlin(name, args, 2, P3::class, callLocation)
+        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+            checkArgsSize(fn = name, args = args, expected = 3, location = loc)
+
+            val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+            val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
+            val p3 = convertArgToKotlin(fn = name, args = args, index = 2, cls = P3::class, nullable = null is P3, loc = loc) as P3
+
             val result = receiver.fn(p1, p2, p3)
+
             wrapAsRuntimeValue(result)
         }
     }
 
     /** Register a native extension method with four parameters */
+    @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
             registerMethod(name: String, noinline fn: T.(P1, P2, P3, P4) -> R) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
-            checkArgsSize(name, args, 4, callLocation)
-            val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-            val p2 = convertArgToKotlin(name, args, 1, P2::class, callLocation)
-            val p3 = convertArgToKotlin(name, args, 2, P3::class, callLocation)
-            val p4 = convertArgToKotlin(name, args, 3, P4::class, callLocation)
+
+        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+            checkArgsSize(fn = name, args = args, expected = 4, location = loc)
+
+            val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+            val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
+            val p3 = convertArgToKotlin(fn = name, args = args, index = 2, cls = P3::class, nullable = null is P3, loc = loc) as P3
+            val p4 = convertArgToKotlin(fn = name, args = args, index = 3, cls = P4::class, nullable = null is P4, loc = loc) as P4
+
             val result = receiver.fn(p1, p2, p3, p4)
+
             wrapAsRuntimeValue(result)
         }
     }
 
     /** Register a native extension method with five parameters */
-    inline fun <
-            reified P1 : Any,
-            reified P2 : Any,
-            reified P3 : Any,
-            reified P4 : Any,
-            reified P5 : Any,
-            reified R : Any,
-            > registerMethod(
-        name: String,
-        noinline fn: T.(P1, P2, P3, P4, P5) -> R,
-    ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, callLocation ->
-            checkArgsSize(name, args, 5, callLocation)
-            val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-            val p2 = convertArgToKotlin(name, args, 1, P2::class, callLocation)
-            val p3 = convertArgToKotlin(name, args, 2, P3::class, callLocation)
-            val p4 = convertArgToKotlin(name, args, 3, P4::class, callLocation)
-            val p5 = convertArgToKotlin(name, args, 4, P5::class, callLocation)
+    @Suppress("UNCHECKED_CAST")
+    inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
+            registerMethod(name: String, noinline fn: T.(P1, P2, P3, P4, P5) -> R) {
+
+        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+            checkArgsSize(fn = name, args = args, expected = 5, location = loc)
+
+            val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+            val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
+            val p3 = convertArgToKotlin(fn = name, args = args, index = 2, cls = P3::class, nullable = null is P3, loc = loc) as P3
+            val p4 = convertArgToKotlin(fn = name, args = args, index = 3, cls = P4::class, nullable = null is P4, loc = loc) as P4
+            val p5 = convertArgToKotlin(fn = name, args = args, index = 4, cls = P5::class, nullable = null is P5, loc = loc) as P5
+
             val result = receiver.fn(p1, p2, p3, p4, p5)
+
             wrapAsRuntimeValue(result)
         }
     }
@@ -318,15 +325,15 @@ inline fun <reified T : Any> KlangScriptExtensionBuilder.registerType(
     registerType(cls = T::class, block = block)
 }
 
-/** Registers a native function as a top-level vararg function */
+/** Registers a native function as a top-level vararg function. Null args are passed through. */
+@Suppress("UNCHECKED_CAST")
 inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.registerVarargFunction(
     name: String, noinline fn: (List<P>) -> R,
 ) {
-    registerFunctionRaw(name) { args, callLocation ->
+    registerFunctionRaw(name) { args, loc ->
         val params = List(args.size) { index ->
-            // println("Converting arg $index of type ${args[index].value!!::class} to type ${P::class}")
-            convertArgToKotlin(name, args, index, P::class, callLocation)
-        }
+            convertArgToKotlin(fn = name, args = args, index = index, cls = P::class, nullable = true, loc = loc)
+        } as List<P>
         val result = fn(params)
         wrapAsRuntimeValue(result)
     }
@@ -344,68 +351,88 @@ inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
 }
 
 /** Registers a native function as a top-level function with one parameter */
+@Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (P1) -> R,
 ) {
-    registerFunctionRaw(name) { args, callLocation ->
-        checkArgsSize(name, args, 1, callLocation)
-        val param = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-        val result = fn(param)
+    registerFunctionRaw(name) { args, loc ->
+        checkArgsSize(fn = name, args = args, expected = 1, location = loc)
+
+        val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+
+        val result = fn(p1)
+
         wrapAsRuntimeValue(result)
     }
 }
 
 /** Registers a native function as a top-level function with two parameters */
+@Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
     name: String, noinline fn: (P1, P2) -> R,
 ) {
-    registerFunctionRaw(name) { args, callLocation ->
-        checkArgsSize(name, args, 2, callLocation)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-        val p2 = convertArgToKotlin(name, args, 1, P2::class, callLocation)
+    registerFunctionRaw(name) { args, loc ->
+        checkArgsSize(fn = name, args = args, expected = 2, location = loc)
+
+        val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+        val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
+
         val result = fn(p1, p2)
+
         wrapAsRuntimeValue(result)
     }
 }
 
 /** Registers a native function as a top-level function with three parameters */
+@Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3) -> R) {
-    registerFunctionRaw(name) { args, callLocation ->
-        checkArgsSize(name, args, 3, callLocation)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-        val p2 = convertArgToKotlin(name, args, 1, P2::class, callLocation)
-        val p3 = convertArgToKotlin(name, args, 2, P3::class, callLocation)
+    registerFunctionRaw(name) { args, loc ->
+        checkArgsSize(fn = name, args = args, expected = 3, location = loc)
+
+        val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+        val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
+        val p3 = convertArgToKotlin(fn = name, args = args, index = 2, cls = P3::class, nullable = null is P3, loc = loc) as P3
+
         val result = fn(p1, p2, p3)
+
         wrapAsRuntimeValue(result)
     }
 }
 
 /** Registers a native function as a top-level function with four parameters */
+@Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4) -> R) {
-    registerFunctionRaw(name) { args, callLocation ->
-        checkArgsSize(name, args, 4, callLocation)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-        val p2 = convertArgToKotlin(name, args, 1, P2::class, callLocation)
-        val p3 = convertArgToKotlin(name, args, 2, P3::class, callLocation)
-        val p4 = convertArgToKotlin(name, args, 3, P4::class, callLocation)
+    registerFunctionRaw(name) { args, loc ->
+        checkArgsSize(fn = name, args = args, expected = 4, location = loc)
+
+        val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+        val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
+        val p3 = convertArgToKotlin(fn = name, args = args, index = 2, cls = P3::class, nullable = null is P3, loc = loc) as P3
+        val p4 = convertArgToKotlin(fn = name, args = args, index = 3, cls = P4::class, nullable = null is P4, loc = loc) as P4
+
         val result = fn(p1, p2, p3, p4)
+
         wrapAsRuntimeValue(result)
     }
 }
 
 /** Registers a native function as a top-level function with five parameters */
+@Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
         KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4, P5) -> R) {
-    registerFunctionRaw(name) { args, callLocation ->
-        checkArgsSize(name, args, 5, callLocation)
-        val p1 = convertArgToKotlin(name, args, 0, P1::class, callLocation)
-        val p2 = convertArgToKotlin(name, args, 1, P2::class, callLocation)
-        val p3 = convertArgToKotlin(name, args, 2, P3::class, callLocation)
-        val p4 = convertArgToKotlin(name, args, 3, P4::class, callLocation)
-        val p5 = convertArgToKotlin(name, args, 4, P5::class, callLocation)
+    registerFunctionRaw(name) { args, loc ->
+        checkArgsSize(fn = name, args = args, expected = 5, location = loc)
+
+        val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
+        val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
+        val p3 = convertArgToKotlin(fn = name, args = args, index = 2, cls = P3::class, nullable = null is P3, loc = loc) as P3
+        val p4 = convertArgToKotlin(fn = name, args = args, index = 3, cls = P4::class, nullable = null is P4, loc = loc) as P4
+        val p5 = convertArgToKotlin(fn = name, args = args, index = 4, cls = P5::class, nullable = null is P5, loc = loc) as P5
+
         val result = fn(p1, p2, p3, p4, p5)
+
         wrapAsRuntimeValue(result)
     }
 }
@@ -417,11 +444,11 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
  *
  * Extracts source locations from RuntimeValue parameters and provides them via CallInfo.
  */
+@Suppress("UNCHECKED_CAST")
 inline fun <reified P : Any, reified R> KlangScriptExtensionBuilder.registerVarargFunctionWithCallInfo(
     name: String, noinline fn: (List<P>, CallInfo) -> R,
 ) {
-    registerFunctionRaw(name) { args, callLocation ->
-        // Extract parameter locations from RuntimeValue instances
+    registerFunctionRaw(name) { args, loc ->
         val paramLocations = args.map { arg ->
             when (arg) {
                 is StringValue -> arg.location
@@ -429,19 +456,11 @@ inline fun <reified P : Any, reified R> KlangScriptExtensionBuilder.registerVara
                 else -> null
             }
         }
-
-        val callInfo = CallInfo(
-            callLocation = callLocation,
-            paramLocations = paramLocations
-        )
-
-        // Convert arguments to target type
+        val callInfo = CallInfo(callLocation = loc, paramLocations = paramLocations)
         val params = List(args.size) { index ->
-            convertArgToKotlin(name, args, index, P::class, callLocation)
-        }
-
+            convertArgToKotlin(fn = name, args = args, index = index, cls = P::class, nullable = true, loc = loc)
+        } as List<P>
         val result = fn(params, callInfo)
-
         wrapAsRuntimeValue(result)
     }
 }

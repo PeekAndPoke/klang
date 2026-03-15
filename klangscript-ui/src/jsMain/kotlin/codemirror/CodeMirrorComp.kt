@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.codemirror
+package io.peekandpoke.klang.ui.codemirror
 
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef

@@ -53,11 +53,11 @@ fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int, location:
  * Convert a RuntimeValue to a Kotlin type.
  *
  * @param cls Target Kotlin class to convert to
- * @param location Optional source location for error reporting
+ * @param loc Optional source location for error reporting
  * @return The converted value as the target type
  * @throws KlangScriptTypeError if conversion is not possible
  */
-fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, location: SourceLocation? = null): T {
+fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, loc: SourceLocation? = null): T {
     // println("Converting ${this::class.simpleName} to ${cls.simpleName}")
 
     val result = when (this) {
@@ -112,7 +112,7 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, location: SourceLocat
                 else -> throw KlangScriptTypeError(
                     message = "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
                     operation = "parameter conversion",
-                    location = location,
+                    location = loc,
                 )
             }
         }
@@ -240,27 +240,38 @@ private fun FunctionValue.callFunction(args: List<Any?>): Any? {
 }
 
 /**
- * Convert a specific argument at the given index to a Kotlin type.
+ * Convert argument at [index] to Kotlin type. When [nullable] is true, [NullValue] returns null.
  *
  * @param fn Function name for error reporting
  * @param args List of runtime arguments
  * @param index Zero-based argument index
  * @param cls Target Kotlin class to convert to
- * @param location Optional source location for error reporting
+ * @param loc Optional source location for error reporting
  * @return The converted argument value
  * @throws KlangScriptArgumentError if the argument index is out of bounds
  * @throws KlangScriptTypeError if conversion fails
  */
-fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: Int, cls: KClass<T>, location: SourceLocation? = null): T {
+fun <T : Any> convertArgToKotlin(
+    fn: String,
+    args: List<RuntimeValue>,
+    index: Int,
+    cls: KClass<T>,
+    nullable: Boolean = false,
+    loc: SourceLocation? = null,
+): T? {
     val arg = args.getOrNull(index) ?: throw KlangScriptArgumentError(
         functionName = fn,
         message = "Expected argument at index $index",
         expected = null,
         actual = null,
-        location = location,
+        location = loc,
     )
 
-    return arg.convertToKotlin(cls, location)
+    if (nullable && arg is NullValue) {
+        return null
+    }
+
+    return arg.convertToKotlin(cls = cls, loc = loc)
 }
 
 /**
@@ -293,5 +304,34 @@ fun wrapAsRuntimeValue(value: Any?): RuntimeValue {
                 value = value
             )
         }
+    }
+}
+
+/**
+ * Guard a native function call. Re-throws [KlangScriptRuntimeError]s as-is.
+ * Wraps any other exception in a [KlangScriptInternalError] with context.
+ *
+ * @param functionName Name of the native function being called
+ * @param args The RuntimeValue arguments passed to the function
+ * @param location Source location of the call site
+ * @param block The native function body to execute
+ */
+inline fun guardNativeCall(
+    functionName: String,
+    args: List<RuntimeValue>,
+    location: SourceLocation?,
+    block: () -> RuntimeValue,
+): RuntimeValue {
+    return try {
+        block()
+    } catch (e: KlangScriptRuntimeError) {
+        throw e // already a proper error, re-throw as-is
+    } catch (e: Throwable) {
+        val argsDesc = args.mapIndexed { i, v -> "p${i + 1}=${v.toDisplayString()}" }.joinToString(", ")
+        throw KlangScriptInternalError(
+            message = "Internal error in native function '$functionName($argsDesc)': ${e.message ?: e::class.simpleName}",
+            cause_ = e,
+            location = location,
+        )
     }
 }
