@@ -30,27 +30,27 @@ class ErrorHandlingTest : StringSpec({
 
         error.errorType shouldBe KlangScriptErrorType.ReferenceError
         error.symbolName shouldBe "undefinedVariable"
-        error.message shouldBe "Undefined variable: undefinedVariable"
+        error.message shouldBe "Undefined symbol: undefinedVariable"
     }
 
     "ReferenceError - format() without location" {
         val error = KlangScriptReferenceError(symbolName = "foo")
 
-        error.format() shouldBe "ReferenceError: Undefined variable: foo"
+        error.format() shouldBe "ReferenceError: Undefined symbol: foo"
     }
 
     "ReferenceError - format() with location (no source)" {
         val location = SourceLocation(null, 5, 12, 5, 13)
         val error = KlangScriptReferenceError(symbolName = "foo", location = location)
 
-        error.format() shouldBe "ReferenceError at 5:12-13: Undefined variable: foo"
+        error.format() shouldBe "ReferenceError at 5:12-13: Undefined symbol: foo"
     }
 
     "ReferenceError - format() with location (with source)" {
         val location = SourceLocation("main.klang", 5, 12, 5, 13)
         val error = KlangScriptReferenceError(symbolName = "foo", location = location)
 
-        error.format() shouldBe "ReferenceError at main.klang:5:12-13: Undefined variable: foo"
+        error.format() shouldBe "ReferenceError at main.klang:5:12-13: Undefined symbol: foo"
     }
 
     // ============================================================
@@ -388,7 +388,7 @@ class ErrorHandlingTest : StringSpec({
             engine.execute("myVariable")
         }
 
-        error.message shouldBe "Undefined variable: myVariable"
+        error.message shouldBe "Undefined symbol: myVariable"
         error.format() shouldContain "ReferenceError"
         error.format() shouldContain "myVariable"
     }

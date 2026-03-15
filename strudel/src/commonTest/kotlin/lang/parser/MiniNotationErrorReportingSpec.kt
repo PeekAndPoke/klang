@@ -18,7 +18,9 @@ class MiniNotationErrorReportingSpec : StringSpec() {
                 parse("c3 [d3")  // Missing closing bracket
             }
 
-            exception.position shouldBe 6
+            // Error spans from '[' (pos 3) to end (pos 6)
+            exception.startPosition shouldBe 3
+            exception.endPosition shouldBe 6
             exception.baseLocation shouldBe null
             exception.message shouldContain "Parse error"
         }
@@ -36,11 +38,25 @@ class MiniNotationErrorReportingSpec : StringSpec() {
                 parse("c3 [d3", baseLocation)
             }
 
-            // Error at position 6 within mini-notation
-            // Combined with baseLocation col 10 = actual col 16
-            exception.message shouldContain "5:16"
-            exception.position shouldBe 6
+            // Error spans from '[' (pos 3) to end (pos 6)
+            exception.startPosition shouldBe 3
+            exception.endPosition shouldBe 6
             exception.baseLocation shouldBe baseLocation
+            // Error message reports the end position: col 10 + 1 (quote) + 6 = 17
+            exception.message shouldContain "5:17"
+            // Location spans from col 14 (10+1+3) to col 17 (10+1+6)
+            exception.location?.startColumn shouldBe 14
+            exception.location?.endColumn shouldBe 17
+        }
+
+        "Error for unclosed angle bracket spans from opener" {
+            val exception = shouldThrow<MiniNotationParseException> {
+                parse("c3 <d3 e3")
+            }
+
+            // Error spans from '<' (pos 3) to end (pos 9)
+            exception.startPosition shouldBe 3
+            exception.endPosition shouldBe 9
         }
 
         "Invalid euclidean rhythm pulses" {
@@ -49,6 +65,16 @@ class MiniNotationErrorReportingSpec : StringSpec() {
             }
 
             exception.message shouldContain "Invalid pulses"
+        }
+
+        "Unclosed euclidean paren spans from opener" {
+            val exception = shouldThrow<MiniNotationParseException> {
+                parse("bd(3,8")
+            }
+
+            // Error spans from '(' (pos 2) to end (pos 6)
+            exception.startPosition shouldBe 2
+            exception.endPosition shouldBe 6
         }
     }
 }

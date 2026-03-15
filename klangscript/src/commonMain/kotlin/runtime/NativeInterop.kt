@@ -28,7 +28,15 @@ data class NativeExtensionMethod(
     val invoker: (receiver: Any, args: List<RuntimeValue>, location: SourceLocation?) -> RuntimeValue,
 )
 
-/** Check if the number of arguments matches the expected count */
+/**
+ * Check if the number of arguments matches the expected count.
+ *
+ * @param fn Function name for error reporting
+ * @param args Actual arguments received
+ * @param expected Minimum expected argument count
+ * @param location Optional source location for error reporting
+ * @throws KlangScriptArgumentError if too few arguments were provided
+ */
 fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int, location: SourceLocation? = null) {
     if (args.size < expected) {
         throw KlangScriptArgumentError(
@@ -42,7 +50,12 @@ fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int, location:
 }
 
 /**
- * Convert a RuntimeValue to a Kotlin type
+ * Convert a RuntimeValue to a Kotlin type.
+ *
+ * @param cls Target Kotlin class to convert to
+ * @param location Optional source location for error reporting
+ * @return The converted value as the target type
+ * @throws KlangScriptTypeError if conversion is not possible
  */
 fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, location: SourceLocation? = null): T {
     // println("Converting ${this::class.simpleName} to ${cls.simpleName}")
@@ -109,6 +122,14 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>, location: SourceLocat
     return result as T
 }
 
+/**
+ * Convert a script [FunctionValue] to a Kotlin lambda.
+ *
+ * Supports functions with 0 to 10 parameters.
+ *
+ * @return A Kotlin lambda that invokes this script function
+ * @throws KlangScriptTypeError if the function has more than 10 parameters
+ */
 fun <T : Any> FunctionValue.convertFunctionToKotlin(): T {
 
     val func = this
@@ -172,7 +193,13 @@ fun <T : Any> FunctionValue.convertFunctionToKotlin(): T {
 }
 
 /**
- * Calls the function with the provided arguments
+ * Invoke this script function with the given raw Kotlin arguments.
+ *
+ * Wraps arguments as [RuntimeValue]s, creates a call environment,
+ * evaluates the function body, and unwraps the result.
+ *
+ * @param args Raw Kotlin arguments (will be wrapped via [wrapAsRuntimeValue])
+ * @return The unwrapped result of the function execution
  */
 private fun FunctionValue.callFunction(args: List<Any?>): Any? {
     // 1. Wrap arguments
@@ -212,7 +239,18 @@ private fun FunctionValue.callFunction(args: List<Any?>): Any? {
     return result.value
 }
 
-// ... existing code ...
+/**
+ * Convert a specific argument at the given index to a Kotlin type.
+ *
+ * @param fn Function name for error reporting
+ * @param args List of runtime arguments
+ * @param index Zero-based argument index
+ * @param cls Target Kotlin class to convert to
+ * @param location Optional source location for error reporting
+ * @return The converted argument value
+ * @throws KlangScriptArgumentError if the argument index is out of bounds
+ * @throws KlangScriptTypeError if conversion fails
+ */
 fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: Int, cls: KClass<T>, location: SourceLocation? = null): T {
     val arg = args.getOrNull(index) ?: throw KlangScriptArgumentError(
         functionName = fn,

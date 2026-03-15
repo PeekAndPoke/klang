@@ -34,6 +34,28 @@ class KlangScriptParser private constructor(
     private val currentSource: String? = null,
 ) {
     companion object {
+        /** Keyword → TokenType lookup map. */
+        private val keywords = mapOf(
+            "true" to TokenType.TRUE,
+            "false" to TokenType.FALSE,
+            "null" to TokenType.NULL,
+            "let" to TokenType.LET,
+            "const" to TokenType.CONST,
+            "import" to TokenType.IMPORT,
+            "export" to TokenType.EXPORT,
+            "from" to TokenType.FROM,
+            "as" to TokenType.AS,
+            "return" to TokenType.RETURN,
+            "in" to TokenType.IN,
+            "if" to TokenType.IF,
+            "else" to TokenType.ELSE,
+            "while" to TokenType.WHILE,
+            "do" to TokenType.DO,
+            "for" to TokenType.FOR,
+            "break" to TokenType.BREAK,
+            "continue" to TokenType.CONTINUE,
+        )
+
         /**
          * Parse KlangScript source code into an AST
          *
@@ -52,6 +74,7 @@ class KlangScriptParser private constructor(
     // Token Types and Lexer
     // ============================================================
 
+    /** Token types produced by the lexer. */
     private enum class TokenType {
         // Literals
         NUMBER, STRING, BACKTICK_STRING, IDENTIFIER,
@@ -90,6 +113,7 @@ class KlangScriptParser private constructor(
         EOF
     }
 
+    /** A lexed token with type, text content, and source position. */
     private data class Token(
         val type: TokenType,
         val text: String,
@@ -97,17 +121,7 @@ class KlangScriptParser private constructor(
         val column: Int,    // 1-based (start column)
         val endLine: Int,   // 1-based
         val endColumn: Int,  // 1-based, exclusive
-    ) {
-        fun toLocation(): SourceLocation {
-            return SourceLocation(
-                source = null, // Will be set by parser
-                startLine = line,
-                startColumn = column,
-                endLine = endLine,
-                endColumn = endColumn
-            )
-        }
-    }
+    )
 
     private lateinit var tokens: List<Token>
     private var pos: Int = 0
@@ -552,27 +566,7 @@ class KlangScriptParser private constructor(
                         column++
                     }
                     val text = source.substring(start, i)
-                    val type = when (text) {
-                        "true" -> TokenType.TRUE
-                        "false" -> TokenType.FALSE
-                        "null" -> TokenType.NULL
-                        "let" -> TokenType.LET
-                        "const" -> TokenType.CONST
-                        "import" -> TokenType.IMPORT
-                        "export" -> TokenType.EXPORT
-                        "from" -> TokenType.FROM
-                        "as" -> TokenType.AS
-                        "return" -> TokenType.RETURN
-                        "in" -> TokenType.IN
-                        "if" -> TokenType.IF
-                        "else" -> TokenType.ELSE
-                        "while" -> TokenType.WHILE
-                        "do" -> TokenType.DO
-                        "for" -> TokenType.FOR
-                        "break" -> TokenType.BREAK
-                        "continue" -> TokenType.CONTINUE
-                        else -> TokenType.IDENTIFIER
-                    }
+                    val type = keywords[text] ?: TokenType.IDENTIFIER
                     addToken(type, text, startColumn)
                 }
 
@@ -765,12 +759,6 @@ class KlangScriptParser private constructor(
                     return null
                 }
                 advance() // consume )
-
-                // Trailing comma handling
-                if (params.isNotEmpty() && previous().type == TokenType.RIGHT_PAREN) {
-                    // Check if there was a trailing comma before )
-                    // We already consumed it in the loop, so params is correct
-                }
 
                 // Must be followed by arrow
                 if (!check(TokenType.ARROW)) {
@@ -1031,7 +1019,7 @@ class KlangScriptParser private constructor(
 
     /**
      * Call and member access (method chaining)
-     * CRITICAL: Allows alternating .prop, (), [index] in any order
+     * CRITICAL: Allows alternating .prop, (), [ index ] in any order
      * Also handles postfix ++ and --
      * Fixes: sine2.fromBipolar().range(0.1, 0.9)
      */
@@ -1495,12 +1483,12 @@ class KlangScriptParser private constructor(
             val exprSource = raw.substring(exprStart, j)
 
             // Parse the expression inside ${...} using a sub-parser
-            val subProgram = KlangScriptParser.parse(exprSource, currentSource)
+            val subProgram = parse(exprSource, currentSource)
             if (subProgram.statements.isEmpty()) {
                 error("Empty expression in template literal interpolation")
             }
-            val stmt = subProgram.statements.first()
-            val expr = when (stmt) {
+
+            val expr = when (val stmt = subProgram.statements.first()) {
                 is ExpressionStatement -> stmt.expression
                 else -> error("Template literal interpolation must be an expression")
             }
@@ -1523,11 +1511,14 @@ class KlangScriptParser private constructor(
     private fun parseWhileStatement(): WhileStatement {
         val whileToken = previous() // WHILE consumed
         consume(TokenType.LEFT_PAREN, "Expected '(' after 'while'")
+
         val condition = parseExpression()
         consume(TokenType.RIGHT_PAREN, "Expected ')' after while condition")
         consume(TokenType.LEFT_BRACE, "Expected '{' after while condition")
+
         val body = parseBlockStatements()
         consume(TokenType.RIGHT_BRACE, "Expected '}' after while body")
+
         return WhileStatement(condition, body, whileToken.toSourceLocation())
     }
 
@@ -1537,17 +1528,20 @@ class KlangScriptParser private constructor(
     private fun parseDoWhileStatement(): DoWhileStatement {
         val doToken = previous() // DO consumed
         consume(TokenType.LEFT_BRACE, "Expected '{' after 'do'")
+
         val body = parseBlockStatements()
         consume(TokenType.RIGHT_BRACE, "Expected '}' after do body")
         consume(TokenType.WHILE, "Expected 'while' after do body")
         consume(TokenType.LEFT_PAREN, "Expected '(' after 'while'")
+
         val condition = parseExpression()
         consume(TokenType.RIGHT_PAREN, "Expected ')' after do-while condition")
+
         return DoWhileStatement(body, condition, doToken.toSourceLocation())
     }
 
     /**
-     * Parse for statement: for ( [init] ; [condition] ; [update] ) { body }
+     * Parse for statement: for ( [ init ] ; [ condition ] ; [ update ] ) { body }
      *
      * The for loop runs in its own scope (init let declarations are scoped to loop).
      * Semicolons are used as separators in the for header (not statement terminators).

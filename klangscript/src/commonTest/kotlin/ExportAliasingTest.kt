@@ -218,7 +218,7 @@ class ExportAliasingTest : StringSpec({
             )
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
-            e.message shouldBe "Undefined variable: add"
+            e.message shouldBe "Undefined function: add"
         }
     }
 

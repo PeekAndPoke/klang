@@ -501,7 +501,7 @@ class LangArithmeticSpec : StringSpec({
         // Verify it's still Rational
         val value = events[0].data.value
         value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
-        (value as StrudelVoiceValue.Num).value.toInt() shouldBe 9
+        value.value.toInt() shouldBe 9
     }
 
     "Arithmetic with fractional results uses Rational precision" {

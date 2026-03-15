@@ -129,7 +129,7 @@ class KlangScriptTypeError(
  */
 class KlangScriptReferenceError(
     val symbolName: String,
-    message: String = "Undefined variable: $symbolName",
+    message: String = "Undefined symbol: $symbolName",
     location: SourceLocation? = null,
     astNode: AstNode? = null,
     callStackTrace: List<CallStackFrame> = emptyList(),

@@ -8,8 +8,13 @@ package io.peekandpoke.klang.script.ast
  * and the runtime execution.
  */
 
+/** Marker interface for anything that carries a [SourceLocation]. */
+interface SourceLocationAware {
+    val location: SourceLocation?
+}
+
 /**
- * Source location information for error reporting
+ * Source location information for error reporting.
  *
  * Tracks the position of a code element in the source file using start and end positions.
  * This naturally handles both single-line and multiline code spans.
@@ -20,11 +25,6 @@ package io.peekandpoke.klang.script.ast
  * @param endLine Ending line number (1-based)
  * @param endColumn Ending column number (1-based, exclusive - points to character after the last character)
  */
-/** Marker interface for anything that carries a [SourceLocation]. */
-interface SourceLocationAware {
-    val location: SourceLocation?
-}
-
 data class SourceLocation(
     val source: String?,
     val startLine: Int,
@@ -32,6 +32,7 @@ data class SourceLocation(
     val endLine: Int,
     val endColumn: Int,
 ) {
+    /** Wrap this location in a single-element [SourceLocationChain]. */
     fun asChain() = SourceLocationChain.single(this)
 
     override fun toString(): String {
@@ -889,7 +890,7 @@ data class ArrayLiteral(
  * Target can be:
  * - Identifier: x = expr
  * - MemberAccess: obj.prop = expr
- * - IndexAccess: arr[i] = expr
+ * - IndexAccess: arr[ i ] = expr
  *
  * Assignment is right-associative and has the lowest precedence (below ternary).
  *
@@ -927,7 +928,7 @@ data class TernaryExpression(
  *
  * Examples:
  * - arr[0]       → first element of array
- * - arr[i]       → element at index i
+ * - arr[ i ]       → element at index i
  * - obj["key"]   → property "key" on object
  *
  * @param obj The object/array expression

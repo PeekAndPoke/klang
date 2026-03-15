@@ -59,6 +59,13 @@ class Environment(
     private val getExtensionMethodNamesCache = mutableMapOf<KClass<*>, Set<String>>()
     private val getAllRegisteredSupertypes = mutableMapOf<KClass<*>, List<KClass<*>>>()
 
+    /**
+     * Register a native extension (libraries, functions, types, objects, extension methods).
+     *
+     * Clears internal lookup caches and merges all registrations from the extension.
+     *
+     * @param native The extension containing registrations to apply
+     */
     fun register(native: KlangScriptExtension) {
         // clear all caches
         getExtensionMethodCache.clear()

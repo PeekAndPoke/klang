@@ -78,8 +78,20 @@ class KlangScriptLibrary internal constructor(
         /** Per-library documentation registry */
         private val docs = KlangDocsRegistry()
 
+        /**
+         * Append KlangScript source code to this library.
+         *
+         * @param sourceCode KlangScript source to include
+         * @return This builder for chaining
+         */
         fun source(sourceCode: String) = apply { this.sourceCode.add(sourceCode) }
 
+        /**
+         * Configure the documentation registry for this library.
+         *
+         * @param block Configuration block applied to the [KlangDocsRegistry]
+         * @return This builder for chaining
+         */
         fun docs(block: KlangDocsRegistry.() -> Unit) = apply { docs.block() }
 
         /**

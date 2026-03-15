@@ -144,17 +144,18 @@ class MiniNotationParser(
                 }
 
                 match(TokenType.L_PAREN) -> {
-                    val pulsesStr = consume(TokenType.LITERAL, "Expected pulses number").text
-                    val pulses = pulsesStr.toIntOrNull() ?: parseError("Invalid pulses: $pulsesStr")
-                    consume(TokenType.COMMA, "Expected ',' in Euclidean rhythm")
-                    val stepsStr = consume(TokenType.LITERAL, "Expected steps number").text
-                    val steps = stepsStr.toIntOrNull() ?: parseError("Invalid steps: $stepsStr")
+                    val openPos = previous().start
+                    val pulsesStr = consume(TokenType.LITERAL, "Expected pulses number", fromPosition = openPos).text
+                    val pulses = pulsesStr.toIntOrNull() ?: parseError("Invalid pulses: $pulsesStr", fromPosition = openPos)
+                    consume(TokenType.COMMA, "Expected ',' in Euclidean rhythm", fromPosition = openPos)
+                    val stepsStr = consume(TokenType.LITERAL, "Expected steps number", fromPosition = openPos).text
+                    val steps = stepsStr.toIntOrNull() ?: parseError("Invalid steps: $stepsStr", fromPosition = openPos)
                     var rotation = 0
                     if (match(TokenType.COMMA)) {
-                        val rotStr = consume(TokenType.LITERAL, "Expected rotation number").text
-                        rotation = rotStr.toIntOrNull() ?: parseError("Invalid rotation: $rotStr")
+                        val rotStr = consume(TokenType.LITERAL, "Expected rotation number", fromPosition = openPos).text
+                        rotation = rotStr.toIntOrNull() ?: parseError("Invalid rotation: $rotStr", fromPosition = openPos)
                     }
-                    consume(TokenType.R_PAREN, "Expected ')' after Euclidean rhythm")
+                    consume(TokenType.R_PAREN, "Expected ')' after Euclidean rhythm", fromPosition = openPos)
                     node = node.withMod { copy(euclidean = MnNode.Euclidean(pulses, steps, rotation)) }
                 }
 
@@ -168,14 +169,16 @@ class MiniNotationParser(
     /** Parses the primary node: atom, group `[]`, alternation `<>`, or rest `~`. */
     private fun parseBaseNode(): MnNode = when {
         match(TokenType.L_BRACKET) -> {
+            val openPos = previous().start
             val items = parseExpression()
-            consume(TokenType.R_BRACKET, "Expected ']'")
+            consume(TokenType.R_BRACKET, "Expected ']'", fromPosition = openPos)
             MnNode.Group(items)
         }
 
         match(TokenType.L_ANGLE) -> {
+            val openPos = previous().start
             val items = parseAlternationItems()
-            consume(TokenType.R_ANGLE, "Expected '>'")
+            consume(TokenType.R_ANGLE, "Expected '>'", fromPosition = openPos)
             MnNode.Alternation(items)
         }
 
@@ -233,12 +236,12 @@ class MiniNotationParser(
         return false
     }
 
-    private fun consume(type: TokenType, message: String): Token {
+    private fun consume(type: TokenType, message: String, fromPosition: Int? = null): Token {
         if (check(type)) return tokens[pos++]
-        parseError(message)
+        parseError(message, fromPosition)
     }
 
-    private fun parseError(message: String): Nothing {
+    private fun parseError(message: String, fromPosition: Int? = null): Nothing {
         val charPos = if (pos < tokens.size) {
             tokens[pos].start
         } else if (tokens.isNotEmpty()) {
@@ -246,7 +249,12 @@ class MiniNotationParser(
         } else {
             0
         }
-        throw MiniNotationParseException(message, charPos, baseLocation)
+        throw MiniNotationParseException(
+            message = message,
+            startPosition = fromPosition ?: charPos,
+            endPosition = charPos,
+            baseLocation = baseLocation,
+        )
     }
 
     // ── Token types ───────────────────────────────────────────────────────

@@ -125,7 +125,7 @@ class ImportAliasingTest : StringSpec({
             error("Should have thrown exception")
         } catch (e: RuntimeException) {
             // Expected - 'add' is not defined, only 'sum' is
-            e.message shouldBe "Undefined variable: add"
+            e.message shouldBe "Undefined function: add"
         }
     }
 

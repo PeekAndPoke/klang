@@ -59,6 +59,7 @@ object KlangStdLib {
     object MathObject {
         override fun toString(): String = "[Math object]"
 
+        /** Register the Math object and all its extension methods. */
         fun KlangScriptLibrary.Builder.register() {
             registerObject("Math", MathObject) {
                 // Math object methods - Single parameter
@@ -92,6 +93,7 @@ object KlangStdLib {
     object ConsoleObject {
         override fun toString(): String = "[Console object]"
 
+        /** Register the console object and its log method. */
         fun KlangScriptLibrary.Builder.register() {
             registerObject("console", ConsoleObject) {
                 registerVarargMethod("log") { args ->
@@ -287,7 +289,13 @@ object KlangStdLib {
     // ===== Helper Functions =====
 
     /**
-     * Require exactly N arguments
+     * Require exactly N arguments.
+     *
+     * @param args Actual arguments received
+     * @param expected Required argument count
+     * @param functionName Function name for error reporting
+     * @param location Optional source location for error reporting
+     * @throws KlangScriptArgumentError if argument count does not match
      */
     private fun requireExactly(args: List<RuntimeValue>, expected: Int, functionName: String, location: SourceLocation? = null) {
         if (args.size != expected) {
@@ -302,7 +310,13 @@ object KlangStdLib {
     }
 
     /**
-     * Convert RuntimeValue to String
+     * Convert a [RuntimeValue] to a Kotlin [String].
+     *
+     * @param value The runtime value (must be a [StringValue])
+     * @param functionName Function name for error reporting
+     * @param location Optional source location for error reporting
+     * @return The underlying string value
+     * @throws KlangScriptTypeError if the value is not a string
      */
     private fun toString(value: RuntimeValue, functionName: String, location: SourceLocation? = null): String {
         return when (value) {

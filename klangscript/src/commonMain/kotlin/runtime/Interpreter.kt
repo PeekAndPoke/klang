@@ -491,7 +491,21 @@ class Interpreter(
      */
     private fun evaluateCall(call: CallExpression): RuntimeValue {
         // Evaluate what we're calling (usually an identifier)
-        val callee = evaluate(call.callee)
+        val callee = try {
+            evaluate(call.callee)
+        } catch (e: KlangScriptReferenceError) {
+            // Improve error message: "Undefined function" instead of "Undefined symbol"
+            if (call.callee is Identifier) {
+                throw KlangScriptReferenceError(
+                    symbolName = e.symbolName,
+                    message = "Undefined function: ${e.symbolName}",
+                    location = e.location,
+                    astNode = call,
+                    callStackTrace = e.callStackTrace,
+                )
+            }
+            throw e
+        }
 
         // Evaluate all arguments left-to-right
         val args = call.arguments.map { evaluate(it) }
@@ -1235,7 +1249,7 @@ class Interpreter(
         return when (val target = assignment.target) {
             is Identifier -> {
                 // Simple variable assignment: x = value
-                env.assign(target.name, value, assignment.location, getStackTrace())
+                env.assign(target.name, value, target.location, getStackTrace())
             }
 
             is MemberAccess -> {
