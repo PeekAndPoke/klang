@@ -694,6 +694,19 @@ class Interpreter(
                 BooleanValue(!boolValue)
             }
 
+            UnaryOperator.BITWISE_NOT -> {
+                val operandValue = evaluate(unaryOp.operand)
+                if (operandValue !is NumberValue) {
+                    throw KlangScriptTypeError(
+                        message = "Bitwise NOT operator requires a number, got ${operandValue.toDisplayString()}",
+                        operation = "unary ~",
+                        location = unaryOp.location,
+                        callStackTrace = getStackTrace()
+                    )
+                }
+                NumberValue(operandValue.value.toInt().inv().toDouble())
+            }
+
             UnaryOperator.PREFIX_INCREMENT -> {
                 // ++x: add 1, assign back, return new value
                 val target = unaryOp.operand
@@ -853,6 +866,16 @@ class Interpreter(
                 }
             }
 
+            BinaryOperator.NULLISH_COALESCE -> {
+                val leftValue = evaluate(binOp.left)
+                // If left is null, evaluate and return right. Otherwise return left.
+                return if (leftValue is NullValue) {
+                    evaluate(binOp.right)
+                } else {
+                    leftValue
+                }
+            }
+
             else -> {
                 // For all other operators, evaluate both operands
             }
@@ -925,6 +948,36 @@ class Interpreter(
 //                    else -> error("Unexpected comparison operator: ${binOp.operator}")
                 }
                 return BooleanValue(result)
+            }
+
+            BinaryOperator.BITWISE_AND,
+            BinaryOperator.BITWISE_OR,
+            BinaryOperator.BITWISE_XOR,
+            BinaryOperator.SHIFT_LEFT,
+            BinaryOperator.SHIFT_RIGHT,
+            BinaryOperator.UNSIGNED_SHIFT_RIGHT,
+                -> {
+                if (leftValue !is NumberValue || rightValue !is NumberValue) {
+                    throw KlangScriptTypeError(
+                        message = "Binary ${binOp.operator} operation requires numbers, " +
+                                "got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
+                        operation = binOp.operator.toString(),
+                        location = binOp.location,
+                        callStackTrace = getStackTrace()
+                    )
+                }
+                val l = leftValue.value.toInt()
+                val r = rightValue.value.toInt()
+                val result = when (binOp.operator) {
+                    BinaryOperator.BITWISE_AND -> l and r
+                    BinaryOperator.BITWISE_OR -> l or r
+                    BinaryOperator.BITWISE_XOR -> l xor r
+                    BinaryOperator.SHIFT_LEFT -> l shl r
+                    BinaryOperator.SHIFT_RIGHT -> l shr r
+                    BinaryOperator.UNSIGNED_SHIFT_RIGHT -> l ushr r
+                    else -> error("Unexpected bitwise operator")
+                }
+                return NumberValue(result.toDouble())
             }
 
             else -> {
@@ -1075,6 +1128,11 @@ class Interpreter(
     private fun evaluateMemberAccess(memberAccess: MemberAccess): RuntimeValue {
         // Evaluate the object expression
         val objValue = evaluate(memberAccess.obj)
+
+        // Optional chaining: if object is null, return null instead of throwing
+        if (memberAccess.optional && objValue is NullValue) {
+            return NullValue
+        }
 
         // Handle native objects - lookup extension methods
         if (objValue is NativeObjectValue<*>) {

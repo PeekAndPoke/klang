@@ -234,6 +234,13 @@ private fun BinaryOperator.toSymbol(): String = when (this) {
     BinaryOperator.AND -> "&&"
     BinaryOperator.OR -> "||"
     BinaryOperator.IN -> "in"
+    BinaryOperator.BITWISE_AND -> "&"
+    BinaryOperator.BITWISE_OR -> "|"
+    BinaryOperator.BITWISE_XOR -> "^"
+    BinaryOperator.SHIFT_LEFT -> "<<"
+    BinaryOperator.SHIFT_RIGHT -> ">>"
+    BinaryOperator.UNSIGNED_SHIFT_RIGHT -> ">>>"
+    BinaryOperator.NULLISH_COALESCE -> "??"
 }
 
 private fun UnaryOperator.toSymbol(): String = when (this) {
@@ -244,6 +251,7 @@ private fun UnaryOperator.toSymbol(): String = when (this) {
     UnaryOperator.PREFIX_DECREMENT -> "--"
     UnaryOperator.POSTFIX_INCREMENT -> "++"
     UnaryOperator.POSTFIX_DECREMENT -> "--"
+    UnaryOperator.BITWISE_NOT -> "~"
 }
 
 // ---- AST → source string (for arrow function bodies, fallbacks) -----

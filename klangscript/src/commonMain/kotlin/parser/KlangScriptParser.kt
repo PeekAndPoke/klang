@@ -93,22 +93,34 @@ class KlangScriptParser private constructor(
         DOUBLE_EQUALS,       // ==   (before =)
         NOT_DOUBLE_EQUALS,   // !==  (before !=)
         NOT_EQUALS,          // !=   (before !)
+        SHIFT_LEFT_EQUALS,   // <<=  (before << and <=)
+        SHIFT_LEFT,          // <<   (before <= and <)
         LESS_EQUAL,          // <=   (before <)
+        UNSIGNED_SHIFT_RIGHT,// >>>  (before >>= and >>)
+        SHIFT_RIGHT_EQUALS,  // >>=  (before >> and >=)
+        SHIFT_RIGHT,         // >>   (before >= and >)
         GREATER_EQUAL,       // >=   (before >)
-        DOUBLE_AMP,          // &&   (before &)
-        DOUBLE_PIPE,         // ||   (before |)
-        DOUBLE_STAR,         // **   (before *)
+        DOUBLE_AMP,          // &&   (before &= and &)
+        AMP_EQUALS,          // &=   (before &)
+        DOUBLE_PIPE,         // ||   (before |= and |)
+        PIPE_EQUALS,         // |=   (before |)
+        DOUBLE_QUESTION,     // ??   (before ?. and ?)
+        QUESTION_DOT,        // ?.   (before ?)
+        CARET_EQUALS,        // ^=   (before ^)
+        DOUBLE_STAR_EQUALS,  // **=  (before ** and *=)
+        DOUBLE_STAR,         // **   (before *=)
         PLUS_PLUS,           // ++   (before + and +=)
         MINUS_MINUS,         // --   (before - and -=)
         PLUS_EQUALS,         // +=   (before +)
         MINUS_EQUALS,        // -=   (before -)
-        STAR_EQUALS,         // *=   (before * and **)
+        STAR_EQUALS,         // *=   (before *)
         SLASH_EQUALS,        // /=   (before /)
         PERCENT_EQUALS,      // %=   (before %)
 
         // Single-char operators
         EQUALS, PLUS, MINUS, STAR, SLASH, PERCENT,
         EXCLAMATION, LESS_THAN, GREATER_THAN,
+        AMP, PIPE, CARET, TILDE,
 
         EOF
     }
@@ -244,8 +256,43 @@ class KlangScriptParser private constructor(
                     column += 2
                 }
 
+                // <<= (before << and <=)
+                ch == '<' && i + 2 < source.length && source[i + 1] == '<' && source[i + 2] == '=' -> {
+                    addToken(TokenType.SHIFT_LEFT_EQUALS, "<<=", startColumn)
+                    i += 3
+                    column += 3
+                }
+
+                // << (before <=)
+                ch == '<' && i + 1 < source.length && source[i + 1] == '<' -> {
+                    addToken(TokenType.SHIFT_LEFT, "<<", startColumn)
+                    i += 2
+                    column += 2
+                }
+
                 ch == '<' && i + 1 < source.length && source[i + 1] == '=' -> {
                     addToken(TokenType.LESS_EQUAL, "<=", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // >>> (before >>= and >>)
+                ch == '>' && i + 2 < source.length && source[i + 1] == '>' && source[i + 2] == '>' -> {
+                    addToken(TokenType.UNSIGNED_SHIFT_RIGHT, ">>>", startColumn)
+                    i += 3
+                    column += 3
+                }
+
+                // >>= (before >> and >=)
+                ch == '>' && i + 2 < source.length && source[i + 1] == '>' && source[i + 2] == '=' -> {
+                    addToken(TokenType.SHIFT_RIGHT_EQUALS, ">>=", startColumn)
+                    i += 3
+                    column += 3
+                }
+
+                // >> (before >=)
+                ch == '>' && i + 1 < source.length && source[i + 1] == '>' -> {
+                    addToken(TokenType.SHIFT_RIGHT, ">>", startColumn)
                     i += 2
                     column += 2
                 }
@@ -262,8 +309,22 @@ class KlangScriptParser private constructor(
                     column += 2
                 }
 
+                // &= (before &)
+                ch == '&' && i + 1 < source.length && source[i + 1] == '=' -> {
+                    addToken(TokenType.AMP_EQUALS, "&=", startColumn)
+                    i += 2
+                    column += 2
+                }
+
                 ch == '|' && i + 1 < source.length && source[i + 1] == '|' -> {
                     addToken(TokenType.DOUBLE_PIPE, "||", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // |= (before |)
+                ch == '|' && i + 1 < source.length && source[i + 1] == '=' -> {
+                    addToken(TokenType.PIPE_EQUALS, "|=", startColumn)
                     i += 2
                     column += 2
                 }
@@ -296,7 +357,14 @@ class KlangScriptParser private constructor(
                     column += 2
                 }
 
-                // ** (before * and *=)
+                // **= (before ** and *=)
+                ch == '*' && i + 2 < source.length && source[i + 1] == '*' && source[i + 2] == '=' -> {
+                    addToken(TokenType.DOUBLE_STAR_EQUALS, "**=", startColumn)
+                    i += 3
+                    column += 3
+                }
+
+                // ** (before *=)
                 ch == '*' && i + 1 < source.length && source[i + 1] == '*' -> {
                     addToken(TokenType.DOUBLE_STAR, "**", startColumn)
                     i += 2
@@ -379,6 +447,20 @@ class KlangScriptParser private constructor(
                     column++
                 }
 
+                // ?? (before ?. and ?)
+                ch == '?' && i + 1 < source.length && source[i + 1] == '?' -> {
+                    addToken(TokenType.DOUBLE_QUESTION, "??", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                // ?. (before ?)
+                ch == '?' && i + 1 < source.length && source[i + 1] == '.' -> {
+                    addToken(TokenType.QUESTION_DOT, "?.", startColumn)
+                    i += 2
+                    column += 2
+                }
+
                 ch == '?' -> {
                     addToken(TokenType.QUESTION, "?", startColumn)
                     i++
@@ -441,6 +523,37 @@ class KlangScriptParser private constructor(
 
                 ch == '>' -> {
                     addToken(TokenType.GREATER_THAN, ">", startColumn)
+                    i++
+                    column++
+                }
+
+                // ^= (before ^)
+                ch == '^' && i + 1 < source.length && source[i + 1] == '=' -> {
+                    addToken(TokenType.CARET_EQUALS, "^=", startColumn)
+                    i += 2
+                    column += 2
+                }
+
+                ch == '&' -> {
+                    addToken(TokenType.AMP, "&", startColumn)
+                    i++
+                    column++
+                }
+
+                ch == '|' -> {
+                    addToken(TokenType.PIPE, "|", startColumn)
+                    i++
+                    column++
+                }
+
+                ch == '^' -> {
+                    addToken(TokenType.CARET, "^", startColumn)
+                    i++
+                    column++
+                }
+
+                ch == '~' -> {
+                    addToken(TokenType.TILDE, "~", startColumn)
                     i++
                     column++
                 }
@@ -535,27 +648,97 @@ class KlangScriptParser private constructor(
                     addToken(TokenType.BACKTICK_STRING, sb.toString(), startLine, startColumn, line, column)
                 }
 
-                // Numbers (including scientific notation: 1e6, 2.5e-3, 1E+10)
+                // Numbers (including hex 0x, octal 0o, binary 0b, scientific notation: 1e6, 2.5e-3, 1E+10)
                 ch.isDigit() -> {
                     val start = i
-                    while (i < source.length && (source[i].isDigit() || source[i] == '.')) {
-                        i++
-                        column++
-                    }
-                    // Scientific notation: optional e/E followed by optional +/- and digits
-                    if (i < source.length && (source[i] == 'e' || source[i] == 'E')) {
-                        i++
-                        column++
-                        if (i < source.length && (source[i] == '+' || source[i] == '-')) {
+
+                    // Check for hex, octal, or binary prefix
+                    if (ch == '0' && i + 1 < source.length) {
+                        val prefix = source[i + 1]
+                        when {
+                            // Hex: 0x or 0X
+                            prefix == 'x' || prefix == 'X' -> {
+                                i += 2
+                                column += 2
+                                val hexStart = i
+                                while (i < source.length && source[i].let { c ->
+                                        c.isDigit() || c in 'a'..'f' || c in 'A'..'F'
+                                    }) {
+                                    i++
+                                    column++
+                                }
+                                val hexStr = source.substring(hexStart, i)
+                                val numValue = hexStr.toLong(16).toDouble()
+                                addToken(TokenType.NUMBER, numValue.toString(), startColumn)
+                            }
+                            // Octal: 0o or 0O
+                            prefix == 'o' || prefix == 'O' -> {
+                                i += 2
+                                column += 2
+                                val octStart = i
+                                while (i < source.length && source[i] in '0'..'7') {
+                                    i++
+                                    column++
+                                }
+                                val octStr = source.substring(octStart, i)
+                                val numValue = octStr.toLong(8).toDouble()
+                                addToken(TokenType.NUMBER, numValue.toString(), startColumn)
+                            }
+                            // Binary: 0b or 0B
+                            prefix == 'b' || prefix == 'B' -> {
+                                i += 2
+                                column += 2
+                                val binStart = i
+                                while (i < source.length && (source[i] == '0' || source[i] == '1')) {
+                                    i++
+                                    column++
+                                }
+                                val binStr = source.substring(binStart, i)
+                                val numValue = binStr.toLong(2).toDouble()
+                                addToken(TokenType.NUMBER, numValue.toString(), startColumn)
+                            }
+                            // Regular number starting with 0
+                            else -> {
+                                while (i < source.length && (source[i].isDigit() || source[i] == '.')) {
+                                    i++
+                                    column++
+                                }
+                                // Scientific notation
+                                if (i < source.length && (source[i] == 'e' || source[i] == 'E')) {
+                                    i++
+                                    column++
+                                    if (i < source.length && (source[i] == '+' || source[i] == '-')) {
+                                        i++
+                                        column++
+                                    }
+                                    while (i < source.length && source[i].isDigit()) {
+                                        i++
+                                        column++
+                                    }
+                                }
+                                addToken(TokenType.NUMBER, source.substring(start, i), startColumn)
+                            }
+                        }
+                    } else {
+                        while (i < source.length && (source[i].isDigit() || source[i] == '.')) {
                             i++
                             column++
                         }
-                        while (i < source.length && source[i].isDigit()) {
+                        // Scientific notation: optional e/E followed by optional +/- and digits
+                        if (i < source.length && (source[i] == 'e' || source[i] == 'E')) {
                             i++
                             column++
+                            if (i < source.length && (source[i] == '+' || source[i] == '-')) {
+                                i++
+                                column++
+                            }
+                            while (i < source.length && source[i].isDigit()) {
+                                i++
+                                column++
+                            }
                         }
+                        addToken(TokenType.NUMBER, source.substring(start, i), startColumn)
                     }
-                    addToken(TokenType.NUMBER, source.substring(start, i), startColumn)
                 }
 
                 // Identifiers and keywords
@@ -685,6 +868,12 @@ class KlangScriptParser private constructor(
             check(TokenType.STAR_EQUALS) -> BinaryOperator.MULTIPLY
             check(TokenType.SLASH_EQUALS) -> BinaryOperator.DIVIDE
             check(TokenType.PERCENT_EQUALS) -> BinaryOperator.MODULO
+            check(TokenType.AMP_EQUALS) -> BinaryOperator.BITWISE_AND
+            check(TokenType.PIPE_EQUALS) -> BinaryOperator.BITWISE_OR
+            check(TokenType.CARET_EQUALS) -> BinaryOperator.BITWISE_XOR
+            check(TokenType.SHIFT_LEFT_EQUALS) -> BinaryOperator.SHIFT_LEFT
+            check(TokenType.SHIFT_RIGHT_EQUALS) -> BinaryOperator.SHIFT_RIGHT
+            check(TokenType.DOUBLE_STAR_EQUALS) -> BinaryOperator.POWER
             else -> return left  // Not an assignment
         }
 
@@ -711,7 +900,7 @@ class KlangScriptParser private constructor(
      * Right-associative.
      */
     private fun parseTernary(): Expression {
-        val condition = parseLogicalOr()
+        val condition = parseNullishCoalescing()
 
         if (!match(TokenType.QUESTION)) return condition
 
@@ -835,6 +1024,21 @@ class KlangScriptParser private constructor(
     }
 
     /**
+     * Nullish coalescing (??)
+     */
+    private fun parseNullishCoalescing(): Expression {
+        var expr = parseLogicalOr()
+
+        while (match(TokenType.DOUBLE_QUESTION)) {
+            val opToken = previous()
+            val right = parseLogicalOr()
+            expr = BinaryOperation(expr, BinaryOperator.NULLISH_COALESCE, right, opToken.toSourceLocation())
+        }
+
+        return expr
+    }
+
+    /**
      * Logical OR (||)
      */
     private fun parseLogicalOr(): Expression {
@@ -853,11 +1057,11 @@ class KlangScriptParser private constructor(
      * Logical AND (&&)
      */
     private fun parseLogicalAnd(): Expression {
-        var expr = parseComparison()
+        var expr = parseBitwiseOr()
 
         while (match(TokenType.DOUBLE_AMP)) {
             val opToken = previous()
-            val right = parseComparison()
+            val right = parseBitwiseOr()
             expr = BinaryOperation(expr, BinaryOperator.AND, right, opToken.toSourceLocation())
         }
 
@@ -865,17 +1069,59 @@ class KlangScriptParser private constructor(
     }
 
     /**
-     * Comparison operators: ===, !==, ==, !=, <, <=, >, >=, in
+     * Bitwise OR (|)
      */
-    private fun parseComparison(): Expression {
-        var expr = parseAddition()
+    private fun parseBitwiseOr(): Expression {
+        var expr = parseBitwiseXor()
+
+        while (match(TokenType.PIPE)) {
+            val opToken = previous()
+            val right = parseBitwiseXor()
+            expr = BinaryOperation(expr, BinaryOperator.BITWISE_OR, right, opToken.toSourceLocation())
+        }
+
+        return expr
+    }
+
+    /**
+     * Bitwise XOR (^)
+     */
+    private fun parseBitwiseXor(): Expression {
+        var expr = parseBitwiseAnd()
+
+        while (match(TokenType.CARET)) {
+            val opToken = previous()
+            val right = parseBitwiseAnd()
+            expr = BinaryOperation(expr, BinaryOperator.BITWISE_XOR, right, opToken.toSourceLocation())
+        }
+
+        return expr
+    }
+
+    /**
+     * Bitwise AND (&)
+     */
+    private fun parseBitwiseAnd(): Expression {
+        var expr = parseEquality()
+
+        while (match(TokenType.AMP)) {
+            val opToken = previous()
+            val right = parseEquality()
+            expr = BinaryOperation(expr, BinaryOperator.BITWISE_AND, right, opToken.toSourceLocation())
+        }
+
+        return expr
+    }
+
+    /**
+     * Equality operators: ===, !==, ==, !=
+     */
+    private fun parseEquality(): Expression {
+        var expr = parseComparison()
 
         while (match(
                 TokenType.TRIPLE_EQUALS, TokenType.NOT_DOUBLE_EQUALS,
                 TokenType.DOUBLE_EQUALS, TokenType.NOT_EQUALS,
-                TokenType.LESS_THAN, TokenType.LESS_EQUAL,
-                TokenType.GREATER_THAN, TokenType.GREATER_EQUAL,
-                TokenType.IN
             )
         ) {
             val operator = when (previous().type) {
@@ -883,11 +1129,55 @@ class KlangScriptParser private constructor(
                 TokenType.NOT_DOUBLE_EQUALS -> BinaryOperator.STRICT_NOT_EQUAL
                 TokenType.DOUBLE_EQUALS -> BinaryOperator.EQUAL
                 TokenType.NOT_EQUALS -> BinaryOperator.NOT_EQUAL
+                else -> error("Unexpected operator")
+            }
+            val opToken = previous()
+            val right = parseComparison()
+            expr = BinaryOperation(expr, operator, right, opToken.toSourceLocation())
+        }
+
+        return expr
+    }
+
+    /**
+     * Relational/comparison operators: <, <=, >, >=, in
+     */
+    private fun parseComparison(): Expression {
+        var expr = parseShift()
+
+        while (match(
+                TokenType.LESS_THAN, TokenType.LESS_EQUAL,
+                TokenType.GREATER_THAN, TokenType.GREATER_EQUAL,
+                TokenType.IN
+            )
+        ) {
+            val operator = when (previous().type) {
                 TokenType.LESS_THAN -> BinaryOperator.LESS_THAN
                 TokenType.LESS_EQUAL -> BinaryOperator.LESS_THAN_OR_EQUAL
                 TokenType.GREATER_THAN -> BinaryOperator.GREATER_THAN
                 TokenType.GREATER_EQUAL -> BinaryOperator.GREATER_THAN_OR_EQUAL
                 TokenType.IN -> BinaryOperator.IN
+                else -> error("Unexpected operator")
+            }
+            val opToken = previous()
+            val right = parseShift()
+            expr = BinaryOperation(expr, operator, right, opToken.toSourceLocation())
+        }
+
+        return expr
+    }
+
+    /**
+     * Shift operators: <<, >>, >>>
+     */
+    private fun parseShift(): Expression {
+        var expr = parseAddition()
+
+        while (match(TokenType.SHIFT_LEFT, TokenType.SHIFT_RIGHT, TokenType.UNSIGNED_SHIFT_RIGHT)) {
+            val operator = when (previous().type) {
+                TokenType.SHIFT_LEFT -> BinaryOperator.SHIFT_LEFT
+                TokenType.SHIFT_RIGHT -> BinaryOperator.SHIFT_RIGHT
+                TokenType.UNSIGNED_SHIFT_RIGHT -> BinaryOperator.UNSIGNED_SHIFT_RIGHT
                 else -> error("Unexpected operator")
             }
             val opToken = previous()
@@ -962,11 +1252,12 @@ class KlangScriptParser private constructor(
      */
     private fun parseUnary(): Expression {
         when {
-            match(TokenType.MINUS, TokenType.PLUS, TokenType.EXCLAMATION) -> {
+            match(TokenType.MINUS, TokenType.PLUS, TokenType.EXCLAMATION, TokenType.TILDE) -> {
                 val operator = when (previous().type) {
                     TokenType.MINUS -> UnaryOperator.NEGATE
                     TokenType.PLUS -> UnaryOperator.PLUS
                     TokenType.EXCLAMATION -> UnaryOperator.NOT
+                    TokenType.TILDE -> UnaryOperator.BITWISE_NOT
                     else -> error("Unexpected unary operator")
                 }
                 val opToken = previous()
@@ -1031,7 +1322,12 @@ class KlangScriptParser private constructor(
             when {
                 match(TokenType.DOT) -> {
                     val property = consume(TokenType.IDENTIFIER, "Expected property name after '.'")
-                    expr = MemberAccess(expr, property.text, property.toSourceLocation())
+                    expr = MemberAccess(expr, property.text, optional = false, property.toSourceLocation())
+                }
+
+                match(TokenType.QUESTION_DOT) -> {
+                    val property = consume(TokenType.IDENTIFIER, "Expected property name after '?.'")
+                    expr = MemberAccess(expr, property.text, optional = true, property.toSourceLocation())
                 }
 
                 match(TokenType.LEFT_PAREN) -> {

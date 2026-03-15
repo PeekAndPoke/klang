@@ -13,6 +13,20 @@ let f = 2.5e-3;
 
 **Expected:** All assignments succeed. Values: 42, 3.14159, -17, 0, 1000000, 0.0025
 
+### 1.1b Hex, Octal, Binary Number Literals ✅
+
+```javascript
+let hex = 0xFF;      // 255
+let hex2 = 0XAB;     // 171
+let oct = 0o77;      // 63
+let oct2 = 0O10;     // 8
+let bin = 0b1010;    // 10
+let bin2 = 0B11111111; // 255
+```
+
+**Expected:** All assignments succeed. Values as commented. Prefixes: `0x`/`0X` (hex), `0o`/`0O` (octal), `0b`/`0B` (
+binary).
+
 ### 1.2 String Literals ✅
 
 ```javascript

@@ -88,3 +88,64 @@ let nested = true ? (false ? "a" : "b") : "c"; // "b"
 ```
 
 **Expected:** Results as commented
+
+### 2.7 Bitwise Operators ✅ — `&` `|` `^` `~`
+
+```javascript
+let and = 5 & 3;       // 1
+let or = 5 | 3;        // 7
+let xor = 5 ^ 3;       // 6
+let not = ~5;           // -6
+```
+
+**Expected:** Results as commented. Operands are converted to 32-bit integers.
+
+### 2.8 Shift Operators ✅ — `<<` `>>` `>>>`
+
+```javascript
+let shl = 1 << 3;       // 8
+let shr = 16 >> 2;      // 4
+let ushr = -1 >>> 28;   // 15
+```
+
+**Expected:** Results as commented. Operands are converted to 32-bit integers.
+
+### 2.9 Nullish Coalescing ✅ — `??`
+
+```javascript
+let a = null ?? "default";   // "default"
+let b = "value" ?? "default"; // "value"
+let c = 0 ?? "default";      // 0 (0 is NOT null)
+```
+
+**Expected:** Returns the left operand if it is not null, otherwise the right operand. Unlike `||`, does not treat `0`,
+`""`, or `false` as "nullish".
+
+### 2.10 Optional Chaining ✅ — `?.`
+
+```javascript
+let obj = { a: { b: 1 } }
+obj.a?.b     // 1
+obj.c?.d     // null (no error thrown)
+```
+
+**Expected:** Returns the property value if the object is not null, otherwise returns null without throwing.
+
+### 2.11 Compound Assignment Operators ✅
+
+```javascript
+let x = 10
+x += 5       // 15
+x -= 3       // 12
+x *= 2       // 24
+x /= 4       // 6
+x %= 4       // 2
+x **= 3      // 8
+x &= 0x0F    // bitwise AND assign
+x |= 0xF0    // bitwise OR assign
+x ^= 0xFF    // bitwise XOR assign
+x <<= 2      // shift left assign
+x >>= 1      // shift right assign
+```
+
+**Expected:** Results as commented

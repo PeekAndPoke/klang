@@ -559,6 +559,27 @@ enum class BinaryOperator {
 
     /** In operator: "key" in obj */
     IN,
+
+    /** Bitwise AND: a & b */
+    BITWISE_AND,
+
+    /** Bitwise OR: a | b */
+    BITWISE_OR,
+
+    /** Bitwise XOR: a ^ b */
+    BITWISE_XOR,
+
+    /** Shift left: a << b */
+    SHIFT_LEFT,
+
+    /** Shift right: a >> b */
+    SHIFT_RIGHT,
+
+    /** Unsigned shift right: a >>> b */
+    UNSIGNED_SHIFT_RIGHT,
+
+    /** Nullish coalescing: a ?? b */
+    NULLISH_COALESCE,
 }
 
 /**
@@ -607,6 +628,9 @@ enum class UnaryOperator {
 
     /** Postfix decrement: x-- (subtract 1, return original value) */
     POSTFIX_DECREMENT,
+
+    /** Bitwise NOT: ~x */
+    BITWISE_NOT,
 }
 
 /**
@@ -671,6 +695,7 @@ data class UnaryOperation(
 data class MemberAccess(
     val obj: Expression,
     val property: String,
+    val optional: Boolean = false,
     override val location: SourceLocation? = null,
 ) : Expression(location)
 
