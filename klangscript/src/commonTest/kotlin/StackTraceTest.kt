@@ -194,18 +194,19 @@ class StackTraceTest : StringSpec({
             countdown(3)
         """.trimIndent()
 
-        // This will eventually cause a stack overflow due to infinite recursion
-        // Can be either our custom StackOverflowError or JVM's java.lang.StackOverflowError
+        // This will cause a stack overflow due to infinite recursion.
+        // Can be our custom KlangScriptStackOverflowError, JVM's StackOverflowError,
+        // or JS's RangeError ("Maximum call stack size exceeded").
         try {
             engine.execute(script, sourceName = "recursive.klang")
             throw AssertionError("Should have thrown an error")
         } catch (e: Throwable) {
-            // Accept either our custom error or JVM stack overflow
             val message = e.message ?: ""
             val isExpectedError = e is KlangScriptStackOverflowError ||
                     e::class.simpleName == "StackOverflowError" ||
-                    message.contains("Stack overflow") ||
-                    message.contains("maximum call depth")
+                    message.contains("Stack overflow", ignoreCase = true) ||
+                    message.contains("maximum call depth", ignoreCase = true) ||
+                    message.contains("Maximum call stack size", ignoreCase = true)
             isExpectedError shouldBe true
         }
     }
@@ -243,17 +244,18 @@ class StackTraceTest : StringSpec({
             infinite()
         """.trimIndent()
 
-        // Can be either our custom StackOverflowError or JVM's java.lang.StackOverflowError
+        // Can be our custom KlangScriptStackOverflowError, JVM's StackOverflowError,
+        // or JS's RangeError ("Maximum call stack size exceeded").
         try {
             engine.execute(script, sourceName = "overflow.klang")
             throw AssertionError("Should have thrown an error")
         } catch (e: Throwable) {
-            // Accept either our custom error or JVM stack overflow
             val message = e.message ?: ""
             val isExpectedError = e is KlangScriptStackOverflowError ||
                     e::class.simpleName == "StackOverflowError" ||
-                    message.contains("Stack overflow") ||
-                    message.contains("maximum call depth")
+                    message.contains("Stack overflow", ignoreCase = true) ||
+                    message.contains("maximum call depth", ignoreCase = true) ||
+                    message.contains("Maximum call stack size", ignoreCase = true)
             isExpectedError shouldBe true
         }
     }
