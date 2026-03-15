@@ -40,12 +40,19 @@ class CodeMirrorTheme {
             this[".cm-cursor, .cm-dropCursor"] = jsObject {
                 borderLeftColor = cursor
             }
-            this["&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, " +
-                    ".cm-selectionBackground, .cm-content ::selection"] =
+            // Selection background — focused editor
+            this["&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground"] =
                 jsObject {
-                    backgroundColor = selection
-                    color = "#000000"
+                    backgroundColor = "${KlangTheme.Hex.accent}60"
                 }
+            // Selection background — unfocused editor (dimmer)
+            this[".cm-selectionBackground"] = jsObject {
+                backgroundColor = "${KlangTheme.Hex.accent}30"
+            }
+            // Native text selection
+            this[".cm-content ::selection"] = jsObject {
+                backgroundColor = "${KlangTheme.Hex.accent}60"
+            }
             this[".cm-panels"] = jsObject {
                 backgroundColor = darkBackground
                 color = ivory
@@ -67,7 +74,7 @@ class CodeMirrorTheme {
                 backgroundColor = "#6699ff0b"
             }
             this[".cm-selectionMatch"] = jsObject {
-                backgroundColor = "#aafe661a"
+                backgroundColor = "${selection}40"
             }
             this["&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket"] = jsObject {
                 backgroundColor = "#bad0f847"
@@ -110,6 +117,63 @@ class CodeMirrorTheme {
             this[".cm-completionInfo"] = jsObject {
                 color = stone
                 padding = "8px 12px"
+            }
+
+            // ── Lint / Diagnostics ──────────────────────────────────────
+            this[".cm-lintRange-error"] = jsObject {
+                backgroundImage = "none"
+                textDecoration = "underline wavy $coral"
+                textDecorationSkipInk = "none"
+                textUnderlineOffset = "3px"
+            }
+            this[".cm-lintRange-warning"] = jsObject {
+                backgroundImage = "none"
+                textDecoration = "underline wavy $whiskey"
+                textDecorationSkipInk = "none"
+                textUnderlineOffset = "3px"
+            }
+            this[".cm-lint-marker-error"] = jsObject {
+                content = "none"
+                color = coral
+            }
+            this[".cm-lint-marker-warning"] = jsObject {
+                content = "none"
+                color = whiskey
+            }
+            this[".cm-panel.cm-panel-lint"] = jsObject {
+                backgroundColor = darkBackground
+                borderTop = "1px solid ${KlangTheme.Hex.textTertiary}"
+                // Only highlight the selected item when the list actually has focus
+                this["& ul:focus li.cm-diagnostic[aria-selected=true], " +
+                        "& ul:focus-within li.cm-diagnostic[aria-selected=true]"] = jsObject {
+                    backgroundColor = "${KlangTheme.Hex.accent}33"
+                    color = ivory
+                }
+                // Override the default blue when list is NOT focused
+                this["& ul:not(:focus):not(:focus-within) li.cm-diagnostic[aria-selected=true]"] = jsObject {
+                    backgroundColor = "transparent"
+                }
+                this["& button"] = jsObject {
+                    backgroundColor = "transparent"
+                    color = stone
+                    border = "1px solid ${KlangTheme.Hex.textTertiary}"
+                    borderRadius = "3px"
+                    this["cursor"] = "pointer"
+                }
+            }
+            this[".cm-diagnostic-error"] = jsObject {
+                borderLeftColor = coral
+                color = stone
+            }
+            this[".cm-diagnostic-warning"] = jsObject {
+                borderLeftColor = whiskey
+                color = stone
+            }
+            this[".cm-lintPoint-error::after"] = jsObject {
+                borderBottomColor = coral
+            }
+            this[".cm-lintPoint-warning::after"] = jsObject {
+                borderBottomColor = whiskey
             }
         },
         jsObject {

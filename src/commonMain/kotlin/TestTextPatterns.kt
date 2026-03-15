@@ -1,7 +1,8 @@
-@file:Suppress("unused", "detekt.all")
+@file:Suppress("detekt.all")
 
 package io.peekandpoke.klang
 
+@Suppress("MayBeConstant", "unused", "SpellCheckingInspection")
 object TestTextPatterns {
     val cMajorNotes = """
         note("c3 d3 e3 f3 g3 a3 b3 c4")
@@ -149,8 +150,7 @@ stack(
    """.trimIndent()
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
-    val aTruthWorthLyingFor = """
-import * from "stdlib"
+    val aTruthWorthLyingFor = """import * from "stdlib"
 import * from "strudel"
 
 let tp = "[0 -1 -3 -5 -7  1  3  7]/8".slow(64) // <---- transposition ... wait for it ... or change it ...
@@ -187,10 +187,10 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).adsr("0.01:0.8:0.7:1.0 0.01:0.3:0.5:1.0".slow(16)).gain(0.75).hpf(60).filterWhen(t => t % 64 >= 4) // .solo()
+  ).adsr("0.01:0.8:0.7:0.5 0.01:0.1:0.3:0.5".slow(16)).gain(0.75).hpf(60).filterWhen(t => t % 64 >= 4) // .solo()
   , // Drums 1 -----------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>").adsr("0.01:0.3:0.8:1.0").gain("0.95".add(berlin2.range(-0.05, 0.0).segment(8)).slow(4)) // .solo()
-).room(0.02).rsize(3.0) /*
+).room(0.02).rsize(3.0).compressor("-10:2:10:0.02:0.25") /*
 
  
  
@@ -225,7 +225,7 @@ stack( // Gitarre! -------------------------------------------------------------
 
 
 
-*/ 
+*/
     """
 
     val tetrisOriginal = """
