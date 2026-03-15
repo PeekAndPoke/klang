@@ -1,9 +1,13 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
 import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.ast.SourceLocationAware
 
 /**
  * Exception thrown when mini-notation parsing fails
+ *
+ * Implements [SourceLocationAware] so the editor can extract the absolute source location
+ * without regex parsing.
  *
  * @param message The error message
  * @param position Position within the mini-notation string (0-based)
@@ -13,14 +17,18 @@ class MiniNotationParseException(
     message: String,
     val position: Int,
     val baseLocation: SourceLocation?,
-) : Exception(buildMessage(message, position, baseLocation)) {
+) : Exception(buildMessage(message, position, baseLocation)), SourceLocationAware {
+
+    /** Absolute source location computed from [baseLocation] + [position]. */
+    override val location: SourceLocation? = baseLocation?.let {
+        val actualLine = it.startLine
+        val actualCol = it.startColumn + position
+        SourceLocation(it.source, actualLine, actualCol, actualLine, actualCol + 1)
+    }
 
     companion object {
         private fun buildMessage(message: String, position: Int, baseLocation: SourceLocation?): String {
             return if (baseLocation != null) {
-                // Calculate actual position in source code
-                // For simplicity, assume the mini-notation string is on a single line
-                // and position is the character offset within that string
                 val actualLine = baseLocation.startLine
                 val actualCol = baseLocation.startColumn + position
                 "Parse error at $actualLine:$actualCol: $message"

@@ -3,14 +3,48 @@ package io.peekandpoke.klang.comp
 import de.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.klang.codemirror.EditorError
 import io.peekandpoke.klang.codemirror.KlangScriptEditorComp
+import io.peekandpoke.klang.script.ast.SourceLocationAware
+import io.peekandpoke.klang.script.runtime.KlangScriptError
 
 /**
- * Parses a Throwable into an EditorError, extracting line/column information from the exception message.
+ * Maps a Throwable into an EditorError for display in the CodeMirror editor.
+ *
+ * If the error is a [KlangScriptError] with a [SourceLocation], the location is used directly.
+ * Otherwise, falls back to regex parsing of the error message.
  */
 fun mapToEditorError(e: Throwable): EditorError {
+    // Use structured location if available (KlangScriptError, MiniNotationParseException, etc.)
+    if (e is SourceLocationAware) {
+        val loc = e.location
+        if (loc != null) {
+            val len = if (loc.startLine == loc.endLine) {
+                (loc.endColumn - loc.startColumn).coerceAtLeast(1)
+            } else {
+                1
+            }
+            val prefix = if (e is KlangScriptError) "${e.errorType.name}: " else ""
+            return EditorError(
+                message = "$prefix${e.message}",
+                line = loc.startLine,
+                col = loc.startColumn,
+                len = len,
+            )
+        }
+    }
+
+    // KlangScriptError without location
+    if (e is KlangScriptError) {
+        return EditorError(
+            message = "${e.errorType.name}: ${e.message}",
+            line = 1,
+            col = 1,
+            len = 1,
+        )
+    }
+
+    // Fallback: parse location from error message (for non-KlangScript exceptions)
     val message = e.message ?: "Unknown error"
 
-    // Try pattern: "at line:col:" (e.g., "Parse error at 14:3: Expected expression")
     val atLineColRegex = Regex("at\\s+(\\d+):(\\d+)", RegexOption.IGNORE_CASE)
     val atLineColMatch = atLineColRegex.find(message)
 
@@ -21,27 +55,15 @@ fun mapToEditorError(e: Throwable): EditorError {
         line = atLineColMatch.groupValues.getOrNull(1)?.toIntOrNull() ?: 1
         col = atLineColMatch.groupValues.getOrNull(2)?.toIntOrNull() ?: 1
     } else {
-        // Fallback to separate line and column patterns
-        val lineRegex = Regex("line[:\\s]+(\\d+)", RegexOption.IGNORE_CASE)
-        val columnRegex = Regex("column[:\\s]+(\\d+)", RegexOption.IGNORE_CASE)
-
-        line = lineRegex.find(message)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-        col = columnRegex.find(message)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+        line = 1
+        col = 1
     }
 
-    // Extract a cleaner message (without the location prefix)
-    val cleanMessage = message
-        .replace(Regex("Parse error at \\d+:\\d+[:\\s]*", RegexOption.IGNORE_CASE), "")
-        .replace(Regex("at line \\d+(, column \\d+)?[:\\s]*", RegexOption.IGNORE_CASE), "")
-        .replace(Regex("line \\d+[:\\s]*", RegexOption.IGNORE_CASE), "")
-        .trim()
-        .takeIf { it.isNotEmpty() } ?: message
-
     return EditorError(
-        message = "Line $line: $cleanMessage",
+        message = message,
         line = line,
         col = col,
-        len = 1
+        len = 1,
     )
 }
 

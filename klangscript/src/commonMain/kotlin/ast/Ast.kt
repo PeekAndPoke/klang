@@ -20,6 +20,11 @@ package io.peekandpoke.klang.script.ast
  * @param endLine Ending line number (1-based)
  * @param endColumn Ending column number (1-based, exclusive - points to character after the last character)
  */
+/** Marker interface for anything that carries a [SourceLocation]. */
+interface SourceLocationAware {
+    val location: SourceLocation?
+}
+
 data class SourceLocation(
     val source: String?,
     val startLine: Int,

@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.script.ast.AstNode
 import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.script.ast.SourceLocationAware
 
 // ── Error Type Enum ──────────────────────────────────────────────────────────
 
@@ -25,9 +26,9 @@ enum class KlangScriptErrorType {
  * The sealed sub-hierarchies [KlangScriptParseError] and [KlangScriptRuntimeError]
  * separate concerns cleanly.
  */
-sealed interface KlangScriptError {
+sealed interface KlangScriptError : SourceLocationAware {
     val errorType: KlangScriptErrorType
-    val location: SourceLocation?
+    override val location: SourceLocation?
 
     /** Format the error for display (type, location, message, stack trace). */
     fun format(): String

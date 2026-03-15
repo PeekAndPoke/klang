@@ -524,6 +524,7 @@ class Interpreter(
                         expected = callee.parameters.size,
                         actual = args.size,
                         location = call.location,
+                        astNode = call,
                         callStackTrace = getStackTrace()
                     )
                 }
@@ -589,6 +590,7 @@ class Interpreter(
                     message = "Cannot call non-function value: ${callee.toDisplayString()}",
                     operation = "function call",
                     location = call.location,
+                    astNode = call,
                     callStackTrace = getStackTrace()
                 )
             }
@@ -1079,6 +1081,7 @@ class Interpreter(
                 message = "Native type '${objValue.qualifiedName}' has no method '${memberAccess.property}'.$suggestion",
                 operation = "member access",
                 location = memberAccess.location,
+                astNode = memberAccess,
                 callStackTrace = getStackTrace()
             )
         }
@@ -1105,6 +1108,7 @@ class Interpreter(
                     message = "Type '$typeName' has no method '${memberAccess.property}'.$suggestion",
                     operation = "member access",
                     location = memberAccess.location,
+                    astNode = memberAccess,
                     callStackTrace = getStackTrace()
                 )
             }
@@ -1117,6 +1121,7 @@ class Interpreter(
                 message = "Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}",
                 operation = "member access",
                 location = memberAccess.location,
+                astNode = memberAccess,
                 callStackTrace = getStackTrace()
             )
         }
