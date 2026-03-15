@@ -1,36 +1,91 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.script.ast.AstNode
 import io.peekandpoke.klang.script.ast.SourceLocation
 
-/**
- * Base class for all KlangScript runtime errors
- *
- * Provides structured error information including error type, message,
- * optional source location, and call stack trace for debugging.
- */
-sealed class KlangScriptError(
-    message: String,
-    val errorType: String,
-    val location: SourceLocation? = null,
-    val stackTrace: List<CallStackFrame> = emptyList(),
-) : RuntimeException(message) {
+// ── Error Type Enum ──────────────────────────────────────────────────────────
 
-    /**
-     * Format the error message for display
-     *
-     * Returns a formatted error message including the error type, message,
-     * and stack trace (if available).
-     * Subclasses can override to add additional context.
-     */
-    open fun format(): String {
-        val header = if (location != null) {
-            "$errorType at $location: $message"
+/** Identifies the category of a KlangScript error. */
+enum class KlangScriptErrorType {
+    SyntaxError,
+    TypeError,
+    ReferenceError,
+    ArgumentError,
+    ImportError,
+    AssignmentError,
+    StackOverflowError,
+}
+
+// ── Sealed Interface ─────────────────────────────────────────────────────────
+
+/**
+ * Base interface for all KlangScript errors (parse and runtime).
+ *
+ * Enables unified handling: `catch (e: Exception) { if (e is KlangScriptError) ... }`.
+ * The sealed sub-hierarchies [KlangScriptParseError] and [KlangScriptRuntimeError]
+ * separate concerns cleanly.
+ */
+sealed interface KlangScriptError {
+    val errorType: KlangScriptErrorType
+    val location: SourceLocation?
+
+    /** Format the error for display (type, location, message, stack trace). */
+    fun format(): String
+}
+
+// ── Parse Errors ─────────────────────────────────────────────────────────────
+
+/**
+ * Base class for parse-time errors.
+ *
+ * Parse errors occur before execution — no call stack or AST node is available.
+ */
+sealed class KlangScriptParseError(
+    message: String,
+    override val errorType: KlangScriptErrorType,
+    override val location: SourceLocation? = null,
+) : Exception(message), KlangScriptError {
+
+    override fun format(): String {
+        return if (location != null) {
+            "${errorType.name} at $location: $message"
         } else {
-            "$errorType: $message"
+            "${errorType.name}: $message"
+        }
+    }
+}
+
+/** Syntax error — invalid token, unterminated string, unexpected character, etc. */
+class KlangScriptSyntaxError(
+    message: String,
+    location: SourceLocation? = null,
+) : KlangScriptParseError(message, KlangScriptErrorType.SyntaxError, location)
+
+// ── Runtime Errors ───────────────────────────────────────────────────────────
+
+/**
+ * Base class for runtime errors.
+ *
+ * Runtime errors carry an optional [astNode] (the AST node that triggered the error)
+ * and a [callStackTrace] (the interpreter call stack at the time of the error).
+ */
+sealed class KlangScriptRuntimeError(
+    message: String,
+    override val errorType: KlangScriptErrorType,
+    override val location: SourceLocation? = null,
+    val astNode: AstNode? = null,
+    val callStackTrace: List<CallStackFrame> = emptyList(),
+) : RuntimeException(message), KlangScriptError {
+
+    override fun format(): String {
+        val header = if (location != null) {
+            "${errorType.name} at $location: $message"
+        } else {
+            "${errorType.name}: $message"
         }
 
-        return if (stackTrace.isNotEmpty()) {
-            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        return if (callStackTrace.isNotEmpty()) {
+            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
         } else {
             header
         }
@@ -38,52 +93,28 @@ sealed class KlangScriptError(
 }
 
 /**
- * ReferenceError - Variable or symbol not found
+ * TypeError — type mismatch or invalid operation.
  *
- * Thrown when trying to access a variable that doesn't exist in any scope.
- * Similar to JavaScript's ReferenceError.
- *
- * Examples:
- * - Accessing undefined variable: `foo` when foo doesn't exist
- * - Accessing non-exported symbol from library
+ * Examples: calling a non-function (`5()`), adding incompatible types, property access on non-object.
  */
-class ReferenceError(
-    val symbolName: String,
-    message: String = "Undefined variable: $symbolName",
-    location: SourceLocation? = null,
-    stackTrace: List<CallStackFrame> = emptyList(),
-) : KlangScriptError(message, "ReferenceError", location, stackTrace)
-
-/**
- * TypeError - Type mismatch or invalid operation
- *
- * Thrown when an operation is performed on incompatible types.
- * Similar to JavaScript's TypeError.
- *
- * Examples:
- * - Calling a non-function: `5()`
- * - Adding incompatible types: `"hello" + null`
- * - Accessing property on non-object: `5.foo`
- */
-class TypeError(
+class KlangScriptTypeError(
     message: String,
     val operation: String? = null,
     location: SourceLocation? = null,
-    stackTrace: List<CallStackFrame> = emptyList(),
-) : KlangScriptError(message, "TypeError", location, stackTrace) {
+    astNode: AstNode? = null,
+    callStackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptRuntimeError(message, KlangScriptErrorType.TypeError, location, astNode, callStackTrace) {
 
     override fun format(): String {
-        val prefix = if (location != null) "$errorType at $location" else errorType
+        val prefix = if (location != null) "${errorType.name} at $location" else errorType.name
         val header = if (operation != null) {
             "$prefix in $operation: $message"
-        } else if (location != null) {
-            "$prefix: $message"
         } else {
-            "$errorType: $message"
+            "$prefix: $message"
         }
 
-        return if (stackTrace.isNotEmpty()) {
-            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        return if (callStackTrace.isNotEmpty()) {
+            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
         } else {
             header
         }
@@ -91,33 +122,43 @@ class TypeError(
 }
 
 /**
- * ArgumentError - Wrong number or type of arguments
+ * ReferenceError — variable or symbol not found.
  *
- * Thrown when a function is called with incorrect arguments.
- *
- * Examples:
- * - Wrong argument count: `add(1)` when add expects 2 arguments
- * - Wrong argument type: `parseInt("hello")`
+ * Examples: accessing undefined variable, accessing non-exported symbol.
  */
-class ArgumentError(
+class KlangScriptReferenceError(
+    val symbolName: String,
+    message: String = "Undefined variable: $symbolName",
+    location: SourceLocation? = null,
+    astNode: AstNode? = null,
+    callStackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptRuntimeError(message, KlangScriptErrorType.ReferenceError, location, astNode, callStackTrace)
+
+/**
+ * ArgumentError — wrong number or type of arguments.
+ *
+ * Examples: wrong argument count, wrong argument type.
+ */
+class KlangScriptArgumentError(
     val functionName: String,
     message: String,
     val expected: Int? = null,
     val actual: Int? = null,
     location: SourceLocation? = null,
-    stackTrace: List<CallStackFrame> = emptyList(),
-) : KlangScriptError(message, "ArgumentError", location, stackTrace) {
+    astNode: AstNode? = null,
+    callStackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptRuntimeError(message, KlangScriptErrorType.ArgumentError, location, astNode, callStackTrace) {
 
     override fun format(): String {
-        val prefix = if (location != null) "$errorType at $location" else errorType
+        val prefix = if (location != null) "${errorType.name} at $location" else errorType.name
         val header = if (expected != null && actual != null) {
             "$prefix in $functionName: Expected $expected arguments, got $actual"
         } else {
             "$prefix in $functionName: $message"
         }
 
-        return if (stackTrace.isNotEmpty()) {
-            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        return if (callStackTrace.isNotEmpty()) {
+            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
         } else {
             header
         }
@@ -125,34 +166,28 @@ class ArgumentError(
 }
 
 /**
- * ImportError - Library import failure
+ * ImportError — library import failure.
  *
- * Thrown when importing a library fails for various reasons.
- *
- * Examples:
- * - Library not found: `import * from "missing"`
- * - Importing non-exported symbol: `import { foo } from "lib"` when foo not exported
- * - Invalid import syntax
+ * Examples: library not found, non-exported symbol, namespace conflict.
  */
-class ImportError(
+class KlangScriptImportError(
     val libraryName: String?,
     message: String,
     location: SourceLocation? = null,
-    stackTrace: List<CallStackFrame> = emptyList(),
-) : KlangScriptError(message, "ImportError", location, stackTrace) {
+    astNode: AstNode? = null,
+    callStackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptRuntimeError(message, KlangScriptErrorType.ImportError, location, astNode, callStackTrace) {
 
     override fun format(): String {
-        val prefix = if (location != null) "$errorType at $location" else errorType
+        val prefix = if (location != null) "${errorType.name} at $location" else errorType.name
         val header = if (libraryName != null) {
             "$prefix in library '$libraryName': $message"
-        } else if (location != null) {
-            "$prefix: $message"
         } else {
-            "$errorType: $message"
+            "$prefix: $message"
         }
 
-        return if (stackTrace.isNotEmpty()) {
-            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        return if (callStackTrace.isNotEmpty()) {
+            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
         } else {
             header
         }
@@ -160,32 +195,28 @@ class ImportError(
 }
 
 /**
- * AssignmentError - Invalid assignment operation
+ * AssignmentError — invalid assignment operation.
  *
- * Thrown when trying to reassign a const variable or perform invalid assignments.
- *
- * Examples:
- * - Reassigning const: `const x = 1; x = 2`
+ * Examples: reassigning a const variable.
  */
-class AssignmentError(
+class KlangScriptAssignmentError(
     val variableName: String?,
     message: String,
     location: SourceLocation? = null,
-    stackTrace: List<CallStackFrame> = emptyList(),
-) : KlangScriptError(message, "AssignmentError", location, stackTrace) {
+    astNode: AstNode? = null,
+    callStackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptRuntimeError(message, KlangScriptErrorType.AssignmentError, location, astNode, callStackTrace) {
 
     override fun format(): String {
-        val prefix = if (location != null) "$errorType at $location" else errorType
+        val prefix = if (location != null) "${errorType.name} at $location" else errorType.name
         val header = if (variableName != null) {
             "$prefix for variable '$variableName': $message"
-        } else if (location != null) {
-            "$prefix: $message"
         } else {
-            "$errorType: $message"
+            "$prefix: $message"
         }
 
-        return if (stackTrace.isNotEmpty()) {
-            header + "\n" + stackTrace.joinToString("\n") { it.format() }
+        return if (callStackTrace.isNotEmpty()) {
+            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
         } else {
             header
         }
@@ -193,55 +224,35 @@ class AssignmentError(
 }
 
 /**
- * StackOverflowError - Call stack exceeded maximum depth
+ * StackOverflowError — call stack exceeded maximum depth.
  *
- * Thrown when the call stack grows beyond the configured limit (default 1000 frames).
- * This prevents infinite recursion from consuming all memory.
- *
- * Examples:
- * - Infinite recursion: `let f = () => f(); f()`
- * - Deeply nested calls exceeding limit
+ * Examples: infinite recursion, deeply nested calls.
  */
-class StackOverflowError(
+class KlangScriptStackOverflowError(
     message: String,
     location: SourceLocation? = null,
-    stackTrace: List<CallStackFrame> = emptyList(),
-) : KlangScriptError(message, "StackOverflowError", location, stackTrace)
+    astNode: AstNode? = null,
+    callStackTrace: List<CallStackFrame> = emptyList(),
+) : KlangScriptRuntimeError(message, KlangScriptErrorType.StackOverflowError, location, astNode, callStackTrace)
+
+// ── Control Flow Exceptions (NOT errors) ─────────────────────────────────────
 
 /**
- * ReturnException - Control flow exception for return statements
- *
- * This is NOT an error but a control flow mechanism used internally by the interpreter.
- * When a return statement is encountered, this exception is thrown to immediately
- * exit the current function and transfer control back to the caller.
- *
- * This exception carries the return value from the function.
- *
- * Implementation note: This uses the exception mechanism for control flow,
- * which is a common pattern in interpreters for implementing early returns.
+ * ReturnException — control flow for return statements.
+ * NOT an error. Carries the return value from the function.
  */
 internal class ReturnException(
     val value: RuntimeValue,
 ) : Exception("Return statement")
 
 /**
- * BreakException - Control flow exception for break statements
- *
- * This is NOT an error but a control flow mechanism used internally by the interpreter.
- * When a break statement is encountered inside a loop, this exception is thrown to
- * immediately exit the enclosing loop.
- *
- * If break appears outside a loop, the exception propagates up uncaught (runtime error).
+ * BreakException — control flow for break statements.
+ * NOT an error.
  */
 internal class BreakException : Exception("Break statement")
 
 /**
- * ContinueException - Control flow exception for continue statements
- *
- * This is NOT an error but a control flow mechanism used internally by the interpreter.
- * When a continue statement is encountered inside a loop, this exception is thrown to
- * skip to the next iteration of the enclosing loop.
- *
- * If continue appears outside a loop, the exception propagates up uncaught (runtime error).
+ * ContinueException — control flow for continue statements.
+ * NOT an error.
  */
 internal class ContinueException : Exception("Continue statement")

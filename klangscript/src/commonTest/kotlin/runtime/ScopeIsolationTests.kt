@@ -16,7 +16,7 @@ class ScopeIsolationTest : StringSpec({
             param
         """.trimIndent()
 
-        shouldThrow<ReferenceError> {
+        shouldThrow<KlangScriptReferenceError> {
             engine.execute(script)
         }
     }
@@ -85,7 +85,7 @@ class ScopeIsolationTest : StringSpec({
             privateVal
         """.trimIndent()
 
-        shouldThrow<ReferenceError> {
+        shouldThrow<KlangScriptReferenceError> {
             engine.execute(script)
         }
     }
@@ -106,7 +106,7 @@ class ScopeIsolationTest : StringSpec({
             add(1, 2)
         """.trimIndent()
 
-        shouldThrow<ReferenceError> {
+        shouldThrow<KlangScriptReferenceError> {
             engine.execute(script)
         }
     }
@@ -137,7 +137,7 @@ class ScopeIsolationTest : StringSpec({
             getA()
         """.trimIndent()
 
-        shouldThrow<ReferenceError> {
+        shouldThrow<KlangScriptReferenceError> {
             engine.execute(script)
         }
     }
@@ -228,7 +228,7 @@ class ScopeIsolationTest : StringSpec({
             f2(1)
         """.trimIndent()
 
-        shouldThrow<ReferenceError> {
+        shouldThrow<KlangScriptReferenceError> {
             engine.execute(script)
         }
     }

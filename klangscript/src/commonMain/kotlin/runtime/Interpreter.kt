@@ -249,11 +249,11 @@ class Interpreter(
         val librarySource = try {
             engine.loadLibrary(libName)
         } catch (e: Exception) {
-            throw ImportError(
+            throw KlangScriptImportError(
                 libraryName = libName,
                 message = "Failed to load library '$libName': ${e.message}",
                 location = importStmt.location,
-                stackTrace = getStackTrace()
+                callStackTrace = getStackTrace()
             )
         }
 
@@ -302,11 +302,11 @@ class Interpreter(
         if (namespaceAlias != null) {
             // Namespace import - create an object containing all exports
             if (imports != null) {
-                throw ImportError(
-                    null,
-                    "Cannot use namespace import with selective imports",
+                throw KlangScriptImportError(
+                    libraryName = null,
+                    message = "Cannot use namespace import with selective imports",
                     location = null,
-                    stackTrace = getStackTrace()
+                    callStackTrace = getStackTrace()
                 )
             }
             val namespaceObject = ObjectValue(exports.toMutableMap())
@@ -321,11 +321,11 @@ class Interpreter(
             val exportNames = imports.map { it.first }
             val missingExports = exportNames.filter { it !in exports }
             if (missingExports.isNotEmpty()) {
-                throw ImportError(
-                    libraryName,
-                    "Cannot import non-exported symbols: ${missingExports.joinToString()}",
+                throw KlangScriptImportError(
+                    libraryName = libraryName,
+                    message = "Cannot import non-exported symbols: ${missingExports.joinToString()}",
                     location = null,
-                    stackTrace = getStackTrace()
+                    callStackTrace = getStackTrace()
                 )
             }
 
@@ -517,13 +517,13 @@ class Interpreter(
             is FunctionValue -> {
                 // Verify argument count matches parameter count
                 if (args.size != callee.parameters.size) {
-                    throw ArgumentError(
+                    throw KlangScriptArgumentError(
                         functionName = "<anonymous function>",
                         message = "Function expects ${callee.parameters.size} arguments, got ${args.size}",
                         expected = callee.parameters.size,
                         actual = args.size,
                         location = call.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
 
@@ -584,11 +584,11 @@ class Interpreter(
             }
 
             else -> {
-                throw TypeError(
-                    "Cannot call non-function value: ${callee.toDisplayString()}",
+                throw KlangScriptTypeError(
+                    message = "Cannot call non-function value: ${callee.toDisplayString()}",
                     operation = "function call",
                     location = call.location,
-                    stackTrace = getStackTrace()
+                    callStackTrace = getStackTrace()
                 )
             }
         }
@@ -643,11 +643,11 @@ class Interpreter(
             UnaryOperator.NEGATE -> {
                 val operandValue = evaluate(unaryOp.operand)
                 if (operandValue !is NumberValue) {
-                    throw TypeError(
-                        "Negation operator requires a number, got ${operandValue.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Negation operator requires a number, got ${operandValue.toDisplayString()}",
                         operation = "unary -",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 NumberValue(-operandValue.value)
@@ -656,11 +656,11 @@ class Interpreter(
             UnaryOperator.PLUS -> {
                 val operandValue = evaluate(unaryOp.operand)
                 if (operandValue !is NumberValue) {
-                    throw TypeError(
-                        "Unary plus operator requires a number, got ${operandValue.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Unary plus operator requires a number, got ${operandValue.toDisplayString()}",
                         operation = "unary +",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 NumberValue(operandValue.value)
@@ -676,20 +676,20 @@ class Interpreter(
                 // ++x: add 1, assign back, return new value
                 val target = unaryOp.operand
                 if (target !is Identifier) {
-                    throw TypeError(
-                        "Prefix increment (++) requires an identifier target",
+                    throw KlangScriptTypeError(
+                        message = "Prefix increment (++) requires an identifier target",
                         operation = "prefix ++",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 val current = evaluate(target)
                 if (current !is NumberValue) {
-                    throw TypeError(
-                        "Prefix increment (++) requires a number, got ${current.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Prefix increment (++) requires a number, got ${current.toDisplayString()}",
                         operation = "prefix ++",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 val newValue = NumberValue(current.value + 1.0)
@@ -701,20 +701,20 @@ class Interpreter(
                 // --x: subtract 1, assign back, return new value
                 val target = unaryOp.operand
                 if (target !is Identifier) {
-                    throw TypeError(
-                        "Prefix decrement (--) requires an identifier target",
+                    throw KlangScriptTypeError(
+                        message = "Prefix decrement (--) requires an identifier target",
                         operation = "prefix --",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 val current = evaluate(target)
                 if (current !is NumberValue) {
-                    throw TypeError(
-                        "Prefix decrement (--) requires a number, got ${current.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Prefix decrement (--) requires a number, got ${current.toDisplayString()}",
                         operation = "prefix --",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 val newValue = NumberValue(current.value - 1.0)
@@ -726,20 +726,20 @@ class Interpreter(
                 // x++: save original, add 1, assign back, return original
                 val target = unaryOp.operand
                 if (target !is Identifier) {
-                    throw TypeError(
-                        "Postfix increment (++) requires an identifier target",
+                    throw KlangScriptTypeError(
+                        message = "Postfix increment (++) requires an identifier target",
                         operation = "postfix ++",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 val current = evaluate(target)
                 if (current !is NumberValue) {
-                    throw TypeError(
-                        "Postfix increment (++) requires a number, got ${current.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Postfix increment (++) requires a number, got ${current.toDisplayString()}",
                         operation = "postfix ++",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 env.assign(target.name, NumberValue(current.value + 1.0), unaryOp.location, getStackTrace())
@@ -750,20 +750,20 @@ class Interpreter(
                 // x--: save original, subtract 1, assign back, return original
                 val target = unaryOp.operand
                 if (target !is Identifier) {
-                    throw TypeError(
-                        "Postfix decrement (--) requires an identifier target",
+                    throw KlangScriptTypeError(
+                        message = "Postfix decrement (--) requires an identifier target",
                         operation = "postfix --",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 val current = evaluate(target)
                 if (current !is NumberValue) {
-                    throw TypeError(
-                        "Postfix decrement (--) requires a number, got ${current.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Postfix decrement (--) requires a number, got ${current.toDisplayString()}",
                         operation = "postfix --",
                         location = unaryOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 env.assign(target.name, NumberValue(current.value - 1.0), unaryOp.location, getStackTrace())
@@ -790,7 +790,7 @@ class Interpreter(
      *
      * @param binOp The binary operation AST node
      * @return NumberValue for arithmetic, BooleanValue for comparisons and logical ops
-     * @throws TypeError if operands are invalid for the operation
+     * @throws KlangScriptTypeError if operands are invalid for the operation
      *
      * Examples:
      * - 5 + 3 → NumberValue(8.0)
@@ -862,19 +862,19 @@ class Interpreter(
             BinaryOperator.IN -> {
                 // "key" in obj — left must be StringValue, right must be ObjectValue
                 if (leftValue !is StringValue) {
-                    throw TypeError(
-                        "Left operand of 'in' must be a string, got ${leftValue.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Left operand of 'in' must be a string, got ${leftValue.toDisplayString()}",
                         operation = "in",
                         location = binOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 if (rightValue !is ObjectValue) {
-                    throw TypeError(
-                        "Right operand of 'in' must be an object, got ${rightValue.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Right operand of 'in' must be an object, got ${rightValue.toDisplayString()}",
                         operation = "in",
                         location = binOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 return BooleanValue(leftValue.value in rightValue.properties)
@@ -887,12 +887,12 @@ class Interpreter(
                 -> {
                 // Numeric comparison operators require both operands to be numbers
                 if (leftValue !is NumberValue || rightValue !is NumberValue) {
-                    throw TypeError(
-                        "Binary ${binOp.operator} operation requires numbers, " +
+                    throw KlangScriptTypeError(
+                        message = "Binary ${binOp.operator} operation requires numbers, " +
                                 "got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
                         operation = binOp.operator.toString(),
                         location = binOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 val result = when (binOp.operator) {
@@ -917,12 +917,12 @@ class Interpreter(
 
                 // Arithmetic operators - ensure both operands are numbers
                 if (leftValue !is NumberValue || rightValue !is NumberValue) {
-                    throw TypeError(
-                        "Binary ${binOp.operator} operation requires numbers, " +
+                    throw KlangScriptTypeError(
+                        message = "Binary ${binOp.operator} operation requires numbers, " +
                                 "got ${leftValue.toDisplayString()} and ${rightValue.toDisplayString()}",
                         operation = binOp.operator.toString(),
                         location = binOp.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
 
@@ -935,23 +935,24 @@ class Interpreter(
                     BinaryOperator.DIVIDE -> {
                         // Check for division by zero
                         if (rightValue.value == 0.0) {
-                            throw TypeError(
-                                "Division by zero",
+                            throw KlangScriptTypeError(
+                                message = "Division by zero",
                                 operation = "division",
                                 location = binOp.location,
-                                stackTrace = getStackTrace()
+                                callStackTrace = getStackTrace()
                             )
                         }
                         leftValue.value / rightValue.value
                     }
+
                     BinaryOperator.MODULO -> {
                         // Check for modulo by zero (consistent with division)
                         if (rightValue.value == 0.0) {
-                            throw TypeError(
-                                "Modulo by zero",
+                            throw KlangScriptTypeError(
+                                message = "Modulo by zero",
                                 operation = "modulo",
                                 location = binOp.location,
-                                stackTrace = getStackTrace()
+                                callStackTrace = getStackTrace()
                             )
                         }
                         leftValue.value % rightValue.value
@@ -1032,7 +1033,7 @@ class Interpreter(
      *
      * @param memberAccess The member access AST node
      * @return The runtime value of the property or bound method
-     * @throws TypeError if the object doesn't support member access or property not found
+     * @throws KlangScriptTypeError if the object doesn't support member access or property not found
      *
      * Examples:
      * ```
@@ -1073,11 +1074,11 @@ class Interpreter(
                 ""
             }
 
-            throw TypeError(
-                "Native type '${objValue.qualifiedName}' has no method '${memberAccess.property}'.$suggestion",
+            throw KlangScriptTypeError(
+                message = "Native type '${objValue.qualifiedName}' has no method '${memberAccess.property}'.$suggestion",
                 operation = "member access",
                 location = memberAccess.location,
-                stackTrace = getStackTrace()
+                callStackTrace = getStackTrace()
             )
         }
         // Handle built-in runtime types (ArrayValue, StringValue, etc.) - lookup extension methods
@@ -1099,11 +1100,11 @@ class Interpreter(
                 val typeName = objValue::class.simpleName ?: "unknown"
                 val suggestion = " Available methods: ${availableMethods.joinToString(", ")}"
 
-                throw TypeError(
-                    "Type '$typeName' has no method '${memberAccess.property}'.$suggestion",
+                throw KlangScriptTypeError(
+                    message = "Type '$typeName' has no method '${memberAccess.property}'.$suggestion",
                     operation = "member access",
                     location = memberAccess.location,
-                    stackTrace = getStackTrace()
+                    callStackTrace = getStackTrace()
                 )
             }
             // Otherwise, fall through to generic error handling
@@ -1111,11 +1112,11 @@ class Interpreter(
 
         // Handle script objects
         if (objValue !is ObjectValue) {
-            throw TypeError(
-                "Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}",
+            throw KlangScriptTypeError(
+                message = "Cannot access property '${memberAccess.property}' on non-object value: ${objValue.toDisplayString()}",
                 operation = "member access",
                 location = memberAccess.location,
-                stackTrace = getStackTrace()
+                callStackTrace = getStackTrace()
             )
         }
 
@@ -1235,11 +1236,11 @@ class Interpreter(
                 // Object property assignment: obj.prop = value
                 val objValue = evaluate(target.obj)
                 if (objValue !is ObjectValue) {
-                    throw TypeError(
-                        "Cannot assign property '${target.property}' on non-object value: ${objValue.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Cannot assign property '${target.property}' on non-object value: ${objValue.toDisplayString()}",
                         operation = "member assignment",
                         location = assignment.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 objValue.setProperty(target.property, value)
@@ -1254,20 +1255,20 @@ class Interpreter(
                 when (objValue) {
                     is ArrayValue -> {
                         if (indexValue !is NumberValue) {
-                            throw TypeError(
-                                "Array index must be a number, got ${indexValue.toDisplayString()}",
+                            throw KlangScriptTypeError(
+                                message = "Array index must be a number, got ${indexValue.toDisplayString()}",
                                 operation = "index assignment",
                                 location = assignment.location,
-                                stackTrace = getStackTrace()
+                                callStackTrace = getStackTrace()
                             )
                         }
                         val idx = indexValue.value.toInt()
                         if (idx < 0 || idx >= objValue.elements.size) {
-                            throw TypeError(
-                                "Array index $idx is out of bounds (size: ${objValue.elements.size})",
+                            throw KlangScriptTypeError(
+                                message = "Array index $idx is out of bounds (size: ${objValue.elements.size})",
                                 operation = "index assignment",
                                 location = assignment.location,
-                                stackTrace = getStackTrace()
+                                callStackTrace = getStackTrace()
                             )
                         }
                         objValue.elements[idx] = value
@@ -1276,31 +1277,33 @@ class Interpreter(
 
                     is ObjectValue -> {
                         if (indexValue !is StringValue) {
-                            throw TypeError(
-                                "Object key must be a string, got ${indexValue.toDisplayString()}",
+                            throw KlangScriptTypeError(
+                                message = "Object key must be a string, got ${indexValue.toDisplayString()}",
                                 operation = "index assignment",
                                 location = assignment.location,
-                                stackTrace = getStackTrace()
+                                callStackTrace = getStackTrace()
                             )
                         }
                         objValue.setProperty(indexValue.value, value)
                         value
                     }
 
-                    else -> throw TypeError(
-                        "Cannot index-assign on value: ${objValue.toDisplayString()}",
-                        operation = "index assignment",
-                        location = assignment.location,
-                        stackTrace = getStackTrace()
-                    )
+                    else -> {
+                        throw KlangScriptTypeError(
+                            "Cannot index-assign on value: ${objValue.toDisplayString()}",
+                            operation = "index assignment",
+                            location = assignment.location,
+                            callStackTrace = getStackTrace()
+                        )
+                    }
                 }
             }
 
-            else -> throw TypeError(
-                "Invalid assignment target",
+            else -> throw KlangScriptTypeError(
+                message = "Invalid assignment target",
                 operation = "assignment",
                 location = assignment.location,
-                stackTrace = getStackTrace()
+                callStackTrace = getStackTrace()
             )
         }
     }
@@ -1336,11 +1339,11 @@ class Interpreter(
         return when (objValue) {
             is ArrayValue -> {
                 if (indexValue !is NumberValue) {
-                    throw TypeError(
-                        "Array index must be a number, got ${indexValue.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Array index must be a number, got ${indexValue.toDisplayString()}",
                         operation = "index access",
                         location = indexAccess.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 val idx = indexValue.value.toInt()
@@ -1353,21 +1356,21 @@ class Interpreter(
 
             is ObjectValue -> {
                 if (indexValue !is StringValue) {
-                    throw TypeError(
-                        "Object key must be a string, got ${indexValue.toDisplayString()}",
+                    throw KlangScriptTypeError(
+                        message = "Object key must be a string, got ${indexValue.toDisplayString()}",
                         operation = "index access",
                         location = indexAccess.location,
-                        stackTrace = getStackTrace()
+                        callStackTrace = getStackTrace()
                     )
                 }
                 objValue.getProperty(indexValue.value)
             }
 
-            else -> throw TypeError(
-                "Cannot index into value: ${objValue.toDisplayString()}",
+            else -> throw KlangScriptTypeError(
+                message = "Cannot index into value: ${objValue.toDisplayString()}",
                 operation = "index access",
                 location = indexAccess.location,
-                stackTrace = getStackTrace()
+                callStackTrace = getStackTrace()
             )
         }
     }

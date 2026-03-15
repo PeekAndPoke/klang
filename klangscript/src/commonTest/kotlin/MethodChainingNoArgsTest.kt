@@ -30,7 +30,7 @@ import io.peekandpoke.klang.script.runtime.NumberValue
  * 1. Parses `sine2.fromBipolar` as memberExpr
  * 2. Sees `()` - parses as call with empty args
  * 3. Sees `.range` - tries new iteration, expects `(` but finds `.`
- * 4. ParseException!
+ * 4. KlangScriptSyntaxError!
  *
  * **Fix needed**: Allow alternating calls and member accesses:
  * ```

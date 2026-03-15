@@ -62,12 +62,12 @@ class CallStack(
      *
      * @param functionName The name of the function being called
      * @param location The source location where the call occurred
-     * @throws StackOverflowError if stack depth exceeds maxDepth
+     * @throws KlangScriptStackOverflowError if stack depth exceeds maxDepth
      */
     fun push(functionName: String, location: SourceLocation?) {
         if (frames.size >= maxDepth) {
-            throw StackOverflowError(
-                "Stack overflow: maximum call depth of $maxDepth exceeded. " +
+            throw KlangScriptStackOverflowError(
+                message = "Stack overflow: maximum call depth of $maxDepth exceeded. " +
                         "Possible infinite recursion in function '$functionName'"
             )
         }

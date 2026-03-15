@@ -370,7 +370,7 @@ class ComparisonOperatorsTest : StringSpec({
 
         // This should parse and execute without errors
         val result = script.execute("note(\"a b\").filter((x) => x + 1)")
-        // We just verify it doesn't throw a ParseException
+        // We just verify it doesn't throw a KlangScriptSyntaxError
         result.shouldBeInstanceOf<RuntimeValue>()
     }
 
@@ -391,7 +391,7 @@ class ComparisonOperatorsTest : StringSpec({
 
         // This should parse and execute without errors - this was failing before the fix
         val result = script.execute("note(\"a b\").filter((x) => x.data.note == \"a\")")
-        // We just verify it doesn't throw a ParseException
+        // We just verify it doesn't throw a KlangScriptSyntaxError
         result.shouldBeInstanceOf<RuntimeValue>()
     }
 })

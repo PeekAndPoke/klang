@@ -7,7 +7,8 @@ import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.builder.registerFunction
 import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.builder.registerType
-import io.peekandpoke.klang.script.runtime.ImportError
+import io.peekandpoke.klang.script.runtime.KlangScriptImportError
+import io.peekandpoke.klang.script.runtime.KlangScriptReferenceError
 import io.peekandpoke.klang.script.runtime.NumberValue
 
 /**
@@ -255,7 +256,7 @@ class LibrarySystemTest : StringSpec({
         result.toDisplayString() shouldContain "10"
 
         // Cannot use non-exported script function helper
-        shouldThrow<io.peekandpoke.klang.script.runtime.ReferenceError> {
+        shouldThrow<KlangScriptReferenceError> {
             engine.execute(
                 """
                     import * from "math"
@@ -370,7 +371,7 @@ class LibrarySystemTest : StringSpec({
     "Library not found error still works" {
         val engine = klangScript()
 
-        val exception = shouldThrow<ImportError> {
+        val exception = shouldThrow<KlangScriptImportError> {
             engine.execute("""import * from "nonexistent" """)
         }
 

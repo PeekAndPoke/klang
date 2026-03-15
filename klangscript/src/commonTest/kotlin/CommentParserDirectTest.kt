@@ -3,7 +3,7 @@ package io.peekandpoke.klang.script
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.peekandpoke.klang.script.parser.KlangScriptParser
-import io.peekandpoke.klang.script.parser.ParseException
+import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 
 /**
  * Direct parser tests to check for tokenization issues with comments and division
@@ -30,7 +30,7 @@ class CommentParserDirectTest : StringSpec({
 
     "parse incomplete division before comment" {
         val code = "10 / // comment"
-        val exception = shouldThrow<ParseException> {
+        val exception = shouldThrow<KlangScriptSyntaxError> {
             KlangScriptParser.parse(code, "test")
         }
         println("✓ Expected parse error: ${exception.message}")

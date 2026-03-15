@@ -7,8 +7,8 @@ import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.builder.registerFunction
 import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.builder.registerType
-import io.peekandpoke.klang.script.runtime.ArgumentError
-import io.peekandpoke.klang.script.runtime.TypeError
+import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 
 /**
  * Native Kotlin interop tests
@@ -186,7 +186,7 @@ class NativeInteropTest : StringSpec() {
                 pattern.nonExistent("test")
             """.trimIndent()
 
-            val error = shouldThrow<TypeError> {
+            val error = shouldThrow<KlangScriptTypeError> {
                 engine.execute(script)
             }
 
@@ -213,7 +213,7 @@ class NativeInteropTest : StringSpec() {
                 pattern.sound()
             """.trimIndent()
 
-            shouldThrow<ArgumentError> {
+            shouldThrow<KlangScriptArgumentError> {
                 engine.execute(script)
             }
         }

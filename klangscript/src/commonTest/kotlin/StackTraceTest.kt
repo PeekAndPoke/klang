@@ -5,10 +5,10 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.script.builder.registerLibrary
-import io.peekandpoke.klang.script.runtime.ArgumentError
-import io.peekandpoke.klang.script.runtime.ReferenceError
-import io.peekandpoke.klang.script.runtime.StackOverflowError
-import io.peekandpoke.klang.script.runtime.TypeError
+import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
+import io.peekandpoke.klang.script.runtime.KlangScriptReferenceError
+import io.peekandpoke.klang.script.runtime.KlangScriptStackOverflowError
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 
 /**
  * Tests for call stack trace functionality
@@ -26,12 +26,12 @@ class StackTraceTest : StringSpec({
             broken()
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "test.klang")
         }
 
-        error.stackTrace.size shouldBe 1
-        error.stackTrace[0].functionName shouldBe "<anonymous>"
+        error.callStackTrace.size shouldBe 1
+        error.callStackTrace[0].functionName shouldBe "<anonymous>"
         error.format() shouldContain "at <anonymous>"
     }
 
@@ -45,15 +45,15 @@ class StackTraceTest : StringSpec({
             outerFunc()
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "nested.klang")
         }
 
         // Should have 3 frames: outerFunc, middleFunc, innerFunc
-        error.stackTrace.size shouldBe 3
-        error.stackTrace[0].functionName shouldBe "<anonymous>" // innerFunc
-        error.stackTrace[1].functionName shouldBe "<anonymous>" // middleFunc
-        error.stackTrace[2].functionName shouldBe "<anonymous>" // outerFunc
+        error.callStackTrace.size shouldBe 3
+        error.callStackTrace[0].functionName shouldBe "<anonymous>" // innerFunc
+        error.callStackTrace[1].functionName shouldBe "<anonymous>" // middleFunc
+        error.callStackTrace[2].functionName shouldBe "<anonymous>" // outerFunc
     }
 
     "Stack trace includes source locations" {
@@ -65,7 +65,7 @@ class StackTraceTest : StringSpec({
             func2()
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "trace.klang")
         }
 
@@ -84,11 +84,11 @@ class StackTraceTest : StringSpec({
             calculate()
         """.trimIndent()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(script, sourceName = "math.klang")
         }
 
-        error.stackTrace.size shouldBe 2
+        error.callStackTrace.size shouldBe 2
         error.format() shouldContain "at <anonymous>"
     }
 
@@ -103,11 +103,11 @@ class StackTraceTest : StringSpec({
             level1()
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "deep.klang")
         }
 
-        error.stackTrace.size shouldBe 4
+        error.callStackTrace.size shouldBe 4
         val formatted = error.format()
         formatted.split("\n").count { it.trim().startsWith("at") } shouldBe 4
     }
@@ -125,13 +125,13 @@ class StackTraceTest : StringSpec({
             process(broken())
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "native.klang")
         }
 
         // Stack should include both the script function and native function
-        error.stackTrace.size shouldBe 1
-        error.stackTrace[0].functionName shouldBe "<anonymous>"
+        error.callStackTrace.size shouldBe 1
+        error.callStackTrace[0].functionName shouldBe "<anonymous>"
     }
 
     "Stack trace with argument count error" {
@@ -143,23 +143,23 @@ class StackTraceTest : StringSpec({
             caller()
         """.trimIndent()
 
-        val error = shouldThrow<ArgumentError> {
+        val error = shouldThrow<KlangScriptArgumentError> {
             engine.execute(script, sourceName = "args.klang")
         }
 
-        error.stackTrace.size shouldBe 1
+        error.callStackTrace.size shouldBe 1
         error.format() shouldContain "at <anonymous>"
     }
 
     "Stack trace empty for top-level errors" {
         val engine = klangScript()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("undefinedVariable", sourceName = "top.klang")
         }
 
         // No function calls, so stack trace should be empty
-        error.stackTrace.size shouldBe 0
+        error.callStackTrace.size shouldBe 0
     }
 
     "Stack trace for library function errors" {
@@ -178,12 +178,12 @@ class StackTraceTest : StringSpec({
             caller()
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "main.klang")
         }
 
         // Should have stack frames from both main and library
-        error.stackTrace.size shouldBe 2
+        error.callStackTrace.size shouldBe 2
     }
 
     "Stack trace with recursive calls" {
@@ -202,7 +202,7 @@ class StackTraceTest : StringSpec({
         } catch (e: Throwable) {
             // Accept either our custom error or JVM stack overflow
             val message = e.message ?: ""
-            val isExpectedError = e is StackOverflowError ||
+            val isExpectedError = e is KlangScriptStackOverflowError ||
                     e::class.simpleName == "StackOverflowError" ||
                     message.contains("Stack overflow") ||
                     message.contains("maximum call depth")
@@ -219,7 +219,7 @@ class StackTraceTest : StringSpec({
             outer()
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "format.klang")
         }
 
@@ -250,7 +250,7 @@ class StackTraceTest : StringSpec({
         } catch (e: Throwable) {
             // Accept either our custom error or JVM stack overflow
             val message = e.message ?: ""
-            val isExpectedError = e is StackOverflowError ||
+            val isExpectedError = e is KlangScriptStackOverflowError ||
                     e::class.simpleName == "StackOverflowError" ||
                     message.contains("Stack overflow") ||
                     message.contains("maximum call depth")

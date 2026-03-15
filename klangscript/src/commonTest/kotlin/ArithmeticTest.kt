@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.script.runtime.KlangScriptTypeError
 import io.peekandpoke.klang.script.runtime.NumberValue
 
 /**
@@ -280,14 +281,14 @@ class ArithmeticTest : StringSpec({
 
     "number + string throws TypeError (no implicit coercion)" {
         val engine = klangScript()
-        io.kotest.assertions.throwables.shouldThrow<io.peekandpoke.klang.script.runtime.TypeError> {
+        io.kotest.assertions.throwables.shouldThrow<KlangScriptTypeError> {
             engine.execute("""5 + "hello"""")
         }
     }
 
     "string + null throws TypeError (no implicit coercion)" {
         val engine = klangScript()
-        io.kotest.assertions.throwables.shouldThrow<io.peekandpoke.klang.script.runtime.TypeError> {
+        io.kotest.assertions.throwables.shouldThrow<KlangScriptTypeError> {
             engine.execute(""""hello" + null""")
         }
     }

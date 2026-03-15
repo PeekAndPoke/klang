@@ -24,31 +24,31 @@ class ErrorHandlingTest : StringSpec({
     "ReferenceError - undefined variable should throw ReferenceError" {
         val engine = klangScript()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("undefinedVariable")
         }
 
-        error.errorType shouldBe "ReferenceError"
+        error.errorType shouldBe KlangScriptErrorType.ReferenceError
         error.symbolName shouldBe "undefinedVariable"
         error.message shouldBe "Undefined variable: undefinedVariable"
     }
 
     "ReferenceError - format() without location" {
-        val error = ReferenceError("foo")
+        val error = KlangScriptReferenceError(symbolName = "foo")
 
         error.format() shouldBe "ReferenceError: Undefined variable: foo"
     }
 
     "ReferenceError - format() with location (no source)" {
         val location = SourceLocation(null, 5, 12, 5, 13)
-        val error = ReferenceError("foo", location = location)
+        val error = KlangScriptReferenceError(symbolName = "foo", location = location)
 
         error.format() shouldBe "ReferenceError at 5:12-13: Undefined variable: foo"
     }
 
     "ReferenceError - format() with location (with source)" {
         val location = SourceLocation("main.klang", 5, 12, 5, 13)
-        val error = ReferenceError("foo", location = location)
+        val error = KlangScriptReferenceError(symbolName = "foo", location = location)
 
         error.format() shouldBe "ReferenceError at main.klang:5:12-13: Undefined variable: foo"
     }
@@ -60,59 +60,59 @@ class ErrorHandlingTest : StringSpec({
     "TypeError - calling non-function should throw TypeError" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("let x = 5\nx()")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.message shouldContain "Cannot call non-function"
     }
 
     "TypeError - binary operation on incompatible types" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("\"hello\" + null")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "ADD"
     }
 
     "TypeError - member access on non-object" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("let x = 5\nx.foo")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.message shouldContain "Cannot access property"
         error.operation shouldBe "member access"
     }
 
     "TypeError - format() without location or operation" {
-        val error = TypeError("Invalid type")
+        val error = KlangScriptTypeError("Invalid type")
 
         error.format() shouldBe "TypeError: Invalid type"
     }
 
     "TypeError - format() with operation but no location" {
-        val error = TypeError("Cannot add string and number", operation = "+")
+        val error = KlangScriptTypeError("Cannot add string and number", operation = "+")
 
         error.format() shouldBe "TypeError in +: Cannot add string and number"
     }
 
     "TypeError - format() with location but no operation" {
         val location = SourceLocation("math.klang", 10, 5, 10, 6)
-        val error = TypeError("Invalid type", location = location)
+        val error = KlangScriptTypeError("Invalid type", location = location)
 
         error.format() shouldBe "TypeError at math.klang:10:5-6: Invalid type"
     }
 
     "TypeError - format() with both location and operation" {
         val location = SourceLocation("math.klang", 10, 5, 10, 6)
-        val error = TypeError("Cannot add string and number", operation = "+", location = location)
+        val error = KlangScriptTypeError("Cannot add string and number", operation = "+", location = location)
 
         error.format() shouldBe "TypeError at math.klang:10:5-6 in +: Cannot add string and number"
     }
@@ -129,11 +129,11 @@ class ErrorHandlingTest : StringSpec({
 
         val engine = builder.build()
 
-        val error = shouldThrow<ArgumentError> {
+        val error = shouldThrow<KlangScriptArgumentError> {
             engine.execute("double()")
         }
 
-        error.errorType shouldBe "ArgumentError"
+        error.errorType shouldBe KlangScriptErrorType.ArgumentError
         error.functionName shouldBe "double"
         error.expected shouldBe 1
         error.actual shouldBe 0
@@ -142,7 +142,7 @@ class ErrorHandlingTest : StringSpec({
     "ArgumentError - wrong number of arguments to script function" {
         val engine = klangScript()
 
-        val error = shouldThrow<ArgumentError> {
+        val error = shouldThrow<KlangScriptArgumentError> {
             engine.execute(
                 """
                     let add = (a, b) => a + b
@@ -151,26 +151,32 @@ class ErrorHandlingTest : StringSpec({
             )
         }
 
-        error.errorType shouldBe "ArgumentError"
+        error.errorType shouldBe KlangScriptErrorType.ArgumentError
         error.message shouldContain "expects 2 arguments"
     }
 
     "ArgumentError - format() without location" {
-        val error = ArgumentError("myFunc", "Wrong arguments", expected = 2, actual = 3)
+        val error = KlangScriptArgumentError(functionName = "myFunc", message = "Wrong arguments", expected = 2, actual = 3)
 
         error.format() shouldBe "ArgumentError in myFunc: Expected 2 arguments, got 3"
     }
 
     "ArgumentError - format() with location" {
         val location = SourceLocation("app.klang", 15, 8, 15, 9)
-        val error = ArgumentError("myFunc", "Wrong arguments", expected = 2, actual = 3, location = location)
+        val error = KlangScriptArgumentError(
+            functionName = "myFunc",
+            message = "Wrong arguments",
+            expected = 2,
+            actual = 3,
+            location = location
+        )
 
         error.format() shouldBe "ArgumentError at app.klang:15:8-9 in myFunc: Expected 2 arguments, got 3"
     }
 
     "ArgumentError - format() with custom message and location" {
         val location = SourceLocation("app.klang", 15, 8, 15, 9)
-        val error = ArgumentError("myFunc", "Invalid argument type", location = location)
+        val error = KlangScriptArgumentError(functionName = "myFunc", message = "Invalid argument type", location = location)
 
         error.format() shouldBe "ArgumentError at app.klang:15:8-9 in myFunc: Invalid argument type"
     }
@@ -182,11 +188,11 @@ class ErrorHandlingTest : StringSpec({
     "ImportError - library not found" {
         val engine = klangScript()
 
-        val error = shouldThrow<ImportError> {
+        val error = shouldThrow<KlangScriptImportError> {
             engine.execute("import * from \"nonexistent\"")
         }
 
-        error.errorType shouldBe "ImportError"
+        error.errorType shouldBe KlangScriptErrorType.ImportError
         error.message shouldContain "Failed to load library"
     }
 
@@ -202,30 +208,30 @@ class ErrorHandlingTest : StringSpec({
 
         val engine = builder.build()
 
-        val error = shouldThrow<ImportError> {
+        val error = shouldThrow<KlangScriptImportError> {
             engine.execute("import { internal } from \"math\"")
         }
 
-        error.errorType shouldBe "ImportError"
+        error.errorType shouldBe KlangScriptErrorType.ImportError
         error.libraryName shouldBe "math"
         error.message shouldContain "non-exported symbols"
     }
 
     "ImportError - format() without library name or location" {
-        val error = ImportError(null, "Cannot import")
+        val error = KlangScriptImportError(libraryName = null, message = "Cannot import")
 
         error.format() shouldBe "ImportError: Cannot import"
     }
 
     "ImportError - format() with library name but no location" {
-        val error = ImportError("math", "Library not found")
+        val error = KlangScriptImportError(libraryName = "math", message = "Library not found")
 
         error.format() shouldBe "ImportError in library 'math': Library not found"
     }
 
     "ImportError - format() with location and library name" {
         val location = SourceLocation("main.klang", 1, 1, 1, 2)
-        val error = ImportError("math", "Library not found", location = location)
+        val error = KlangScriptImportError(libraryName = "math", message = "Library not found", location = location)
 
         error.format() shouldBe "ImportError at main.klang:1:1-2 in library 'math': Library not found"
     }
@@ -238,27 +244,27 @@ class ErrorHandlingTest : StringSpec({
         // Note: Current implementation doesn't support assignment expressions yet
         // This test documents expected behavior when assignment is implemented
         // For now, we test that const tracking works in Environment
-        val error = AssignmentError("x", "Cannot reassign const variable")
+        val error = KlangScriptAssignmentError(variableName = "x", message = "Cannot reassign const variable")
 
-        error.errorType shouldBe "AssignmentError"
+        error.errorType shouldBe KlangScriptErrorType.AssignmentError
         error.variableName shouldBe "x"
     }
 
     "AssignmentError - format() without location" {
-        val error = AssignmentError("x", "Cannot reassign const")
+        val error = KlangScriptAssignmentError(variableName = "x", message = "Cannot reassign const")
 
         error.format() shouldBe "AssignmentError for variable 'x': Cannot reassign const"
     }
 
     "AssignmentError - format() with location" {
         val location = SourceLocation("app.klang", 20, 3, 20, 4)
-        val error = AssignmentError("x", "Cannot reassign const", location = location)
+        val error = KlangScriptAssignmentError(variableName = "x", message = "Cannot reassign const", location = location)
 
         error.format() shouldBe "AssignmentError at app.klang:20:3-4 for variable 'x': Cannot reassign const"
     }
 
     "AssignmentError - format() without variable name" {
-        val error = AssignmentError(null, "Invalid assignment")
+        val error = KlangScriptAssignmentError(variableName = null, message = "Invalid assignment")
 
         error.format() shouldBe "AssignmentError: Invalid assignment"
     }
@@ -295,7 +301,7 @@ class ErrorHandlingTest : StringSpec({
 
         val engine = builder.build()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(
                 """
                     import { willFail } from "broken"
@@ -318,7 +324,7 @@ class ErrorHandlingTest : StringSpec({
 
         val engine = builder.build()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(
                 """
                     import { badAdd } from "math"
@@ -343,7 +349,7 @@ class ErrorHandlingTest : StringSpec({
 
         val engine = builder.build()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(
                 """
                     let calculate = () => process(missingVar)
@@ -358,7 +364,7 @@ class ErrorHandlingTest : StringSpec({
     "TypeError in nested arithmetic" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(
                 """
                     let outer = (x) => x * 2
@@ -378,7 +384,7 @@ class ErrorHandlingTest : StringSpec({
     "Error messages should be descriptive - undefined variable" {
         val engine = klangScript()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("myVariable")
         }
 
@@ -390,7 +396,7 @@ class ErrorHandlingTest : StringSpec({
     "Error messages should be descriptive - type error" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("5()")
         }
 
@@ -404,7 +410,7 @@ class ErrorHandlingTest : StringSpec({
 
         val engine = builder.build()
 
-        val error = shouldThrow<ArgumentError> {
+        val error = shouldThrow<KlangScriptArgumentError> {
             engine.execute("test(1)")
         }
 
@@ -426,33 +432,33 @@ class ErrorHandlingTest : StringSpec({
     "TypeError - unary PLUS on string" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("+\"hello\"")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "unary +"
     }
 
     "TypeError - unary NEGATE on string" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("-\"hello\"")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "unary -"
     }
 
     "TypeError - unary NEGATE on null" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("-null")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "unary -"
     }
 
@@ -463,55 +469,55 @@ class ErrorHandlingTest : StringSpec({
     "TypeError - multiplication with string" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("5 * \"hello\"")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "MULTIPLY"
     }
 
     "TypeError - division with string" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("10 / \"hello\"")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "DIVIDE"
     }
 
     "TypeError - subtraction with null" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("5 - null")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "SUBTRACT"
     }
 
     "TypeError - boolean in arithmetic" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("true + 5")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "ADD"
     }
 
     "TypeError - modulo by zero" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("10 % 0")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "modulo"
         error.message shouldBe "Modulo by zero"
     }
@@ -519,22 +525,22 @@ class ErrorHandlingTest : StringSpec({
     "TypeError - modulo with string" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("10 % \"hello\"")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "MODULO"
     }
 
     "TypeError - modulo with null" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("5 % null")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.operation shouldBe "MODULO"
     }
 
@@ -545,18 +551,18 @@ class ErrorHandlingTest : StringSpec({
     "TypeError - member access on null" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("null.property")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.message shouldContain "Cannot access property"
     }
 
     "TypeError - chained member access on non-object" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(
                 """
                     let obj = { a: 5 }
@@ -565,18 +571,18 @@ class ErrorHandlingTest : StringSpec({
             )
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.message shouldContain "Cannot access property"
     }
 
     "TypeError - member access on string" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("\"hello\".length")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.message shouldContain "Cannot access property"
     }
 
@@ -587,33 +593,33 @@ class ErrorHandlingTest : StringSpec({
     "TypeError - calling null" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("null()")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.message shouldContain "Cannot call non-function"
     }
 
     "TypeError - calling boolean" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("true()")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.message shouldContain "Cannot call non-function"
     }
 
     "TypeError - calling object" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("let obj = { a: 1 }\nobj()")
         }
 
-        error.errorType shouldBe "TypeError"
+        error.errorType shouldBe KlangScriptErrorType.TypeError
         error.message shouldContain "Cannot call non-function"
     }
 
@@ -624,7 +630,7 @@ class ErrorHandlingTest : StringSpec({
     "ReferenceError - undefined variable in object literal" {
         val engine = klangScript()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("{ a: undefinedVar }")
         }
 
@@ -634,7 +640,7 @@ class ErrorHandlingTest : StringSpec({
     "TypeError - nested operations with mixed types" {
         val engine = klangScript()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute("(5 + 3) * \"hello\"")
         }
 
@@ -647,7 +653,7 @@ class ErrorHandlingTest : StringSpec({
 
         val engine = builder.build()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(
                 """
                     let obj = { method: (x) => x }

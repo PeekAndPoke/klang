@@ -7,7 +7,7 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.ast.ImportStatement
 import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
-import io.peekandpoke.klang.script.parser.ParseException
+import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.ObjectValue
 
@@ -250,7 +250,7 @@ class NamespaceImportTest : StringSpec({
             )
         }
 
-        shouldThrow<ParseException> {
+        shouldThrow<KlangScriptSyntaxError> {
             // This should fail at parse time or runtime
             // Parser allows it, so check runtime error
             engine.execute(

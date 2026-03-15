@@ -125,7 +125,7 @@ class Environment(
         stackTrace: List<CallStackFrame> = emptyList(),
     ): RuntimeValue {
         return values[name] ?: parent?.get(name, location, stackTrace)
-        ?: throw ReferenceError(name, location = location, stackTrace = stackTrace)
+        ?: throw KlangScriptReferenceError(symbolName = name, location = location, callStackTrace = stackTrace)
     }
 
     /**
@@ -139,8 +139,8 @@ class Environment(
      * @param value The new runtime value
      * @param location Optional source location for error reporting
      * @param stackTrace Optional call stack for error reporting
-     * @throws AssignmentError if variable is const
-     * @throws ReferenceError if variable is not defined
+     * @throws KlangScriptAssignmentError if variable is const
+     * @throws KlangScriptReferenceError if variable is not defined
      */
     fun assign(
         name: String,
@@ -151,11 +151,11 @@ class Environment(
         return when {
             values.containsKey(name) -> {
                 if (mutable[name] == false) {
-                    throw AssignmentError(
+                    throw KlangScriptAssignmentError(
                         variableName = name,
                         message = "Cannot reassign constant variable '$name'",
                         location = location,
-                        stackTrace = stackTrace,
+                        callStackTrace = stackTrace,
                     )
                 }
                 values[name] = value
@@ -163,7 +163,7 @@ class Environment(
             }
 
             parent != null -> parent.assign(name, value, location, stackTrace)
-            else -> throw ReferenceError(name, location = location, stackTrace = stackTrace)
+            else -> throw KlangScriptReferenceError(symbolName = name, location = location, callStackTrace = stackTrace)
         }
     }
 
@@ -246,7 +246,7 @@ class Environment(
         val library = libraries[name] ?: if (parent != null) {
             return parent.loadLibrary(name)
         } else {
-            throw ImportError(name, "Library not found")
+            throw KlangScriptImportError(libraryName = name, message = "Library not found")
         }
 
         register(library.native)

@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.parser
 
 import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 
 /**
  * Hand-rolled recursive descent parser for KlangScript
@@ -39,7 +40,7 @@ class KlangScriptParser private constructor(
          * @param source The source code to parse
          * @param sourceName Optional source file name for error reporting
          * @return Program AST node
-         * @throws ParseException if the source contains syntax errors
+         * @throws KlangScriptSyntaxError if the source contains syntax errors
          */
         fun parse(source: String, sourceName: String? = null): Program {
             val parser = KlangScriptParser(currentSource = sourceName)
@@ -465,7 +466,10 @@ class KlangScriptParser private constructor(
                     }
 
                     if (i >= source.length) {
-                        throw ParseException(ErrorResult("Unterminated string", column, line))
+                        throw KlangScriptSyntaxError(
+                            "Unterminated string",
+                            location = SourceLocation(currentSource, startLine, startColumn, line, column),
+                        )
                     }
 
                     i++ // Skip closing quote
@@ -506,7 +510,10 @@ class KlangScriptParser private constructor(
                     }
 
                     if (i >= source.length) {
-                        throw ParseException(ErrorResult("Unterminated backtick string", column, line))
+                        throw KlangScriptSyntaxError(
+                            "Unterminated backtick string",
+                            location = SourceLocation(currentSource, startLine, startColumn, line, column),
+                        )
                     }
 
                     i++ // Skip closing backtick
@@ -570,7 +577,10 @@ class KlangScriptParser private constructor(
                 }
 
                 else -> {
-                    throw ParseException(ErrorResult("Unexpected character: $ch", column, line))
+                    throw KlangScriptSyntaxError(
+                        "Unexpected character: $ch",
+                        location = SourceLocation(currentSource, line, column, line, column + 1),
+                    )
                 }
             }
         }
@@ -611,7 +621,10 @@ class KlangScriptParser private constructor(
 
     private fun error(message: String): Nothing {
         val token = if (isAtEnd()) previous() else peek()
-        throw ParseException(ErrorResult(message, token.column, token.line))
+        throw KlangScriptSyntaxError(
+            message,
+            location = SourceLocation(currentSource, token.line, token.column, token.endLine, token.endColumn),
+        )
     }
 
     /** Skip any semicolons (used as optional statement terminators outside for-loop headers) */

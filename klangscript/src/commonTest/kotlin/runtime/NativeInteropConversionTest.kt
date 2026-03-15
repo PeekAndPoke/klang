@@ -113,7 +113,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "convertToKotlin: throws TypeError when value cannot be converted to target class" {
         val str = StringValue("hello")
-        shouldThrow<TypeError> {
+        shouldThrow<KlangScriptTypeError> {
             // String cannot be converted to Int — goes through else branch, cls.isInstance fails
             str.convertToKotlin(Int::class)
         }
@@ -129,7 +129,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "convertArgToKotlin: throws ArgumentError for out-of-bounds index" {
         val args = listOf(NumberValue(1.0))
-        shouldThrow<ArgumentError> {
+        shouldThrow<KlangScriptArgumentError> {
             convertArgToKotlin("testFn", args, 5, Double::class)
         }
     }
@@ -144,7 +144,7 @@ class NativeInteropConversionTest : StringSpec({
 
     "checkArgsSize: throws ArgumentError when too few arguments" {
         val args = listOf(NumberValue(1.0))
-        val error = shouldThrow<ArgumentError> {
+        val error = shouldThrow<KlangScriptArgumentError> {
             checkArgsSize("myFn", args, 3)
         }
         error.expected shouldBe 3
@@ -269,7 +269,7 @@ class NativeInteropConversionTest : StringSpec({
             closureEnv = Environment(),
             engine = klangScript()
         )
-        shouldThrow<TypeError> {
+        shouldThrow<KlangScriptTypeError> {
             fv.convertFunctionToKotlin<Any>()
         }
     }

@@ -31,7 +31,7 @@ data class NativeExtensionMethod(
 /** Check if the number of arguments matches the expected count */
 fun checkArgsSize(fn: String, args: List<RuntimeValue>, expected: Int) {
     if (args.size < expected) {
-        throw ArgumentError(
+        throw KlangScriptArgumentError(
             functionName = fn,
             message = "Call to function $fn expected $expected arguments but got ${args.size}",
             expected = expected,
@@ -95,8 +95,8 @@ fun <T : Any> RuntimeValue.convertToKotlin(cls: KClass<T>): T {
 
             when (isValid) {
                 true -> value
-                else -> throw TypeError(
-                    "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
+                else -> throw KlangScriptTypeError(
+                    message = "Cannot convert ${this::class.simpleName} to ${cls.simpleName}",
                     operation = "parameter conversion"
                 )
             }
@@ -158,9 +158,8 @@ fun <T : Any> FunctionValue.convertFunctionToKotlin(): T {
             callFunction(listOf(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10))
         }
 
-        else -> throw TypeError(
-            "Cannot convert script function to Kotlin. " +
-                    "Only functions with up to 5 parameters are supported.",
+        else -> throw KlangScriptTypeError(
+            message = "Cannot convert script function to Kotlin. Only functions with up to 10 parameters are supported.",
             operation = "parameter conversion"
         )
     }
@@ -212,9 +211,9 @@ private fun FunctionValue.callFunction(args: List<Any?>): Any? {
 
 // ... existing code ...
 fun <T : Any> convertArgToKotlin(fn: String, args: List<RuntimeValue>, index: Int, cls: KClass<T>): T {
-    val arg = args.getOrNull(index) ?: throw ArgumentError(
-        fn,
-        "Expected argument at index $index",
+    val arg = args.getOrNull(index) ?: throw KlangScriptArgumentError(
+        functionName = fn,
+        message = "Expected argument at index $index",
         expected = null,
         actual = null
     )

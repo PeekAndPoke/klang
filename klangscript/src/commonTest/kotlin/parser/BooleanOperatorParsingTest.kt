@@ -4,6 +4,7 @@ import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 
 /**
  * Tests for parsing boolean logic operators (&& and ||)
@@ -21,37 +22,37 @@ class BooleanOperatorParsingTest : StringSpec({
     // ============================================================
 
     "parser accepts && operator" {
-        shouldNotThrow<ParseException> {
+        shouldNotThrow<KlangScriptSyntaxError> {
             KlangScriptParser.parse("true && false", "test.klang")
         }
     }
 
     "parser accepts || operator" {
-        shouldNotThrow<ParseException> {
+        shouldNotThrow<KlangScriptSyntaxError> {
             KlangScriptParser.parse("true || false", "test.klang")
         }
     }
 
     "parser accepts both && and || in same expression" {
-        shouldNotThrow<ParseException> {
+        shouldNotThrow<KlangScriptSyntaxError> {
             KlangScriptParser.parse("true && false || true", "test.klang")
         }
     }
 
     "parser accepts complex boolean expressions" {
-        shouldNotThrow<ParseException> {
+        shouldNotThrow<KlangScriptSyntaxError> {
             KlangScriptParser.parse("a && b || c && d", "test.klang")
         }
     }
 
     "parser accepts chained AND operations" {
-        shouldNotThrow<ParseException> {
+        shouldNotThrow<KlangScriptSyntaxError> {
             KlangScriptParser.parse("a && b && c && d", "test.klang")
         }
     }
 
     "parser accepts chained OR operations" {
-        shouldNotThrow<ParseException> {
+        shouldNotThrow<KlangScriptSyntaxError> {
             KlangScriptParser.parse("a || b || c || d", "test.klang")
         }
     }

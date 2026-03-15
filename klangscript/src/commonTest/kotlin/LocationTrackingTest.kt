@@ -23,7 +23,7 @@ class LocationTrackingTest : StringSpec({
             undefinedVariable
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "test.klang")
         }
 
@@ -42,7 +42,7 @@ class LocationTrackingTest : StringSpec({
             x + y
         """.trimIndent()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(script, sourceName = "math.klang")
         }
 
@@ -59,7 +59,7 @@ class LocationTrackingTest : StringSpec({
             num.property
         """.trimIndent()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(script, sourceName = "access.klang")
         }
 
@@ -76,7 +76,7 @@ class LocationTrackingTest : StringSpec({
             x()
         """.trimIndent()
 
-        val error = shouldThrow<TypeError> {
+        val error = shouldThrow<KlangScriptTypeError> {
             engine.execute(script, sourceName = "call.klang")
         }
 
@@ -94,7 +94,7 @@ class LocationTrackingTest : StringSpec({
             add(1)
         """.trimIndent()
 
-        val error = shouldThrow<ArgumentError> {
+        val error = shouldThrow<KlangScriptArgumentError> {
             engine.execute(script, sourceName = "args.klang")
         }
 
@@ -111,7 +111,7 @@ class LocationTrackingTest : StringSpec({
             registerFunction<Double, Double, Double>("test") { x, y -> x + y }
         }
 
-        val error = shouldThrow<ArgumentError> {
+        val error = shouldThrow<KlangScriptArgumentError> {
             engine.execute("test(1)", sourceName = "native.klang")
         }
 
@@ -129,8 +129,8 @@ class LocationTrackingTest : StringSpec({
             import * from "nonexistent"
         """.trimIndent()
 
-        val error = shouldThrow<ImportError> {
-            engine.execute(script, sourceName = "imports.klang")
+        val error = shouldThrow<KlangScriptImportError> {
+            engine.execute(source = script, sourceName = "imports.klang")
         }
 
         error.location shouldNotBe null
@@ -150,7 +150,7 @@ class LocationTrackingTest : StringSpec({
             undefinedVar
         """.trimIndent()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute(script, sourceName = "multiline.klang")
         }
 
@@ -161,7 +161,7 @@ class LocationTrackingTest : StringSpec({
     "Location tracking works without source name" {
         val engine = klangScript()
 
-        val error = shouldThrow<ReferenceError> {
+        val error = shouldThrow<KlangScriptReferenceError> {
             engine.execute("missingVar")
         }
 

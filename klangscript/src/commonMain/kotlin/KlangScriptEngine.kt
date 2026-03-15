@@ -3,7 +3,6 @@ package io.peekandpoke.klang.script
 import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.parser.KlangScriptParser
-import io.peekandpoke.klang.script.parser.ParseException
 import io.peekandpoke.klang.script.runtime.*
 
 /**
@@ -83,7 +82,7 @@ class KlangScriptEngine private constructor(
      * @param source The KlangScript source code to execute
      * @param sourceName Optional name for the source (e.g., "main.klang", "user-script")
      * @return The runtime value of the last statement
-     * @throws ParseException if the source contains syntax errors
+     * @throws KlangScriptSyntaxError if the source contains syntax errors
      * @throws RuntimeException if execution fails (e.g., undefined variable)
      *
      * Example:
@@ -126,7 +125,7 @@ class KlangScriptEngine private constructor(
      * @param sourceName Optional name for the source (e.g., "main.klang", "user-script")
      * @param executionContext Pre-configured execution context with imported libraries
      * @return The runtime value of the last statement
-     * @throws ParseException if the source contains syntax errors
+     * @throws KlangScriptSyntaxError if the source contains syntax errors
      * @throws RuntimeException if execution fails (e.g., undefined variable)
      *
      * Example:
