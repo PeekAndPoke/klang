@@ -76,6 +76,19 @@ class KlangScriptDocsPage(ctx: NoProps) : PureComponent(ctx) {
                             }
                         }
 
+                        val exampleDescription = example.description
+                        if (exampleDescription != null) {
+                            p {
+                                css {
+                                    color = Color(laf.textSecondary)
+                                    fontSize = 0.9.rem
+                                    marginTop = 0.25.rem
+                                    marginBottom = 0.25.rem
+                                }
+                                +exampleDescription
+                            }
+                        }
+
                         InViewport {
                             KlangScriptReplComp(initialCode = example.code)
                         }

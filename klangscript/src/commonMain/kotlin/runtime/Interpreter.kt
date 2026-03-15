@@ -975,7 +975,7 @@ class Interpreter(
                     BinaryOperator.SHIFT_LEFT -> l shl r
                     BinaryOperator.SHIFT_RIGHT -> l shr r
                     BinaryOperator.UNSIGNED_SHIFT_RIGHT -> l ushr r
-                    else -> error("Unexpected bitwise operator")
+                    // else -> error("Unexpected bitwise operator")
                 }
                 return NumberValue(result.toDouble())
             }

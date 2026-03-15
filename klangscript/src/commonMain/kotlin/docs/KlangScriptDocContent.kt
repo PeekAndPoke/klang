@@ -8,6 +8,7 @@ data class DocSection(
 
 data class DocExample(
     val title: String? = null,
+    val description: String? = null,
     val code: String,
 )
 
@@ -18,30 +19,30 @@ val klangScriptDocSections: List<DocSection> = listOf(
     // ==========================================
     DocSection(
         title = "Hello KlangScript",
-        description = "Welcome to KlangScript! Type code, see results. Every example is interactive — edit and run it yourself.",
+        description = "Welcome to KlangScript! The REPL shows the result of your last expression automatically. Try editing the code and hitting Run.",
         examples = listOf(
             DocExample(
-                title = "Hello World",
+                title = "Your first expression",
+                description = "The simplest program is just an expression. The REPL shows its result automatically — no print statement needed.",
                 code = """
-                    |import * from "stdlib"
-                    |
-                    |console.log("Hello, KlangScript!")
-                    |console.log("Ready to make some music.")
+                    |// Just write an expression. The REPL displays the result.
+                    |2 + 3
                 """.trimMargin(),
             ),
             DocExample(
-                title = "Numbers and strings",
+                title = "console.log for multiple values",
+                description = "Use console.log() when you want to print multiple values or label your output.",
                 code = """
                     |import * from "stdlib"
                     |
-                    |console.log("BPM:", 120)
-                    |console.log("2 + 3 =", 2 + 3)
-                    |console.log("Note:", "C4")
-                    |print("print() also works!")
+                    |console.log("result:", 6 * 7)
+                    |console.log("Hello,", "KlangScript!")
+                    |print("print() also works")
                 """.trimMargin(),
             ),
             DocExample(
                 title = "Comments",
+                description = "Comments are ignored by the interpreter. Use them to explain your code or temporarily disable lines.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -63,10 +64,11 @@ val klangScriptDocSections: List<DocSection> = listOf(
     // ==========================================
     DocSection(
         title = "Variables & Constants",
-        description = "Use 'let' for values that change and 'const' for values that don't. KlangScript supports numbers, strings, booleans, and null.",
+        description = "Use `let` for values that change and `const` for values that don't. KlangScript supports numbers, strings, booleans, and null — no `undefined`.",
         examples = listOf(
             DocExample(
                 title = "let and const",
+                description = "Use let for values that change, const for values that stay fixed. Reassigning a const throws an error.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -81,6 +83,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "All value types",
+                description = "KlangScript has numbers, strings, booleans, and null. No undefined — uninitialized variables are null. JS note: Unlike JavaScript, there is no undefined. Uninitialized variables are null.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -89,24 +92,26 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const key = "A minor"
                     |const active = true
                     |let solo = null
+                    |let unset
                     |
                     |console.log(`Track: ${"$"}{key}, ${"$"}{tempo} BPM, swing: ${"$"}{swing}`)
                     |console.log("active:", active, "solo:", solo)
+                    |console.log("uninitialized let:", unset)
                 """.trimMargin(),
             ),
             DocExample(
-                title = "Reassignment and mutation",
+                title = "Number formats",
+                description = "Numbers can be written in decimal, hexadecimal (0x), octal (0o), or binary (0b). They all evaluate to regular numbers.",
                 code = """
                     |import * from "stdlib"
                     |
-                    |let volume = 80
-                    |console.log("Volume:", volume)
+                    |const hex = 0xFF
+                    |const octal = 0o77
+                    |const binary = 0b1010
                     |
-                    |volume = 100
-                    |console.log("Volume after boost:", volume)
-                    |
-                    |let unset
-                    |console.log("Uninitialized let:", unset)
+                    |console.log("0xFF =", hex)
+                    |console.log("0o77 =", octal)
+                    |console.log("0b1010 =", binary)
                 """.trimMargin(),
             ),
         ),
@@ -121,6 +126,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "Arithmetic",
+                description = "Standard math operators, plus ** for exponentiation and % for remainder.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -128,28 +134,27 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const beatLength = 60 / bpm
                     |console.log("Beat length:", beatLength, "seconds")
                     |
-                    |console.log("8 semitones up: 2 **", 8, "=", 2 ** 8)
-                    |console.log("Bar position: 17 % 4 =", 17 % 4)
+                    |console.log("2 ** 8 =", 2 ** 8)
+                    |console.log("17 % 4 =", 17 % 4)
                     |console.log("Halftime:", bpm / 2, "BPM")
                 """.trimMargin(),
             ),
             DocExample(
                 title = "Comparison and ternary",
+                description = "Compare values and choose between options. The ternary ? : is a compact if/else expression.",
                 code = """
-                    |import * from "stdlib"
-                    |
                     |const velocity = 95
-                    |console.log("loud?", velocity > 80)
-                    |console.log("exact hit?", velocity == 100)
-                    |console.log("not silent?", velocity != 0)
-                    |console.log("in range?", velocity >= 1 && velocity <= 127)
+                    |const loud = velocity > 80
+                    |const exact = velocity == 100
+                    |const inRange = velocity >= 1 && velocity <= 127
                     |
                     |const label = velocity >= 90 ? "forte" : "piano"
-                    |console.log("Dynamic:", label)
+                    |label
                 """.trimMargin(),
             ),
             DocExample(
                 title = "Logical operators and short-circuit",
+                description = "&& and || short-circuit: they stop evaluating as soon as the result is known. Use || for defaults. JS note: Falsy values are 0, \"\", null, and false. No undefined or NaN.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -170,6 +175,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "Assignment operators and increment",
+                description = "Compound assignment combines an operator with =. Prefix/postfix ++ and -- increment or decrement.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -189,21 +195,131 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("prefix ++:", ++step)
                     |console.log("postfix ++:", step++)
                     |console.log("after postfix:", step)
-                    |console.log("prefix --:", --step)
                 """.trimMargin(),
             ),
         ),
     ),
 
     // ==========================================
-    // 4. Strings & Template Literals
+    // 4. Nullish Coalescing & Optional Chaining
+    // ==========================================
+    DocSection(
+        title = "Nullish Coalescing & Optional Chaining",
+        description = "Handle null values cleanly. ?? provides fallbacks for null (not all falsy values), and ?. safely navigates through nullable chains.",
+        examples = listOf(
+            DocExample(
+                title = "Nullish coalescing (??)",
+                description = "?? returns the right side only when the left is null. Unlike ||, it doesn't trigger on 0 or empty strings. JS note: Same as JavaScript's ?? — returns fallback only for null, not all falsy values.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |console.log(null ?? "default")
+                    |console.log(0 ?? "default")
+                    |console.log("" ?? "default")
+                    |
+                    |// Compare with ||
+                    |console.log("|| with 0:", 0 || "fallback")
+                    |console.log("?? with 0:", 0 ?? "fallback")
+                """.trimMargin(),
+            ),
+            DocExample(
+                title = "Optional chaining (?.)",
+                description = "?. safely accesses properties on values that might be null. Returns null instead of throwing an error.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |const user = null
+                    |console.log("user?.name:", user?.name)
+                    |
+                    |const config = { audio: { sampleRate: 48000 } }
+                    |console.log("sample rate:", config?.audio?.sampleRate)
+                    |
+                    |const empty = { audio: null }
+                    |console.log("missing:", empty?.audio?.sampleRate)
+                """.trimMargin(),
+            ),
+            DocExample(
+                title = "Combining ?? and ?.",
+                description = "Chain ?. for safe access, then ?? for a fallback. A clean pattern for nested optional data.",
+                code = """
+                    |const config = { audio: null }
+                    |
+                    |const rate = config?.audio?.sampleRate ?? 44100
+                    |rate
+                """.trimMargin(),
+            ),
+        ),
+    ),
+
+    // ==========================================
+    // 5. Bitwise & Shift Operators
+    // ==========================================
+    DocSection(
+        title = "Bitwise & Shift Operators",
+        description = "Work with individual bits using bitwise and shift operators. Useful for flags, masks, and low-level audio data.",
+        examples = listOf(
+            DocExample(
+                title = "Bitwise basics",
+                description = "Bitwise operators work on individual bits of integer values. & masks bits, | combines them, ^ toggles them.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |console.log("0b1100 & 0b1010 =", 0b1100 & 0b1010)
+                    |console.log("0b1100 | 0b1010 =", 0b1100 | 0b1010)
+                    |console.log("0b1100 ^ 0b1010 =", 0b1100 ^ 0b1010)
+                    |console.log("~0b1010 =", ~0b1010)
+                """.trimMargin(),
+            ),
+            DocExample(
+                title = "Shift operators",
+                description = "Shift bits left or right. Left shift doubles the value per shift; right shift halves it.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |console.log("1 << 4 =", 1 << 4)
+                    |console.log("128 >> 3 =", 128 >> 3)
+                    |console.log("-8 >>> 1 =", -8 >>> 1)
+                """.trimMargin(),
+            ),
+            DocExample(
+                title = "Practical: flags and masks",
+                description = "Combine bitwise operators for flag management — common in audio settings and MIDI processing.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |// Define flags
+                    |const REVERB = 1
+                    |const DELAY = 2
+                    |const CHORUS = 4
+                    |
+                    |// Set flags with |=
+                    |let effects = 0
+                    |effects |= REVERB
+                    |effects |= CHORUS
+                    |console.log("effects:", effects)
+                    |
+                    |// Check a flag with &
+                    |console.log("has reverb?", (effects & REVERB) != 0)
+                    |console.log("has delay?", (effects & DELAY) != 0)
+                    |
+                    |// Toggle with ^=
+                    |effects ^= DELAY
+                    |console.log("after toggle delay:", effects)
+                """.trimMargin(),
+            ),
+        ),
+    ),
+
+    // ==========================================
+    // 6. Strings & Template Literals
     // ==========================================
     DocSection(
         title = "Strings & Template Literals",
-        description = "Template literals with \${...} let you embed expressions in strings. KlangScript provides rich string methods for searching, transforming, and splitting text.",
+        description = "Template literals with \${...} embed expressions in strings. KlangScript provides rich string methods for searching, transforming, and splitting text.",
         examples = listOf(
             DocExample(
                 title = "Template literals",
+                description = "Backtick strings embed expressions with \${...}. Cleaner than string concatenation. JS note: KlangScript does NOT allow \"text\" + number. Use template literals instead.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -218,6 +334,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "String methods — queries",
+                description = "Check string properties: length, position, prefix, suffix. JS note: .length() is a method call with parens, not a property like in JavaScript.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -231,6 +348,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "String methods — transforms",
+                description = "Transform strings: case, trim, split, replace, repeat. These return new strings — the original is unchanged.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -250,14 +368,15 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 5. Arrays
+    // 7. Arrays
     // ==========================================
     DocSection(
         title = "Arrays",
-        description = "Arrays are ordered collections with Kotlin-style methods. Build note sequences, filter data, and reshape lists.",
+        description = "Arrays are ordered collections with Kotlin-style methods. Build sequences, filter data, and reshape lists.",
         examples = listOf(
             DocExample(
                 title = "Creating and accessing",
+                description = "Arrays hold ordered values. Access by index, or use .first() and .last() for the endpoints. JS note: Use .size() instead of .length, .first()/.last() instead of index math.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -272,7 +391,8 @@ val klangScriptDocSections: List<DocSection> = listOf(
                 """.trimMargin(),
             ),
             DocExample(
-                title = "Array methods — query",
+                title = "Array methods — query and transform",
+                description = "Search, check, and reshape arrays without mutating the original. JS note: .contains() = JS .includes(). .joinToString() = JS .join(). .reversed() returns a new array (JS .reverse() mutates!).",
                 code = """
                     |import * from "stdlib"
                     |
@@ -280,27 +400,16 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("contains E:", scale.contains("E"))
                     |console.log("indexOf G:", scale.indexOf("G"))
                     |console.log("isEmpty:", scale.isEmpty())
-                    |console.log("isNotEmpty:", scale.isNotEmpty())
-                    |
-                    |const empty = []
-                    |console.log("[] isEmpty:", empty.isEmpty())
-                """.trimMargin(),
-            ),
-            DocExample(
-                title = "Array methods — transform",
-                code = """
-                    |import * from "stdlib"
-                    |
-                    |const pattern = ["kick", "hat", "snare", "hat"]
-                    |console.log("reversed:", pattern.reversed())
-                    |console.log("first 2:", pattern.take(2))
-                    |console.log("skip 2:", pattern.drop(2))
-                    |console.log("middle:", pattern.subList(1, 3))
-                    |console.log("joined:", pattern.joinToString(" > "))
+                    |console.log("reversed:", scale.reversed())
+                    |console.log("first 3:", scale.take(3))
+                    |console.log("skip 5:", scale.drop(5))
+                    |console.log("middle:", scale.subList(2, 5))
+                    |console.log("joined:", scale.joinToString(" - "))
                 """.trimMargin(),
             ),
             DocExample(
                 title = "Array methods — mutate",
+                description = "Add and remove elements. These methods modify the array in place. JS note: .add() = JS .push(). .removeLast() = JS .pop(). .removeFirst() = JS .shift().",
                 code = """
                     |import * from "stdlib"
                     |
@@ -322,7 +431,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 6. Objects
+    // 8. Objects
     // ==========================================
     DocSection(
         title = "Objects",
@@ -330,6 +439,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "Object basics",
+                description = "Objects group named values. Access properties with dot notation or brackets for dynamic keys.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -343,6 +453,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "Object utility methods",
+                description = "Object.keys(), .values(), and .entries() let you inspect an object's contents.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -359,6 +470,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "Nested objects and the in operator",
+                description = "Objects can contain other objects. Use \"key\" in obj to check if a key exists.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -378,7 +490,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 7. Control Flow
+    // 9. Control Flow
     // ==========================================
     DocSection(
         title = "Control Flow",
@@ -386,6 +498,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "if/else as expression",
+                description = "In KlangScript, if/else returns a value — assign it directly to a variable. JS note: This is different from JavaScript where if/else is a statement. In KlangScript, it's an expression.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -405,6 +518,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "for and while loops",
+                description = "Repeat actions with for (when you know how many times) or while (when you have a condition).",
                 code = """
                     |import * from "stdlib"
                     |
@@ -426,10 +540,10 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "do-while",
+                description = "do-while runs the body at least once before checking the condition.",
                 code = """
                     |import * from "stdlib"
                     |
-                    |// do-while always executes at least once
                     |let attempts = 0
                     |let value = 0
                     |do {
@@ -442,6 +556,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "break and continue",
+                description = "break exits a loop early. continue skips to the next iteration.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -469,7 +584,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 8. Functions & Closures
+    // 10. Functions & Closures
     // ==========================================
     DocSection(
         title = "Functions & Closures",
@@ -477,6 +592,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "Arrow functions — expression vs block",
+                description = "Expression body returns implicitly. Block body needs an explicit return. JS note: KlangScript only has arrow functions. No function keyword, no function name() {}.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -497,6 +613,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "Closures",
+                description = "A function can capture variables from its surrounding scope. This is called a closure — the inner function \"remembers\" the outer scope.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -514,6 +631,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "Higher-order functions and currying",
+                description = "Functions can take functions as arguments and return functions. Currying builds reusable partial applications.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -533,7 +651,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     ),
 
     // ==========================================
-    // 9. Imports & the Standard Library
+    // 11. Imports & the Standard Library
     // ==========================================
     DocSection(
         title = "Imports & the Standard Library",
@@ -541,6 +659,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "Wildcard import and Math",
+                description = "import * from \"stdlib\" loads everything. The Math object provides common mathematical functions.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -553,7 +672,8 @@ val klangScriptDocSections: List<DocSection> = listOf(
                 """.trimMargin(),
             ),
             DocExample(
-                title = "Trigonometry",
+                title = "Trigonometry and clamping",
+                description = "Sine, cosine, and tangent for wave calculations. min/max for clamping values to a range.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -573,32 +693,29 @@ val klangScriptDocSections: List<DocSection> = listOf(
             ),
             DocExample(
                 title = "Selective and aliased imports",
+                description = "Import only what you need, or rename imports to avoid conflicts. Namespace imports keep everything under a prefix.",
                 code = """
                     |import * from "stdlib"
                     |
-                    |// Selective import from a custom module
-                    |// (Modules use export to control their public API)
+                    |// Selective import from a custom module:
+                    |// import { midiToFreq } from "music-utils"
+                    |// Aliased: import { abs as absolute } from "stdlib"
+                    |// Namespace: import * as M from "stdlib"
                     |
-                    |// Here's how export/import works with custom libraries:
-                    |// Library "music-utils" would contain:
-                    |//   let midiToFreq = (note) => 440 * Math.pow(2, (note - 69) / 12)
-                    |//   let freqToMidi = (freq) => 69 + 12 * (Math.log(freq / 440) / Math.log(2))
-                    |//   export { midiToFreq, freqToMidi }
-                    |//
-                    |// Then: import { midiToFreq as m2f } from "music-utils"
+                    |// With stdlib, use Math directly:
+                    |const hypotenuse = Math.sqrt(Math.pow(3, 2) + Math.pow(4, 2))
+                    |console.log("3-4-5 triangle:", hypotenuse)
                     |
-                    |// For now, let's use Math from stdlib:
                     |const midiToFreq = (note) => Math.round(440 * Math.pow(2, (note - 69) / 12))
                     |console.log("C4 (60):", midiToFreq(60), "Hz")
                     |console.log("A4 (69):", midiToFreq(69), "Hz")
-                    |console.log("C5 (72):", midiToFreq(72), "Hz")
                 """.trimMargin(),
             ),
         ),
     ),
 
     // ==========================================
-    // 10. Method Chaining & Putting It All Together
+    // 12. Method Chaining & Putting It All Together
     // ==========================================
     DocSection(
         title = "Method Chaining & Putting It All Together",
@@ -606,20 +723,18 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "String chaining",
+                description = "Chain method calls left-to-right for clean, readable transformations.",
                 code = """
                     |import * from "stdlib"
                     |
-                    |const raw = "  Kick, Hat, Snare, Hat  "
-                    |const instruments = raw.trim().toLowerCase().replace(",", " >")
-                    |console.log("chain:", instruments)
-                    |
-                    |const notes = raw.trim().split(", ")
-                    |console.log("parsed:", notes)
-                    |console.log("count:", notes.size(), "instruments")
+                    |const result = "  Hello World  ".trim().toLowerCase().replace("world", "klang")
+                    |console.log("chained:", result)
+                    |console.log("split:", result.split(" "))
                 """.trimMargin(),
             ),
             DocExample(
                 title = "Array + string chaining",
+                description = "Build data pipelines by chaining array and string operations together.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -634,12 +749,12 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("motif:", motif)
                     |
                     |// Build display string
-                    |const display = `Melody (${"$"}{melody.size()} notes): ${"$"}{melody.joinToString(", ")}`
-                    |console.log(display)
+                    |console.log(`Melody (${"$"}{melody.size()} notes): ${"$"}{melody.joinToString(", ")}`)
                 """.trimMargin(),
             ),
             DocExample(
-                title = "Beat Machine — capstone",
+                title = "Capstone: putting it all together",
+                description = "A complete program combining variables, arrays, objects, loops, functions, closures, template strings, Math, and imports.",
                 code = """
                     |import * from "stdlib"
                     |
