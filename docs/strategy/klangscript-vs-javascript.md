@@ -30,6 +30,10 @@ These are the **gotchas** — a JS developer will type these expecting one thing
 | **`const` mutability**             | `const` prevents reassignment but allows object mutation | Same behavior — `const` prevents reassignment only                                    | 🟢 Low       |
 | **Truthy/falsy**                   | `0`, `""`, `null`, `undefined`, `NaN`, `false` are falsy | `0`, `""`, `null`, `false` are falsy. **No `undefined`, no `NaN`**                    | 🟡 Medium    |
 | **String concatenation**           | `"a" + "b"` → `"ab"`, `"a" + 1` → `"a1"`                 | `"a" + "b"` → `"ab"`, `"a" + 1` → **TypeError**. Use template literals: `` `a${1}` `` | 🔴 High      |
+| **`??` (nullish coalescing)**      | `null ?? "fallback"` → `"fallback"` (ES2020)             | **Same behavior** — returns right only when left is `null`                            | 🟢 Same      |
+| **`?.` (optional chaining)**       | `obj?.prop` → `undefined` if null (ES2020)               | `obj?.prop` → **`null`** if null (no `undefined`)                                     | 🟡 Medium    |
+| **Bitwise operators**              | `&`, `\|`, `^`, `~`, `<<`, `>>`, `>>>` on 32-bit ints    | **Same operators, same behavior**                                                     | 🟢 Same      |
+| **Number literal formats**         | `0xFF`, `0o77`, `0b1010`                                 | **Same formats** — hex, octal, binary                                                 | 🟢 Same      |
 
 ---
 
@@ -193,6 +197,27 @@ doesn't exist in JS.
 | `.joinToString(sep)`                  | More descriptive than `.join()`                            |
 | `.contains(item)`                     | Reads better than `.includes()`                            |
 | `.reversed()` (non-mutating)          | Returns new array. JS `.reverse()` mutates in place.       |
+
+---
+
+## 8. Features That Work the Same as JavaScript
+
+These are **safe ground** — JS developers can use them without surprises:
+
+| Feature                                   | Notes                                                   |
+|-------------------------------------------|---------------------------------------------------------|
+| `??` (nullish coalescing)                 | Same as ES2020. Returns right only when left is `null`. |
+| `?.` (optional chaining)                  | Same as ES2020, but returns `null` (not `undefined`).   |
+| `&`, `\|`, `^`, `~` (bitwise)             | Same behavior.                                          |
+| `<<`, `>>`, `>>>` (shift)                 | Same behavior.                                          |
+| `0xFF`, `0o77`, `0b1010` (number formats) | Hex, octal, binary — same syntax.                       |
+| `+=`, `-=`, `*=`, `/=`, `%=`              | Same compound assignments.                              |
+| `**=`, `&=`, `\|=`, `^=`, `<<=`, `>>=`    | Same compound assignments.                              |
+| Template literals `` `${expr}` ``         | Same syntax and behavior.                               |
+| `let` / `const`                           | Same scoping. (No `var`.)                               |
+| Arrow functions `() => expr`              | Same syntax. (But it's the ONLY function syntax.)       |
+| `Object.keys/values/entries`              | Same behavior.                                          |
+| Import/export (named)                     | Same ES6 syntax.                                        |
 
 ---
 
