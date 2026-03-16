@@ -92,7 +92,7 @@ class JvmAudioBackend(
                         }
 
                         is KlangCommLink.Cmd.ReplaceVoices -> {
-                            voices.replaceVoices(cmd.playbackId, cmd.voices)
+                            voices.replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
                         }
 
                         is KlangCommLink.Cmd.Cleanup -> {

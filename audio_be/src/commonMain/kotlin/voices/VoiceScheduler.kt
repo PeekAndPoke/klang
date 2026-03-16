@@ -309,12 +309,26 @@ class VoiceScheduler(
     /**
      * Atomically replaces all scheduled voices for a playback with new ones.
      * Used for tempo/pattern changes to ensure gap-free transitions.
+     *
+     * When [afterTimeSec] is provided, only removes scheduled voices that start at or after
+     * the cutoff time, preserving voices about to play (grace window).
      */
-    fun replaceVoices(playbackId: String, voices: List<ScheduledVoice>) {
-        // Clear scheduled voices and epoch
-        clearScheduled(playbackId)
+    fun replaceVoices(playbackId: String, voices: List<ScheduledVoice>, afterTimeSec: Double? = null) {
+        if (afterTimeSec != null) {
+            val epoch = playbackEpochs[playbackId]
+            if (epoch != null) {
+                val cutoffSec = epoch + afterTimeSec
+                scheduled.removeWhen { voice ->
+                    voice.playbackId == playbackId &&
+                            (playbackEpochs[voice.playbackId]?.let { it + voice.startTime } ?: 0.0) >= cutoffSec
+                }
+            }
+        } else {
+            // Clear all scheduled voices and epoch
+            clearScheduled(playbackId)
+        }
 
-        // Schedule all new voices (first one will establish new epoch)
+        // Schedule all new voices (first one will establish new epoch if needed)
         voices.forEach { voice ->
             scheduleVoice(voice)
         }
@@ -459,15 +473,10 @@ class VoiceScheduler(
         if (pid !in playbackEpochs) {
             // Get the current backend time
             val nowSec = backendStartTimeSec + (lastProcessedFrame.toDouble() / options.sampleRate.toDouble())
-            val nowMs = nowSec * 1000.0
             // Calculate the frontend latency
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
             // Set the epoch of the playback (without latency - latency is only for UI feedback)
             playbackEpochs[pid] = voice.playbackStartTime + latency
-            // Send the backend's current wall-clock time to the frontend.
-            options.commLink.feedback.send(
-                KlangCommLink.Feedback.PlaybackLatency(playbackId = pid, backendTimestampMs = nowMs)
-            )
         }
     }
 

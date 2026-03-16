@@ -96,7 +96,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
                         }
 
                         is KlangCommLink.Cmd.ReplaceVoices -> {
-                            ctx.voices.replaceVoices(cmd.playbackId, cmd.voices)
+                            ctx.voices.replaceVoices(cmd.playbackId, cmd.voices, cmd.afterTimeSec)
                         }
 
                         is KlangCommLink.Cmd.Cleanup -> {

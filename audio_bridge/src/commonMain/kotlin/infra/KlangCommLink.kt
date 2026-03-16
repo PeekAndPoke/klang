@@ -37,6 +37,7 @@ class KlangCommLink(capacity: Int = 8192) {
         data class ReplaceVoices(
             override val playbackId: String,
             val voices: List<ScheduledVoice>,
+            val afterTimeSec: Double? = null,
         ) : Cmd {
             companion object {
                 const val SERIAL_NAME = "replace-voices"
@@ -139,18 +140,6 @@ class KlangCommLink(capacity: Int = 8192) {
         data class SampleReceived(
             override val playbackId: String,
             val req: SampleRequest,
-        ) : Feedback
-
-        @Serializable
-        @SerialName("playback-latency")
-        data class PlaybackLatency(
-            override val playbackId: String,
-            /**
-             * The backend's KlangTime.internalMsNow() at the moment the playback epoch was recorded.
-             * Both frontend and backend KlangTime are seeded from Date.now(), so the frontend
-             * can compute transport latency as: backendTimestampMs - frontendStartTimeMs
-             */
-            val backendTimestampMs: Double,
         ) : Feedback
 
         @Serializable

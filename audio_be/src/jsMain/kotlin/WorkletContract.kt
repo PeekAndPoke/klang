@@ -16,6 +16,7 @@ object WorkletContract {
 
     const val PROP_TYPE = "type"
 
+    const val PROP_AFTER_TIME_SEC = "afterTimeSec"
     const val PROP_CHUNK_OFFSET = "chunkOffset"
     const val PROP_CLEAR_SCHEDULED = "clearScheduled"
     const val PROP_DATA = "data"
@@ -79,6 +80,7 @@ object WorkletContract {
                 it[PROP_TYPE] = KlangCommLink.Cmd.ReplaceVoices.SERIAL_NAME
                 it[PROP_PLAYBACK_ID] = playbackId
                 it[PROP_VOICES] = voices.map { v -> v.encode() }.toTypedArray()
+                it[PROP_AFTER_TIME_SEC] = afterTimeSec
             }
 
             is KlangCommLink.Cmd.ScheduleVoice -> jsObject {
@@ -128,7 +130,8 @@ object WorkletContract {
 
             KlangCommLink.Cmd.ReplaceVoices.SERIAL_NAME -> KlangCommLink.Cmd.ReplaceVoices(
                 playbackId = msg[PROP_PLAYBACK_ID],
-                voices = (msg[PROP_VOICES] as Array<*>).map { decodeScheduledVoice(it!!) }
+                voices = (msg[PROP_VOICES] as Array<*>).map { decodeScheduledVoice(it!!) },
+                afterTimeSec = msg[PROP_AFTER_TIME_SEC] as? Double,
             )
 
             KlangCommLink.Cmd.ScheduleVoice.SERIAL_NAME -> KlangCommLink.Cmd.ScheduleVoice(

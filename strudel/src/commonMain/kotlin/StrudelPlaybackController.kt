@@ -68,7 +68,7 @@ internal class StrudelPlaybackController(
 
     // ===== Latency Compensation =====
     /** Measured transport latency in milliseconds. Applied to signals. */
-    private var backendLatencyMs: Double = 0.0
+    private var backendLatencyMs: Double = 100.0
     private val largeDriftThresholdMs = 500.0
 
     // ===== Public API =====
@@ -90,14 +90,13 @@ internal class StrudelPlaybackController(
      * Update the cycles per second (tempo)
      */
     fun updateCyclesPerSecond(cps: Double) {
-        // Capture cycle position under the old tempo before changing it
-        val currentCycle = getNowCycle()
+        // Capture nowMs once to avoid drift between getNowCycle() and startTimeMs recalculation
+        val nowMs = klangTime.internalMsNow()
+        val elapsedSec = ((nowMs - startTimeMs) - backendLatencyMs) / 1000.0
+        val currentCycle = elapsedSec * cyclesPerSecond  // cycle position under OLD cps
         // Update tempo
         this.cyclesPerSecond = cps
-        // Recalculate startTimeMs so the playhead position is preserved:
-        //   getNowCycle() = ((nowMs - startTimeMs) - backendLatencyMs) / 1000.0 * cyclesPerSecond
-        //   solving for startTimeMs given currentCycle must remain unchanged:
-        val nowMs = klangTime.internalMsNow()
+        // Recalculate startTimeMs so the playhead position is preserved under the new cps
         startTimeMs = nowMs - backendLatencyMs - (currentCycle / cyclesPerSecond) * 1000.0
         // Re-request current cycle with new tempo
         resyncCurrentCycle()
@@ -157,22 +156,17 @@ internal class StrudelPlaybackController(
             }
 
             is KlangCommLink.Feedback.Diagnostics -> {
-                val rawOffset = (feedback.backendNowMs - klangTime.internalMsNow()) + feedback.outputLatencyMs
+                val latency = feedback.outputLatencyMs
+                val rawOffset = (feedback.backendNowMs - klangTime.internalMsNow()) + latency
                 val drift = abs(rawOffset - backendLatencyMs)
-                if (drift > largeDriftThresholdMs) {
-                    // Large clock discontinuity (hibernate, AudioContext suspension, etc.)
-                    // Snap immediately rather than waiting for EMA to slowly converge
-                    backendLatencyMs = rawOffset
-                    resyncCurrentCycle()
+
+                backendLatencyMs = if (drift > largeDriftThresholdMs) {
+                    // Large clock discontinuity (hibernate, AudioContext suspension, etc.), Snap immediately
+                    rawOffset
                 } else {
                     // Normal case: EMA α=0.05: ~1 second convergence at 20 Hz; smooths message-transit jitter
-                    backendLatencyMs = backendLatencyMs * 0.95 + rawOffset * 0.05
+                    backendLatencyMs * 0.95 + rawOffset * 0.05
                 }
-            }
-
-            is KlangCommLink.Feedback.PlaybackLatency -> {
-                backendLatencyMs = feedback.backendTimestampMs - startTimeMs
-                backendLatencyMs = backendLatencyMs.coerceIn(-5000.0, 5000.0)
             }
 
             is KlangCommLink.Feedback.SampleReceived -> {
@@ -462,22 +456,27 @@ internal class StrudelPlaybackController(
 
     /**
      * Re-requests the current cycle and sends events to backend.
+     * Uses a 100ms grace window: voices about to play within the window are preserved,
+     * only voices beyond the cutoff are replaced.
      */
     private fun resyncCurrentCycle() {
         val nowCycle = getNowCycle()
+        val graceWindowSec = 0.1
+        val cutoffCycle = nowCycle + (graceWindowSec * cyclesPerSecond)
 
         val from = floor(nowCycle)
         val to = ceil(queryCursorCycles)
 
         try {
             val voices = queryEvents(from = from, to = to, sendSignals = true)
-
-            // println("Sync: $from -> $to (nowCycle=$nowCycle) --> ${voices.size} voices")
+            // Only send voices beyond the grace window
+            val futureVoices = voices.filter { it.startTime / secPerCycle >= cutoffCycle }
 
             sendControl(
                 KlangCommLink.Cmd.ReplaceVoices(
                     playbackId = playbackId,
-                    voices = voices,
+                    voices = futureVoices,
+                    afterTimeSec = cutoffCycle * secPerCycle,
                 )
             )
         } catch (e: Exception) {

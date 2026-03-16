@@ -121,7 +121,7 @@ class JsAudioBackend(
                 // The worklet has no access to AudioContext properties, so we enrich here.
                 val enriched = if (decoded is KlangCommLink.Feedback.Diagnostics) {
                     val baseLat = ctx.baseLatency * 1000.0
-                    val deviceLat = ctx.outputLatency * 1000.0
+                    val deviceLat = guessDeviceLatencyMs(ctx.outputLatency * 1000.0)
                     decoded.copy(
                         baseLatencyMs = baseLat,
                         outputDeviceLatencyMs = deviceLat,
