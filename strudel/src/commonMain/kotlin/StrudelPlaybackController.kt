@@ -71,6 +71,10 @@ internal class StrudelPlaybackController(
     private var backendLatencyMs: Double = 100.0
     private val largeDriftThresholdMs = 500.0
 
+    // ===== Resync =====
+    /** Grace window in seconds: voices within this window are preserved during resync */
+    private val resyncGraceWindowSec = 0.05
+
     // ===== Public API =====
     val isRunning: Boolean get() = running.get()
 
@@ -90,14 +94,17 @@ internal class StrudelPlaybackController(
      * Update the cycles per second (tempo)
      */
     fun updateCyclesPerSecond(cps: Double) {
-        // Capture nowMs once to avoid drift between getNowCycle() and startTimeMs recalculation
+        // The grace window (same as in resyncCurrentCycle) defines the switchover point:
+        // voices before it keep the old tempo, voices after it use the new tempo.
         val nowMs = klangTime.internalMsNow()
-        val elapsedSec = ((nowMs - startTimeMs) - backendLatencyMs) / 1000.0
-        val currentCycle = elapsedSec * cyclesPerSecond  // cycle position under OLD cps
+        val cutoffMs = nowMs + resyncGraceWindowSec * 1000.0
+        // Cycle position at the cutoff under the OLD cps
+        val cutoffElapsedSec = (cutoffMs - startTimeMs) / 1000.0
+        val cutoffCycle = cutoffElapsedSec * cyclesPerSecond
         // Update tempo
         this.cyclesPerSecond = cps
-        // Recalculate startTimeMs so the playhead position is preserved under the new cps
-        startTimeMs = nowMs - backendLatencyMs - (currentCycle / cyclesPerSecond) * 1000.0
+        // Recalculate startTimeMs so cutoffCycle maps to the same wall-clock time under new cps
+        startTimeMs = cutoffMs - (cutoffCycle / cyclesPerSecond) * 1000.0
         // Re-request current cycle with new tempo
         resyncCurrentCycle()
     }
@@ -255,7 +262,7 @@ internal class StrudelPlaybackController(
             // Emit completed cycles (stall-safe)
             emitCompletedCycles()
             // Look ahead for sample sound
-            lookAheadForSampleSounds(queryCursorCycles + sampleSoundLookAheadCycles, 1.0)
+            lookAheadForSampleSounds(from = queryCursorCycles + sampleSoundLookAheadCycles, dur = 1.0)
             // Request the next cycles from the source
             requestNextCyclesAndAdvanceCursor()
             // roughly 60 FPS
@@ -401,7 +408,7 @@ internal class StrudelPlaybackController(
      */
     private fun getNowCycle(): Double {
         val nowMs = klangTime.internalMsNow()
-        val elapsedSec = ((nowMs - startTimeMs) - backendLatencyMs) / 1000.0
+        val elapsedSec = (nowMs - startTimeMs) / 1000.0
         return elapsedSec / secPerCycle
     }
 
@@ -422,11 +429,9 @@ internal class StrudelPlaybackController(
             try {
                 val events = queryEvents(from = from, to = to, sendSignals = true)
 
+                // Schedule voices
                 for (voice in events) {
-                    // Schedule the voice
-                    sendControl(
-                        KlangCommLink.Cmd.ScheduleVoice(playbackId = playbackId, voice = voice)
-                    )
+                    sendControl(KlangCommLink.Cmd.ScheduleVoice(playbackId = playbackId, voice = voice))
                 }
 
                 queryCursorCycles = to
@@ -461,8 +466,7 @@ internal class StrudelPlaybackController(
      */
     private fun resyncCurrentCycle() {
         val nowCycle = getNowCycle()
-        val graceWindowSec = 0.1
-        val cutoffCycle = nowCycle + (graceWindowSec * cyclesPerSecond)
+        val cutoffCycle = nowCycle + (resyncGraceWindowSec * cyclesPerSecond)
 
         val from = floor(nowCycle)
         val to = ceil(queryCursorCycles)
@@ -479,6 +483,9 @@ internal class StrudelPlaybackController(
                     afterTimeSec = cutoffCycle * secPerCycle,
                 )
             )
+
+            // Update cursor so the fetch loop continues from where resync left off
+            queryCursorCycles = to
         } catch (e: Exception) {
             e.printStackTrace()
         }
