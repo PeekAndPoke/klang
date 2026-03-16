@@ -157,7 +157,7 @@ stack(
 import * from "stdlib"
 import * from "strudel"
 
-let tp = "[0 -1 -3 -5 -7  1  3  7]/16".slow(32) // <---- transposition ... wait for it ... or change it ...
+let tp = "[0 -1 -3 -5 -7  1  3  5]/16".slow(32) // <---- transposition ... wait for it ... or change it ...
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").orbit(6).fast(2).transpose(tp)
@@ -165,13 +165,13 @@ stack( // Gitarre! -------------------------------------------------------------
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").clip(0.85).hpf(400).lpf(5000).pan(0.45).notchf(1220).transpose(tp).warmth(0.3)
+    .orbit(1).fast(4).scale("C3:chromatic").clip(0.85).hpf(400).lpf(5000).pan(0.45).notchf(800).transpose(tp).warmth(0.3)
     .s("supersaw").unison(6).detune(0.02).gain(0.25).distort(saw.range(0.5, 0.8).slow(32)).postgain(0.8) // .solo()
     .adsr("0.001:0.3:0.7:0.05").filterWhen(t => t % 64 > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").clip(0.85).hpf(750).lpf(5000).pan(0.4).notchf(1220).transpose(tp).warmth(0.2)
+    .orbit(2).fast(4).scale("C4:chromatic").clip(0.85).hpf(750).lpf(5000).pan(0.4).notchf(1200).transpose(tp).warmth(0.2)
     .s("supersaw").unison(6).detune(0.02).gain(0.25).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.7) // .solo()
     .adsr("0.001:0.3:0.7:0.03").filterWhen(t => t % 64 > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
