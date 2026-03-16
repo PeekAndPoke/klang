@@ -6,6 +6,7 @@ import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.routing.Router.Companion.router
+import de.peekandpoke.kraft.utils.documentCtrl
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
@@ -84,6 +85,11 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
         } else {
             router.navToUri(uri)
         }
+    }
+
+    @Suppress("unused")
+    private val hasFocus by subscribingTo(documentCtrl.hasFocus) {
+        if (it) playback?.reemitVoiceSignals()
     }
 
     init {

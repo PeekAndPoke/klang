@@ -9,6 +9,7 @@ import de.peekandpoke.kraft.popups.PopupsManager
 import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
+import de.peekandpoke.kraft.utils.documentCtrl
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
@@ -203,6 +204,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             codeEditorRef { it.setCode(b.code) }
             blocksEditorRef { it.setCode(b.code) }
         }
+    }
+
+    @Suppress("unused")
+    private val hasFocus by subscribingTo(documentCtrl.hasFocus) {
+        if (it) playback?.reemitVoiceSignals()
     }
 
     init {
