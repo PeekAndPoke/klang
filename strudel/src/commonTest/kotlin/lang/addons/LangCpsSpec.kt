@@ -2,10 +2,10 @@ package io.peekandpoke.klang.strudel.lang.addons
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.dslInterfaceTests
-import io.peekandpoke.klang.strudel.math.Rational
 
 class LangCpsSpec : StringSpec({
 

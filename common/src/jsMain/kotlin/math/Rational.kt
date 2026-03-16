@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.math
+package io.peekandpoke.klang.common.math
 
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
@@ -16,13 +16,13 @@ actual class Rational private constructor(
     private val n: dynamic,
     /** BigInt denominator */
     private val d: dynamic,
+    /** Precomputed flags to avoid repeated BigInt comparisons on the hot path */
+    actual val isNaN: Boolean,
+    actual val isInfinite: Boolean,
 ) : Comparable<Rational> {
 
     actual val numerator: Long get() = bigIntToLong(n)
     actual val denominator: Long get() = bigIntToLong(d)
-
-    actual val isNaN: Boolean get() = bigIntEq(d, BI_ZERO) && bigIntEq(n, BI_ZERO)
-    actual val isInfinite: Boolean get() = bigIntEq(d, BI_ZERO) && !bigIntEq(n, BI_ZERO)
 
     actual companion object {
         // BigInt constants
@@ -30,19 +30,29 @@ actual class Rational private constructor(
         private val BI_ONE: dynamic = js("BigInt(1)")
         private val BI_NEG_ONE: dynamic = js("BigInt(-1)")
 
-        actual val ZERO = Rational(BI_ZERO, BI_ONE)
-        actual val QUARTER = Rational(BI_ONE, js("BigInt(4)"))
-        actual val HALF = Rational(BI_ONE, js("BigInt(2)"))
-        actual val ONE = Rational(BI_ONE, BI_ONE)
-        actual val TWO = Rational(js("BigInt(2)"), BI_ONE)
-        actual val MINUS_ONE = Rational(BI_NEG_ONE, BI_ONE)
-        actual val POSITIVE_INFINITY = Rational(BI_ONE, BI_ZERO)
-        actual val NEGATIVE_INFINITY = Rational(BI_NEG_ONE, BI_ZERO)
-        actual val NaN = Rational(BI_ZERO, BI_ZERO)
+        /** Private factory that precomputes isNaN/isInfinite flags */
+        private fun of(n: dynamic, d: dynamic): Rational {
+            val dIsZero = bigIntEq(d, BI_ZERO)
+            return Rational(
+                n = n, d = d,
+                isNaN = dIsZero && bigIntEq(n, BI_ZERO),
+                isInfinite = dIsZero && !bigIntEq(n, BI_ZERO),
+            )
+        }
 
-        actual operator fun invoke(value: Long): Rational = Rational(longToBigInt(value), BI_ONE)
+        actual val ZERO = of(BI_ZERO, BI_ONE)
+        actual val QUARTER = of(BI_ONE, js("BigInt(4)"))
+        actual val HALF = of(BI_ONE, js("BigInt(2)"))
+        actual val ONE = of(BI_ONE, BI_ONE)
+        actual val TWO = of(js("BigInt(2)"), BI_ONE)
+        actual val MINUS_ONE = of(BI_NEG_ONE, BI_ONE)
+        actual val POSITIVE_INFINITY = of(BI_ONE, BI_ZERO)
+        actual val NEGATIVE_INFINITY = of(BI_NEG_ONE, BI_ZERO)
+        actual val NaN = of(BI_ZERO, BI_ZERO)
 
-        actual operator fun invoke(value: Int): Rational = Rational(intToBigInt(value), BI_ONE)
+        actual operator fun invoke(value: Long): Rational = of(longToBigInt(value), BI_ONE)
+
+        actual operator fun invoke(value: Int): Rational = of(intToBigInt(value), BI_ONE)
 
         actual operator fun invoke(value: Double): Rational {
             if (value.isNaN()) return NaN
@@ -50,7 +60,7 @@ actual class Rational private constructor(
             if (value == 0.0) return ZERO
 
             val (bn, bd) = doubleToFractionBigInt(abs(value))
-            return if (value < 0) Rational(bigIntNeg(bn), bd) else Rational(bn, bd)
+            return if (value < 0) of(bigIntNeg(bn), bd) else of(bn, bd)
         }
 
         actual fun parse(value: String): Rational {
@@ -85,7 +95,7 @@ actual class Rational private constructor(
         private fun createBI(numerator: dynamic, denominator: dynamic): Rational {
             if (bigIntEq(denominator, BI_ZERO)) {
                 return if (bigIntEq(numerator, BI_ZERO)) NaN
-                else Rational(if (bigIntGt(numerator, BI_ZERO)) BI_ONE else BI_NEG_ONE, BI_ZERO)
+                else of(if (bigIntGt(numerator, BI_ZERO)) BI_ONE else BI_NEG_ONE, BI_ZERO)
             }
             if (bigIntEq(numerator, BI_ZERO)) return ZERO
 
@@ -93,7 +103,7 @@ actual class Rational private constructor(
             val n = bigIntDiv(numerator, common)
             val d = bigIntDiv(denominator, common)
 
-            return if (bigIntLt(d, BI_ZERO)) Rational(bigIntNeg(n), bigIntNeg(d)) else Rational(n, d)
+            return if (bigIntLt(d, BI_ZERO)) of(bigIntNeg(n), bigIntNeg(d)) else of(n, d)
         }
 
         actual fun Number.toRational(): Rational = invoke(this.toDouble())
@@ -206,7 +216,7 @@ actual class Rational private constructor(
             if (this == ZERO || other == ZERO) return NaN
             val thisSign = bigIntSign(n)
             val otherSign = bigIntSign(other.n)
-            return if (thisSign == otherSign) Rational(BI_ONE, BI_ZERO) else Rational(BI_NEG_ONE, BI_ZERO)
+            return if (thisSign == otherSign) POSITIVE_INFINITY else NEGATIVE_INFINITY
         }
 
         return createBI(bigIntMul(n, other.n), bigIntMul(d, other.d))
@@ -234,7 +244,7 @@ actual class Rational private constructor(
 
     actual operator fun unaryMinus(): Rational {
         if (isNaN) return NaN
-        return Rational(bigIntNeg(n), d)
+        return of(bigIntNeg(n), d)
     }
 
     actual operator fun plus(other: Number): Rational = this + other.toRational()
@@ -275,7 +285,7 @@ actual class Rational private constructor(
     }
 
     actual fun toLong(): Long {
-        if (bigIntEq(d, BI_ZERO)) return 0L
+        if (isNaN || isInfinite) return 0L
         return bigIntToLong(bigIntDiv(n, d))
     }
 
@@ -291,7 +301,7 @@ actual class Rational private constructor(
 
     actual fun abs(): Rational {
         if (isNaN) return NaN
-        return if (bigIntLt(n, BI_ZERO)) Rational(bigIntNeg(n), d) else this
+        return if (bigIntLt(n, BI_ZERO)) of(bigIntNeg(n), d) else this
     }
 
     actual fun floor(): Rational {
@@ -300,7 +310,7 @@ actual class Rational private constructor(
 
         val res = bigIntDiv(n, d)
         val exact = bigIntEq(bigIntRem(n, d), BI_ZERO)
-        return if (bigIntGte(n, BI_ZERO) || exact) Rational(res, BI_ONE) else Rational(bigIntAdd(res, BI_NEG_ONE), BI_ONE)
+        return if (bigIntGte(n, BI_ZERO) || exact) of(res, BI_ONE) else of(bigIntAdd(res, BI_NEG_ONE), BI_ONE)
     }
 
     actual fun ceil(): Rational {
@@ -309,7 +319,7 @@ actual class Rational private constructor(
 
         val res = bigIntDiv(n, d)
         val exact = bigIntEq(bigIntRem(n, d), BI_ZERO)
-        return if (!bigIntGt(n, BI_ZERO) || exact) Rational(res, BI_ONE) else Rational(bigIntAdd(res, BI_ONE), BI_ONE)
+        return if (!bigIntGt(n, BI_ZERO) || exact) of(res, BI_ONE) else of(bigIntAdd(res, BI_ONE), BI_ONE)
     }
 
     actual fun frac(): Rational {

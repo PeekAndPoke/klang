@@ -74,8 +74,11 @@ stack(                                                              ////////    
     .superimpose(x => x.transpose("<0 12 0 -12>/8").bandf(sine.range(2000, 6000).slow(24)).bandq(1.2).gain(0.75))         ////////
     .detune(sine.range(0.05, 0.3).early(1.5).slow(12))                                                                    ////////
     .filterWhen(x => x >= 31.4) // .solo()                                                                                ////////
-  ,                                                                                                                       
-  sound(`<
+  ,        
+  note("<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1@2 a1!2] [b1!2 c2!2]] [[d2 d2]!4 [c2 c2]!4] [[b1 g#1]!2 [a1 g#1]!2]>")
+   .slow(2).orbit(2).clip(0.25).adsr("0.02:0.2:0.6:0.2").tremolo("0.1:8::0:0").warmth(0.2).gain("0.7").hpf("100").lpf(2000)
+    .filterWhen(x => x >= 31.4) // .solo()                                                                                ////////
+  , sound(`<
     [[bd:2,cr,cr] hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
     [[bd,hh]      hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [mt mt,sd]    [ht ht,oh]]
     [[bd:2,cr]    hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
@@ -86,7 +89,7 @@ stack(                                                              ////////    
     [[bd:2,cr]    hh sd      [sd,hh]]  [bd      hh sd:8    oh]  [bd      hh sd hh]       [bd hh      sd            [bd,oh]   ]
     [[bd,cr]      hh [sd,hh] cr     ]  [[bd,cr] hh [bd,cr] hh]  [[sd,oh] bd sd [bd,hh]]  [sd [bd,hh] [bd bd]       [bd bd,hh]]
   >`)
-    .orbit(2).gain("0.8".add(berlin.range(-0.1, 0.0).fast(16))).adsr("0.01:0.2:0.8:0.5")
+    .orbit(3).gain("0.8".add(berlin.range(-0.1, 0.0).fast(16))).adsr("0.01:0.2:0.8:0.5")
     .fast(2) // .solo()
   ,
 ).room(0.1).rsize(2.0).compressor("-6:1.2:8:0.03:0.2")

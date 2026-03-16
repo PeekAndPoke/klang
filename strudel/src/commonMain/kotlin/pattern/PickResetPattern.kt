@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.strudel.pattern
 
+import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.math.Rational
 
 /**
  * Pattern that selects from a lookup table and resets the selected pattern at the event start.

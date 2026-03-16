@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.math
+package io.peekandpoke.klang.common.math
 
 import kotlinx.serialization.Serializable
 import kotlin.math.abs

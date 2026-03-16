@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.strudel.math.Rational
+import io.peekandpoke.klang.common.math.Rational
 import kotlinx.serialization.Serializable
 
 /**
