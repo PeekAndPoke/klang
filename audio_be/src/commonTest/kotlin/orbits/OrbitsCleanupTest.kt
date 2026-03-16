@@ -27,7 +27,7 @@ class OrbitsCleanupTest : StringSpec({
     }
 
     "inactive orbits are skipped during mixing" {
-        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate)
+        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val masterMix = StereoBuffer(blockFrames)
 
         // Create orbit 0 and make it inactive
@@ -55,7 +55,7 @@ class OrbitsCleanupTest : StringSpec({
     }
 
     "round-robin cleanup checks one orbit per block" {
-        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate)
+        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val masterMix = StereoBuffer(blockFrames)
 
         // Create 3 orbits, all active but silent
@@ -95,7 +95,7 @@ class OrbitsCleanupTest : StringSpec({
     }
 
     "round-robin wraps around after maxOrbits" {
-        val orbits = Orbits(maxOrbits = 2, blockFrames = blockFrames, sampleRate = sampleRate)
+        val orbits = Orbits(maxOrbits = 2, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val masterMix = StereoBuffer(blockFrames)
 
         // Create 2 orbits
@@ -129,7 +129,7 @@ class OrbitsCleanupTest : StringSpec({
     }
 
     "cleanup handles empty orbits map gracefully" {
-        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate)
+        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val masterMix = StereoBuffer(blockFrames)
 
         // No orbits created - should not crash
@@ -141,7 +141,7 @@ class OrbitsCleanupTest : StringSpec({
     }
 
     "inactive orbit with signal is not mixed" {
-        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate)
+        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val masterMix = StereoBuffer(blockFrames)
 
         // Create orbit and deactivate it
@@ -166,7 +166,7 @@ class OrbitsCleanupTest : StringSpec({
     }
 
     "cleanup only checks existing orbits" {
-        val orbits = Orbits(maxOrbits = 8, blockFrames = blockFrames, sampleRate = sampleRate)
+        val orbits = Orbits(maxOrbits = 8, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val masterMix = StereoBuffer(blockFrames)
 
         // Create only orbit 0 (sparse map)
@@ -184,7 +184,7 @@ class OrbitsCleanupTest : StringSpec({
     }
 
     "multiple active orbits mix correctly" {
-        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate)
+        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val masterMix = StereoBuffer(blockFrames)
 
         // Create 3 active orbits with different signals
@@ -211,7 +211,7 @@ class OrbitsCleanupTest : StringSpec({
     }
 
     "orbit deactivated by cleanup is not mixed on next block" {
-        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate)
+        val orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
         val masterMix = StereoBuffer(blockFrames)
 
         // Create silent orbit

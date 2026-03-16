@@ -7,7 +7,7 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 /**
  * Mixing channel / Effect bus ... called Orbit in strudel
  */
-class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
+class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int, private val silentBlocksBeforeTailCheck: Int) {
     // dry mix buffer
     val mixBuffer = StereoBuffer(blockFrames)
 
@@ -39,6 +39,9 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
     // To track if we need to update parameters this block
     var isActive = false
         private set
+
+    // Silent block counter for graceful deactivation (allows effect tails to decay)
+    private var silentBlockCount: Int = 0
 
     /**
      * Update orbit settings from a voice.
@@ -136,35 +139,50 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int) {
 
     /**
      * Checks if the orbit is silent and deactivates it if so.
-     * This helps clean up unused orbits to reduce processing overhead.
+     *
+     * Uses a two-phase approach to avoid cutting off effect tails (delay/reverb):
+     * 1. When mixBuffer is silent, increment a counter instead of deactivating immediately.
+     *    This grace period keeps effects processing so their tails continue to decay naturally.
+     * 2. After N silent blocks, scan effect internal buffers. If they still have audio, reset
+     *    the counter and keep processing. If silent, deactivate.
      */
     fun tryDeactivate() {
         if (!isActive) return
 
-        // Check if silent
-        var silent = true
-        val threshold = 0.00001 // -90dB approx
+        // Check if mixBuffer has audio
+        if (!isMixBufferSilent()) {
+            silentBlockCount = 0
+            return
+        }
 
-        // Check left channel
+        // mixBuffer is silent — count up
+        silentBlockCount++
+
+        // Grace period: keep processing effects for N blocks
+        if (silentBlockCount < silentBlocksBeforeTailCheck) return
+
+        // After grace period: check if effects still have tail audio
+        fun delayHasTail() = delayLine.delayTimeSeconds > 0.001 && delayLine.hasTail()
+        fun reverbHasTail() = reverb.roomSize > 0.001 && reverb.hasTail()
+
+        if (reverbHasTail() || delayHasTail()) {
+            silentBlockCount = 0
+            return
+        }
+
+        // Everything is silent — deactivate
+        isActive = false
+        silentBlockCount = 0
+    }
+
+    private fun isMixBufferSilent(): Boolean {
+        val threshold = 0.00001
         for (sample in mixBuffer.left) {
-            if (sample > threshold || sample < -threshold) {
-                silent = false
-                break
-            }
+            if (sample > threshold || sample < -threshold) return false
         }
-
-        // Check right channel
-        if (silent) {
-            for (sample in mixBuffer.right) {
-                if (sample > threshold || sample < -threshold) {
-                    silent = false
-                    break
-                }
-            }
+        for (sample in mixBuffer.right) {
+            if (sample > threshold || sample < -threshold) return false
         }
-
-        if (silent) {
-            isActive = false
-        }
+        return true
     }
 }

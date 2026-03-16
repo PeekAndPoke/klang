@@ -194,7 +194,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
         val (scheduler, _) = createTestScheduler { currentTimeMs }
 
         // Initially no orbits allocated
-        scheduler.options.orbits.allocatedIds shouldHaveSize 0
+        scheduler.options.orbits.orbitsIds shouldHaveSize 0
 
         // Schedule voices on orbits 0 and 3
         val voice1 = ScheduledVoice(
@@ -218,7 +218,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
         scheduler.process(0)
 
         // Should have 2 orbits allocated
-        val allocatedIds = scheduler.options.orbits.allocatedIds
+        val allocatedIds = scheduler.options.orbits.orbitsIds
         allocatedIds shouldHaveSize 2
         allocatedIds.contains(0) shouldBe true
         allocatedIds.contains(3) shouldBe true

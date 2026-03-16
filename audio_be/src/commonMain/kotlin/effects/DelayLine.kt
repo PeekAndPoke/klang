@@ -40,6 +40,19 @@ class DelayLine(
     // Safety saturation threshold to prevent explosion
     private val limit = 2.0
 
+    /**
+     * Returns true if the internal delay buffer still contains audio above the given threshold.
+     * Used to detect effect tails that should keep the orbit alive.
+     */
+    fun hasTail(threshold: Double = 0.00001): Boolean {
+        for (i in 0 until bufferSize) {
+            if (abs(buffer.left[i]) > threshold || abs(buffer.right[i]) > threshold) {
+                return true
+            }
+        }
+        return false
+    }
+
     fun process(input: StereoBuffer, output: StereoBuffer, length: Int) {
         // Optimization: Split loop into two chunks to handle circular buffer wrapping
         // This removes the 'if (writePos >= bufferSize)' check from the inner loop

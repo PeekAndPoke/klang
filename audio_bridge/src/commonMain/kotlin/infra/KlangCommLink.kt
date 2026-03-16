@@ -188,7 +188,7 @@ class KlangCommLink(capacity: Int = 8192) {
             data class OrbitState(
                 /** Orbit ID (0-15 typically) */
                 val id: Int,
-                /** Whether this orbit is currently active (has voices rendering to it) */
+                /** Whether this orbit is currently active (processing audio or effect tails) */
                 val active: Boolean,
             )
         }

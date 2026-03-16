@@ -10,21 +10,23 @@ class Orbits(
     maxOrbits: Int = 16,
     private val blockFrames: Int,
     private val sampleRate: Int,
+    private val silentBlocksBeforeTailCheck: Int = 10,
 ) {
     private val maxOrbits = maxOrbits.coerceIn(1, 255)
-    private val orbits = mutableMapOf<Int, Orbit>()
+    private val id2orbit = mutableMapOf<Int, Orbit>()
     private var cleanupIndex = 0
 
-    /**
-     * Get all currently allocated orbit IDs.
-     */
-    val allocatedIds: Set<Int> get() = orbits.keys
+    /** Get all orbits */
+    val orbits get() = id2orbit.values
+
+    /** Get all currently allocated orbit IDs. */
+    val orbitsIds: Set<Int> get() = id2orbit.keys
 
     /**
      * Clear all orbits
      */
     fun clearAll() {
-        for (orbit in orbits.values) {
+        for (orbit in id2orbit.values) {
             orbit.clear()
         }
     }
@@ -39,18 +41,18 @@ class Orbits(
      */
     fun processAndMix(masterMix: StereoBuffer) {
         // Step 1: Process effects on all orbits
-        for (orbit in orbits.values) {
+        for (orbit in id2orbit.values) {
             orbit.processEffects()
         }
 
         // Step 2: Apply ducking (cross-orbit sidechain)
-        for (orbit in orbits.values) {
+        for (orbit in id2orbit.values) {
             val ducking = orbit.ducking
             val duckOrbitId = orbit.duckOrbitId
 
             if (ducking != null && duckOrbitId != null) {
                 // Get sidechain source orbit
-                val sidechainOrbit = orbits[duckOrbitId]
+                val sidechainOrbit = id2orbit[duckOrbitId]
 
                 if (sidechainOrbit != null) {
                     // Apply ducking using sidechain orbit's mix as trigger
@@ -69,7 +71,7 @@ class Orbits(
         }
 
         // Step 3: Mix all orbits to output
-        for (orbit in orbits.values) {
+        for (orbit in id2orbit.values) {
             if (!orbit.isActive) continue
 
             run {
@@ -93,11 +95,11 @@ class Orbits(
 
         // Step 4: Cleanup stale orbits (round-robin approach)
         // We pick one orbit per block to check for silence
-        val orbitKeys = orbits.keys.toList()
+        val orbitKeys = id2orbit.keys.toList()
         if (orbitKeys.isNotEmpty()) {
             val keyIndex = cleanupIndex % orbitKeys.size
             val orbitId = orbitKeys[keyIndex]
-            orbits[orbitId]?.tryDeactivate()
+            id2orbit[orbitId]?.tryDeactivate()
 
             cleanupIndex = (cleanupIndex + 1) % maxOrbits
         }
@@ -113,8 +115,8 @@ class Orbits(
     fun getOrInit(id: Int, voice: Voice): Orbit {
         val safeId = id % maxOrbits
 
-        return orbits.getOrPut(safeId) {
-            Orbit(id = id, blockFrames = blockFrames, sampleRate = sampleRate)
+        return id2orbit.getOrPut(safeId) {
+            Orbit(id = id, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck)
         }.also {
             it.updateFromVoice(voice)
         }

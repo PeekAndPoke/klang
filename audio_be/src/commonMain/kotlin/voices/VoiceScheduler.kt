@@ -376,6 +376,7 @@ class VoiceScheduler(
 
         // 3. Render Loop
         var i = 0
+
         while (i < active.size) {
             val activeVoice = active[i]
 
@@ -426,11 +427,8 @@ class VoiceScheduler(
         if (endMs - lastDiagnosticsTimeMs > 20.0) {
             lastDiagnosticsTimeMs = endMs
 
-            // Determine which orbits are currently active (have voices feeding them)
-            val activeOrbitIds = active.map { it.voice.orbitId }.toSet()
-
-            val orbitStates = options.orbits.allocatedIds.map { id ->
-                KlangCommLink.Feedback.Diagnostics.OrbitState(id = id, active = id in activeOrbitIds)
+            val orbitStates = options.orbits.orbits.map { orbit ->
+                KlangCommLink.Feedback.Diagnostics.OrbitState(id = orbit.id, active = orbit.isActive)
             }
 
             options.commLink.feedback.send(

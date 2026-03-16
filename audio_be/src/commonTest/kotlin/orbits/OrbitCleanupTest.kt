@@ -14,7 +14,7 @@ class OrbitCleanupTest : StringSpec({
     val sampleRate = 44100
 
     fun createTestOrbit(): Orbit {
-        return Orbit(id = 0, blockFrames = blockFrames, sampleRate = sampleRate)
+        return Orbit(id = 0, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = 0)
     }
 
     fun makeOrbitActive(orbit: Orbit) {

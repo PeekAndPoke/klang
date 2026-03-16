@@ -76,6 +76,22 @@ class Reverb(
     private val fixedGain = 0.015 // Standard Freeverb gain scaling to normalize sum of 8 combs
     private val allPassFeedback = 0.5
 
+    /**
+     * Returns true if the internal reverb buffers still contain audio above the given threshold.
+     * Checks comb filter buffers (which hold the bulk of the reverb tail).
+     */
+    fun hasTail(threshold: Double = 0.00001): Boolean {
+        for (c in 0 until numCombs) {
+            for (sample in combBufsL[c]) {
+                if (sample > threshold || sample < -threshold) return true
+            }
+            for (sample in combBufsR[c]) {
+                if (sample > threshold || sample < -threshold) return true
+            }
+        }
+        return false
+    }
+
     fun process(input: StereoBuffer, output: StereoBuffer, length: Int) {
         val inL = input.left
         val inR = input.right
