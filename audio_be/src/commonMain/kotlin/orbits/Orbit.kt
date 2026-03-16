@@ -7,7 +7,7 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 /**
  * Mixing channel / Effect bus ... called Orbit in strudel
  */
-class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int, private val silentBlocksBeforeTailCheck: Int) {
+class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int, private val silentBlocksBeforeTailCheck: Int = 10) {
     // dry mix buffer
     val mixBuffer = StereoBuffer(blockFrames)
 

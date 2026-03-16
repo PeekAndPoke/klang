@@ -157,6 +157,8 @@ class KlangCommLink(capacity: Int = 8192) {
         @SerialName("diagnostics")
         data class Diagnostics(
             override val playbackId: String,
+            /** Backend sample rate in Hz (e.g. 44100, 48000) */
+            val sampleRate: Int,
             /**
              * Rendering headroom as a ratio (not time-based).
              * - 1.0 = idle (all time available)
@@ -178,10 +180,11 @@ class KlangCommLink(capacity: Int = 8192) {
              * Used by the frontend to continuously correct clock drift via EMA.
              */
             val backendNowMs: Double,
-            /**
-             * Audio device output latency in ms (hardware buffer → speakers).
-             * Set by the JS backend from the actual AudioContext; 0.0 on JVM.
-             */
+            /** AudioContext.baseLatency in ms (browser's audio processing pipeline). 0.0 on JVM. */
+            val baseLatencyMs: Double = 0.0,
+            /** AudioContext.outputLatency in ms (hardware/device latency, e.g. Bluetooth). 0.0 on JVM. */
+            val outputDeviceLatencyMs: Double = 0.0,
+            /** Total output latency in ms (baseLatencyMs + outputDeviceLatencyMs). */
             val outputLatencyMs: Double = 0.0,
         ) : Feedback {
             @Serializable

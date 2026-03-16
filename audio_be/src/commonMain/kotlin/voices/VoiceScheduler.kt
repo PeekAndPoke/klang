@@ -434,6 +434,7 @@ class VoiceScheduler(
             options.commLink.feedback.send(
                 KlangCommLink.Feedback.Diagnostics(
                     playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID, // System-wide diagnostics
+                    sampleRate = options.sampleRate,
                     renderHeadroom = avgHeadroom,
                     activeVoiceCount = active.size,
                     orbits = orbitStates,

@@ -54,6 +54,7 @@ class KlangPlayer(
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
     val signals = _signals.readonly
     private var feedbackDispatcherJob: Job? = null
+    private var hasLoggedDiagnostics = false
 
     // Centralized sample preloader (shared across all playbacks)
     val samplePreloader = SamplePreloader(
@@ -118,6 +119,17 @@ class KlangPlayer(
 
                     // System messages go to player signals
                     is KlangCommLink.Feedback.Diagnostics -> {
+                        if (!hasLoggedDiagnostics) {
+                            hasLoggedDiagnostics = true
+                            println(
+                                "[KlangPlayer] Diagnostics: " +
+                                        "sampleRate=${feedback.sampleRate} (FE=${options.sampleRate}), " +
+                                        "baseLatency=${feedback.baseLatencyMs}ms, " +
+                                        "deviceLatency=${feedback.outputDeviceLatencyMs}ms, " +
+                                        "measuredLatency=${feedback.outputLatencyMs}ms"
+                            )
+                        }
+
                         if (feedback.playbackId == KlangCommLink.SYSTEM_PLAYBACK_ID) {
                             withContext(callbackDispatcher) {
                                 _signals(KlangPlaybackSignal.Diagnostics(feedback))

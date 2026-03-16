@@ -14,6 +14,8 @@ actual fun klangPlayer(
 ): KlangPlayer {
     val sampleRate = resolveBestSampleRate(options.sampleRate)
 
+    console.log("[KlangPlayer][JS] using sample rate $sampleRate")
+
     val effectiveOptions = options.copy(sampleRate = sampleRate)
 
     return KlangPlayer(
@@ -37,7 +39,7 @@ fun resolveBestSampleRate(desired: Int): Int {
 
         actual
     } catch (e: dynamic) {
-        console.log("[KlangPlayer][JS] Failed to create AudioContext with desired sample rate $desired:")
+        console.log("[KlangPlayer][JS] Failed to create AudioContext with desired sample rate $desired:", e)
 
         // Fallback: Create a default context and see what the browser prefers
         try {
@@ -46,7 +48,7 @@ fun resolveBestSampleRate(desired: Int): Int {
             ctx.close()
             actual
         } catch (e2: dynamic) {
-            console.log("[KlangPlayer][JS] Failed to create default AudioContext:")
+            console.log("[KlangPlayer][JS] Failed to create default AudioContext:", e2)
 
             // Absolute fallback ... safe bet as most hardware run natively on 48000
             48000

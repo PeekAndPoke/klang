@@ -120,7 +120,13 @@ class JsAudioBackend(
                 // Augment Diagnostics with real output latency from the actual AudioContext.
                 // The worklet has no access to AudioContext properties, so we enrich here.
                 val enriched = if (decoded is KlangCommLink.Feedback.Diagnostics) {
-                    decoded.copy(outputLatencyMs = (ctx.outputLatency + ctx.baseLatency) * 1000.0)
+                    val baseLat = ctx.baseLatency * 1000.0
+                    val deviceLat = ctx.outputLatency * 1000.0
+                    decoded.copy(
+                        baseLatencyMs = baseLat,
+                        outputDeviceLatencyMs = deviceLat,
+                        outputLatencyMs = baseLat + deviceLat,
+                    )
                 } else {
                     decoded
                 }

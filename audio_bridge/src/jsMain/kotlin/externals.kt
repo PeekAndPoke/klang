@@ -18,10 +18,23 @@ external class AudioContext(options: AudioContextOptions = definedExternally) {
 
     /** Estimated latency added by the browser's audio processing pipeline in seconds. */
     val baseLatency: Double
+
+    /** Current audio time in seconds (where the engine is writing). */
+    val currentTime: Double
+
+    fun getOutputTimestamp(): AudioTimestamp
     fun resume(): Promise<Unit>
     fun close(): Promise<Unit>
     fun decodeAudioData(audioData: ArrayBuffer): Promise<AudioBuffer>
     fun createAnalyser(): AnalyserNode
+}
+
+external interface AudioTimestamp {
+    /** Audio stream position currently at the speakers, in same units as AudioContext.currentTime. */
+    val contextTime: Double
+
+    /** Estimation of when that sample frame was rendered, in same units as performance.now(). */
+    val performanceTime: Double
 }
 
 external interface AudioContextOptions {
