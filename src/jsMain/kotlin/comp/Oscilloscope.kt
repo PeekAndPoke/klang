@@ -304,7 +304,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val oscilloscopeRect = dom?.getBoundingClientRect() ?: return
 
         // Single overlay covering from oscilloscope left edge to viewport right edge
-        val extraHeight = 50.0
+        val extraHeight = 40.0
         val container = document.createElement("div") as HTMLDivElement
         container.style.position = "fixed"
         container.style.top = "${oscilloscopeRect.top - extraHeight / 2}px"

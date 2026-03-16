@@ -419,23 +419,23 @@ class RationalSpec : StringSpec({
 
     "exp() | One returns e" {
         val result = Rational.ONE.exp().toDouble()
-        result shouldBe (kotlin.math.E plusOrMinus EPSILON)
+        result shouldBe (E plusOrMinus EPSILON)
     }
 
     "exp() | Positive values" {
-        Rational(2.0).exp().toDouble() shouldBe (kotlin.math.exp(2.0) plusOrMinus EPSILON)
-        Rational(0.5).exp().toDouble() shouldBe (kotlin.math.exp(0.5) plusOrMinus EPSILON)
-        Rational(3.0).exp().toDouble() shouldBe (kotlin.math.exp(3.0) plusOrMinus EPSILON)
+        Rational(2.0).exp().toDouble() shouldBe (exp(2.0) plusOrMinus EPSILON)
+        Rational(0.5).exp().toDouble() shouldBe (exp(0.5) plusOrMinus EPSILON)
+        Rational(3.0).exp().toDouble() shouldBe (exp(3.0) plusOrMinus EPSILON)
     }
 
     "exp() | Negative values" {
-        Rational(-1.0).exp().toDouble() shouldBe (kotlin.math.exp(-1.0) plusOrMinus EPSILON)
-        Rational(-2.0).exp().toDouble() shouldBe (kotlin.math.exp(-2.0) plusOrMinus EPSILON)
-        Rational(-10.0).exp().toDouble() shouldBe (kotlin.math.exp(-10.0) plusOrMinus EPSILON)
+        Rational(-1.0).exp().toDouble() shouldBe (exp(-1.0) plusOrMinus EPSILON)
+        Rational(-2.0).exp().toDouble() shouldBe (exp(-2.0) plusOrMinus EPSILON)
+        Rational(-10.0).exp().toDouble() shouldBe (exp(-10.0) plusOrMinus EPSILON)
     }
 
     "exp() | Large negative values approach zero" {
-        Rational(-20.0).exp().toDouble() shouldBe (kotlin.math.exp(-20.0) plusOrMinus 1e-9)
+        Rational(-20.0).exp().toDouble() shouldBe (exp(-20.0) plusOrMinus 1e-9)
         val exp30Result = Rational(-30.0).exp().toDouble()
         exp30Result shouldBe (0.0 plusOrMinus 1e-9)
     }
@@ -455,7 +455,7 @@ class RationalSpec : StringSpec({
             testValues.forEach { value ->
                 withClue("exp($value)") {
                     val rationalResult = Rational(value).exp().toDouble()
-                    val kotlinResult = kotlin.math.exp(value)
+                    val kotlinResult = exp(value)
                     rationalResult shouldBe (kotlinResult plusOrMinus EPSILON)
                 }
             }
@@ -773,7 +773,7 @@ class RationalSpec : StringSpec({
 
     // ln() function tests - natural logarithm
     "ln() | Basic natural logarithms" {
-        Rational(kotlin.math.E).ln().toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+        Rational(E).ln().toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         Rational(1.0).ln().toDouble() shouldBe (0.0 plusOrMinus EPSILON)
     }
 
@@ -797,7 +797,7 @@ class RationalSpec : StringSpec({
     }
 
     "ln() | Matches kotlin.math.ln" {
-        val testValues = listOf(1.0, 2.0, kotlin.math.E, 10.0, 0.5, 100.0)
+        val testValues = listOf(1.0, 2.0, E, 10.0, 0.5, 100.0)
 
         assertSoftly {
             testValues.forEach { value ->
@@ -912,7 +912,7 @@ class RationalSpec : StringSpec({
 
     "ln() | Property: ln(e^x) = x" {
         val x = Rational(2)
-        val result = Rational(kotlin.math.E).pow(x).ln()
+        val result = Rational(E).pow(x).ln()
         result.toDouble() shouldBe (x.toDouble() plusOrMinus EPSILON)
     }
 
