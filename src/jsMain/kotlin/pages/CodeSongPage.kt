@@ -442,7 +442,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             }
                         }
 
-
                         // Highlight-per-event field
                         noui.item {
                             css { width = 140.px }

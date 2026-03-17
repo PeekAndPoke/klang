@@ -4,7 +4,6 @@ import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.*
 import io.peekandpoke.klang.ui.feel.KlangTheme
 
-
 class CodeMirrorTheme {
 
     // ── Palette ───────────────────────────────────────────────────────────────

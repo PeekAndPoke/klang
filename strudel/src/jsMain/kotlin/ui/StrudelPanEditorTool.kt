@@ -232,10 +232,10 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
             div {
                 css {
                     position = Position.absolute
-                    left = LinearDimension("${fillLeftPct}%")
+                    left = LinearDimension("$fillLeftPct%")
                     top = 0.px
                     height = 100.pct
-                    width = LinearDimension("${fillWidthPct}%")
+                    width = LinearDimension("$fillWidthPct%")
                     backgroundColor = Color(laf.gold)
                     borderRadius = 4.px
                     pointerEvents = PointerEvents.none
@@ -246,7 +246,7 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
             div {
                 css {
                     position = Position.absolute
-                    left = LinearDimension("${centerPct}%")
+                    left = LinearDimension("$centerPct%")
                     top = 0.px
                     height = 100.pct
                     width = 1.px
@@ -273,7 +273,7 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
                     div {
                         css {
                             position = Position.absolute
-                            left = LinearDimension("${pct}%")
+                            left = LinearDimension("$pct%")
                             top = 0.px
                             width = 1.px
                             height = if (isMajor) 6.px else 3.px
@@ -291,7 +291,7 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
                         span {
                             css {
                                 position = Position.absolute
-                                left = LinearDimension("${pct}%")
+                                left = LinearDimension("$pct%")
                                 top = 7.px
                                 fontSize = 9.px
                                 color = Color("#aaa")

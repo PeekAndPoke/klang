@@ -73,5 +73,4 @@ data class ScheduledVoiceEvent(
     val data: StrudelVoiceData,
     /** Source location chain for highlighting */
     val sourceLocations: SourceLocationChain?,
-) {
-}
+)

@@ -250,7 +250,6 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-
             // Symbol list
             filteredSymbols.forEach { symbol ->
                 renderKlangSymbol(symbol)

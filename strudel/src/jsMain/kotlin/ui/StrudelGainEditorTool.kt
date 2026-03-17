@@ -228,7 +228,7 @@ private class StrudelGainEditorComp(ctx: Ctx<Props>) : Component<StrudelGainEdit
                     left = 0.px
                     top = 0.px
                     height = 100.pct
-                    width = LinearDimension("${fillPct}%")
+                    width = LinearDimension("$fillPct%")
                     backgroundColor = Color(laf.gold)
                     borderRadius = 4.px
                     pointerEvents = PointerEvents.none
@@ -239,7 +239,7 @@ private class StrudelGainEditorComp(ctx: Ctx<Props>) : Component<StrudelGainEdit
             div {
                 css {
                     position = Position.absolute
-                    left = LinearDimension("${centerPct}%")
+                    left = LinearDimension("$centerPct%")
                     top = 0.px
                     height = 100.pct
                     width = 1.px
@@ -266,7 +266,7 @@ private class StrudelGainEditorComp(ctx: Ctx<Props>) : Component<StrudelGainEdit
                     div {
                         css {
                             position = Position.absolute
-                            left = LinearDimension("${pct}%")
+                            left = LinearDimension("$pct%")
                             top = 0.px
                             width = 1.px
                             height = if (isMajor) 6.px else 3.px
@@ -278,7 +278,7 @@ private class StrudelGainEditorComp(ctx: Ctx<Props>) : Component<StrudelGainEdit
                         span {
                             css {
                                 position = Position.absolute
-                                left = LinearDimension("${pct}%")
+                                left = LinearDimension("$pct%")
                                 top = 7.px
                                 fontSize = 9.px
                                 color = Color("#aaa")

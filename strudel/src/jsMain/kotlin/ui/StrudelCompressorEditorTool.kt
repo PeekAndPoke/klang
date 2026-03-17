@@ -288,8 +288,11 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
         fun outputDb(inputDb: Double): Double {
             return if (safeKnee <= 0.0) {
                 // Hard knee
-                if (inputDb <= safeThreshold) inputDb
-                else safeThreshold + (inputDb - safeThreshold) / safeRatio
+                if (inputDb <= safeThreshold) {
+                    inputDb
+                } else {
+                    safeThreshold + (inputDb - safeThreshold) / safeRatio
+                }
             } else {
                 // Soft knee
                 val kneeStart = safeThreshold - halfKnee

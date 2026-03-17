@@ -114,7 +114,9 @@ private class StrudelEuclidEditorComp(ctx: Ctx<Props>) : Component<StrudelEuclid
         if (s <= 0) return emptyList()
         val clampedP = p.coerceIn(0, s)
         val base = List(s) { i -> (i * clampedP % s) < clampedP }
-        return if (r == 0) base else {
+        return if (r == 0) {
+            base
+        } else {
             val rot = r % s
             base.drop(rot) + base.take(rot)
         }

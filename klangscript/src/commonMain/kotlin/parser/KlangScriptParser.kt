@@ -96,7 +96,7 @@ class KlangScriptParser private constructor(
         SHIFT_LEFT_EQUALS,   // <<=  (before << and <=)
         SHIFT_LEFT,          // <<   (before <= and <)
         LESS_EQUAL,          // <=   (before <)
-        UNSIGNED_SHIFT_RIGHT,// >>>  (before >>= and >>)
+        UNSIGNED_SHIFT_RIGHT, // >>>  (before >>= and >>)
         SHIFT_RIGHT_EQUALS,  // >>=  (before >> and >=)
         SHIFT_RIGHT,         // >>   (before >= and >)
         GREATER_EQUAL,       // >=   (before >)

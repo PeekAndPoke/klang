@@ -52,7 +52,6 @@ class MenuLayout(ctx: Ctx<Props>) : Component<MenuLayout.Props>(ctx) {
 
                     height = 100.pct
                     overflowY = Overflow.hidden
-
                 }
 
                 SidebarMenu()
