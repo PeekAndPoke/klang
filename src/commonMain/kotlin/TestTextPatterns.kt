@@ -156,6 +156,7 @@ stack(
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
     val aTruthWorthLyingFor = """
+
 import * from "stdlib"
 import * from "strudel"
 
@@ -196,7 +197,7 @@ stack( // Gitarre! -------------------------------------------------------------
   ).orbit(4).adsr("0.01:0.8:0.7:0.25 0.01:0.1:0.1:0.25".slow(16)).gain(0.8).hpf(60).filterWhen(t => t % 64 >= 4) // .solo()
   , // Drums 1 -----------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>")
-    .orbit(5).adsr("0.01:0.2:0.8:0.5").gain("0.95".add(berlin2.range(-0.05, 0.0).segment(8)).slow(4)) // .solo()
+    .orbit(5).adsr("0.01:0.2:0.8:0.5").gain("1.0".add(rand.range(-0.1, 0.0).segment(8))) // .solo()
 ).room(0.02).rsize(3.0).compressor("-10:2:10:0.02:0.25") /*
 
  
