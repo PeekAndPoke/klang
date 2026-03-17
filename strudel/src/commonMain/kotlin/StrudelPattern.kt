@@ -97,7 +97,7 @@ interface StrudelPattern {
      */
     class QueryContext(data: Map<Key<*>, Any?> = emptyMap()) {
         companion object {
-            val randomSeedKey = Key<Long>("randomSeed")
+            val randomSeedKey = Key<Int>("randomSeed")
             val cpsKey = Key<Double>("cps")
             val kronosKey = Key<Kronos>("kronos")
 
@@ -193,16 +193,27 @@ interface StrudelPattern {
 
         /** Gets the random generator for this context. */
         fun getRandom(): Random {
-            val seed = getOrNull(randomSeedKey) ?: 0L
+            val seed = getOrNull(randomSeedKey) ?: 0
             return Random(seed)
         }
 
         /** Gets a new random generator seeded with the context's random seed and the given seed. */
         fun getSeededRandom(seed: Any, vararg seeds: Any): Random {
-            val baseSeed = getOrNull(randomSeedKey) ?: 0L
+            val baseSeed = getOrNull(randomSeedKey) ?: 0
             val s = baseSeed.hashCode() + seeds.fold(seed.hashCode()) { acc, it -> acc + it.hashCode() }
 
-            return Random((s.toLong() * 2862933555777941757L) + 3037000493L)
+            return Random(mixSeed(s))
+        }
+
+        /** MurmurHash3 integer finalizer — avalanches an Int seed so nearby values scatter. */
+        private fun mixSeed(value: Int): Int {
+            var h = value
+            h = h xor (h ushr 16)
+            h *= -0x7a143595  // 0x85ebca6b
+            h = h xor (h ushr 13)
+            h *= -0x3d4d51cb  // 0xc2b2ae35
+            h = h xor (h ushr 16)
+            return h
         }
 
         /** Gets the cycles per second (cps) for this context. */

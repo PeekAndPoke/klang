@@ -88,7 +88,7 @@ internal class ReversePattern(
         val endCycle = to.ceil()
         val events = createEventList()
 
-        for (c in startCycle.toLong()..endCycle.toLong()) {
+        for (c in startCycle.toInt()..endCycle.toInt()) {
             val cycle = c.toRational()
             val nextCycle = cycle + Rational.ONE
 

@@ -177,12 +177,12 @@ internal inline fun scaleTimeRange(
 /**
  * Calculates the range of cycle indices that overlap with [from, to).
  *
- * Returns a LongRange from floor(from) to floor(to), inclusive.
+ * Returns an IntRange from floor(from) to floor(to), inclusive.
  * Used for patterns that operate per-cycle.
  */
-internal inline fun calculateCycleBounds(from: Rational, to: Rational): LongRange {
-    val cycleStart = floor(from.toDouble()).toLong()
-    val cycleEnd = floor(to.toDouble()).toLong()
+internal inline fun calculateCycleBounds(from: Rational, to: Rational): IntRange {
+    val cycleStart = floor(from.toDouble()).toInt()
+    val cycleEnd = floor(to.toDouble()).toInt()
     return cycleStart..cycleEnd
 }
 
