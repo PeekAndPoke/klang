@@ -161,6 +161,7 @@ actual class Rational private constructor(
         private fun intToBigInt(v: Int): dynamic = js("BigInt(v)")
         private fun longToBigInt(v: Long): dynamic = js("BigInt(v.toString())")
         private fun doubleToBigInt(v: Double): dynamic = js("BigInt(Math.trunc(v))")
+        private fun bigIntToInt(v: dynamic): Int = (js("Number(v)") as Double).toInt()
         private fun bigIntToLong(v: dynamic): Long = v.toString().toLong()
         private fun bigIntToDouble(v: dynamic): Double = js("Number(v)") as Double
 
@@ -238,7 +239,7 @@ actual class Rational private constructor(
     actual operator fun rem(other: Rational): Rational {
         if (isNaN || other.isNaN || bigIntEq(other.n, BI_ZERO)) return NaN
         val div = this / other
-        val trunc = div.toLong().toRational()
+        val trunc = createBI(bigIntDiv(div.n, div.d), BI_ONE)
         return this - (other * trunc)
     }
 
@@ -289,7 +290,10 @@ actual class Rational private constructor(
         return bigIntToLong(bigIntDiv(n, d))
     }
 
-    actual fun toInt(): Int = toLong().toInt()
+    actual fun toInt(): Int {
+        if (isNaN || isInfinite) return 0
+        return bigIntToInt(bigIntDiv(n, d))
+    }
 
     actual fun toFractionString(): String {
         if (isNaN) return "NaN"
