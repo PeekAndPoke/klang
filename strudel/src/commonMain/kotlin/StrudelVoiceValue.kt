@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.RationalStringSerializer
+import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.RationalStringSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer

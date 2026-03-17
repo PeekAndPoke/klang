@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.strudel.pattern
 
+import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.math.Rational
 
 /**
  * A pattern that modifies the query context before querying the source pattern.

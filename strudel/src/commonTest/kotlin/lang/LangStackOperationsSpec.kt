@@ -2,8 +2,8 @@ package io.peekandpoke.klang.strudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
+import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 
 class LangStackOperationsSpec : StringSpec({
 

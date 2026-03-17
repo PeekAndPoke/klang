@@ -2,6 +2,7 @@
 
 package io.peekandpoke.klang.strudel.lang.addons
 
+import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
@@ -13,7 +14,6 @@ import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArg
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 import io.peekandpoke.klang.strudel.lang.addons.pattern.MergePattern
 import io.peekandpoke.klang.strudel.lang.addons.pattern.SoloPattern
-import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.strudel.pattern.SequencePattern

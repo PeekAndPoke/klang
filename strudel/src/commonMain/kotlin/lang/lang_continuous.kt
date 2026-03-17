@@ -2,13 +2,13 @@
 
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.common.math.BerlinNoise
+import io.peekandpoke.klang.common.math.PerlinNoise
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel._mapRangeContext
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.math.BerlinNoise
-import io.peekandpoke.klang.strudel.math.PerlinNoise
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
 import io.peekandpoke.klang.strudel.pattern.ContinuousPattern

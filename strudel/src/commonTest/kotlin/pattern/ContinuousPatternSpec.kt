@@ -4,11 +4,11 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.EPSILON
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.range
 import io.peekandpoke.klang.strudel.lang.sine
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 class ContinuousPatternSpec : StringSpec({
 

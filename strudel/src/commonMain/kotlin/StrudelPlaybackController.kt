@@ -10,8 +10,8 @@ import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
+import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.math.Rational
 import kotlinx.coroutines.*
 import kotlin.math.abs
 import kotlin.math.ceil

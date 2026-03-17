@@ -4,12 +4,12 @@ package io.peekandpoke.klang.strudel
 
 import de.peekandpoke.ultra.common.datetime.Kronos
 import de.peekandpoke.ultra.common.datetime.MpInstant
+import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import kotlin.jvm.JvmName
@@ -245,14 +245,13 @@ interface StrudelPattern {
      * Queries events from [from] and [to] cycles with an empty [QueryContext].
      */
     fun queryArc(from: Rational, to: Rational): List<StrudelPatternEvent> =
-        queryArcContextual(from, to, QueryContext.empty)
-//            .filter { it.begin >= from }
+        queryArcContextual(from = from, to = to, ctx = QueryContext.empty)
 
     /**
      * Queries events from [from] and [to] cycles with an empty [QueryContext].
      */
     fun queryArc(from: Double, to: Double): List<StrudelPatternEvent> =
-        queryArc(from.toRational(), to.toRational())
+        queryArc(from = from.toRational(), to = to.toRational())
 
     /**
      * Queries events from [from] and [to] cycles with the given [ctx].
@@ -278,7 +277,7 @@ interface StrudelPattern {
  * @return The first event at the sample time, or null if none exists
  */
 fun StrudelPattern.sampleAt(time: Rational, ctx: QueryContext): StrudelPatternEvent? =
-    queryArcContextual(time, time + StrudelPattern.QUERY_EPSILON, ctx).firstOrNull()
+    queryArcContextual(from = time, to = time + StrudelPattern.QUERY_EPSILON, ctx = ctx).firstOrNull()
 
 /**
  * Creates a static pattern, that can be stored and used for playback with
@@ -287,7 +286,7 @@ fun StrudelPattern.sampleAt(time: Rational, ctx: QueryContext): StrudelPatternEv
  * Acts like recording the arc [from] - [to] for later playback.
  */
 fun StrudelPattern.makeStatic(from: Rational, to: Rational): StaticStrudelPattern =
-    StaticStrudelPattern(events = queryArc(from, to))
+    StaticStrudelPattern(events = queryArc(from = from, to = to))
 
 /**
  * Creates a pattern that transforms the event list using the given function.

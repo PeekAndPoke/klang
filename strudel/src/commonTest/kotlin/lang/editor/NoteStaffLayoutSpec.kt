@@ -22,7 +22,7 @@ import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
  */
 class NoteStaffLayoutSpec : StringSpec() {
 
-    private fun parse(pattern: String) = parseMiniNotationMnPattern(pattern)!!
+    private fun parse(pattern: String) = parseMiniNotationMnPattern(pattern)
     private fun fullRange(pattern: String) = 0..pattern.length
     private fun layout(pattern: String) = NoteStaffLayout.buildLayoutItems(parse(pattern), fullRange(pattern))
     private fun layoutOf(p: MnPattern, text: String) = NoteStaffLayout.buildLayoutItems(p, fullRange(text))
@@ -196,7 +196,7 @@ class NoteStaffLayoutSpec : StringSpec() {
 
             // Open bracket → Sequential(group.id, 0) (insert at start of group)
             val openTarget =
-                targets.first { it.target is InsertTarget.Sequential && (it.target as InsertTarget.Sequential).parentId == group.id }
+                targets.first { it.target is InsertTarget.Sequential && it.target.parentId == group.id }
             (openTarget.target as InsertTarget.Sequential).index shouldBe 0
 
             // Close bracket → Sequential(p.id, 1) (insert after group in pattern)

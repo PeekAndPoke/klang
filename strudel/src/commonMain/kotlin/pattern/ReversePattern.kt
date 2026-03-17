@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.strudel.pattern
 
+import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.strudel.TimeSpan
-import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * Reverses the pattern within each cycle (or over multiple cycles based on n).

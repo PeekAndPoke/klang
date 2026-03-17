@@ -4,8 +4,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 import kotlinx.serialization.json.Json
 
 @Suppress("RegExpRedundantEscape")

@@ -2,14 +2,14 @@
 
 package io.peekandpoke.klang.strudel.lang.addons
 
+import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.TimeSpan
 import io.peekandpoke.klang.strudel._outerJoin
 import io.peekandpoke.klang.strudel._splitQueries
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
 
 /**
  * ADDONS: Tempo and timing functions that are NOT available in the original strudel impl

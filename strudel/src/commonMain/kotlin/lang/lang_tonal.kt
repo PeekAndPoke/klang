@@ -2,9 +2,9 @@
 
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 import io.peekandpoke.klang.strudel.pattern.BindPattern
 import io.peekandpoke.klang.strudel.pattern.ControlPattern

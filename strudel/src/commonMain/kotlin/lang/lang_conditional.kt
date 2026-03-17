@@ -2,12 +2,12 @@
 
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel._innerJoin
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.math.Rational
 import io.peekandpoke.klang.strudel.sampleAt
 
 /**

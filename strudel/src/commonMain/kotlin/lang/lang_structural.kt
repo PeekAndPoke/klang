@@ -2,6 +2,9 @@
 
 package io.peekandpoke.klang.strudel.lang
 
+import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.common.math.lcm
 import io.peekandpoke.klang.strudel.*
 import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
@@ -9,9 +12,6 @@ import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArg
 import io.peekandpoke.klang.strudel.lang.addons.not
 import io.peekandpoke.klang.strudel.lang.addons.timeLoop
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.math.Rational
-import io.peekandpoke.klang.strudel.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.math.lcm
 import io.peekandpoke.klang.strudel.pattern.*
 import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import kotlin.math.abs

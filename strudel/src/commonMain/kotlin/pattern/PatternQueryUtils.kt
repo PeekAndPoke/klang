@@ -2,9 +2,9 @@
 
 package io.peekandpoke.klang.strudel.pattern
 
+import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.strudel.StrudelPatternEvent
 import io.peekandpoke.klang.strudel.TimeSpan
-import io.peekandpoke.klang.strudel.math.Rational
 import kotlin.math.floor
 
 /**
