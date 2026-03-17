@@ -164,6 +164,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             extensions.add(
                 dslEditorExtension(
                     docProvider = { docContext.docProvider(it) },
+                    astIndexProvider = { docContext.lastAstIndex },
                     hoverPopup = hoverPopup,
                     popups = popups,
                     onNavigate = props.onNavigate ?: { _, _ -> },

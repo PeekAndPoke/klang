@@ -12,6 +12,7 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.klang.script.ast.AstIndex
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -34,6 +35,7 @@ import org.w3c.dom.Element
  */
 fun dslEditorExtension(
     docProvider: (String) -> KlangSymbol?,
+    astIndexProvider: () -> AstIndex? = { null },
     hoverPopup: KlangDocsHoverPopupCtrl,
     popups: PopupsManager,
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
@@ -134,8 +136,8 @@ fun dslEditorExtension(
     fun argInfoAt(event: dynamic, view: EditorView): CallArgInfo? {
         val source = view.state.doc.toString()
         val coords = jsObject<dynamic> { this.x = event.clientX; this.y = event.clientY }.unsafeCast<Coords>()
-        val pos = view.posAtCoords(coords)
-        return if (pos != null) findCallArgAt(source, pos, docProvider) else null
+        val pos = view.posAtCoords(coords) ?: return null
+        return findCallArgAtAst(astIndexProvider(), source, pos, docProvider)
     }
 
     fun makeToolContext(argInfo: CallArgInfo, view: EditorView): KlangUiToolContext {

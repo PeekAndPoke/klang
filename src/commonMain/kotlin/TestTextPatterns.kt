@@ -56,9 +56,9 @@ stack(                                                              ////////    
     [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]      //////// //////// ////////          ////////                  ////////
     [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
   >`)                                                                                          ////////          //////// ////////
-    .sound("tri").clip(0.33).hpf(600).warmth(0.5)                                                          ////////          //////// ////////
+    .sound("tri").clip(0.33).hpf(600).warmth(0.5)                                              ////////          //////// ////////
     .superimpose(x => x.transpose("<0 12 0 -12>/8"))                                           ////////          //////// ////////
-    .orbit(0).gain("0.2").pan(cosine2.range(0.3, 0.7).oneMinusValue().slow(32))                 ////////          //////// ////////
+    .orbit(0).gain("0.2").pan(cosine2.range(0.3, 0.7).oneMinusValue().slow(32))                ////////          //////// ////////
     .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)      
     .filterWhen(x => x >= 16) // .solo()                                                       ////////          ////////
   ,                                                                                            ////////          ////////
@@ -73,12 +73,12 @@ stack(                                                              ////////    
     .orbit(1).gain(1.0).pan(cosine2.slow(32).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")                                  ////////
     .superimpose(x => x.transpose("<0 12 0 -12>/8").bandf(sine.range(2000, 6000).slow(24)).bandq(1.2).gain(0.75))         ////////
     .detune(sine.range(0.05, 0.3).early(1.5).slow(12))                                                                    ////////
-    .filterWhen(x => x > 31.4 && x % 64 > 15.4) // .solo()                                                                                ////////
+    .filterWhen(x => x > 31.4 && x % 64 > 15.4) // .solo()                                                                ////////
   ,        
-  note("<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1@2 a1!2] [b1!2 c2!2]] [[d2 d2]!4 [c2 c2]!4] [[b1]!4 [a1 c2|a2|a1]!4]>")
-   .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.35).warmth(0.8).distort(1).postgain(0.3)
-    .adsr("0.01:0.1:0.5:0.15").tremolo("0.05:8::0:0").hpf("80").lpf(2000)
-    .filterWhen(x => x > 31.4 && x % 128 > 15.4)  //  .solo()                                                                                ////////
+  note("<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1 a1] [b1!2 c2!2]] [[d2 d2]!4 [c2 c2]!4] [[b1]!4 [a1]!3 [a1 d2]]>")
+   .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.5).warmth(0.8).distort(0.5).postgain(0.35)
+    .adsr("0.01:0.1:0.5:0.1").tremolo("0.1:8::0:0").hpf("80").lpf(2000)
+    .filterWhen(x => x > 31.4 && x % 128 > 15.4)  // .solo()                                                              
   , sound(`<
     [[bd:2,cr,cr] hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
     [[bd,hh]      hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [mt mt,sd]    [ht ht,oh]]

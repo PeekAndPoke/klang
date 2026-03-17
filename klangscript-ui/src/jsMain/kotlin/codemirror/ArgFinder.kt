@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.ui.codemirror
 
+import io.peekandpoke.klang.script.ast.AstIndex
 import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
@@ -12,7 +14,7 @@ import io.peekandpoke.klang.ui.KlangUiToolRegistry
  * @param symbol        The resolved KlangSymbol for that function.
  * @param paramIndex    Zero-based index of the argument the cursor is on.
  * @param paramName     Name of the corresponding parameter.
- * @param tools         Resolved ui tools for this param (name → tool), in declaration order.
+ * @param tools         Resolved ui tools for this param (name -> tool), in declaration order.
  * @param argFrom       Start offset in the source string (inclusive, whitespace-trimmed).
  * @param argTo         End offset in the source string (exclusive, whitespace-trimmed).
  * @param argText       Raw source text of the argument, trimmed of surrounding whitespace.
@@ -27,6 +29,15 @@ data class CallArgInfo(
     val argTo: Int,
     val argText: String,
 )
+
+/**
+ * Resolves the parameter for a given argument index, handling vararg params.
+ * If argIndex is beyond the param list and the last param is vararg, returns the last param.
+ */
+private fun resolveParam(callable: KlangCallable, argIndex: Int): KlangParam? {
+    return callable.params.getOrNull(argIndex)
+        ?: callable.params.lastOrNull()?.takeIf { it.isVararg }
+}
 
 /**
  * Finds the function-call argument at [pos] in [source] and returns tool information for it,
@@ -46,7 +57,7 @@ fun findCallArgAt(
 ): CallArgInfo? {
     if (pos <= 0 || source.isEmpty()) return null
 
-    // ── Step 1: find enclosing `(` by scanning backward ─────────────────────
+    // -- Step 1: find enclosing `(` by scanning backward --
 
     var depth = 0
     var openParen = -1
@@ -61,7 +72,7 @@ fun findCallArgAt(
                 }
                 depth--
             }
-            // Strings are not tracked backward — the cursor may be inside a string arg,
+            // Strings are not tracked backward -- the cursor may be inside a string arg,
             // so we just track paren depth and rely on the forward scan for accuracy.
         }
         i--
@@ -69,7 +80,7 @@ fun findCallArgAt(
 
     if (openParen < 0) return null
 
-    // ── Step 2: identifier immediately before `(` ────────────────────────────
+    // -- Step 2: identifier immediately before `(` --
 
     var j = openParen - 1
     while (j >= 0 && source[j].isWhitespace()) j--
@@ -79,11 +90,11 @@ fun findCallArgAt(
     if (nameStart >= nameEnd) return null
     val functionName = source.substring(nameStart, nameEnd)
 
-    // ── Step 3: resolve symbol ────────────────────────────────────────────────
+    // -- Step 3: resolve symbol --
 
     val symbol = docProvider(functionName) ?: return null
 
-    // ── Step 4: scan forward to find argument boundaries [from, to) ──────────
+    // -- Step 4: scan forward to find argument boundaries [from, to) --
 
     data class ArgBound(val from: Int, val to: Int)
 
@@ -124,7 +135,7 @@ fun findCallArgAt(
 
     if (argBounds.isEmpty()) return null
 
-    // ── Step 5: find which arg contains pos ──────────────────────────────────
+    // -- Step 5: find which arg contains pos --
 
     val argIndex = argBounds.indexOfFirst { b -> pos in b.from until b.to }
     if (argIndex < 0) return null
@@ -137,10 +148,10 @@ fun findCallArgAt(
     val argFrom = bound.from + leadingSpaces
     val argTo = argFrom + trimmed.length
 
-    // ── Step 6: match param + resolve tools ──────────────────────────────────
+    // -- Step 6: match param + resolve tools --
 
     val callable = symbol.variants.filterIsInstance<KlangCallable>().firstOrNull() ?: return null
-    val param = callable.params.getOrNull(argIndex) ?: return null
+    val param = resolveParam(callable, argIndex) ?: return null
     val tools = KlangUiToolRegistry.resolve(param.uitools)
     if (tools.isEmpty()) return null
 
@@ -148,6 +159,61 @@ fun findCallArgAt(
         functionName = functionName,
         symbol = symbol,
         paramIndex = argIndex,
+        paramName = param.name,
+        tools = tools,
+        argFrom = argFrom,
+        argTo = argTo,
+        argText = trimmed,
+    )
+}
+
+/**
+ * AST-based version of [findCallArgAt]. Uses a pre-built [AstIndex] to look up the deepest
+ * AST node at [pos] and walk up to the enclosing CallExpression.
+ *
+ * Falls back to the text-scanner [findCallArgAt] if [astIndex] is null (parse failed).
+ *
+ * Advantages over the text scanner:
+ * - Correct for nested calls: `foo(bar(1), 2)` correctly resolves inner vs outer
+ * - Handles strings with parens: `foo("hello (world)")` doesn't confuse the scanner
+ * - Handles multiline code and lambdas correctly
+ * - O(log n) lookup after one-time O(n) index build
+ */
+fun findCallArgAtAst(
+    astIndex: AstIndex?,
+    source: String,
+    pos: Int,
+    docProvider: (String) -> KlangSymbol?,
+): CallArgInfo? {
+    // Fall back to text scanner if no AST index available
+    if (astIndex == null) return findCallArgAt(source, pos, docProvider)
+
+    val result = astIndex.callArgAt(pos) ?: return null
+    if (result.argIndex < 0) return null
+
+    val symbol = docProvider(result.functionName) ?: return null
+    val callable = symbol.variants.filterIsInstance<KlangCallable>().firstOrNull() ?: return null
+    val param = resolveParam(callable, result.argIndex) ?: return null
+    val tools = KlangUiToolRegistry.resolve(param.uitools)
+    if (tools.isEmpty()) return null
+
+    // Extract trimmed arg text from source offsets
+    val rawSlice = if (result.argFrom < result.argTo && result.argTo <= source.length) {
+        source.substring(result.argFrom, result.argTo)
+    } else {
+        ""
+    }
+    val trimmed = rawSlice.trim()
+    if (trimmed.isEmpty()) return null
+
+    val leadingSpaces = rawSlice.indexOfFirst { !it.isWhitespace() }
+    val argFrom = result.argFrom + maxOf(0, leadingSpaces)
+    val argTo = argFrom + trimmed.length
+
+    return CallArgInfo(
+        functionName = result.functionName,
+        symbol = symbol,
+        paramIndex = result.argIndex,
         paramName = param.name,
         tools = tools,
         argFrom = argFrom,
