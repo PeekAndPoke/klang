@@ -197,9 +197,12 @@ fun findCallArgAtAst(
     val tools = KlangUiToolRegistry.resolve(param.uitools)
     if (tools.isEmpty()) return null
 
-    // Extract trimmed arg text from source offsets
-    val rawSlice = if (result.argFrom < result.argTo && result.argTo <= source.length) {
-        source.substring(result.argFrom, result.argTo)
+    // Use cursor node range (the actual node under the cursor, e.g., a StringLiteral)
+    // rather than the full argument range (which might include chained method calls)
+    val textFrom = result.cursorNodeFrom
+    val textTo = result.cursorNodeTo
+    val rawSlice = if (textFrom < textTo && textTo <= source.length) {
+        source.substring(textFrom, textTo)
     } else {
         ""
     }
@@ -207,7 +210,7 @@ fun findCallArgAtAst(
     if (trimmed.isEmpty()) return null
 
     val leadingSpaces = rawSlice.indexOfFirst { !it.isWhitespace() }
-    val argFrom = result.argFrom + maxOf(0, leadingSpaces)
+    val argFrom = textFrom + maxOf(0, leadingSpaces)
     val argTo = argFrom + trimmed.length
 
     return CallArgInfo(

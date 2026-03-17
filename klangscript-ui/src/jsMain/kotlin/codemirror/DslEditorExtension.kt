@@ -234,7 +234,7 @@ fun dslEditorExtension(
     var badgesShowTimer: dynamic = null
 
     /** The mouse X when the user first hovered the current param (for damped tracking). */
-    var badgeInitialMouseX: Double = 0.0
+    var badgeInitialMouseX = 0.0
 
     fun cancelBadgesShow() {
         if (badgesShowTimer != null) window.clearTimeout(badgesShowTimer.unsafeCast<Int>())
@@ -286,7 +286,7 @@ fun dslEditorExtension(
         // Dampen horizontal tracking: move at 50% of mouse offset from initial hover position
         val dampedX = badgeInitialMouseX + (mouseX - badgeInitialMouseX) * 0.5
         container.asDynamic().style.left = "${dampedX}px"
-        container.asDynamic().style.top = "${rect.top - 21}px"
+        container.asDynamic().style.top = "${rect.top - 25}px"
         container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
 

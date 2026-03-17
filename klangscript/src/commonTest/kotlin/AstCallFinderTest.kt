@@ -118,4 +118,13 @@ class AstCallFinderTest : StringSpec({
         result.functionName shouldBe "sound"
         result.argIndex shouldBe 0
     }
+
+    "cursor on receiver string walks up to outer call" {
+        // .adsr("...".slow(16)) — cursor on the string should resolve to adsr, arg 0
+        val src = "x.adsr(\"0.01:0.8\".slow(16))"
+        val pos = src.indexOf("0.01")
+        val result = findAt(src, pos).shouldNotBeNull()
+        result.functionName shouldBe "adsr"
+        result.argIndex shouldBe 0
+    }
 })

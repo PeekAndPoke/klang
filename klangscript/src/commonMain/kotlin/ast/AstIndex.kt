@@ -17,6 +17,12 @@ data class CallExpressionAtResult(
     val argument: Expression?,
     val argFrom: Int,
     val argTo: Int,
+    /** The deepest AST node at the cursor position (e.g., a StringLiteral inside a nested call). */
+    val cursorNode: AstNode? = null,
+    /** Start offset of the cursor node (may differ from argFrom when cursor is on a sub-expression). */
+    val cursorNodeFrom: Int = argFrom,
+    /** End offset of the cursor node. */
+    val cursorNodeTo: Int = argTo,
 )
 
 /**
@@ -63,6 +69,7 @@ class AstIndex private constructor(
      */
     fun callArgAt(pos: Int): CallExpressionAtResult? {
         val deepestNode = nodeAt(pos) ?: return null
+        val deepestRange = offsetMap[deepestNode]
 
         // Walk up from the deepest node to find an enclosing CallExpression
         var node: AstNode = deepestNode
@@ -83,6 +90,9 @@ class AstIndex private constructor(
                         argument = arg,
                         argFrom = argRange?.first ?: pos,
                         argTo = argRange?.let { it.last + 1 } ?: pos,
+                        cursorNode = deepestNode,
+                        cursorNodeFrom = deepestRange?.first ?: pos,
+                        cursorNodeTo = deepestRange?.let { it.last + 1 } ?: pos,
                     )
                 }
             }
@@ -160,10 +170,40 @@ private class IndexBuilder(
         val loc = node.location ?: return
         val start = loc.toStartOffset() ?: return
         val end = loc.toEndOffset() ?: return
-        if (start >= end) return // skip zero-width (e.g., CallExpression's paren-only location)
+        if (start >= end) {
+            // Zero-width location (e.g., CallExpression where location is just the opening paren).
+            // For CallExpressions, compute an effective range from callee start to location offset + 1.
+            // The full range gets refined in indexCallExpressionRange() after children are visited.
+            return
+        }
 
         offsets[node] = start until end
         positioned.add(AstIndex.PositionedEntry(node, level, start, end))
+    }
+
+    /**
+     * Computes an effective offset range for a CallExpression whose own location is zero-width.
+     * Uses the callee's start and the last argument's end (or the paren position) to cover the full span.
+     */
+    private fun indexCallExpressionRange(call: CallExpression, level: Int) {
+        if (call in offsets) return // already has a valid range from its own location
+
+        // Effective start: callee's start offset
+        val calleeRange = offsets[call.callee]
+        val start = calleeRange?.first ?: return
+
+        // Effective end: last argument's end, or the paren position + 1
+        val lastArgRange = call.arguments.lastOrNull()?.let { offsets[it] }
+        val parenEnd = call.location?.toEndOffset()
+        // Use the furthest end we can find, +1 to account for the closing paren
+        val end = maxOf(
+            lastArgRange?.let { it.last + 2 } ?: 0,  // +2: IntRange.last is inclusive, +1 for ')'
+            parenEnd?.let { it + 1 } ?: 0,
+        )
+        if (end <= start) return
+
+        offsets[call] = start until end
+        positioned.add(AstIndex.PositionedEntry(call, level, start, end))
     }
 
     fun visitStatements(stmts: List<Statement>, parent: AstNode, level: Int) {
@@ -207,6 +247,8 @@ private class IndexBuilder(
                 for (arg in expr.arguments) {
                     visitExpression(arg, expr, level + 1)
                 }
+                // Compute effective range for CallExpressions with zero-width locations
+                indexCallExpressionRange(expr, level)
             }
 
             is BinaryOperation -> {
