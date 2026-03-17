@@ -94,8 +94,11 @@ actual class Rational private constructor(
         /** Internal create that stays in BigInt-land */
         private fun createBI(numerator: dynamic, denominator: dynamic): Rational {
             if (bigIntEq(denominator, BI_ZERO)) {
-                return if (bigIntEq(numerator, BI_ZERO)) NaN
-                else of(if (bigIntGt(numerator, BI_ZERO)) BI_ONE else BI_NEG_ONE, BI_ZERO)
+                return if (bigIntEq(numerator, BI_ZERO)) {
+                    NaN
+                } else {
+                    of(if (bigIntGt(numerator, BI_ZERO)) BI_ONE else BI_NEG_ONE, BI_ZERO)
+                }
             }
             if (bigIntEq(numerator, BI_ZERO)) return ZERO
 
