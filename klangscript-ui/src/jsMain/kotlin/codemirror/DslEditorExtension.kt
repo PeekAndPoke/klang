@@ -229,6 +229,15 @@ fun dslEditorExtension(
     var badgeArgInfo: CallArgInfo? = null
 
     var badgesHideTimer: dynamic = null
+    var badgesShowTimer: dynamic = null
+
+    /** The mouse X when the user first hovered the current param (for damped tracking). */
+    var badgeInitialMouseX: Double = 0.0
+
+    fun cancelBadgesShow() {
+        if (badgesShowTimer != null) window.clearTimeout(badgesShowTimer.unsafeCast<Int>())
+        badgesShowTimer = null
+    }
 
     fun cancelBadgesClose() {
         if (badgesHideTimer != null) window.clearTimeout(badgesHideTimer.unsafeCast<Int>())
@@ -236,6 +245,7 @@ fun dslEditorExtension(
     }
 
     fun hideBadges() {
+        cancelBadgesShow()
         val container = badgeContainer
         if (container != null) container.asDynamic().style.display = "none"
         badgeCacheKey = null
@@ -271,8 +281,9 @@ fun dslEditorExtension(
         }
 
         val container = getOrCreateBadgeContainer()
-        // Center horizontally on mouse X, above the text line
-        container.asDynamic().style.left = "${mouseX}px"
+        // Dampen horizontal tracking: move at 50% of mouse offset from initial hover position
+        val dampedX = badgeInitialMouseX + (mouseX - badgeInitialMouseX) * 0.5
+        container.asDynamic().style.left = "${dampedX}px"
         container.asDynamic().style.top = "${rect.top - 21}px"
         container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
@@ -399,11 +410,25 @@ fun dslEditorExtension(
                 val argInfo = argInfoAt(event, view)
                 if (argInfo != null && argInfo.tools.isNotEmpty()) {
                     cancelBadgesClose()
-                    showBadges(argInfo, view, mouseX)
+                    val newKey = "${argInfo.argFrom}:${argInfo.tools.joinToString(",") { it.first }}"
+                    if (newKey == badgeCacheKey) {
+                        // Badge already visible for this arg — just update position
+                        showBadges(argInfo, view, mouseX)
+                    } else {
+                        // New arg — record initial mouse X and schedule badge after 500ms
+                        cancelBadgesShow()
+                        badgeInitialMouseX = mouseX
+                        badgesShowTimer = window.setTimeout({
+                            badgesShowTimer = null
+                            showBadges(argInfo, view, mouseX)
+                        }, 100)
+                    }
                 } else if (badgeArgInfo != null) {
                     // Mouse left the current param but badges are visible —
                     // keep them alive so the user can reach them.
+                    cancelBadgesShow()
                 } else {
+                    cancelBadgesShow()
                     scheduleBadgesClose()
                 }
             } catch (e: Throwable) {
@@ -419,6 +444,7 @@ fun dslEditorExtension(
         lastHoveredWord = null
         dispatchClear(view)
         hoverPopup.scheduleClose()
+        cancelBadgesShow()
         scheduleBadgesClose()
         false
     }

@@ -134,7 +134,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         val isDisabled = props.disabled
         val iconFn: SemanticIconFn = props.icon ?: semanticIcon { this }
         val iconColor = if (isDisabled) {
-            Color.grey
+            Color.dimGray
         } else {
             props.colors.getColor(smoothedValue)
         }

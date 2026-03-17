@@ -56,28 +56,29 @@ stack(                                                              ////////    
     [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]      //////// //////// ////////          ////////                  ////////
     [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
   >`)                                                                                          ////////          //////// ////////
-    .sound("tri").clip(0.33).hpf(600)                                                          ////////          //////// ////////
+    .sound("tri").clip(0.33).hpf(600).warmth(0.5)                                                          ////////          //////// ////////
     .superimpose(x => x.transpose("<0 12 0 -12>/8"))                                           ////////          //////// ////////
-    .orbit(0).gain(0.22).pan(cosine2.range(0.3, 0.7).oneMinusValue().slow(64))                 ////////          //////// ////////
-    .delay(0.3).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)      
+    .orbit(0).gain("0.2").pan(cosine2.range(0.3, 0.7).oneMinusValue().slow(32))                 ////////          //////// ////////
+    .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)      
     .filterWhen(x => x >= 16) // .solo()                                                       ////////          ////////
   ,                                                                                            ////////          ////////
   note(`<                                                                                      ////////          ////////
     [[e2 e3]*4]                   [[a2 a3]*4]                                                  ////////          ////////
-    [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5|a5|a5|e5]]                                           
+    [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5|a5|a5|e5]]                                          
                                                                                                         //////// //////// ////////
     [[d2 d3]*4]                   [[c2 c3]*4]                                                           //////// //////// ////////
     [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5|a5|a5|e5 a4] [a2 a3]]                     //////// //////// ////////
   >`)                                                                                                   //////// //////// ////////
-    .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.5)                       
-    .orbit(1).gain(1.0).pan(cosine2.slow(64).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")                                  ////////
+    .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.5)                      
+    .orbit(1).gain(1.0).pan(cosine2.slow(32).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")                                  ////////
     .superimpose(x => x.transpose("<0 12 0 -12>/8").bandf(sine.range(2000, 6000).slow(24)).bandq(1.2).gain(0.75))         ////////
     .detune(sine.range(0.05, 0.3).early(1.5).slow(12))                                                                    ////////
-    .filterWhen(x => x >= 31.4) // .solo()                                                                                ////////
+    .filterWhen(x => x > 31.4 && x % 64 > 15.4) // .solo()                                                                                ////////
   ,        
-  note("<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1@2 a1!2] [b1!2 c2!2]] [[d2 d2]!4 [c2 c2]!4] [[b1 g#1]!2 [a1 g#1]!2]>")
-   .slow(2).orbit(2).clip(0.25).adsr("0.02:0.2:0.6:0.2").tremolo("0.1:8::0:0").warmth(0.2).gain("0.7").hpf("100").lpf(2000)
-    .filterWhen(x => x >= 31.4) // .solo()                                                                                ////////
+  note("<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1@2 a1!2] [b1!2 c2!2]] [[d2 d2]!4 [c2 c2]!4] [[b1]!4 [a1 c2|a2|a1]!4]>")
+   .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.35).warmth(0.8).distort(1).postgain(0.3)
+    .adsr("0.01:0.1:0.5:0.15").tremolo("0.05:8::0:0").hpf("80").lpf(2000)
+    .filterWhen(x => x > 31.4 && x % 128 > 15.4)  //  .solo()                                                                                ////////
   , sound(`<
     [[bd:2,cr,cr] hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
     [[bd,hh]      hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [mt mt,sd]    [ht ht,oh]]
@@ -92,12 +93,13 @@ stack(                                                              ////////    
     .orbit(3).gain("0.8".add(berlin.range(-0.1, 0.0).fast(16))).adsr("0.01:0.2:0.8:0.5")
     .fast(2) // .solo()
   ,
-).room(0.1).rsize(2.0).compressor("-6:1.2:8:0.03:0.2")
-    
-    
-    
-    
-    """.trimIndent()
+).room(0.1).rsize(1.0).compressor("-6:1.2:8:0.03:0.2")
+
+
+
+
+
+        """.trimIndent()
 
     val strangerThingsNetflix = """
 import * from "stdlib"
@@ -157,7 +159,7 @@ stack(
 import * from "stdlib"
 import * from "strudel"
 
-let tp = "[0 -1 -3 -5 -7  1  3  5]/16".slow(32) // <---- transposition ... wait for it ... or change it ...
+let tp = "[0 -1 -3 -5 -6  -2  1  3]/16".slow(32) // <---- transposition ... wait for it ... or change it ...
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").orbit(6).fast(2).transpose(tp)
@@ -197,10 +199,6 @@ stack( // Gitarre! -------------------------------------------------------------
     .adsr("0.01:0.2:0.8:0.5").gain("0.95".add(berlin2.range(-0.05, 0.0).segment(8)).slow(4)) // .solo()
 ).room(0.02).rsize(3.0).compressor("-10:2:10:0.02:0.25") /*
 
- 
- 
- 
- 
  
  
  
