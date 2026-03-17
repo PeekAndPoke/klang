@@ -106,7 +106,11 @@ actual class Rational private constructor(
             val n = bigIntDiv(numerator, common)
             val d = bigIntDiv(denominator, common)
 
-            return if (bigIntLt(d, BI_ZERO)) of(bigIntNeg(n), bigIntNeg(d)) else of(n, d)
+            return if (bigIntLt(d, BI_ZERO)) {
+                of(bigIntNeg(n), bigIntNeg(d))
+            } else {
+                of(n, d)
+            }
         }
 
         actual fun Number.toRational(): Rational = invoke(this.toDouble())
@@ -216,6 +220,7 @@ actual class Rational private constructor(
 
     actual operator fun times(other: Rational): Rational {
         if (isNaN || other.isNaN) return NaN
+
         if (isInfinite || other.isInfinite) {
             if (this == ZERO || other == ZERO) return NaN
             val thisSign = bigIntSign(n)
@@ -228,6 +233,7 @@ actual class Rational private constructor(
 
     actual operator fun div(other: Rational): Rational {
         if (isNaN || other.isNaN) return NaN
+
         if (bigIntEq(other.n, BI_ZERO)) {
             return if (bigIntEq(n, BI_ZERO)) {
                 NaN
@@ -284,7 +290,13 @@ actual class Rational private constructor(
 
     actual fun toDouble(): Double {
         if (isNaN) return Double.NaN
-        if (isInfinite) return if (bigIntGt(n, BI_ZERO)) Double.POSITIVE_INFINITY else Double.NEGATIVE_INFINITY
+
+        if (isInfinite) return if (bigIntGt(n, BI_ZERO)) {
+            Double.POSITIVE_INFINITY
+        } else {
+            Double.NEGATIVE_INFINITY
+        }
+
         return bigIntToDouble(n) / bigIntToDouble(d)
     }
 
@@ -301,6 +313,7 @@ actual class Rational private constructor(
     actual fun toFractionString(): String {
         if (isNaN) return "NaN"
         if (isInfinite) return if (bigIntGt(n, BI_ZERO)) "Infinity" else "-Infinity"
+
         return "$n/$d"
     }
 
@@ -308,7 +321,12 @@ actual class Rational private constructor(
 
     actual fun abs(): Rational {
         if (isNaN) return NaN
-        return if (bigIntLt(n, BI_ZERO)) of(bigIntNeg(n), d) else this
+
+        return if (bigIntLt(n, BI_ZERO)) {
+            of(bigIntNeg(n), d)
+        } else {
+            this
+        }
     }
 
     actual fun floor(): Rational {
@@ -317,7 +335,12 @@ actual class Rational private constructor(
 
         val res = bigIntDiv(n, d)
         val exact = bigIntEq(bigIntRem(n, d), BI_ZERO)
-        return if (bigIntGte(n, BI_ZERO) || exact) of(res, BI_ONE) else of(bigIntAdd(res, BI_NEG_ONE), BI_ONE)
+
+        return if (bigIntGte(n, BI_ZERO) || exact) {
+            of(res, BI_ONE)
+        } else {
+            of(bigIntAdd(res, BI_NEG_ONE), BI_ONE)
+        }
     }
 
     actual fun ceil(): Rational {
@@ -326,7 +349,12 @@ actual class Rational private constructor(
 
         val res = bigIntDiv(n, d)
         val exact = bigIntEq(bigIntRem(n, d), BI_ZERO)
-        return if (!bigIntGt(n, BI_ZERO) || exact) of(res, BI_ONE) else of(bigIntAdd(res, BI_ONE), BI_ONE)
+
+        return if (!bigIntGt(n, BI_ZERO) || exact) {
+            of(res, BI_ONE)
+        } else {
+            of(bigIntAdd(res, BI_ONE), BI_ONE)
+        }
     }
 
     actual fun frac(): Rational {
@@ -344,19 +372,26 @@ actual class Rational private constructor(
 
         val roundedAbs = if (frac >= HALF) floor + ONE else floor
 
-        return if (bigIntLt(n, BI_ZERO)) -roundedAbs else roundedAbs
+        return if (bigIntLt(n, BI_ZERO)) {
+            -roundedAbs
+        } else {
+            roundedAbs
+        }
     }
 
     actual fun exp(): Rational {
         if (isNaN) return NaN
         val result = kotlin.math.exp(toDouble())
+
         if (result.isNaN() || result.isInfinite()) return NaN
+
         return Rational(result)
     }
 
     actual fun pow(exponent: Rational): Rational {
         val result = toDouble().pow(exponent.toDouble())
         if (result.isNaN() || result.isInfinite()) return NaN
+
         return Rational(result)
     }
 

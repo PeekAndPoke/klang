@@ -31,46 +31,33 @@ class ContinuousPattern private constructor(
 
     override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
 
-        val fromD = from.toDouble()
-        val toD = to.toDouble()
-
         val value = getValue(
             min = ctx.getOrDefault(minKey, 0.0),
             max = ctx.getOrDefault(maxKey, 1.0),
-            from = fromD,
-            to = toD,
+            from = from.toDouble(),
+            to = to.toDouble(),
             ctx = ctx
         ).asVoiceValue()
 
-        // Fast path: single span (covers segment(1) and most typical queries)
-        if (toD - fromD <= 1.0) {
-            val span = TimeSpan(begin = from, end = to)
-            return listOf(
-                StrudelPatternEvent(
-                    part = span,
-                    whole = span,
-                    data = StrudelVoiceData.empty.copy(value = value)
-                )
-            )
-        }
-
-        // Multi-cycle path: step by 1 cycle at a time
+        // Make sure we do not run into an infinite loop
+        val granularity = 1.0
         val result = createEventList()
         var currentFrom = from
 
         while (to > currentFrom) {
-            val nextFrom = minOf(to, currentFrom + Rational.ONE)
+            val nextFrom = minOf(to, currentFrom + granularity)
 
             val span = TimeSpan(begin = currentFrom, end = nextFrom)
 
-            result.add(
-                StrudelPatternEvent(
-                    part = span,
-                    whole = span,
-                    data = StrudelVoiceData.empty.copy(value = value)
-                )
+            val event = StrudelPatternEvent(
+                part = span,
+                whole = span,
+                data = StrudelVoiceData.empty.copy(value = value)
             )
 
+            result.add(event)
+
+            // go ahead
             currentFrom = nextFrom
         }
 
