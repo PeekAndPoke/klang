@@ -20,76 +20,81 @@ package io.peekandpoke.klang.script.ast
  * 2. The specific string parameter
  * 3. The specific atom being played
  *
- * @property locations List of locations from outermost (call site) to innermost (atom)
+ * Backed by an Array for minimal allocation on prepend/append (the hot path).
  */
-data class SourceLocationChain(
-    val locations: List<SourceLocation>,
+class SourceLocationChain private constructor(
+    private val items: Array<SourceLocation>,
 ) {
     companion object {
-        /**
-         * Create a chain from a single location
-         */
-        fun single(location: SourceLocation): SourceLocationChain =
-            SourceLocationChain(listOf(location))
+        private val emptyArray = emptyArray<SourceLocation>()
 
-        /**
-         * Create an empty chain (no location information)
-         */
-        val empty: SourceLocationChain = SourceLocationChain(emptyList())
+        fun single(location: SourceLocation): SourceLocationChain =
+            SourceLocationChain(arrayOf(location))
+
+        val empty: SourceLocationChain = SourceLocationChain(emptyArray)
+
+        fun of(locations: List<SourceLocation>): SourceLocationChain =
+            if (locations.isEmpty()) empty else SourceLocationChain(locations.toTypedArray())
+
+        private fun Array<SourceLocation>.concat(other: Array<SourceLocation>): Array<SourceLocation> =
+            Array(size + other.size) { i -> if (i < size) this[i] else other[i - size] }
+
+        private fun Array<SourceLocation>.concat(other: List<SourceLocation>): Array<SourceLocation> =
+            Array(size + other.size) { i -> if (i < size) this[i] else other[i - size] }
+
+        private fun List<SourceLocation>.concat(other: Array<SourceLocation>): Array<SourceLocation> =
+            Array(size + other.size) { i -> if (i < size) this[i] else other[i - size] }
     }
 
-    /**
-     * Add a location to the end of the chain (innermost position)
-     */
+    val locations: List<SourceLocation> get() = items.asList()
+
+    /** Add a location to the end of the chain (innermost position) */
     fun append(location: SourceLocation): SourceLocationChain =
-        SourceLocationChain(locations + location)
+        SourceLocationChain(items.concat(arrayOf(location)))
 
-    /**
-     * Add a list of locations to the end of the chain
-     */
-    fun append(locations: List<SourceLocation>): SourceLocationChain =
-        SourceLocationChain(this.locations + locations)
+    /** Add a list of locations to the end of the chain */
+    fun append(locations: List<SourceLocation>): SourceLocationChain {
+        if (locations.isEmpty()) return this
+        return SourceLocationChain(items.concat(locations))
+    }
 
-    /**
-     * Add a location to the beginning of the chain (outermost position)
-     */
+    /** Add a location to the beginning of the chain (outermost position) */
     fun prepend(location: SourceLocation): SourceLocationChain =
-        SourceLocationChain(listOf(location) + locations)
+        SourceLocationChain(arrayOf(location).concat(items))
 
-    /**
-     * Add a list of locations to the beginning of the chain
-     */
-    fun prepend(locations: List<SourceLocation>): SourceLocationChain =
-        SourceLocationChain(locations + this.locations)
+    /** Add a list of locations to the beginning of the chain */
+    fun prepend(locations: List<SourceLocation>): SourceLocationChain {
+        if (locations.isEmpty()) return this
+        return SourceLocationChain(locations.concat(items))
+    }
 
-    /**
-     * Combine two chains
-     */
-    fun plus(other: SourceLocationChain): SourceLocationChain =
-        SourceLocationChain(locations + other.locations)
+    /** Combine two chains */
+    fun plus(other: SourceLocationChain): SourceLocationChain {
+        if (other.items.isEmpty()) return this
+        if (items.isEmpty()) return other
+        return SourceLocationChain(items.concat(other.items))
+    }
 
-    /**
-     * Get the outermost (call site) location
-     */
-    val outermost: SourceLocation? get() = locations.firstOrNull()
+    /** Get the outermost (call site) location */
+    val outermost: SourceLocation? get() = items.firstOrNull()
 
-    /**
-     * Get the innermost (most specific) location
-     */
-    val innermost: SourceLocation? get() = locations.lastOrNull()
+    /** Get the innermost (most specific) location */
+    val innermost: SourceLocation? get() = items.lastOrNull()
 
-    /**
-     * Check if the chain is empty
-     */
-    val isEmpty: Boolean get() = locations.isEmpty()
+    val isEmpty: Boolean get() = items.isEmpty()
 
-    /**
-     * Check if the chain has any locations
-     */
-    val isNotEmpty: Boolean get() = locations.isNotEmpty()
+    val isNotEmpty: Boolean get() = items.isNotEmpty()
 
     override fun toString(): String {
         if (isEmpty) return "SourceLocationChain(empty)"
-        return "SourceLocationChain(${locations.joinToString(" -> ")})"
+        return "SourceLocationChain(${items.joinToString(" -> ")})"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is SourceLocationChain) return false
+        return items.contentEquals(other.items)
+    }
+
+    override fun hashCode(): Int = items.contentHashCode()
 }

@@ -19,7 +19,7 @@ var strudelLangRandomInit = false
 // -- Helpers ----------------------------------------------------------------------------------------------------------
 
 fun applyRandomSeed(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val seed = args.getOrNull(0)?.value?.asLongOrNull()
+    val seed = args.getOrNull(0)?.value?.asIntOrNull()
 
     return ContextModifierPattern(source = pattern) {
         if (seed != null) {

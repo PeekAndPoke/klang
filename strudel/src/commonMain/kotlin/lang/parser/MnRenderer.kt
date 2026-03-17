@@ -95,5 +95,5 @@ object MnRenderer {
      * E.g. `2.0` → `"2"`, `0.5` → `"0.5"`.
      */
     private fun renderNumber(d: Double): String =
-        if (d == kotlin.math.floor(d) && !d.isInfinite()) d.toLong().toString() else d.toString()
+        if (d == kotlin.math.floor(d) && !d.isInfinite()) d.toInt().toString() else d.toString()
 }

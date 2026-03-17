@@ -104,7 +104,7 @@ private fun extractKey(data: StrudelVoiceData): String {
         null -> ""
         is StrudelVoiceValue -> value.asString
         is String -> value
-        is Int, is Long, is Double, is Float -> value.toString()
+        is Number -> value.toString()
         else -> value.toString()
     }
 }

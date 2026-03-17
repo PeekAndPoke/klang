@@ -66,7 +66,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     // True when editor code differs from original props (for reset button)
     private val isModifiedFromOriginal get() = currentCode != props.code
 
-    private var currentCycle: Long by value(0)
+    private var currentCycle: Int by value(0)
 
     private val laf by subscribingTo(KlangTheme)
     private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })

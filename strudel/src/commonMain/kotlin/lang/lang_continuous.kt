@@ -945,7 +945,7 @@ val square2 by dslObject { square2Base }
 // -- perlin / perlin2 -------------------------------------------------------------------------------------------------
 
 private fun createPerlin(): StrudelPattern {
-    val cache = mutableMapOf<Long?, PerlinNoise>()
+    val cache = mutableMapOf<Int?, PerlinNoise>()
 
     return ContinuousPattern { from, _, ctx ->
         val seedKey = ctx.getOrNull(QueryContext.randomSeedKey)
@@ -997,7 +997,7 @@ val perlin2 by dslObject { createPerlin().toBipolar() }
 // -- berlin / berlin2 -------------------------------------------------------------------------------------------------
 
 private fun createBerlin(): StrudelPattern {
-    val cache = mutableMapOf<Long?, BerlinNoise>()
+    val cache = mutableMapOf<Int?, BerlinNoise>()
 
     return ContinuousPattern { from, _, ctx ->
         val seedKey = ctx.getOrNull(QueryContext.randomSeedKey)

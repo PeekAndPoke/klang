@@ -6,14 +6,16 @@ import io.kotest.matchers.shouldBe
 class LangWChooseCyclesSpec : StringSpec({
 
     "wchooseCycles works" {
-        val p = wchooseCycles(listOf("a", 1), listOf("b", 0)).seed(123)
+        // Extension form: "a" is the base pattern (weight 1.0), "b" weight 0 → always picks "a"
+        val p = "a".wchooseCycles(listOf("b", 0)).seed(123)
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
         events[0].data.value?.asString shouldBe "a"
     }
 
     "wrandcat alias works" {
-        val p = wrandcat(listOf("a", 1), listOf("b", 0)).seed(123)
+        // Extension form: "a" is the base pattern (weight 1.0), "b" weight 0 → always picks "a"
+        val p = "a".wrandcat(listOf("b", 0)).seed(123)
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
         events[0].data.value?.asString shouldBe "a"

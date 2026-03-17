@@ -138,13 +138,6 @@ internal fun Any.asIntOrNull(): Int? = when (this) {
 }
 
 /** Safely convert any value to a long or null */
-internal fun Any.asLongOrNull(): Long? = when (this) {
-    is Rational -> this.toLong()
-    is Number -> this.toLong()
-    is String -> this.toDoubleOrNull()?.toLong()
-    is StrudelVoiceValue -> this.asInt?.toLong()
-    else -> null
-}
 
 // --- High Level Helpers ---
 

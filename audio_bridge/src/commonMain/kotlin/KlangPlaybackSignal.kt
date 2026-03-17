@@ -50,7 +50,7 @@ sealed class KlangPlaybackSignal {
      * @param atTimeSec Wall-clock boundary time in seconds (from KlangTime epoch), with latency offset applied.
      */
     data class CycleCompleted(
-        val cycleIndex: Long,
+        val cycleIndex: Int,
         val atTimeSec: Double,
     ) : KlangPlaybackSignal()
 

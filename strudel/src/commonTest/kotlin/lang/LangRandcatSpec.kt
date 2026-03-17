@@ -12,8 +12,8 @@ class LangRandcatSpec : StringSpec({
     }
 
     "randcat works as pattern extension" {
-        // n("a").randcat("b") -> choice between a and b
-        val p = n("a").randcat("b").seed(123)
+        // seq("a").randcat("b") -> choice between a and b
+        val p = seq("a").randcat("b").seed(123)
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
         events[0].data.value?.asString shouldBeIn listOf("a", "b")

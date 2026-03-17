@@ -58,10 +58,10 @@ internal class StrudelPlaybackController(
 
     // ===== Autonomous Progression =====
     private var startTimeMs = 0.0
-    private var localFrameCounter = 0L
+    private var localFrameCounter = 0
 
     // ===== Cycle Tracking (for CycleCompleted signal) =====
-    private var lastEmittedCycle = -1L
+    private var lastEmittedCycle = -1
 
     // ===== Resources =====
     private val klangTime = KlangTime.create()
@@ -232,7 +232,7 @@ internal class StrudelPlaybackController(
         // Reset state
         queryCursorCycles = 0.0
         sampleSoundLookAheadPointer = 0.0
-        lastEmittedCycle = -1L
+        lastEmittedCycle = -1
 
         // ===== PRELOAD PHASE =====
         preloadSamples(prefetchCycles)
@@ -275,7 +275,7 @@ internal class StrudelPlaybackController(
     private fun updateLocalFrameCounter() {
         val elapsedMs = klangTime.internalMsNow() - startTimeMs
         val elapsedSec = elapsedMs / 1000.0
-        localFrameCounter = (elapsedSec * playerOptions.sampleRate).toLong()
+        localFrameCounter = (elapsedSec * playerOptions.sampleRate).toInt()
     }
 
     /**
@@ -288,7 +288,7 @@ internal class StrudelPlaybackController(
 
         val elapsedMs = klangTime.internalMsNow() - startTimeMs
         val elapsedSec = elapsedMs / 1000.0
-        val completedCycle = floor(elapsedSec / secPerCycle).toLong() - 1
+        val completedCycle = floor(elapsedSec / secPerCycle).toInt() - 1
 
         if (completedCycle > lastEmittedCycle) {
             // Emit all missing cycles in order
