@@ -427,8 +427,10 @@ fun dslEditorExtension(
                     }
                 } else if (badgeArgInfo != null) {
                     // Mouse left the current param but badges are visible —
-                    // keep them alive so the user can reach them.
+                    // schedule close so they don't linger, but with enough
+                    // delay that the user can still reach them.
                     cancelBadgesShow()
+                    scheduleBadgesClose()
                 } else {
                     cancelBadgesShow()
                     scheduleBadgesClose()
