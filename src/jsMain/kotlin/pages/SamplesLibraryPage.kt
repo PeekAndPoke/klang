@@ -13,9 +13,9 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.Player
+import io.peekandpoke.klang.audio_engine.playOnce
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.playStrudelOnce
 import kotlinx.css.*
 import kotlinx.html.*
 import org.w3c.dom.HTMLInputElement
@@ -121,7 +121,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
         lastStrudelCode = buildStrudelCodeString(sound, effectiveIndex, bank)
 
         // Play once for 1 cycle
-        val playback = player.playStrudelOnce(pattern, cycles = 1)
+        val playback = player.playOnce(pattern, cycles = 1)
         playback.start()
     }
 

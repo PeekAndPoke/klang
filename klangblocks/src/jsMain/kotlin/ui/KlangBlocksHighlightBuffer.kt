@@ -2,7 +2,7 @@ package io.peekandpoke.klang.blocks.ui
 
 import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.blocks.model.CodeGenResult
-import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.common.SourceLocation
 import kotlinx.browser.window
 
 /**

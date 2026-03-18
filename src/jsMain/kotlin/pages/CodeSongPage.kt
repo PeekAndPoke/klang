@@ -25,22 +25,21 @@ import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
 import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.fs
-import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.ast.SourceLocationChain
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.strudelLib
-import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
@@ -103,7 +102,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     @Suppress("unused")
     private val laf by subscribingTo(KlangTheme)
     private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
-    private var playback: StrudelPlayback? by value(null)
+    private var playback: KlangCyclicPlayback? by value(null)
     private val isPlaying get() = playback != null
 
     private val codeEditorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
@@ -239,7 +238,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private fun scheduleVoiceHighlights(voiceEvent: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
         codeHighlightBuffer.scheduleHighlight(voiceEvent)
-        val chain = voiceEvent.sourceLocations as? SourceLocationChain ?: return
+        val chain = voiceEvent.sourceLocations ?: return
         val now = Date.now()
         val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
         val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
@@ -261,7 +260,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             val pattern = StrudelPattern.compileRaw(code)
                                 ?: error("Failed to compile Strudel pattern from code")
 
-                            playback = p.playStrudel(pattern)
+                            playback = p.play(pattern)
 
                             playback?.signals?.invoke { signal ->
                                 when (signal) {
@@ -285,7 +284,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             }
 
                             playback?.start(
-                                StrudelPlayback.Options(cyclesPerSecond = cps)
+                                KlangCyclicPlayback.Options(cyclesPerSecond = cps)
                             )
                         }
                     }

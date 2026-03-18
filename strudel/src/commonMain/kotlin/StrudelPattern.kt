@@ -4,6 +4,8 @@ package io.peekandpoke.klang.strudel
 
 import de.peekandpoke.ultra.common.datetime.Kronos
 import de.peekandpoke.ultra.common.datetime.MpInstant
+import io.peekandpoke.klang.audio_bridge.KlangPattern
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.script.klangScript
@@ -17,8 +19,12 @@ import kotlin.random.Random
 
 /**
  * Strudel pattern.
+ *
+ * Implements [KlangPattern] to participate in cross-pattern composition.
+ * The [queryEvents] default implementation bridges from strudel's Rational-based [queryArc] API
+ * to the generic cycle-based API, handling onset filtering and sorting.
  */
-interface StrudelPattern {
+interface StrudelPattern : KlangPattern {
     companion object {
         /** Small epsilon value for point queries (sampling control patterns at a specific time) */
         val QUERY_EPSILON = 1e-6.toRational()
@@ -274,6 +280,17 @@ interface StrudelPattern {
      */
     fun queryArcContextual(from: Double, to: Double, ctx: QueryContext): List<StrudelPatternEvent> =
         queryArcContextual(from = from.toRational(), to = to.toRational(), ctx = ctx)
+
+    /**
+     * KlangPattern bridge: converts strudel's Rational-based queryArc to the generic cycle-based API.
+     * Handles onset filtering and sorting.
+     */
+    override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+        val ctx = QueryContext { set(QueryContext.cpsKey, cps) }
+        return queryArcContextual(Rational(fromCycles), Rational(toCycles), ctx)
+            .filter { it.isOnset }
+            .sortedBy { it.part.begin }
+    }
 }
 
 /**

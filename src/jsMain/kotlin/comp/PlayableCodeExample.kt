@@ -17,14 +17,14 @@ import de.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.strudelLib
-import io.peekandpoke.klang.strudel.playStrudel
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -51,7 +51,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private var playback: StrudelPlayback? by value(null)
+    private var playback: KlangCyclicPlayback? by value(null)
     private val isPlaying get() = playback != null
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
@@ -135,7 +135,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         val player = getPlayer()
                         console.log("PlayableCodeExample: Starting new playback...")
 
-                        playback = player.playStrudel(pattern)
+                        playback = player.play(pattern)
                         playback?.start()
 
                         // Mark code as playing

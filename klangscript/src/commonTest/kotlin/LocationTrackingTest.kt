@@ -245,8 +245,8 @@ class LocationTrackingTest : StringSpec({
 
     "Multiple string literals have different locations" {
         val engine = klangScript {
-            var firstLocation: io.peekandpoke.klang.script.ast.SourceLocation? = null
-            var secondLocation: io.peekandpoke.klang.script.ast.SourceLocation? = null
+            var firstLocation: io.peekandpoke.klang.common.SourceLocation? = null
+            var secondLocation: io.peekandpoke.klang.common.SourceLocation? = null
 
             registerFunctionRaw("captureFirst") { args, _ ->
                 val stringValue = args[0] as? StringValue

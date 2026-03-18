@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.comp
 
 import de.peekandpoke.kraft.components.ComponentRef
-import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.ast.SourceLocationAware
+import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.SourceLocationAware
 import io.peekandpoke.klang.script.runtime.KlangScriptError
 import io.peekandpoke.klang.ui.codemirror.EditorError
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp

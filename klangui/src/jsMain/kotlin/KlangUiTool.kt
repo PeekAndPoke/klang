@@ -5,7 +5,7 @@ import de.peekandpoke.ultra.common.TypedKey
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.html.FlowContent
 

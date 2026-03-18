@@ -1,35 +1,35 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.audio_engine
 
 import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.klang.audio_bridge.KlangPattern
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
-import io.peekandpoke.klang.strudel.lang.filterWhen
 
 /**
- * One-shot Strudel playback that stops automatically after a specified number of cycles.
+ * One-shot playback that stops automatically after a specified number of cycles.
  * Useful for sample previews, auditioning, and other finite-length playback scenarios.
  *
  * @param cyclesToPlay Number of cycles to play before stopping (default: 1)
  */
-internal class OneShotStrudelPlayback internal constructor(
+internal class OneShotPlayback internal constructor(
     override val playbackId: String,
-    pattern: StrudelPattern,
+    pattern: KlangPattern,
     context: KlangPlaybackContext,
     private val cyclesToPlay: Int = 1,
     onStarted: () -> Unit = {},
     onStopped: () -> Unit = {},
-) : StrudelPlayback {
+) : KlangCyclicPlayback {
 
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
 
     override val signals: Stream<KlangPlaybackSignal> = _signals.readonly
 
     // Wrap the pattern to only return events within the target cycle range
-    private val limitedPattern = pattern.filterWhen { it < cyclesToPlay }
+    private val limitedPattern = CycleLimitedPattern(pattern, cyclesToPlay)
 
-    private val controller = StrudelPlaybackController(
+    private val controller = KlangPlaybackController(
         playbackId = playbackId,
         pattern = limitedPattern,
         context = context,
@@ -47,7 +47,7 @@ internal class OneShotStrudelPlayback internal constructor(
         }
     }
 
-    override fun updatePattern(pattern: StrudelPattern) {
+    override fun updatePattern(pattern: KlangPattern) {
         controller.updatePattern(pattern)
     }
 
@@ -60,10 +60,10 @@ internal class OneShotStrudelPlayback internal constructor(
     }
 
     override fun start() {
-        start(StrudelPlayback.Options())
+        start(KlangCyclicPlayback.Options())
     }
 
-    override fun start(options: StrudelPlayback.Options) {
+    override fun start(options: KlangCyclicPlayback.Options) {
         controller.start(options.copy(prefetchCycles = cyclesToPlay))
     }
 
@@ -74,5 +74,22 @@ internal class OneShotStrudelPlayback internal constructor(
 
     override fun handleFeedback(feedback: KlangCommLink.Feedback) {
         controller.handleFeedback(feedback)
+    }
+}
+
+/**
+ * A pattern wrapper that filters out events beyond a cycle limit.
+ * Generic replacement for strudel's `filterWhen` DSL method.
+ */
+private class CycleLimitedPattern(
+    private val inner: KlangPattern,
+    private val maxCycles: Int,
+) : KlangPattern {
+    override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
+        if (fromCycles >= maxCycles) {
+            return emptyList()
+        }
+        val clampedTo = toCycles.coerceAtMost(maxCycles.toDouble())
+        return inner.queryEvents(fromCycles, clampedTo, cps)
     }
 }

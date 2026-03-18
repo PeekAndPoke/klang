@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.script.ast
+package io.peekandpoke.klang.common
 
 /**
  * A chain of source locations tracking transformation path
@@ -33,8 +33,13 @@ class SourceLocationChain private constructor(
 
         val empty: SourceLocationChain = SourceLocationChain(emptyArray)
 
-        fun of(locations: List<SourceLocation>): SourceLocationChain =
-            if (locations.isEmpty()) empty else SourceLocationChain(locations.toTypedArray())
+        fun of(locations: List<SourceLocation>): SourceLocationChain {
+            return if (locations.isEmpty()) {
+                empty
+            } else {
+                SourceLocationChain(locations.toTypedArray())
+            }
+        }
 
         private fun Array<SourceLocation>.concat(other: Array<SourceLocation>): Array<SourceLocation> =
             Array(size + other.size) { i -> if (i < size) this[i] else other[i - size] }
@@ -54,7 +59,9 @@ class SourceLocationChain private constructor(
 
     /** Add a list of locations to the end of the chain */
     fun append(locations: List<SourceLocation>): SourceLocationChain {
-        if (locations.isEmpty()) return this
+        if (locations.isEmpty()) {
+            return this
+        }
         return SourceLocationChain(items.concat(locations))
     }
 
@@ -64,14 +71,20 @@ class SourceLocationChain private constructor(
 
     /** Add a list of locations to the beginning of the chain */
     fun prepend(locations: List<SourceLocation>): SourceLocationChain {
-        if (locations.isEmpty()) return this
+        if (locations.isEmpty()) {
+            return this
+        }
         return SourceLocationChain(locations.concat(items))
     }
 
     /** Combine two chains */
     fun plus(other: SourceLocationChain): SourceLocationChain {
-        if (other.items.isEmpty()) return this
-        if (items.isEmpty()) return other
+        if (other.items.isEmpty()) {
+            return this
+        }
+        if (items.isEmpty()) {
+            return other
+        }
         return SourceLocationChain(items.concat(other.items))
     }
 
@@ -86,13 +99,19 @@ class SourceLocationChain private constructor(
     val isNotEmpty: Boolean get() = items.isNotEmpty()
 
     override fun toString(): String {
-        if (isEmpty) return "SourceLocationChain(empty)"
+        if (isEmpty) {
+            return "SourceLocationChain(empty)"
+        }
         return "SourceLocationChain(${items.joinToString(" -> ")})"
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is SourceLocationChain) return false
+        if (this === other) {
+            return true
+        }
+        if (other !is SourceLocationChain) {
+            return false
+        }
         return items.contentEquals(other.items)
     }
 
