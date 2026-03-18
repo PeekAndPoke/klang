@@ -26,8 +26,8 @@ import kotlin.math.pow
 @Suppress("FunctionName")
 fun Tag.Oscilloscope(
     strokeColor: Color = Color.white,
-    strokeWidth: Double = 1.2,
-    centerLineColor: Color? = Color.white.withAlpha(0.2),
+    strokeWidth: Double = 1.1,
+    centerLineColor: Color? = Color.white.withAlpha(0.07),
     centerLineWidth: Double = 1.0,
     pointSkip: Int = 4,
     player: () -> KlangPlayer?,
@@ -150,7 +150,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 canvasWidth = canvasElement.width.toDouble(),
                 canvasHeight = canvasElement.height.toDouble(),
                 strokeColor = props.strokeColor,
-                strokeWidth = props.strokeWidth,
+                strokeWidth = props.strokeWidth * 2,
                 centerLineColor = props.centerLineColor,
                 centerLineWidth = props.centerLineWidth,
                 bufferStartFraction = 0.0,

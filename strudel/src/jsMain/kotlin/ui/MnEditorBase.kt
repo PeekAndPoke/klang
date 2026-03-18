@@ -61,6 +61,36 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     /** Incremented on every reset — used to force embedded atom tools to remount. */
     protected var resetVersion by value(0)
 
+    /** Synthetic atom used when the pattern has no real atoms, so the atom editor panel is always visible. */
+    private val syntheticAtom = MnNode.Atom(value = "")
+
+    /**
+     * Resolves the current atom to display in the editor panel.
+     *
+     * Priority: selectedAtom (from cursor) > lastAtom > first atom in pattern > syntheticAtom.
+     * This ensures the atom editor panel is always visible when the tool opens.
+     */
+    protected fun resolveCurrentAtom(): MnNode.Atom {
+        val selected = selectedAtom
+        if (selected != null) {
+            lastAtom = selected
+            lastRest = null
+            return selected
+        }
+        lastAtom?.let { return it }
+        // Auto-select the first atom in the pattern
+        val first = pattern?.let { collectAtoms(it).firstOrNull() }
+        if (first != null) {
+            lastAtom = first
+            cursorOffset = first.sourceRange?.first ?: 0
+            return first
+        }
+        return syntheticAtom
+    }
+
+    /** Whether the given atom is the synthetic placeholder (no real atom in the pattern). */
+    protected fun isSyntheticAtom(atom: MnNode.Atom): Boolean = atom === syntheticAtom
+
     // ── Undo / redo ───────────────────────────────────────────────────────────
 
     private val undoStack = ArrayDeque<String>()
@@ -208,6 +238,16 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
 
     /** Replaces [old] with [new] in the pattern tree (legacy convenience, uses id-based replace). */
     protected fun updateNode(old: MnNode, new: MnNode) {
+        if (old is MnNode.Atom && isSyntheticAtom(old)) {
+            // Synthetic atom: no tree node to replace — set text directly from the new value
+            val newValue = (new as? MnNode.Atom)?.value ?: return
+            pushUndo()
+            text = newValue
+            cursorOffset = newValue.length
+            lastAtom = pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) }
+            return
+        }
+
         val p = pattern ?: return
         pushUndo()
         val newRoot = p.replaceById(old.id, new) as? MnPattern ?: return
@@ -351,13 +391,10 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
     // ── Template render ───────────────────────────────────────────────────────
 
     override fun VDom.render() {
-        val atom = (selectedAtom ?: lastAtom).also {
-            if (selectedAtom != null) {
-                lastAtom = selectedAtom; lastRest = null
-            }
-        }
+        val atom = resolveCurrentAtom()
+        val isSynthetic = isSyntheticAtom(atom)
 
-        val rest = if (atom != null) null else lastRest
+        val rest = if (!isSynthetic) null else lastRest
 
         ui.segment {
             css {
@@ -366,7 +403,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 flexDirection = FlexDirection.column
             }
 
-            mnPatternTextInput(laf, text, atom, parseError, highlightedRanges) { newText, cursor ->
+            mnPatternTextInput(laf, text, if (isSynthetic) null else atom, parseError, highlightedRanges) { newText, cursor ->
                 text = newText
                 cursorOffset = cursor
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
@@ -379,7 +416,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
             renderStaves()
 
             ui.divider {}
-            if (atom != null) {
+            if (!isSynthetic) {
                 val parentRepeat = pattern?.let { MnNodeOps.findParentRepeat(it, atom.id) }
                 mnModifierPanel(
                     laf,

@@ -200,7 +200,7 @@ interface StrudelPattern {
         /** Gets a new random generator seeded with the context's random seed and the given seed. */
         fun getSeededRandom(seed: Any, vararg seeds: Any): Random {
             val baseSeed = getOrNull(randomSeedKey) ?: 0
-            val s = baseSeed.hashCode() + seeds.fold(seed.hashCode()) { acc, it -> acc + it.hashCode() }
+            val s = baseSeed.hashCode() + seeds.fold(seed.hashCode()) { acc, it -> acc * it.hashCode() }
 
             return Random(mixSeed(s))
         }

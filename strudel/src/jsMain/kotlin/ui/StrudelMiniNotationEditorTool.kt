@@ -56,7 +56,8 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
     // ── Render ────────────────────────────────────────────────────────────────
 
     override fun VDom.render() {
-        val atom = (selectedAtom ?: lastAtom).also { if (selectedAtom != null) lastAtom = selectedAtom }
+        val atom = resolveCurrentAtom()
+        val isSynthetic = isSyntheticAtom(atom)
 
         ui.segment {
             css {
@@ -84,20 +85,18 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
                 }
             }
 
-            mnPatternTextInput(laf, text, atom, parseError) { newText, cursor ->
+            mnPatternTextInput(laf, text, if (isSynthetic) null else atom, parseError) { newText, cursor ->
                 text = newText
                 cursorOffset = cursor
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
             }
 
             ui.divider {}
-            if (atom != null) {
+            if (!isSynthetic) {
                 mnModifierPanel(laf, atom) { updated -> updateNode(atom, updated) }
                 ui.divider {}
-                renderAtomPanel(atom)
-            } else {
-                mnModifierPanelDisabled(laf)
             }
+            renderAtomPanel(atom)
 
             div { css { flexGrow = 1.0 } }
 
@@ -109,10 +108,9 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
     // ── Atom value panel ──────────────────────────────────────────────────────
 
     private fun FlowContent.renderAtomPanel(atom: MnNode.Atom) {
-        val atomTool = props.atomTool
-        when {
-            atomTool == null -> renderAtomValueInput(atom)
-            atomTool is KlangUiToolEmbeddable -> renderEmbeddedAtomTool(atom, atomTool)
+        when (val atomTool = props.atomTool) {
+            null -> renderAtomValueInput(atom)
+            is KlangUiToolEmbeddable -> renderEmbeddedAtomTool(atom, atomTool)
             else -> renderAtomModalButton(atom, atomTool)
         }
     }

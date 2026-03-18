@@ -12,6 +12,7 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.klang.script.ast.AstIndex
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -34,6 +35,7 @@ import org.w3c.dom.Element
  */
 fun dslEditorExtension(
     docProvider: (String) -> KlangSymbol?,
+    astIndexProvider: () -> AstIndex? = { null },
     hoverPopup: KlangDocsHoverPopupCtrl,
     popups: PopupsManager,
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
@@ -134,8 +136,8 @@ fun dslEditorExtension(
     fun argInfoAt(event: dynamic, view: EditorView): CallArgInfo? {
         val source = view.state.doc.toString()
         val coords = jsObject<dynamic> { this.x = event.clientX; this.y = event.clientY }.unsafeCast<Coords>()
-        val pos = view.posAtCoords(coords)
-        return if (pos != null) findCallArgAt(source, pos, docProvider) else null
+        val pos = view.posAtCoords(coords) ?: return null
+        return findCallArgAtAst(astIndexProvider(), source, pos, docProvider)
     }
 
     fun makeToolContext(argInfo: CallArgInfo, view: EditorView): KlangUiToolContext {
@@ -232,7 +234,7 @@ fun dslEditorExtension(
     var badgesShowTimer: dynamic = null
 
     /** The mouse X when the user first hovered the current param (for damped tracking). */
-    var badgeInitialMouseX: Double = 0.0
+    var badgeInitialMouseX = 0.0
 
     fun cancelBadgesShow() {
         if (badgesShowTimer != null) window.clearTimeout(badgesShowTimer.unsafeCast<Int>())
@@ -284,7 +286,7 @@ fun dslEditorExtension(
         // Dampen horizontal tracking: move at 50% of mouse offset from initial hover position
         val dampedX = badgeInitialMouseX + (mouseX - badgeInitialMouseX) * 0.5
         container.asDynamic().style.left = "${dampedX}px"
-        container.asDynamic().style.top = "${rect.top - 21}px"
+        container.asDynamic().style.top = "${rect.top - 25}px"
         container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
 
@@ -425,8 +427,10 @@ fun dslEditorExtension(
                     }
                 } else if (badgeArgInfo != null) {
                     // Mouse left the current param but badges are visible —
-                    // keep them alive so the user can reach them.
+                    // schedule close so they don't linger, but with enough
+                    // delay that the user can still reach them.
                     cancelBadgesShow()
+                    scheduleBadgesClose()
                 } else {
                     cancelBadgesShow()
                     scheduleBadgesClose()

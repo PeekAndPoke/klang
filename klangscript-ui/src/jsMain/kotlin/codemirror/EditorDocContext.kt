@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import de.peekandpoke.ultra.common.cache.fastCache
 import io.peekandpoke.klang.script.KlangScriptLibrary
+import io.peekandpoke.klang.script.ast.AstIndex
 import io.peekandpoke.klang.script.ast.ImportStatement
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.parser.KlangScriptParser
@@ -24,10 +24,9 @@ class EditorDocContext(
     private var lastImports: Set<String> = emptySet()
     private var debounceTimer: Int? = null
 
-    /** Cache: code string → set of imported library names. */
-    private val importCache = fastCache<String, Set<String>> {
-        maxEntries(100)
-    }
+    /** Cached AST index from the last successful parse (stale on parse error, which is fine for hover). */
+    var lastAstIndex: AstIndex? = null
+        private set
 
     /** Look up a symbol by name in the active (import-based) registry. */
     fun docProvider(name: String): KlangSymbol? = activeRegistry.get(name)
@@ -56,22 +55,29 @@ class EditorDocContext(
     }
 
     private fun processCode(code: String) {
-        val imports = importCache.getOrPut(code) { extractImports(code) }
+        // Always parse to keep the AST index up-to-date for hover/tool badges
+        val program = try {
+            KlangScriptParser.parse(code)
+        } catch (_: Throwable) {
+            null // Keep lastAstIndex as-is (stale AST is better than none for hover)
+        }
 
-        if (imports == lastImports) return
-        lastImports = imports
-        rebuildRegistry(imports)
-    }
+        if (program != null) {
+            lastAstIndex = AstIndex.build(program, code)
+        }
 
-    private fun extractImports(code: String): Set<String> {
-        return try {
-            val program = KlangScriptParser.parse(code)
+        val imports = if (program != null) {
             program.statements
                 .filterIsInstance<ImportStatement>()
                 .map { it.libraryName }
                 .toSet()
-        } catch (_: Throwable) {
-            lastImports  // keep previous on parse error
+        } else {
+            lastImports
+        }
+
+        if (imports != lastImports) {
+            lastImports = imports
+            rebuildRegistry(imports)
         }
     }
 
