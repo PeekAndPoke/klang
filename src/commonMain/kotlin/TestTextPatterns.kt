@@ -110,7 +110,7 @@ import * from "strudel"
 
 let wait = 16
 let keep = 32 * 6
-let notch = sine.range(440, 3 * 440).slow(8) // 440, 880, 1560 ?
+let notch = sine.range(440, 2.5 * 440).slow(8) // 440, 880, 1560 ?
 
 stack(
   // Claps --------------------------------------------------------------------------------------------------
@@ -126,24 +126,24 @@ stack(
   n("<[0 2 4 6 7 6 4 2]!14 [-1 0 2 4 6 4 2 0] [-3 -1 0 2 4 2 0 -3]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(1).s("supersaw").unison(6).detune(saw.range(0.0, 0.4).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.175).slow(256))
-    .gain(0.3).distort(2).warmth(0.25).postgain(0.2)
+    .gain(0.3).distort(2).warmth(0.25).postgain(0.3)
     .pan(sine.range(0.25, 0.75).oneMinusValue().slow(16)).adsr("0.05:0.5:0.7:0.1")
     .hpf(160).lpenv(perlin.slow(4).range(0, 3))
     .filterWhen(x => x >= wait * 3 && x < (wait * 4 + keep))
   , // Bass -------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 c2 [d1,d1]]>/8").clip(0.75).struct("x!8")
-    .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.3)
-    .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(1.9).legato(1.05))
+    .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.25)
+    .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.5).slow(32)).warmth(0.5)
-    .lpf(7 * 440).hpf(100).crush(saw.range(4.0, 1.49).add(berlin2.mul(0.05).seq(8)).slow(64)).notchf(notch)
+    .lpf(6 * 440).hpf(100).crush(saw.range(4.0, 1.475).add(berlin2.mul(0.05).seq(8).slow(8)).slow(64)).notchf(notch)
     .velocity(cat(saw.pow(3).slow(16), pure(1).slow(256))).filterWhen(x => x < (wait * 3 + keep)) 
   , // Perc 2 -----------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-    .orbit(3).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1)
+    .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1)
     .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
   , // Perc 1 -----------------------------------------------------------------------------------------------
   sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-    .orbit(4).gain(0.85).pan(0.5).adsr("0.02:0.2:0.5:1").degrade(0.01).hpf(80)        
+    .orbit(5).gain(0.85).pan(0.5).adsr("0.02:0.2:0.5:1").degrade(0.01).hpf(80)        
     .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
   , // Shore ------------------------------------------------------------------------------------------------
   note("c").fast(8).sound("brown")
@@ -162,6 +162,7 @@ stack(
    
   
    
+       
        """ // Stranger Things END
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
