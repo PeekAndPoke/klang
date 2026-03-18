@@ -108,7 +108,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0004",
             title = "Stranger Synths",
-            cps = 0.58,
+            cps = 0.6,
             code = TestTextPatterns.strangerThingsNetflix,
             icon = "film",
         )

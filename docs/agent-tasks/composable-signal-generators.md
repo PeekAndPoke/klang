@@ -182,20 +182,33 @@ class ScratchBuffers(blockFrames: Int, initialCapacity: Int = 4) {
     private val pool = ArrayList<DoubleArray>(initialCapacity)
     private var nextFree = 0
 
-    fun acquire(): DoubleArray {
+    private fun acquire(): DoubleArray {
         if (nextFree >= pool.size) pool.add(DoubleArray(pool[0].size))
         return pool[nextFree++]
     }
-    fun release() {
+
+    private fun release() {
         nextFree--
     }
+
+    /** Scoped access — guarantees release even on exceptions. Never leak a buffer. */
+    inline fun <R> use(block: (DoubleArray) -> R): R {
+        val buf = acquire()
+        try {
+            return block(buf)
+        } finally {
+            release()
+        }
+    }
+
     fun reset() {
         nextFree = 0
     }
 }
 ```
 
-Max simultaneous buffers = composition tree depth. `(a + b).mul(0.5) + c` needs 2.
+`acquire()` and `release()` are private — all external access goes through `use { }`, which guarantees the buffer is
+returned. Max simultaneous buffers = composition tree depth. `(a + b).mul(0.5) + c` needs 2.
 
 ### Arithmetic Operators
 
@@ -204,10 +217,10 @@ Max simultaneous buffers = composition tree depth. `(a + b).mul(0.5) + c` needs 
 fun SignalGen.plus(other: SignalGen, scratch: ScratchBuffers): SignalGen {
     return SignalGen { buffer, offset, length, freqHz, sampleRate, phaseMod ->
         this.generate(buffer, offset, length, freqHz, sampleRate, phaseMod)
-        val tmp = scratch.acquire()
-        other.generate(tmp, offset, length, freqHz, sampleRate, phaseMod)
-        for (i in offset until offset + length) buffer[i] += tmp[i]
-        scratch.release()
+        scratch.use { tmp ->
+            other.generate(tmp, offset, length, freqHz, sampleRate, phaseMod)
+            for (i in offset until offset + length) buffer[i] += tmp[i]
+        }
     }
 }
 
@@ -575,6 +588,8 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 | **Feedback**          | `A.feedback(delaySamples) { transform }` — Faust's `~` operator. | M      | H      | Gates all recursive topologies: KS, comb, FM feedback, waveguide.             |
 | **FeedInject**        | Continuous signal injection into active delay line.              | M      | H      | Bowed strings, drones, blown tubes. Commuted synthesis approach.              |
 | **Crossfade / Morph** | Smooth interpolation between two SignalGens.                     | L      | M      | Timbral animation, vector synthesis, wavetable morphing.                      |
+| **Oversample**        | Run wrapped SignalGen at Nx rate, decimate with anti-alias LPF.  | M      | H      | Essential for waveshaper/distortion. 2x-8x. Per-node, not global.             |
+| **ControlRate**       | Compute once per block, broadcast to buffer. For modulators.     | L      | M      | LFOs, envelopes, drift don't need audio-rate. Saves significant CPU.          |
 | **Waveguide**         | Bidirectional coupled delay lines with reflection filters.       | H      | M      | Tubes, strings, membranes. Needs mandatory loss filter (energy conservation). |
 
 ### Effects / Post-Processing
@@ -627,6 +642,21 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
   ImpulseColor (8-tap) is the per-voice alternative. Full convolution must be shared post-mixdown.
 - **Drift must use correlated noise**: Independent random pitch drift per voice causes beating. DriftCloud uses
   Perlin-style correlated noise so partials wander coherently.
+- **Buffer type (DoubleArray vs FloatArray)**: The entire existing audio_be codebase uses `DoubleArray` (48+ occurrences
+  across 23 files). `FloatArray` would be faster (half the memory, better cache locality, maps to JS `Float32Array`
+  natively), but switching requires conversion at every voice pipeline boundary. Decision: start with `DoubleArray` for
+  compatibility, but use `typealias SignalBuffer = DoubleArray` so a future swap is mechanical.
+- **Scratch buffer safety**: `ScratchBuffers.acquire()`/`release()` are private. All access through scoped
+  `use { buf -> ... }` which guarantees release even on exceptions. Prevents resource leaks in composition chains.
+- **Oversampling**: Nonlinear operations (waveshaping, distortion, wavefolding, soft clipping) generate aliasing
+  artifacts at high drive values. Solution: `signal.oversample(factor)` combinator that runs the wrapped SignalGen at
+  2x/4x/8x sample rate internally, then decimates with an anti-alias lowpass filter. Cost: Nx compute for that node +
+  upsample/downsample filters. Per-node, not global — only the nonlinear stage needs it. SuperCollider and Faust both
+  support per-UGen oversampling.
+- **Undersampling / control rate**: Modulation sources (LFOGen, DriftCloud, Envelope, SampleAndHold) don't need
+  audio-rate computation. Computing once per block and filling the buffer with a constant value saves significant CPU.
+  SuperCollider's `.kr` runs at `blockSize/sampleRate`. Could be implicit for modulator nodes, or explicit via a
+  `signal.controlRate()` wrapper that computes one sample per block and broadcasts.
 
 ### Synthesis Families Enabled
 
@@ -645,3 +675,205 @@ With the full 20-block toolkit:
 
 Estimated capability: ~70% of commonly-used SuperCollider synthesis power, ~60% of Faust, ~50% of Reaktor. The remaining
 30% is specialist territory (granular, spectral, advanced physical modeling) that can be added incrementally.
+
+---
+
+## Professional Audio Engineer Review (2026-03-17)
+
+### Correctness Issues Found
+
+**Karplus-Strong — missing critical details:**
+
+- **Fractional delay interpolation is not optional.** Delay length `sampleRate / freqHz` is rarely integer. At 48kHz,
+  A4 (440Hz) = 109.09 samples. Without interpolation, high notes are audibly out of tune. Use allpass interpolation
+  (first-order allpass at delay line read point) for best spectral preservation, or at minimum linear interpolation.
+- **Separate loss factor needed** in feedback loop (typically 0.990-0.999), independent of damping filter. Otherwise
+  timbre and sustain are undesirably coupled.
+- **DC blocker inside the loop** needed for long-sustain patches, not just after output.
+
+**PolyBLEP for square/pulze — partially correct:**
+
+- PolyBLEP works for fixed-duty square. For variable pulse width (PWM), PolyBLEP must be applied at *both* transitions
+  independently, with positions that change with pulse width. More involved implementation.
+- Adequate up to ~80% of Nyquist. Above that, MinBLEP (minimum-phase BLEP tables) needed for better rejection.
+- **Triangle waves** need **PolyBLAMP** (bandlimited ramp), not PolyBLEP. If generating from phase directly (not by
+  integrating a square), PolyBLAMP at the corners is required.
+
+**8-tap ImpulseColor — too short for body simulation:**
+
+- 8 taps at 48kHz = 0.17ms. Useful body resonances start at ~1ms and extend to 20ms+.
+- 8 taps can shape spectral slope but cannot create resonant peaks/notches that distinguish materials.
+- **Replace with ModalResonator**: bank of 3-8 second-order resonators (biquads) with preset mode frequencies and decay
+  rates per material. 5 modes = 5 biquads = similar cost to a 10-tap FIR but far more realistic resonance.
+  Example guitar body modes: ~100Hz, ~200Hz, ~400Hz.
+
+**tanh soft clipping — correct but basic:**
+
+- `tanh` produces symmetric odd harmonics. Fine as default.
+- For **tube character**: needs asymmetric function (different coefficients for +/- half-cycles) to produce even
+  harmonics.
+- For **transistor character**: `atan(k*x)/atan(k)` with high k gives sharper knee.
+- **Critical missing piece**: Pre-emphasis / de-emphasis filtering (boost highs before clipping, cut after). Without
+  this, no waveshaper sounds like an amp. Real amp circuits do this with tone stacks.
+- **ADAA (Antiderivative Anti-Aliasing)** should replace oversampling for waveshapers. For `tanh`, the antiderivative
+  is `log(cosh(x))`, compute `(F(x1) - F(x0)) / (x1 - x0)`. Eliminates aliasing at zero oversampling cost.
+  Published by Parker et al. (2016), now industry standard. Strongly recommended over per-node oversampling.
+
+**DC blocker cutoff**: 5Hz may be too low for feedback paths where DC accumulates fast. Use 20Hz in feedback loops
+(still inaudible on any real speaker), keep 5Hz for master output.
+
+### Realism Estimates — Corrected
+
+| Instrument           | Document claim | Engineer estimate | Key gap                                                        |
+|----------------------|----------------|-------------------|----------------------------------------------------------------|
+| Acoustic guitar (KS) | 70-80%         | 55-70%            | Missing body resonance, pick position, sympathetic resonance   |
+| Bass guitar (KS)     | 70-80%         | 65-75%            | More achievable (less complex body, listener less sensitive)   |
+| E-guitar (clean)     | 70-75%         | 45-55%            | **Most inflated.** Missing pickup sim + cabinet IR             |
+| E-guitar (distorted) | 65-75%         | 40-55%            | Saw + distortion ≠ guitar. Needs pickup, cab, multi-stage gain |
+| Rhodes (FM)          | 65-75%         | 55-65%            | Velocity-dependent FM index envelope is critical               |
+| Organ (additive)     | 75-85%         | 70-80%            | Achievable with key click + scanner vibrato                    |
+| Synth pad            | 80-90%         | 80-90%            | Correct — detuned saws IS what pads are                        |
+| Bowed string         | 40-55%         | 25-40%            | Noise injection into KS = "scratchy pad," not "violin"         |
+
+### What's Missing for +10-20% Realism Per Family
+
+**Plucked strings:**
+
+1. Fractional delay interpolation (allpass/Thiran): +5%, essential for pitch accuracy
+2. **Pick position modeling**: comb filter in excitation path. `exciter[n] - exciter[n-pickDelay]` where
+   `pickDelay = delayLength * pickPosition`. Pick near bridge = bright, near neck = warm. Cheap (one subtraction +
+   delay read). +5-10%
+3. **Body resonance via ModalResonator**: 3-5 second-order resonators tuned to body modes. +5-10%
+4. **Velocity-dependent excitation**: harder picks = brighter noise (lowpass cutoff scales with velocity). +3-5%
+5. **String stiffness**: second-order allpass in feedback loop for inharmonic partials. Critical for bass. +5%
+
+**Electric guitar:**
+
+1. **Pickup simulation**: single biquad peak filter at 2-5kHz (single-coil ~4-5kHz, humbucker ~2-3kHz). +10-15%
+2. **Cabinet simulation**: the single most important element. Severe bandpass 80Hz-5kHz with peak ~2kHz. Short IR
+   (64-128 taps) or 8-band EQ. +15-20%
+3. **Pre-distortion tone stack**: treble/mid/bass EQ *before* distortion (3 biquads). +5-10%
+4. **Multi-stage gain**: `gain → EQ → tanh → gain → EQ → tanh` (2-3 stages). +5-10%
+5. **Sag / dynamic response**: envelope follower controlling gain before clipper. +3-5%
+
+**Rhodes FM — parameters that work:**
+
+- Carrier: sine at fundamental. Modulator 1: 1x freq, index 1.5-3.0 (tine/tone bar).
+  Modulator 2: ~14x freq, index 0.3-0.8, fast decay (tine attack "bell").
+- **Critical**: FM index must decay with envelope. High at attack (bell-like) → low sustained (warm).
+- Velocity mapping: low velocity = low index (warm), high velocity = high index (bright, barky).
+- Tremolo: stereo panning effect (L/R anti-phase triangle LFO 3-7Hz), not simple AM.
+
+**Organ — convincing additive:**
+
+- 9 drawbar harmonics: 16', 5⅓', 8', 4', 2⅔', 2', 1⅗', 1⅓', 1' (note non-octave quint stops)
+- **Key click**: 2-5ms broadband noise at note-on AND note-off. +10%
+- **Scanner vibrato/chorus**: NOT simple pitch vibrato. Multi-tap delay scanned by LFO. Simplified: 3-stage phaser
+  with LFO. +10-15%
+- **Tonewheel imperfections**: ±1-2% random detuning and level variation per harmonic. +3-5%
+- **Percussion**: decaying click on 2nd or 3rd harmonic, single-trigger. +5%
+- **Leslie speaker**: dual LFOs with frequency-dependent AM/FM (horn/drum at different speeds, crossover ~800Hz). +15%
+
+**Percussion recipes:**
+
+- **Kick**: sine 150-300Hz → sweep to 40-60Hz over 30-80ms + noise burst 2-5ms (beater) + 2x harmonic sine (punch).
+  75-85% realism.
+- **Snare**: body sine/tri 150-250Hz (slight pitch sweep) + bandpass noise 1-5kHz (snare wires, longer decay) + comb
+  filter on noise for buzz character. 65-75%.
+- **Hi-hat**: 6 detuned square waves at inharmonic ratios (1.0, 1.4471, 1.6170, 1.9265, 2.5028, 2.6637 — TR-808
+  ratios) + bandpass 7-10kHz. Open/closed = envelope length only. 60-70%.
+- **Cymbals**: 15-20 resonant modes with inharmonic ratios, frequency-dependent damping. Very hard. 40-50%.
+
+**Bowed strings — minimum viable:**
+
+- Waveguide (bidirectional delay) + nonlinear friction element at one point:
+  `F_friction = f(v_bow - v_string)` with stick/slip regions
+- Bow pressure + velocity as continuous controls (not note-on params)
+- Body resonance critical: violin modes at ~280Hz (A0), 460Hz (B1-), 530Hz (B1+)
+- Simplified friction + waveguide + 3-mode ModalResonator = 50-60%
+
+**Wind — minimum viable:**
+
+- Flute: noise into tuned comb filter with continuous injection. 40-50%
+- Clarinet: reed model `y = max(0, 1 - pressure_diff) * pressure_diff` (produces odd harmonics) + waveguide. 45-55%
+- Brass: out of scope (lip-bore coupling too complex)
+
+### Overlooked DSP Fundamentals
+
+**Filters:**
+
+- **Ladder filter (Moog-style)**: Four cascaded one-pole filters with feedback. Most requested synth filter topology.
+  Huovilainen model is the standard reference. Cheap (4 one-pole sections + feedback). If you implement one filter
+  besides SVF, make it this.
+- **Filter self-oscillation**: When resonance > 1.0, filter should produce a sine at cutoff frequency. Fundamental
+  synthesis tool, not just artifact. Both SVF and ladder support this.
+- **Filter FM / cutoff modulation at audio rate**: Essential for acid bass (TB-303 style). Filter must accept
+  modulation signal, not just static cutoff.
+- **Cytomic SVF**: Andrew Simper's SVF implementation is the industry standard for virtual analog. Better behavior at
+  high frequencies than Chamberlin SVF. Consider this over the basic SVF.
+
+**Envelopes — curve shapes matter:**
+
+- **Exponential curves** are essential. Linear envelopes sound "digital." Use
+  `y = target + (start - target) * exp(-t / tau)` or cheap digital: `y = y + (target - y) * coeff`.
+- Attack: concave exponential (slow start, fast finish). Decay: convex exponential (fast start, slow finish).
+- **Curve parameter** per segment (-1 to +1, linear at 0) gives full control.
+- **Retriggering behavior**: restart from zero, restart from current value (most common/musical), or legato.
+
+**Missing core synth features:**
+
+1. **Portamento / Glide**: one-pole lowpass on freqHz. `freq += (target - freq) * coeff`. SignalGen wrapper that
+   smooths incoming freqHz.
+2. **Hard sync**: oscillator A resets B's phase each cycle. Requires inter-SignalGen communication (phase reset
+   callback). Current interface doesn't support this.
+3. **Phase reset on note-on**: many synths reset phase to 0 on each note for consistent timbre. Need a reset mechanism.
+4. **Unison generalized**: `unison(count, detuneCents, stereoSpread)` combinator for any SignalGen, not just supersaw.
+5. **Sub-oscillator**: trivially `sine.detune(-12)` but should be documented as a pattern.
+6. **Sample playback as SignalGen**: one-shot or looped sample player. Turns any recording into an oscillator.
+7. **Chebyshev polynomial waveshaping**: T2(x) adds exact 2nd harmonic, T3(x) adds 3rd, etc. Cheap, musically
+   precise.
+8. **Additional noise colors**: blue noise (HF emphasis, dithering), velvet noise (sparse impulses, efficient reverb),
+   crackle (already have this one).
+
+### Performance Reality Check
+
+**DoubleArray vs FloatArray — engineer's recommendation:**
+
+- On JS: `Float64Array` vs `Float32Array` arithmetic speed is similar (JS uses f64 internally). But **memory bandwidth
+  and cache utilization** matter: `Float32Array` = half the memory = 2x cache fit = **15-30% throughput improvement**.
+- On WASM: more pronounced. SIMD processes 4x `f32` vs 2x `f64` per instruction.
+- **Recommendation**: Use `FloatArray` (32-bit) for signal buffers. 32-bit gives ~150dB dynamic range (human hearing
+  ~120dB). Use `Double` only for **phase accumulators** (to avoid pitch drift) and **feedback delay indices**.
+
+**Oversampling — prefer ADAA instead:**
+
+- Per-node oversampling needs upsample filter + Nx processing + downsample filter. At 2x with 23-tap half-band FIR:
+  ~4.4M MACs/sec per node. Expensive.
+- **ADAA (Antiderivative Anti-Aliasing)** eliminates aliasing from waveshapers at zero oversampling cost. Use for
+  tanh, polynomial, Chebyshev. Keep oversampling only for waveshapers without known antiderivatives.
+- Budget: at most 1-2 oversampled nodes per voice in JS AudioWorklet.
+
+**Realistic voice budgets (JS AudioWorklet, 48kHz, 128-sample blocks, 50% CPU headroom):**
+
+- Simple voice (2 oscs + filter + env): ~1.5M MACs/sec → 50-80 simultaneous
+- Complex voice (supersaw + filter + distortion + 3 envs + mod): ~5-8M MACs/sec → 15-25 simultaneous
+- Physical model (KS + body + effects): ~3-5M MACs/sec → 20-35 simultaneous
+- **Realistic targets with JS overhead (GC, function calls): 8-16 complex voices, 16-32 simple voices.**
+
+### Recommended Priority Changes
+
+**Drop or defer:**
+
+- Oversample combinator → use ADAA instead (cheaper, equally effective)
+- ImpulseColor (8-tap) → replace with ModalResonator (biquad bank, far more realistic at similar cost)
+- MicroConvolver per-voice → keep only as shared post-mix bus effect
+
+**Add to plan:**
+
+- **ModalResonator** (bank of 3-8 second-order resonators): body simulation, material character
+- **Ladder Filter** (Moog-style, Huovilainen model): the most requested synth filter
+- **ADAA Waveshaper**: anti-aliased distortion without oversampling cost
+- **Fractional Delay Line** (allpass interpolation): essential for KS pitch accuracy
+- **Portamento / Glide**: frequency smoothing wrapper
+- **Pick Position**: comb filter in KS excitation path
+- **Cabinet IR**: shared bus, post-mix (essential for electric guitar)
