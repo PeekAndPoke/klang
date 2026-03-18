@@ -2,9 +2,9 @@
 
 package io.peekandpoke.klang.script.builder
 
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.ast.CallInfo
-import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.getUniqueClassName
 import io.peekandpoke.klang.script.runtime.*
 import kotlin.jvm.JvmName

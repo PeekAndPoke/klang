@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.SourceLocationAware
 import io.peekandpoke.klang.script.ast.AstNode
-import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.ast.SourceLocationAware
 
 // ── Error Type Enum ──────────────────────────────────────────────────────────
 
@@ -77,7 +77,8 @@ sealed class KlangScriptRuntimeError(
     override val location: SourceLocation? = null,
     val astNode: AstNode? = null,
     val callStackTrace: List<CallStackFrame> = emptyList(),
-) : RuntimeException(message), KlangScriptError {
+    cause: Throwable? = null,
+) : RuntimeException(message, cause), KlangScriptError {
 
     override fun format(): String {
         val header = if (location != null) {
@@ -245,11 +246,18 @@ class KlangScriptStackOverflowError(
  */
 class KlangScriptInternalError(
     message: String,
-    val cause_: Throwable? = null,
+    cause: Throwable? = null,
     location: SourceLocation? = null,
     astNode: AstNode? = null,
     callStackTrace: List<CallStackFrame> = emptyList(),
-) : KlangScriptRuntimeError(message, KlangScriptErrorType.InternalError, location, astNode, callStackTrace)
+) : KlangScriptRuntimeError(
+    message = message,
+    errorType = KlangScriptErrorType.InternalError,
+    location = location,
+    astNode = astNode,
+    callStackTrace = callStackTrace,
+    cause = cause,
+)
 
 // ── Control Flow Exceptions (NOT errors) ─────────────────────────────────────
 

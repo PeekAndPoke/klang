@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.strudel.pattern.AtomicPattern
 

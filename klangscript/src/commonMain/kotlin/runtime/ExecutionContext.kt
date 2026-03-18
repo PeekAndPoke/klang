@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.script.runtime
 
-import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.common.SourceLocation
 
 /**
  * Execution context for a KlangScript execution.

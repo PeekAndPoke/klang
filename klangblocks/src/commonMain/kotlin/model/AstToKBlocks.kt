@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.blocks.model
 
 import io.peekandpoke.klang.blocks.model.AstToKBlocks.extractChain
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.ast.*
 
 object AstToKBlocks {
@@ -56,7 +57,7 @@ object AstToKBlocks {
         else -> null
     }
 
-    private fun convertExprStmt(expr: Expression): KBStmt? {
+    private fun convertExprStmt(expr: Expression): KBStmt {
         val chain = extractChain(expr)
         if (chain != null) return KBChainStmt(id = uuid(), steps = chainResultToSteps(chain))
         // Non-chain expression statement (e.g. postfix x++, x--): preserve as KBExprStmt

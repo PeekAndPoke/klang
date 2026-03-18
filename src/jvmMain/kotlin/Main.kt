@@ -1,17 +1,17 @@
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.audio_engine.klangPlayer
+import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
 import io.peekandpoke.klang.strudel.lang.pan
 import io.peekandpoke.klang.strudel.lang.strudelLib
-import io.peekandpoke.klang.strudel.playStrudel
-import io.peekandpoke.klang.strudel.strudelPlayer
 import kotlinx.coroutines.delay
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
@@ -120,20 +120,20 @@ private suspend fun helloStrudel() {
             sampleRate = 48_000,
         )
 
-        val player = strudelPlayer(
+        val player = klangPlayer(
             options = playerOptions,
         )
 
         println("start 1 ...")
-        val playback1 = player.playStrudel(pattern1)
+        val playback1 = player.play(pattern1)
         playback1.start(
-            StrudelPlayback.Options(
+            KlangCyclicPlayback.Options(
                 cyclesPerSecond = 0.5,
             )
         )
 
 //        delay(10_000)
-//        val playback2 = player.playStrudel(pattern2)
+//        val playback2 = player.play(pattern2)
 //        playback2.start(
 //            KlangPlayback.Options(
 //                cyclesPerSecond = 0.6,

@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.*
 import io.peekandpoke.klang.script.parser.KlangScriptParser

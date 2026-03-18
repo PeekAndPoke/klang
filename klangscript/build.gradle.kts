@@ -42,6 +42,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                api(project(":common"))
                 implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)

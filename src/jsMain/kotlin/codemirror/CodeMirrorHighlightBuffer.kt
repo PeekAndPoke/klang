@@ -2,8 +2,7 @@ package io.peekandpoke.klang.codemirror
 
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.codemirror.ext.EditorView
-import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.ast.SourceLocationChain
+import io.peekandpoke.klang.common.SourceLocation
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
@@ -72,7 +71,7 @@ class CodeMirrorHighlightBuffer(
     // ── Public API ──────────────────────────────────────────────────────────
 
     fun scheduleHighlight(event: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
-        val chain = event.sourceLocations as? SourceLocationChain ?: return
+        val chain = event.sourceLocations ?: return
         chain.locations.asReversed()
             .filter { it.isValid() }
             .take(maxHighlightsPerEvent).forEach { location ->

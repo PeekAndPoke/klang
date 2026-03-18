@@ -23,10 +23,10 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
+import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
+import io.peekandpoke.klang.audio_engine.playOnce
 import io.peekandpoke.klang.comp.*
-import io.peekandpoke.klang.strudel.StrudelPlayback
 import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.playStrudelOnce
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
@@ -222,7 +222,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             val song = sound("[bd bd bd bd  [ds, cr] ~ ~ ~]").fast(1)
                 .adsr("0.01:1.0:1.0:2.0").room(0.1).rsize(5.0)
 
-            val playback = Player.get()?.playStrudelOnce(song)
+            val playback = Player.get()?.playOnce(song)
 
             // Wait for the song to finish before navigating
             playback?.signals?.invoke { signal ->
@@ -235,7 +235,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            playback?.start(StrudelPlayback.Options(cyclesPerSecond = 1.0))
+            playback?.start(KlangCyclicPlayback.Options(cyclesPerSecond = 1.0))
         }
 
         fun getResult() = result

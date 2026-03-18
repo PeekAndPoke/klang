@@ -1,32 +1,26 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.audio_engine
 
 import de.peekandpoke.ultra.streams.StreamSource
-import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.audio_bridge.KlangTime
-import io.peekandpoke.klang.audio_bridge.SampleRequest
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
 import kotlinx.coroutines.*
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
 /**
- * Core scheduling controller for Strudel playback.
+ * Core scheduling controller for pattern playback.
  * Handles pattern querying, event scheduling, sample management, and cycle tracking.
  * Designed to be reused by different playback lifecycle policies (continuous, one-shot, etc.).
  *
- * This is an internal implementation detail. Users should interact with [StrudelPlayback] interface.
+ * This is an internal implementation detail. Users should interact with [KlangCyclicPlayback] interface.
  */
-internal class StrudelPlaybackController(
+internal class KlangPlaybackController(
     private val playbackId: String,
-    private var pattern: StrudelPattern,
+    private var pattern: KlangPattern,
     context: KlangPlaybackContext,
     private val signals: StreamSource<KlangPlaybackSignal>,
     private val onStarted: () -> Unit = {},
@@ -76,12 +70,13 @@ internal class StrudelPlaybackController(
     private val resyncGraceWindowSec = 0.05
 
     // ===== Public API =====
+    @Suppress("unused")
     val isRunning: Boolean get() = running.get()
 
     /**
      * Update the pattern being played
      */
-    fun updatePattern(pattern: StrudelPattern) {
+    fun updatePattern(pattern: KlangPattern) {
         // Update pattern
         this.pattern = pattern
         // Re-request current cycle to repopulate backend
@@ -109,7 +104,7 @@ internal class StrudelPlaybackController(
         resyncCurrentCycle()
     }
 
-    fun start(options: StrudelPlayback.Options = StrudelPlayback.Options()) {
+    fun start(options: KlangCyclicPlayback.Options = KlangCyclicPlayback.Options()) {
         // Atomically transition from stopped to running
         if (!running.compareAndSet(expect = false, update = true)) {
             // Already running
@@ -210,7 +205,9 @@ internal class StrudelPlaybackController(
             .map { it.data.asSampleRequest() }
             .toSet()
 
-        if (sampleRequests.isEmpty()) return
+        if (sampleRequests.isEmpty()) {
+            return
+        }
 
         // Use centralized preloader with deferred (waits for backend ack)
         // Emits signals and caches across playbacks
@@ -269,7 +266,7 @@ internal class StrudelPlaybackController(
             delay(16)
         }
 
-        println("StrudelPlaybackController stopped")
+        println("KlangPlaybackController stopped")
     }
 
     private fun updateLocalFrameCounter() {
@@ -284,7 +281,9 @@ internal class StrudelPlaybackController(
      */
     private fun emitCompletedCycles() {
         // Check if still running before emitting (prevent emissions after stop)
-        if (!running.get()) return
+        if (!running.get()) {
+            return
+        }
 
         val elapsedMs = klangTime.internalMsNow() - startTimeMs
         val elapsedSec = elapsedMs / 1000.0
@@ -314,21 +313,10 @@ internal class StrudelPlaybackController(
     }
 
     /**
-     * Query events from the Strudel pattern and convert to ScheduledVoice.
+     * Query events from the pattern and convert to ScheduledVoice.
      */
     private fun queryEvents(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
-        // Convert Double time to Rational for exact pattern arithmetic
-        val fromRational = Rational(from)
-        val toRational = Rational(to)
-
-        val ctx = QueryContext {
-            set(QueryContext.cpsKey, cyclesPerSecond)
-        }
-
-        val events: List<StrudelPatternEvent> =
-            pattern.queryArcContextual(from = fromRational, to = toRational, ctx = ctx)
-                .filter { it.isOnset }
-                .sortedBy { it.part.begin }
+        val events = pattern.queryEvents(fromCycles = from, toCycles = to, cps = cyclesPerSecond)
 
         // Transform to ScheduledVoice using absolute time from KlangTime epoch
         val secPerCycle = 1.0 / cyclesPerSecond
@@ -341,16 +329,15 @@ internal class StrudelPlaybackController(
         val signalEvents = mutableListOf<KlangPlaybackSignal.VoicesScheduled.VoiceEvent>()
 
         val voices = events.map { event ->
-            val timeSpan = event.whole
-            val relativeStartTime = (timeSpan.begin * secPerCycle).toDouble()
-            val duration = (timeSpan.duration * secPerCycle).toDouble()
+            val relativeStartTime = event.startCycles * secPerCycle
+            val duration = event.durationCycles * secPerCycle
 
             // Absolute times for UI callbacks
             val absoluteStartTime = playbackStartTimeSec + relativeStartTime
             val absoluteEndTime = absoluteStartTime + duration
 
             // Convert to VoiceData
-            val voiceData = event.data.toVoiceData()
+            val voiceData = event.toVoiceData()
 
             // Collect signal event
             signalEvents.add(
@@ -386,7 +373,9 @@ internal class StrudelPlaybackController(
     private fun lookAheadForSampleSounds(from: Double, dur: Double) {
         val to = from + dur
 
-        if (to <= sampleSoundLookAheadPointer) return
+        if (to <= sampleSoundLookAheadPointer) {
+            return
+        }
 
         sampleSoundLookAheadPointer = to
 
@@ -424,8 +413,6 @@ internal class StrudelPlaybackController(
             val from = queryCursorCycles
             val to = from + fetchChunk
 
-            // println("Advance: $from -> $to")
-
             try {
                 val events = queryEvents(from = from, to = to, sendSignals = true)
 
@@ -447,11 +434,15 @@ internal class StrudelPlaybackController(
      * Does not touch the audio backend — only fires UI signals.
      */
     fun reemitVoiceSignals() {
-        if (!running.get()) return
+        if (!running.get()) {
+            return
+        }
         val nowCycle = getNowCycle()
         val from = floor(nowCycle)
         val to = queryCursorCycles
-        if (from >= to) return
+        if (from >= to) {
+            return
+        }
         try {
             queryEvents(from = from, to = to, sendSignals = true)
         } catch (e: Exception) {
@@ -461,7 +452,7 @@ internal class StrudelPlaybackController(
 
     /**
      * Re-requests the current cycle and sends events to backend.
-     * Uses a 100ms grace window: voices about to play within the window are preserved,
+     * Uses a 50ms grace window: voices about to play within the window are preserved,
      * only voices beyond the cutoff are replaced.
      */
     private fun resyncCurrentCycle() {

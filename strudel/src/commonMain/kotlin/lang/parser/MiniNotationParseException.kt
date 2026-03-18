@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.strudel.lang.parser
 
-import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.ast.SourceLocationAware
+import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.SourceLocationAware
 
 /**
  * Exception thrown when mini-notation parsing fails

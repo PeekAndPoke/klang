@@ -4,7 +4,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.builder.registerFunction
 import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.runtime.*

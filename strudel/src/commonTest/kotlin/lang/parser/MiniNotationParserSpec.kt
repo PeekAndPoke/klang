@@ -380,7 +380,7 @@ class MiniNotationParserSpec : StringSpec() {
         // ===== Source Location Tracking Tests =====
 
         "Single atom tracks source location" {
-            val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
+            val baseLocation = io.peekandpoke.klang.common.SourceLocation(
                 source = "test.klang",
                 startLine = 1,
                 startColumn = 10,
@@ -409,7 +409,7 @@ class MiniNotationParserSpec : StringSpec() {
         }
 
         "Sequence preserves individual atom locations" {
-            val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
+            val baseLocation = io.peekandpoke.klang.common.SourceLocation(
                 source = "test.klang",
                 startLine = 1,
                 startColumn = 10,
@@ -436,7 +436,7 @@ class MiniNotationParserSpec : StringSpec() {
         }
 
         "Nested groups preserve atom locations" {
-            val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
+            val baseLocation = io.peekandpoke.klang.common.SourceLocation(
                 source = "test.klang",
                 startLine = 1,
                 startColumn = 10,
@@ -463,7 +463,7 @@ class MiniNotationParserSpec : StringSpec() {
         }
 
         "Alternation preserves atom locations" {
-            val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
+            val baseLocation = io.peekandpoke.klang.common.SourceLocation(
                 source = "test.klang",
                 startLine = 1,
                 startColumn = 10,
@@ -491,7 +491,7 @@ class MiniNotationParserSpec : StringSpec() {
         }
 
         "Euclidean rhythm preserves inner pattern location" {
-            val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
+            val baseLocation = io.peekandpoke.klang.common.SourceLocation(
                 source = "test.klang",
                 startLine = 1,
                 startColumn = 10,
@@ -515,7 +515,7 @@ class MiniNotationParserSpec : StringSpec() {
         }
 
         "Weighted pattern preserves atom location" {
-            val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
+            val baseLocation = io.peekandpoke.klang.common.SourceLocation(
                 source = "test.klang",
                 startLine = 1,
                 startColumn = 10,
@@ -538,7 +538,7 @@ class MiniNotationParserSpec : StringSpec() {
         }
 
         "Fast/slow modifiers preserve atom location" {
-            val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
+            val baseLocation = io.peekandpoke.klang.common.SourceLocation(
                 source = "test.klang",
                 startLine = 1,
                 startColumn = 10,
@@ -562,7 +562,7 @@ class MiniNotationParserSpec : StringSpec() {
         }
 
         "Multiline notation tracks line numbers" {
-            val baseLocation = io.peekandpoke.klang.script.ast.SourceLocation(
+            val baseLocation = io.peekandpoke.klang.common.SourceLocation(
                 source = "test.klang",
                 startLine = 5,
                 startColumn = 0,

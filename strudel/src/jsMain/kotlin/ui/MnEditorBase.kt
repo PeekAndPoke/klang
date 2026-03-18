@@ -11,8 +11,7 @@ import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.ops.filterIsInstance
 import de.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.ast.SourceLocationChain
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
 import io.peekandpoke.klang.strudel.lang.parser.MnPattern
@@ -325,7 +324,7 @@ data class ResolvedVoiceHighlight(
  * Returns `null` if the voice has no source location or the location doesn't match.
  */
 internal fun voiceToSourceRange(voice: KlangPlaybackSignal.VoicesScheduled.VoiceEvent, base: SourceLocation, mnText: String): IntRange? {
-    val chain = voice.sourceLocations as? SourceLocationChain ?: return null
+    val chain = voice.sourceLocations ?: return null
     // Check all locations in the chain, not just innermost — more robust
     for (loc in chain.locations.asReversed()) {
         val range = locationToSourceRange(loc, base, mnText) ?: continue

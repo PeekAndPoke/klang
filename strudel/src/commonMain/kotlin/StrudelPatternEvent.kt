@@ -1,7 +1,9 @@
 package io.peekandpoke.klang.strudel
 
-import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.ast.SourceLocationChain
+import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
+import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.SourceLocationChain
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.math.abs
@@ -24,8 +26,13 @@ data class StrudelPatternEvent(
      * Not included in serialization as it's only used for live-coding features.
      */
     @Transient
-    val sourceLocations: SourceLocationChain? = null,
-) {
+    override val sourceLocations: SourceLocationChain? = null,
+) : KlangPatternEvent {
+
+    override val startCycles: Double get() = whole.begin.toDouble()
+    override val durationCycles: Double get() = whole.duration.toDouble()
+    override fun toVoiceData(): VoiceData = data.toVoiceData()
+
     /** Check if this event is an onset event (should be played) */
     val isOnset: Boolean = whole.isValid && abs(whole.begin.toDouble() - part.begin.toDouble()) < ONSET_EPSILON
 
@@ -54,23 +61,3 @@ data class StrudelPatternEvent(
         else -> copy(sourceLocations = sourceLocations?.append(locations.locations) ?: locations)
     }
 }
-
-/**
- * Event fired when a voice is scheduled for playback.
- *
- * Uses ABSOLUTE wall-clock times (from KlangTime epoch) because
- * this is consumed by the frontend UI for highlighting (compared with Date.now()).
- *
- * Note: This is different from ScheduledVoice which uses RELATIVE times
- * (seconds since playback start) for the audio backend.
- */
-data class ScheduledVoiceEvent(
-    /** Absolute start time (seconds from KlangTime epoch) */
-    val startTime: Double,
-    /** Absolute end time (seconds from KlangTime epoch) */
-    val endTime: Double,
-    /** The voice data being played */
-    val data: StrudelVoiceData,
-    /** Source location chain for highlighting */
-    val sourceLocations: SourceLocationChain?,
-)

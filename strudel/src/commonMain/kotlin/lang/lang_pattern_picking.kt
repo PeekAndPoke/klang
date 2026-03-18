@@ -2,8 +2,8 @@
 
 package io.peekandpoke.klang.strudel.lang
 
-import io.peekandpoke.klang.script.ast.SourceLocation
-import io.peekandpoke.klang.script.ast.SourceLocationChain
+import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.StrudelVoiceData
 import io.peekandpoke.klang.strudel.StrudelVoiceValue

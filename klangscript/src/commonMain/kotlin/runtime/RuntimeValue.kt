@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
-import io.peekandpoke.klang.script.ast.SourceLocation
 import io.peekandpoke.klang.script.getUniqueClassName
 import kotlin.reflect.KClass
 

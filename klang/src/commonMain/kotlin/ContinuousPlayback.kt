@@ -1,28 +1,28 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.audio_engine
 
 import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_engine.KlangPlaybackContext
 
 /**
- * Continuous Strudel playback that runs indefinitely until explicitly stopped.
+ * Continuous playback that runs indefinitely until explicitly stopped.
  * This is the default playback mode for live coding.
  */
-internal class ContinuousStrudelPlayback internal constructor(
+internal class ContinuousPlayback internal constructor(
     override val playbackId: String,
-    pattern: StrudelPattern,
+    pattern: KlangPattern,
     context: KlangPlaybackContext,
     onStarted: () -> Unit = {},
     onStopped: () -> Unit = {},
-) : StrudelPlayback {
+) : KlangCyclicPlayback {
 
     private val _signals = StreamSource<KlangPlaybackSignal>(KlangPlaybackSignal.Idle)
 
     override val signals: Stream<KlangPlaybackSignal> = _signals.readonly
 
-    private val controller = StrudelPlaybackController(
+    private val controller = KlangPlaybackController(
         playbackId = playbackId,
         pattern = pattern,
         context = context,
@@ -31,7 +31,7 @@ internal class ContinuousStrudelPlayback internal constructor(
         onStopped = onStopped,
     )
 
-    override fun updatePattern(pattern: StrudelPattern) {
+    override fun updatePattern(pattern: KlangPattern) {
         controller.updatePattern(pattern)
     }
 
@@ -44,10 +44,10 @@ internal class ContinuousStrudelPlayback internal constructor(
     }
 
     override fun start() {
-        start(StrudelPlayback.Options())
+        start(KlangCyclicPlayback.Options())
     }
 
-    override fun start(options: StrudelPlayback.Options) {
+    override fun start(options: KlangCyclicPlayback.Options) {
         controller.start(options)
     }
 

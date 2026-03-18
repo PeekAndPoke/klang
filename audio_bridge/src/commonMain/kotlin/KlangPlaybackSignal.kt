@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_bridge
 
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.common.SourceLocationChain
 
 /**
  * Signals emitted during playback lifecycle.
@@ -72,8 +73,8 @@ sealed class KlangPlaybackSignal {
             val endTime: Double,
             /** The voice data being played */
             val data: VoiceData,
-            /** Source locations for code highlighting (module-specific type, e.g. SourceLocationChain) */
-            val sourceLocations: Any?,
+            /** Source locations for code highlighting */
+            val sourceLocations: SourceLocationChain?,
         ) {
             /** Start time in milliseconds */
             val startTimeMs get() = (startTime * 1000).toLong()

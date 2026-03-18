@@ -2,7 +2,7 @@
 
 package io.peekandpoke.klang
 
-@Suppress("MayBeConstant", "unused", "SpellCheckingInspection")
+@Suppress("MayBeConstant", "unused")
 object TestTextPatterns {
     val cMajorNotes = """
         note("c3 d3 e3 f3 g3 a3 b3 c4")
@@ -119,24 +119,24 @@ stack(
     .filterWhen(x => x >= wait * 6 && x < (wait * 12 + keep))
   , // Lyrics -----------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
-    .scale("C6:major").scaleTranspose("0 -1 2 0".slow(32)).hpf(1200).lpf(4000)
-    .sound("pulse").warmth(0.95).crush(3).gain(0.15).clip(0.5).pan(berlin.slow(2)).adsr("0.09:0.2:0.2:0.2") // .solo()
+    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(2000).bandq(2.0)
+    .sound("pulse").warmth(0.95).crush(3).gain(0.15).clip(0.5).pan(berlin.slow(2)).adsr("0.09:0.1:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 8 && x < (wait * 6 + keep))
   , // Melody -----------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [-1 0 2 4 6 4 2 0] [-3 -1 0 2 4 2 0 -3]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(1).s("supersaw").unison(6).detune(saw.range(0.0, 0.4).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.175).slow(256))
+    .orbit(1).s("supersaw").unison(6).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.175).slow(256))
     .gain(0.3).distort(2).warmth(0.25).postgain(0.3)
     .pan(sine.range(0.25, 0.75).oneMinusValue().slow(16)).adsr("0.05:0.5:0.7:0.1")
     .hpf(160).lpenv(perlin.slow(4).range(0, 3))
     .filterWhen(x => x >= wait * 3 && x < (wait * 4 + keep))
   , // Bass -------------------------------------------------------------------------------------------------
-  note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 c2 [d1,d1]]>/8").clip(0.75).struct("x!8")
+  note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 c2 [d1,d1,d2]]>/8").clip(0.75).struct("x!8")
     .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.25)
     .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(1.9).legato(1.05).orbit(3))
-    .s("supersaw").unison(6).detune(saw.range(0.1, 0.5).slow(32)).warmth(0.5)
-    .lpf(6 * 440).hpf(100).crush(saw.range(4.0, 1.475).add(berlin2.mul(0.05).seq(8).slow(8)).slow(64)).notchf(notch)
-    .velocity(cat(saw.pow(3).slow(16), pure(1).slow(256))).filterWhen(x => x < (wait * 3 + keep)) 
+    .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
+    .lpf(6 * 440).hpf(100).crush(saw.range(4.0, 1.475).add(berlin2.mul(0.1).seq(8).slow(4)).slow(64)).notchf(notch)
+    .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).filterWhen(x => x < (wait * 3 + keep)) 
   , // Perc 2 -----------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
     .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1)

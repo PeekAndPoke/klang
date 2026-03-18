@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.script.ast
 
+import io.peekandpoke.klang.common.SourceLocation
+
 /**
  * Debug information for function/method calls
  *

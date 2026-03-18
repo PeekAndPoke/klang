@@ -3,7 +3,7 @@ package io.peekandpoke.klang.strudel.lang.locations
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.script.ast.SourceLocation
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg
 import io.peekandpoke.klang.strudel.lang.toListOfPatterns
 import io.peekandpoke.klang.strudel.lang.voiceValueModifier

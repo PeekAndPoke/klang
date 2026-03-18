@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.script.runtime
 
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
-import io.peekandpoke.klang.script.ast.SourceLocation
 import kotlin.reflect.KClass
 
 /**
@@ -330,7 +330,7 @@ inline fun guardNativeCall(
         val argsDesc = args.mapIndexed { i, v -> "p${i + 1}=${v.toDisplayString()}" }.joinToString(", ")
         throw KlangScriptInternalError(
             message = "Internal error in native function '$functionName($argsDesc)': ${e.message ?: e::class.simpleName}",
-            cause_ = e,
+            cause = e,
             location = location,
         )
     }

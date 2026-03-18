@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.script.ast
 
+import io.peekandpoke.klang.common.SourceLocation
+
 /**
  * Result of finding a CallExpression at a cursor position.
  *
@@ -234,7 +236,6 @@ private class IndexBuilder(
                 visitStatements(stmt.body, stmt, level + 1)
             }
 
-            is IfExpression -> visitExpression(stmt, parent, level)
             is ImportStatement, is ExportStatement, is BreakStatement, is ContinueStatement -> {}
         }
     }
