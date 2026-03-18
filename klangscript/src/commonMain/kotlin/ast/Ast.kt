@@ -32,6 +32,11 @@ data class SourceLocation(
     val endLine: Int,
     val endColumn: Int,
 ) {
+    /** Returns true when the code location is valid (spans at least one character) */
+    fun isValid(): Boolean {
+        return startLine != endLine || startColumn != endColumn
+    }
+
     /** Wrap this location in a single-element [SourceLocationChain]. */
     fun asChain() = SourceLocationChain.single(this)
 

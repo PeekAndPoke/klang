@@ -33,14 +33,70 @@ All of these produce "a block of samples given a frequency" — that's the abstr
 ## Core Interface
 
 ```kotlin
+/**
+ * Context passed to every SignalGen on each render block.
+ * Provides timing, voice lifecycle, and shared resources.
+ * Extensible: future fields (beat position, other voices, etc.) are additive, not signature-breaking.
+ */
+/**
+ * Context for SignalGen rendering. Created ONCE per voice, mutated per block.
+ * No reinstantiation in the hot path.
+ *
+ * RULE: No Long anywhere in audio hot paths. Long is boxed in Kotlin/JS = severe perf degradation.
+ * Int frames: max ~2.1B frames = ~12.4 hours at 48kHz — more than enough for any voice.
+ */
+class SignalContext(
+    // ── Static per voice (set at creation, never changes) ──────────────────────
+    val sampleRate: Int,
+    val voiceDurationFrames: Int,      // total gate duration (scheduled, before release)
+    val gateEndFrame: Int,             // frame (relative to voice start) when gate ends
+    val releaseFrames: Int,            // release duration in frames (from ADSR)
+    val voiceEndFrame: Int,            // frame (relative to voice start) when voice ends
+    val scratchBuffers: ScratchBuffers,
+
+    // ── Mutable per block (updated by caller before each generate() call) ──────
+    var offset: Int = 0,               // start index in buffer for this block
+    var length: Int = 0,               // number of samples to generate
+    var voiceElapsedFrames: Int = 0,   // frames since voice start (monotonic)
+    var phaseMod: DoubleArray? = null, // per-sample phase-increment multipliers (1.0 = no change), or null
+                                      // MUST be at least (offset + length) elements long when non-null
+) {
+    // ── Computed properties (derived from above, no storage) ───────────────────
+
+    /** Seconds since voice start */
+    val voiceElapsedSecs: Double get() = voiceElapsedFrames.toDouble() / sampleRate
+
+    /** Total gate duration in seconds */
+    val voiceDurationSecs: Double get() = voiceDurationFrames.toDouble() / sampleRate
+
+    /** Voice progress 0.0 → 1.0 relative to gate duration. Can exceed 1.0 during release. */
+    val voiceProgress: Double get() = voiceElapsedFrames.toDouble() / voiceDurationFrames
+
+    /** True when past gate end (in ADSR release phase) */
+    val isInRelease: Boolean get() = voiceElapsedFrames >= gateEndFrame
+
+    /** Release progress 0.0 → 1.0 (only meaningful when isInRelease is true) */
+    val releaseProgress: Double get() {
+        if (!isInRelease) return 0.0
+        if (releaseFrames <= 0) return 1.0  // zero-length release = immediately done
+        return ((voiceElapsedFrames - gateEndFrame).toDouble() / releaseFrames).coerceIn(0.0, 1.0)
+    }
+
+    /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */
+    val sampleRateD: Double get() = sampleRate.toDouble()
+}
+
+/**
+ * Core signal generator interface. 3 parameters only:
+ * - buffer: where to write output (varies for scratch buffers in composition)
+ * - freqHz: base frequency (varies per node — detune modifies it)
+ * - ctx: everything else (timing, block params, modulation, resources)
+ */
 fun interface SignalGen {
     fun generate(
         buffer: DoubleArray,
-        offset: Int,
-        length: Int,
         freqHz: Double,
-        sampleRate: Int,
-        phaseMod: DoubleArray?,  // per-sample freq multipliers (1.0 = no change)
+        ctx: SignalContext,
     )
 }
 ```
@@ -52,7 +108,254 @@ fun interface SignalGen {
    delay = `sampleRate / freqHz`).
 3. **No return value** — state is encapsulated. Simpler interface, no "what does the return mean for composites"
    problem.
-4. **`sampleRate` passed per call** — keeps nodes free of system config, though it's constant in practice.
+4. **`SignalContext` instead of scattered params** — `sampleRate` and `scratchBuffers` move into ctx. Voice timing
+   (elapsed, duration, progress, release state) is available to every node. Extensible: future context (beat position,
+   other voices, global state) is additive — no signature changes needed.
+
+### Easing Functions
+
+Easing functions shape how values transition over time. They map `t` (0.0→1.0) to an output (0.0→1.0)
+with different curves. Used by time-windowed combinators for fade-ins, fade-outs, and crossfades.
+
+```kotlin
+typealias EasingFn = (t: Double) -> Double
+
+object Easings {
+    val linear: EasingFn = { it }
+    val easeIn: EasingFn = { it * it }
+    val easeOut: EasingFn = { 1.0 - (1.0 - it) * (1.0 - it) }
+    val easeInOut: EasingFn = {
+        if (it < 0.5) 2.0 * it * it
+        else 1.0 - (-2.0 * it + 2.0).pow(2) / 2.0
+    }
+    val smoothstep: EasingFn = { it * it * (3.0 - 2.0 * it) }
+    val sineIn: EasingFn = { 1.0 - cos(it * PI / 2.0) }
+    val sineOut: EasingFn = { sin(it * PI / 2.0) }
+    val exponentialIn: EasingFn = { if (it == 0.0) 0.0 else 2.0.pow(10.0 * it - 10.0) }
+    /** Equal-power crossfade: maintains constant perceived loudness (no -3dB dip) */
+    val equalPower: EasingFn = { sin(it * PI / 2.0) }
+}
+```
+
+No lookup tables needed — these are pure math, called twice per block (not per sample). See interpolation
+approach below.
+
+### Block-Size Independent Interpolation
+
+**Problem:** Block size varies per backend (JS=128, JVM=256+). If control values are computed "once per block,"
+the same patch sounds different on different platforms. Fast-changing values get audible stepping on larger blocks.
+
+**Solution:** Compute at block boundaries, linearly interpolate per-sample. Two function evaluations per block
+regardless of block size. Results are block-size independent.
+
+```kotlin
+// Compute easing at block START and END, interpolate per-sample between them
+// Cost: 2 easing function calls + 1 multiply + 1 add per sample
+fun interpolatePerSample(
+    buffer: DoubleArray, ctx: SignalContext,
+    valueAtStart: Double, valueAtEnd: Double,
+) {
+    val inc = (valueAtEnd - valueAtStart) / ctx.length
+    var v = valueAtStart
+    for (i in ctx.offset until ctx.offset + ctx.length) {
+        buffer[i] *= v
+        v += inc
+    }
+}
+```
+
+This pattern applies to:
+
+- **Easing envelopes**: fade-in/out curves on time windows
+- **ControlRate combinator**: any modulator running below audio rate
+- **LFO depth**: slow modulation computed at block boundaries
+- **Filter cutoff sweeps**: smooth parameter changes
+
+### Time-Windowed Combinators
+
+With voice timing in ctx and easing, SignalGens can be scoped to time windows with shaped transitions:
+
+```kotlin
+#### Clock-Time Windows (absolute millis)
+
+For effects that depend on real time — transient clicks, specific attack shapes, fixed-length fades:
+
+```kotlin
+fun SignalGen.during(
+    startMs: Double,
+    endMs: Double,
+    fadeInMs: Double = 2.0,       // 2ms default — prevents clicks
+    fadeOutMs: Double = 2.0,
+    fadeInEasing: EasingFn = Easings.linear,
+    fadeOutEasing: EasingFn = Easings.linear,
+): SignalGen
+```
+
+Examples:
+
+```kotlin
+// 15ms noise transient with 1ms fade-out
+noise.during(0.0, 15.0, fadeOutMs = 1.0, fadeOutEasing = Easings.easeOut) + sine
+
+// Fixed 100ms attack swell
+saw.during(0.0, 100.0, fadeInMs = 100.0, fadeInEasing = Easings.easeIn)
+```
+
+#### Voice-Relative Windows (0.0 → 1.0 progress)
+
+For effects that scale with note duration — "first half," "last 20%," timbral evolution:
+
+```kotlin
+fun SignalGen.duringProgress(
+    start: Double,                    // 0.0 = voice start, 1.0 = gate end
+    end: Double,                      // can exceed 1.0 to include release
+    fadeIn: Double = 0.01,            // 1% of voice duration default
+    fadeOut: Double = 0.01,
+    fadeInEasing: EasingFn = Easings.linear,
+    fadeOutEasing: EasingFn = Easings.linear,
+): SignalGen
+```
+
+Examples:
+
+```kotlin
+// Bright saw for first half, warm saw for second half
+saw.duringProgress(0.0, 0.5) + saw.withWarmth(0.6).duringProgress(0.5, 1.0)
+
+// FM bark during first 5% of note, then clean
+sine.fm(mod, 3.0).duringProgress(0.0, 0.05) + sine.duringProgress(0.05, 1.0)
+```
+
+#### Sequencing and Crossfade
+
+```kotlin
+/** Crossfade from this to other — clock time */
+fun SignalGen.thenCrossfade(
+    other: SignalGen,
+    atMs: Double,
+    durationMs: Double,
+    easing: EasingFn = Easings.equalPower,
+): SignalGen
+
+/** Sequence multiple signals with automatic crossfades — clock time.
+ *  - Each Pair maps a SignalGen to its END time in ms (first segment starts at 0).
+ *  - All segments' generate() is called every block (state advances continuously).
+ *  - Crossfade uses equalPower easing (fade-out: cos, fade-in: sin) for constant loudness.
+ *  - After the last segment ends: silence (the last signal stops, it does not sustain).
+ *  - To sustain the last signal indefinitely, use Double.POSITIVE_INFINITY as end time.
+ */
+fun chain(
+    vararg segments: Pair<SignalGen, Double>,  // signal to end-time-ms
+    crossfadeMs: Double = 2.0,
+): SignalGen
+
+/** Like chain() but loops: after the last segment, wraps back to the first.
+ *  Each Pair maps a SignalGen to its DURATION in ms (not end time).
+ *  Total cycle length = sum of all durations.
+ */
+fun ring(
+    vararg segments: Pair<SignalGen, Double>,  // signal to duration-ms
+    crossfadeMs: Double = 2.0,
+): SignalGen
+```
+
+**Crossfade note:** `thenCrossfade`, `chain`, and `ring` use equal-power crossfade internally: fade-out uses
+`cos(t * PI/2)` and fade-in uses `sin(t * PI/2)`. This maintains constant perceived loudness for uncorrelated
+signals. For correlated signals (e.g., two saws at the same frequency), linear crossfade is safer to avoid
+a +3dB bump.
+
+```kotlin
+// chain: play once, then silence
+chain(sine to 500.0, sqr to 500.0, crossfadeMs = 10.0)
+
+// ring: loop forever
+ring(sine to 500.0, sqr to 500.0, tri to 500.0, crossfadeMs = 10.0)
+// → sine(500ms) → sqr(500ms) → tri(500ms) → sine(500ms) → ...
+```
+
+#### Implementation Rule
+
+**All `during*()` variants ALWAYS call `this.generate()`.** The time window only controls
+amplitude, never state advancement. This prevents phase discontinuities when composing
+adjacent time windows (e.g., `sine.during(0, 500) + sqr.during(500, 1000)`).
+
+```kotlin
+// Implementation pattern for ALL during variants:
+this.generate(buffer, freqHz, ctx)  // ALWAYS run — keeps phase advancing
+val gainStart = windowGain(...)
+val gainEnd = windowGain(...)
+interpolatePerSample(buffer, ctx, gainStart, gainEnd)  // 0.0 when outside window
+```
+
+```
+
+### ControlRate Combinator
+
+For modulators (LFO, drift, envelopes) that don't need audio-rate computation.
+Computes at block boundaries, interpolates per-sample. Block-size independent.
+
+```kotlin
+/** Run source at control rate: compute at block start/end, interpolate per-sample.
+ *  NOTE: only correct for time-based signals (LFOs, envelopes). Not for stateful
+ *  generators whose behavior depends on sample count (noise, feedback loops). */
+fun SignalGen.controlRate(): SignalGen {
+    var lastValue = Double.NaN  // NaN = first block not yet computed
+    val sampleBuf = DoubleArray(1) // scratch for single-sample evaluation — NOT the output buffer
+
+    return SignalGen { buffer, freqHz, ctx ->
+        // Save and adjust ctx for single-sample evaluation
+        val savedOffset = ctx.offset
+        val savedLength = ctx.length
+        ctx.offset = 0
+        ctx.length = 1
+
+        // Compute value at end of this block
+        this.generate(sampleBuf, freqHz, ctx)
+        val newValue = sampleBuf[0]
+
+        // Restore ctx
+        ctx.offset = savedOffset
+        ctx.length = savedLength
+
+        // First block: no previous value — fill with constant (no ramp from 0)
+        if (lastValue.isNaN()) lastValue = newValue
+
+        // Interpolate from last block's value to this block's value
+        val inc = (newValue - lastValue) / ctx.length
+        var v = lastValue
+        for (i in ctx.offset until ctx.offset + ctx.length) {
+            buffer[i] = v
+            v += inc
+        }
+        lastValue = newValue
+    }
+}
+```
+
+**Use cases:**
+
+```kotlin
+// Noise attack transient (first 15ms) with eased fade-out, layered with sustained sine
+noise.during(0.0, 15.0, fadeOutMs = 5.0, fadeOutEasing = Easings.easeOut) + sine
+
+// FM "bark" on attack with smooth crossfade to clean sustain (like DX7 Rhodes)
+sine.fm(mod, highIndex).thenCrossfade(sine, atMs = 30.0, durationMs = 20.0, easing = Easings.easeOut)
+
+// Timbral evolution: bright first half → warm second half (voice-relative)
+saw.duringProgress(0.0, 0.5) + saw.withWarmth(0.6).duringProgress(0.5, 1.0)
+
+// Sequenced signals with automatic crossfades
+chain(sine to 500.0, sqr to 1000.0, crossfadeMs = 10.0)
+
+// LFO at control rate (smooth, block-size independent)
+lfo(rate = 5.0, shape = sine).controlRate()
+
+// Exciter that fires at voice start with eased fade-out
+noise.during(0.0, 2.0, fadeOutMs = 1.0, fadeOutEasing = Easings.easeOut)
+```
+
+This replaces the need for dedicated `TransientClick` and `AttackPhaseModulator` primitives — they become
+composition patterns using `during()` + easing + existing primitives.
 
 ---
 
@@ -66,9 +369,22 @@ Each factory returns a `SignalGen` with captured `var phase`:
 object SignalGens {
     fun sine(gain: Double = 1.0): SignalGen {
         var phase = 0.0
-        return SignalGen { buffer, offset, length, freqHz, sampleRate, phaseMod ->
-            val phaseInc = TWO_PI * freqHz / sampleRate
-            // ... same inner loop as current sineFn, using captured `phase` ...
+        return SignalGen { buffer, freqHz, ctx ->
+            val phaseInc = TWO_PI * freqHz / ctx.sampleRate
+            val end = ctx.offset + ctx.length
+            if (ctx.phaseMod == null) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = gain * sin(phase)
+                    phase += phaseInc
+                    if (phase >= TWO_PI) phase -= TWO_PI
+                }
+            } else {
+                for (i in ctx.offset until end) {
+                    buffer[i] = gain * sin(phase)
+                    phase += phaseInc * ctx.phaseMod!![i]
+                    if (phase >= TWO_PI) phase -= TWO_PI
+                }
+            }
         }
     }
 
@@ -115,8 +431,8 @@ fun karplus(
     var excited = false
     var lastOut = 0.0
 
-    return SignalGen { buffer, offset, length, freqHz, sampleRate, phaseMod ->
-        val delayLength = (sampleRate.toDouble() / freqHz).toInt().coerceAtLeast(2)
+    return SignalGen { buffer, freqHz, ctx ->
+        val delayLength = (ctx.sampleRate.toDouble() / freqHz).toInt().coerceAtLeast(2)
 
         // Initialize or resize delay line
         if (delayLine == null || delayLine!!.size != delayLength) {
@@ -127,14 +443,23 @@ fun karplus(
 
         // Fill delay line with exciter signal on first call
         if (!excited) {
-            exciter.generate(delayLine!!, 0, delayLength, freqHz, sampleRate, null)
+            val savedOffset = ctx.offset
+            val savedLength = ctx.length
+            val savedPhaseMod = ctx.phaseMod
+            ctx.offset = 0
+            ctx.length = delayLength
+            ctx.phaseMod = null
+            exciter.generate(delayLine!!, freqHz, ctx)
+            ctx.offset = savedOffset
+            ctx.length = savedLength
+            ctx.phaseMod = savedPhaseMod
             excited = true
         }
 
         // Karplus-Strong loop
         val dl = delayLine!!
-        val end = offset + length
-        for (i in offset until end) {
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
             val readPos = writePos
             val nextPos = (writePos + 1) % delayLength
 
@@ -143,8 +468,7 @@ fun karplus(
             val next = dl[nextPos]
             val filtered = feedback * (current * (1.0 - damping) + next * damping)
 
-            // One-pole smoothing
-            val out = filtered + 0.0 * (lastOut - filtered)
+            val out = filtered
             lastOut = out
 
             buffer[i] = out
@@ -213,22 +537,40 @@ returned. Max simultaneous buffers = composition tree depth. `(a + b).mul(0.5) +
 ### Arithmetic Operators
 
 ```kotlin
-// Binary (capture ScratchBuffers at construction)
-fun SignalGen.plus(other: SignalGen, scratch: ScratchBuffers): SignalGen {
-    return SignalGen { buffer, offset, length, freqHz, sampleRate, phaseMod ->
-        this.generate(buffer, offset, length, freqHz, sampleRate, phaseMod)
-        scratch.use { tmp ->
-            other.generate(tmp, offset, length, freqHz, sampleRate, phaseMod)
-            for (i in offset until offset + length) buffer[i] += tmp[i]
+// Binary — scratch comes from ctx now, no need to capture separately
+fun SignalGen.plus(other: SignalGen): SignalGen {
+    return SignalGen { buffer, freqHz, ctx ->
+        this.generate(buffer, freqHz, ctx)
+        ctx.scratchBuffers.use { tmp ->
+            other.generate(tmp, freqHz, ctx)
+            for (i in ctx.offset until ctx.offset + ctx.length) buffer[i] += tmp[i]
         }
     }
 }
 
-fun SignalGen.times(other: SignalGen, scratch: ScratchBuffers): SignalGen  // Ring mod
+fun SignalGen.times(other: SignalGen): SignalGen  // Ring mod (same pattern)
 
 // Unary (no scratch needed)
-fun SignalGen.mul(factor: Double): SignalGen   // Scale amplitude
+fun SignalGen.mul(factor: Double): SignalGen {
+    return SignalGen { buffer, freqHz, ctx ->
+        this.generate(buffer, freqHz, ctx)
+        for (i in ctx.offset until ctx.offset + ctx.length) buffer[i] *= factor
+    }
+}
 fun SignalGen.div(divisor: Double): SignalGen = mul(1.0 / divisor)
+```
+
+Note: since `scratchBuffers` is now in `SignalContext`, binary operators no longer need the `scratch` parameter —
+they get it from `ctx`. This means the `SignalGenScope` DSL is no longer needed just for operator syntax!
+Kotlin operator overloading works directly:
+
+```kotlin
+operator fun SignalGen.plus(other: SignalGen): SignalGen = this.plus(other)
+operator fun SignalGen.times(other: SignalGen): SignalGen = this.times(other)
+
+// Usage — no scope needed:
+val pad = (sine + square).div(2)
+val rich = sine + sine.detune(7)
 ```
 
 ### Frequency Operators
@@ -236,8 +578,8 @@ fun SignalGen.div(divisor: Double): SignalGen = mul(1.0 / divisor)
 ```kotlin
 fun SignalGen.detune(semitones: Double): SignalGen {
     val ratio = 2.0.pow(semitones / 12.0)
-    return SignalGen { buf, off, len, freqHz, sr, pm ->
-        this.generate(buf, off, len, freqHz * ratio, sr, pm)
+    return SignalGen { buffer, freqHz, ctx ->
+        this.generate(buffer, freqHz * ratio, ctx)
     }
 }
 
@@ -252,29 +594,20 @@ fun SignalGen.withWarmth(factor: Double): SignalGen  // One-pole LPF (existing p
 fun SignalGen.withGain(gain: Double): SignalGen = mul(gain)
 ```
 
-### DSL Scope
+### Usage Examples
 
-For clean operator syntax without passing `scratch` everywhere:
+Since `scratchBuffers` is in `SignalContext`, no DSL scope or `scratch` parameter needed:
 
 ```kotlin
-class SignalGenScope(private val scratch: ScratchBuffers) {
-    val sine get() = SignalGens.sine()
-    val saw get() = SignalGens.sawtooth()
-    val square get() = SignalGens.square()
-    val triangle get() = SignalGens.triangle()
+// Direct composition — operators just work
+val pad = (sine + square).div(2)
+val rich = sine.mul(0.7) + saw.mul(0.3)
+val detuned = sine + sine.detune(7)
+val pluck = karplus(exciter = whiteNoise(rng))
 
-    operator fun SignalGen.plus(other: SignalGen) = this.plus(other, scratch)
-    operator fun SignalGen.times(other: SignalGen) = this.times(other, scratch)
-
-    fun karplus(exciter: SignalGen, damping: Double = 0.5) =
-        SignalGens.karplus(exciter, damping)
-}
-
-// Usage:
-signalGen(scratch) { (sine + square).div(2) }
-signalGen(scratch) { sine.mul(0.7) + saw.mul(0.3) }
-signalGen(scratch) { sine + sine.detune(7) }
-signalGen(scratch) { karplus(exciter = whiteNoise(rng)) }
+// Time-windowed composition (millis)
+val epiano = noise.during(0.0, 5.0) + sine  // 5ms click attack + sustained tone
+val evolving = saw.thenCrossfade(saw.withWarmth(0.6), atMs = 100.0, durationMs = 50.0)
 ```
 
 ---
@@ -286,9 +619,9 @@ signalGen(scratch) { karplus(exciter = whiteNoise(rng)) }
 ```kotlin
 fun OscFn.toSignalGen(): SignalGen {
     var phase = 0.0
-    return SignalGen { buf, off, len, freqHz, sr, pm ->
-        val phaseInc = TWO_PI * freqHz / sr
-        phase = this@toSignalGen.process(buf, off, len, phase, phaseInc, pm)
+    return SignalGen { buffer, freqHz, ctx ->
+        val phaseInc = TWO_PI * freqHz / ctx.sampleRate
+        phase = this@toSignalGen.process(buffer, ctx.offset, ctx.length, phase, phaseInc, ctx.phaseMod)
     }
 }
 ```
@@ -312,11 +645,28 @@ class SynthVoice(
 
     override fun getBaseFrequency(): Double = freqHz
 
+    // SignalContext created ONCE per voice (no allocation in hot path)
+    private val signalCtx = SignalContext(
+        sampleRate = ..., voiceDurationFrames = ..., gateEndFrame = ...,
+        releaseFrames = ..., voiceEndFrame = ..., scratchBuffers = ...,
+    )
+
     override fun generateSignal(ctx, offset, length, pitchMod) {
-        signal.generate(ctx.voiceBuffer, offset, length, freqHz, ctx.sampleRate, pitchMod)
+        // Update mutable per-block fields (no object creation)
+        signalCtx.offset = offset
+        signalCtx.length = length
+        signalCtx.voiceElapsedFrames = (ctx.blockStart - startFrame).toInt()
+        signalCtx.phaseMod = pitchMod
+        // Render — 3 params only
+        signal.generate(ctx.voiceBuffer, freqHz, signalCtx)
     }
 }
 ```
+
+`Voice.RenderContext` and `SignalContext` serve different purposes:
+
+- `Voice.RenderContext`: shared across ALL voices — orbit buses, block cursor, shared buffers
+- `SignalContext`: per-voice — voice timing, block params, scratch buffers. Created once, mutated per block.
 
 ### Voice.RenderContext Changes
 
@@ -327,7 +677,7 @@ class RenderContext(
     val blockFrames: Int,
     val voiceBuffer: DoubleArray,
     val freqModBuffer: DoubleArray,
-    val scratchBuffers: ScratchBuffers,  // NEW
+    val scratchBuffers: ScratchBuffers,  // NEW — shared pool, passed into SignalContext per voice
 )
 ```
 
@@ -555,11 +905,11 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 
 ### Generators (new SignalGen primitives)
 
-| Block                    | Description                                                                            | Effort | Impact | Notes                                                                              |
-|--------------------------|----------------------------------------------------------------------------------------|--------|--------|------------------------------------------------------------------------------------|
-| **Wavetable Oscillator** | Single-cycle table with interpolated phase lookup. Follows same `generate()` contract. | M      | H      | Opens entire wavetable synthesis paradigm. Morphing between tables.                |
-| **TransientClick**       | Shaped noise burst on note-on (1-20ms). Params: color, punch, duration.                | L      | H      | The first 5-20ms defines instrument identity. Hammer, pick, tongue, pluck.         |
-| **ImpulseColor**         | 8-tap FIR with material-derived coefficients (wood, metal, skin, glass).               | L      | H      | Cheap body/cabinet character. Replaces expensive MicroConvolver for per-voice use. |
+| Block                    | Description                                                                                                                                                  | Effort | Impact | Notes                                                                               |
+|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|--------|-------------------------------------------------------------------------------------|
+| **Wavetable Oscillator** | Single-cycle table with interpolated phase lookup. Follows same `generate()` contract.                                                                       | M      | H      | Opens entire wavetable synthesis paradigm. Morphing between tables.                 |
+| ~~**TransientClick**~~   | ~~Shaped noise burst on note-on (1-20ms).~~ **Subsumed by `during()` + easing:** `noise.during(0.0, 15.0, fadeOutMs = 5.0, fadeOutEasing = Easings.easeOut)` | —      | —      | No longer a separate primitive. Composition pattern using existing building blocks. |
+| **ImpulseColor**         | 8-tap FIR with material-derived coefficients (wood, metal, skin, glass).                                                                                     | L      | H      | Cheap body/cabinet character. Replaces expensive MicroConvolver for per-voice use.  |
 
 ### Filters as SignalGen Combinators
 
@@ -572,14 +922,14 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 
 ### Modulators as SignalGen
 
-| Block                        | Description                                                                                     | Effort | Impact | Notes                                                                                  |
-|------------------------------|-------------------------------------------------------------------------------------------------|--------|--------|----------------------------------------------------------------------------------------|
-| **LFOGen**                   | Multi-shape modulation source. Ignores note freqHz, uses own rate. Output: control signal.      | L      | H      | Enables vibrato, tremolo, filter sweeps at composition level (not locked in Voice).    |
-| **DriftCloud**               | Correlated micro-randomness via Perlin-style noise. Per-partial wandering. Param: `life` (0-1). | L      | H      | Analog warmth. Must use correlated noise (not independent per-voice) to avoid beating. |
-| **SampleAndHold**            | Samples source when trigger crosses zero. Classic stepped modulation.                           | L      | M      | Retro sci-fi, random sequencing, quantized modulation.                                 |
-| **AttackPhaseModulator**     | Decaying FM index during attack only. Fast-decaying modulation envelope.                        | L      | H      | DX7 electric piano pluck trick. Momentary harmonic splash that vanishes.               |
-| **Envelope (multi-segment)** | Beyond ADSR: DAHDSR, AR, ASR, function-based, looping envelopes.                                | M      | M      | Per-voice temporal shaping. Percussion needs exponential AR; pads need multi-stage.    |
-| **Slew Rate Limiter**        | Exponential follower for smoothing parameter changes.                                           | L      | M      | Prevents zipper noise. Portamento. Envelope following.                                 |
+| Block                        | Description                                                                                                                              | Effort | Impact | Notes                                                                                  |
+|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|--------|--------|----------------------------------------------------------------------------------------|
+| **LFOGen**                   | Multi-shape modulation source. Ignores note freqHz, uses own rate. Output: control signal.                                               | L      | H      | Enables vibrato, tremolo, filter sweeps at composition level (not locked in Voice).    |
+| **DriftCloud**               | Correlated micro-randomness via Perlin-style noise. Per-partial wandering. Param: `life` (0-1).                                          | L      | H      | Analog warmth. Must use correlated noise (not independent per-voice) to avoid beating. |
+| **SampleAndHold**            | Samples source when trigger crosses zero. Classic stepped modulation.                                                                    | L      | M      | Retro sci-fi, random sequencing, quantized modulation.                                 |
+| ~~**AttackPhaseModulator**~~ | ~~Decaying FM index during attack only.~~ **Subsumed by `during()` + FM:** `sine.fm(mod, highIndex).during(0.0, 30.0, fadeOutMs = 20.0)` | —      | —      | No longer a separate primitive. Composition pattern using FM + time window.            |
+| **Envelope (multi-segment)** | Beyond ADSR: DAHDSR, AR, ASR, function-based, looping envelopes.                                                                         | M      | M      | Per-voice temporal shaping. Percussion needs exponential AR; pads need multi-stage.    |
+| **Slew Rate Limiter**        | Exponential follower for smoothing parameter changes.                                                                                    | L      | M      | Prevents zipper noise. Portamento. Envelope following.                                 |
 
 ### Structural Combinators
 

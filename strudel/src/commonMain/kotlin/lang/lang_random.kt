@@ -146,7 +146,9 @@ fun PatternMapperFn.withSeed(n: PatternLike): PatternMapperFn = this._withSeed(l
  * @tags rand, random, continuous, noise
  */
 internal val _rand by dslObject {
-    ContinuousPattern { from, _, ctx -> ctx.getSeededRandom(from, "rand").nextDouble() }
+    ContinuousPattern { from, _, ctx ->
+        ctx.getSeededRandom(from, "rand").nextDouble()
+    }
 }
 
 /**
