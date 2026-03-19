@@ -2219,21 +2219,41 @@ internal val PatternMapperFn._lpe by dslPatternMapperExtension { m, args, callIn
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Sets the LPF envelope depth (modulation amount) in Hz.
+ * Sets the LPF envelope depth (modulation amount).
  *
- * Determines how far above the base [lpf] cutoff the filter sweeps when the envelope is
- * fully open. A larger value creates a more dramatic filter sweep. Use with [lpattack],
- * [lpdecay], [lpsustain], [lprelease].
+ * Controls how far above the base [lpf] cutoff the filter sweeps when the ADSR envelope
+ * is fully open. The depth is a multiplier applied to the base cutoff:
+ *
+ * ```
+ * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * ```
+ *
+ * ### How cutoff, ADSR, and depth work together
+ *
+ * | Component | Role |
+ * |-----------|------|
+ * | `lpf(freq)` | Sets the **resting** cutoff — where the filter sits with no envelope |
+ * | `lpattack / lpdecay / lpsustain / lprelease` | Shapes the **envelope curve** over time (0→1→sustain→0) |
+ * | `lpenv(depth)` | Scales **how far** the envelope moves the cutoff |
+ *
+ * Example with `lpf(500).lpenv(3.0).lpattack(0.01).lpdecay(0.5).lpsustain(0.2).lprelease(0.3)`:
+ *
+ * | Phase | envValue | Cutoff |
+ * |-------|----------|--------|
+ * | Note start | 0.0 | 500 Hz |
+ * | Attack peak | 1.0 | 500 × (1 + 3 × 1) = **2000 Hz** |
+ * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
+ * | Release end | 0.0 | 500 Hz |
  *
  * ```KlangScript
- * s("bd").lpf(200).lpenv(4000)                // sweeps up to 4.2 kHz at peak
+ * s("bd").lpf(200).lpenv(3.0)                // sweeps up to 800 Hz at peak
  * ```
  *
  * ```KlangScript
- * note("c4").lpf(300).lpenv("<1000 8000>")    // subtle vs dramatic sweep per cycle
+ * note("c4").lpf(300).lpenv("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
  * ```
  *
- * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @param-tool depth StrudelLpEnvSequenceEditor
  * @alias lpe
@@ -2716,21 +2736,41 @@ internal val PatternMapperFn._hpe by dslPatternMapperExtension { m, args, callIn
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Sets the HPF envelope depth (modulation amount) in Hz.
+ * Sets the HPF envelope depth (modulation amount).
  *
- * Determines how far above the base [hpf] cutoff the filter sweeps when the envelope is
- * fully open. A larger value creates a more dramatic filter sweep. Use with [hpattack],
- * [hpdecay], [hpsustain], [hprelease].
+ * Controls how far above the base [hpf] cutoff the filter sweeps when the ADSR envelope
+ * is fully open. The depth is a multiplier applied to the base cutoff:
+ *
+ * ```
+ * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * ```
+ *
+ * ### How cutoff, ADSR, and depth work together
+ *
+ * | Component | Role |
+ * |-----------|------|
+ * | `hpf(freq)` | Sets the **resting** cutoff — where the filter sits with no envelope |
+ * | `hpattack / hpdecay / hpsustain / hprelease` | Shapes the **envelope curve** over time (0→1→sustain→0) |
+ * | `hpenv(depth)` | Scales **how far** the envelope moves the cutoff |
+ *
+ * Example with `hpf(500).hpenv(3.0).hpattack(0.01).hpdecay(0.5).hpsustain(0.2).hprelease(0.3)`:
+ *
+ * | Phase | envValue | Cutoff |
+ * |-------|----------|--------|
+ * | Note start | 0.0 | 500 Hz |
+ * | Attack peak | 1.0 | 500 × (1 + 3 × 1) = **2000 Hz** |
+ * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
+ * | Release end | 0.0 | 500 Hz |
  *
  * ```KlangScript
- * s("sd").hpf(100).hpenv(3000)                // sweeps up to 3.1 kHz at peak
+ * s("sd").hpf(100).hpenv(3.0)                // sweeps up to 400 Hz at peak
  * ```
  *
  * ```KlangScript
- * note("c4").hpf(200).hpenv("<500 5000>")     // subtle vs dramatic sweep per cycle
+ * note("c4").hpf(200).hpenv("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
  * ```
  *
- * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @param-tool depth StrudelHpEnvSequenceEditor
  * @alias hpe
@@ -3213,21 +3253,41 @@ internal val PatternMapperFn._bpe by dslPatternMapperExtension { m, args, callIn
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Sets the BPF envelope depth (modulation amount) in Hz.
+ * Sets the BPF envelope depth (modulation amount).
  *
- * Determines how far above the base [bandf] centre frequency the filter sweeps when the
- * envelope is fully open. A larger value creates a more dramatic sweep. Use with [bpattack],
- * [bpdecay], [bpsustain], [bprelease].
+ * Controls how far above the base [bandf] centre frequency the filter sweeps when the ADSR envelope
+ * is fully open. The depth is a multiplier applied to the base cutoff:
+ *
+ * ```
+ * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * ```
+ *
+ * ### How cutoff, ADSR, and depth work together
+ *
+ * | Component | Role |
+ * |-----------|------|
+ * | `bandf(freq)` | Sets the **resting** centre frequency — where the filter sits with no envelope |
+ * | `bpattack / bpdecay / bpsustain / bprelease` | Shapes the **envelope curve** over time (0→1→sustain→0) |
+ * | `bpenv(depth)` | Scales **how far** the envelope moves the centre frequency |
+ *
+ * Example with `bandf(500).bpenv(3.0).bpattack(0.01).bpdecay(0.5).bpsustain(0.2).bprelease(0.3)`:
+ *
+ * | Phase | envValue | Centre freq |
+ * |-------|----------|-------------|
+ * | Note start | 0.0 | 500 Hz |
+ * | Attack peak | 1.0 | 500 × (1 + 3 × 1) = **2000 Hz** |
+ * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
+ * | Release end | 0.0 | 500 Hz |
  *
  * ```KlangScript
- * s("sd").bandf(500).bpenv(3000)                // sweeps up to 3.5 kHz at peak
+ * s("sd").bandf(500).bpenv(3.0)                // sweeps up to 2000 Hz at peak
  * ```
  *
  * ```KlangScript
- * note("c4").bandf(300).bpenv("<500 5000>")     // subtle vs dramatic sweep per cycle
+ * note("c4").bandf(300).bpenv("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
  * ```
  *
- * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
+ * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the BPF envelope depth, or [StrudelPattern] when called on a pattern.
  * @param-tool depth StrudelBpEnvSequenceEditor
  * @alias bpe

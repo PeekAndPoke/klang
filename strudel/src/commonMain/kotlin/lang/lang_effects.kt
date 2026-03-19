@@ -15,10 +15,31 @@ var strudelLangEffectsInit = false
 
 // -- distort() / dist() -----------------------------------------------------------------------------------------------
 
-private val distortMutation = voiceModifier { copy(distort = it?.asDoubleOrNull()) }
+private val distortMutation = voiceModifier {
+    val str = it?.toString() ?: return@voiceModifier this
+    if (":" in str) {
+        val parts = str.split(":")
+        copy(
+            distort = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: distort,
+            distortShape = parts.getOrNull(1)?.trim()?.takeIf { s -> s.isNotEmpty() } ?: distortShape,
+        )
+    } else {
+        copy(distort = str.toDoubleOrNull() ?: distort)
+    }
+}
 
 fun applyDistort(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftOrReinterpretNumericalField(args, distortMutation)
+    val str = args.firstOrNull()?.value?.toString() ?: ""
+    return if (":" in str) {
+        source._applyControlFromParams(args, distortMutation) { src, ctrl ->
+            src.copy(
+                distort = ctrl.distort ?: src.distort,
+                distortShape = ctrl.distortShape ?: src.distortShape,
+            )
+        }
+    } else {
+        source._liftOrReinterpretNumericalField(args, distortMutation)
+    }
 }
 
 internal val _distort by dslPatternMapper { args, callInfo -> { p -> p._distort(args, callInfo) } }
@@ -43,14 +64,19 @@ internal val PatternMapperFn._dist by dslPatternMapperExtension { m, args, callI
  * Higher values produce more harmonic saturation and clipping. Works well on synth
  * bass lines and leads; combine with `lpf` to tame harsh high frequencies.
  *
+ * Accepts either a single numeric value or a colon-separated `"amount:shape"` string
+ * to set both distortion amount and waveshaper shape at once. Available shapes:
+ * `soft`, `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`.
+ *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
- * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ * @param amount The distortion amount, or `"amount:shape"` compound string.
  *   Omit to reinterpret the pattern's values as distortion.
+ * @param-tool amount StrudelDistortSequenceEditor
  * @return A new pattern with distortion applied.
  *
  * ```KlangScript
- * note("c2 eb2 g2").s("sawtooth").distort(0.5)   // moderate distortion
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5)   // moderate distortion (default shape)
  * ```
  *
  * ```KlangScript
@@ -58,7 +84,39 @@ internal val PatternMapperFn._dist by dslPatternMapperExtension { m, args, callI
  * ```
  *
  * ```KlangScript
- * seq("0 0.5 1.0").distort()                     // reinterpret values as distortion
+ * note("c2 eb2 g2").s("sawtooth").distort("0.5:soft")       // warm tanh saturation
+ * ```
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort("0.7:hard")       // aggressive hard clipping
+ * ```
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort("0.4:gentle")     // smooth x/(1+|x|) saturation
+ * ```
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort("0.6:cubic")      // tube-like, 3rd harmonic
+ * ```
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort("0.5:diode")      // asymmetric, even harmonics
+ * ```
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort("0.8:fold")       // sine wavefolding, metallic
+ * ```
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort("0.5:chebyshev")  // T3 polynomial, tape saturation
+ * ```
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort("0.7:rectify")    // full-wave rectification, octave-up
+ * ```
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort("0.6:exp")        // exponential, transistor-style
  * ```
  * @alias dist
  * @category effects
@@ -91,8 +149,9 @@ fun String.distort(amount: PatternLike? = null): StrudelPattern =
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
- * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ * @param amount The distortion amount or `"amount:shape"` compound string.
  *   Omit to reinterpret the pattern's values as distortion.
+ * @param-tool amount StrudelDistortSequenceEditor
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript
@@ -132,8 +191,9 @@ fun PatternMapperFn.distort(amount: PatternLike? = null): PatternMapperFn =
  *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
- * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ * @param amount The distortion amount or `"amount:shape"` compound string.
  *   Omit to reinterpret the pattern's values as distortion.
+ * @param-tool amount StrudelDistortSequenceEditor
  * @return A new pattern with distortion applied.
  *
  * ```KlangScript
@@ -178,8 +238,9 @@ fun String.dist(amount: PatternLike? = null): StrudelPattern =
  * Use the returned mapper as a transform argument or apply it to a pattern via `.apply(...)`.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
- * @param amount The distortion amount. Higher values produce more saturation and clipping.
+ * @param amount The distortion amount or `"amount:shape"` compound string.
  *   Omit to reinterpret the pattern's values as distortion.
+ * @param-tool amount StrudelDistortSequenceEditor
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript
@@ -214,6 +275,245 @@ fun dist(amount: PatternLike? = null): PatternMapperFn = _dist(listOfNotNull(amo
 fun PatternMapperFn.dist(amount: PatternLike? = null): PatternMapperFn =
     _dist(listOfNotNull(amount).asStrudelDslArgs())
 
+// -- distortshape() / distshape() / dshape() --------------------------------------------------------------------------
+
+private val distortShapeMutation = voiceModifier { shape -> copy(distortShape = shape?.toString()?.lowercase()) }
+
+fun applyDistortShape(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+    return source._applyControlFromParams(args, distortShapeMutation) { src, ctrl ->
+        src.copy(distortShape = ctrl.distortShape)
+    }
+}
+
+internal val _distortshape by dslPatternMapper { args, callInfo -> { p -> p._distortshape(args, callInfo) } }
+internal val StrudelPattern._distortshape by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyDistortShape(p, args)
+}
+internal val String._distortshape by dslStringExtension { p, args, callInfo -> p._distortshape(args, callInfo) }
+internal val PatternMapperFn._distortshape by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_distortshape(args, callInfo))
+}
+
+internal val _distshape by dslPatternMapper { args, callInfo -> { p -> p._distshape(args, callInfo) } }
+internal val StrudelPattern._distshape by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyDistortShape(p, args)
+}
+internal val String._distshape by dslStringExtension { p, args, callInfo -> p._distshape(args, callInfo) }
+internal val PatternMapperFn._distshape by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_distshape(args, callInfo))
+}
+
+internal val _dshape by dslPatternMapper { args, callInfo -> { p -> p._dshape(args, callInfo) } }
+internal val StrudelPattern._dshape by dslPatternExtension { p, args, /* callInfo */ _ ->
+    applyDistortShape(p, args)
+}
+internal val String._dshape by dslStringExtension { p, args, callInfo -> p._dshape(args, callInfo) }
+internal val PatternMapperFn._dshape by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_dshape(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the distortion waveshaper shape for this pattern.
+ *
+ * Controls which waveshaping algorithm is used for distortion. Available shapes:
+ * `soft`, `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`.
+ *
+ * @param shape The waveshaper shape name.
+ * @param-tool shape StrudelDistortShapeSequenceEditor
+ * @return A new pattern with the distortion shape applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5).distortshape("fold")   // wavefolding distortion
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").distort(0.7).distortshape("<soft hard fold exp>")   // cycle through shapes
+ * ```
+ *
+ * @alias distshape, dshape
+ * @category effects
+ * @tags distortshape, distshape, dshape, distort, shape, waveshaper
+ */
+@StrudelDsl
+fun StrudelPattern.distortshape(shape: PatternLike): StrudelPattern =
+    this._distortshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Parses this string as a pattern and sets the distortion waveshaper shape.
+ *
+ * @param shape The waveshaper shape name.
+ *
+ * ```KlangScript
+ * "c2 eb2 g2".distortshape("fold").distort(0.5).note().s("sawtooth")
+ * ```
+ */
+@StrudelDsl
+fun String.distortshape(shape: PatternLike): StrudelPattern = this._distortshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the distortion waveshaper shape.
+ *
+ * @param shape The waveshaper shape name.
+ * @param-tool shape StrudelDistortShapeSequenceEditor
+ * @return A [PatternMapperFn] that sets the distortion shape.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").apply(distortshape("fold"))   // wavefolding via mapper
+ * ```
+ *
+ * @alias distshape, dshape
+ * @category effects
+ * @tags distortshape, distshape, dshape, distort, shape, waveshaper
+ */
+@StrudelDsl
+fun distortshape(shape: PatternLike): PatternMapperFn = _distortshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape after the previous mapper.
+ *
+ * @param shape The waveshaper shape name.
+ * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").apply(distort(0.5).distortshape("fold"))   // amount then shape
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.distortshape(shape: PatternLike): PatternMapperFn =
+    _distortshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Alias for [distortshape]. Sets the distortion waveshaper shape for this pattern.
+ *
+ * @param shape The waveshaper shape name.
+ * @param-tool shape StrudelDistortShapeSequenceEditor
+ * @return A new pattern with the distortion shape applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5).distshape("hard")   // hard clipping
+ * ```
+ *
+ * ```KlangScript
+ * note("c3*4").distort(0.7).distshape("<soft hard fold exp>")   // cycle through shapes
+ * ```
+ *
+ * @alias distortshape, dshape
+ * @category effects
+ * @tags distshape, distortshape, dshape, distort, shape, waveshaper
+ */
+@StrudelDsl
+fun StrudelPattern.distshape(shape: PatternLike): StrudelPattern =
+    this._distshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Alias for [distortshape]. Parses this string as a pattern and sets the distortion waveshaper shape.
+ *
+ * @param shape The waveshaper shape name.
+ *
+ * ```KlangScript
+ * "c2 eb2 g2".distshape("fold").distort(0.5).note().s("sawtooth")
+ * ```
+ */
+@StrudelDsl
+fun String.distshape(shape: PatternLike): StrudelPattern = this._distshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the distortion waveshaper shape. Alias for [distortshape].
+ *
+ * @param shape The waveshaper shape name.
+ * @return A [PatternMapperFn] that sets the distortion shape.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").apply(distshape("fold"))   // wavefolding via mapper
+ * ```
+ *
+ * @alias distortshape, dshape
+ * @category effects
+ * @tags distshape, distortshape, dshape, distort, shape, waveshaper
+ */
+@StrudelDsl
+fun distshape(shape: PatternLike): PatternMapperFn = _distshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape (alias for [distortshape])
+ * after the previous mapper.
+ *
+ * @param shape The waveshaper shape name.
+ * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").apply(distort(0.5).distshape("fold"))   // amount then shape
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.distshape(shape: PatternLike): PatternMapperFn =
+    _distshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Alias for [distortshape]. Sets the distortion waveshaper shape for this pattern.
+ *
+ * @param shape The waveshaper shape name.
+ * @param-tool shape StrudelDistortShapeSequenceEditor
+ * @return A new pattern with the distortion shape applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").distort(0.5).dshape("hard")   // hard clipping
+ * ```
+ *
+ * @alias distortshape, distshape
+ * @category effects
+ * @tags dshape, distortshape, distshape, distort, shape, waveshaper
+ */
+@StrudelDsl
+fun StrudelPattern.dshape(shape: PatternLike): StrudelPattern =
+    this._dshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Alias for [distortshape]. Parses this string as a pattern and sets the distortion waveshaper shape.
+ *
+ * @param shape The waveshaper shape name.
+ *
+ * ```KlangScript
+ * "c2 eb2 g2".dshape("fold").distort(0.5).note().s("sawtooth")
+ * ```
+ */
+@StrudelDsl
+fun String.dshape(shape: PatternLike): StrudelPattern = this._dshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the distortion waveshaper shape. Alias for [distortshape].
+ *
+ * @param shape The waveshaper shape name.
+ * @return A [PatternMapperFn] that sets the distortion shape.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").apply(dshape("fold"))   // wavefolding via mapper
+ * ```
+ *
+ * @alias distortshape, distshape
+ * @category effects
+ * @tags dshape, distortshape, distshape, distort, shape, waveshaper
+ */
+@StrudelDsl
+fun dshape(shape: PatternLike): PatternMapperFn = _dshape(listOf(shape).asStrudelDslArgs())
+
+/**
+ * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape (alias for [distortshape])
+ * after the previous mapper.
+ *
+ * @param shape The waveshaper shape name.
+ * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").apply(distort(0.5).dshape("fold"))   // amount then shape
+ * ```
+ */
+@StrudelDsl
+fun PatternMapperFn.dshape(shape: PatternLike): PatternMapperFn =
+    _dshape(listOf(shape).asStrudelDslArgs())
+
 // -- Named distortion shapes ------------------------------------------------------------------------------------------
 // Each sets distort amount AND distortShape. Follows strudel.cc convention where each shape is its own function.
 
@@ -239,6 +539,7 @@ internal val String._soft by dslStringExtension { p, args, callInfo -> p._soft(a
  * Warm, analog-style saturation. Smoothly rounds off peaks.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = heavy saturation).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with soft distortion applied.
  *
  * ```KlangScript
@@ -271,6 +572,7 @@ internal val String._hard by dslStringExtension { p, args, callInfo -> p._hard(a
  * Can produce aliasing artifacts at high drive — use for intentional lofi character.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = heavy clipping).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with hard-clipping distortion applied.
  *
  * ```KlangScript
@@ -302,6 +604,7 @@ internal val String._gentle by dslStringExtension { p, args, callInfo -> p._gent
  * Very smooth saturation with a wide knee. Warmer and more gradual than tanh.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = warm saturation).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with gentle distortion applied.
  *
  * ```KlangScript
@@ -333,6 +636,7 @@ internal val String._cubic by dslStringExtension { p, args, callInfo -> p._cubic
  * Emulates vacuum tube saturation. Emphasizes the 3rd harmonic for a musical, warm character.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = warm tube saturation).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with cubic distortion applied.
  *
  * ```KlangScript
@@ -365,6 +669,7 @@ internal val String._diode by dslStringExtension { p, args, callInfo -> p._diode
  * Includes DC offset compensation.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = thick saturation).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with diode distortion applied.
  *
  * ```KlangScript
@@ -397,6 +702,7 @@ internal val String._fold by dslStringExtension { p, args, callInfo -> p._fold(a
  * metallic, FM-like timbres. Higher drive values produce more folds and richer harmonics.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = heavy folding).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with wavefolding applied.
  *
  * ```KlangScript
@@ -428,6 +734,7 @@ internal val String._chebyshev by dslStringExtension { p, args, callInfo -> p._c
  * Generates pure 3rd harmonics using a T3 Chebyshev polynomial. Tape-saturation feel.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = strong harmonic addition).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with Chebyshev distortion applied.
  *
  * ```KlangScript
@@ -460,6 +767,7 @@ internal val String._rectify by dslStringExtension { p, args, callInfo -> p._rec
  * Includes DC offset compensation.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = full rectification).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with rectification applied.
  *
  * ```KlangScript
@@ -492,6 +800,7 @@ internal val String._expClip by dslStringExtension { p, args, callInfo -> p._exp
  * Punchy and defined.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = transistor crunch).
+ * @param-tool amount StrudelDistortAmountSequenceEditor
  * @return A new pattern with exponential distortion applied.
  *
  * ```KlangScript
@@ -2426,10 +2735,35 @@ fun PatternMapperFn.dfb(amount: PatternLike? = null): PatternMapperFn =
 
 // -- phaser() / ph() --------------------------------------------------------------------------------------------------
 
-private val phaserMutation = voiceModifier { copy(phaserRate = it?.asDoubleOrNull()) }
+private val phaserMutation = voiceModifier {
+    val str = it?.toString() ?: return@voiceModifier this
+    if (":" in str) {
+        val parts = str.split(":").map { d -> d.trim().toDoubleOrNull() }
+        copy(
+            phaserRate = parts.getOrNull(0) ?: phaserRate,
+            phaserDepth = parts.getOrNull(1) ?: phaserDepth,
+            phaserCenter = parts.getOrNull(2) ?: phaserCenter,
+            phaserSweep = parts.getOrNull(3) ?: phaserSweep,
+        )
+    } else {
+        copy(phaserRate = str.toDoubleOrNull() ?: phaserRate)
+    }
+}
 
 fun applyPhaser(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    return source._liftOrReinterpretNumericalField(args, phaserMutation)
+    val str = args.firstOrNull()?.value?.toString() ?: ""
+    return if (":" in str) {
+        source._applyControlFromParams(args, phaserMutation) { src, ctrl ->
+            src.copy(
+                phaserRate = ctrl.phaserRate ?: src.phaserRate,
+                phaserDepth = ctrl.phaserDepth ?: src.phaserDepth,
+                phaserCenter = ctrl.phaserCenter ?: src.phaserCenter,
+                phaserSweep = ctrl.phaserSweep ?: src.phaserSweep,
+            )
+        }
+    } else {
+        source._liftOrReinterpretNumericalField(args, phaserMutation)
+    }
 }
 
 internal val _phaser by dslPatternMapper { args, callInfo -> { p -> p._phaser(args, callInfo) } }
@@ -2453,9 +2787,15 @@ internal val PatternMapperFn._ph by dslPatternMapperExtension { m, args, callInf
  *
  * A phaser creates a sweeping comb-filter effect by modulating a series of all-pass filters.
  * Higher rate values produce faster sweeping. Use with `phaserdepth` and `phasercenter`.
+ *
+ * Accepts either a single numeric value (rate) or a colon-separated `"rate:depth:center:sweep"`
+ * string to set all phaser parameters at once. Trailing fields can be omitted.
+ *
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
- * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
+ * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
+ *   Omit to reinterpret the pattern's values as phaser rate.
+ * @param-tool rate StrudelPhaserSequenceEditor
  * @return A new pattern with the phaser rate applied.
  *
  * ```KlangScript
@@ -2467,7 +2807,11 @@ internal val PatternMapperFn._ph by dslPatternMapperExtension { m, args, callInf
  * ```
  *
  * ```KlangScript
- * seq("0.1 0.5 1 4").phaser()   // reinterpret values as phaser rate
+ * note("c3 e3 g3").s("sawtooth").phaser("0.5:0.8:500:1000")   // full compound phaser
+ * ```
+ *
+ * ```KlangScript
+ * note("c3 e3 g3").s("sawtooth").phaser("2.0:0.6")   // rate + depth only
  * ```
  *
  * @alias ph
@@ -2499,7 +2843,9 @@ fun String.phaser(rate: PatternLike? = null): StrudelPattern =
  * Use the returned mapper as a transform argument or apply it via `.apply(...)`.
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
- * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
+ * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
+ *   Omit to reinterpret the pattern's values as phaser rate.
+ * @param-tool rate StrudelPhaserSequenceEditor
  * @return A [PatternMapperFn] that sets the phaser rate.
  *
  * ```KlangScript
@@ -2540,7 +2886,9 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null): PatternMapperFn =
  *
  * When [rate] is omitted, the pattern's own numeric values are reinterpreted as the phaser rate.
  *
- * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
+ * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
+ *   Omit to reinterpret the pattern's values as phaser rate.
+ * @param-tool rate StrudelPhaserSequenceEditor
  * @return A new pattern with the phaser rate applied.
  *
  * ```KlangScript
@@ -2581,7 +2929,9 @@ fun String.ph(rate: PatternLike? = null): StrudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate. Alias for [phaser].
  *
- * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
+ * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
+ *   Omit to reinterpret the pattern's values as phaser rate.
+ * @param-tool rate StrudelPhaserSequenceEditor
  * @return A [PatternMapperFn] that sets the phaser rate.
  *
  * ```KlangScript

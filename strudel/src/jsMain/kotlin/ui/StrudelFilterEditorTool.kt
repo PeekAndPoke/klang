@@ -231,9 +231,8 @@ private class StrudelFilterEditorComp(ctx: Ctx<Props>) : Component<StrudelFilter
                     }
                     UiInputField(envDepth, { envDepth = it; liveUpdate() }) {
                         domKey("env")
-                        step(100.0)
+                        step(0.1)
                         label("Env Depth")
-                        rightLabel { ui.basic.label { +"Hz" } }
                     }
                 }
             }

@@ -6,6 +6,17 @@ import kotlinx.serialization.Serializable
  * Filter envelope for dynamic filter cutoff modulation.
  *
  * Uses ADSR envelope parameters plus a depth parameter to control the amount of modulation.
+ * The depth is a dimensionless ratio (not Hz) that scales the base cutoff:
+ *
+ * ```
+ * newCutoff = baseCutoff × (1 + depth × envelopeValue)
+ * ```
+ *
+ * | depth | envValue | baseCutoff=500 | Result                        |
+ * |-------|----------|----------------|-------------------------------|
+ * | 1.0   | 1.0      | 500 × (1+1×1)  | 1000 Hz (1 octave up)         |
+ * | 3.0   | 1.0      | 500 × (1+3×1)  | 2000 Hz (~2 octaves up)       |
+ * | 0.5   | 0.2      | 500 × (1+0.5×0.2) | 550 Hz (subtle)           |
  */
 @Serializable
 data class FilterEnvelope(
@@ -17,7 +28,7 @@ data class FilterEnvelope(
     val sustain: Double? = null,
     /** Release time in seconds - time to return to baseline after note off */
     val release: Double? = null,
-    /** Modulation depth (0.0 to 1.0) - amount of filter envelope effect */
+    /** Modulation depth as a ratio — scales how far the envelope moves the cutoff above its base value. No upper bound. */
     val depth: Double? = null,
 ) {
     /**

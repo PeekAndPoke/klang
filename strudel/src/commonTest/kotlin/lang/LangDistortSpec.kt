@@ -140,4 +140,223 @@ class LangDistortSpec : StringSpec({
         events.size shouldBe 1
         events[0].data.distort shouldBe 3.0
     }
+
+    // -- combined "amount:shape" format -----------------------------------------------
+
+    "distort() combined sets amount and shape" {
+        val p = note("c").distort("0.5:hard")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.5
+            distortShape shouldBe "hard"
+        }
+    }
+
+    "distort() combined with amount only (no colon) preserves backward compat" {
+        val p = note("c").distort(0.7)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.distort shouldBe 0.7
+        events[0].data.distortShape shouldBe null
+    }
+
+    "distort() combined works as string extension" {
+        val p = "c".distort("0.8:fold")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.8
+            distortShape shouldBe "fold"
+        }
+    }
+
+    "distort() combined works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").distort("0.5:soft")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.5
+            distortShape shouldBe "soft"
+        }
+    }
+
+    "dist() combined works" {
+        val p = note("c").dist("0.6:diode")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.6
+            distortShape shouldBe "diode"
+        }
+    }
+
+    "distort() combined works with mini-notation patterns" {
+        val p = note("c3 e3").distort("<0.3:soft 0.6:hard>")
+        val cycle0 = p.queryArc(0.0, 1.0)
+        val cycle1 = p.queryArc(1.0, 2.0)
+
+        assertSoftly {
+            cycle0.size shouldBe 2
+            cycle0[0].data.distort shouldBe 0.3
+            cycle0[0].data.distortShape shouldBe "soft"
+
+            cycle1.size shouldBe 2
+            cycle1[0].data.distort shouldBe 0.6
+            cycle1[0].data.distortShape shouldBe "hard"
+        }
+    }
+
+    "distort() combined works chained with other effects" {
+        val p = note("c").apply(gain(0.8).distort("0.5:fold"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            gain shouldBe 0.8
+            distort shouldBe 0.5
+            distortShape shouldBe "fold"
+        }
+    }
+
+    // -- distortshape() / distshape() / dshape() ------------------------------------------
+
+    "distortshape dsl interface" {
+        dslInterfaceTests(
+            "pattern.distortshape(shape)" to note("c").distortshape("fold"),
+            "script pattern.distortshape(shape)" to
+                    StrudelPattern.compile("""note("c").distortshape("fold")"""),
+            "string.distortshape(shape)" to "c".distortshape("fold"),
+            "script string.distortshape(shape)" to
+                    StrudelPattern.compile(""""c".distortshape("fold")"""),
+            "distortshape(shape)" to note("c").apply(distortshape("fold")),
+            "script distortshape(shape)" to
+                    StrudelPattern.compile("""note("c").apply(distortshape("fold"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.distortShape shouldBe "fold"
+        }
+    }
+
+    "distshape dsl interface" {
+        dslInterfaceTests(
+            "pattern.distshape(shape)" to note("c").distshape("hard"),
+            "script pattern.distshape(shape)" to
+                    StrudelPattern.compile("""note("c").distshape("hard")"""),
+            "string.distshape(shape)" to "c".distshape("hard"),
+            "script string.distshape(shape)" to
+                    StrudelPattern.compile(""""c".distshape("hard")"""),
+            "distshape(shape)" to note("c").apply(distshape("hard")),
+            "script distshape(shape)" to
+                    StrudelPattern.compile("""note("c").apply(distshape("hard"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.distortShape shouldBe "hard"
+        }
+    }
+
+    "dshape dsl interface" {
+        dslInterfaceTests(
+            "pattern.dshape(shape)" to note("c").dshape("exp"),
+            "script pattern.dshape(shape)" to
+                    StrudelPattern.compile("""note("c").dshape("exp")"""),
+            "string.dshape(shape)" to "c".dshape("exp"),
+            "script string.dshape(shape)" to
+                    StrudelPattern.compile(""""c".dshape("exp")"""),
+            "dshape(shape)" to note("c").apply(dshape("exp")),
+            "script dshape(shape)" to
+                    StrudelPattern.compile("""note("c").apply(dshape("exp"))"""),
+        ) { _, events ->
+            events.shouldNotBeEmpty()
+            events[0].data.distortShape shouldBe "exp"
+        }
+    }
+
+    "distortshape() sets VoiceData.distortShape" {
+        val p = note("c").distortshape("fold")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.distortShape shouldBe "fold"
+    }
+
+    "distortshape() works with control pattern" {
+        val p = note("c3 e3").distortshape("<soft hard>")
+        val cycle0 = p.queryArc(0.0, 1.0)
+        val cycle1 = p.queryArc(1.0, 2.0)
+
+        assertSoftly {
+            cycle0.size shouldBe 2
+            cycle0[0].data.distortShape shouldBe "soft"
+
+            cycle1.size shouldBe 2
+            cycle1[0].data.distortShape shouldBe "hard"
+        }
+    }
+
+    "distortshape() converts to lowercase" {
+        val p = note("c").distortshape("FOLD")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.distortShape shouldBe "fold"
+    }
+
+    "distortshape() chains with distort()" {
+        val p = note("c").distort(0.5).distortshape("hard")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.5
+            distortShape shouldBe "hard"
+        }
+    }
+
+    "distortshape() works in compiled code" {
+        val p = StrudelPattern.compile("""note("c").distort(0.5).distortshape("fold")""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.5
+            distortShape shouldBe "fold"
+        }
+    }
+
+    "distshape() as alias works" {
+        val p = note("c").distort(0.5).distshape("hard")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.5
+            distortShape shouldBe "hard"
+        }
+    }
+
+    "dshape() as alias works" {
+        val p = note("c").distort(0.5).dshape("exp")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.5
+            distortShape shouldBe "exp"
+        }
+    }
+
+    "PatternMapperFn.distortshape() chains correctly" {
+        val p = note("c").apply(distort(0.5).distortshape("fold"))
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        with(events[0].data) {
+            distort shouldBe 0.5
+            distortShape shouldBe "fold"
+        }
+    }
 })
