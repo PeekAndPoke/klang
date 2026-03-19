@@ -71,6 +71,8 @@ data class VoiceData(
 
     // Effects
     val distort: Double?,
+    /** Distortion shape: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp */
+    val distortShape: String?,
     val coarse: Double?,
     val crush: Double?,
 
@@ -174,6 +176,7 @@ data class VoiceData(
             fmSustain = null,
             fmEnv = null,
             distort = null,
+            distortShape = null,
             coarse = null,
             crush = null,
             phaser = null,

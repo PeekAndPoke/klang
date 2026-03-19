@@ -61,6 +61,18 @@ fun registerStrudelUiTools(registry: KlangUiToolRegistry = KlangUiToolRegistry) 
     registry.register("StrudelTremoloEditor", StrudelTremoloEditorTool)
     registry.register("StrudelTremoloSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelTremoloEditorTool))
 
+    // ── Distort tools ─────────────────────────────────────────────────────────
+    registry.register("StrudelDistortEditor", StrudelDistortEditorTool)
+    registry.register("StrudelDistortSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelDistortEditorTool))
+    registry.register("StrudelDistortShapeEditor", StrudelDistortShapeEditorTool)
+    registry.register("StrudelDistortShapeSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelDistortShapeEditorTool))
+    registry.register("StrudelDistortAmountEditor", StrudelDistortAmountEditorTool)
+    registry.register("StrudelDistortAmountSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelDistortAmountEditorTool))
+
+    // ── Phaser tools ──────────────────────────────────────────────────────────
+    registry.register("StrudelPhaserEditor", StrudelPhaserEditorTool)
+    registry.register("StrudelPhaserSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelPhaserEditorTool))
+
     registry.register("StrudelCompressorEditor", StrudelCompressorEditorTool)
     registry.register("StrudelCompressorSequenceEditor", StrudelMiniNotationEditorTool(atomTool = StrudelCompressorEditorTool))
 

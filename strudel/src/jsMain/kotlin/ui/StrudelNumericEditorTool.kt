@@ -9,13 +9,12 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
-import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onMouseDown
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
-import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.document
 import kotlinx.css.*
@@ -28,6 +27,17 @@ import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
 
 // ── Tool instances ───────────────────────────────────────────────────────────
+
+/** Editor for distortion amount (0–2). */
+object StrudelDistortAmountEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
+    title = "Distortion Amount Editor",
+    iconFn = { bolt },
+    fieldLabel = "Distortion Amount",
+    maxValue = 2.0,
+    defaultValue = 0.5,
+    step = 0.01,
+    centerValue = null,
+)
 
 /** Editor for room size (0–10). */
 object StrudelRoomSizeEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
@@ -167,47 +177,43 @@ object StrudelNResonanceEditorTool : KlangUiToolEmbeddable by StrudelNumericEdit
 
 // ── Filter envelope depth editors ────────────────────────────────────────────
 
-/** Editor for LP filter envelope depth in Hz (0–20000). */
+/** Editor for LP filter envelope depth (unitless ratio). */
 object StrudelLpEnvEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
     title = "Low-Pass Env Depth Editor",
     iconFn = { filter },
-    fieldLabel = "Depth (Hz)",
-    maxValue = 20000.0,
-    defaultValue = 4000.0,
-    step = 100.0,
+    fieldLabel = "Depth",
+    defaultValue = 0.5,
+    step = 0.1,
     centerValue = null,
 )
 
-/** Editor for HP filter envelope depth in Hz (0–20000). */
+/** Editor for HP filter envelope depth (unitless ratio). */
 object StrudelHpEnvEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
     title = "High-Pass Env Depth Editor",
     iconFn = { filter },
-    fieldLabel = "Depth (Hz)",
-    maxValue = 20000.0,
-    defaultValue = 4000.0,
-    step = 100.0,
+    fieldLabel = "Depth",
+    defaultValue = 0.5,
+    step = 0.1,
     centerValue = null,
 )
 
-/** Editor for BP filter envelope depth in Hz (0–20000). */
+/** Editor for BP filter envelope depth (unitless ratio). */
 object StrudelBpEnvEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
     title = "Band-Pass Env Depth Editor",
     iconFn = { filter },
-    fieldLabel = "Depth (Hz)",
-    maxValue = 20000.0,
-    defaultValue = 4000.0,
-    step = 100.0,
+    fieldLabel = "Depth",
+    defaultValue = 0.5,
+    step = 0.1,
     centerValue = null,
 )
 
-/** Editor for notch filter envelope depth in Hz (0–20000). */
+/** Editor for notch filter envelope depth (unitless ratio). */
 object StrudelNfEnvEditorTool : KlangUiToolEmbeddable by StrudelNumericEditorTool(
     title = "Notch Env Depth Editor",
     iconFn = { filter },
-    fieldLabel = "Depth (Hz)",
-    maxValue = 20000.0,
-    defaultValue = 4000.0,
-    step = 100.0,
+    fieldLabel = "Depth",
+    defaultValue = 0.5,
+    step = 0.1,
     centerValue = null,
 )
 
@@ -401,11 +407,14 @@ class StrudelNumericEditorTool(
     override val title: String,
     override val iconFn: SemanticIconFn,
     val fieldLabel: String,
-    val maxValue: Double,
     val defaultValue: Double,
     val step: Double,
+    /** If non-null, the drag bar uses this as the lower bound. */
+    val minValue: Double? = null,
+    /** If non-null, the drag bar uses this as the upper bound. When null the drag bar is hidden. */
+    val maxValue: Double? = null,
     /** If non-null, draws a center marker line at this value. */
-    val centerValue: Double?,
+    val centerValue: Double? = null,
 ) : KlangUiToolEmbeddable {
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
@@ -439,6 +448,7 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
     private val cfg get() = props.config
 
     private val laf by subscribingTo(KlangTheme)
+    private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
 
     private val formCtrl = formController()
 
@@ -456,13 +466,18 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
 
     private var dragTarget: Element? = null
 
+    private val barMin get() = cfg.minValue ?: 0.0
+    private val barMax get() = cfg.maxValue
+    private val hasBar get() = barMax != null
+
     private val onDocumentMouseMove: (Event) -> Unit = { e ->
         val bar = dragTarget
-        if (bar != null) {
+        val max = barMax
+        if (bar != null && max != null) {
             val me = e as MouseEvent
             val rect = bar.getBoundingClientRect()
             val ratio = ((me.clientX.toDouble() - rect.left) / rect.width).coerceIn(0.0, 1.0)
-            current = (ratio * cfg.maxValue).roundTo(2)
+            current = (barMin + ratio * (max - barMin)).roundTo(2)
             liveUpdate()
         }
     }
@@ -494,12 +509,15 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
     private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
 
     private fun liveUpdate() {
-        if (props.embedded) {
+        if (props.embedded || autoUpdate) {
             props.toolCtx.onCommit(buildValue())
         }
     }
 
     private fun onCancel() {
+        if (!props.embedded && autoUpdate && isInitialModified) {
+            props.toolCtx.onCommit(initialValue)
+        }
         props.toolCtx.onCancel()
     }
 
@@ -515,11 +533,12 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
     }
 
     private fun startDrag(e: MouseEvent) {
+        val max = barMax ?: return
         val bar = e.currentTarget as? Element ?: return
         dragTarget = bar
         val rect = bar.getBoundingClientRect()
         val ratio = ((e.clientX.toDouble() - rect.left) / rect.width).coerceIn(0.0, 1.0)
-        current = (ratio * cfg.maxValue).roundTo(2)
+        current = (barMin + ratio * (max - barMin)).roundTo(2)
         liveUpdate()
         document.addEventListener("mousemove", onDocumentMouseMove)
         document.addEventListener("mouseup", onDocumentMouseUp)
@@ -536,28 +555,13 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
                 ui.small.header { +cfg.title }
                 renderContent()
                 ui.divider {}
-                div {
-                    css {
-                        display = Display.flex
-                        justifyContent = JustifyContent.flexEnd
-                        gap = 8.px
-                    }
-                    ui.basic.button {
-                        onClick { onCancel() }
-                        icon.times()
-                        +"Cancel"
-                    }
-                    ui.basic.givenNot(isInitialModified) { disabled }.button {
-                        onClick { onReset() }
-                        icon.undo()
-                        +"Reset"
-                    }
-                    ui.black.givenNot(isCurrentModified) { disabled }.button {
-                        onClick { onCommit() }
-                        icon.check()
-                        +"Update"
-                    }
-                }
+                ToolButtonBar(
+                    isInitialModified = isInitialModified,
+                    isCurrentModified = isCurrentModified,
+                    onCancel = ::onCancel,
+                    onReset = ::onReset,
+                    onCommit = ::onCommit,
+                )
             }
         }
     }
@@ -573,15 +577,20 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
                     label(cfg.fieldLabel)
                 }
             }
-            ui.divider {}
-            renderBar()
+            if (hasBar) {
+                ui.divider {}
+                renderBar()
+            }
         }
     }
 
     // ── Interactive bar ─────────────────────────────────────────────────────
 
     private fun FlowContent.renderBar() {
-        val fillPct = (current / cfg.maxValue * 100.0).coerceIn(0.0, 100.0)
+        val max = barMax ?: return
+        val min = barMin
+        val range = max - min
+        val fillPct = if (range > 0.0) ((current - min) / range * 100.0).coerceIn(0.0, 100.0) else 0.0
 
         div {
             css {
@@ -611,8 +620,8 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
 
             // Center line (if configured)
             val center = cfg.centerValue
-            if (center != null) {
-                val centerPct = center / cfg.maxValue * 100.0
+            if (center != null && range > 0.0) {
+                val centerPct = (center - min) / range * 100.0
                 div {
                     css {
                         position = Position.absolute
@@ -638,7 +647,7 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
                     pointerEvents = PointerEvents.none
                 }
                 for (i in 0..tickCount) {
-                    val v = i.toDouble() / tickCount * cfg.maxValue
+                    val v = min + i.toDouble() / tickCount * range
                     val pct = i.toDouble() / tickCount * 100.0
                     val isMajor = i % 5 == 0
                     div {

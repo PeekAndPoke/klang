@@ -86,6 +86,8 @@ data class StrudelVoiceData(
 
     // Effects
     val distort: Double?,
+    /** Distortion shape: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp */
+    val distortShape: String?,
     val coarse: Double?,
     val crush: Double?,
 
@@ -273,6 +275,7 @@ data class StrudelVoiceData(
             fmSustain = null,
             fmEnv = null,
             distort = null,
+            distortShape = null,
             coarse = null,
             crush = null,
             phaserRate = null,
@@ -379,6 +382,7 @@ data class StrudelVoiceData(
             fmSustain = other.fmSustain ?: fmSustain,
             fmEnv = other.fmEnv ?: fmEnv,
             distort = other.distort ?: distort,
+            distortShape = other.distortShape ?: distortShape,
             coarse = other.coarse ?: coarse,
             crush = other.crush ?: crush,
             phaserRate = other.phaserRate ?: phaserRate,
@@ -613,6 +617,7 @@ data class StrudelVoiceData(
             fmSustain = fmSustain,
             fmEnv = fmEnv,
             distort = distort,
+            distortShape = distortShape,
             coarse = coarse,
             crush = crush,
             phaser = phaserRate,

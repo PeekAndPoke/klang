@@ -143,24 +143,45 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
             css {
                 position = Position.relative
                 display = Display.inlineBlock
+                width = props.size
+                height = props.size
             }
 
             ui.basic.inverted.white.circular.icon.label {
                 css {
-                    borderWidth = 1.8.px
+                    boxSizing = BoxSizing.borderBox
+                    borderWidth = 2.5.px
                     width = props.size
                     height = props.size
                     position = Position.relative
+                    margin = Margin(0.px)
+                }
+
+                canvas {
+                    css {
+                        position = Position.absolute
+                        top = 0.px
+                        left = 0.px
+                        width = 100.pct
+                        height = 100.pct
+                        pointerEvents = PointerEvents.none
+                    }
                 }
 
                 props.title?.let { title = it }
 
                 icon.iconFn().then {
                     css {
-                        paddingTop = props.size * 0.075
+                        // Scale icon with gauge size and center between middle and top of circle
+                        fontSize = props.size * 0.15
+                        position = Position.absolute
+                        left = 50.pct
+                        top = 30.pct
+                        put("transform", "translate(-50%, -50%)")
+                        margin = Margin(0.px)
                         color = iconColor
                         if (!isDisabled) {
-                            put("text-shadow", "0 0 10px")
+                            put("text-shadow", "0 0 7px")
                         }
                     }
                 }
@@ -179,17 +200,6 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                     }
                 }
             }
-
-            canvas {
-                css {
-                    position = Position.absolute
-                    top = 0.px
-                    left = 0.px
-                    width = 100.pct
-                    height = 100.pct
-                    pointerEvents = PointerEvents.none
-                }
-            }
         }
     }
 
@@ -206,6 +216,12 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
 
         ctx.clearRect(0.0, 0.0, w, h)
 
+        // Draw circular background
+        ctx.fillStyle = "rgba(25, 25, 25, 1.0)"
+        ctx.beginPath()
+        ctx.arc(cx, cy, (size / 2) - 2, 0.0, 2 * PI)
+        ctx.fill()
+
         // Calculate indicator angle
         // Gauge range: 135deg (bottom-left) to 405deg (bottom-right) = 270deg sweep
         val startAngle = 0.75 * PI  // 135deg
@@ -221,8 +237,8 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         // Draw subtle tick marks inside the circle
         val tickColor = "rgba(255, 255, 255, 0.33)"
         val tickCount = 11  // Number of tick marks
-        val tickOuterRadius = (size / 2) * 0.88  // Start just inside circle edge
-        val tickInnerRadius = (size / 2) * 0.78  // End further inside
+        val tickOuterRadius = (size / 2) * 0.88  // Small gap between circle and ticks
+        val tickInnerRadius = (size / 2) * 0.73  // End further inside
 
         ctx.strokeStyle = tickColor
         ctx.lineWidth = 1.0
@@ -242,7 +258,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
         }
 
         // Draw needle as a triangle (sharp tip)
-        val color = Color.white.withAlpha(0.9)
+        val color = Color.white.withAlpha(0.8)
 
         // Needle dimensions
         val innerRadius = size * 0.08  // Start point (just beyond center)

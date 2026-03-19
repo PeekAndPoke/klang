@@ -4,8 +4,6 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.html.onClick
-import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.ops.filterIsInstance
@@ -19,6 +17,7 @@ import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.document
@@ -44,6 +43,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     // ── Theme ─────────────────────────────────────────────────────────────────
 
     protected val laf: KlangLookAndFeel by subscribingTo(KlangTheme)
+    private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
 
     // ── State ─────────────────────────────────────────────────────────────────
 
@@ -244,6 +244,7 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
             text = newValue
             cursorOffset = newValue.length
             lastAtom = pattern?.let { MnNodeOps.findAtomAtOffset(it, text, cursorOffset) }
+            liveUpdate()
             return
         }
 
@@ -258,11 +259,25 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
         } else {
             lastAtom = null
         }
+        liveUpdate()
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────
 
-    protected fun onCancel() = props.toolCtx.onCancel()
+    protected fun liveUpdate() {
+        if (autoUpdate) {
+            lastCommittedText = text
+            props.toolCtx.onCommit(text.quoteForCommit())
+        }
+    }
+
+    protected fun onCancel() {
+        if (autoUpdate && isModified) {
+            val initial = initialText()
+            props.toolCtx.onCommit(initial.quoteForCommit())
+        }
+        props.toolCtx.onCancel()
+    }
 
     protected fun onReset() {
         pushUndo()
@@ -280,24 +295,13 @@ abstract class MnPatternEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P
     // ── Bottom bar ────────────────────────────────────────────────────────────
 
     protected fun FlowContent.renderBottomBar() {
-        div {
-            css { display = Display.flex; justifyContent = JustifyContent.flexEnd; gap = 8.px }
-            ui.basic.button {
-                onClick { onCancel() }
-                icon.times()
-                +"Cancel"
-            }
-            ui.basic.givenNot(isModified) { disabled }.button {
-                onClick { onReset() }
-                icon.undo()
-                +"Reset"
-            }
-            ui.positive.givenNot(hasUncommittedChanges) { disabled }.button {
-                onClick { if (hasUncommittedChanges) onCommit() }
-                icon.check()
-                +"Update"
-            }
-        }
+        ToolButtonBar(
+            isInitialModified = isModified,
+            isCurrentModified = hasUncommittedChanges,
+            onCancel = ::onCancel,
+            onReset = ::onReset,
+            onCommit = ::onCommit,
+        )
     }
 }
 
@@ -406,6 +410,7 @@ abstract class MnEditorBase<P : MnPatternEditorBase.BaseProps>(ctx: Ctx<P>) : Mn
                 text = newText
                 cursorOffset = cursor
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
+                liveUpdate()
             }
 
             renderExtraControls()

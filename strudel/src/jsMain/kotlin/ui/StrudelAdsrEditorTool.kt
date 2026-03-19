@@ -9,14 +9,16 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
-import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
-import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
-import kotlinx.css.*
+import kotlinx.css.marginBottom
+import kotlinx.css.minWidth
+import kotlinx.css.px
+import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -54,6 +56,7 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
     // ── Parse current value from raw source text ──────────────────────────────
 
     private val laf by subscribingTo(KlangTheme)
+    private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
 
     private val formCtrl = formController()
 
@@ -93,12 +96,15 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
 
     /** Called after every slider change in embedded mode — propagates live updates to the host. */
     private fun liveUpdate() {
-        if (props.embedded) {
+        if (props.embedded || autoUpdate) {
             props.toolCtx.onCommit(buildValue())
         }
     }
 
     private fun onCancel() {
+        if (!props.embedded && autoUpdate && isInitialModified) {
+            props.toolCtx.onCommit(initialValue)
+        }
         props.toolCtx.onCancel()
     }
 
@@ -131,28 +137,13 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
                 ui.small.header { +"ADSR Envelope" }
                 renderContent()
                 ui.divider {}
-                div {
-                    css {
-                        display = Display.flex
-                        justifyContent = JustifyContent.flexEnd
-                        gap = 8.px
-                    }
-                    ui.basic.button {
-                        onClick { onCancel() }
-                        icon.times()
-                        +"Cancel"
-                    }
-                    ui.basic.givenNot(isInitialModified) { disabled }.button {
-                        onClick { onReset() }
-                        icon.undo()
-                        +"Reset"
-                    }
-                    ui.black.givenNot(isCurrentModified) { disabled }.button {
-                        onClick { onCommit() }
-                        icon.check()
-                        +"Update"
-                    }
-                }
+                ToolButtonBar(
+                    isInitialModified = isInitialModified,
+                    isCurrentModified = isCurrentModified,
+                    onCancel = ::onCancel,
+                    onReset = ::onReset,
+                    onCommit = ::onCommit,
+                )
             }
         }
     }

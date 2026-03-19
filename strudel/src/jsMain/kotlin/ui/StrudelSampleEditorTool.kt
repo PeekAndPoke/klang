@@ -9,10 +9,10 @@ import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
-import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.*
@@ -91,6 +91,7 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
 
     @Suppress("unused")
     private val laf by subscribingTo(KlangTheme)
+    private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
@@ -112,12 +113,15 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
     private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
 
     private fun liveUpdate() {
-        if (props.embedded) {
+        if (props.embedded || autoUpdate) {
             props.toolCtx.onCommit(buildValue())
         }
     }
 
     private fun onCancel() {
+        if (!props.embedded && autoUpdate && isInitialModified) {
+            props.toolCtx.onCommit(initialValue)
+        }
         props.toolCtx.onCancel()
     }
 
@@ -142,28 +146,13 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
                 ui.small.header { +"Sample" }
                 renderContent()
                 ui.divider {}
-                div {
-                    css {
-                        display = Display.flex
-                        justifyContent = JustifyContent.flexEnd
-                        gap = 8.px
-                    }
-                    ui.basic.button {
-                        onClick { onCancel() }
-                        icon.times()
-                        +"Cancel"
-                    }
-                    ui.basic.givenNot(isInitialModified) { disabled }.button {
-                        onClick { onReset() }
-                        icon.undo()
-                        +"Reset"
-                    }
-                    ui.black.givenNot(isCurrentModified) { disabled }.button {
-                        onClick { onCommit() }
-                        icon.check()
-                        +"Update"
-                    }
-                }
+                ToolButtonBar(
+                    isInitialModified = isInitialModified,
+                    isCurrentModified = isCurrentModified,
+                    onCancel = ::onCancel,
+                    onReset = ::onReset,
+                    onCommit = ::onCommit,
+                )
             }
         }
     }
@@ -208,7 +197,7 @@ private class StrudelSampleEditorComp(ctx: Ctx<Props>) : Component<StrudelSample
                     }
                     for (entry in filtered) {
                         val isSelected = sample == entry.name
-                        ui.mini.givenNot(isSelected) { basic }.button {
+                        ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
                             key = entry.name
                             onClick { sample = entry.name; liveUpdate() }
                             +entry.name

@@ -88,14 +88,16 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     val builtIn = BuiltInSongs.songs.firstOrNull { it.id == songId }
 
+    val v = 1
+
     val cpsStream = StreamSource(builtIn?.cps ?: 0.5)
-        .persistInLocalStorage("song-$songId-cps", Double.serializer())
+        .persistInLocalStorage("song-$v-$songId-cps", Double.serializer())
 
     val songTitleStream = StreamSource(builtIn?.title ?: "New Song")
-        .persistInLocalStorage("song-$songId-title", String.serializer())
+        .persistInLocalStorage("song-$v-$songId-title", String.serializer())
 
     val codeStream = StreamSource(builtIn?.code ?: defaultCode)
-        .persistInLocalStorage("song-$songId-code", String.serializer())
+        .persistInLocalStorage("song-$v-$songId-code", String.serializer())
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 

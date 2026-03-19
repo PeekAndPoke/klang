@@ -25,36 +25,32 @@ import kotlin.math.sin
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for editing tremolo parameters: depth:rate:shape:skew:phase. */
-object StrudelTremoloEditorTool : KlangUiToolEmbeddable {
-    override val title: String = "Tremolo Editor"
+/** [KlangUiToolEmbeddable] for editing phaser parameters: rate:depth:center:sweep. */
+object StrudelPhaserEditorTool : KlangUiToolEmbeddable {
+    override val title: String = "Phaser Editor"
 
-    override val iconFn: SemanticIconFn = { wave_square }
+    override val iconFn: SemanticIconFn = { sync_alternate }
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
-        StrudelTremoloEditorComp(ctx, embedded = false)
+        StrudelPhaserEditorComp(ctx, embedded = false)
     }
 
     override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) {
-        StrudelTremoloEditorComp(ctx, embedded = true)
+        StrudelPhaserEditorComp(ctx, embedded = true)
     }
 }
 
 // ── Entry-point helpers ───────────────────────────────────────────────────────
 
 @Suppress("FunctionName")
-private fun Tag.StrudelTremoloEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
-    comp(StrudelTremoloEditorComp.Props(toolCtx, embedded)) { StrudelTremoloEditorComp(it) }
+private fun Tag.StrudelPhaserEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
+    comp(StrudelPhaserEditorComp.Props(toolCtx, embedded)) { StrudelPhaserEditorComp(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremoloEditorComp.Props>(ctx) {
+private class StrudelPhaserEditorComp(ctx: Ctx<Props>) : Component<StrudelPhaserEditorComp.Props>(ctx) {
 
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
-
-    companion object {
-        private val shapes = listOf("sine", "triangle", "square", "saw")
-    }
 
     // ── Parse current value from raw source text ──────────────────────────────
 
@@ -65,19 +61,18 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
-    private fun parseInput(): List<String> {
+    private fun parseInput(): List<Double?> {
         val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
         if (raw.isBlank()) return emptyList()
-        return raw.split(":").map { it.trim() }
+        return raw.split(":").map { it.trim().toDoubleOrNull() }
     }
 
     private val parsedParts = parseInput()
 
-    private var depth by value(parsedParts.getOrNull(0)?.toDoubleOrNull() ?: 0.5)
-    private var rate by value(parsedParts.getOrNull(1)?.toDoubleOrNull())
-    private var shape by value(parsedParts.getOrNull(2)?.takeIf { it in shapes })
-    private var skew by value(parsedParts.getOrNull(3)?.toDoubleOrNull())
-    private var phase by value(parsedParts.getOrNull(4)?.toDoubleOrNull())
+    private var rate by value(parsedParts.getOrNull(0) ?: 0.5)
+    private var depth by value(parsedParts.getOrNull(1))
+    private var center by value(parsedParts.getOrNull(2))
+    private var sweep by value(parsedParts.getOrNull(3))
 
     private var resetCounter by value(0)
 
@@ -87,19 +82,14 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String {
-        val parts = mutableListOf(depth.fmt())
+        val parts = mutableListOf(rate.fmt())
 
-        val optionals = listOf(
-            rate?.fmt(),
-            shape,
-            skew?.fmt(),
-            phase?.fmt(),
-        )
+        val optionals = listOf(depth, center, sweep)
         val lastSetIndex = optionals.indexOfLast { it != null }
 
         if (lastSetIndex >= 0) {
             for (i in 0..lastSetIndex) {
-                parts.add(optionals[i] ?: "")
+                parts.add(optionals[i]?.fmt() ?: "")
             }
         }
 
@@ -124,11 +114,10 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
 
     private fun onReset() {
         val p = parseInput()
-        depth = p.getOrNull(0)?.toDoubleOrNull() ?: 0.5
-        rate = p.getOrNull(1)?.toDoubleOrNull()
-        shape = p.getOrNull(2)?.takeIf { it in shapes }
-        skew = p.getOrNull(3)?.toDoubleOrNull()
-        phase = p.getOrNull(4)?.toDoubleOrNull()
+        rate = p.getOrNull(0) ?: 0.5
+        depth = p.getOrNull(1)
+        center = p.getOrNull(2)
+        sweep = p.getOrNull(3)
         formCtrl.resetAllFields()
         props.toolCtx.onCommit(initialValue)
         resetCounter++
@@ -146,7 +135,7 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Tremolo" }
+                ui.small.header { +"Phaser" }
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -162,52 +151,26 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
 
     private fun FlowContent.renderContent() {
         div {
-            key = "tremolo-editor-content-$resetCounter"
+            key = "phaser-editor-content-$resetCounter"
 
             ui.form {
                 ui.two.stackable.fields {
-                    UiInputField(depth, { depth = it; liveUpdate() }) {
-                        domKey("depth")
-                        step(0.01)
-                        label("Depth")
+                    UiInputField(rate, { rate = it; liveUpdate() }) {
+                        domKey("rate")
+                        step(0.1)
+                        label("Rate (Hz)")
                     }
-                    nullableField("rate", "Rate (cycles)", 0.5, rate) { rate = it; liveUpdate() }
+                    nullableField("depth", "Depth", 0.01, depth) { depth = it; liveUpdate() }
                 }
-            }
-
-            // Shape buttons
-            div {
-                css {
-                    display = Display.flex
-                    flexWrap = FlexWrap.wrap
-                    gap = 6.px
-                    marginTop = 8.px
-                    marginBottom = 8.px
-                }
-                for (s in shapes) {
-                    val isSelected = shape == s
-                    ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
-                        key = s
-                        onClick {
-                            shape = if (isSelected) null else s
-                            liveUpdate()
-                        }
-                        +s
-                    }
-                }
-            }
-
-            ui.form {
                 ui.two.stackable.fields {
-                    nullableField("skew", "Skew", 0.01, skew) { skew = it; liveUpdate() }
-                    nullableField("phase", "Phase", 0.01, phase) { phase = it; liveUpdate() }
+                    nullableField("center", "Center (Hz)", 10.0, center) { center = it; liveUpdate() }
+                    nullableField("sweep", "Sweep (Hz)", 10.0, sweep) { sweep = it; liveUpdate() }
                 }
             }
-
             ui.divider {}
             div {
                 css { if (!props.embedded) marginBottom = 1.rem }
-                renderTremoloViz()
+                renderPhaserViz()
             }
         }
     }
@@ -240,62 +203,62 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
 
     // ── SVG visualization ────────────────────────────────────────────────────
 
-    private fun FlowContent.renderTremoloViz() {
+    private fun FlowContent.renderPhaserViz() {
         val w = 400.0
-        val h = 80.0
-        val padL = 10.0
-        val padR = 10.0
-        val padT = 8.0
-        val padB = 8.0
+        val h = 90.0
+        val padL = 22.0
+        val padR = 6.0
+        val padT = 6.0
+        val padB = 20.0
         val drawW = w - padL - padR
         val drawH = h - padT - padB
 
-        val clampedDepth = depth.coerceIn(0.0, 1.0)
-        val clampedRate = (rate ?: 4.0).coerceIn(0.5, 32.0)
-        val clampedPhase = (phase ?: 0.0)
+        val clampedRate = rate.coerceIn(0.01, 20.0)
+        val clampedDepth = (depth ?: 0.5).coerceIn(0.0, 1.0)
+        val clampedCenter = (center ?: 1000.0).coerceIn(100.0, 10000.0)
+        val clampedSweep = (sweep ?: 500.0).coerceIn(0.0, 10000.0)
         val goldHex = laf.gold
 
         val numPoints = drawW.toInt()
 
-        val points = buildString {
+        // Frequency sweep curve
+        val freqPoints = buildString {
             for (i in 0 until numPoints) {
                 val t = i.toDouble() / numPoints  // 0..1 (one cycle)
-
-                // Generate LFO waveform based on shape
-                val lfoPhase = (t * clampedRate + clampedPhase) % 1.0
-                val lfoRaw = when (shape) {
-                    "square" -> if (lfoPhase < 0.5) 1.0 else -1.0
-                    "triangle" -> if (lfoPhase < 0.5) (4.0 * lfoPhase - 1.0) else (3.0 - 4.0 * lfoPhase)
-                    "saw" -> 2.0 * lfoPhase - 1.0
-                    else -> sin(lfoPhase * 2.0 * PI) // sine (default)
-                }
-
-                // Map to gain: 1.0 down to (1.0 - depth)
-                val lfoNorm = (lfoRaw + 1.0) * 0.5
-                val gain = 1.0 - (clampedDepth * (1.0 - lfoNorm))
-
-                val x = padL + i.toDouble()
-                val y = padT + drawH - gain * drawH
+                val lfo = sin(t * clampedRate * 2.0 * PI)
+                val freq = clampedCenter + lfo * clampedSweep * clampedDepth
+                val normFreq = ((freq - 100.0) / 9900.0).coerceIn(0.0, 1.0)
+                val px = padL + i.toDouble()
+                val py = padT + drawH - normFreq * drawH
                 if (i > 0) append(" ")
-                append("$x,$y")
+                append("$px,$py")
             }
         }
 
         svgRoot(viewBox = "0 0 $w $h") {
             svgRect(padL, padT, drawW, drawH, fill = "rgba(0,0,0,0.2)", rx = "2")
-            svgLine(padL, padT, padL + drawW, padT, stroke = "rgba(255,255,255,0.15)", strokeWidth = "0.5")
-            svgLine(
-                padL, padT + drawH * (1.0 - (1.0 - clampedDepth)),
-                padL + drawW, padT + drawH * (1.0 - (1.0 - clampedDepth)),
-                stroke = "rgba(255,255,255,0.1)", strokeWidth = "0.5",
-            )
+
+            // Center frequency line
+            val centerNorm = ((clampedCenter - 100.0) / 9900.0).coerceIn(0.0, 1.0)
+            val centerY = padT + drawH - centerNorm * drawH
+            svgLine(padL, centerY, padL + drawW, centerY, stroke = "rgba(255,255,255,0.15)", strokeWidth = "0.5")
+
+            // Frequency sweep
             svgPolyline(
-                points = points,
+                points = freqPoints,
                 stroke = goldHex,
-                strokeWidth = "1",
+                strokeWidth = "1.5",
                 strokeLinejoin = "round",
                 strokeLinecap = "round",
             )
+
+            // Axis labels
+            svgText(
+                x = 4, y = padT + drawH / 2,
+                text = "Freq", fill = "#ccc", fontSize = "5", textAnchor = "middle",
+                transform = "rotate(-90, 4, ${padT + drawH / 2})",
+            )
+            svgText(padL + drawW / 2, h - 4, "Time", fill = "#ccc", fontSize = "5", textAnchor = "middle")
         }
     }
 }
