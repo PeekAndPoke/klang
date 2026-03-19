@@ -11,9 +11,9 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
-import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.*
+import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.FlowContent
@@ -73,6 +73,7 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
     private val laf by subscribingTo(KlangTheme)
+    private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
 
     private val formCtrl = formController()
 
@@ -112,12 +113,15 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
     private val isCurrentModified get() = currentValue != buildValue()
 
     private fun liveUpdate() {
-        if (props.embedded) {
+        if (props.embedded || autoUpdate) {
             props.toolCtx.onCommit(buildValue())
         }
     }
 
     private fun onCancel() {
+        if (!props.embedded && autoUpdate && isInitialModified) {
+            props.toolCtx.onCommit(initialValue)
+        }
         props.toolCtx.onCancel()
     }
 
@@ -161,28 +165,13 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
                 ui.small.header { +"Compressor" }
                 renderContent()
                 ui.divider {}
-                div {
-                    css {
-                        display = Display.flex
-                        justifyContent = JustifyContent.flexEnd
-                        gap = 8.px
-                    }
-                    ui.basic.button {
-                        onClick { onCancel() }
-                        icon.times()
-                        +"Cancel"
-                    }
-                    ui.basic.givenNot(isInitialModified) { disabled }.button {
-                        onClick { onReset() }
-                        icon.undo()
-                        +"Reset"
-                    }
-                    ui.black.givenNot(isCurrentModified) { disabled }.button {
-                        onClick { onCommit() }
-                        icon.check()
-                        +"Update"
-                    }
-                }
+                ToolButtonBar(
+                    isInitialModified = isInitialModified,
+                    isCurrentModified = isCurrentModified,
+                    onCancel = ::onCancel,
+                    onReset = ::onReset,
+                    onCommit = ::onCommit,
+                )
             }
         }
     }
@@ -200,14 +189,24 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
                     gap = 4.px
                     marginBottom = 8.px
                 }
+                val matchedPreset = PRESETS.find {
+                    it.threshold == threshold && it.ratio == ratio && it.knee == knee &&
+                            it.attack == attack && it.release == release
+                }
+
                 for (preset in PRESETS) {
-                    ui.mini.basic.button {
-                        css {
-                            whiteSpace = WhiteSpace.nowrap
-                        }
+                    val isSelected = preset === matchedPreset
+                    ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
+                        css { whiteSpace = WhiteSpace.nowrap }
                         onClick { applyPreset(preset) }
                         +preset.name
                     }
+                }
+
+                val isCustom = matchedPreset == null
+                ui.mini.givenNot(isCustom) { basic }.given(isCustom) { with(laf.styles.goldButton()) }.button {
+                    css { whiteSpace = WhiteSpace.nowrap }
+                    +"Custom"
                 }
             }
 

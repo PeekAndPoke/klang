@@ -89,6 +89,7 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
                 text = newText
                 cursorOffset = cursor
                 lastAtom = lastAtom?.let { a -> pattern?.let { p -> findAtomById(p, a.id) } }
+                liveUpdate()
             }
 
             ui.divider {}

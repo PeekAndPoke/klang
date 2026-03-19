@@ -96,6 +96,12 @@ data class KlangLookAndFeel(
          * Dark-themed docs hover popup.
          * Applied to the segment container; overrides Semantic UI descendant colors.
          */
+        /** Gold-highlighted button — use for selected/active toggle buttons. */
+        val goldButton by rule {
+            put("background-color", "$gold !important")
+            put("color", "#222 !important")
+        }
+
         /** Overlays a 10 % dark tint — use on subtle inset panels. */
         val darken10 by rule {
             put("background-color", "rgba(0,0,0,0.1) !important")

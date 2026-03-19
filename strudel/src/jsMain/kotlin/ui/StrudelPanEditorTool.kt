@@ -9,13 +9,12 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
-import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onMouseDown
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
-import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.document
 import kotlinx.css.*
@@ -59,6 +58,7 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
     // ── Parse current value from raw source text ──────────────────────────────
 
     private val laf by subscribingTo(KlangTheme)
+    private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
 
     private val formCtrl = formController()
 
@@ -115,12 +115,15 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
     private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
 
     private fun liveUpdate() {
-        if (props.embedded) {
+        if (props.embedded || autoUpdate) {
             props.toolCtx.onCommit(buildValue())
         }
     }
 
     private fun onCancel() {
+        if (!props.embedded && autoUpdate && isInitialModified) {
+            props.toolCtx.onCommit(initialValue)
+        }
         props.toolCtx.onCancel()
     }
 
@@ -157,28 +160,13 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
                 ui.small.header { +"Pan" }
                 renderContent()
                 ui.divider {}
-                div {
-                    css {
-                        display = Display.flex
-                        justifyContent = JustifyContent.flexEnd
-                        gap = 8.px
-                    }
-                    ui.basic.button {
-                        onClick { onCancel() }
-                        icon.times()
-                        +"Cancel"
-                    }
-                    ui.basic.givenNot(isInitialModified) { disabled }.button {
-                        onClick { onReset() }
-                        icon.undo()
-                        +"Reset"
-                    }
-                    ui.black.givenNot(isCurrentModified) { disabled }.button {
-                        onClick { onCommit() }
-                        icon.check()
-                        +"Update"
-                    }
-                }
+                ToolButtonBar(
+                    isInitialModified = isInitialModified,
+                    isCurrentModified = isCurrentModified,
+                    onCancel = ::onCancel,
+                    onReset = ::onReset,
+                    onCommit = ::onCommit,
+                )
             }
         }
     }

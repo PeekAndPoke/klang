@@ -14,7 +14,9 @@ import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.comp.NoteStaffComp
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
@@ -66,6 +68,8 @@ private class StrudelSingleScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelS
 
     // ── Parse initial value ───────────────────────────────────────────────────
 
+    private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+
     private val initialValue = props.toolCtx.currentValue ?: ""
 
     /** Initial scale name derived from [initialValue] (e.g. `"c4:major"` → `"c4 major"`). */
@@ -94,12 +98,17 @@ private class StrudelSingleScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelS
 
     /** Called after every field change in embedded mode — propagates live updates to the host. */
     private fun liveUpdate() {
-        if (props.embedded) {
+        if (props.embedded || autoUpdate) {
             props.toolCtx.onCommit(buildValue())
         }
     }
 
-    private fun onCancel() = props.toolCtx.onCancel()
+    private fun onCancel() {
+        if (!props.embedded && autoUpdate && isInitialModified) {
+            props.toolCtx.onCommit(initialValue)
+        }
+        props.toolCtx.onCancel()
+    }
 
     private fun onReset() {
         pickedScaleName = initialScaleName
@@ -134,6 +143,11 @@ private class StrudelSingleScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelS
                     ui.small.basic.label { +buildValue() }
                     noui.basic.segment {
                         css { padding = Padding(0.px); display = Display.flex; gap = 8.px }
+                        ui.mini.givenNot(autoUpdate) { basic }.given(autoUpdate) { with(KlangTheme().styles.goldButton()) }.button {
+                            onClick { KlangToolAutoUpdate.toggle() }
+                            icon.sync_alternate()
+                            +"Auto-update"
+                        }
                         ui.basic.button {
                             onClick { onCancel() }
                             icon.times()
@@ -144,10 +158,12 @@ private class StrudelSingleScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelS
                             icon.undo()
                             +"Reset"
                         }
-                        ui.positive.givenNot(isCurrentModified) { disabled }.button {
-                            onClick { onCommit() }
-                            icon.check()
-                            +"Update"
+                        if (!autoUpdate) {
+                            ui.positive.givenNot(isCurrentModified) { disabled }.button {
+                                onClick { onCommit() }
+                                icon.check()
+                                +"Update"
+                            }
                         }
                     }
                 }

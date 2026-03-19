@@ -16,41 +16,42 @@ import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlin.math.PI
-import kotlin.math.sin
+import kotlin.math.*
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
-/** [KlangUiToolEmbeddable] for selecting a waveform. */
-object StrudelWaveformEditorTool : KlangUiToolEmbeddable {
-    override val title: String = "Waveform"
+/** [KlangUiToolEmbeddable] for selecting a distortion waveshaper shape. */
+object StrudelDistortShapeEditorTool : KlangUiToolEmbeddable {
+    override val title: String = "Distort Shape"
 
-    override val iconFn: SemanticIconFn = { wave_square }
+    override val iconFn: SemanticIconFn = { bolt }
 
     override fun FlowContent.render(ctx: KlangUiToolContext) {
-        StrudelWaveformEditorComp(ctx, embedded = false)
+        StrudelDistortShapeEditorComp(ctx, embedded = false)
     }
 
     override fun FlowContent.renderEmbedded(ctx: KlangUiToolContext) {
-        StrudelWaveformEditorComp(ctx, embedded = true)
+        StrudelDistortShapeEditorComp(ctx, embedded = true)
     }
 }
 
 // ── Entry-point helpers ───────────────────────────────────────────────────────
 
 @Suppress("FunctionName")
-private fun Tag.StrudelWaveformEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
-    comp(StrudelWaveformEditorComp.Props(toolCtx, embedded)) { StrudelWaveformEditorComp(it) }
+private fun Tag.StrudelDistortShapeEditorComp(toolCtx: KlangUiToolContext, embedded: Boolean) =
+    comp(StrudelDistortShapeEditorComp.Props(toolCtx, embedded)) { StrudelDistortShapeEditorComp(it) }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWaveformEditorComp.Props>(ctx) {
+private class StrudelDistortShapeEditorComp(ctx: Ctx<Props>) :
+    Component<StrudelDistortShapeEditorComp.Props>(ctx) {
 
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
-    // ── Available waveforms ───────────────────────────────────────────────────
-
-    private val waveforms = listOf("sine", "triangle", "sawtooth", "square", "noise")
+    companion object {
+        val shapes = listOf("soft", "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp")
+        val allOptions = listOf("default") + shapes
+    }
 
     // ── Parse current value from raw source text ──────────────────────────────
 
@@ -62,14 +63,14 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
     private val parsed
         get() = run {
             val raw = initialValue.trim().removePrefix("\"").removeSuffix("\"")
-            if (raw in waveforms) raw else "sine"
+            if (raw in allOptions) raw else "default"
         }
 
-    private var waveform by value(parsed)
+    private var shape by value(parsed)
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun buildValue(): String = "\"$waveform\""
+    private fun buildValue(): String = "\"$shape\""
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = (props.toolCtx.currentValue ?: "") != buildValue()
@@ -88,7 +89,7 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
     }
 
     private fun onReset() {
-        waveform = parsed
+        shape = parsed
         props.toolCtx.onCommit(initialValue)
     }
 
@@ -104,7 +105,7 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Waveform" }
+                ui.small.header { +"Distort Shape" }
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -120,7 +121,7 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
 
     private fun FlowContent.renderContent() {
         div {
-            key = "waveform-editor-content"
+            key = "distort-shape-editor-content"
 
             div {
                 css {
@@ -129,66 +130,96 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
                     gap = 6.px
                     marginBottom = 8.px
                 }
-                for (wf in waveforms) {
-                    val isSelected = waveform == wf
+                for (s in allOptions) {
+                    val isSelected = shape == s
                     ui.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
-                        key = wf
-                        onClick { waveform = wf; liveUpdate() }
-                        +wf
+                        key = s
+                        onClick { shape = s; liveUpdate() }
+                        +s
                     }
                 }
             }
             ui.divider {}
             div {
                 css { if (!props.embedded) marginBottom = 1.rem }
-                renderWaveformSvg()
+                renderTransferCurve()
             }
         }
     }
 
-    // ── SVG ───────────────────────────────────────────────────────────────────
+    // ── SVG visualization: waveshaper transfer curve ─────────────────────────
 
-    private fun FlowContent.renderWaveformSvg() {
+    private fun FlowContent.renderTransferCurve() {
         val w = 400.0
-        val h = 80.0
-        val padL = 10.0
-        val padR = 10.0
-        val padT = 8.0
-        val padB = 8.0
+        val h = 100.0
+        val padL = 22.0
+        val padR = 6.0
+        val padT = 6.0
+        val padB = 20.0
         val drawW = w - padL - padR
         val drawH = h - padT - padB
         val midY = padT + drawH / 2.0
 
-        val numPoints = drawW.toInt()
+        val goldHex = laf.gold
 
+        val numPoints = drawW.toInt()
         val points = buildString {
             for (i in 0 until numPoints) {
-                val t = i.toDouble() / numPoints  // 0..1 (one cycle)
-                val amplitude = when (waveform) {
-                    "sine" -> sin(t * 2.0 * PI)
-                    "triangle" -> if (t < 0.5) (4.0 * t - 1.0) else (3.0 - 4.0 * t)
-                    "sawtooth" -> 2.0 * t - 1.0
-                    "square" -> if (t < 0.5) 1.0 else -1.0
-                    "noise" -> sin(i.toDouble() * 127.1) * sin(i.toDouble() * 311.7)
-                    else -> 0.0
-                }
-                val x = padL + i.toDouble()
-                val y = midY - amplitude * (drawH / 2.0 * 0.9)
+                val x = -1.0 + 2.0 * i / numPoints
+                val driven = x * 3.0  // moderate drive to show shape character
+                val y = waveshape(driven, shape)
+                val px = padL + i.toDouble()
+                val py = midY - y * (drawH / 2.0 * 0.9)
                 if (i > 0) append(" ")
-                append("$x,$y")
+                append("$px,$py")
             }
         }
 
         svgRoot(viewBox = "0 0 $w $h") {
             svgRect(padL, padT, drawW, drawH, fill = "rgba(0,0,0,0.2)", rx = "2")
             svgLine(padL, midY, padL + drawW, midY, stroke = "rgba(255,255,255,0.15)", strokeWidth = "0.5")
+            svgLine(
+                padL + drawW / 2, padT, padL + drawW / 2, padT + drawH,
+                stroke = "rgba(255,255,255,0.1)", strokeWidth = "0.5",
+            )
+            svgLine(padL, padT + drawH, padL + drawW, padT, stroke = "rgba(255,255,255,0.08)", strokeWidth = "0.5")
             svgPolyline(
                 points = points,
-                stroke = laf.gold,
-                strokeWidth = "1",
+                stroke = goldHex,
+                strokeWidth = "1.5",
                 strokeLinejoin = "round",
                 strokeLinecap = "round",
             )
+            svgText(padL - 3, midY + 2, "0", fill = "#ccc", fontSize = "5", textAnchor = "end")
+            svgText(padL - 3, padT + 4, "1", fill = "#ccc", fontSize = "5", textAnchor = "end")
+            svgText(padL - 3, padT + drawH, "-1", fill = "#ccc", fontSize = "5", textAnchor = "end")
+            svgText(padL + drawW / 2, h - 4, "Input", fill = "#ccc", fontSize = "5", textAnchor = "middle")
         }
+    }
+
+    private fun waveshape(x: Double, shape: String): Double = when (shape) {
+        "soft" -> tanh(x)
+        "hard" -> x.coerceIn(-1.0, 1.0)
+        "gentle" -> x / (1.0 + abs(x))
+        "cubic" -> {
+            val c = x.coerceIn(-1.0, 1.0)
+            c - c * c * c / 3.0
+        }
+
+        "diode" -> if (x >= 0.0) tanh(x) else tanh(x * 0.5)
+        "fold" -> sin(x * PI / 2.0)
+        "chebyshev" -> {
+            val c = x.coerceIn(-1.0, 1.0)
+            4.0 * c * c * c - 3.0 * c
+        }
+
+        "rectify" -> abs(tanh(x))
+        "exp" -> sign(x) * (1.0 - exp(-abs(x)))
+        else -> tanh(x)
+    }
+
+    private fun tanh(x: Double): Double {
+        val e2x = exp(2.0 * x)
+        return (e2x - 1.0) / (e2x + 1.0)
     }
 }
