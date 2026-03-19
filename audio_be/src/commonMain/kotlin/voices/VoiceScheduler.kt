@@ -732,7 +732,7 @@ class VoiceScheduler(
         val compressor = Voice.Compressor.fromStringConfig(data.compressor)
 
         // Effects
-        val distort = Voice.Distort(amount = data.distort ?: 0.0)
+        val distort = Voice.Distort(amount = data.distort ?: 0.0, shape = data.distortShape ?: "soft")
         val crush = Voice.Crush(amount = data.crush ?: 0.0)
         val coarse = Voice.Coarse(amount = data.coarse ?: 0.0)
 

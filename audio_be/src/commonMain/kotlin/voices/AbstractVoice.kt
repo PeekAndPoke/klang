@@ -72,7 +72,11 @@ abstract class AbstractVoice(
     // Initialize effect filters
     private val fxCrush = if (crush.amount > 0.0) BitCrushFilter(crush.amount) else null
     private val fxCoarse = if (coarse.amount > 1.0) SampleRateReducerFilter(coarse.amount) else null
-    private val fxDistortion = if (distort.amount > 0.0) DistortionFilter(distort.amount) else null
+    private val fxDistortion = if (distort.amount > 0.0) {
+        DistortionFilter(distort.amount, distort.shape)
+    } else {
+        null
+    }
 
     // Lazily initialized filters that need sampleRate
     private var lazyTremolo: TremoloFilter? = null

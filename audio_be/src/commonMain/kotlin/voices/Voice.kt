@@ -211,6 +211,8 @@ sealed interface Voice {
     class Distort(
         /** Distortion amount (0.0 = clean, 1.0+ = heavy saturation) */
         val amount: Double,
+        /** Distortion shape/type: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp */
+        val shape: String = "soft",
     )
 
     /**

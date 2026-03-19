@@ -17,7 +17,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0001",
             title = "Synthris",
-            cps = 0.65,
+            cps = 0.67,
             code = TestTextPatterns.tetris,
             icon = "gamepad",
         )
@@ -107,7 +107,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0004",
             title = "Stranger Synths",
-            cps = 0.62,
+            cps = 0.63,
             code = TestTextPatterns.strangerThingsNetflix,
             icon = "film",
         )

@@ -353,6 +353,7 @@ class GraalStrudelPattern(
                 fmEnv = fmEnv,
                 // Effects
                 distort = distort,
+                distortShape = null,
                 coarse = coarse,
                 crush = crush,
                 // Phaser

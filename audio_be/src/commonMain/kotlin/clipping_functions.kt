@@ -89,4 +89,60 @@ object ClippingFuncs {
     inline fun nativeTanh(x: Double): Double {
         return kotlin.math.tanh(x)
     }
+
+    /**
+     * Asymmetric Diode Clipping.
+     *
+     * **Sonic Character:** Thicker, warmer than symmetric clipping.
+     * Positive peaks compress via tanh, negative peaks compress less aggressively.
+     * **Use Case:** Tube amp simulation, adding "body" to bass lines.
+     * **Math:** tanh(x) for positive, tanh(x * 0.75) for negative.
+     * **Note:** Generates DC offset — always use with a DC blocking filter.
+     */
+    inline fun diodeClip(x: Double): Double {
+        return if (x >= 0.0) {
+            fastTanh(x)
+        } else {
+            fastTanh(x * 0.75)
+        }
+    }
+
+    /**
+     * Chebyshev T3 Polynomial (3rd harmonic generator).
+     *
+     * **Sonic Character:** Pure 3rd harmonic addition, tape-saturation feel.
+     * **Use Case:** Subtle harmonic enhancement, "tape warmth".
+     * **Math:** T3(x) = 4x^3 - 3x, with input clamped to [-1, 1].
+     */
+    inline fun chebyshevT3(x: Double): Double {
+        val xc = x.coerceIn(-1.0, 1.0)
+        return 4.0 * xc * xc * xc - 3.0 * xc
+    }
+
+    /**
+     * Full-Wave Rectifier.
+     *
+     * **Sonic Character:** Octave-up effect, buzzy, gnarly.
+     * **Use Case:** Octave effects, aggressive bass sounds.
+     * **Math:** |x|, then soft-clipped to prevent aliasing.
+     * **Note:** Generates DC offset — always use with a DC blocking filter.
+     */
+    inline fun rectify(x: Double): Double {
+        return abs(x).coerceAtMost(1.0)
+    }
+
+    /**
+     * Exponential Soft Clip (Transistor-style).
+     *
+     * **Sonic Character:** Tighter knee than tanh, more "transistor" than "tube".
+     * **Use Case:** Transistor amp simulation, punchy drums.
+     * **Math:** sign(x) * (1 - exp(-|x|))
+     */
+    inline fun expClip(x: Double): Double {
+        return if (x >= 0.0) {
+            1.0 - kotlin.math.exp(-x)
+        } else {
+            -(1.0 - kotlin.math.exp(x))
+        }
+    }
 }

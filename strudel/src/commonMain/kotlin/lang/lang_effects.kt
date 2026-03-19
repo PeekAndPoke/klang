@@ -214,6 +214,303 @@ fun dist(amount: PatternLike? = null): PatternMapperFn = _dist(listOfNotNull(amo
 fun PatternMapperFn.dist(amount: PatternLike? = null): PatternMapperFn =
     _dist(listOfNotNull(amount).asStrudelDslArgs())
 
+// -- Named distortion shapes ------------------------------------------------------------------------------------------
+// Each sets distort amount AND distortShape. Follows strudel.cc convention where each shape is its own function.
+
+private fun shapedDistortMutation(shape: String) = voiceModifier {
+    copy(distort = it?.asDoubleOrNull(), distortShape = shape)
+}
+
+private fun applyShapedDistort(
+    source: StrudelPattern, args: List<StrudelDslArg<Any?>>, shape: String
+): StrudelPattern {
+    return source._liftOrReinterpretNumericalField(args, shapedDistortMutation(shape))
+}
+
+// --- soft (tanh, warm analog saturation) ---
+
+internal val _soft by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "soft") } }
+internal val StrudelPattern._soft by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "soft") }
+internal val String._soft by dslStringExtension { p, args, callInfo -> p._soft(args, callInfo) }
+
+/**
+ * Applies soft-clipping (tanh) distortion to this pattern.
+ *
+ * Warm, analog-style saturation. Smoothly rounds off peaks.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = heavy saturation).
+ * @return A new pattern with soft distortion applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").soft(0.5)
+ * ```
+ * @category effects
+ * @tags distort, soft, saturation, warm, analog
+ */
+@StrudelDsl
+fun StrudelPattern.soft(amount: PatternLike? = null): StrudelPattern =
+    this._soft(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.soft(amount: PatternLike? = null): StrudelPattern =
+    this._soft(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun soft(amount: PatternLike? = null): PatternMapperFn = _soft(listOfNotNull(amount).asStrudelDslArgs())
+
+// --- hard (hard clipping, aggressive digital) ---
+
+internal val _hard by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "hard") } }
+internal val StrudelPattern._hard by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "hard") }
+internal val String._hard by dslStringExtension { p, args, callInfo -> p._hard(args, callInfo) }
+
+/**
+ * Applies hard-clipping distortion to this pattern.
+ *
+ * Harsh, aggressive digital clipping. Chops off peaks at the threshold.
+ * Can produce aliasing artifacts at high drive — use for intentional lofi character.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = heavy clipping).
+ * @return A new pattern with hard-clipping distortion applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").hard(0.5)
+ * ```
+ * @category effects
+ * @tags distort, hard, clipping, digital, aggressive
+ */
+@StrudelDsl
+fun StrudelPattern.hard(amount: PatternLike? = null): StrudelPattern =
+    this._hard(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.hard(amount: PatternLike? = null): StrudelPattern =
+    this._hard(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun hard(amount: PatternLike? = null): PatternMapperFn = _hard(listOfNotNull(amount).asStrudelDslArgs())
+
+// --- gentle (soft clip x/(1+|x|), wider knee) ---
+
+internal val _gentle by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "gentle") } }
+internal val StrudelPattern._gentle by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "gentle") }
+internal val String._gentle by dslStringExtension { p, args, callInfo -> p._gentle(args, callInfo) }
+
+/**
+ * Applies gentle soft-clipping distortion to this pattern.
+ *
+ * Very smooth saturation with a wide knee. Warmer and more gradual than tanh.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = warm saturation).
+ * @return A new pattern with gentle distortion applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").gentle(0.5)
+ * ```
+ * @category effects
+ * @tags distort, gentle, soft, warm, smooth
+ */
+@StrudelDsl
+fun StrudelPattern.gentle(amount: PatternLike? = null): StrudelPattern =
+    this._gentle(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.gentle(amount: PatternLike? = null): StrudelPattern =
+    this._gentle(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun gentle(amount: PatternLike? = null): PatternMapperFn = _gentle(listOfNotNull(amount).asStrudelDslArgs())
+
+// --- cubic (tube-like, 3rd harmonic) ---
+
+internal val _cubic by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "cubic") } }
+internal val StrudelPattern._cubic by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "cubic") }
+internal val String._cubic by dslStringExtension { p, args, callInfo -> p._cubic(args, callInfo) }
+
+/**
+ * Applies cubic (tube-like) distortion to this pattern.
+ *
+ * Emulates vacuum tube saturation. Emphasizes the 3rd harmonic for a musical, warm character.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = warm tube saturation).
+ * @return A new pattern with cubic distortion applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").cubic(0.5)
+ * ```
+ * @category effects
+ * @tags distort, cubic, tube, warm, musical
+ */
+@StrudelDsl
+fun StrudelPattern.cubic(amount: PatternLike? = null): StrudelPattern =
+    this._cubic(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.cubic(amount: PatternLike? = null): StrudelPattern =
+    this._cubic(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun cubic(amount: PatternLike? = null): PatternMapperFn = _cubic(listOfNotNull(amount).asStrudelDslArgs())
+
+// --- diode (asymmetric, even harmonics) ---
+
+internal val _diode by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "diode") } }
+internal val StrudelPattern._diode by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "diode") }
+internal val String._diode by dslStringExtension { p, args, callInfo -> p._diode(args, callInfo) }
+
+/**
+ * Applies diode-clipping distortion to this pattern.
+ *
+ * Asymmetric saturation that adds even harmonics (2nd, 4th) for a thicker, warmer sound.
+ * Includes DC offset compensation.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = thick saturation).
+ * @return A new pattern with diode distortion applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").diode(0.5)
+ * ```
+ * @category effects
+ * @tags distort, diode, asymmetric, thick, warm, even-harmonics
+ */
+@StrudelDsl
+fun StrudelPattern.diode(amount: PatternLike? = null): StrudelPattern =
+    this._diode(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.diode(amount: PatternLike? = null): StrudelPattern =
+    this._diode(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun diode(amount: PatternLike? = null): PatternMapperFn = _diode(listOfNotNull(amount).asStrudelDslArgs())
+
+// --- fold (sine wavefolding, metallic) ---
+
+internal val _fold by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "fold") } }
+internal val StrudelPattern._fold by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "fold") }
+internal val String._fold by dslStringExtension { p, args, callInfo -> p._fold(args, callInfo) }
+
+/**
+ * Applies sine wavefolding distortion to this pattern.
+ *
+ * Instead of clipping peaks, maps them back using a sine function. Creates complex,
+ * metallic, FM-like timbres. Higher drive values produce more folds and richer harmonics.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = heavy folding).
+ * @return A new pattern with wavefolding applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").fold(0.5)
+ * ```
+ * @category effects
+ * @tags distort, fold, wavefolder, metallic, scifi, fm
+ */
+@StrudelDsl
+fun StrudelPattern.fold(amount: PatternLike? = null): StrudelPattern =
+    this._fold(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.fold(amount: PatternLike? = null): StrudelPattern =
+    this._fold(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun fold(amount: PatternLike? = null): PatternMapperFn = _fold(listOfNotNull(amount).asStrudelDslArgs())
+
+// --- chebyshev (3rd harmonic generator, tape saturation) ---
+
+internal val _chebyshev by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "chebyshev") } }
+internal val StrudelPattern._chebyshev by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "chebyshev") }
+internal val String._chebyshev by dslStringExtension { p, args, callInfo -> p._chebyshev(args, callInfo) }
+
+/**
+ * Applies Chebyshev polynomial distortion to this pattern.
+ *
+ * Generates pure 3rd harmonics using a T3 Chebyshev polynomial. Tape-saturation feel.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = strong harmonic addition).
+ * @return A new pattern with Chebyshev distortion applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").chebyshev(0.5)
+ * ```
+ * @category effects
+ * @tags distort, chebyshev, harmonic, tape, saturation
+ */
+@StrudelDsl
+fun StrudelPattern.chebyshev(amount: PatternLike? = null): StrudelPattern =
+    this._chebyshev(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.chebyshev(amount: PatternLike? = null): StrudelPattern =
+    this._chebyshev(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun chebyshev(amount: PatternLike? = null): PatternMapperFn = _chebyshev(listOfNotNull(amount).asStrudelDslArgs())
+
+// --- rectify (full-wave, octave-up effect) ---
+
+internal val _rectify by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "rectify") } }
+internal val StrudelPattern._rectify by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "rectify") }
+internal val String._rectify by dslStringExtension { p, args, callInfo -> p._rectify(args, callInfo) }
+
+/**
+ * Applies full-wave rectification distortion to this pattern.
+ *
+ * Creates an octave-up effect by folding negative half-waves to positive. Gnarly, buzzy character.
+ * Includes DC offset compensation.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = full rectification).
+ * @return A new pattern with rectification applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").rectify(0.5)
+ * ```
+ * @category effects
+ * @tags distort, rectify, octave, buzz, gnarly
+ */
+@StrudelDsl
+fun StrudelPattern.rectify(amount: PatternLike? = null): StrudelPattern =
+    this._rectify(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.rectify(amount: PatternLike? = null): StrudelPattern =
+    this._rectify(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun rectify(amount: PatternLike? = null): PatternMapperFn = _rectify(listOfNotNull(amount).asStrudelDslArgs())
+
+// --- exp (exponential soft clip, transistor-style) ---
+
+internal val _expClip by dslPatternMapper { args, _ -> { p -> applyShapedDistort(p, args, "exp") } }
+internal val StrudelPattern._expClip by dslPatternExtension { p, args, _ -> applyShapedDistort(p, args, "exp") }
+internal val String._expClip by dslStringExtension { p, args, callInfo -> p._expClip(args, callInfo) }
+
+/**
+ * Applies exponential soft-clipping distortion to this pattern.
+ *
+ * Tighter saturation knee than tanh, more "transistor" than "tube" character.
+ * Punchy and defined.
+ *
+ * @param amount The distortion amount (0.0 = clean, 1.0+ = transistor crunch).
+ * @return A new pattern with exponential distortion applied.
+ *
+ * ```KlangScript
+ * note("c2 eb2 g2").s("sawtooth").expClip(0.5)
+ * ```
+ * @category effects
+ * @tags distort, exp, transistor, punch, crunch
+ */
+@StrudelDsl
+fun StrudelPattern.expClip(amount: PatternLike? = null): StrudelPattern =
+    this._expClip(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun String.expClip(amount: PatternLike? = null): StrudelPattern =
+    this._expClip(listOfNotNull(amount).asStrudelDslArgs())
+
+@StrudelDsl
+fun expClip(amount: PatternLike? = null): PatternMapperFn = _expClip(listOfNotNull(amount).asStrudelDslArgs())
+
 // -- crush() ----------------------------------------------------------------------------------------------------------
 
 private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
