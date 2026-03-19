@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -56,6 +57,8 @@ private class StrudelPhaserEditorComp(ctx: Ctx<Props>) : Component<StrudelPhaser
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -135,7 +138,7 @@ private class StrudelPhaserEditorComp(ctx: Ctx<Props>) : Component<StrudelPhaser
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Phaser" }
+                toolHeaderWithInfo("Phaser", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -158,13 +161,16 @@ private class StrudelPhaserEditorComp(ctx: Ctx<Props>) : Component<StrudelPhaser
                     UiInputField(rate, { rate = it; liveUpdate() }) {
                         domKey("rate")
                         step(0.1)
-                        label("Rate (Hz)")
+                        label {
+                            +"Rate (Hz)"
+                            subFieldInfoIcon("rate", "rate", props.toolCtx, infoPopup)
+                        }
                     }
-                    nullableField("depth", "Depth", 0.01, depth) { depth = it; liveUpdate() }
+                    nullableField("depth", "Depth", 0.01, depth, subField = "depth") { depth = it; liveUpdate() }
                 }
                 ui.two.stackable.fields {
-                    nullableField("center", "Center (Hz)", 10.0, center) { center = it; liveUpdate() }
-                    nullableField("sweep", "Sweep (Hz)", 10.0, sweep) { sweep = it; liveUpdate() }
+                    nullableField("center", "Center (Hz)", 10.0, center, subField = "center") { center = it; liveUpdate() }
+                    nullableField("sweep", "Sweep (Hz)", 10.0, sweep, subField = "sweep") { sweep = it; liveUpdate() }
                 }
             }
             ui.divider {}
@@ -180,12 +186,20 @@ private class StrudelPhaserEditorComp(ctx: Ctx<Props>) : Component<StrudelPhaser
         labelText: String,
         stepVal: Double,
         current: Double?,
+        subField: String? = null,
         onChange: (Double?) -> Unit,
     ) {
         UiInputField.nullable(current, { onChange(it) }) {
             domKey(key)
             step(stepVal)
-            label(labelText)
+            if (subField != null) {
+                label {
+                    +labelText
+                    subFieldInfoIcon("rate", subField, props.toolCtx, infoPopup)
+                }
+            } else {
+                label(labelText)
+            }
             if (current == null) {
                 placeholder("default")
             }

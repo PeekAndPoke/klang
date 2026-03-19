@@ -396,6 +396,62 @@ class KDocParserTest : StringSpec({
         )
     }
 
+    "parse param-sub tag — single sub-field" {
+        val kdoc = """
+            Distortion effect.
+
+            @param amount The distortion amount or compound string.
+            @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.paramSubs shouldContainExactly mapOf(
+            "amount" to mapOf("amount" to "Distortion drive level (0 = clean, 2 = extreme)")
+        )
+    }
+
+    "parse param-sub tag — multiple sub-fields for one param" {
+        val kdoc = """
+            Distortion effect.
+
+            @param amount The distortion amount or compound string.
+            @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
+            @param-sub amount shape Waveshaper curve type: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.paramSubs shouldContainExactly mapOf(
+            "amount" to mapOf(
+                "amount" to "Distortion drive level (0 = clean, 2 = extreme)",
+                "shape" to "Waveshaper curve type: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp"
+            )
+        )
+    }
+
+    "parse param-sub tag — sub-fields for multiple params" {
+        val kdoc = """
+            Complex effect.
+
+            @param-sub paramA fieldX Description of fieldX
+            @param-sub paramA fieldY Description of fieldY
+            @param-sub paramB fieldZ Description of fieldZ
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.paramSubs shouldContainExactly mapOf(
+            "paramA" to mapOf(
+                "fieldX" to "Description of fieldX",
+                "fieldY" to "Description of fieldY"
+            ),
+            "paramB" to mapOf(
+                "fieldZ" to "Description of fieldZ"
+            )
+        )
+    }
+
     "whitespace-only fenced block is ignored" {
         val kdoc = """
             Function.

@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -55,6 +56,8 @@ private class StrudelReverbEditorComp(ctx: Ctx<Props>) : Component<StrudelReverb
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -137,7 +140,7 @@ private class StrudelReverbEditorComp(ctx: Ctx<Props>) : Component<StrudelReverb
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Reverb" }
+                toolHeaderWithInfo("Reverb", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -160,16 +163,22 @@ private class StrudelReverbEditorComp(ctx: Ctx<Props>) : Component<StrudelReverb
                     UiInputField(room, { room = it; liveUpdate() }) {
                         domKey("room")
                         step(0.01)
-                        label("Room (wet/dry)")
+                        label {
+                            +"Room (wet/dry)"
+                            subFieldInfoIcon("params", "room", props.toolCtx, infoPopup)
+                        }
                     }
                     UiInputField(size, { size = it; liveUpdate() }) {
                         domKey("size")
                         step(0.1)
-                        label("Size (0–10)")
+                        label {
+                            +"Size (0–10)"
+                            subFieldInfoIcon("params", "size", props.toolCtx, infoPopup)
+                        }
                     }
-                    nullableField("fade", "Fade (s)", 0.01, fade) { fade = it; liveUpdate() }
-                    nullableField("lowpass", "Lowpass (Hz)", 100.0, lowpass) { lowpass = it; liveUpdate() }
-                    nullableField("dim", "Dim (Hz)", 100.0, dim) { dim = it; liveUpdate() }
+                    nullableField("fade", "Fade (s)", 0.01, fade, subField = "fade") { fade = it; liveUpdate() }
+                    nullableField("lowpass", "Lowpass (Hz)", 100.0, lowpass, subField = "lowpass") { lowpass = it; liveUpdate() }
+                    nullableField("dim", "Dim (Hz)", 100.0, dim, subField = "dim") { dim = it; liveUpdate() }
                 }
             }
             ui.divider {}
@@ -185,12 +194,20 @@ private class StrudelReverbEditorComp(ctx: Ctx<Props>) : Component<StrudelReverb
         labelText: String,
         stepVal: Double,
         current: Double?,
+        subField: String? = null,
         onChange: (Double?) -> Unit,
     ) {
         UiInputField.nullable(current, { onChange(it) }) {
             domKey(key)
             step(stepVal)
-            label(labelText)
+            if (subField != null) {
+                label {
+                    +labelText
+                    subFieldInfoIcon("params", subField, props.toolCtx, infoPopup)
+                }
+            } else {
+                label(labelText)
+            }
             if (current == null) {
                 placeholder("default")
             }

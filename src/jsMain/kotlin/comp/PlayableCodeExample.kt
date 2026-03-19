@@ -25,10 +25,11 @@ import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.strudelLib
-import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 
@@ -71,10 +72,10 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private val laf by subscribingTo(KlangTheme)
     private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
 
-    private val hoverPopup: KlangDocsHoverPopupCtrl by lazy {
-        KlangDocsHoverPopupCtrl(popups = popups) { doc ->
-            KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
-        }
+    private val hoverPopup: HoverPopupCtrl by lazy { HoverPopupCtrl(popups = popups) }
+
+    private val hoverContent: FlowContent.(KlangSymbol) -> Unit = { doc ->
+        KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
     }
 
     private fun navToDoc(doc: KlangSymbol, event: dynamic) {
@@ -272,6 +273,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 },
                 availableLibraries = listOf(stdlibLib, strudelLib),
                 hoverPopup = hoverPopup,
+                hoverContent = hoverContent,
                 popups = popups,
                 onNavigate = ::navToDoc,
             ).track(editorRef)

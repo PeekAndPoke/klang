@@ -109,13 +109,74 @@ All tool source files are in `strudel/src/jsMain/kotlin/ui/`.
    ```
 4. The KSP processor picks it up automatically on next build.
 
+## Info Icons & Help Text
+
+Every UI tool surfaces help text from KDoc via (i) info icons.
+
+### Tool-level (i)
+
+Use `toolHeaderWithInfo(title, ctx, popupCtrl)` instead of `ui.small.header { +title }` in modal mode.
+Shows the first paragraph of the function's KDoc description on hover. Only renders the icon when
+a description exists.
+
+```kotlin
+private val infoPopup = HoverPopupCtrl(popups)
+// ...
+toolHeaderWithInfo("Delay", props.toolCtx, infoPopup)
+```
+
+### Per-field (i) for single-param tools
+
+Use `paramInfoIcon(paramName, ctx, popupCtrl)` next to the field label. Data comes from `@param` KDoc.
+
+```kotlin
+label {
+    +cfg.fieldLabel
+    paramInfoIcon(props.toolCtx.paramName, props.toolCtx, infoPopup)
+}
+```
+
+### Per-sub-field (i) for multi-field tools
+
+Use `subFieldInfoIcon(paramName, subFieldName, ctx, popupCtrl)` next to each sub-field label.
+Data comes from `@param-sub` KDoc tags.
+
+```kotlin
+label {
+    +"Amount"
+    subFieldInfoIcon("amount", "amount", props.toolCtx, infoPopup)
+}
+```
+
+All three only render when description text exists (no empty popups).
+All helpers live in `strudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`.
+
+## `@param-sub` KDoc Tag
+
+Syntax for documenting sub-fields within composite (colon-separated) parameters:
+
+```
+@param-sub <paramName> <subFieldName> <description>
+```
+
+- Used when a single `@param` is a colon-separated compound value (e.g. `"amount:shape"`)
+- Each sub-field gets its own `@param-sub` line
+- Parsed by KSP into `KlangParam.subFields: Map<String, String>`
+- Example from `distort()`:
+  ```kotlin
+  @param amount The distortion amount, or "amount:shape" compound string.
+  @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
+  @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
+  ```
+
 ## Key Files
 
 | File                                                    | Role                                        |
 |---------------------------------------------------------|---------------------------------------------|
 | `klangui/src/jsMain/kotlin/KlangUiTool.kt`              | Interfaces + registry                       |
-| `strudel-ksp/src/main/kotlin/KDocParser.kt`             | Parses `@param-tool` tags                   |
-| `klangscript/src/commonMain/kotlin/types/KlangParam.kt` | `uitools` field                             |
+| `strudel-ksp/src/main/kotlin/KDocParser.kt`             | Parses `@param-tool` and `@param-sub` tags  |
+| `klangscript/src/commonMain/kotlin/types/KlangParam.kt` | `uitools` + `subFields` fields              |
+| `strudel/src/jsMain/kotlin/ui/KlangToolInfoHelpers.kt`  | Info icon helpers + `HoverPopupCtrl`        |
 | `src/jsMain/kotlin/codemirror/ArgFinder.kt`             | Finds arg under cursor                      |
 | `src/jsMain/kotlin/codemirror/DslGoToDocsExtension.kt`  | Right-click → tool launch                   |
 | `strudel/src/jsMain/kotlin/ui/StrudelUiTools.kt`        | Registration function                       |

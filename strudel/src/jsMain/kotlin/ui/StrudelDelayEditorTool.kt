@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -55,6 +56,8 @@ private class StrudelDelayEditorComp(ctx: Ctx<Props>) : Component<StrudelDelayEd
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -132,7 +135,7 @@ private class StrudelDelayEditorComp(ctx: Ctx<Props>) : Component<StrudelDelayEd
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Delay" }
+                toolHeaderWithInfo("Delay", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -155,10 +158,13 @@ private class StrudelDelayEditorComp(ctx: Ctx<Props>) : Component<StrudelDelayEd
                     UiInputField(wet, { wet = it; liveUpdate() }) {
                         domKey("wet")
                         step(0.01)
-                        label("Wet/Dry")
+                        label {
+                            +"Wet/Dry"
+                            subFieldInfoIcon("amount", "wet", props.toolCtx, infoPopup)
+                        }
                     }
-                    nullableField("time", "Time (s)", 0.01, time) { time = it; liveUpdate() }
-                    nullableField("feedback", "Feedback", 0.01, feedback) { feedback = it; liveUpdate() }
+                    nullableField("time", "Time (s)", 0.01, time, subField = "time") { time = it; liveUpdate() }
+                    nullableField("feedback", "Feedback", 0.01, feedback, subField = "feedback") { feedback = it; liveUpdate() }
                 }
             }
             ui.divider {}
@@ -174,12 +180,20 @@ private class StrudelDelayEditorComp(ctx: Ctx<Props>) : Component<StrudelDelayEd
         labelText: String,
         stepVal: Double,
         current: Double?,
+        subField: String? = null,
         onChange: (Double?) -> Unit,
     ) {
         UiInputField.nullable(current, { onChange(it) }) {
             domKey(key)
             step(stepVal)
-            label(labelText)
+            if (subField != null) {
+                label {
+                    +labelText
+                    subFieldInfoIcon("amount", subField, props.toolCtx, infoPopup)
+                }
+            } else {
+                label(labelText)
+            }
             if (current == null) {
                 placeholder("default")
             }

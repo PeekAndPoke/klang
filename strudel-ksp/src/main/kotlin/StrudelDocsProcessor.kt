@@ -234,6 +234,10 @@ class StrudelDocsProcessor(
                     if (paramUiTools.isNotEmpty()) {
                         append(", uitools = listOf(${paramUiTools.joinToString(", ") { "\"$it\"" }})")
                     }
+                    val paramSubFields = kdoc.paramSubs[paramName]
+                    if (paramSubFields != null && paramSubFields.isNotEmpty()) {
+                        append(", subFields = mapOf(${paramSubFields.entries.joinToString(", ") { "\"${it.key}\" to \"\"\"${it.value}\"\"\"" }})")
+                    }
                     appendLine("),")
                 }
                 appendLine("                ),")

@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -11,6 +12,7 @@ import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
@@ -57,6 +59,7 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -134,7 +137,7 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
             ui.segment {
                 key = "adsr-editor"
                 css { minWidth = 600.px }
-                ui.small.header { +"ADSR Envelope" }
+                toolHeaderWithInfo("ADSR Envelope", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -158,10 +161,10 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
                 key = "adsr-editor-form"
                 ui.four.stackable.fields {
                     key = "adsr-editor-fields"
-                    adsrRow("Attack", "sec", attack, 0.001) { attack = it; liveUpdate() }
-                    adsrRow("Decay", "sec", decay, 0.001) { decay = it; liveUpdate() }
-                    adsrRow("Sustain", "", sustain, 0.01) { sustain = it; liveUpdate() }
-                    adsrRow("Release", "sec", release, 0.001) { release = it; liveUpdate() }
+                    adsrRow("Attack", "sec", attack, 0.001, "attack") { attack = it; liveUpdate() }
+                    adsrRow("Decay", "sec", decay, 0.001, "decay") { decay = it; liveUpdate() }
+                    adsrRow("Sustain", "", sustain, 0.01, "sustain") { sustain = it; liveUpdate() }
+                    adsrRow("Release", "sec", release, 0.001, "release") { release = it; liveUpdate() }
                 }
             }
             ui.divider {
@@ -230,12 +233,16 @@ private class StrudelAdsrEditorComp(ctx: Ctx<Props>) : Component<StrudelAdsrEdit
         unit: String,
         value: Double,
         step: Double,
+        subField: String,
         onChange: (Double) -> Unit,
     ) {
         UiInputField(value, onChange) {
             domKey(label)
             step(step)
-            label(label)
+            label {
+                +label
+                subFieldInfoIcon("params", subField, props.toolCtx, infoPopup)
+            }
             if (unit.isNotEmpty()) rightLabel { ui.basic.label { +unit } }
         }
     }

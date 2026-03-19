@@ -9,6 +9,7 @@ import de.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.ui.scheduleShow
 import kotlinx.css.*
 import kotlinx.html.*
 import org.w3c.dom.Element
@@ -195,8 +196,9 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
             key = "func-name"
             +block.funcName
 
-            doc?.let {
-                onMouseEnter { event -> props.ctx.hoverPopup?.scheduleShow(doc, event) }
+            val hoverContent = props.ctx.hoverContent
+            if (doc != null && hoverContent != null) {
+                onMouseEnter { event -> props.ctx.hoverPopup?.scheduleShow(doc, event, content = hoverContent) }
                 onMouseLeave { props.ctx.hoverPopup?.scheduleClose() }
             }
         }

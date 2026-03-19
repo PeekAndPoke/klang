@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.ui
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
@@ -56,6 +57,7 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
@@ -104,7 +106,7 @@ private class StrudelWaveformEditorComp(ctx: Ctx<Props>) : Component<StrudelWave
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Waveform" }
+                toolHeaderWithInfo("Waveform", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(

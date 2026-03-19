@@ -80,6 +80,11 @@ internal val PatternMapperFn._reverb by dslPatternMapperExtension { m, args, cal
  *
  * @param params The reverb parameters as a colon-separated string `"room:size:fade:lowpass:dim"`.
  * @param-tool params StrudelReverbSequenceEditor
+ * @param-sub params room Wet/dry mix (0 = fully dry, 1 = fully wet)
+ * @param-sub params size Room size — larger values produce longer reverb tails
+ * @param-sub params fade Reverb tail fade time in seconds
+ * @param-sub params lowpass Lowpass filter frequency on reverb output in Hz
+ * @param-sub params dim High-frequency damping frequency in Hz
  * @return A new pattern with all specified reverb parameters applied.
  * @category effects
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
@@ -501,6 +506,11 @@ internal val PatternMapperFn._tremolo by dslPatternMapperExtension { m, args, ca
  *
  * @param params The tremolo parameters as a colon-separated string `"depth:rate:shape:skew:phase"`.
  * @param-tool params StrudelTremoloSequenceEditor
+ * @param-sub params depth Modulation intensity (0 = no effect, 1 = full tremolo)
+ * @param-sub params rate LFO speed in cycles per pattern cycle
+ * @param-sub params shape LFO waveform: sine, triangle, square, saw
+ * @param-sub params skew Waveform skew (0–1)
+ * @param-sub params phase LFO start phase offset in cycles
  * @return A new pattern with all specified tremolo parameters applied.
  * @category effects
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon

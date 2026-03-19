@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -12,6 +13,7 @@ import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onMouseDown
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
@@ -450,6 +452,8 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
 
+    private val infoPopup = HoverPopupCtrl(popups)
+
     private val formCtrl = formController()
 
     private val initialValue = props.toolCtx.currentValue ?: ""
@@ -552,7 +556,7 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +cfg.title }
+                toolHeaderWithInfo(cfg.title, props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -574,7 +578,10 @@ private class StrudelNumericEditorComp(ctx: Ctx<Props>) : Component<StrudelNumer
                 UiInputField(current, { current = it; liveUpdate() }) {
                     domKey("value")
                     step(cfg.step)
-                    label(cfg.fieldLabel)
+                    label {
+                        +cfg.fieldLabel
+                        paramInfoIcon(props.toolCtx.paramName, props.toolCtx, infoPopup)
+                    }
                 }
             }
             if (hasBar) {

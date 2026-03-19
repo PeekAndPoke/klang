@@ -49,6 +49,7 @@ private val String._foo by dslStringExtension { p, args, callInfo -> p._foo(args
 
 - Examples: fenced ` ```KlangScript ``` ` blocks — **NOT** `@sample` tags
 - Required tags: `@param`, `@return`, `@category` (one word), `@tags` (comma-separated)
+- `@param-sub` required for composite params (colon-separated values like `"amount:shape"`)
 - `@alias` required when aliases exist — every alias must list all the others
 - Max line length: 120 chars
 - Single-line `/** ... */` only when entire comment fits within 120 chars

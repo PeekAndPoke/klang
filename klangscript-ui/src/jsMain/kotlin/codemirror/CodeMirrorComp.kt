@@ -11,8 +11,9 @@ import de.peekandpoke.ultra.common.OnChange
 import io.peekandpoke.klang.codemirror.ext.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
-import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.id
@@ -27,7 +28,8 @@ fun Tag.KlangScriptEditorComp(
     code: String,
     onCodeChanged: OnChange<String>,
     availableLibraries: List<KlangScriptLibrary> = emptyList(),
-    hoverPopup: KlangDocsHoverPopupCtrl? = null,
+    hoverPopup: HoverPopupCtrl? = null,
+    hoverContent: (FlowContent.(KlangSymbol) -> Unit)? = null,
     popups: PopupsManager? = null,
     onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
@@ -37,6 +39,7 @@ fun Tag.KlangScriptEditorComp(
         onCodeChanged = onCodeChanged,
         availableLibraries = availableLibraries,
         hoverPopup = hoverPopup,
+        hoverContent = hoverContent,
         popups = popups,
         onNavigate = onNavigate,
         onOpenTool = onOpenTool,
@@ -53,7 +56,8 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val code: String,
         val onCodeChanged: OnChange<String>,
         val availableLibraries: List<KlangScriptLibrary> = emptyList(),
-        val hoverPopup: KlangDocsHoverPopupCtrl? = null,
+        val hoverPopup: HoverPopupCtrl? = null,
+        val hoverContent: (FlowContent.(KlangSymbol) -> Unit)? = null,
         val popups: PopupsManager? = null,
         val onNavigate: ((doc: KlangSymbol, event: dynamic) -> Unit)? = null,
         val onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
@@ -157,15 +161,17 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val extensions = mutableListOf<Extension>()
 
         val hoverPopup = props.hoverPopup
+        val hoverContent = props.hoverContent
         val popups = props.popups
 
         // Hover docs + context menu + tool badges
-        if (hoverPopup != null && popups != null) {
+        if (hoverPopup != null && hoverContent != null && popups != null) {
             extensions.add(
                 dslEditorExtension(
                     docProvider = { docContext.docProvider(it) },
                     astIndexProvider = { docContext.lastAstIndex },
                     hoverPopup = hoverPopup,
+                    hoverContent = hoverContent,
                     popups = popups,
                     onNavigate = props.onNavigate ?: { _, _ -> },
                     onOpenTool = props.onOpenTool,

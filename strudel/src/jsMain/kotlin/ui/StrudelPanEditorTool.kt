@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -12,6 +13,7 @@ import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onMouseDown
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
@@ -59,6 +61,7 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -157,7 +160,7 @@ private class StrudelPanEditorComp(ctx: Ctx<Props>) : Component<StrudelPanEditor
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Pan" }
+                toolHeaderWithInfo("Pan", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(

@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -60,6 +61,7 @@ private class StrudelDistortEditorComp(ctx: Ctx<Props>) : Component<StrudelDisto
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -128,7 +130,7 @@ private class StrudelDistortEditorComp(ctx: Ctx<Props>) : Component<StrudelDisto
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Distort" }
+                toolHeaderWithInfo("Distort", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -152,12 +154,18 @@ private class StrudelDistortEditorComp(ctx: Ctx<Props>) : Component<StrudelDisto
                         domKey("amount")
                         step(0.01)
                         appear { three.wide }
-                        label("Amount")
+                        label {
+                            +"Amount"
+                            subFieldInfoIcon("amount", "amount", props.toolCtx, infoPopup)
+                        }
                     }
 
                     // Shape buttons
                     noui.twelve.wide.field {
-                        label { +"Shape" }
+                        label {
+                            +"Shape"
+                            subFieldInfoIcon("amount", "shape", props.toolCtx, infoPopup)
+                        }
 
                         div {
                             css {

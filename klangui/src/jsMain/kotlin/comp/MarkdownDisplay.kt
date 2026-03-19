@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.comp
+package io.peekandpoke.klang.ui.comp
 
 import de.peekandpoke.kraft.addons.marked.markdown2html
 import de.peekandpoke.kraft.components.Component
@@ -8,7 +8,7 @@ import de.peekandpoke.kraft.utils.SimpleAsyncQueue
 import de.peekandpoke.kraft.utils.launch
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.key
-import io.peekandpoke.klang.strudel.lang.delay
+import kotlinx.coroutines.delay
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.unsafe

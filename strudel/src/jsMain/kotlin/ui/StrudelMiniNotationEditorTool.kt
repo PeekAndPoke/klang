@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.ui
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.modals.ModalsManager.Companion.modals
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
@@ -12,6 +13,7 @@ import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.strudel.lang.parser.MnNode
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -52,6 +54,8 @@ private class StrudelMiniNotationEditorComp(ctx: Ctx<Props>) : MnPatternEditorBa
         override val toolCtx: KlangUiToolContext,
         val atomTool: KlangUiTool?,
     ) : BaseProps
+
+    private val infoPopup = HoverPopupCtrl(popups)
 
     // ── Render ────────────────────────────────────────────────────────────────
 

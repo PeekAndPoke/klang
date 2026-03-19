@@ -10,6 +10,7 @@ import io.peekandpoke.klang.blocks.model.KBImportStmt
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.ui.scheduleShow
 import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -142,8 +143,11 @@ class KlangBlocksPaletteComp(ctx: Ctx<Props>) : Component<KlangBlocksPaletteComp
                                         )
                                     }
 
-                                    onMouseEnter { event -> props.ctx.hoverPopup?.scheduleShow(doc, event) }
-                                    onMouseLeave { props.ctx.hoverPopup?.scheduleClose() }
+                                    val hoverContent = props.ctx.hoverContent
+                                    if (hoverContent != null) {
+                                        onMouseEnter { event -> props.ctx.hoverPopup?.scheduleShow(doc, event, content = hoverContent) }
+                                        onMouseLeave { props.ctx.hoverPopup?.scheduleClose() }
+                                    }
 
                                     +doc.name
                                 }

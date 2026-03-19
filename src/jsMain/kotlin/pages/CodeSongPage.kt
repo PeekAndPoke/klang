@@ -40,17 +40,14 @@ import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.lang.strudelLib
-import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
-import kotlinx.html.Tag
-import kotlinx.html.div
-import kotlinx.html.p
-import kotlinx.html.title
+import kotlinx.html.*
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
 import kotlin.js.Date
@@ -141,10 +138,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     /** Current view: text editor or visual block editor. */
     private var editorMode by value(EditorMode.CODE)
 
-    private val hoverPopup: KlangDocsHoverPopupCtrl by lazy {
-        KlangDocsHoverPopupCtrl(popups = popups) { doc ->
-            KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
-        }
+    private val hoverPopup: HoverPopupCtrl by lazy { HoverPopupCtrl(popups = popups) }
+
+    private val hoverContent: FlowContent.(KlangSymbol) -> Unit = { doc ->
+        KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
     }
 
     private fun openTool(toolName: String, ctx: KlangUiToolContext, argFrom: Int) {
@@ -524,6 +521,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 },
                                 availableLibraries = listOf(stdlibLib, strudelLib),
                                 hoverPopup = hoverPopup,
+                                hoverContent = hoverContent,
                                 popups = popups,
                                 onNavigate = ::navToDoc,
                                 onOpenTool = { toolName, ctx, argFrom, _ ->
@@ -540,6 +538,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
                                 highlights = blocksHighlightBuffer.highlights,
                                 hoverPopup = hoverPopup,
+                                hoverContent = hoverContent,
                             ).track(blocksEditorRef)
                         }
                     }

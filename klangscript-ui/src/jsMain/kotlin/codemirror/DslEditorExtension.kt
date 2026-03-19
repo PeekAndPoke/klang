@@ -14,9 +14,10 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.codemirror.ext.*
 import io.peekandpoke.klang.script.ast.AstIndex
 import io.peekandpoke.klang.script.types.KlangSymbol
-import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.scheduleShow
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.minWidth
@@ -36,7 +37,8 @@ import org.w3c.dom.Element
 fun dslEditorExtension(
     docProvider: (String) -> KlangSymbol?,
     astIndexProvider: () -> AstIndex? = { null },
-    hoverPopup: KlangDocsHoverPopupCtrl,
+    hoverPopup: HoverPopupCtrl,
+    hoverContent: FlowContent.(KlangSymbol) -> Unit,
     popups: PopupsManager,
     onNavigate: (doc: KlangSymbol, event: dynamic) -> Unit,
     onOpenTool: ((toolName: String, ctx: KlangUiToolContext, argFrom: Int, event: dynamic) -> Unit)? = null,
@@ -397,7 +399,7 @@ fun dslEditorExtension(
                     Vector2D(x = visRight - pad, y = visTop + pad) to
                             PopupsManager.Positioning.TopRight
                 }
-                hoverPopup.scheduleShow(doc, anchor, positioning)
+                hoverPopup.scheduleShow(doc = doc, anchor = anchor, positioning = positioning, content = hoverContent)
             } else {
                 hoverPopup.scheduleClose()
             }

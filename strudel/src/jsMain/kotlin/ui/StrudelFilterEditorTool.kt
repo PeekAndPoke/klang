@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -116,6 +117,7 @@ private class StrudelFilterEditorComp(ctx: Ctx<Props>) : Component<StrudelFilter
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -187,7 +189,7 @@ private class StrudelFilterEditorComp(ctx: Ctx<Props>) : Component<StrudelFilter
             ui.segment {
                 key = "filter-editor"
                 css { minWidth = 500.px }
-                ui.small.header { +props.tool.title }
+                toolHeaderWithInfo(props.tool.title, props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(

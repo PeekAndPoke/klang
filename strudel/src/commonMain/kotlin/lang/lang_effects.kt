@@ -73,6 +73,8 @@ internal val PatternMapperFn._dist by dslPatternMapperExtension { m, args, callI
  * @param amount The distortion amount, or `"amount:shape"` compound string.
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount StrudelDistortSequenceEditor
+ * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
+ * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
  * @return A new pattern with distortion applied.
  *
  * ```KlangScript
@@ -152,6 +154,8 @@ fun String.distort(amount: PatternLike? = null): StrudelPattern =
  * @param amount The distortion amount or `"amount:shape"` compound string.
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount StrudelDistortSequenceEditor
+ * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
+ * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript
@@ -194,6 +198,8 @@ fun PatternMapperFn.distort(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The distortion amount or `"amount:shape"` compound string.
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount StrudelDistortSequenceEditor
+ * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
+ * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
  * @return A new pattern with distortion applied.
  *
  * ```KlangScript
@@ -241,6 +247,8 @@ fun String.dist(amount: PatternLike? = null): StrudelPattern =
  * @param amount The distortion amount or `"amount:shape"` compound string.
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount StrudelDistortSequenceEditor
+ * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
+ * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript
@@ -2284,6 +2292,9 @@ internal val PatternMapperFn._delay by dslPatternMapperExtension { m, args, call
  * ```
  *
  * @param-tool amount StrudelDelaySequenceEditor
+ * @param-sub amount wet Wet/dry mix (0 = fully dry, 1 = fully wet)
+ * @param-sub amount time Delay interval in seconds
+ * @param-sub amount feedback Feedback amount (0–1), higher values produce more repeats
  * @category effects
  * @tags delay, echo, wet, mix, delaytime, delayfeedback
  */
@@ -2796,6 +2807,10 @@ internal val PatternMapperFn._ph by dslPatternMapperExtension { m, args, callInf
  * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
  *   Omit to reinterpret the pattern's values as phaser rate.
  * @param-tool rate StrudelPhaserSequenceEditor
+ * @param-sub rate rate LFO speed in Hz controlling the sweep rate
+ * @param-sub rate depth Modulation depth (0–1), how far the filters sweep
+ * @param-sub rate center Center frequency in Hz for the all-pass filter bank
+ * @param-sub rate sweep Sweep range in Hz around the center frequency
  * @return A new pattern with the phaser rate applied.
  *
  * ```KlangScript
@@ -2846,6 +2861,10 @@ fun String.phaser(rate: PatternLike? = null): StrudelPattern =
  * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
  *   Omit to reinterpret the pattern's values as phaser rate.
  * @param-tool rate StrudelPhaserSequenceEditor
+ * @param-sub rate rate LFO speed in Hz controlling the sweep rate
+ * @param-sub rate depth Modulation depth (0–1), how far the filters sweep
+ * @param-sub rate center Center frequency in Hz for the all-pass filter bank
+ * @param-sub rate sweep Sweep range in Hz around the center frequency
  * @return A [PatternMapperFn] that sets the phaser rate.
  *
  * ```KlangScript
@@ -2889,6 +2908,10 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null): PatternMapperFn =
  * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
  *   Omit to reinterpret the pattern's values as phaser rate.
  * @param-tool rate StrudelPhaserSequenceEditor
+ * @param-sub rate rate LFO speed in Hz controlling the sweep rate
+ * @param-sub rate depth Modulation depth (0–1), how far the filters sweep
+ * @param-sub rate center Center frequency in Hz for the all-pass filter bank
+ * @param-sub rate sweep Sweep range in Hz around the center frequency
  * @return A new pattern with the phaser rate applied.
  *
  * ```KlangScript
@@ -2932,6 +2955,10 @@ fun String.ph(rate: PatternLike? = null): StrudelPattern =
  * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
  *   Omit to reinterpret the pattern's values as phaser rate.
  * @param-tool rate StrudelPhaserSequenceEditor
+ * @param-sub rate rate LFO speed in Hz controlling the sweep rate
+ * @param-sub rate depth Modulation depth (0–1), how far the filters sweep
+ * @param-sub rate center Center frequency in Hz for the all-pass filter bank
+ * @param-sub rate sweep Sweep range in Hz around the center frequency
  * @return A [PatternMapperFn] that sets the phaser rate.
  *
  * ```KlangScript

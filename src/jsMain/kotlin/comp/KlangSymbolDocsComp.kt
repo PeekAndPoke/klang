@@ -13,6 +13,7 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.window
 import kotlinx.css.*

@@ -12,10 +12,12 @@ import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.blocks.model.*
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
-import io.peekandpoke.klang.ui.KlangDocsHoverPopupCtrl
+import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import kotlinx.browser.document
 import kotlinx.css.*
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.span
@@ -30,7 +32,8 @@ fun Tag.KlangBlocksEditorComp(
     onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
     highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
     theme: KlangBlocksTheme = KlangBlocksTheme.Default,
-    hoverPopup: KlangDocsHoverPopupCtrl? = null,
+    hoverPopup: HoverPopupCtrl? = null,
+    hoverContent: (FlowContent.(KlangSymbol) -> Unit)? = null,
 ) = comp(
     KlangBlocksEditorComp.Props(
         availableLibraries = availableLibraries,
@@ -40,6 +43,7 @@ fun Tag.KlangBlocksEditorComp(
         highlights = highlights,
         theme = theme,
         hoverPopup = hoverPopup,
+        hoverContent = hoverContent,
     )
 ) {
     KlangBlocksEditorComp(it)
@@ -54,7 +58,8 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
         val onCodeGenChanged: ((CodeGenResult) -> Unit)? = null,
         val highlights: Stream<KlangBlocksHighlightBuffer.HighlightSignal?>,
         val theme: KlangBlocksTheme = KlangBlocksTheme.Default,
-        val hoverPopup: KlangDocsHoverPopupCtrl? = null,
+        val hoverPopup: HoverPopupCtrl? = null,
+        val hoverContent: (FlowContent.(KlangSymbol) -> Unit)? = null,
     )
 
     // ---- Drag state FSM --------------------------------------------
@@ -311,6 +316,7 @@ class KlangBlocksEditorComp(ctx: Ctx<Props>) : Component<KlangBlocksEditorComp.P
             ),
             theme = props.theme,
             hoverPopup = props.hoverPopup,
+            hoverContent = props.hoverContent,
         )
 
         div(classes = props.theme.styles.editorRoot()) {

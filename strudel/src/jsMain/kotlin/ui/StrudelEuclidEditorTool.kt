@@ -4,18 +4,16 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.ui
-import io.peekandpoke.klang.ui.KlangUiToolContext
-import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
+import io.peekandpoke.klang.ui.*
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
-import io.peekandpoke.klang.ui.svgCircle
-import io.peekandpoke.klang.ui.svgRoot
 import kotlinx.css.marginBottom
 import kotlinx.css.minWidth
 import kotlinx.css.px
@@ -60,6 +58,7 @@ private class StrudelEuclidEditorComp(ctx: Ctx<Props>) : Component<StrudelEuclid
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -136,7 +135,7 @@ private class StrudelEuclidEditorComp(ctx: Ctx<Props>) : Component<StrudelEuclid
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Euclidean Rhythm" }
+                toolHeaderWithInfo("Euclidean Rhythm", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(

@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -60,6 +61,8 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -146,7 +149,7 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
         } else {
             ui.segment {
                 css { minWidth = 400.px }
-                ui.small.header { +"Tremolo" }
+                toolHeaderWithInfo("Tremolo", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -169,9 +172,12 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
                     UiInputField(depth, { depth = it; liveUpdate() }) {
                         domKey("depth")
                         step(0.01)
-                        label("Depth")
+                        label {
+                            +"Depth"
+                            subFieldInfoIcon("params", "depth", props.toolCtx, infoPopup)
+                        }
                     }
-                    nullableField("rate", "Rate (cycles)", 0.5, rate) { rate = it; liveUpdate() }
+                    nullableField("rate", "Rate (cycles)", 0.5, rate, subField = "rate") { rate = it; liveUpdate() }
                 }
             }
 
@@ -199,8 +205,8 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
 
             ui.form {
                 ui.two.stackable.fields {
-                    nullableField("skew", "Skew", 0.01, skew) { skew = it; liveUpdate() }
-                    nullableField("phase", "Phase", 0.01, phase) { phase = it; liveUpdate() }
+                    nullableField("skew", "Skew", 0.01, skew, subField = "skew") { skew = it; liveUpdate() }
+                    nullableField("phase", "Phase", 0.01, phase, subField = "phase") { phase = it; liveUpdate() }
                 }
             }
 
@@ -217,12 +223,20 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
         labelText: String,
         stepVal: Double,
         current: Double?,
+        subField: String? = null,
         onChange: (Double?) -> Unit,
     ) {
         UiInputField.nullable(current, { onChange(it) }) {
             domKey(key)
             step(stepVal)
-            label(labelText)
+            if (subField != null) {
+                label {
+                    +labelText
+                    subFieldInfoIcon("params", subField, props.toolCtx, infoPopup)
+                }
+            } else {
+                label(labelText)
+            }
             if (current == null) {
                 placeholder("default")
             }
@@ -270,12 +284,8 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
                     else -> sin(lfoPhase * 2.0 * PI) // sine (default)
                 }
 
-                // Map to gain: 1.0 down to (1.0 - depth)
-                val lfoNorm = (lfoRaw + 1.0) * 0.5
-                val gain = 1.0 - (clampedDepth * (1.0 - lfoNorm))
-
                 val x = padL + i.toDouble()
-                val y = padT + drawH - gain * drawH
+                val y = padT + drawH / 2.0 - (lfoRaw * clampedDepth * drawH / 2.0)
                 if (i > 0) append(" ")
                 append("$x,$y")
             }
@@ -283,12 +293,7 @@ private class StrudelTremoloEditorComp(ctx: Ctx<Props>) : Component<StrudelTremo
 
         svgRoot(viewBox = "0 0 $w $h") {
             svgRect(padL, padT, drawW, drawH, fill = "rgba(0,0,0,0.2)", rx = "2")
-            svgLine(padL, padT, padL + drawW, padT, stroke = "rgba(255,255,255,0.15)", strokeWidth = "0.5")
-            svgLine(
-                padL, padT + drawH * (1.0 - (1.0 - clampedDepth)),
-                padL + drawW, padT + drawH * (1.0 - (1.0 - clampedDepth)),
-                stroke = "rgba(255,255,255,0.1)", strokeWidth = "0.5",
-            )
+            svgLine(padL, padT + drawH / 2.0, padL + drawW, padT + drawH / 2.0, stroke = "rgba(255,255,255,0.15)", strokeWidth = "0.5")
             svgPolyline(
                 points = points,
                 stroke = goldHex,

@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
 import de.peekandpoke.kraft.forms.formController
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.common.toFixed
@@ -74,6 +75,8 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
 
     private val laf by subscribingTo(KlangTheme)
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val formCtrl = formController()
 
@@ -162,7 +165,7 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
             ui.segment {
                 key = "compressor-editor"
                 css { minWidth = 560.px }
-                ui.small.header { +"Compressor" }
+                toolHeaderWithInfo("Compressor", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 ToolButtonBar(
@@ -219,30 +222,45 @@ private class StrudelCompressorEditorComp(ctx: Ctx<Props>) : Component<StrudelCo
                     UiInputField(threshold, { threshold = it; liveUpdate() }) {
                         domKey("threshold")
                         step(1.0)
-                        label("Threshold")
+                        label {
+                            +"Threshold"
+                            subFieldInfoIcon("params", "threshold", props.toolCtx, infoPopup)
+                        }
                         rightLabel { ui.basic.label { +"dB" } }
                     }
                     UiInputField(ratio, { ratio = it; liveUpdate() }) {
                         domKey("ratio")
                         step(0.5)
-                        label("Ratio")
+                        label {
+                            +"Ratio"
+                            subFieldInfoIcon("params", "ratio", props.toolCtx, infoPopup)
+                        }
                     }
                     UiInputField(knee, { knee = it; liveUpdate() }) {
                         domKey("knee")
                         step(0.5)
-                        label("Knee")
+                        label {
+                            +"Knee"
+                            subFieldInfoIcon("params", "knee", props.toolCtx, infoPopup)
+                        }
                         rightLabel { ui.basic.label { +"dB" } }
                     }
                     UiInputField(attack, { attack = it; liveUpdate() }) {
                         domKey("attack")
                         step(0.001)
-                        label("Attack")
+                        label {
+                            +"Attack"
+                            subFieldInfoIcon("params", "attack", props.toolCtx, infoPopup)
+                        }
                         rightLabel { ui.basic.label { +"sec" } }
                     }
                     UiInputField(release, { release = it; liveUpdate() }) {
                         domKey("release")
                         step(0.01)
-                        label("Release")
+                        label {
+                            +"Release"
+                            subFieldInfoIcon("params", "release", props.toolCtx, infoPopup)
+                        }
                         rightLabel { ui.basic.label { +"sec" } }
                     }
                 }

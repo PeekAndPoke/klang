@@ -492,6 +492,11 @@ internal val PatternMapperFn._comp by dslPatternMapperExtension { m, args, callI
  * @param params The compression parameters as a colon-separated string.
  *
  * @param-tool params StrudelCompressorSequenceEditor
+ * @param-sub params threshold Level in dB above which compression starts (e.g. -20)
+ * @param-sub params ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold)
+ * @param-sub params knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft)
+ * @param-sub params attack How quickly compression engages, in seconds (e.g. 0.003)
+ * @param-sub params release How quickly compression releases, in seconds (e.g. 0.1)
  * @alias comp
  * @category dynamics
  * @tags compressor, comp, compression, threshold, ratio, dynamics
@@ -1432,6 +1437,10 @@ internal val PatternMapperFn._adsr by dslPatternMapperExtension { m, args, callI
  *
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
  * @param-tool params StrudelAdsrSequenceEditor
+ * @param-sub params attack Attack time in seconds — how quickly the note rises from silence to full volume
+ * @param-sub params decay Decay time in seconds — how quickly the volume falls from peak to sustain level
+ * @param-sub params sustain Sustain level (0–1) — the volume held while the note is pressed
+ * @param-sub params release Release time in seconds — how long the note takes to fade to silence after note-off
  *
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope

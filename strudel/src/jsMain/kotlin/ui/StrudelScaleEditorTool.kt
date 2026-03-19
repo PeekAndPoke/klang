@@ -3,6 +3,7 @@ package io.peekandpoke.klang.strudel.ui
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
@@ -11,6 +12,7 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.tones.scale.Scale
+import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
@@ -69,6 +71,7 @@ private class StrudelSingleScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelS
     // ── Parse initial value ───────────────────────────────────────────────────
 
     private val autoUpdate by subscribingTo(KlangToolAutoUpdate)
+    private val infoPopup = HoverPopupCtrl(popups)
 
     private val initialValue = props.toolCtx.currentValue ?: ""
 
@@ -129,7 +132,7 @@ private class StrudelSingleScaleEditorComp(ctx: Ctx<Props>) : Component<StrudelS
         } else {
             ui.segment {
                 css { minWidth = 50.vw }
-                ui.small.header { +"Scale" }
+                toolHeaderWithInfo("Scale", props.toolCtx, infoPopup)
                 renderContent()
                 ui.divider {}
                 noui.basic.segment {

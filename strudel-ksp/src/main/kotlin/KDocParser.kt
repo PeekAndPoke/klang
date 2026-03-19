@@ -20,6 +20,8 @@ data class ParsedKDoc(
     val aliases: List<String>,
     /** @param-tool tags: parameter name -> list of UI tool names */
     val paramTools: Map<String, List<String>>,
+    /** @param-sub tags: parameter name -> (sub-field name -> description) */
+    val paramSubs: Map<String, Map<String, String>>,
 )
 
 /**
@@ -38,6 +40,7 @@ object KDocParser {
                 tags = emptyList(),
                 aliases = emptyList(),
                 paramTools = emptyMap(),
+                paramSubs = emptyMap(),
             )
         }
 
@@ -103,6 +106,7 @@ object KDocParser {
         val tags = mutableListOf<String>()
         val aliases = mutableListOf<String>()
         val paramTools = mutableMapOf<String, MutableList<String>>()
+        val paramSubs = mutableMapOf<String, MutableMap<String, String>>()
 
         var currentTag: String? = null
         var currentContent = StringBuilder()
@@ -143,12 +147,28 @@ object KDocParser {
                         if (trimmed.isNotEmpty()) paramTools.getOrPut(paramName) { mutableListOf() }.add(trimmed)
                     }
                 }
+
+                tag.startsWith("param-sub:") -> {
+                    val parts = tag.removePrefix("param-sub:").split(":", limit = 2)
+                    if (parts.size == 2 && content.isNotEmpty()) {
+                        paramSubs.getOrPut(parts[0]) { mutableMapOf() }[parts[1]] = content
+                    }
+                }
             }
         }
 
         for (line in tagLines) {
             val t = line.trim()
             when {
+                t.startsWith("@param-sub") -> {
+                    saveCurrentTag()
+                    val match = Regex("@param-sub\\s+(\\w+)\\s+(\\w+)\\s+(.*)").matchEntire(t)
+                    if (match != null) {
+                        currentTag = "param-sub:${match.groupValues[1]}:${match.groupValues[2]}"
+                        currentContent = StringBuilder(match.groupValues[3])
+                    }
+                }
+
                 t.startsWith("@param-tool") -> {
                     saveCurrentTag()
                     val match = Regex("@param-tool\\s+(\\w+)\\s*(.*)").matchEntire(t)
@@ -209,6 +229,7 @@ object KDocParser {
             tags = tags,
             aliases = aliases,
             paramTools = paramTools,
+            paramSubs = paramSubs,
         )
     }
 }
