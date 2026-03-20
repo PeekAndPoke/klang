@@ -25,7 +25,8 @@ class SignalGenRegistry(
 
     fun get(name: String): SignalGenDsl? = defs[name.lowercase()]
 
-    fun contains(name: String): Boolean {
+    fun contains(name: String?): Boolean {
+        if (name == null) return true // null → default oscillator (triangle)
         val key = name.lowercase()
         return defs.containsKey(key) || legacyOscillators?.isOsc(name) == true
     }
@@ -38,14 +39,14 @@ class SignalGenRegistry(
      * Checks the DSL registry first, then falls back to legacy [Oscillators].
      * Returns null if the name is unknown in both.
      */
-    fun createSignalGen(name: String, data: VoiceData, freqHz: Double): SignalGen? {
-        val key = name.lowercase()
-
+    fun createSignalGen(name: String?, data: VoiceData, freqHz: Double): SignalGen? {
         // DSL path — toSignalGen() creates fresh instances with independent mutable state
-        val dsl = defs[key]
-        if (dsl != null) return dsl.toSignalGen()
+        if (name != null) {
+            val dsl = defs[name.lowercase()]
+            if (dsl != null) return dsl.toSignalGen()
+        }
 
-        // Legacy OscFn path
+        // Legacy OscFn path (handles null → triangle fallback)
         val oscillators = legacyOscillators ?: return null
         if (!oscillators.isOsc(name)) return null
 

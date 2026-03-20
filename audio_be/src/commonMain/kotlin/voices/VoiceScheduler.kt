@@ -164,10 +164,7 @@ class VoiceScheduler(
     private var minHeadroom = 1.0
     private var avgHeadroom = 1.0
 
-    fun VoiceData.isOscillator(): Boolean {
-        val s = sound ?: return false
-        return options.signalGenRegistry.contains(s)
-    }
+    fun VoiceData.isOscillator(): Boolean = options.signalGenRegistry.contains(sound)
 
     fun VoiceData.isSampleSound() = !isOscillator()
 
@@ -766,7 +763,7 @@ class VoiceScheduler(
                 val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
                 val voiceEndFrame = voiceDurationFrames + releaseFrames
 
-                val signal = options.signalGenRegistry.createSignalGen(sound ?: "", data, freqHz)
+                val signal = options.signalGenRegistry.createSignalGen(sound, data, freqHz)
                     ?: return null
 
                 val signalCtx = SignalContext(

@@ -84,9 +84,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     private var overlayCtx2d: CanvasRenderingContext2D? = null
     private var overlayContainer: HTMLDivElement? = null
 
-    // Cache for deflection multipliers to avoid recalculating every frame
-    private var deflectionCache: DoubleArray? = null
-    private var cachedTotalWidth: Double = 0.0
+    // Two-level deflection cache: strength → (width → values)
+    private val deflectionCaches = mutableMapOf<Double, Pair<Double, DoubleArray>>()
 
     @Suppress("unused")
     private val playerSub by subscribingTo(props.player) {
@@ -188,7 +187,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 centerLineWidth = props.centerLineWidth,
                 buffer = history[0],
                 bufferLength = history.bufferSize,
-                applyDeflection = true,
+                deflectionStrength = 3.0,
             )
         } else {
             // Expanded mode — flatten history frames oldest-to-newest into expandedStorage
@@ -237,7 +236,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 centerLineWidth = props.centerLineWidth,
                 buffer = storage,
                 bufferLength = offset,
-                applyDeflection = true,
+                deflectionStrength = 2.0,
             )
         }
     }
@@ -247,22 +246,22 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
      * Returns a value between 0.02 (at edges) and 1.0 (at center).
      * Gentle curve so deflection stays high across most of the width.
      */
-    private fun calculateStringDeflection(normalized: Double): Double {
-        val strength = 2.0
-        val curveValue = 1.0 - 2.0.pow(strength) * (normalized - 0.5).pow(strength)
-
+    private fun calculateStringDeflection(normalized: Double, strength: Double): Double {
+        val dist = kotlin.math.abs(normalized - 0.5)
+        val curveValue = (1.0 - 2.0.pow(strength) * dist.pow(strength)).coerceAtLeast(0.0)
         return 0.02 + 0.98 * curveValue
     }
 
-    private fun getOrBuildDeflectionCache(totalWidth: Double): DoubleArray {
-        if (deflectionCache == null || cachedTotalWidth != totalWidth) {
-            val resolution = totalWidth.toInt().coerceAtLeast(1)
-            deflectionCache = DoubleArray(resolution) { pixelX ->
-                calculateStringDeflection(pixelX.toDouble() / totalWidth)
-            }
-            cachedTotalWidth = totalWidth
+    private fun getOrBuildDeflectionCache(totalWidth: Double, strength: Double): DoubleArray {
+        val cached = deflectionCaches[strength]
+        if (cached != null && cached.first == totalWidth) return cached.second
+
+        val resolution = totalWidth.toInt().coerceAtLeast(1)
+        val values = DoubleArray(resolution) { pixelX ->
+            calculateStringDeflection(pixelX.toDouble() / totalWidth, strength)
         }
-        return deflectionCache!!
+        deflectionCaches[strength] = totalWidth to values
+        return values
     }
 
     private fun drawWaveformSlice(
@@ -275,7 +274,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         centerLineWidth: Double,
         buffer: Float32Array,
         bufferLength: Int,
-        applyDeflection: Boolean = false,
+        deflectionStrength: Double = 0.0,
     ) {
         val centerY = canvasHeight / 2.0
 
@@ -299,7 +298,11 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         if (bufferLength <= 0) return
 
         val widthInt = canvasWidth.toInt()
-        val deflectionCache = if (applyDeflection) getOrBuildDeflectionCache(canvasWidth) else null
+        val deflectionCache = if (deflectionStrength > 0.0) {
+            getOrBuildDeflectionCache(canvasWidth, deflectionStrength)
+        } else {
+            null
+        }
         val step = props.pixelSkip.coerceAtLeast(1)
 
         if (widthInt >= bufferLength) {
@@ -429,8 +432,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         overlayCanvas = null
         overlayCtx2d = null
         expandedStorage = null
-        deflectionCache = null
-        cachedTotalWidth = 0.0
+        deflectionCaches.clear()
     }
 
     override fun VDom.render() {
