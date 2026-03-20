@@ -5,6 +5,9 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
+import io.peekandpoke.klang.audio_be.signalgen.SignalContext
+import io.peekandpoke.klang.audio_be.signalgen.SignalGen
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -13,6 +16,28 @@ class FilterModulationTest : StringSpec({
 
     val sampleRate = 44100
     val blockFrames = 100
+
+    val noopSignal = SignalGen { buffer, _, ctx ->
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) buffer[i] = 0.0
+    }
+
+    fun createSignalCtx(
+        startFrame: Long = 0,
+        gateEndFrame: Long = 1000,
+        endFrame: Long = 1000,
+    ): SignalContext {
+        val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
+        val releaseFrames = (endFrame - gateEndFrame).toInt()
+        return SignalContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = voiceDurationFrames,
+            gateEndFrame = voiceDurationFrames,
+            releaseFrames = releaseFrames,
+            voiceEndFrame = voiceDurationFrames + releaseFrames,
+            scratchBuffers = ScratchBuffers(blockFrames),
+        )
+    }
 
     // Helper to create a dummy context
     fun createCtx(blockStart: Long = 0): Voice.RenderContext {
@@ -83,10 +108,10 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            signal = noopSignal,
+            signalCtx = createSignalCtx(),
             fm = null,
-            freqHz = 440.0,
-            phaseInc = 0.1
+            freqHz = 440.0
         )
 
         val ctx = createCtx()
@@ -136,10 +161,10 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            signal = noopSignal,
+            signalCtx = createSignalCtx(),
             fm = null,
-            freqHz = 440.0,
-            phaseInc = 0.1
+            freqHz = 440.0
         )
 
         // Render at the attack peak (frame 100)
@@ -192,10 +217,10 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            signal = noopSignal,
+            signalCtx = createSignalCtx(),
             fm = null,
-            freqHz = 440.0,
-            phaseInc = 0.1
+            freqHz = 440.0
         )
 
         // Render at start (frame 0)
@@ -248,10 +273,10 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            signal = noopSignal,
+            signalCtx = createSignalCtx(),
             fm = null,
-            freqHz = 440.0,
-            phaseInc = 0.1
+            freqHz = 440.0
         )
 
         // Render at sustain phase (frame 300 = after attack 100 + decay 100)
@@ -317,10 +342,10 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            signal = noopSignal,
+            signalCtx = createSignalCtx(),
             fm = null,
-            freqHz = 440.0,
-            phaseInc = 0.1
+            freqHz = 440.0
         )
 
         // Render at attack peak (frame 100)
@@ -425,10 +450,10 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            signal = noopSignal,
+            signalCtx = createSignalCtx(),
             fm = null,
-            freqHz = 440.0,
-            phaseInc = 0.1
+            freqHz = 440.0
         )
 
         val ctx = createCtx(blockStart = 0)
@@ -484,10 +509,10 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            signal = noopSignal,
+            signalCtx = createSignalCtx(),
             fm = null,
-            freqHz = 440.0,
-            phaseInc = 0.1
+            freqHz = 440.0
         )
 
         // Render at frame 50 (block starts before voice starts)
@@ -541,10 +566,10 @@ class FilterModulationTest : StringSpec({
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            osc = { buffer, offset, length, phase, phaseInc, _ -> phase },
+            signal = noopSignal,
+            signalCtx = createSignalCtx(),
             fm = null,
-            freqHz = 440.0,
-            phaseInc = 0.1
+            freqHz = 440.0
         )
 
         // Render at start of release (frame 300)

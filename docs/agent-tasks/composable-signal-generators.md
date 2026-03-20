@@ -830,6 +830,317 @@ SynthVoice(signal = signal, freqHz = freqHz)
 
 ---
 
+## Parameterized SignalGen Registry (2026-03-20)
+
+### Problem
+
+Hard-coded SignalGen oscillators (sgpad, sgbell, sgbuzz) proved the architecture works end-to-end.
+But every new oscillator requires a code change. We need:
+
+1. **A registry** so oscillators are looked up by name, not hard-coded in `when` blocks
+2. **Per-playback instances** so KlangScript can register custom oscillators scoped to a playback session
+3. **Parameterization** so oscillator timbres can be controlled from strudel patterns without
+   serializing the entire composition tree per voice
+
+### Architecture
+
+```
+Global SignalGenRegistry (sine, saw, sgpad, sgbell, ...)
+  └─ Per-playback fork() (inherits defaults, adds KlangScript-registered oscillators)
+       └─ Per-voice: factory(resolvedParams) → fresh SignalGen instance
+```
+
+Each voice gets a **fresh SignalGen instance** (factory pattern). Mutable state (phase, filter
+memory) is isolated per-voice. The composition recipe lives in the registry; only param values
+vary per voice.
+
+### Core Types
+
+#### OscParamSchema
+
+Maps parameter names to array indices. Immutable after construction. Used once at `makeVoice()`
+time to resolve `Map<String, Double>` (from VoiceData) into `DoubleArray` (for hot-loop access).
+
+```kotlin
+class OscParamSchema private constructor(
+    val params: List<ParamDef>,
+    private val nameToIndex: Map<String, Int>,
+) {
+    data class ParamDef(
+        val name: String,
+        val index: Int,
+        val default: Double,
+        val min: Double = Double.NEGATIVE_INFINITY,
+        val max: Double = Double.POSITIVE_INFINITY,
+    )
+
+    /** Resolve name→value map into indexed DoubleArray. Missing values get defaults. */
+    fun resolve(values: Map<String, Double>?): DoubleArray
+
+    companion object {
+        val EMPTY = OscParamSchema(emptyList(), emptyMap())
+        val EMPTY_PARAMS = DoubleArray(0)
+
+        fun build(block: Builder.() -> Unit): OscParamSchema
+    }
+
+    class Builder {
+        fun param(name: String, default: Double, min: Double = ..., max: Double = ...)
+    }
+}
+```
+
+#### SignalGenRegistry
+
+Two-tier lookup. Global tier populated at startup; per-playback tier created via `fork()`.
+
+```kotlin
+typealias SignalGenFactory = (params: DoubleArray) -> SignalGen
+
+class SignalGenDef(
+    val name: String,
+    val schema: OscParamSchema,
+    val factory: SignalGenFactory,
+)
+
+class SignalGenRegistry {
+    fun register(def: SignalGenDef)
+    fun get(name: String): SignalGenDef?
+    fun contains(name: String): Boolean
+    fun names(): Set<String>
+
+    /** Shallow-copy all defs into a new child registry. */
+    fun fork(): SignalGenRegistry
+}
+```
+
+**Design rationale:**
+
+- `fork()` shallow-copies the HashMap. O(1) lookup, no parent-chain traversal.
+- Factory receives resolved `DoubleArray` — params baked into closures at voice creation time.
+- Factory called at `makeVoice()`, not in hot loop. Fresh closures = independent mutable state.
+
+#### SignalContext.params
+
+Add resolved params to `SignalContext` for hot-loop indexed access:
+
+```kotlin
+class SignalContext(
+    // ... existing static per-voice fields ...
+    val params: DoubleArray = OscParamSchema.EMPTY_PARAMS,  // NEW
+    // ... existing mutable per-block fields ...
+)
+```
+
+Hot-loop access: `ctx.params[0]` — zero overhead array index. No boxing, no map lookup.
+
+### Parameter Design
+
+**Control-rate (per-block) for strudel params.** Pattern values change at note boundaries, not
+per-sample. The resolved `DoubleArray` is set once at voice creation and remains constant.
+
+**Per-sample modulation where musically necessary** is already handled by existing mechanisms:
+
+- Frequency modulation → `ctx.phaseMod`
+- Amplitude modulation → `times()` operator (ring mod)
+- Filter cutoff modulation → make `cutoffHz` accept a `SignalGen` (future, compositional approach)
+
+**No modulation bus needed.** The existing compositional approach (phaseMod, times, filter-as-SignalGen)
+covers the important cases without index-mapping complexity.
+
+### Default Oscillator Registration
+
+Migrates hard-coded `SignalGenOscillators` to parameterized registry entries:
+
+```kotlin
+fun SignalGenRegistry.registerDefaults() {
+    register(SignalGenDef(
+        name = "sgpad",
+        schema = OscParamSchema.build {
+            param("detune", default = 0.1, min = 0.0, max = 24.0)
+            param("cutoff", default = 3000.0, min = 20.0, max = 20000.0)
+        },
+        factory = { params ->
+            val osc1 = SignalGens.sawtooth()
+            val osc2 = SignalGens.sawtooth().detune(params[0])
+            (osc1 + osc2).div(2.0).onePoleLowpass(params[1])
+        }
+    ))
+
+    register(SignalGenDef(
+        name = "sgbell",
+        schema = OscParamSchema.build {
+            param("ratio", default = 1.4, min = 0.1, max = 20.0)
+            param("depth", default = 300.0, min = 0.0, max = 5000.0)
+            param("decay", default = 0.5, min = 0.01, max = 10.0)
+        },
+        factory = { params ->
+            SignalGens.sine().fm(
+                modulator = SignalGens.sine(),
+                ratio = params[0],
+                depth = params[1],
+                envAttackSec = 0.001,
+                envDecaySec = params[2],
+                envSustainLevel = 0.0,
+            )
+        }
+    ))
+
+    register(SignalGenDef(
+        name = "sgbuzz",
+        schema = OscParamSchema.build {
+            param("cutoff", default = 2000.0, min = 20.0, max = 20000.0)
+        },
+        factory = { params ->
+            SignalGens.square().lowpass(params[0])
+        }
+    ))
+}
+```
+
+### Pipeline Interaction: Stack, Don't Bypass
+
+SignalGen compositions go through the full AbstractVoice pipeline (pre-filters, main filter,
+ADSR envelope, post-filters, panning/mixing). They **stack**, they don't bypass.
+
+**Rationale:**
+
+- `sound("sgpad").lpf(2000)` must work the same as `sound("sine").lpf(2000)`
+- Pipeline handles routing (pan, orbit sends, delay/reverb, ducking, gain multiplier)
+- Pattern ADSR controls dynamics; SignalGen internal ADSR (if any) is timbral identity only
+
+**Convention:** SignalGen factories registered via KlangScript should generally NOT include
+`.adsr()` unless the envelope shape is part of the timbre identity (e.g., a bell that must
+decay regardless of pattern settings).
+
+### VoiceData Transport
+
+Add oscillator params to `VoiceData` (audio_bridge):
+
+```kotlin
+data class VoiceData(
+    // ... existing fields ...
+    val osciParams: Map<String, Double>? = null,  // NEW
+)
+```
+
+- `null` when unused — zero serialization overhead for existing voices
+- `Map<String, Double>` because strudel doesn't know the param schema (it's on the backend)
+- Resolution to indexed `DoubleArray` happens at `makeVoice()` via `OscParamSchema.resolve()`
+
+### Strudel Integration
+
+Pattern-based parameter control — each param is a regular strudel pattern:
+
+```javascript
+sound("sgpad").osciParam("detune", "0.1 0.5").osciParam("cutoff", rand.range(1000, 5000))
+sound("sgbell").osciParam("ratio", "1.4 2.8").osciParam("decay", 0.8)
+```
+
+Implementation: `.osciParam("name", value)` accumulates name-value pairs into `VoiceData.osciParams`.
+Works like any strudel control (`.gain()`, `.cutoff()`, etc.).
+
+### KlangScript Registration API
+
+```
+registerOsc("myPad", { detune: 0.1, cutoff: 3000.0 }) { params ->
+    val osc1 = sawtooth()
+    val osc2 = sawtooth().detune(params.detune)
+    (osc1 + osc2).div(2.0).lowpass(params.cutoff)
+}
+```
+
+Registers on the per-playback `SignalGenRegistry` (forked from global). The interpreter:
+
+1. Builds `OscParamSchema` from the defaults map
+2. Creates a `SignalGenFactory` that evaluates the body with resolved params
+3. Registers a `SignalGenDef` on the playback's registry
+
+### VoiceScheduler Integration
+
+```kotlin
+// In makeVoice(), the isOsci branch:
+val sgDef = options.signalGenRegistry.get(sound ?: "")
+val osc = if (sgDef != null) {
+    val resolvedParams = sgDef.schema.resolve(data.osciParams)
+    val signalGen = sgDef.factory(resolvedParams)
+    signalGen.toOscFn(
+        sampleRate = sampleRate,
+        voiceDurationFrames = voiceDurationFrames,
+        gateEndFrame = gateEndFrameRel,
+        releaseFrames = releaseFrames,
+        voiceEndFrame = voiceEndFrame,
+        scratchBuffers = scratchBuffers,
+        params = resolvedParams,
+    )
+} else {
+    data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
+}
+```
+
+### Real-Time Safety Notes
+
+**Address now:**
+
+- Pre-allocate modulation buffers in FM/vibrato/accelerate at construction time (currently
+  lazy-allocated on first `generate()` call — allocation in audio thread)
+- Pre-size `ScratchBuffers` to 8 and assert if pool grows at runtime
+- Cap voice promotions per block (~8) to limit allocation bursts on JS AudioWorklet
+
+**Performance:**
+
+- Complex SignalGen trees (~10-15 nested lambdas) are fine; V8 inlines many of them
+- Triangle `asin(sin(phase))` costs two transcendentals per sample — replace with phase-based math
+- Consider `typealias SignalBuffer = DoubleArray` now for future Float32 migration
+- Practical voice limit: 8-12 complex SignalGen voices on JS, 16-24 simple ones
+
+### Migration Path
+
+**Phase 1 — Registry infrastructure (no behavior change):**
+
+1. Create `OscParamSchema.kt`
+2. Create `SignalGenRegistry.kt` (`SignalGenDef`, `SignalGenFactory`, `SignalGenRegistry`)
+3. Create `SignalGenDefaults.kt` (migrates hard-coded oscillators with param schemas)
+4. Add `params` to `SignalContext` (backward compatible, defaults to empty array)
+5. Update `SignalGenBridge.toOscFn()` to accept `params`
+
+**Phase 2 — Wire registry into voice pipeline:**
+
+6. Add `osciParams` to `VoiceData` + update `VoiceData.empty`
+7. Add `signalGenRegistry` to `VoiceScheduler.Options`
+8. Update `VoiceScheduler.isOscillator()` and `makeVoice()` to use registry
+9. Initialize global registry with `registerDefaults()` at backend startup
+10. Delete `SignalGenOscillators.kt`
+
+**Phase 3 — Strudel + KlangScript integration:**
+
+11. Add `.osciParam()` control to strudel pattern layer
+12. Wire `osciParam` values into `VoiceData.osciParams`
+13. Add `registerOsc` to KlangScript stdlib
+14. Create per-playback registry forking from global
+
+**Optional — OscFn wrapping:**
+Existing `Oscillators` (OscFn-based) continue unchanged. The fallback path in `makeVoice()`
+checks SignalGenRegistry first, then Oscillators. OscFn oscillators can be wrapped and
+registered incrementally via `OscFn.toSignalGen()`.
+
+### Files Summary
+
+| File                                | Action     | Changes                                                        |
+|-------------------------------------|------------|----------------------------------------------------------------|
+| `signalgen/OscParamSchema.kt`       | **CREATE** | ParamDef, Builder, resolve(), defaults()                       |
+| `signalgen/SignalGenRegistry.kt`    | **CREATE** | SignalGenDef, SignalGenFactory, SignalGenRegistry              |
+| `signalgen/SignalGenDefaults.kt`    | **CREATE** | registerDefaults() with parameterized sgpad/sgbell/sgbuzz      |
+| `signalgen/SignalContext.kt`        | **MODIFY** | Add `val params: DoubleArray`                                  |
+| `signalgen/SignalGenBridge.kt`      | **MODIFY** | Add `params` parameter to `toOscFn()`                          |
+| `audio_bridge/VoiceData.kt`         | **MODIFY** | Add `val osciParams: Map<String, Double>?`                     |
+| `voices/VoiceScheduler.kt`          | **MODIFY** | Add registry to Options, use in isOscillator() and makeVoice() |
+| `signalgen/SignalGenOscillators.kt` | **DELETE** | Replaced by SignalGenDefaults.kt                               |
+| Strudel pattern layer               | **MODIFY** | Add .osciParam() control                                       |
+| KlangScript stdlib                  | **MODIFY** | Add registerOsc built-in                                       |
+
+---
+
 ## Performance Notes
 
 - **Primitive inner loops**: identical to current `OscFn` — `phaseInc` computed once per block, tight for-loop

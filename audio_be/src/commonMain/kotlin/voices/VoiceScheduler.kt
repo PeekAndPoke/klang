@@ -8,11 +8,9 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.FormantFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.osci.OscFn
-import io.peekandpoke.klang.audio_be.osci.Oscillators
-import io.peekandpoke.klang.audio_be.osci.withWarmth
 import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
-import io.peekandpoke.klang.audio_be.signalgen.SignalGenOscillators
+import io.peekandpoke.klang.audio_be.signalgen.SignalContext
+import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
@@ -25,8 +23,7 @@ class VoiceScheduler(
         val commLink: KlangCommLink.BackendEndpoint,
         val sampleRate: Int,
         val blockFrames: Int,
-        val oscillators: Oscillators,
-//        val samples: Samples,
+        val signalGenRegistry: SignalGenRegistry,
         val orbits: Orbits,
         /** Supplier for current backend time in milliseconds (from KlangTime) */
         val performanceTimeMs: () -> Double = { 0.0 },
@@ -139,8 +136,8 @@ class VoiceScheduler(
     // Global start time for absolute time to frame conversion
     private var backendStartTimeSec: Double = 0.0
 
-    // Map playbackId -> backend-local epoch (seconds since backend start) when this playback was first seen
-    private val playbackEpochs = mutableMapOf<String, Double>()
+    // Map playbackId -> per-playback context (registry, epoch, ...)
+    private val playbackContexts = mutableMapOf<String, PlaybackCtx>()
 
     // Track the last processed frame (for epoch recording)
     private var lastProcessedFrame: Long = 0
@@ -167,37 +164,17 @@ class VoiceScheduler(
     private var minHeadroom = 1.0
     private var avgHeadroom = 1.0
 
-    // TEMPORARY: SignalGen POC bridge — check SignalGen oscillators before fallback to Oscillators
-    fun VoiceData.isOscillator() = SignalGenOscillators.isSignalGenOsc(sound) || options.oscillators.isOsc(sound)
+    fun VoiceData.isOscillator(): Boolean {
+        val s = sound ?: return false
+        return options.signalGenRegistry.contains(s)
+    }
 
     fun VoiceData.isSampleSound() = !isOscillator()
-
-    fun VoiceData.createOscillator(oscillators: Oscillators, freqHz: Double): OscFn {
-        val e = this
-
-        // Create base oscillator
-        val rawOsc = oscillators.get(
-            name = e.sound,
-            freqHz = freqHz,
-            density = e.density,
-            voices = e.voices,
-            freqSpread = e.freqSpread,
-            panSpread = e.panSpread,
-        )
-
-        // Apply warmth wrapper if specified
-        val warmthAmount = e.warmth ?: 0.0
-        return if (warmthAmount > 0.0) {
-            rawOsc.withWarmth(warmthAmount)
-        } else {
-            rawOsc
-        }
-    }
 
     fun clear() {
         scheduled.clear()
         active.clear()
-        playbackEpochs.clear()
+        playbackContexts.clear()
     }
 
     fun addSample(msg: KlangCommLink.Cmd.Sample) {
@@ -293,7 +270,7 @@ class VoiceScheduler(
      */
     fun cleanup(playbackId: String) {
         // Remove playback epoch - prevents new voices from scheduling
-        playbackEpochs.remove(playbackId)
+        playbackContexts.remove(playbackId)
         // Remove all scheduled voices for this playback (they never started, so no need to ring out)
         // Note: MinHeap doesn't support efficient removal, so we rebuild without matching voices
         clearScheduled(playbackId)
@@ -322,12 +299,12 @@ class VoiceScheduler(
      */
     fun replaceVoices(playbackId: String, voices: List<ScheduledVoice>, afterTimeSec: Double? = null) {
         if (afterTimeSec != null) {
-            val epoch = playbackEpochs[playbackId]
+            val epoch = playbackContexts[playbackId]?.epoch
             if (epoch != null) {
                 val cutoffSec = epoch + afterTimeSec
                 scheduled.removeWhen { voice ->
                     voice.playbackId == playbackId &&
-                            (playbackEpochs[voice.playbackId]?.let { it + voice.startTime } ?: 0.0) >= cutoffSec
+                            (playbackContexts[voice.playbackId]?.epoch?.let { it + voice.startTime } ?: 0.0) >= cutoffSec
                 }
             }
         } else {
@@ -476,14 +453,18 @@ class VoiceScheduler(
     private fun ensureEpoch(voice: ScheduledVoice) {
         val pid = voice.playbackId
 
-        // Auto-register playback epoch on first voice
-        if (pid !in playbackEpochs) {
+        // Auto-register playback context on first voice
+        if (pid !in playbackContexts) {
             // Get the current backend time
             val nowSec = backendStartTimeSec + (lastProcessedFrame.toDouble() / options.sampleRate.toDouble())
             // Calculate the frontend latency
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
-            // Set the epoch of the playback (without latency - latency is only for UI feedback)
-            playbackEpochs[pid] = voice.playbackStartTime + latency
+            // Create per-playback context with forked registry
+            playbackContexts[pid] = PlaybackCtx(
+                playbackId = pid,
+                signalGenRegistry = options.signalGenRegistry.fork(),
+                epoch = voice.playbackStartTime + latency,
+            )
         }
     }
 
@@ -517,13 +498,14 @@ class VoiceScheduler(
         while (true) {
             val head = scheduled.peek() ?: break
 
-            // Look up this playback's epoch
-            val epoch = playbackEpochs[head.playbackId]
-            if (epoch == null) {
-                // No epoch recorded — shouldn't happen, but skip gracefully
+            // Look up this playback's context
+            val pCtx = playbackContexts[head.playbackId]
+            if (pCtx == null) {
+                // No context recorded — shouldn't happen, but skip gracefully
                 scheduled.pop()
                 continue
             }
+            val epoch = pCtx.epoch
 
             // Convert relative time to absolute backend time
             val absoluteStartSec = epoch + head.startTime
@@ -780,25 +762,21 @@ class VoiceScheduler(
                 // Update endFrame based on actual release
                 val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toLong()
 
-                val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
-
-                // TEMPORARY: SignalGen POC bridge — try SignalGen oscillators first
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-                val gateEndFrameRel = voiceDurationFrames
                 val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
                 val voiceEndFrame = voiceDurationFrames + releaseFrames
 
-                val osc = SignalGenOscillators.create(
-                    name = sound ?: "",
+                val signal = options.signalGenRegistry.createSignalGen(sound ?: "", data, freqHz)
+                    ?: return null
+
+                val signalCtx = SignalContext(
                     sampleRate = sampleRate,
                     voiceDurationFrames = voiceDurationFrames,
-                    gateEndFrame = gateEndFrameRel,
+                    gateEndFrame = voiceDurationFrames,
                     releaseFrames = releaseFrames,
                     voiceEndFrame = voiceEndFrame,
                     scratchBuffers = scratchBuffers,
-                ) ?: data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
-
-                // println("making synth voice for freq $freqHz")
+                )
 
                 SynthVoice(
                     orbitId = orbit,
@@ -823,10 +801,10 @@ class VoiceScheduler(
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
-                    osc = osc,
+                    signal = signal,
+                    signalCtx = signalCtx,
                     fm = fm,
                     freqHz = freqHz,
-                    phaseInc = phaseInc,
                 )
             }
 

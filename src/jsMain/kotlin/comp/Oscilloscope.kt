@@ -188,6 +188,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 centerLineWidth = props.centerLineWidth,
                 buffer = history[0],
                 bufferLength = history.bufferSize,
+                applyDeflection = true,
             )
         } else {
             // Expanded mode — flatten history frames oldest-to-newest into expandedStorage
