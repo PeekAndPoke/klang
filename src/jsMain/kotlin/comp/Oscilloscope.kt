@@ -11,6 +11,7 @@ import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.Unsubscribe
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBufferHistory
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -86,6 +87,9 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     // Two-level deflection cache: strength → (width → values)
     private val deflectionCaches = mutableMapOf<Double, Pair<Double, DoubleArray>>()
+
+    @Suppress("unused")
+    private val laf by subscribingTo(KlangTheme)
 
     @Suppress("unused")
     private val playerSub by subscribingTo(props.player) {
@@ -187,7 +191,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 centerLineWidth = props.centerLineWidth,
                 buffer = history[0],
                 bufferLength = history.bufferSize,
-                deflectionStrength = 3.0,
+                deflectionStrength = 8.0,
             )
         } else {
             // Expanded mode — flatten history frames oldest-to-newest into expandedStorage
@@ -290,12 +294,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             ctx.stroke()
         }
 
-        // Draw waveform
-        ctx.strokeStyle = strokeColor.toString()
-        ctx.lineWidth = strokeWidth
-        ctx.beginPath()
-
         if (bufferLength <= 0) return
+
+        // Build waveform path
+        ctx.beginPath()
 
         val widthInt = canvasWidth.toInt()
         val deflectionCache = if (deflectionStrength > 0.0) {
@@ -367,6 +369,19 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             }
         }
 
+        // Stroke shadow behind for contrast
+        ctx.strokeStyle = Color.black.withAlpha(0.5).toString()
+        ctx.lineWidth = strokeWidth + 4.5
+        ctx.stroke()
+
+        // Gold highlight
+        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.25).toString()
+        ctx.lineWidth = strokeWidth + 3.0
+        ctx.stroke()
+
+        // Stroke foreground waveform
+        ctx.strokeStyle = strokeColor.toString()
+        ctx.lineWidth = strokeWidth
         ctx.stroke()
     }
 
