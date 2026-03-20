@@ -45,8 +45,9 @@ class DelayLine(
      * Used to detect effect tails that should keep the orbit alive.
      */
     fun hasTail(threshold: Double = 0.00001): Boolean {
+        val thresholdF = threshold.toFloat()
         for (i in 0 until bufferSize) {
-            if (abs(buffer.left[i]) > threshold || abs(buffer.right[i]) > threshold) {
+            if (abs(buffer.left[i]) > thresholdF || abs(buffer.right[i]) > thresholdF) {
                 return true
             }
         }
@@ -73,9 +74,9 @@ class DelayLine(
     }
 
     private fun processInternal(
-        buffer: DoubleArray,
-        input: DoubleArray,
-        output: DoubleArray,
+        buffer: FloatArray,
+        input: FloatArray,
+        output: FloatArray,
         offset: Int,
         length: Int,
         startWritePos: Int,
@@ -106,8 +107,8 @@ class DelayLine(
             var readIndex2 = readIndex1 - 1
             if (readIndex2 < 0) readIndex2 += bufferSize
 
-            val s1 = buffer[readIndex1]
-            val s2 = buffer[readIndex2]
+            val s1 = buffer[readIndex1].toDouble()
+            val s2 = buffer[readIndex2].toDouble()
 
             // Linear Interpolation: s1 + alpha * (s2 - s1)
             // This allows the delay time to exist "between" samples
@@ -115,17 +116,17 @@ class DelayLine(
 
             // --- 2. Feedback loop with Safety Clamping ---
 
-            var newSample = input[inputIndex] + (delayedSignal * feedback)
+            var newSample = input[inputIndex].toDouble() + (delayedSignal * feedback)
 
             // Hard clip safety to prevent feedback explosions
             if (abs(newSample) > limit) {
                 newSample = if (newSample > 0) limit else -limit
             }
 
-            buffer[pos] = newSample
+            buffer[pos] = newSample.toFloat()
 
             // --- 3. Output ---
-            output[inputIndex] += delayedSignal
+            output[inputIndex] = (output[inputIndex] + delayedSignal).toFloat()
 
             // Advance pointer (no wrap check needed here due to chunking)
             pos++

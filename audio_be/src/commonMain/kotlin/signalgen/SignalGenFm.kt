@@ -26,7 +26,8 @@ fun SignalGen.fm(
 ): SignalGen {
     if (depth == 0.0) return this
 
-    var modBuf: DoubleArray? = null
+    var modBuf: FloatArray? = null
+    var phaseModBuf: DoubleArray? = null
 
     return SignalGen { buffer, freqHz, ctx ->
         if (freqHz <= 0.0) {
@@ -37,9 +38,14 @@ fun SignalGen.fm(
         val bufSize = ctx.offset + ctx.length
         val existing0 = modBuf
         if (existing0 == null || existing0.size < bufSize) {
-            modBuf = DoubleArray(bufSize)
+            modBuf = FloatArray(bufSize)
+        }
+        val existingPm = phaseModBuf
+        if (existingPm == null || existingPm.size < bufSize) {
+            phaseModBuf = DoubleArray(bufSize)
         }
         val mb = modBuf ?: error("unreachable")
+        val pmb = phaseModBuf ?: error("unreachable")
 
         // Compute FM envelope level (control rate — once per block)
         val envLevel = if (envAttackSec > 0.0 || envDecaySec > 0.0 || envSustainLevel < 1.0) {
@@ -49,26 +55,26 @@ fun SignalGen.fm(
         }
         val effectiveDepth = depth * envLevel
 
-        // Generate modulator signal
+        // Generate modulator signal into FloatArray
         val modFreq = freqHz * ratio
         modulator.generate(mb, modFreq, ctx)
 
-        // Convert modulator output to frequency multipliers
+        // Convert modulator output to frequency multipliers in DoubleArray
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            mb[i] = 1.0 + (mb[i] * effectiveDepth / freqHz)
+            pmb[i] = 1.0 + (mb[i].toDouble() * effectiveDepth / freqHz)
         }
 
         // Chain with existing phaseMod
         val existing = ctx.phaseMod
         if (existing != null) {
             for (i in ctx.offset until end) {
-                mb[i] *= existing[i]
+                pmb[i] *= existing[i]
             }
         }
 
         val savedMod = ctx.phaseMod
-        ctx.phaseMod = mb
+        ctx.phaseMod = pmb
         this.generate(buffer, freqHz, ctx)
         ctx.phaseMod = savedMod
     }

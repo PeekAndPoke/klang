@@ -64,7 +64,7 @@ fun SignalGen.adsr(
 
             if (currentLevel < 0.0) currentLevel = 0.0
 
-            buffer[i] *= currentLevel
+            buffer[i] = (buffer[i] * currentLevel).toFloat()
             absPos++
         }
     }

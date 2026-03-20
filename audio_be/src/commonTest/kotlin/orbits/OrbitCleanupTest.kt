@@ -51,8 +51,8 @@ class OrbitCleanupTest : StringSpec({
         orbit.isActive shouldBe true
 
         // Add some signal to the buffer
-        orbit.mixBuffer.left[0] = 0.5
-        orbit.mixBuffer.right[0] = 0.5
+        orbit.mixBuffer.left[0] = 0.5f
+        orbit.mixBuffer.right[0] = 0.5f
 
         // Try to deactivate
         orbit.tryDeactivate()
@@ -67,8 +67,8 @@ class OrbitCleanupTest : StringSpec({
 
         // Fill with values just below threshold
         for (i in 0 until blockFrames) {
-            orbit.mixBuffer.left[i] = 0.000005
-            orbit.mixBuffer.right[i] = 0.000005
+            orbit.mixBuffer.left[i] = 0.000005f
+            orbit.mixBuffer.right[i] = 0.000005f
         }
 
         orbit.tryDeactivate()
@@ -83,8 +83,8 @@ class OrbitCleanupTest : StringSpec({
 
         // Fill with values just above threshold
         for (i in 0 until blockFrames) {
-            orbit.mixBuffer.left[i] = 0.0002
-            orbit.mixBuffer.right[i] = 0.0002
+            orbit.mixBuffer.left[i] = 0.0002f
+            orbit.mixBuffer.right[i] = 0.0002f
         }
 
         orbit.tryDeactivate()
@@ -98,8 +98,8 @@ class OrbitCleanupTest : StringSpec({
         makeOrbitActive(orbit)
 
         // Left channel has signal, right is silent
-        orbit.mixBuffer.left[64] = 0.1
-        orbit.mixBuffer.right.fill(0.0)
+        orbit.mixBuffer.left[64] = 0.1f
+        orbit.mixBuffer.right.fill(0.0f)
 
         orbit.tryDeactivate()
 
@@ -112,8 +112,8 @@ class OrbitCleanupTest : StringSpec({
         makeOrbitActive(orbit)
 
         // Right channel has signal, left is silent
-        orbit.mixBuffer.left.fill(0.0)
-        orbit.mixBuffer.right[64] = 0.1
+        orbit.mixBuffer.left.fill(0.0f)
+        orbit.mixBuffer.right[64] = 0.1f
 
         orbit.tryDeactivate()
 
@@ -126,8 +126,8 @@ class OrbitCleanupTest : StringSpec({
         makeOrbitActive(orbit)
 
         // Fill with negative values above threshold
-        orbit.mixBuffer.left[0] = -0.5
-        orbit.mixBuffer.right[0] = -0.3
+        orbit.mixBuffer.left[0] = -0.5f
+        orbit.mixBuffer.right[0] = -0.3f
 
         orbit.tryDeactivate()
 
@@ -145,7 +145,7 @@ class OrbitCleanupTest : StringSpec({
         orbit.isActive shouldBe false
 
         // Add signal to buffer
-        orbit.mixBuffer.left[0] = 0.5
+        orbit.mixBuffer.left[0] = 0.5f
 
         // Try to deactivate again - should exit early
         orbit.tryDeactivate()
@@ -176,7 +176,7 @@ class OrbitCleanupTest : StringSpec({
 
         // Silent except for one sample in the middle
         orbit.mixBuffer.clear()
-        orbit.mixBuffer.left[64] = 0.01
+        orbit.mixBuffer.left[64] = 0.01f
 
         orbit.tryDeactivate()
 
@@ -190,7 +190,7 @@ class OrbitCleanupTest : StringSpec({
 
         // Silent except for last sample
         orbit.mixBuffer.clear()
-        orbit.mixBuffer.right[blockFrames - 1] = 0.001
+        orbit.mixBuffer.right[blockFrames - 1] = 0.001f
 
         orbit.tryDeactivate()
 

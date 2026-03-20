@@ -117,9 +117,9 @@ class SignalGenRegistryTest : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
 
-        val buffer = DoubleArray(blockFrames)
+        val buffer = FloatArray(blockFrames)
         signal!!.generate(buffer, 440.0, ctx)
-        buffer.any { it != 0.0 } shouldBe true
+        buffer.any { it != 0.0f } shouldBe true
     }
 
     "createSignalGen falls back to legacy oscillators" {
@@ -142,9 +142,9 @@ class SignalGenRegistryTest : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
 
-        val buffer = DoubleArray(blockFrames)
+        val buffer = FloatArray(blockFrames)
         signal!!.generate(buffer, 440.0, ctx)
-        buffer.any { it != 0.0 } shouldBe true
+        buffer.any { it != 0.0f } shouldBe true
     }
 
     "createSignalGen returns null for unknown name" {
@@ -203,9 +203,9 @@ class SignalGenRegistryTest : StringSpec({
         for (name in listOf("sgpad", "sgbell", "sgbuzz")) {
             val dsl = registry.get(name)!!
             val sig = dsl.toSignalGen()
-            val buffer = DoubleArray(blockFrames)
+            val buffer = FloatArray(blockFrames)
             sig.generate(buffer, 440.0, ctx)
-            buffer.any { it != 0.0 } shouldBe true
+            buffer.any { it != 0.0f } shouldBe true
         }
     }
 })

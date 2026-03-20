@@ -26,25 +26,25 @@ class FormantFilter(
     }
 
     // Scratch buffer to avoid allocation in process loop
-    private var scratchBuffer: DoubleArray = DoubleArray(0)
+    private var scratchBuffer: FloatArray = FloatArray(0)
 
-    override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+    override fun process(buffer: FloatArray, offset: Int, length: Int) {
         // Resize scratch buffer if needed
         if (scratchBuffer.size < length) {
-            scratchBuffer = DoubleArray(length)
+            scratchBuffer = FloatArray(length)
         }
 
         // 1. Copy input to scratch buffer (because we will overwrite 'buffer')
         buffer.copyInto(scratchBuffer, 0, offset, offset + length)
 
         // 2. Clear output buffer
-        buffer.fill(0.0, offset, offset + length)
+        buffer.fill(0.0f, offset, offset + length)
 
         // 3. Process each band in parallel
         for (band in filters) {
             // We need a clean copy of input for each parallel filter
             // Create temporary buffer for this band
-            val bandBuffer = DoubleArray(length)
+            val bandBuffer = FloatArray(length)
             scratchBuffer.copyInto(bandBuffer, 0, 0, length)
 
             // Process through bandpass filter
@@ -52,7 +52,7 @@ class FormantFilter(
 
             // Sum into main buffer with gain
             for (i in 0 until length) {
-                buffer[offset + i] += bandBuffer[i] * band.gain
+                buffer[offset + i] = (buffer[offset + i] + bandBuffer[i] * band.gain).toFloat()
             }
         }
     }

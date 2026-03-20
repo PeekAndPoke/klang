@@ -20,7 +20,7 @@ class BitCrushFilter(
         0.0
     }
 
-    override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+    override fun process(buffer: FloatArray, offset: Int, length: Int) {
         // Early return if no crushing
         if (amount <= 0.0 || levels <= 1.0) return
 
@@ -29,7 +29,7 @@ class BitCrushFilter(
         for (i in 0 until length) {
             val idx = offset + i
             // Quantize the amplitude to discrete levels
-            buffer[idx] = floor(buffer[idx] * halfLevels) / halfLevels
+            buffer[idx] = (floor(buffer[idx].toDouble() * halfLevels) / halfLevels).toFloat()
         }
     }
 }

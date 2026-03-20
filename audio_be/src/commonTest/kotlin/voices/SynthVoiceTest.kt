@@ -21,7 +21,7 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext()
         voice.render(ctx)
 
-        ctx.voiceBuffer.all { it == 1.0 } shouldBe true
+        ctx.voiceBuffer.all { it == 1.0f } shouldBe true
     }
 
     "SynthVoice with silence signal produces no output" {
@@ -32,7 +32,7 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext()
         voice.render(ctx)
 
-        ctx.voiceBuffer.all { it == 0.0 } shouldBe true
+        ctx.voiceBuffer.all { it == 0.0f } shouldBe true
     }
 
     "SynthVoice with ramp signal produces ramping output" {
@@ -44,8 +44,8 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext(blockFrames = 10)
         voice.render(ctx)
 
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[9] shouldBe (0.9 plusOrMinus 0.01)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[9].toDouble() shouldBe (0.9 plusOrMinus 0.01)
     }
 
     "SynthVoice passes pitch modulation to signal" {
@@ -54,7 +54,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal = SignalGen { buffer, _, ctx ->
             receivedPhaseMod = ctx.phaseMod
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+            for (i in ctx.offset until end) buffer[i] = 1.0f
         }
 
         val voice = createSynthVoice(
@@ -75,7 +75,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal = SignalGen { buffer, _, ctx ->
             receivedPhaseMod = ctx.phaseMod
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+            for (i in ctx.offset until end) buffer[i] = 1.0f
         }
 
         val voice = createSynthVoice(
@@ -111,9 +111,9 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext(blockFrames = 100)
         voice.render(ctx)
 
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[50] shouldBe (0.5 plusOrMinus 0.02)
-        ctx.voiceBuffer[99] shouldBe (0.99 plusOrMinus 0.02)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.5 plusOrMinus 0.02)
+        ctx.voiceBuffer[99].toDouble() shouldBe (0.99 plusOrMinus 0.02)
     }
 
     "SynthVoice with filter affects signal output" {
@@ -165,7 +165,7 @@ class SynthVoiceTest : StringSpec({
             receivedOffset = ctx.offset
             receivedLength = ctx.length
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+            for (i in ctx.offset until end) buffer[i] = 1.0f
         }
 
         val voice = createSynthVoice(
@@ -187,7 +187,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal = SignalGen { buffer, _, ctx ->
             receivedLength = ctx.length
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+            for (i in ctx.offset until end) buffer[i] = 1.0f
         }
 
         val voice = createSynthVoice(
@@ -208,7 +208,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal = SignalGen { buffer, _, ctx ->
             elapsedFrames.add(ctx.voiceElapsedFrames)
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+            for (i in ctx.offset until end) buffer[i] = 1.0f
         }
 
         val voice = createSynthVoice(

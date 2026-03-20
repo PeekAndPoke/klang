@@ -143,10 +143,10 @@ class VoiceScheduler(
     private var lastProcessedFrame: Long = 0
 
     // Scratch buffers
-    private val voiceBuffer = DoubleArray(options.blockFrames)
+    private val voiceBuffer = FloatArray(options.blockFrames)
     private val freqModBuffer = DoubleArray(options.blockFrames)
 
-    // TEMPORARY: SignalGen POC bridge — scratch buffers for SignalGen composition operators
+    // Scratch buffers for SignalGen composition operators (plus, times, etc.)
     private val scratchBuffers = ScratchBuffers(options.blockFrames)
 
     // Context reused per block

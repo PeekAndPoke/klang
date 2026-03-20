@@ -176,7 +176,7 @@ class Orbit(val id: Int, val blockFrames: Int, sampleRate: Int, private val sile
     }
 
     private fun isMixBufferSilent(): Boolean {
-        val threshold = 0.00001
+        val threshold = 0.00001f
         for (sample in mixBuffer.left) {
             if (sample > threshold || sample < -threshold) return false
         }

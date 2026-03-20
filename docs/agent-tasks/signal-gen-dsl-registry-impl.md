@@ -124,6 +124,33 @@ audio_be (backend only):
     - Actual sine/sawtooth output through the full voice pipeline
     - SignalGen compositions (Plus, FM) rendered through SynthVoice
 
+## FloatArray Migration (2026-03-20)
+
+All audio signal buffers migrated from `DoubleArray` to `FloatArray` for 2x cache fit (~15-30% throughput).
+
+**FloatArray (audio signal buffers):**
+
+- `SignalGen.generate(buffer: FloatArray, ...)`
+- `OscFn.process(buffer: FloatArray, ...)`
+- `AudioFilter.process(buffer: FloatArray, ...)`
+- `StereoBuffer.left/right`, `ScratchBuffers` pool, `Voice.RenderContext.voiceBuffer`
+- All filter implementations, effects (Reverb, DelayLine, Compressor, Ducking, Phaser)
+
+**Stays DoubleArray (precision-sensitive):**
+
+- `SignalContext.phaseMod` — frequency multipliers
+- `Voice.RenderContext.freqModBuffer` — pitch modulation ratios
+- Phase accumulators (`var phase = 0.0` inside oscillators)
+- FM modulation buffers (`phaseModBuf` in `SignalGenFm.kt`)
+- Pitch modulation buffers in `SignalGenPitchMod.kt`
+
+**Current pattern in filters/effects:** IIR filter state (`ic1eq`, `ic2eq`, `y`, `xPrev`, coefficients)
+is kept as `Double` with explicit `.toDouble()` on buffer read and `.toFloat()` on buffer write. This is
+a no-op on JS (numbers are always f64 internally, Float32Array read/write does implicit conversion anyway)
+and a single-cycle instruction on JVM. Could be simplified to Float state throughout — the Double precision
+is not actually needed for our filter types (SVF, one-pole). Professional DAWs like Bitwig run entirely at
+32-bit float. Left as-is for now; simplification is a low-risk cleanup task.
+
 ## What's NOT Implemented Yet (from the plan doc)
 
 - **Frontend waveform preview** — `SignalGenDsl.renderPreview()` in `audio_bridge` (common code). Lightweight pure-math

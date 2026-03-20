@@ -13,7 +13,7 @@ import kotlin.math.pow
  * @param ctx per-voice rendering context (timing, block params, scratch buffers)
  */
 fun interface SignalGen {
-    fun generate(buffer: DoubleArray, freqHz: Double, ctx: SignalContext)
+    fun generate(buffer: FloatArray, freqHz: Double, ctx: SignalContext)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -27,7 +27,7 @@ operator fun SignalGen.plus(other: SignalGen): SignalGen = SignalGen { buffer, f
         other.generate(tmp, freqHz, ctx)
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] += tmp[i]
+            buffer[i] = buffer[i] + tmp[i]
         }
     }
 }
@@ -39,7 +39,7 @@ operator fun SignalGen.times(other: SignalGen): SignalGen = SignalGen { buffer, 
         other.generate(tmp, freqHz, ctx)
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] *= tmp[i]
+            buffer[i] = buffer[i] * tmp[i]
         }
     }
 }
@@ -49,7 +49,7 @@ fun SignalGen.mul(factor: Double): SignalGen = SignalGen { buffer, freqHz, ctx -
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] *= factor
+        buffer[i] = (buffer[i] * factor).toFloat()
     }
 }
 

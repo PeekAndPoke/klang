@@ -48,7 +48,7 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
 
         // Read processed signal from voice buffer
         // (All effects have already been applied in the voice's render pipeline)
-        var signal = voiceBuffer[idx]
+        var signal = voiceBuffer[idx].toDouble()
 
         // Apply post-gain
         signal *= postGain
@@ -58,18 +58,18 @@ fun Voice.mixToOrbit(ctx: Voice.RenderContext, offset: Int, length: Int) {
         val right = signal * gainR
 
         // Sum to orbit mix buffer
-        outL[idx] += left
-        outR[idx] += right
+        outL[idx] = (outL[idx] + left).toFloat()
+        outR[idx] = (outR[idx] + right).toFloat()
 
         // Send to effects buses
         if (sendToDelay) {
-            delaySendL[idx] += left * delayAmount
-            delaySendR[idx] += right * delayAmount
+            delaySendL[idx] = (delaySendL[idx] + left * delayAmount).toFloat()
+            delaySendR[idx] = (delaySendR[idx] + right * delayAmount).toFloat()
         }
 
         if (sendToReverb) {
-            reverbSendL[idx] += left * reverbAmount
-            reverbSendR[idx] += right * reverbAmount
+            reverbSendL[idx] = (reverbSendL[idx] + left * reverbAmount).toFloat()
+            reverbSendR[idx] = (reverbSendR[idx] + right * reverbAmount).toFloat()
         }
     }
 }

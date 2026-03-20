@@ -10,10 +10,6 @@ import kotlin.random.Random
  * Factory functions for SignalGen oscillator primitives.
  *
  * Each factory returns a fresh SignalGen with its own phase state.
- * These are native reimplementations (not wrappers around OscFn) to avoid double-bridging.
- *
- * TEMPORARY: SignalGen POC bridge — these will become the primary oscillator implementations
- * when SignalGen replaces OscFn.
  */
 object SignalGens {
 
@@ -27,13 +23,13 @@ object SignalGens {
 
             if (phaseMod == null) {
                 for (i in ctx.offset until end) {
-                    buffer[i] = gain * sin(phase)
+                    buffer[i] = (gain * sin(phase)).toFloat()
                     phase += phaseInc
                     if (phase >= TWO_PI) phase -= TWO_PI
                 }
             } else {
                 for (i in ctx.offset until end) {
-                    buffer[i] = gain * sin(phase)
+                    buffer[i] = (gain * sin(phase)).toFloat()
                     phase += phaseInc * phaseMod[i]
                     if (phase >= TWO_PI) phase -= TWO_PI
                 }
@@ -53,7 +49,7 @@ object SignalGens {
                 for (i in ctx.offset until end) {
                     var out = 2.0 * phase - 1.0
                     out -= polyBlep(phase, inc)
-                    buffer[i] = gain * out
+                    buffer[i] = (gain * out).toFloat()
                     phase += inc
                     if (phase >= 1.0) phase -= 1.0
                 }
@@ -62,7 +58,7 @@ object SignalGens {
                     val dt = inc * phaseMod[i]
                     var out = 2.0 * phase - 1.0
                     out -= polyBlep(phase, dt)
-                    buffer[i] = gain * out
+                    buffer[i] = (gain * out).toFloat()
                     phase += dt
                     if (phase >= 1.0) phase -= 1.0
                 }
@@ -80,13 +76,13 @@ object SignalGens {
 
             if (phaseMod == null) {
                 for (i in ctx.offset until end) {
-                    buffer[i] = gain * if (sin(phase) >= 0.0) 1.0 else -1.0
+                    buffer[i] = (gain * if (sin(phase) >= 0.0) 1.0 else -1.0).toFloat()
                     phase += phaseInc
                     if (phase >= TWO_PI) phase -= TWO_PI
                 }
             } else {
                 for (i in ctx.offset until end) {
-                    buffer[i] = gain * if (sin(phase) >= 0.0) 1.0 else -1.0
+                    buffer[i] = (gain * if (sin(phase) >= 0.0) 1.0 else -1.0).toFloat()
                     phase += phaseInc * phaseMod[i]
                     if (phase >= TWO_PI) phase -= TWO_PI
                 }
@@ -105,13 +101,13 @@ object SignalGens {
 
             if (phaseMod == null) {
                 for (i in ctx.offset until end) {
-                    buffer[i] = gain * norm * asin(sin(phase))
+                    buffer[i] = (gain * norm * asin(sin(phase))).toFloat()
                     phase += phaseInc
                     if (phase >= TWO_PI) phase -= TWO_PI
                 }
             } else {
                 for (i in ctx.offset until end) {
-                    buffer[i] = gain * norm * asin(sin(phase))
+                    buffer[i] = (gain * norm * asin(sin(phase))).toFloat()
                     phase += phaseInc * phaseMod[i]
                     if (phase >= TWO_PI) phase -= TWO_PI
                 }
@@ -123,7 +119,7 @@ object SignalGens {
         return SignalGen { buffer, _, ctx ->
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                buffer[i] = gain * (rng.nextDouble() * 2.0 - 1.0)
+                buffer[i] = (gain * (rng.nextDouble() * 2.0 - 1.0)).toFloat()
             }
         }
     }

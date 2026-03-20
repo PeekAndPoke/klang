@@ -96,7 +96,7 @@ fun SignalGen.svf(
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            val v0 = buffer[i]
+            val v0 = buffer[i].toDouble()
             val v3 = v0 - ic2eq
             val v1 = a1 * ic1eq + a2 * v3
             val v2 = ic2eq + a2 * ic1eq + a3 * v3
@@ -108,7 +108,7 @@ fun SignalGen.svf(
                 SvfMode.HIGHPASS -> v0 - k * v1 - v2
                 SvfMode.BANDPASS -> v1
                 SvfMode.NOTCH -> v0 - k * v1
-            }
+            }.toFloat()
         }
     }
 }
@@ -150,9 +150,9 @@ fun SignalGen.onePoleLowpass(cutoffHz: Double): SignalGen {
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            y += alpha * (buffer[i] - y)
+            y += alpha * (buffer[i].toDouble() - y)
             y = flushDenormal(y)
-            buffer[i] = y
+            buffer[i] = y.toFloat()
         }
     }
 }
@@ -179,11 +179,11 @@ fun SignalGen.onePoleHighpass(cutoffHz: Double): SignalGen {
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            val x = buffer[i]
+            val x = buffer[i].toDouble()
             y = a * (y + x - xPrev)
             y = flushDenormal(y)
             xPrev = x
-            buffer[i] = y
+            buffer[i] = y.toFloat()
         }
     }
 }
@@ -222,7 +222,7 @@ fun SignalGen.formant(bands: List<FormantBand>): SignalGen {
                 inputCopy[i] = buffer[i]
             }
             for (i in ctx.offset until end) {
-                buffer[i] = 0.0
+                buffer[i] = 0.0f
             }
 
             for (band in bandStates) {
@@ -238,13 +238,13 @@ fun SignalGen.formant(bands: List<FormantBand>): SignalGen {
                 }
 
                 for (i in ctx.offset until end) {
-                    val v0 = inputCopy[i]
+                    val v0 = inputCopy[i].toDouble()
                     val v3 = v0 - band.ic2eq
                     val v1 = band.a1 * band.ic1eq + band.a2 * v3
                     val v2 = band.ic2eq + band.a2 * band.ic1eq + band.a3 * v3
                     band.ic1eq = flushDenormal(2.0 * v1 - band.ic1eq)
                     band.ic2eq = flushDenormal(2.0 * v2 - band.ic2eq)
-                    buffer[i] += v1 * band.linearGain
+                    buffer[i] = (buffer[i] + v1 * band.linearGain).toFloat()
                 }
             }
         }

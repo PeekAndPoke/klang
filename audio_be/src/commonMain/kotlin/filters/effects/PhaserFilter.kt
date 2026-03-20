@@ -39,7 +39,7 @@ class PhaserFilter(
     private val inverseSampleRate = 1.0 / sampleRate
     private val lfoIncrement = rate * TWO_PI * inverseSampleRate
 
-    override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+    override fun process(buffer: FloatArray, offset: Int, length: Int) {
         // Early return if no phaser effect
         if (depth <= 0.0) return
 
@@ -62,7 +62,7 @@ class PhaserFilter(
             val alpha = (tanValue - 1.0) / (tanValue + 1.0)
 
             // 4. Process through all-pass filter cascade with feedback
-            var signal = buffer[idx] + lastOutput * feedback
+            var signal = buffer[idx].toDouble() + lastOutput * feedback
 
             for (s in 0 until stages) {
                 // All-pass filter: y[n] = alpha * x[n] + z[n-1]
@@ -76,7 +76,7 @@ class PhaserFilter(
 
             // 5. Mix wet and dry signals
             // Phaser effect comes from mixing the phase-shifted signal with original
-            buffer[idx] += signal * depth
+            buffer[idx] = (buffer[idx] + signal * depth).toFloat()
         }
     }
 }

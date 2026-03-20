@@ -37,14 +37,14 @@ class SignalGensTest : StringSpec({
         }
     }
 
-    fun generate(sig: SignalGen, freqHz: Double = 440.0, blockFrames: Int = defaultBlockFrames): DoubleArray {
-        val buffer = DoubleArray(blockFrames)
+    fun generate(sig: SignalGen, freqHz: Double = 440.0, blockFrames: Int = defaultBlockFrames): FloatArray {
+        val buffer = FloatArray(blockFrames)
         sig.generate(buffer, freqHz, createCtx(blockFrames))
         return buffer
     }
 
     /** Count zero crossings (sign changes) in the buffer */
-    fun DoubleArray.zeroCrossings(): Int {
+    fun FloatArray.zeroCrossings(): Int {
         var count = 0
         for (i in 1 until size) {
             if ((this[i - 1] >= 0.0 && this[i] < 0.0) || (this[i - 1] < 0.0 && this[i] >= 0.0)) {
@@ -55,10 +55,10 @@ class SignalGensTest : StringSpec({
     }
 
     /** Find peak absolute amplitude */
-    fun DoubleArray.peakAmplitude(): Double = maxOf(maxOrNull() ?: 0.0, -(minOrNull() ?: 0.0))
+    fun FloatArray.peakAmplitude(): Double = maxOf((maxOrNull() ?: 0.0f).toDouble(), -(minOrNull() ?: 0.0f).toDouble())
 
     /** Check that the waveform is roughly symmetric around zero (mean close to 0) */
-    fun DoubleArray.dcOffset(): Double = average()
+    fun FloatArray.dcOffset(): Double = map { it.toDouble() }.average()
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Triangle
@@ -107,7 +107,7 @@ class SignalGensTest : StringSpec({
         val rampLen = 100
         if (rampStart + rampLen < buf.size) {
             // Slope should be roughly constant
-            val slopes = (0 until rampLen - 1).map { buf[rampStart + it + 1] - buf[rampStart + it] }
+            val slopes = (0 until rampLen - 1).map { (buf[rampStart + it + 1] - buf[rampStart + it]).toDouble() }
             val avgSlope = slopes.average()
             // All slopes should be close to the average (linear = constant slope)
             for (slope in slopes) {
@@ -120,8 +120,8 @@ class SignalGensTest : StringSpec({
         val sig = SignalGens.triangle()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = DoubleArray(blockSize)
-        val buf2 = DoubleArray(blockSize)
+        val buf1 = FloatArray(blockSize)
+        val buf2 = FloatArray(blockSize)
 
         // Render two consecutive blocks
         sig.generate(buf1, 440.0, ctx)
@@ -129,7 +129,7 @@ class SignalGensTest : StringSpec({
         sig.generate(buf2, 440.0, ctx)
 
         // Last sample of block 1 and first sample of block 2 should be close (continuous)
-        val diff = abs(buf2[0] - buf1[blockSize - 1])
+        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
         diff shouldBeLessThan 0.05
     }
 
@@ -173,14 +173,14 @@ class SignalGensTest : StringSpec({
         val sig = SignalGens.sine()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = DoubleArray(blockSize)
-        val buf2 = DoubleArray(blockSize)
+        val buf1 = FloatArray(blockSize)
+        val buf2 = FloatArray(blockSize)
 
         sig.generate(buf1, 440.0, ctx)
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
-        val diff = abs(buf2[0] - buf1[blockSize - 1])
+        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
         diff shouldBeLessThan 0.05
     }
 
@@ -222,15 +222,15 @@ class SignalGensTest : StringSpec({
         val sig = SignalGens.sawtooth()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = DoubleArray(blockSize)
-        val buf2 = DoubleArray(blockSize)
+        val buf1 = FloatArray(blockSize)
+        val buf2 = FloatArray(blockSize)
 
         sig.generate(buf1, 440.0, ctx)
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
         // Sawtooth is continuous within a ramp — only jumps at reset
-        val diff = abs(buf2[0] - buf1[blockSize - 1])
+        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
         diff shouldBeLessThan 1.5
     }
 
@@ -271,7 +271,7 @@ class SignalGensTest : StringSpec({
         val gain = 1.0
         val buf = generate(SignalGens.whiteNoise(Random(42), gain), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample) shouldBeLessThan gain + 0.001
+            abs(sample.toDouble()) shouldBeLessThan gain + 0.001
         }
     }
 
@@ -284,7 +284,7 @@ class SignalGensTest : StringSpec({
         val gain = 0.3
         val buf = generate(SignalGens.whiteNoise(Random(42), gain), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample) shouldBeLessThan gain + 0.001
+            abs(sample.toDouble()) shouldBeLessThan gain + 0.001
         }
         buf.peakAmplitude() shouldBeGreaterThan gain * 0.8
     }
@@ -310,8 +310,8 @@ class SignalGensTest : StringSpec({
         val sig2 = SignalGens.sine()
         val ctx = createCtx(128)
 
-        val buf1 = DoubleArray(128)
-        val buf2 = DoubleArray(128)
+        val buf1 = FloatArray(128)
+        val buf2 = FloatArray(128)
 
         // Advance sig1 by one block, leave sig2 at start
         sig1.generate(buf1, 440.0, ctx)

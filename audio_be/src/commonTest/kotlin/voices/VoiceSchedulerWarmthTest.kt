@@ -42,11 +42,11 @@ class VoiceSchedulerWarmthTest : StringSpec({
 
         val osc = createOscillatorWithWarmth(voiceData, oscillators, 440.0)
 
-        val buffer = DoubleArray(100)
+        val buffer = FloatArray(100)
         osc.process(buffer, 0, 100, 0.0, 0.1, null)
 
         // Should produce output
-        buffer.any { it != 0.0 } shouldBe true
+        buffer.any { it != 0.0f } shouldBe true
     }
 
     "createOscillator returns raw oscillator when warmth is 0.0" {
@@ -57,11 +57,11 @@ class VoiceSchedulerWarmthTest : StringSpec({
 
         val osc = createOscillatorWithWarmth(voiceData, oscillators, 440.0)
 
-        val buffer = DoubleArray(100)
+        val buffer = FloatArray(100)
         osc.process(buffer, 0, 100, 0.0, 0.1, null)
 
         // Should produce output
-        buffer.any { it != 0.0 } shouldBe true
+        buffer.any { it != 0.0f } shouldBe true
     }
 
     "createOscillator applies warmth when warmth > 0.0" {
@@ -76,12 +76,12 @@ class VoiceSchedulerWarmthTest : StringSpec({
         )
 
         // Generate raw square wave
-        val rawBuffer = DoubleArray(100)
+        val rawBuffer = FloatArray(100)
         createOscillatorWithWarmth(voiceDataNoWarmth, oscillators, 440.0)
             .process(rawBuffer, 0, 100, 0.0, 0.5, null)
 
         // Generate warm square wave
-        val warmBuffer = DoubleArray(100)
+        val warmBuffer = FloatArray(100)
         createOscillatorWithWarmth(voiceDataWithWarmth, oscillators, 440.0)
             .process(warmBuffer, 0, 100, 0.0, 0.5, null)
 
@@ -109,11 +109,11 @@ class VoiceSchedulerWarmthTest : StringSpec({
 
             val osc = createOscillatorWithWarmth(voiceData, oscillators, 440.0)
 
-            val buffer = DoubleArray(100)
+            val buffer = FloatArray(100)
             osc.process(buffer, 0, 100, 0.0, 0.1, null)
 
             // Should produce output for all oscillator types
-            buffer.any { it != 0.0 } shouldBe true
+            buffer.any { it != 0.0f } shouldBe true
         }
     }
 })

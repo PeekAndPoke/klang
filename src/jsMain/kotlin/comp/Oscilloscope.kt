@@ -191,7 +191,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 centerLineWidth = props.centerLineWidth,
                 buffer = history[0],
                 bufferLength = history.bufferSize,
-                deflectionStrength = 8.0,
+                deflectionStrength = 4.0,
             )
         } else {
             // Expanded mode — flatten history frames oldest-to-newest into expandedStorage
@@ -370,12 +370,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         }
 
         // Stroke shadow behind for contrast
-        ctx.strokeStyle = Color.black.withAlpha(0.5).toString()
+        ctx.strokeStyle = Color.black.withAlpha(0.4).toString()
         ctx.lineWidth = strokeWidth + 4.5
         ctx.stroke()
 
         // Gold highlight
-        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.25).toString()
+        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.2).toString()
         ctx.lineWidth = strokeWidth + 3.0
         ctx.stroke()
 

@@ -40,8 +40,8 @@ class OrbitsCleanupTest : StringSpec({
         // Create orbit 1 with signal
         val voice1 = createTestVoice(orbitId = 1)
         val orbit1 = orbits.getOrInit(1, voice1)
-        orbit1.mixBuffer.left[0] = 0.5
-        orbit1.mixBuffer.right[0] = 0.5
+        orbit1.mixBuffer.left[0] = 0.5f
+        orbit1.mixBuffer.right[0] = 0.5f
 
         // Clear master mix
         masterMix.clear()
@@ -50,8 +50,8 @@ class OrbitsCleanupTest : StringSpec({
         orbits.processAndMix(masterMix)
 
         // Master should only have orbit 1's signal (orbit 0 was skipped)
-        masterMix.left[0] shouldBe 0.5
-        masterMix.right[0] shouldBe 0.5
+        masterMix.left[0] shouldBe 0.5f
+        masterMix.right[0] shouldBe 0.5f
     }
 
     "round-robin cleanup checks one orbit per block" {
@@ -136,8 +136,8 @@ class OrbitsCleanupTest : StringSpec({
         orbits.processAndMix(masterMix)
 
         // Should complete without error
-        masterMix.left[0] shouldBe 0.0
-        masterMix.right[0] shouldBe 0.0
+        masterMix.left[0] shouldBe 0.0f
+        masterMix.right[0] shouldBe 0.0f
     }
 
     "inactive orbit with signal is not mixed" {
@@ -151,8 +151,8 @@ class OrbitsCleanupTest : StringSpec({
         orbit.tryDeactivate()
 
         // Add signal AFTER deactivation
-        orbit.mixBuffer.left[0] = 1.0
-        orbit.mixBuffer.right[0] = 1.0
+        orbit.mixBuffer.left[0] = 1.0f
+        orbit.mixBuffer.right[0] = 1.0f
 
         // Clear master
         masterMix.clear()
@@ -161,8 +161,8 @@ class OrbitsCleanupTest : StringSpec({
         orbits.processAndMix(masterMix)
 
         // Master should be silent (inactive orbit was skipped)
-        masterMix.left[0] shouldBe 0.0
-        masterMix.right[0] shouldBe 0.0
+        masterMix.left[0] shouldBe 0.0f
+        masterMix.right[0] shouldBe 0.0f
     }
 
     "cleanup only checks existing orbits" {
@@ -192,13 +192,13 @@ class OrbitsCleanupTest : StringSpec({
         val orbit1 = orbits.getOrInit(1, createTestVoice(1))
         val orbit2 = orbits.getOrInit(2, createTestVoice(2))
 
-        orbit0.mixBuffer.left[0] = 0.1
-        orbit1.mixBuffer.left[0] = 0.2
-        orbit2.mixBuffer.left[0] = 0.3
+        orbit0.mixBuffer.left[0] = 0.1f
+        orbit1.mixBuffer.left[0] = 0.2f
+        orbit2.mixBuffer.left[0] = 0.3f
 
-        orbit0.mixBuffer.right[0] = 0.1
-        orbit1.mixBuffer.right[0] = 0.2
-        orbit2.mixBuffer.right[0] = 0.3
+        orbit0.mixBuffer.right[0] = 0.1f
+        orbit1.mixBuffer.right[0] = 0.2f
+        orbit2.mixBuffer.right[0] = 0.3f
 
         masterMix.clear()
 
@@ -206,8 +206,8 @@ class OrbitsCleanupTest : StringSpec({
         orbits.processAndMix(masterMix)
 
         // All three should be summed
-        masterMix.left[0] shouldBe (0.6 plusOrMinus 0.0001)
-        masterMix.right[0] shouldBe (0.6 plusOrMinus 0.0001)
+        masterMix.left[0].toDouble() shouldBe (0.6 plusOrMinus 0.0001)
+        masterMix.right[0].toDouble() shouldBe (0.6 plusOrMinus 0.0001)
     }
 
     "orbit deactivated by cleanup is not mixed on next block" {
@@ -223,14 +223,14 @@ class OrbitsCleanupTest : StringSpec({
         orbit0.isActive shouldBe false
 
         // Add signal to the now-inactive orbit
-        orbit0.mixBuffer.left[0] = 1.0
-        orbit0.mixBuffer.right[0] = 1.0
+        orbit0.mixBuffer.left[0] = 1.0f
+        orbit0.mixBuffer.right[0] = 1.0f
 
         masterMix.clear()
 
         // Second block: should NOT mix the inactive orbit
         orbits.processAndMix(masterMix)
-        masterMix.left[0] shouldBe 0.0
-        masterMix.right[0] shouldBe 0.0
+        masterMix.left[0] shouldBe 0.0f
+        masterMix.right[0] shouldBe 0.0f
     }
 })

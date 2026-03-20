@@ -30,9 +30,9 @@ object VoiceTestHelpers {
             orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
+            voiceBuffer = FloatArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
-            scratchBuffers = io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             this.blockStart = blockStart
         }
@@ -201,7 +201,7 @@ object VoiceTestHelpers {
      * Useful as default when you don't care about filtering.
      */
     object NoOpFilter : AudioFilter {
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             // Do nothing
         }
     }
@@ -215,7 +215,7 @@ object VoiceTestHelpers {
 
         val processCalls = mutableListOf<ProcessCall>()
 
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             processCalls.add(ProcessCall(offset, length, processCalls.size))
         }
 
@@ -314,21 +314,21 @@ object TestSamples {
 object TestOscillators {
     val constant = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
         for (i in 0 until length) {
-            buffer[offset + i] = 1.0
+            buffer[offset + i] = 1.0f
         }
         phase
     }
 
     val ramp = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
         for (i in 0 until length) {
-            buffer[offset + i] = i.toDouble() / length
+            buffer[offset + i] = (i.toFloat() / length)
         }
         phase
     }
 
     val silence = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
         for (i in 0 until length) {
-            buffer[offset + i] = 0.0
+            buffer[offset + i] = 0.0f
         }
         phase
     }
@@ -341,21 +341,21 @@ object TestSignalGens {
     val constant = SignalGen { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = 1.0
+            buffer[i] = 1.0f
         }
     }
 
     val ramp = SignalGen { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = (i - ctx.offset).toDouble() / ctx.length
+            buffer[i] = (i - ctx.offset).toFloat() / ctx.length
         }
     }
 
     val silence = SignalGen { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = 0.0
+            buffer[i] = 0.0f
         }
     }
 }

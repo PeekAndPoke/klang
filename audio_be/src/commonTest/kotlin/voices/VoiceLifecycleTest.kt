@@ -24,7 +24,7 @@ class VoiceLifecycleTest : StringSpec({
         result shouldBe true // Voice continues (will start in future)
 
         // Buffer should remain empty (voice hasn't started)
-        ctx.voiceBuffer.all { it == 0.0 } shouldBe true
+        ctx.voiceBuffer.all { it == 0.0f } shouldBe true
     }
 
     "voice does not render after endFrame" {
@@ -39,7 +39,7 @@ class VoiceLifecycleTest : StringSpec({
         result shouldBe false // Voice is done
 
         // Buffer should remain empty (voice has ended)
-        ctx.voiceBuffer.all { it == 0.0 } shouldBe true
+        ctx.voiceBuffer.all { it == 0.0f } shouldBe true
     }
 
     "voice starting at block boundary renders full block" {
@@ -54,7 +54,7 @@ class VoiceLifecycleTest : StringSpec({
         result shouldBe true
 
         // Buffer should have audio (TestOscillators.constant = 1.0)
-        ctx.voiceBuffer.all { it == 1.0 } shouldBe true
+        ctx.voiceBuffer.all { it == 1.0f } shouldBe true
     }
 
     "voice ending at block boundary renders full block" {
@@ -69,7 +69,7 @@ class VoiceLifecycleTest : StringSpec({
         result shouldBe true
 
         // Buffer should have audio
-        ctx.voiceBuffer.all { it == 1.0 } shouldBe true
+        ctx.voiceBuffer.all { it == 1.0f } shouldBe true
     }
 
     "voice starting mid-block renders partial buffer" {
@@ -84,10 +84,10 @@ class VoiceLifecycleTest : StringSpec({
         result shouldBe true
 
         // First 50 samples should be 0 (voice hasn't started)
-        ctx.voiceBuffer.take(50).all { it == 0.0 } shouldBe true
+        ctx.voiceBuffer.take(50).all { it == 0.0f } shouldBe true
 
         // Last 50 samples should have audio
-        ctx.voiceBuffer.takeLast(50).all { it == 1.0 } shouldBe true
+        ctx.voiceBuffer.takeLast(50).all { it == 1.0f } shouldBe true
     }
 
     "voice ending mid-block renders partial buffer" {
@@ -102,10 +102,10 @@ class VoiceLifecycleTest : StringSpec({
         result shouldBe true
 
         // First 50 samples should have audio
-        ctx.voiceBuffer.take(50).all { it == 1.0 } shouldBe true
+        ctx.voiceBuffer.take(50).all { it == 1.0f } shouldBe true
 
         // Last 50 samples should be 0 (voice has ended)
-        ctx.voiceBuffer.takeLast(50).all { it == 0.0 } shouldBe true
+        ctx.voiceBuffer.takeLast(50).all { it == 0.0f } shouldBe true
     }
 
     "voice spanning multiple blocks renders correctly" {
@@ -117,17 +117,17 @@ class VoiceLifecycleTest : StringSpec({
         // Block 1: frames 0-100
         val ctx1 = createContext(blockStart = 0, blockFrames = 100)
         voice.render(ctx1) shouldBe true
-        ctx1.voiceBuffer.all { it == 1.0 } shouldBe true
+        ctx1.voiceBuffer.all { it == 1.0f } shouldBe true
 
         // Block 2: frames 100-200
         val ctx2 = createContext(blockStart = 100, blockFrames = 100)
         voice.render(ctx2) shouldBe true
-        ctx2.voiceBuffer.all { it == 1.0 } shouldBe true
+        ctx2.voiceBuffer.all { it == 1.0f } shouldBe true
 
         // Block 3: frames 200-300
         val ctx3 = createContext(blockStart = 200, blockFrames = 100)
         voice.render(ctx3) shouldBe true
-        ctx3.voiceBuffer.all { it == 1.0 } shouldBe true
+        ctx3.voiceBuffer.all { it == 1.0f } shouldBe true
 
         // Block 4: frames 300-400 (voice has ended)
         val ctx4 = createContext(blockStart = 300, blockFrames = 100)
@@ -146,9 +146,9 @@ class VoiceLifecycleTest : StringSpec({
         result shouldBe true
 
         // Only frame 50 should have audio
-        ctx.voiceBuffer[49] shouldBe 0.0
-        ctx.voiceBuffer[50] shouldBe 1.0
-        ctx.voiceBuffer[51] shouldBe 0.0
+        ctx.voiceBuffer[49] shouldBe 0.0f
+        ctx.voiceBuffer[50] shouldBe 1.0f
+        ctx.voiceBuffer[51] shouldBe 0.0f
     }
 
     "voice with zero-duration (startFrame == endFrame) does not render" {
@@ -162,7 +162,7 @@ class VoiceLifecycleTest : StringSpec({
 
         // Voice continues but doesn't render anything
         result shouldBe true
-        ctx.voiceBuffer.all { it == 0.0 } shouldBe true
+        ctx.voiceBuffer.all { it == 0.0f } shouldBe true
     }
 
     "gateEndFrame triggers release phase" {
@@ -194,10 +194,10 @@ class VoiceLifecycleTest : StringSpec({
         val midRelease = ctx3.voiceBuffer[0]
 
         // Voice should be at full amplitude before gate
-        beforeGate shouldBe 1.0
+        beforeGate shouldBe 1.0f
 
         // At gate end, still at sustain level
-        atGateEnd shouldBe 1.0
+        atGateEnd shouldBe 1.0f
 
         // Mid-release should be lower
         (midRelease < atGateEnd) shouldBe true
@@ -258,11 +258,11 @@ class VoiceLifecycleTest : StringSpec({
         result shouldBe true
 
         // First 50 samples should be 0 (voice hasn't started)
-        ctx.voiceBuffer.take(50).all { it == 0.0 } shouldBe true
+        ctx.voiceBuffer.take(50).all { it == 0.0f } shouldBe true
 
         // Last 50 samples should have audio (sample value * envelope)
         // Note: Sample has value 0.5, but envelope might modify it
-        (ctx.voiceBuffer[50] > 0.0) shouldBe true
+        (ctx.voiceBuffer[50] > 0.0f) shouldBe true
     }
 
     "voice at exact block boundaries handles edge cases" {
@@ -274,17 +274,17 @@ class VoiceLifecycleTest : StringSpec({
         // Query block that ends exactly at startFrame
         val ctx1 = createContext(blockStart = 0, blockFrames = 100)
         voice.render(ctx1) shouldBe true
-        ctx1.voiceBuffer.all { it == 0.0 } shouldBe true
+        ctx1.voiceBuffer.all { it == 0.0f } shouldBe true
 
         // Query block that starts exactly at startFrame
         val ctx2 = createContext(blockStart = 100, blockFrames = 100)
         voice.render(ctx2) shouldBe true
-        ctx2.voiceBuffer.all { it == 1.0 } shouldBe true
+        ctx2.voiceBuffer.all { it == 1.0f } shouldBe true
 
         // Query block that ends exactly at endFrame
         val ctx3 = createContext(blockStart = 100, blockFrames = 100)
         voice.render(ctx3) shouldBe true
-        ctx3.voiceBuffer.all { it == 1.0 } shouldBe true
+        ctx3.voiceBuffer.all { it == 1.0f } shouldBe true
 
         // Query block that starts exactly at endFrame
         val ctx4 = createContext(blockStart = 200, blockFrames = 100)

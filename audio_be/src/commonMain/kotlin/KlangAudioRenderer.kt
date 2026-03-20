@@ -49,7 +49,7 @@ class KlangAudioRenderer(
         val right = mix.right
 
         // Cache max value to avoid repeated field access/casting
-        val maxShort = Short.MAX_VALUE.toDouble()
+        val maxShort = Short.MAX_VALUE.toFloat()
 
         for (i in 0 until blockFrames) {
             val lSample = left[i]
@@ -59,17 +59,17 @@ class KlangAudioRenderer(
             // Most samples are within safe bounds [-1.0, 1.0].
             // We skip all math for them to preserve CPU and Transparency (Unity Gain).
 
-            val lOut = if (lSample >= -1.0 && lSample <= 1.0) {
+            val lOut = if (lSample >= -1.0f && lSample <= 1.0f) {
                 (lSample * maxShort).toInt()
-            } else if (lSample > 1.0) {
+            } else if (lSample > 1.0f) {
                 Short.MAX_VALUE.toInt()
             } else {
                 Short.MIN_VALUE.toInt()
             }
 
-            val rOut = if (rSample >= -1.0 && rSample <= 1.0) {
+            val rOut = if (rSample >= -1.0f && rSample <= 1.0f) {
                 (rSample * maxShort).toInt()
-            } else if (rSample > 1.0) {
+            } else if (rSample > 1.0f) {
                 Short.MAX_VALUE.toInt()
             } else {
                 Short.MIN_VALUE.toInt()

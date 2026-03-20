@@ -20,5 +20,5 @@ interface AudioFilter {
         fun setCutoff(cutoffHz: Double)
     }
 
-    fun process(buffer: DoubleArray, offset: Int, length: Int)
+    fun process(buffer: FloatArray, offset: Int, length: Int)
 }

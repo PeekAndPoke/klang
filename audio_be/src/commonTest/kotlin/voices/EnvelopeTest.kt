@@ -28,13 +28,13 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // At frame 0, envelope should be ~0
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
 
         // At frame 50 (middle of attack), envelope should be ~0.5
-        ctx.voiceBuffer[50] shouldBe (0.5 plusOrMinus 0.02)
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.5 plusOrMinus 0.02)
 
         // At frame 99 (end of attack), envelope should be ~1.0
-        ctx.voiceBuffer[99] shouldBe (0.99 plusOrMinus 0.02)
+        ctx.voiceBuffer[99].toDouble() shouldBe (0.99 plusOrMinus 0.02)
     }
 
     "decay phase decreases from 1 to sustain level" {
@@ -54,13 +54,13 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // At start of decay (frame 100), envelope should be ~1.0
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.02)
+        ctx.voiceBuffer[0].toDouble() shouldBe (1.0 plusOrMinus 0.02)
 
         // At middle of decay (frame 150), envelope should be ~0.75
-        ctx.voiceBuffer[50] shouldBe (0.75 plusOrMinus 0.02)
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.75 plusOrMinus 0.02)
 
         // At end of decay (frame 199), envelope should be ~0.5
-        ctx.voiceBuffer[99] shouldBe (0.5 plusOrMinus 0.02)
+        ctx.voiceBuffer[99].toDouble() shouldBe (0.5 plusOrMinus 0.02)
     }
 
     "sustain phase holds at sustain level" {
@@ -81,9 +81,9 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // All samples should be at sustain level
-        ctx.voiceBuffer[0] shouldBe (0.6 plusOrMinus 0.01)
-        ctx.voiceBuffer[50] shouldBe (0.6 plusOrMinus 0.01)
-        ctx.voiceBuffer[99] shouldBe (0.6 plusOrMinus 0.01)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.6 plusOrMinus 0.01)
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.6 plusOrMinus 0.01)
+        ctx.voiceBuffer[99].toDouble() shouldBe (0.6 plusOrMinus 0.01)
     }
 
     "release phase decays from sustain to zero" {
@@ -107,13 +107,13 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // At start of release (frame 100), envelope should be ~1.0
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.02)
+        ctx.voiceBuffer[0].toDouble() shouldBe (1.0 plusOrMinus 0.02)
 
         // At middle of release (frame 150), envelope should be ~0.5
-        ctx.voiceBuffer[50] shouldBe (0.5 plusOrMinus 0.02)
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.5 plusOrMinus 0.02)
 
         // At end of release (frame 199), envelope should be near 0
-        ctx.voiceBuffer[99] shouldBe (0.0 plusOrMinus 0.02)
+        ctx.voiceBuffer[99].toDouble() shouldBe (0.0 plusOrMinus 0.02)
     }
 
     "zero attack time produces immediate full amplitude" {
@@ -132,8 +132,8 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // First sample should already be at full amplitude
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[50] shouldBe (1.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[0].toDouble() shouldBe (1.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[50].toDouble() shouldBe (1.0 plusOrMinus 0.01)
     }
 
     "zero decay time transitions immediately to sustain" {
@@ -153,7 +153,7 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // Should immediately be at sustain level
-        ctx.voiceBuffer[0] shouldBe (0.5 plusOrMinus 0.02)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.5 plusOrMinus 0.02)
     }
 
     "zero release time produces very fast decay" {
@@ -177,9 +177,9 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // First sample is still at sustain level (relPos = 0)
-        ctx.voiceBuffer[0] shouldBe (1.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[0].toDouble() shouldBe (1.0 plusOrMinus 0.01)
         // Second sample should drop to 0 (relPos = 1, relRate = 1.0)
-        ctx.voiceBuffer[1] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[1].toDouble() shouldBe (0.0 plusOrMinus 0.01)
     }
 
     "full ADSR cycle works correctly" {
@@ -198,22 +198,22 @@ class EnvelopeTest : StringSpec({
         // Attack phase (0-100)
         val ctx1 = createContext(blockStart = 50, blockFrames = 1)
         voice.render(ctx1)
-        ctx1.voiceBuffer[0] shouldBe (0.5 plusOrMinus 0.02) // Mid-attack
+        ctx1.voiceBuffer[0].toDouble() shouldBe (0.5 plusOrMinus 0.02) // Mid-attack
 
         // Decay phase (100-200)
         val ctx2 = createContext(blockStart = 150, blockFrames = 1)
         voice.render(ctx2)
-        ctx2.voiceBuffer[0] shouldBe (0.75 plusOrMinus 0.02) // Mid-decay
+        ctx2.voiceBuffer[0].toDouble() shouldBe (0.75 plusOrMinus 0.02) // Mid-decay
 
         // Sustain phase (200-300)
         val ctx3 = createContext(blockStart = 250, blockFrames = 1)
         voice.render(ctx3)
-        ctx3.voiceBuffer[0] shouldBe (0.5 plusOrMinus 0.01) // Sustain
+        ctx3.voiceBuffer[0].toDouble() shouldBe (0.5 plusOrMinus 0.01) // Sustain
 
         // Release phase (300-400)
         val ctx4 = createContext(blockStart = 350, blockFrames = 1)
         voice.render(ctx4)
-        ctx4.voiceBuffer[0] shouldBe (0.25 plusOrMinus 0.02) // Mid-release
+        ctx4.voiceBuffer[0].toDouble() shouldBe (0.25 plusOrMinus 0.02) // Mid-release
     }
 
     "envelope state is preserved across multiple renders" {
@@ -231,12 +231,12 @@ class EnvelopeTest : StringSpec({
         // Render first half of attack
         val ctx1 = createContext(blockStart = 0, blockFrames = 100)
         voice.render(ctx1)
-        val firstHalfValue = ctx1.voiceBuffer[99]
+        val firstHalfValue = ctx1.voiceBuffer[99].toDouble()
 
         // Render second half of attack
         val ctx2 = createContext(blockStart = 100, blockFrames = 100)
         voice.render(ctx2)
-        val secondHalfStart = ctx2.voiceBuffer[0]
+        val secondHalfStart = ctx2.voiceBuffer[0].toDouble()
 
         // Second render should continue where first left off
         secondHalfStart shouldBe (firstHalfValue plusOrMinus 0.02)
@@ -260,8 +260,8 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // Should be clamped at 0, not negative
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[50] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.0 plusOrMinus 0.01)
     }
 
     "envelope with very small attack works correctly" {
@@ -280,8 +280,8 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // After 1 frame, should be at full amplitude
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.1) // First sample
-        ctx.voiceBuffer[1] shouldBe (1.0 plusOrMinus 0.1) // After attack
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.1) // First sample
+        ctx.voiceBuffer[1].toDouble() shouldBe (1.0 plusOrMinus 0.1) // After attack
     }
 
     "envelope with sustain level of 0 produces silence after decay" {
@@ -301,8 +301,8 @@ class EnvelopeTest : StringSpec({
         voice.render(ctx)
 
         // Should be silent
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[50] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.0 plusOrMinus 0.01)
     }
 
     "envelope respects gate end frame for release timing" {
@@ -321,12 +321,12 @@ class EnvelopeTest : StringSpec({
         // Just before gate ends (frame 199)
         val ctx1 = createContext(blockStart = 199, blockFrames = 1)
         voice.render(ctx1)
-        val beforeRelease = ctx1.voiceBuffer[0]
+        val beforeRelease = ctx1.voiceBuffer[0].toDouble()
 
         // Just after gate ends (frame 200)
         val ctx2 = createContext(blockStart = 200, blockFrames = 1)
         voice.render(ctx2)
-        val atReleaseStart = ctx2.voiceBuffer[0]
+        val atReleaseStart = ctx2.voiceBuffer[0].toDouble()
 
         // Should start releasing
         beforeRelease shouldBe (1.0 plusOrMinus 0.02)
@@ -335,6 +335,6 @@ class EnvelopeTest : StringSpec({
         // Halfway through release (frame 250)
         val ctx3 = createContext(blockStart = 250, blockFrames = 1)
         voice.render(ctx3)
-        ctx3.voiceBuffer[0] shouldBe (0.5 plusOrMinus 0.02)
+        ctx3.voiceBuffer[0].toDouble() shouldBe (0.5 plusOrMinus 0.02)
     }
 })

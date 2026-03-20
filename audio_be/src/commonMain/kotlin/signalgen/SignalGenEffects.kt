@@ -41,7 +41,7 @@ fun SignalGen.distort(amount: Double, shape: String = "soft"): SignalGen {
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            val x = buffer[i] * drive
+            val x = buffer[i].toDouble() * drive
             var y = waveshaper(x) * outputGain
 
             if (needsDcBlock) {
@@ -51,7 +51,7 @@ fun SignalGen.distort(amount: Double, shape: String = "soft"): SignalGen {
                 y = dcOut
             }
 
-            buffer[i] = y
+            buffer[i] = y.toFloat()
         }
     }
 }
@@ -96,7 +96,7 @@ fun SignalGen.crush(amount: Double): SignalGen {
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = floor(buffer[i] * halfLevels) / halfLevels
+            buffer[i] = (floor(buffer[i].toDouble() * halfLevels) / halfLevels).toFloat()
         }
     }
 }
@@ -113,7 +113,7 @@ fun SignalGen.crush(amount: Double): SignalGen {
 fun SignalGen.coarse(amount: Double): SignalGen {
     if (amount <= 1.0) return this
 
-    var lastValue = 0.0
+    var lastValue = 0.0f
     var counter = 0.0
 
     return SignalGen { buffer, freqHz, ctx ->
@@ -179,7 +179,7 @@ fun SignalGen.phaser(
             val alpha = (tanValue - 1.0) / (tanValue + 1.0)
 
             // All-pass cascade with feedback
-            var signal = buffer[i] + lastOutput * feedback
+            var signal = buffer[i].toDouble() + lastOutput * feedback
 
             for (s in 0 until stages) {
                 val output = alpha * signal + filterState[s]
@@ -190,7 +190,7 @@ fun SignalGen.phaser(
             lastOutput = flushDenormal(signal)
 
             // Mix wet with dry
-            buffer[i] += signal * depth
+            buffer[i] = (buffer[i] + signal * depth).toFloat()
         }
     }
 }
@@ -224,7 +224,7 @@ fun SignalGen.tremolo(
 
             val lfoNorm = (sin(phase) + 1.0) * 0.5
             val gain = 1.0 - (depth * (1.0 - lfoNorm))
-            buffer[i] *= gain
+            buffer[i] = (buffer[i] * gain).toFloat()
         }
     }
 }
@@ -249,11 +249,11 @@ fun SignalGen.dcBlock(coefficient: Double = 0.995): SignalGen {
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            val x = buffer[i]
+            val x = buffer[i].toDouble()
             val y = x - x1 + coefficient * y1
             x1 = x
             y1 = flushDenormal(y)
-            buffer[i] = y
+            buffer[i] = y.toFloat()
         }
     }
 }

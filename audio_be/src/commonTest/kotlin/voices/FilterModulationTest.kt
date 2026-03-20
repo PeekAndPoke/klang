@@ -19,7 +19,7 @@ class FilterModulationTest : StringSpec({
 
     val noopSignal = SignalGen { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) buffer[i] = 0.0
+        for (i in ctx.offset until end) buffer[i] = 0.0f
     }
 
     fun createSignalCtx(
@@ -45,9 +45,9 @@ class FilterModulationTest : StringSpec({
             orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
+            voiceBuffer = FloatArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
-            scratchBuffers = io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             this.blockStart = blockStart
         }
@@ -63,7 +63,7 @@ class FilterModulationTest : StringSpec({
             cutoffHistory.add(cutoffHz)
         }
 
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             // No-op
         }
 

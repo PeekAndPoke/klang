@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -20,9 +21,9 @@ class SampleVoiceRenderTest : StringSpec({
             orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
+            voiceBuffer = FloatArray(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
-            scratchBuffers = io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         )
     }
 
@@ -38,7 +39,7 @@ class SampleVoiceRenderTest : StringSpec({
 
     // Helper to create a dummy filter that does nothing
     val dummyFilter = object : AudioFilter {
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {}
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {}
     }
 
     // Helper to create a basic SampleVoice
@@ -115,9 +116,9 @@ class SampleVoiceRenderTest : StringSpec({
         // Indices: 0, 2, 4, 6, 8
         for (i in 0 until 5) {
             val expected = sample.pcm[i * 2].toDouble()
-            ctx.voiceBuffer[i] shouldBe (expected plusOrMinus 0.0001)
+            ctx.voiceBuffer[i].toDouble() shouldBe (expected plusOrMinus 0.0001)
         }
-        ctx.voiceBuffer[5] shouldBe 0.0
+        ctx.voiceBuffer[5] shouldBe 0.0f
     }
 
     "render loop (explicit)" {
@@ -137,7 +138,7 @@ class SampleVoiceRenderTest : StringSpec({
 
         // Should play 0, 1, 2, 3, 4, then wrap to 0, 1, 2, 3, 4...
         // 0.0, 0.11, 0.22, 0.33, 0.44
-        val values = (0 until 10).map { ctx.voiceBuffer[it] }
+        val values = (0 until 10).map { ctx.voiceBuffer[it].toDouble() }
         val expectedSegment = (0 until 5).map { sample.pcm[it].toDouble() }
 
         values.subList(0, 5) shouldBe expectedSegment // First pass

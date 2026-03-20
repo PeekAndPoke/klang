@@ -19,7 +19,7 @@ fun SignalGenDsl.toSignalGen(): SignalGen = when (this) {
     is SignalGenDsl.Silence -> SignalGen { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = 0.0
+            buffer[i] = 0.0f
         }
     }
 

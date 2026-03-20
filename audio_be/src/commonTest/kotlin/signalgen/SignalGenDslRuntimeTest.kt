@@ -24,14 +24,14 @@ class SignalGenDslRuntimeTest : StringSpec({
         }
     }
 
-    fun generateBlock(signalGen: SignalGen, freqHz: Double = 440.0): DoubleArray {
-        val buffer = DoubleArray(blockFrames)
+    fun generateBlock(signalGen: SignalGen, freqHz: Double = 440.0): FloatArray {
+        val buffer = FloatArray(blockFrames)
         val ctx = createCtx()
         signalGen.generate(buffer, freqHz, ctx)
         return buffer
     }
 
-    fun DoubleArray.hasNonZeroSamples(): Boolean = any { it != 0.0 }
+    fun FloatArray.hasNonZeroSamples(): Boolean = any { it != 0.0f }
 
     "Sine DSL produces non-zero output" {
         val sig = SignalGenDsl.Sine().toSignalGen()
@@ -60,7 +60,7 @@ class SignalGenDslRuntimeTest : StringSpec({
 
     "Silence DSL produces zero output" {
         val sig = SignalGenDsl.Silence.toSignalGen()
-        generateBlock(sig).all { it == 0.0 } shouldBe true
+        generateBlock(sig).all { it == 0.0f } shouldBe true
     }
 
     "Plus composition produces non-zero output" {

@@ -46,13 +46,13 @@ class Ducking(
      * @param sidechain The trigger signal (e.g., kick drum on another orbit)
      * @param blockSize Number of samples to process
      */
-    fun process(input: DoubleArray, sidechain: DoubleArray, blockSize: Int) {
+    fun process(input: FloatArray, sidechain: FloatArray, blockSize: Int) {
         require(input.size >= blockSize) { "Input buffer too small" }
         require(sidechain.size >= blockSize) { "Sidechain buffer too small" }
 
         for (i in 0 until blockSize) {
             // Calculate sidechain signal level (RMS-like envelope following)
-            val sidechainLevel = abs(sidechain[i])
+            val sidechainLevel = abs(sidechain[i].toDouble())
 
             // Calculate target gain based on sidechain level
             // When sidechain is loud, gain goes down (ducking)
@@ -75,7 +75,7 @@ class Ducking(
             }
 
             // Apply gain reduction
-            input[i] *= currentGain
+            input[i] = (input[i] * currentGain).toFloat()
         }
     }
 
