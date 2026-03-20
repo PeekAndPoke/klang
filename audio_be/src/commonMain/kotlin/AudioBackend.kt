@@ -14,7 +14,7 @@ interface AudioBackend {
      * Access to visualization data.
      * Returns null if backend doesn't support visualization.
      */
-    val visualizer: AudioVisualizer? get() = null
+    val analyzer: AudioAnalyzer? get() = null
 
     suspend fun run(scope: CoroutineScope)
 }

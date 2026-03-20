@@ -20,22 +20,10 @@ class JsAudioBackend(
     private val sampleUploadBuffer = KlangRingBuffer<KlangCommLink.Cmd.Sample.Chunk>(8192 * 4)
 
     // AnalyserNode for visualization
-    private var analyser: AnalyserNode? = null
+    private var analyserNode: AnalyserNode? = null
 
     // Implement AudioVisualizer interface with zero-copy methods
-    override val visualizer = object : AudioVisualizer {
-        override val fftSize: Int = 2048
-
-        override fun getWaveform(out: VisualizerBuffer) {
-            // Zero-copy fill on JS (VisualizerBuffer is Float32Array)
-            analyser?.getFloatTimeDomainData(out)
-        }
-
-        override fun getFft(out: VisualizerBuffer) {
-            // Zero-copy fill on JS
-            analyser?.getFloatFrequencyData(out)
-        }
-    }
+    override val analyzer = JsAudioAnalyzer { analyserNode }
 
     override suspend fun run(scope: CoroutineScope) {
         console.log("JsAudioBackend starting")
@@ -89,18 +77,18 @@ class JsAudioBackend(
             // Create AnalyserNode for visualization (with fallback if it fails)
             try {
                 console.log("Creating AnalyserNode")
-                analyser = ctx.createAnalyser().apply {
+                analyserNode = ctx.createAnalyser().apply {
                     fftSize = 2048
                     smoothingTimeConstant = 0.8
                 }
                 console.log("AnalyserNode created successfully for visualization")
             } catch (e: Throwable) {
                 console.warn("Failed to create AnalyserNode, visualization disabled:", e)
-                analyser = null
+                analyserNode = null
             }
 
             // Connect audio graph: Worklet → Analyser → Destination (or direct if no analyser)
-            when (val ana = analyser) {
+            when (val ana = analyserNode) {
                 null -> {
                     node.connect(ctx.destination)
                 }

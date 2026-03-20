@@ -23,10 +23,13 @@ object Player {
     private val _status = StreamSource<Status>(Status.NOT_LOADED)
     val status: Stream<Status> = _status.readonly
 
-    private val _samplesStream = StreamSource<Samples?>(null)
-    val samplesStream: Stream<Samples?> = _samplesStream.readonly
+    private val _player = StreamSource<KlangPlayer?>(null)
+    val player: Stream<KlangPlayer?> = _player.readonly
 
-    private var _player: KlangPlayer? = null
+    private val _samples = StreamSource<Samples?>(null)
+    val samples: Stream<Samples?> = _samples.readonly
+
+//    private var _playerInstance: KlangPlayer? = null
 
     private var deferred: CompletableDeferred<KlangPlayer>? = null
 
@@ -38,11 +41,11 @@ object Player {
     init {
         launch {
             val samples = samplesDeferred.await()
-            _samplesStream(samples)
+            _samples(samples)
         }
     }
 
-    fun get(): KlangPlayer? = _player
+    fun get(): KlangPlayer? = player()
 
     fun ensure(): Deferred<KlangPlayer> {
         deferred?.let { return it }
@@ -53,17 +56,19 @@ object Player {
             _status(Status.LOADING)
 
             val samples = samplesDeferred.await()
-            _samplesStream(samples)
+            _samples(samples)
 
             val playerOptions = KlangPlayer.Options(samples = samples, sampleRate = 48000)
-            val player = klangPlayer(playerOptions)
 
-            _status(Status.READY)
-
-            console.log("KlangPlayer ready", player)
-
-            _player = player
-            def.complete(player)
+            klangPlayer(playerOptions) { playerInstance ->
+                console.log("KlangPlayer ready", playerInstance)
+                // Submit Status
+                _status(Status.READY)
+                // Submit the player instance
+                _player(playerInstance)
+                // Complete the deferred
+                def.complete(playerInstance)
+            }
         }
 
         return def

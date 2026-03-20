@@ -11,6 +11,8 @@ import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.osci.OscFn
 import io.peekandpoke.klang.audio_be.osci.Oscillators
 import io.peekandpoke.klang.audio_be.osci.withWarmth
+import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
+import io.peekandpoke.klang.audio_be.signalgen.SignalGenOscillators
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
@@ -147,13 +149,17 @@ class VoiceScheduler(
     private val voiceBuffer = DoubleArray(options.blockFrames)
     private val freqModBuffer = DoubleArray(options.blockFrames)
 
+    // TEMPORARY: SignalGen POC bridge — scratch buffers for SignalGen composition operators
+    private val scratchBuffers = ScratchBuffers(options.blockFrames)
+
     // Context reused per block
     private val ctx = Voice.RenderContext(
         orbits = options.orbits,
         sampleRate = options.sampleRate,
         blockFrames = options.blockFrames,
         voiceBuffer = voiceBuffer,
-        freqModBuffer = freqModBuffer
+        freqModBuffer = freqModBuffer,
+        scratchBuffers = scratchBuffers,
     )
 
     // Diagnostics state
@@ -161,7 +167,8 @@ class VoiceScheduler(
     private var minHeadroom = 1.0
     private var avgHeadroom = 1.0
 
-    fun VoiceData.isOscillator() = options.oscillators.isOsc(sound)
+    // TEMPORARY: SignalGen POC bridge — check SignalGen oscillators before fallback to Oscillators
+    fun VoiceData.isOscillator() = SignalGenOscillators.isSignalGenOsc(sound) || options.oscillators.isOsc(sound)
 
     fun VoiceData.isSampleSound() = !isOscillator()
 
@@ -773,8 +780,23 @@ class VoiceScheduler(
                 // Update endFrame based on actual release
                 val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toLong()
 
-                val osc = data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
                 val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
+
+                // TEMPORARY: SignalGen POC bridge — try SignalGen oscillators first
+                val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
+                val gateEndFrameRel = voiceDurationFrames
+                val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
+                val voiceEndFrame = voiceDurationFrames + releaseFrames
+
+                val osc = SignalGenOscillators.create(
+                    name = sound ?: "",
+                    sampleRate = sampleRate,
+                    voiceDurationFrames = voiceDurationFrames,
+                    gateEndFrame = gateEndFrameRel,
+                    releaseFrames = releaseFrames,
+                    voiceEndFrame = voiceEndFrame,
+                    scratchBuffers = scratchBuffers,
+                ) ?: data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
 
                 // println("making synth voice for freq $freqHz")
 

@@ -130,7 +130,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     private fun processVisualizer() {
         props.player()?.let { player ->
             // This fills the buffer with frequency data in Decibels (dB)
-            player.getVisualizer()?.getFft(visualizerBuffer)
+            player.getAnalyzer()?.getFft(visualizerBuffer)
         }
 
         drawSpectrum()

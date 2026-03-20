@@ -11,6 +11,7 @@ import kotlin.js.json
  */
 actual fun klangPlayer(
     options: KlangPlayer.Options,
+    onReady: (KlangPlayer) -> Unit,
 ): KlangPlayer {
     val sampleRate = resolveBestSampleRate(options.sampleRate)
 
@@ -21,6 +22,7 @@ actual fun klangPlayer(
     return KlangPlayer(
         options = effectiveOptions,
         backendFactory = { config -> JsAudioBackend(config) },
+        onReady = onReady,
         fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = Dispatchers.Default,
         callbackDispatcher = Dispatchers.Default,

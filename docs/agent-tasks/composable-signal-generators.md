@@ -612,6 +612,136 @@ val evolving = saw.thenCrossfade(saw.withWarmth(0.6), atMs = 100.0, durationMs =
 
 ---
 
+## Feedback Combinators (2026-03-20)
+
+Two feedback modes enable recursive signal topologies — the highest-leverage missing piece identified
+in the Six Hats analysis. These collapse Karplus-Strong, comb filters, FM self-modulation (DX7),
+waveguides, and chaotic oscillators into composition algebra.
+
+### Output Feedback
+
+**Topology:** `output[n] = source[n] + gain * transform(output[n - delay])`
+
+The signal recirculates through a delay line. The `transform` closure (per-sample, stateful via capture)
+shapes the feedback path — typically a lowpass filter for Karplus-Strong.
+
+```kotlin
+fun SignalGen.feedback(
+    delaySamples: Double,                        // fractional for pitch accuracy
+    gain: Double = 0.998,
+    transform: ((Double) -> Double) = { it },    // per-sample, stateful via closure
+): SignalGen
+```
+
+**Key design decisions:**
+
+- **Fractional delay with linear interpolation** — integer-only delay makes high notes audibly out of
+  tune (C7 @ 48kHz: 72 cents error with integer delay). Uses the same interpolation pattern as the
+  existing `DelayLine.kt` (lines 92-114).
+- **Built-in DC blocker** (~20Hz, coefficient 0.995) inside the loop — prevents DC accumulation from
+  asymmetric sources or transforms.
+- **Hard limiter at ±4.0** inside the loop — prevents explosion if `gain * |H_transform(f)| > 1.0`.
+  Matches `DelayLine.kt` safety pattern.
+- **Denormal flushing** on delay line writes — prevents performance cliff when signal decays to zero.
+
+**Convenience variant** for pitched feedback (Karplus-Strong):
+
+```kotlin
+fun SignalGen.feedbackTuned(
+    gain: Double = 0.998,
+    maxDelaySamples: Int = 2400,                 // ~20Hz at 48kHz
+    transform: ((Double) -> Double) = { it },
+): SignalGen
+```
+
+Derives delay from `freqHz` at generate-time: `delaySamples = sampleRate / freqHz`. The user doesn't
+need to know sample rate or compute delay manually.
+
+#### Usage Examples
+
+```kotlin
+// Karplus-Strong plucked string
+var lpState = 0.0
+noise.during(0.0, delayMs)
+    .feedbackTuned(gain = 0.998) { sample ->
+        lpState = 0.5 * (sample + lpState)  // one-pole lowpass in feedback
+        lpState
+    }
+
+// Comb filter — simple resonant delay
+signal.feedback(delaySamples = 100.0, gain = 0.7)
+
+// Echo with filtering
+signal.feedback(delaySamples = 24000.0, gain = 0.5) { sample ->
+    lpState = 0.7 * sample + 0.3 * lpState
+    lpState
+}
+```
+
+### Phase Feedback
+
+**Topology:** output modulates the oscillator's own frequency per-sample via `phaseMod`.
+
+Each sample's output determines the next sample's phase increment. This creates a sample-by-sample
+data dependency — the inner SignalGen is called with `length=1` per sample (128 calls per block).
+
+```kotlin
+fun SignalGen.phaseFeedback(
+    delaySamples: Int = 1,
+    depth: Double = 1.0,
+): SignalGen
+```
+
+**Key design decisions:**
+
+- **Per-sample generate()** is inherently required — no block-level optimization possible.
+  Overhead: ~128 function calls/block (~1.3µs) — acceptable.
+- **Frequency multiplier clamped to [0.1, 10.0]** — prevents NaN/aliasing from extreme values.
+- **FM-style feedback, not PM** — the feedback is converted to a frequency multiplier
+  (`1.0 + feedback * depth / freqHz`), not a direct phase offset like the DX7.
+  Produces interesting chaotic timbres; true PM would require a `phaseOffset` field on SignalContext.
+- **Inner generator should be simple** (oscillator, not deep chain) for performance.
+
+#### Depth controls timbre continuously
+
+| depth   | Character                  |
+|---------|----------------------------|
+| 0.0     | Pure sine                  |
+| 0.1-0.3 | Slight harmonic enrichment |
+| 0.5     | Sawtooth-like spectrum     |
+| 0.7-1.0 | Aggressive, buzzy          |
+| >1.0    | Chaotic / noise-like       |
+
+#### Usage Examples
+
+```kotlin
+// DX7-style self-modulating operator
+sine.phaseFeedback(delaySamples = 1, depth = 0.5)
+
+// Variable waveshaping via feedback depth
+sine.phaseFeedback(1, depth = lfoValue * 0.8)
+
+// Phase feedback exciting a resonant delay (metallic pluck with FM character)
+sine.phaseFeedback(1, depth = 0.3)
+    .feedbackTuned(gain = 0.995) { sample ->
+        lpState = 0.5 * (sample + lpState); lpState
+    }
+```
+
+### Synthesis Techniques Enabled
+
+| Technique            | Combinator                                | Example                          |
+|----------------------|-------------------------------------------|----------------------------------|
+| Karplus-Strong pluck | `feedbackTuned` + lowpass transform       | Guitar, harp, bass, banjo        |
+| Comb filter          | `feedback` (no transform)                 | Metallic resonance, flanger body |
+| Physical model tube  | `feedbackTuned` + continuous injection    | Flute, didgeridoo                |
+| FM self-modulation   | `phaseFeedback(1, depth)`                 | DX7 growl, electric piano bark   |
+| Chaotic oscillator   | `phaseFeedback(1, depth > 1.0)`           | Textured noise, evolving timbres |
+| Echo / tape delay    | `feedback(longDelay)` + filtering         | Dub echo, tape degradation       |
+| Bowed string         | `feedbackTuned` + continuous noise inject | Sustained string-like drone      |
+
+---
+
 ## Backward Compatibility
 
 ### OscFn Bridge
@@ -764,12 +894,10 @@ cases, but:
 
 ### Missing Features (by priority)
 
-1. **Feedback combinator** (from Faust's `~` operator) — highest-leverage gap
-    - Pattern: `A.feedback(delaySamples) { transform }`
-    - Collapses Karplus-Strong, comb filters, FM feedback (DX7 op6→6), waveguide into composition algebra
-    - Eliminates need for Karplus-Strong as a special-cased class
-    - Example: `sine.feedback(1) { it.times(feedbackAmount) }` = FM self-modulation
-    - Example: `noise.feedback(pitchSamples) { it.lowpass(damping) }` = Karplus-Strong
+1. ~~**Feedback combinator**~~ — ✅ **DESIGNED** (2026-03-20). See "Feedback Combinators" section above.
+    - `feedback(delaySamples, gain) { transform }` — output feedback with fractional delay
+    - `feedbackTuned(gain) { transform }` — pitch-aware variant for Karplus-Strong
+    - `phaseFeedback(delaySamples, depth)` — FM-style phase self-modulation
 
 2. **Buffer-rate frequency** — see above. At minimum, design the seam.
 
@@ -933,14 +1061,14 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 
 ### Structural Combinators
 
-| Block                 | Description                                                      | Effort | Impact | Notes                                                                         |
-|-----------------------|------------------------------------------------------------------|--------|--------|-------------------------------------------------------------------------------|
-| **Feedback**          | `A.feedback(delaySamples) { transform }` — Faust's `~` operator. | M      | H      | Gates all recursive topologies: KS, comb, FM feedback, waveguide.             |
-| **FeedInject**        | Continuous signal injection into active delay line.              | M      | H      | Bowed strings, drones, blown tubes. Commuted synthesis approach.              |
-| **Crossfade / Morph** | Smooth interpolation between two SignalGens.                     | L      | M      | Timbral animation, vector synthesis, wavetable morphing.                      |
-| **Oversample**        | Run wrapped SignalGen at Nx rate, decimate with anti-alias LPF.  | M      | H      | Essential for waveshaper/distortion. 2x-8x. Per-node, not global.             |
-| **ControlRate**       | Compute once per block, broadcast to buffer. For modulators.     | L      | M      | LFOs, envelopes, drift don't need audio-rate. Saves significant CPU.          |
-| **Waveguide**         | Bidirectional coupled delay lines with reflection filters.       | H      | M      | Tubes, strings, membranes. Needs mandatory loss filter (energy conservation). |
+| Block                 | Description                                                                             | Effort | Impact | Notes                                                                         |
+|-----------------------|-----------------------------------------------------------------------------------------|--------|--------|-------------------------------------------------------------------------------|
+| ~~**Feedback**~~      | ✅ **DESIGNED** — `feedback()`, `feedbackTuned()`, `phaseFeedback()`. See section above. | M      | H      | Gates all recursive topologies: KS, comb, FM feedback, waveguide.             |
+| **FeedInject**        | Continuous signal injection into active delay line.                                     | M      | H      | Bowed strings, drones, blown tubes. Commuted synthesis approach.              |
+| **Crossfade / Morph** | Smooth interpolation between two SignalGens.                                            | L      | M      | Timbral animation, vector synthesis, wavetable morphing.                      |
+| **Oversample**        | Run wrapped SignalGen at Nx rate, decimate with anti-alias LPF.                         | M      | H      | Essential for waveshaper/distortion. 2x-8x. Per-node, not global.             |
+| **ControlRate**       | Compute once per block, broadcast to buffer. For modulators.                            | L      | M      | LFOs, envelopes, drift don't need audio-rate. Saves significant CPU.          |
+| **Waveguide**         | Bidirectional coupled delay lines with reflection filters.                              | H      | M      | Tubes, strings, membranes. Needs mandatory loss filter (energy conservation). |
 
 ### Effects / Post-Processing
 

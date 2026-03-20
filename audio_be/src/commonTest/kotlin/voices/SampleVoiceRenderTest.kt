@@ -21,7 +21,8 @@ class SampleVoiceRenderTest : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = DoubleArray(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames)
+            freqModBuffer = DoubleArray(blockFrames),
+            scratchBuffers = io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers(blockFrames),
         )
     }
 

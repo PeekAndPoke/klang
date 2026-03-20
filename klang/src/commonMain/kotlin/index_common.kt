@@ -8,6 +8,7 @@ import io.peekandpoke.klang.audio_engine.KlangPlayer.Options
  */
 expect fun klangPlayer(
     options: Options,
+    onReady: (KlangPlayer) -> Unit,
 ): KlangPlayer
 
 /**

@@ -53,7 +53,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
             div {
                 key = "oscilloscope"
                 css { height = 60.px }
-                Oscilloscope { Player.get() }
+                Oscilloscope(player = Player.player)
             }
 
             div {

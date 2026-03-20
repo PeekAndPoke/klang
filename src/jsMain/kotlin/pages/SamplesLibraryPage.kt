@@ -44,7 +44,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private val samples: Samples? by subscribingTo(Player.samplesStream)
+    private val samples: Samples? by subscribingTo(Player.samples)
     private var searchText: String by value("")
     private var groupBy: GroupBy by value(GroupBy.BANK)
     private var lastStrudelCode: String by value("")
