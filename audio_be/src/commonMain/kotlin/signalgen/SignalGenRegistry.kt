@@ -17,6 +17,11 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
 class SignalGenRegistry(
     private var legacyOscillators: Oscillators? = null,
 ) {
+    companion object {
+        /** Default sound when none is specified */
+        const val DEFAULT_SOUND = "triangle"
+    }
+
     private val defs = mutableMapOf<String, SignalGenDsl>()
 
     fun register(name: String, dsl: SignalGenDsl) {
@@ -26,9 +31,8 @@ class SignalGenRegistry(
     fun get(name: String): SignalGenDsl? = defs[name.lowercase()]
 
     fun contains(name: String?): Boolean {
-        if (name == null) return true // null → default oscillator (triangle)
-        val key = name.lowercase()
-        return defs.containsKey(key) || legacyOscillators?.isOsc(name) == true
+        val key = (name ?: DEFAULT_SOUND).lowercase()
+        return defs.containsKey(key) || legacyOscillators?.isOsc(key) == true
     }
 
     fun names(): Set<String> = defs.keys.toSet()
@@ -41,12 +45,11 @@ class SignalGenRegistry(
      */
     fun createSignalGen(name: String?, data: VoiceData, freqHz: Double): SignalGen? {
         // DSL path — toSignalGen() creates fresh instances with independent mutable state
-        if (name != null) {
-            val dsl = defs[name.lowercase()]
-            if (dsl != null) return dsl.toSignalGen()
-        }
+        val key = (name ?: DEFAULT_SOUND).lowercase()
+        val dsl = defs[key]
+        if (dsl != null) return dsl.toSignalGen()
 
-        // Legacy OscFn path (handles null → triangle fallback)
+        // Legacy OscFn path
         val oscillators = legacyOscillators ?: return null
         if (!oscillators.isOsc(name)) return null
 
