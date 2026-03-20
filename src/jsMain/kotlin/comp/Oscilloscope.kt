@@ -65,6 +65,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     companion object {
         private const val FRAME_SIZE = 2048
+        private const val CROSSFADE_SAMPLES = 64
         private val idleBuffer = Float32Array(FRAME_SIZE)
     }
 
@@ -196,11 +197,32 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             val storage = expandedStorage ?: return
 
             val numFrames = minOf(history.size, props.expandedFrameCount)
+            val bufSize = history.bufferSize
+            val fadeLen = minOf(CROSSFADE_SAMPLES, bufSize / 2)
             var offset = 0
-            for (age in numFrames - 1 downTo 0) {
+
+            for (frameIdx in 0 until numFrames) {
+                val age = numFrames - 1 - frameIdx
                 val frame = history[age]
-                for (i in 0 until history.bufferSize) {
-                    storage[offset++] = frame[i]
+
+                if (frameIdx == 0) {
+                    // First frame — copy entirely
+                    for (i in 0 until bufSize) {
+                        storage[offset++] = frame[i]
+                    }
+                } else {
+                    // Crossfade: blend end of previous frame with start of this frame
+                    // Rewind into the already-written tail
+                    offset -= fadeLen
+                    for (i in 0 until fadeLen) {
+                        val t = (i + 1).toFloat() / (fadeLen + 1).toFloat()
+                        storage[offset] = storage[offset] * (1f - t) + frame[i] * t
+                        offset++
+                    }
+                    // Copy remainder of frame
+                    for (i in fadeLen until bufSize) {
+                        storage[offset++] = frame[i]
+                    }
                 }
             }
 
@@ -221,11 +243,14 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     /**
      * Calculate vibrating string deflection for expanded mode.
-     * Returns a value between 0.1 (at edges) and 1.0 (at center).
+     * Returns a value between 0.02 (at edges) and 1.0 (at center).
+     * Gentle curve so deflection stays high across most of the width.
      */
     private fun calculateStringDeflection(normalized: Double): Double {
-        val curveValue = 1.0 - 16.0 * (normalized - 0.5).pow(4)
-        return 0.1 + 0.9 * curveValue
+        val strength = 2.0
+        val curveValue = 1.0 - 2.0.pow(strength) * (normalized - 0.5).pow(strength)
+
+        return 0.02 + 0.98 * curveValue
     }
 
     private fun getOrBuildDeflectionCache(totalWidth: Double): DoubleArray {
@@ -356,7 +381,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val oscilloscopeRect = dom?.getBoundingClientRect() ?: return
 
         // Single overlay covering from oscilloscope left edge to viewport right edge
-        val extraHeight = 40.0
+        val extraHeight = 20.0
         val container = document.createElement("div") as HTMLDivElement
         container.style.position = "fixed"
         container.style.top = "${oscilloscopeRect.top - extraHeight / 2}px"
@@ -386,7 +411,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     private fun updateOverlaySize() {
         val oscilloscopeRect = dom?.getBoundingClientRect() ?: return
-        val extraHeight = 40.0
+        val extraHeight = 20.0
         overlayContainer?.let { container ->
             container.style.top = "${oscilloscopeRect.top - extraHeight / 2}px"
             container.style.left = "${oscilloscopeRect.left}px"

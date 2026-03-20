@@ -194,6 +194,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                             bottom = 20.pct
                             width = 100.pct
                             textAlign = TextAlign.center
+                            fontSize = props.size * 0.19
                             color = textColor
                         }
                         +display(smoothedValue)

@@ -74,6 +74,7 @@ class CodeMirrorHighlightBuffer(
         val chain = event.sourceLocations ?: return
         chain.locations.asReversed()
             .filter { it.isValid() }
+            .distinct()
             .take(maxHighlightsPerEvent).forEach { location ->
             scheduleForLocation(location, event)
         }

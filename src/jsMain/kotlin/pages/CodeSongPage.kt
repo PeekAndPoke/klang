@@ -132,6 +132,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     private var isCodeModified by value(false)
+    private var currentCycle: Int by value(0)
 
     val isBuiltInModified get() = builtIn != null && builtIn.code != code
 
@@ -261,8 +262,14 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                             playback = p.play(pattern)
 
+                            currentCycle = 0
+
                             playback?.signals?.invoke { signal ->
                                 when (signal) {
+                                    is KlangPlaybackSignal.CycleCompleted -> {
+                                        currentCycle = signal.cycleIndex + 1
+                                    }
+
                                     is KlangPlaybackSignal.VoicesScheduled -> {
                                         // When there is a modal dialog open, we stop highlighting
                                         if (currentModals.isNotEmpty()) return@invoke
@@ -304,6 +311,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         playback?.stop()
         cancelHighlights()
         playback = null
+        currentCycle = 0
     }
 
     /** True when the current code contains any comments (they would be lost on Code→Blocks). */
@@ -412,6 +420,17 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                     title = "Stop playback"
                                     icon.black.stop()
                                 }
+                        }
+
+                        if (isPlaying) {
+                            noui.item {
+                                css {
+                                    alignSelf = Align.center
+                                    color = Color.grey
+                                }
+                                icon.music()
+                                +" Cycle $currentCycle"
+                            }
                         }
 
                         if (isBuiltInModified) {

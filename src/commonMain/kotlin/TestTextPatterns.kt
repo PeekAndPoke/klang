@@ -120,7 +120,7 @@ stack(
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(2.0).hpf(1000)
-    .sound("pulse").warmth(0.95).crush(3).gain(0.3).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.1:0.2:0.1") // .solo()
+    .sound("pulse").warmth(0.95).crush(3).gain(0.25).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.1:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
@@ -133,9 +133,9 @@ stack(
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.75).struct("x!8")
     .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.275)
-    .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 0] [12 12 0 12 12 [12 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
+    .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 0] [12 12 0 12 12 [0 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
-    .lpf(6 * 440).hpf(180).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.05).seq(8).slow(2)).slow(64)).notchf(notch)
+    .lpf(6 * 440).hpf(180).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seq(8).slow(2)).slow(32)).notchf(notch)
     .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).filterWhen(x => x < (wait * 4 + keep))
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
@@ -162,7 +162,6 @@ stack(
    
    
  
-   
        """ // Stranger Things END
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
@@ -195,8 +194,8 @@ stack( // Gitarre! -------------------------------------------------------------
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
   ).orbit(3).fast(1).scale("C2:chromatic").pan(0.55).hpf(120).lpf(1800).warmth(0.5)
     .s("supersaw").unison(6).detune(0.08).gain("0.6 0.525 0.5 0.525")
-    .adsr("0.001:0.1:0.5:0.01").clip(1.01).distort(2).postgain(0.20)
-    .superimpose(x => x.orbit(4).pan("0.6").bandf("800 975 [1175|1200|1225|1300]*32".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.15))
+    .adsr("0.001:0.1:0.5:0.01").clip(1.01).distort(2).postgain(0.17)
+    .superimpose(x => x.orbit(4).pan("0.6").bandf("800 975 [1175|1200|1225|1300]*32".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.14))
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.15") // .solo()
