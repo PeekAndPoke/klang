@@ -45,7 +45,7 @@ class DistortionFilter(
         needsDcBlock = resolved.needsDcBlock
     }
 
-    override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+    override fun process(buffer: FloatArray, offset: Int, length: Int) {
         if (amount <= 0.0) {
             return
         }
@@ -57,7 +57,7 @@ class DistortionFilter(
 
         for (i in 0 until length) {
             val idx = offset + i
-            val x = buffer[idx] * d
+            val x = buffer[idx].toDouble() * d
             var y = fn(x) * g
 
             if (dcBlock) {
@@ -68,7 +68,7 @@ class DistortionFilter(
                 y = dcOut
             }
 
-            buffer[idx] = y
+            buffer[idx] = y.toFloat()
         }
     }
 

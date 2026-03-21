@@ -37,7 +37,7 @@ class OscillatorWarmthTest : StringSpec({
     "withWarmth applies low-pass filtering to signal" {
         // Create a square wave (harsh harmonics)
         val squareOsc = Oscillators.squareFn()
-        val buffer = DoubleArray(blockFrames)
+        val buffer = FloatArray(blockFrames)
 
         // Generate raw square wave
         squareOsc.process(buffer, 0, blockFrames, 0.0, 0.1, null)
@@ -45,7 +45,7 @@ class OscillatorWarmthTest : StringSpec({
 
         // Apply warmth (should smooth the signal)
         val warmOsc = squareOsc.withWarmth(0.5)
-        buffer.fill(0.0)
+        buffer.fill(0.0f)
         warmOsc.process(buffer, 0, blockFrames, 0.0, 0.1, null)
         val warmSignal = buffer.copyOf()
 
@@ -64,7 +64,7 @@ class OscillatorWarmthTest : StringSpec({
     "withWarmth reduces high-frequency content" {
         // Create sawtooth (rich harmonics)
         val sawOsc = Oscillators.sawtoothFn()
-        val buffer = DoubleArray(blockFrames)
+        val buffer = FloatArray(blockFrames)
 
         // Generate raw sawtooth
         sawOsc.process(buffer, 0, blockFrames, 0.0, 0.5, null)
@@ -72,18 +72,18 @@ class OscillatorWarmthTest : StringSpec({
 
         // Apply heavy warmth
         val veryWarmOsc = sawOsc.withWarmth(0.8)
-        buffer.fill(0.0)
+        buffer.fill(0.0f)
         veryWarmOsc.process(buffer, 0, blockFrames, 0.0, 0.5, null)
         val warmPeak = buffer.maxOf { abs(it) }
 
         // Heavy warmth should reduce peak amplitude (smooths sharp transitions)
-        warmPeak shouldNotBe (rawPeak plusOrMinus 0.01)
+        warmPeak.toDouble() shouldNotBe (rawPeak.toDouble() plusOrMinus 0.01)
     }
 
     "withWarmth preserves phase information" {
         val sineOsc = Oscillators.sineFn()
-        val buffer1 = DoubleArray(blockFrames)
-        val buffer2 = DoubleArray(blockFrames)
+        val buffer1 = FloatArray(blockFrames)
+        val buffer2 = FloatArray(blockFrames)
 
         // Process twice with same starting phase
         val warmOsc = sineOsc.withWarmth(0.3)
@@ -96,7 +96,7 @@ class OscillatorWarmthTest : StringSpec({
 
     "withWarmth can be chained multiple times" {
         val osc = Oscillators.sineFn()
-        val buffer = DoubleArray(blockFrames)
+        val buffer = FloatArray(blockFrames)
 
         // Apply warmth multiple times (each adds more filtering)
         val doubleWarm = osc.withWarmth(0.3).withWarmth(0.3)
@@ -111,7 +111,7 @@ class OscillatorWarmthTest : StringSpec({
 
         // Values > 1.0 should be coerced to 0.99 (max stability)
         val tooHighWarmth = osc.withWarmth(5.0)
-        val buffer = DoubleArray(blockFrames)
+        val buffer = FloatArray(blockFrames)
         tooHighWarmth.process(buffer, 0, blockFrames, 0.0, 0.1, null)
 
         // Should not produce NaN or infinite values
@@ -122,7 +122,7 @@ class OscillatorWarmthTest : StringSpec({
         val osc = Oscillators.sineFn()
         val warmOsc = osc.withWarmth(0.5)
 
-        val buffer = DoubleArray(blockFrames)
+        val buffer = FloatArray(blockFrames)
         val phaseMod = DoubleArray(blockFrames) { 1.0 + 0.1 * it / blockFrames } // Slight FM
 
         warmOsc.process(buffer, 0, blockFrames, 0.0, 0.1, phaseMod)
@@ -135,7 +135,7 @@ class OscillatorWarmthTest : StringSpec({
         val osc = Oscillators.sineFn()
         val warmOsc = osc.withWarmth(0.4)
 
-        val buffer = DoubleArray(blockFrames)
+        val buffer = FloatArray(blockFrames)
         val offset = 10
         val length = 50
 
@@ -143,19 +143,19 @@ class OscillatorWarmthTest : StringSpec({
 
         // First 10 samples should be 0.0 (not processed)
         for (i in 0 until offset) {
-            buffer[i] shouldBe 0.0
+            buffer[i] shouldBe 0.0f
         }
 
         // Middle 50 samples should be non-zero (processed)
         var nonZeroCount = 0
         for (i in offset until offset + length) {
-            if (abs(buffer[i]) > 0.001) nonZeroCount++
+            if (abs(buffer[i]) > 0.001f) nonZeroCount++
         }
         nonZeroCount shouldNotBe 0
 
         // Last samples should be 0.0 (not processed)
         for (i in offset + length until blockFrames) {
-            buffer[i] shouldBe 0.0
+            buffer[i] shouldBe 0.0f
         }
     }
 })

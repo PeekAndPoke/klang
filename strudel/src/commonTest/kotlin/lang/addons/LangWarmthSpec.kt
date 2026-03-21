@@ -31,8 +31,8 @@ class LangWarmthSpec : StringSpec({
                     StrudelPattern.compile("""seq("$pat").apply(warmth("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.warmth shouldBe 0.1
-            events[1].data.warmth shouldBe 0.5
+            events[0].data.oscParams?.get("warmth") shouldBe 0.1
+            events[1].data.oscParams?.get("warmth") shouldBe 0.5
         }
     }
 
@@ -43,8 +43,8 @@ class LangWarmthSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.warmth shouldBe 0.1
-            events[1].data.warmth shouldBe 0.5
+            events[0].data.oscParams?.get("warmth") shouldBe 0.1
+            events[1].data.oscParams?.get("warmth") shouldBe 0.5
         }
     }
 
@@ -55,8 +55,8 @@ class LangWarmthSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.warmth shouldBe 0.1
-            events[1].data.warmth shouldBe 0.5
+            events[0].data.oscParams?.get("warmth") shouldBe 0.1
+            events[1].data.oscParams?.get("warmth") shouldBe 0.5
         }
     }
 
@@ -67,8 +67,8 @@ class LangWarmthSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.warmth shouldBe 0.1
-            events[1].data.warmth shouldBe 0.5
+            events[0].data.oscParams?.get("warmth") shouldBe 0.1
+            events[1].data.oscParams?.get("warmth") shouldBe 0.5
         }
     }
 
@@ -77,7 +77,7 @@ class LangWarmthSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.warmth } shouldBe listOf(0.25, 0.5)
+        events.map { it.data.oscParams?.get("warmth") } shouldBe listOf(0.25, 0.5)
     }
 
     "warmth() works as pattern extension" {
@@ -85,7 +85,7 @@ class LangWarmthSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.warmth shouldBe 0.5
+        events[0].data.oscParams?.get("warmth") shouldBe 0.5
     }
 
     "warmth() works as string extension" {
@@ -93,7 +93,7 @@ class LangWarmthSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.warmth shouldBe 0.3
+        events[0].data.oscParams?.get("warmth") shouldBe 0.3
     }
 
     "warmth() works in compiled code" {
@@ -101,7 +101,7 @@ class LangWarmthSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
-        events[0].data.warmth shouldBe 0.4
+        events[0].data.oscParams?.get("warmth") shouldBe 0.4
     }
 
     "warmth() with continuous pattern sets warmth correctly" {
@@ -111,13 +111,13 @@ class LangWarmthSpec : StringSpec({
 
         events.size shouldBe 4
         // t=0.0: sine(0) = 0.5
-        events[0].data.warmth shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].data.oscParams?.get("warmth") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.25: sine(0.25) = 1.0
-        events[1].data.warmth shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].data.oscParams?.get("warmth") shouldBe (1.0 plusOrMinus EPSILON)
         // t=0.5: sine(0.5) = 0.5
-        events[2].data.warmth shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].data.oscParams?.get("warmth") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.75: sine(0.75) = 0.0
-        events[3].data.warmth shouldBe (0.0 plusOrMinus EPSILON)
+        events[3].data.oscParams?.get("warmth") shouldBe (0.0 plusOrMinus EPSILON)
     }
 
     "warmth() can be chained with other functions" {
@@ -126,7 +126,7 @@ class LangWarmthSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.sound shouldBe "supersaw"
-        events[0].data.warmth shouldBe 0.25
+        events[0].data.oscParams?.get("warmth") shouldBe 0.25
         events[0].data.note shouldBe "c3"
     }
 
@@ -135,7 +135,7 @@ class LangWarmthSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.warmth shouldBe null
+        events[0].data.oscParams?.get("warmth") shouldBe null
     }
 
     "apply(mul().warmth())" {
@@ -144,8 +144,8 @@ class LangWarmthSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.warmth shouldBe (0.4 plusOrMinus EPSILON)  // 0.2*2=0.4 -> warmth=0.4
-            events[1].data.warmth shouldBe (0.8 plusOrMinus EPSILON)  // 0.4*2=0.8 -> warmth=0.8
+            events[0].data.oscParams?.get("warmth") shouldBe (0.4 plusOrMinus EPSILON)  // 0.2*2=0.4 -> warmth=0.4
+            events[1].data.oscParams?.get("warmth") shouldBe (0.8 plusOrMinus EPSILON)  // 0.4*2=0.8 -> warmth=0.8
         }
     }
 
@@ -155,8 +155,8 @@ class LangWarmthSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.warmth shouldBe (0.4 plusOrMinus EPSILON)  // 0.2*2=0.4 -> warmth=0.4
-            events[1].data.warmth shouldBe (0.8 plusOrMinus EPSILON)  // 0.4*2=0.8 -> warmth=0.8
+            events[0].data.oscParams?.get("warmth") shouldBe (0.4 plusOrMinus EPSILON)  // 0.2*2=0.4 -> warmth=0.4
+            events[1].data.oscParams?.get("warmth") shouldBe (0.8 plusOrMinus EPSILON)  // 0.4*2=0.8 -> warmth=0.8
         }
     }
 
@@ -166,10 +166,10 @@ class LangWarmthSpec : StringSpec({
 
         events.size shouldBe 3
         events[0].data.sound shouldBe "sine"
-        events[0].data.warmth shouldBe 0.3
+        events[0].data.oscParams?.get("warmth") shouldBe 0.3
         events[1].data.sound shouldBe "triangle"
-        events[1].data.warmth shouldBe 0.5
+        events[1].data.oscParams?.get("warmth") shouldBe 0.5
         events[2].data.sound shouldBe "square"
-        events[2].data.warmth shouldBe 0.7
+        events[2].data.oscParams?.get("warmth") shouldBe 0.7
     }
 })

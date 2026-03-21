@@ -38,12 +38,14 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         data object Songs : State
         data object Samples : State
         data object Docs : State
+        data object Credits : State
     }
 
     private fun inferState(): State = when {
         currentRoute.route in listOf(Nav.editSongCode, Nav.newSongCode) -> State.Songs
         currentRoute.route in listOf(Nav.samplesLibrary) -> State.Samples
-        currentRoute.route.pattern.startsWith(Nav.docsBase) -> State.Docs
+        currentRoute.route.pattern.startsWith(Nav.manualsBase) -> State.Docs
+        currentRoute.route == Nav.credits -> State.Credits
         else -> State.Main
     }
 
@@ -68,6 +70,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
                 when (state) {
                     State.Main -> renderDefaultMenu()
+                    State.Credits -> renderDefaultMenu()
                     State.Songs -> renderSongsMenu()
                     State.Samples -> renderSamplesMenu()
                     State.Docs -> renderDocsMenu()
@@ -187,12 +190,26 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 itemCss(isSelected)
                 onItemClick {
                     state = State.Docs
-                    router.navToUri(Nav.docs())
+                    router.navToUri(Nav.manuals())
                 }
                 icon.book()
                 noui.content {
                     itemContentCss(isSelected)
                     +"Motör Manuals"
+                }
+            }
+
+            noui.item {
+                val isSelected = state == State.Credits
+                itemCss(isSelected)
+                onItemClick {
+                    state = State.Credits
+                    router.navToUri(Nav.credits())
+                }
+                icon.bullhorn()
+                noui.content {
+                    itemContentCss(isSelected)
+                    +"Credits"
                 }
             }
         }
@@ -257,9 +274,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
         menuItemsList {
             noui.item {
-                val isSelected = currentRoute.route == Nav.docsStrudel
+                val isSelected = currentRoute.route == Nav.manualsStrudel
                 itemCss(isSelected)
-                onItemClick { router.navToUri(Nav.docsStrudel()) }
+                onItemClick { router.navToUri(Nav.manualsStrudel()) }
                 icon.wind()
                 noui.content {
                     itemContentCss(isSelected)
@@ -268,9 +285,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             }
 
             noui.item {
-                val isSelected = currentRoute.route == Nav.docsKlangScript
+                val isSelected = currentRoute.route == Nav.manualsKlangScript
                 itemCss(isSelected)
-                onItemClick { router.navToUri(Nav.docsKlangScript()) }
+                onItemClick { router.navToUri(Nav.manualsKlangScript()) }
                 icon.code()
                 noui.content {
                     itemContentCss(isSelected)

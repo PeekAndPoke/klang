@@ -93,7 +93,7 @@ class DistortionSpec : StringSpec({
 
     "DistortionFilter with amount=0 passes signal through unchanged" {
         val filter = DistortionFilter(amount = 0.0)
-        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9)
+        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f)
         val original = buffer.copyOf()
         filter.process(buffer, 0, buffer.size)
         for (i in buffer.indices) {
@@ -103,19 +103,19 @@ class DistortionSpec : StringSpec({
 
     "DistortionFilter soft shape produces bounded output" {
         val filter = DistortionFilter(amount = 1.0, shape = "soft")
-        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0)
+        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f)
         filter.process(buffer, 0, buffer.size)
         for (sample in buffer) {
-            abs(sample) shouldBeLessThan 1.01
+            abs(sample.toDouble()) shouldBeLessThan 1.01
         }
     }
 
     "DistortionFilter hard shape clips to [-1, 1]" {
         val filter = DistortionFilter(amount = 1.0, shape = "hard")
-        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0)
+        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f)
         filter.process(buffer, 0, buffer.size)
         for (sample in buffer) {
-            abs(sample) shouldBeLessThan 1.01
+            abs(sample.toDouble()) shouldBeLessThan 1.01
         }
     }
 
@@ -123,10 +123,10 @@ class DistortionSpec : StringSpec({
         val shapes = listOf("soft", "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp")
         for (shape in shapes) {
             val filter = DistortionFilter(amount = 0.8, shape = shape)
-            val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0, 0.0, 0.1)
+            val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f, 0.0f, 0.1f)
             filter.process(buffer, 0, buffer.size)
             for (sample in buffer) {
-                abs(sample) shouldBeLessThan 3.0 // generous bound, accounts for normalization
+                abs(sample.toDouble()) shouldBeLessThan 3.0 // generous bound, accounts for normalization
             }
         }
     }
@@ -134,38 +134,38 @@ class DistortionSpec : StringSpec({
     "DistortionFilter unknown shape falls back to soft" {
         val filterUnknown = DistortionFilter(amount = 0.5, shape = "nonexistent")
         val filterSoft = DistortionFilter(amount = 0.5, shape = "soft")
-        val buf1 = doubleArrayOf(0.5, -0.3, 0.8)
-        val buf2 = doubleArrayOf(0.5, -0.3, 0.8)
+        val buf1 = floatArrayOf(0.5f, -0.3f, 0.8f)
+        val buf2 = floatArrayOf(0.5f, -0.3f, 0.8f)
         filterUnknown.process(buf1, 0, buf1.size)
         filterSoft.process(buf2, 0, buf2.size)
         for (i in buf1.indices) {
-            buf1[i] shouldBe (buf2[i] plusOrMinus 0.0001)
+            buf1[i].toDouble() shouldBe (buf2[i].toDouble() plusOrMinus 0.0001)
         }
     }
 
     "DistortionFilter diode shape DC blocker removes offset over time" {
         val filter = DistortionFilter(amount = 0.8, shape = "diode")
         // Feed a constant positive signal — should be DC-blocked toward zero
-        val buffer = DoubleArray(4096) { 0.5 }
+        val buffer = FloatArray(4096) { 0.5f }
         filter.process(buffer, 0, buffer.size)
         // After many samples, the DC blocker should have driven the signal close to zero
         val lastSample = buffer[buffer.size - 1]
-        abs(lastSample) shouldBeLessThan 0.1
+        abs(lastSample.toDouble()) shouldBeLessThan 0.1
     }
 
     "DistortionFilter rectify shape DC blocker removes offset over time" {
         val filter = DistortionFilter(amount = 0.5, shape = "rectify")
         // Alternating signal that becomes all-positive after rectification
-        val buffer = DoubleArray(4096) { i -> if (i % 2 == 0) 0.3 else -0.3 }
+        val buffer = FloatArray(4096) { i -> if (i % 2 == 0) 0.3f else -0.3f }
         filter.process(buffer, 0, buffer.size)
         // DC blocker should center the output around zero over time
-        val avg = buffer.takeLast(100).average()
+        val avg = buffer.takeLast(100).map { it.toDouble() }.average()
         abs(avg) shouldBeLessThan 0.15
     }
 
     "DistortionFilter with offset processes only the specified range" {
         val filter = DistortionFilter(amount = 1.0, shape = "hard")
-        val buffer = doubleArrayOf(0.1, 0.2, 0.3, 0.4, 0.5)
+        val buffer = floatArrayOf(0.1f, 0.2f, 0.3f, 0.4f, 0.5f)
         val original0 = buffer[0]
         val original4 = buffer[4]
         filter.process(buffer, 1, 3) // Only process indices 1, 2, 3

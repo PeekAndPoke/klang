@@ -105,7 +105,6 @@ stack(                                                                 //////// 
         """
 
     val strangerThingsNetflix = """
-
 import * from "stdlib"
 import * from "strudel"
 
@@ -114,45 +113,45 @@ let keep = 32 * 6
 let notch = sine.range(440, 3 * 440).slow(8) // 440, 880, 1560 ?
 
 stack(
-  // Claps --------------------------------------------------------------------------------------------------
+  // Claps --------------------------------------------------------------------------------------------------------------------
   sound("cp ~ cp ~ ~ cp cp ~  cp ~ ~ ~ cp cp ~ ~").slow(4).orbit(0).gain(0.3).legato(2.0)
     .bandf(sine.range(1400, 1800).fast(3.14))
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
-  , // Lyrics -----------------------------------------------------------------------------------------------
+  , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(2.0).hpf(1000)
-    .sound("pulse").warmth(0.95).crush(3).gain(0.3).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.1:0.2:0.1") // .solo()
-    .filterWhen(x => x >= wait * 12 && x < (wait * 8 + keep))
-  , // Melody -----------------------------------------------------------------------------------------------
-  n("<[0 2 4 6 7 6 4 2]!14 [-3 -1 0 2 4 2 0 -3] [-1 0 2 4 6 2 0 -1]>")
+    .sound("pulse").warmth(0.95).crush(3).gain(0.225).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
+    .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
+  , // Melody -----------------------------------------------------------------------------------------------------------------
+  n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(1).s("supersaw").unison(8).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.175).slow(256))
+    .orbit(1).s("supersaw").unison(8).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.2).slow(256))
     .gain(0.3).distort(2).warmth(0.5).postgain(0.2)
-
     .pan(sine.range(0.25, 0.75).oneMinusValue().slow(16)).adsr("0.07:0.2:0.1:0.05")
     .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3)
     .filterWhen(x => x >= wait * 3 && x < (wait * 4 + keep))
-  , // Bass -------------------------------------------------------------------------------------------------
+  , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.75).struct("x!8")
     .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.275)
-    .superimpose(x => x.scaleTranspose("[12 12 7 12 12 12 0 -12]/16").gain(1.9).legato(1.05).orbit(3))
+    .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
-    .lpf(6 * 440).hpf(180).crush(saw.range(4.0, 1.475).add(berlin2.mul(0.05).seq(8).slow(4)).slow(64)).notchf(notch)
+    .lpf(6 * 440).hpf(180).notchf(notch).notchq(0.75).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
     .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).filterWhen(x => x < (wait * 4 + keep))
-  , // Perc 2 -----------------------------------------------------------------------------------------------
+  , // Perc 2 ------------------------------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
     .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1)
     .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
-  , // Perc 1 -----------------------------------------------------------------------------------------------
+  , // Perc 1 -----------------------------------------------------------------------------------------------------------------------
   sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
     .orbit(5).gain(0.85).pan(0.5).adsr("0.02:0.2:0.5:1").degrade(0.01).hpf(80)        
     .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
-  , // Shore ------------------------------------------------------------------------------------------------
+  , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(8).sound("brown")
     .orbit(0).gain(0.10).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(64)).bandq(sine.range(0.05, 5.0).slow(32).early(16))
   ,
 ).delay("0.1::0.5").delaytime(pure(1/8).div(cps)).room("0.05:10.0").compressor("-10:2:10:0.02:0.25")
+
 
 
 
@@ -196,8 +195,8 @@ stack( // Gitarre! -------------------------------------------------------------
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
   ).orbit(3).fast(1).scale("C2:chromatic").pan(0.55).hpf(120).lpf(1800).warmth(0.5)
     .s("supersaw").unison(6).detune(0.08).gain("0.6 0.525 0.5 0.525")
-    .adsr("0.001:0.1:0.5:0.01").clip(1.01).distort(2).postgain(0.20)
-    .superimpose(x => x.orbit(4).pan("0.6").bandf("800 975 [1175|1200|1225|1300]*32".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.15))
+    .adsr("0.001:0.1:0.5:0.01").clip(1.01).distort(2).postgain(0.17)
+    .superimpose(x => x.orbit(4).pan("0.6").bandf("800 975 [1175|1200|1225|1300]*32".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.14))
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.15") // .solo()

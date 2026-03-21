@@ -43,7 +43,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.101.3"
+        private const val ultra_version = "0.102.0"
 
         object Ultra {
             const val common = "io.peekandpoke.ultra:common:$ultra_version"
@@ -434,9 +434,9 @@ object Deps {
         const val logback_classic = "ch.qos.logback:logback-classic:$logback_version"
 
         // https://plugins.gradle.org/plugin/io.kotest
-        const val kotest_plugin_version = "6.1.6"
+        const val kotest_plugin_version = "6.1.7"
         // https://mvnrepository.com/artifact/io.kotest/kotest-common
-        const val kotest_version = "6.1.5"
+        const val kotest_version = "6.1.7"
 
         const val kotest_framework_engine = "io.kotest:kotest-framework-engine:$kotest_version"
         const val kotest_assertions_core = "io.kotest:kotest-assertions-core:$kotest_version"

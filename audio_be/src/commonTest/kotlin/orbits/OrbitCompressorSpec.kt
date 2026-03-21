@@ -119,14 +119,14 @@ class OrbitCompressorSpec : StringSpec({
 
         // Warm up the envelope follower with many blocks of loud signal (~-6 dB, well above threshold)
         repeat(50) {
-            val l = DoubleArray(blockFrames) { 0.5 }
-            val r = DoubleArray(blockFrames) { 0.5 }
+            val l = FloatArray(blockFrames) { 0.5f }
+            val r = FloatArray(blockFrames) { 0.5f }
             compressor.process(l, r, blockFrames)
         }
 
         // Measure steady-state compression level
-        val steadyLeft = DoubleArray(blockFrames) { 0.5 }
-        val steadyRight = DoubleArray(blockFrames) { 0.5 }
+        val steadyLeft = FloatArray(blockFrames) { 0.5f }
+        val steadyRight = FloatArray(blockFrames) { 0.5f }
         compressor.process(steadyLeft, steadyRight, blockFrames)
         val steadyLevel = steadyLeft.map { abs(it) }.average()
 
@@ -142,8 +142,8 @@ class OrbitCompressorSpec : StringSpec({
         )
 
         // Process immediately after — should be at roughly the same compression level
-        val afterLeft = DoubleArray(blockFrames) { 0.5 }
-        val afterRight = DoubleArray(blockFrames) { 0.5 }
+        val afterLeft = FloatArray(blockFrames) { 0.5f }
+        val afterRight = FloatArray(blockFrames) { 0.5f }
         orbit.compressor!!.process(afterLeft, afterRight, blockFrames)
         val afterLevel = afterLeft.map { abs(it) }.average()
 

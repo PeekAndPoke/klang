@@ -250,7 +250,7 @@ abstract class AbstractVoice(
 
             if (currentEnv < 0.0) currentEnv = 0.0
 
-            ctx.voiceBuffer[idx] *= currentEnv
+            ctx.voiceBuffer[idx] = (ctx.voiceBuffer[idx] * currentEnv).toFloat()
             absPos++
         }
 

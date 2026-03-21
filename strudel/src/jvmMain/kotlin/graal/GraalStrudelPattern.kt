@@ -106,12 +106,14 @@ class GraalStrudelPattern(
         val soundIndex = value.safeGetMember("n").safeNumberOrNull()?.toInt()
 
         // ///////////////////////////////////////////////////////////////////////////////////
-        // Get Oscillator parameters
-        val density = value.safeGetMember("density").safeNumberOrNull()
-        val voices = value.safeGetMember("unison").safeNumberOrNull()
-        val panSpread = value.safeGetMember("spread").safeNumberOrNull()
-        val freqSpread = value.safeGetMember("detune").safeNumberOrNull()
-        val warmth = value.safeGetMember("warmth").safeNumberOrNull()
+        // Get Oscillator parameters → build oscParams map
+        val oscParams = buildMap {
+            value.safeGetMember("density").safeNumberOrNull()?.let { put("density", it) }
+            value.safeGetMember("unison").safeNumberOrNull()?.let { put("voices", it) }
+            value.safeGetMember("spread").safeNumberOrNull()?.let { put("panSpread", it) }
+            value.safeGetMember("detune").safeNumberOrNull()?.let { put("freqSpread", it) }
+            value.safeGetMember("warmth").safeNumberOrNull()?.let { put("warmth", it) }
+        }.ifEmpty { null }
 
         // ///////////////////////////////////////////////////////////////////////////////////
         // ADSR (flat fields)
@@ -322,12 +324,8 @@ class GraalStrudelPattern(
                 bank = bank,
                 sound = sound,
                 soundIndex = soundIndex,
-                // Oscilator
-                density = density,
-                voices = voices,
-                panSpread = panSpread,
-                freqSpread = freqSpread,
-                warmth = warmth,
+                // Oscillator parameters
+                oscParams = oscParams,
                 // ADSR (flat fields)
                 attack = attack,
                 decay = decay,

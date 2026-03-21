@@ -24,7 +24,7 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // With "always on" envelope, first 100 samples should be 0.5
-        ctx.voiceBuffer.all { it == 0.5 } shouldBe true
+        ctx.voiceBuffer.all { it == 0.5f } shouldBe true
     }
 
     "SampleVoice with rate > 1 plays faster" {
@@ -39,8 +39,8 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Should cover full sample in 50 frames
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[49] shouldBe (0.98 plusOrMinus 0.03)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[49].toDouble() shouldBe (0.98 plusOrMinus 0.03)
     }
 
     "SampleVoice with rate < 1 plays slower" {
@@ -55,8 +55,8 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Should only cover half the sample in 100 frames
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[99] shouldBe (0.50 plusOrMinus 0.02)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[99].toDouble() shouldBe (0.50 plusOrMinus 0.02)
     }
 
     "SampleVoice performs linear interpolation" {
@@ -91,10 +91,10 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // First 50 samples should have audio
-        (ctx.voiceBuffer[25] > 0.0) shouldBe true
+        (ctx.voiceBuffer[25] > 0.0f) shouldBe true
 
         // After sample ends, should be silent
-        ctx.voiceBuffer[75] shouldBe 0.0
+        ctx.voiceBuffer[75] shouldBe 0.0f
     }
 
     "SampleVoice with explicit looping wraps correctly" {
@@ -116,12 +116,12 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // First 50 frames should play 0.0 to 0.5
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[49] shouldBe (0.49 plusOrMinus 0.02)
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[49].toDouble() shouldBe (0.49 plusOrMinus 0.02)
 
         // Next 50 frames should loop back and play 0.0 to 0.5 again
-        ctx.voiceBuffer[50] shouldBe (0.0 plusOrMinus 0.02)
-        ctx.voiceBuffer[99] shouldBe (0.49 plusOrMinus 0.02)
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.0 plusOrMinus 0.02)
+        ctx.voiceBuffer[99].toDouble() shouldBe (0.49 plusOrMinus 0.02)
     }
 
     "SampleVoice with stopFrame ends early" {
@@ -143,10 +143,10 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // First 50 frames should have audio
-        (ctx.voiceBuffer[25] > 0.0) shouldBe true
+        (ctx.voiceBuffer[25] > 0.0f) shouldBe true
 
         // After stopFrame, should be silent
-        ctx.voiceBuffer[75] shouldBe 0.0
+        ctx.voiceBuffer[75] shouldBe 0.0f
     }
 
     "SampleVoice playhead advances correctly" {
@@ -232,9 +232,9 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Envelope should modulate sample amplitude
-        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.02)  // Start of attack
-        ctx.voiceBuffer[50] shouldBe (0.5 plusOrMinus 0.03) // Mid-attack
-        ctx.voiceBuffer[99] shouldBe (0.99 plusOrMinus 0.03) // End of attack
+        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.02)  // Start of attack
+        ctx.voiceBuffer[50].toDouble() shouldBe (0.5 plusOrMinus 0.03) // Mid-attack
+        ctx.voiceBuffer[99].toDouble() shouldBe (0.99 plusOrMinus 0.03) // End of attack
     }
 
     "SampleVoice handles sample end boundary" {
@@ -250,10 +250,10 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // First 5 samples should have audio
-        (ctx.voiceBuffer[2] > 0.0) shouldBe true
+        (ctx.voiceBuffer[2] > 0.0f) shouldBe true
 
         // After sample ends, should be silent
-        ctx.voiceBuffer[7] shouldBe 0.0
+        ctx.voiceBuffer[7] shouldBe 0.0f
     }
 
     "SampleVoice with negative playhead is handled" {
@@ -269,11 +269,11 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Negative playhead samples should be 0
-        ctx.voiceBuffer[0] shouldBe 0.0
-        ctx.voiceBuffer[9] shouldBe 0.0
+        ctx.voiceBuffer[0] shouldBe 0.0f
+        ctx.voiceBuffer[9] shouldBe 0.0f
 
         // After playhead reaches 0, should have audio
-        (ctx.voiceBuffer[15] >= 0.0) shouldBe true
+        (ctx.voiceBuffer[15] >= 0.0f) shouldBe true
     }
 
     "SampleVoice preserves playhead across renders" {

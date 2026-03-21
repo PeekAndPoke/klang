@@ -21,12 +21,12 @@ class VoiceSchedulerWarmthTest : StringSpec({
         oscillators.get(
             name = voiceData.sound,
             freqHz = freqHz,
-            density = voiceData.density,
-            voices = voiceData.voices,
-            freqSpread = voiceData.freqSpread,
-            panSpread = voiceData.panSpread,
+            density = voiceData.oscParams?.get("density"),
+            voices = voiceData.oscParams?.get("voices"),
+            freqSpread = voiceData.oscParams?.get("freqSpread"),
+            panSpread = voiceData.oscParams?.get("panSpread"),
         ).let { rawOsc ->
-            val warmthAmount = voiceData.warmth ?: 0.0
+            val warmthAmount = voiceData.oscParams?.get("warmth") ?: 0.0
             if (warmthAmount > 0.0) {
                 rawOsc.withWarmth(warmthAmount)
             } else {
@@ -37,51 +37,51 @@ class VoiceSchedulerWarmthTest : StringSpec({
     "createOscillator returns raw oscillator when warmth is null" {
         val voiceData = VoiceData.empty.copy(
             sound = "sine",
-            warmth = null
+            oscParams = null
         )
 
         val osc = createOscillatorWithWarmth(voiceData, oscillators, 440.0)
 
-        val buffer = DoubleArray(100)
+        val buffer = FloatArray(100)
         osc.process(buffer, 0, 100, 0.0, 0.1, null)
 
         // Should produce output
-        buffer.any { it != 0.0 } shouldBe true
+        buffer.any { it != 0.0f } shouldBe true
     }
 
     "createOscillator returns raw oscillator when warmth is 0.0" {
         val voiceData = VoiceData.empty.copy(
             sound = "sine",
-            warmth = 0.0
+            oscParams = mapOf("warmth" to 0.0)
         )
 
         val osc = createOscillatorWithWarmth(voiceData, oscillators, 440.0)
 
-        val buffer = DoubleArray(100)
+        val buffer = FloatArray(100)
         osc.process(buffer, 0, 100, 0.0, 0.1, null)
 
         // Should produce output
-        buffer.any { it != 0.0 } shouldBe true
+        buffer.any { it != 0.0f } shouldBe true
     }
 
     "createOscillator applies warmth when warmth > 0.0" {
         val voiceDataNoWarmth = VoiceData.empty.copy(
             sound = "square",
-            warmth = 0.0
+            oscParams = mapOf("warmth" to 0.0)
         )
 
         val voiceDataWithWarmth = VoiceData.empty.copy(
             sound = "square",
-            warmth = 0.6
+            oscParams = mapOf("warmth" to 0.6)
         )
 
         // Generate raw square wave
-        val rawBuffer = DoubleArray(100)
+        val rawBuffer = FloatArray(100)
         createOscillatorWithWarmth(voiceDataNoWarmth, oscillators, 440.0)
             .process(rawBuffer, 0, 100, 0.0, 0.5, null)
 
         // Generate warm square wave
-        val warmBuffer = DoubleArray(100)
+        val warmBuffer = FloatArray(100)
         createOscillatorWithWarmth(voiceDataWithWarmth, oscillators, 440.0)
             .process(warmBuffer, 0, 100, 0.0, 0.5, null)
 
@@ -103,17 +103,16 @@ class VoiceSchedulerWarmthTest : StringSpec({
         for (oscName in oscillatorNames) {
             val voiceData = VoiceData.empty.copy(
                 sound = oscName,
-                warmth = 0.5,
-                voices = 3.0 // For supersaw
+                oscParams = mapOf("warmth" to 0.5, "voices" to 3.0)
             )
 
             val osc = createOscillatorWithWarmth(voiceData, oscillators, 440.0)
 
-            val buffer = DoubleArray(100)
+            val buffer = FloatArray(100)
             osc.process(buffer, 0, 100, 0.0, 0.1, null)
 
             // Should produce output for all oscillator types
-            buffer.any { it != 0.0 } shouldBe true
+            buffer.any { it != 0.0f } shouldBe true
         }
     }
 })

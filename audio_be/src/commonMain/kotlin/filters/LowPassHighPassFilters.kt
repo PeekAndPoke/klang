@@ -40,13 +40,13 @@ object LowPassHighPassFilters {
             lowPass = 1.0 - exp(-2.0 * PI * cutoff / sampleRate)
         }
 
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             val end = offset + length
             // Tight loop: very fast!
             for (i in offset until end) {
-                val x = buffer[i]
+                val x = buffer[i].toDouble()
                 y += lowPass * (x - y)
-                buffer[i] = y
+                buffer[i] = y.toFloat()
             }
         }
     }
@@ -66,13 +66,13 @@ object LowPassHighPassFilters {
             a = exp(-2.0 * PI * cutoff / sampleRate)
         }
 
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val x = buffer[i]
+                val x = buffer[i].toDouble()
                 y = a * (y + x - xPrev)
                 xPrev = x
-                buffer[i] = y
+                buffer[i] = y.toFloat()
             }
         }
     }
@@ -106,11 +106,11 @@ object LowPassHighPassFilters {
     }
 
     class SvfLPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             // Inline loop for LPF specific output (v2)
             val end = offset + length
             for (i in offset until end) {
-                val v0 = buffer[i]
+                val v0 = buffer[i].toDouble()
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
@@ -118,16 +118,16 @@ object LowPassHighPassFilters {
                 ic1eq = 2.0 * v1 - ic1eq
                 ic2eq = 2.0 * v2 - ic2eq
 
-                buffer[i] = v2 // Low pass output
+                buffer[i] = v2.toFloat() // Low pass output
             }
         }
     }
 
     class SvfHPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val v0 = buffer[i]
+                val v0 = buffer[i].toDouble()
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
@@ -136,16 +136,16 @@ object LowPassHighPassFilters {
                 ic2eq = 2.0 * v2 - ic2eq
 
                 // High pass output: v0 - k*v1 - v2
-                buffer[i] = v0 - k * v1 - v2
+                buffer[i] = (v0 - k * v1 - v2).toFloat()
             }
         }
     }
 
     class SvfBPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val v0 = buffer[i]
+                val v0 = buffer[i].toDouble()
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
@@ -154,16 +154,16 @@ object LowPassHighPassFilters {
                 ic2eq = 2.0 * v2 - ic2eq
 
                 // Band pass output: v1
-                buffer[i] = v1
+                buffer[i] = v1.toFloat()
             }
         }
     }
 
     class SvfNotch(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val v0 = buffer[i]
+                val v0 = buffer[i].toDouble()
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
@@ -172,7 +172,7 @@ object LowPassHighPassFilters {
                 ic2eq = 2.0 * v2 - ic2eq
 
                 // Notch output: v0 - k*v1
-                buffer[i] = v0 - k * v1
+                buffer[i] = (v0 - k * v1).toFloat()
             }
         }
     }

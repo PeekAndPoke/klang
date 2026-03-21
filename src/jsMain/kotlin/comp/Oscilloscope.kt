@@ -7,8 +7,11 @@ import de.peekandpoke.kraft.utils.onResize
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
-import io.peekandpoke.klang.audio_bridge.createVisualizerBuffer
+import de.peekandpoke.ultra.streams.Stream
+import de.peekandpoke.ultra.streams.Unsubscribe
+import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBufferHistory
 import io.peekandpoke.klang.audio_engine.KlangPlayer
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*
@@ -16,21 +19,23 @@ import kotlinx.html.Tag
 import kotlinx.html.canvas
 import kotlinx.html.div
 import kotlinx.html.js.onClickFunction
+import org.khronos.webgl.Float32Array
 import org.khronos.webgl.get
+import org.khronos.webgl.set
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLDivElement
-import kotlin.math.floor
 import kotlin.math.pow
 
 @Suppress("FunctionName")
 fun Tag.Oscilloscope(
+    player: Stream<KlangPlayer?>,
     strokeColor: Color = Color.white,
     strokeWidth: Double = 1.1,
     centerLineColor: Color? = Color.white.withAlpha(0.07),
     centerLineWidth: Double = 1.0,
-    pointSkip: Int = 4,
-    player: () -> KlangPlayer?,
+    pixelSkip: Int = 3,
+    expandedFrameCount: Int = 5,
 ) = comp(
     Oscilloscope.Props(
         player = player,
@@ -38,7 +43,8 @@ fun Tag.Oscilloscope(
         strokeWidth = strokeWidth,
         centerLineColor = centerLineColor,
         centerLineWidth = centerLineWidth,
-        pointSkip = pointSkip,
+        pixelSkip = pixelSkip,
+        expandedFrameCount = expandedFrameCount,
     )
 ) {
     Oscilloscope(it)
@@ -49,18 +55,27 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     data class Props(
-        val player: () -> KlangPlayer?,
+        val player: Stream<KlangPlayer?>,
         val strokeColor: Color,
         val strokeWidth: Double,
         val centerLineColor: Color?,
         val centerLineWidth: Double,
-        val pointSkip: Int,
+        val pixelSkip: Int,
+        val expandedFrameCount: Int,
     )
+
+    companion object {
+        private const val FRAME_SIZE = 2048
+        private const val CROSSFADE_SAMPLES = 64
+        private val idleBuffer = Float32Array(FRAME_SIZE)
+    }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private var visualizerAnimFrame: Int? = null
-    private val visualizerBuffer = createVisualizerBuffer(2048)
+    private var waveformUnsubscribe: Unsubscribe? = null
+
+    private var lastHistory: AnalyzerBufferHistory? = null
+    private var expandedStorage: Float32Array? = null
 
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
@@ -70,15 +85,20 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     private var overlayCtx2d: CanvasRenderingContext2D? = null
     private var overlayContainer: HTMLDivElement? = null
 
-    // Cache for deflection multipliers to avoid recalculating every frame
-    private var deflectionCache: DoubleArray? = null
-    private var cachedTotalWidth: Double = 0.0
+    // Two-level deflection cache: strength → (width → values)
+    private val deflectionCaches = mutableMapOf<Double, Pair<Double, DoubleArray>>()
+
+    @Suppress("unused")
+    private val laf by subscribingTo(KlangTheme)
+
+    @Suppress("unused")
+    private val playerSub by subscribingTo(props.player) {
+        subscribeToWaveform(it)
+    }
 
     init {
         lifecycle {
             onMount {
-                visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
-
                 dom?.let { container ->
                     canvas = dom?.querySelector("canvas") as HTMLCanvasElement?
                     canvas?.let {
@@ -88,10 +108,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
                     ctx2d = canvas?.getContext("2d") as? CanvasRenderingContext2D
                 }
+
+                drawIdleWaveform()
             }
 
             onUnmount {
-                visualizerAnimFrame?.let { window.cancelAnimationFrame(it) }
+                waveformUnsubscribe?.invoke()
+                waveformUnsubscribe = null
                 cleanupOverlay()
             }
 
@@ -108,24 +131,53 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                     if (expanded) {
                         updateOverlaySize()
                     }
+
+                    // Redraw after resize (canvas clear on resize)
+                    val h = lastHistory
+                    if (h != null) drawWaveform(h) else drawIdleWaveform()
                 }
             }
         }
     }
 
-    private fun processVisualizer() {
-        props.player()?.let { player ->
-            player.getVisualizer()?.getWaveform(visualizerBuffer)
+    private fun subscribeToWaveform(player: KlangPlayer?) {
+        console.log("New player", player)
+
+        waveformUnsubscribe?.invoke()
+        waveformUnsubscribe = null
+
+        val analyzer = player?.getAnalyzer() ?: return
+
+        console.log("Subscribing to waveform ++++++++++++++++++++++++++++++++++++++++++++++")
+
+        waveformUnsubscribe = analyzer.waveform.subscribeToStream { history ->
+            lastHistory = history
+            drawWaveform(history)
+            triggerRedraw()
         }
-
-        drawWaveform()
-
-        visualizerAnimFrame = window.requestAnimationFrame { processVisualizer() }
     }
 
-    private fun drawWaveform() {
+    private fun drawIdleWaveform() {
+        val ctx = ctx2d ?: return
+        val c = canvas ?: return
+        drawWaveformSlice(
+            ctx = ctx,
+            canvasWidth = c.width.toDouble(),
+            canvasHeight = c.height.toDouble(),
+            strokeColor = props.strokeColor,
+            strokeWidth = props.strokeWidth,
+            centerLineColor = props.centerLineColor,
+            centerLineWidth = props.centerLineWidth,
+            buffer = idleBuffer,
+            bufferLength = FRAME_SIZE,
+        )
+    }
+
+    private fun drawWaveform(history: AnalyzerBufferHistory) {
+        if (history.size == 0) return
+
         if (!expanded) {
-            // Normal mode — draw on the small embedded canvas
+            // Normal mode — draw on the small embedded canvas using most recent frame
             val ctx = ctx2d ?: return
             val canvasElement = canvas ?: return
             canvasElement.style.visibility = "visible"
@@ -137,47 +189,83 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 strokeWidth = props.strokeWidth,
                 centerLineColor = props.centerLineColor,
                 centerLineWidth = props.centerLineWidth,
-                bufferStartFraction = 0.0,
-                bufferEndFraction = 1.0,
+                buffer = history[0],
+                bufferLength = history.bufferSize,
+                deflectionStrength = 4.0,
             )
         } else {
-            // Expanded mode — hide small canvas, draw on full-width overlay
+            // Expanded mode — flatten history frames oldest-to-newest into expandedStorage
             canvas?.style?.visibility = "hidden"
             val ctx = overlayCtx2d ?: return
             val canvasElement = overlayCanvas ?: return
+            val storage = expandedStorage ?: return
+
+            val numFrames = minOf(history.size, props.expandedFrameCount)
+            val bufSize = history.bufferSize
+            val fadeLen = minOf(CROSSFADE_SAMPLES, bufSize / 2)
+            var offset = 0
+
+            for (frameIdx in 0 until numFrames) {
+                val age = numFrames - 1 - frameIdx
+                val frame = history[age]
+
+                if (frameIdx == 0) {
+                    // First frame — copy entirely
+                    for (i in 0 until bufSize) {
+                        storage[offset++] = frame[i]
+                    }
+                } else {
+                    // Crossfade: blend end of previous frame with start of this frame
+                    // Rewind into the already-written tail
+                    offset -= fadeLen
+                    for (i in 0 until fadeLen) {
+                        val t = (i + 1).toFloat() / (fadeLen + 1).toFloat()
+                        storage[offset] = storage[offset] * (1f - t) + frame[i] * t
+                        offset++
+                    }
+                    // Copy remainder of frame
+                    for (i in fadeLen until bufSize) {
+                        storage[offset++] = frame[i]
+                    }
+                }
+            }
+
             drawWaveformSlice(
                 ctx = ctx,
                 canvasWidth = canvasElement.width.toDouble(),
                 canvasHeight = canvasElement.height.toDouble(),
                 strokeColor = props.strokeColor,
-                strokeWidth = props.strokeWidth * 2,
+                strokeWidth = props.strokeWidth,
                 centerLineColor = props.centerLineColor,
                 centerLineWidth = props.centerLineWidth,
-                bufferStartFraction = 0.0,
-                bufferEndFraction = 1.0,
-                applyDeflection = true,
+                buffer = storage,
+                bufferLength = offset,
+                deflectionStrength = 2.0,
             )
         }
     }
 
     /**
      * Calculate vibrating string deflection for expanded mode.
-     * Returns a value between 0.1 (at edges) and 1.0 (at center).
+     * Returns a value between 0.02 (at edges) and 1.0 (at center).
+     * Gentle curve so deflection stays high across most of the width.
      */
-    private fun calculateStringDeflection(normalized: Double): Double {
-        val curveValue = 1.0 - 16.0 * (normalized - 0.5).pow(4)
-        return 0.1 + 0.9 * curveValue
+    private fun calculateStringDeflection(normalized: Double, strength: Double): Double {
+        val dist = kotlin.math.abs(normalized - 0.5)
+        val curveValue = (1.0 - 2.0.pow(strength) * dist.pow(strength)).coerceAtLeast(0.0)
+        return 0.02 + 0.98 * curveValue
     }
 
-    private fun getOrBuildDeflectionCache(totalWidth: Double): DoubleArray {
-        if (deflectionCache == null || cachedTotalWidth != totalWidth) {
-            val resolution = totalWidth.toInt().coerceAtLeast(1)
-            deflectionCache = DoubleArray(resolution) { pixelX ->
-                calculateStringDeflection(pixelX.toDouble() / totalWidth)
-            }
-            cachedTotalWidth = totalWidth
+    private fun getOrBuildDeflectionCache(totalWidth: Double, strength: Double): DoubleArray {
+        val cached = deflectionCaches[strength]
+        if (cached != null && cached.first == totalWidth) return cached.second
+
+        val resolution = totalWidth.toInt().coerceAtLeast(1)
+        val values = DoubleArray(resolution) { pixelX ->
+            calculateStringDeflection(pixelX.toDouble() / totalWidth, strength)
         }
-        return deflectionCache!!
+        deflectionCaches[strength] = totalWidth to values
+        return values
     }
 
     private fun drawWaveformSlice(
@@ -188,9 +276,9 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         strokeWidth: Double,
         centerLineColor: Color?,
         centerLineWidth: Double,
-        bufferStartFraction: Double,
-        bufferEndFraction: Double,
-        applyDeflection: Boolean = false,
+        buffer: Float32Array,
+        bufferLength: Int,
+        deflectionStrength: Double = 0.0,
     ) {
         val centerY = canvasHeight / 2.0
 
@@ -206,29 +294,26 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             ctx.stroke()
         }
 
-        // Draw waveform
-        ctx.strokeStyle = strokeColor.toString()
-        ctx.lineWidth = strokeWidth
+        if (bufferLength <= 0) return
+
+        // Build waveform path
         ctx.beginPath()
 
-        val bufferLength = visualizerBuffer.length
-        val startIdx = floor(bufferLength * bufferStartFraction).toInt()
-        val endIdx = floor(bufferLength * bufferEndFraction).toInt()
-        val sliceLength = endIdx - startIdx
-
-        if (sliceLength <= 0) return
-
         val widthInt = canvasWidth.toInt()
-        val deflectionCache = if (applyDeflection) getOrBuildDeflectionCache(canvasWidth) else null
-        val step = if (expanded) 1 else props.pointSkip.coerceAtLeast(1)
+        val deflectionCache = if (deflectionStrength > 0.0) {
+            getOrBuildDeflectionCache(canvasWidth, deflectionStrength)
+        } else {
+            null
+        }
+        val step = props.pixelSkip.coerceAtLeast(1)
 
-        if (widthInt >= sliceLength) {
+        if (widthInt >= bufferLength) {
             // More pixels than samples
-            val sliceWidth = canvasWidth / sliceLength.toDouble()
+            val sliceWidth = canvasWidth / bufferLength.toDouble()
             var isFirstPoint = true
 
-            for (i in 0 until sliceLength step step) {
-                var value = visualizerBuffer[startIdx + i]
+            for (i in 0 until bufferLength step step) {
+                var value = buffer[i]
                 val x = i * sliceWidth
 
                 deflectionCache?.let { cache ->
@@ -247,20 +332,18 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             }
         } else {
             // More samples than pixels — downsample with min/max per pixel
-            val samplesPerPixel = sliceLength / widthInt
+            val samplesPerPixel = bufferLength / widthInt
             var isFirstPoint = true
 
             for (pixelX in 0 until widthInt step step) {
                 val localStartIdx = pixelX * samplesPerPixel
-                val localEndIdx = minOf(localStartIdx + samplesPerPixel, sliceLength)
-                val bufferStartIdx = startIdx + localStartIdx
-                val bufferEndIdx = startIdx + localEndIdx
+                val localEndIdx = minOf(localStartIdx + samplesPerPixel, bufferLength)
 
-                var minVal = visualizerBuffer[bufferStartIdx]
-                var maxVal = visualizerBuffer[bufferStartIdx]
+                var minVal = buffer[localStartIdx]
+                var maxVal = buffer[localStartIdx]
 
-                for (i in bufferStartIdx + 1 until bufferEndIdx) {
-                    val value = visualizerBuffer[i]
+                for (i in localStartIdx + 1 until localEndIdx) {
+                    val value = buffer[i]
                     if (value < minVal) minVal = value
                     if (value > maxVal) maxVal = value
                 }
@@ -286,6 +369,19 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             }
         }
 
+        // Stroke shadow behind for contrast
+        ctx.strokeStyle = Color.black.withAlpha(0.4).toString()
+        ctx.lineWidth = strokeWidth + 4.5
+        ctx.stroke()
+
+        // Gold highlight
+        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.2).toString()
+        ctx.lineWidth = strokeWidth + 3.0
+        ctx.stroke()
+
+        // Stroke foreground waveform
+        ctx.strokeStyle = strokeColor.toString()
+        ctx.lineWidth = strokeWidth
         ctx.stroke()
     }
 
@@ -304,7 +400,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val oscilloscopeRect = dom?.getBoundingClientRect() ?: return
 
         // Single overlay covering from oscilloscope left edge to viewport right edge
-        val extraHeight = 40.0
+        val extraHeight = 20.0
         val container = document.createElement("div") as HTMLDivElement
         container.style.position = "fixed"
         container.style.top = "${oscilloscopeRect.top - extraHeight / 2}px"
@@ -328,11 +424,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         overlayContainer = container
         overlayCanvas = canvas
         overlayCtx2d = canvas.getContext("2d") as? CanvasRenderingContext2D
+
+        expandedStorage = Float32Array(FRAME_SIZE * props.expandedFrameCount)
     }
 
     private fun updateOverlaySize() {
         val oscilloscopeRect = dom?.getBoundingClientRect() ?: return
-        val extraHeight = 40.0
+        val extraHeight = 20.0
         overlayContainer?.let { container ->
             container.style.top = "${oscilloscopeRect.top - extraHeight / 2}px"
             container.style.left = "${oscilloscopeRect.left}px"
@@ -348,8 +446,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         overlayContainer = null
         overlayCanvas = null
         overlayCtx2d = null
-        deflectionCache = null
-        cachedTotalWidth = 0.0
+        expandedStorage = null
+        deflectionCaches.clear()
     }
 
     override fun VDom.render() {

@@ -155,6 +155,15 @@ textarea::selection,
     color: var(--klang-text-primary) !important;
 }
 
+/* ── Links ────────────────────────────────────────────────────────────────── */
+a {
+    color: var(--klang-gold) !important;
+    transition: color var(--klang-transition);
+}
+a:hover {
+    color: #f0c55a !important;
+}
+
 /* ── Code blocks ──────────────────────────────────────────────────────────── */
 pre, code {
     color: var(--klang-text-primary) !important;

@@ -21,7 +21,7 @@ class CompressorSpec : StringSpec({
         )
 
         // Create a buffer with loud signal (above threshold)
-        val buffer = DoubleArray(1000) { 0.5 } // ~-6 dB
+        val buffer = FloatArray(1000) { 0.5f } // ~-6 dB
 
         compressor.process(buffer, 0, 1000)
 
@@ -41,14 +41,14 @@ class CompressorSpec : StringSpec({
         )
 
         // Create a buffer with quiet signal (below threshold)
-        val buffer = DoubleArray(1000) { 0.01 } // ~-40 dB
+        val buffer = FloatArray(1000) { 0.01f } // ~-40 dB
         val original = buffer.copyOf()
 
         compressor.process(buffer, 0, 1000)
 
         // Signal should be mostly unchanged
         for (i in buffer.indices) {
-            buffer[i] shouldBe (original[i] plusOrMinus 0.01)
+            buffer[i].toDouble() shouldBe (original[i].toDouble() plusOrMinus 0.01)
         }
     }
 
@@ -89,19 +89,19 @@ class CompressorSpec : StringSpec({
         )
 
         // Process some audio
-        val buffer = DoubleArray(100) { 0.5 }
+        val buffer = FloatArray(100) { 0.5f }
         compressor.process(buffer, 0, 100)
 
         // Reset
         compressor.reset()
 
         // Process quiet signal - should not be affected by previous state
-        val quietBuffer = DoubleArray(100) { 0.01 }
+        val quietBuffer = FloatArray(100) { 0.01f }
         val original = quietBuffer.copyOf()
         compressor.process(quietBuffer, 0, 100)
 
         for (i in quietBuffer.indices) {
-            quietBuffer[i] shouldBe (original[i] plusOrMinus 0.01)
+            quietBuffer[i].toDouble() shouldBe (original[i].toDouble() plusOrMinus 0.01)
         }
     }
 
@@ -115,8 +115,8 @@ class CompressorSpec : StringSpec({
             releaseSeconds = 0.1
         )
 
-        val left = DoubleArray(1000) { 0.5 }
-        val right = DoubleArray(1000) { 0.5 }
+        val left = FloatArray(1000) { 0.5f }
+        val right = FloatArray(1000) { 0.5f }
 
         compressor.process(left, right, 1000)
 
@@ -148,7 +148,7 @@ class CompressorSpec : StringSpec({
         )
 
         // Create signal right at threshold
-        val bufferHard = DoubleArray(1000) { 0.1 } // ~-20 dB
+        val bufferHard = FloatArray(1000) { 0.1f } // ~-20 dB
         val bufferSoft = bufferHard.copyOf()
 
         hardKnee.process(bufferHard, 0, 1000)

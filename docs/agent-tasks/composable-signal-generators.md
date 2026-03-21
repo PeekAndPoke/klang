@@ -612,6 +612,136 @@ val evolving = saw.thenCrossfade(saw.withWarmth(0.6), atMs = 100.0, durationMs =
 
 ---
 
+## Feedback Combinators (2026-03-20)
+
+Two feedback modes enable recursive signal topologies — the highest-leverage missing piece identified
+in the Six Hats analysis. These collapse Karplus-Strong, comb filters, FM self-modulation (DX7),
+waveguides, and chaotic oscillators into composition algebra.
+
+### Output Feedback
+
+**Topology:** `output[n] = source[n] + gain * transform(output[n - delay])`
+
+The signal recirculates through a delay line. The `transform` closure (per-sample, stateful via capture)
+shapes the feedback path — typically a lowpass filter for Karplus-Strong.
+
+```kotlin
+fun SignalGen.feedback(
+    delaySamples: Double,                        // fractional for pitch accuracy
+    gain: Double = 0.998,
+    transform: ((Double) -> Double) = { it },    // per-sample, stateful via closure
+): SignalGen
+```
+
+**Key design decisions:**
+
+- **Fractional delay with linear interpolation** — integer-only delay makes high notes audibly out of
+  tune (C7 @ 48kHz: 72 cents error with integer delay). Uses the same interpolation pattern as the
+  existing `DelayLine.kt` (lines 92-114).
+- **Built-in DC blocker** (~20Hz, coefficient 0.995) inside the loop — prevents DC accumulation from
+  asymmetric sources or transforms.
+- **Hard limiter at ±4.0** inside the loop — prevents explosion if `gain * |H_transform(f)| > 1.0`.
+  Matches `DelayLine.kt` safety pattern.
+- **Denormal flushing** on delay line writes — prevents performance cliff when signal decays to zero.
+
+**Convenience variant** for pitched feedback (Karplus-Strong):
+
+```kotlin
+fun SignalGen.feedbackTuned(
+    gain: Double = 0.998,
+    maxDelaySamples: Int = 2400,                 // ~20Hz at 48kHz
+    transform: ((Double) -> Double) = { it },
+): SignalGen
+```
+
+Derives delay from `freqHz` at generate-time: `delaySamples = sampleRate / freqHz`. The user doesn't
+need to know sample rate or compute delay manually.
+
+#### Usage Examples
+
+```kotlin
+// Karplus-Strong plucked string
+var lpState = 0.0
+noise.during(0.0, delayMs)
+    .feedbackTuned(gain = 0.998) { sample ->
+        lpState = 0.5 * (sample + lpState)  // one-pole lowpass in feedback
+        lpState
+    }
+
+// Comb filter — simple resonant delay
+signal.feedback(delaySamples = 100.0, gain = 0.7)
+
+// Echo with filtering
+signal.feedback(delaySamples = 24000.0, gain = 0.5) { sample ->
+    lpState = 0.7 * sample + 0.3 * lpState
+    lpState
+}
+```
+
+### Phase Feedback
+
+**Topology:** output modulates the oscillator's own frequency per-sample via `phaseMod`.
+
+Each sample's output determines the next sample's phase increment. This creates a sample-by-sample
+data dependency — the inner SignalGen is called with `length=1` per sample (128 calls per block).
+
+```kotlin
+fun SignalGen.phaseFeedback(
+    delaySamples: Int = 1,
+    depth: Double = 1.0,
+): SignalGen
+```
+
+**Key design decisions:**
+
+- **Per-sample generate()** is inherently required — no block-level optimization possible.
+  Overhead: ~128 function calls/block (~1.3µs) — acceptable.
+- **Frequency multiplier clamped to [0.1, 10.0]** — prevents NaN/aliasing from extreme values.
+- **FM-style feedback, not PM** — the feedback is converted to a frequency multiplier
+  (`1.0 + feedback * depth / freqHz`), not a direct phase offset like the DX7.
+  Produces interesting chaotic timbres; true PM would require a `phaseOffset` field on SignalContext.
+- **Inner generator should be simple** (oscillator, not deep chain) for performance.
+
+#### Depth controls timbre continuously
+
+| depth   | Character                  |
+|---------|----------------------------|
+| 0.0     | Pure sine                  |
+| 0.1-0.3 | Slight harmonic enrichment |
+| 0.5     | Sawtooth-like spectrum     |
+| 0.7-1.0 | Aggressive, buzzy          |
+| >1.0    | Chaotic / noise-like       |
+
+#### Usage Examples
+
+```kotlin
+// DX7-style self-modulating operator
+sine.phaseFeedback(delaySamples = 1, depth = 0.5)
+
+// Variable waveshaping via feedback depth
+sine.phaseFeedback(1, depth = lfoValue * 0.8)
+
+// Phase feedback exciting a resonant delay (metallic pluck with FM character)
+sine.phaseFeedback(1, depth = 0.3)
+    .feedbackTuned(gain = 0.995) { sample ->
+        lpState = 0.5 * (sample + lpState); lpState
+    }
+```
+
+### Synthesis Techniques Enabled
+
+| Technique            | Combinator                                | Example                          |
+|----------------------|-------------------------------------------|----------------------------------|
+| Karplus-Strong pluck | `feedbackTuned` + lowpass transform       | Guitar, harp, bass, banjo        |
+| Comb filter          | `feedback` (no transform)                 | Metallic resonance, flanger body |
+| Physical model tube  | `feedbackTuned` + continuous injection    | Flute, didgeridoo                |
+| FM self-modulation   | `phaseFeedback(1, depth)`                 | DX7 growl, electric piano bark   |
+| Chaotic oscillator   | `phaseFeedback(1, depth > 1.0)`           | Textured noise, evolving timbres |
+| Echo / tape delay    | `feedback(longDelay)` + filtering         | Dub echo, tape degradation       |
+| Bowed string         | `feedbackTuned` + continuous noise inject | Sustained string-like drone      |
+
+---
+
 ## Backward Compatibility
 
 ### OscFn Bridge
@@ -700,6 +830,317 @@ SynthVoice(signal = signal, freqHz = freqHz)
 
 ---
 
+## Parameterized SignalGen Registry (2026-03-20)
+
+### Problem
+
+Hard-coded SignalGen oscillators (sgpad, sgbell, sgbuzz) proved the architecture works end-to-end.
+But every new oscillator requires a code change. We need:
+
+1. **A registry** so oscillators are looked up by name, not hard-coded in `when` blocks
+2. **Per-playback instances** so KlangScript can register custom oscillators scoped to a playback session
+3. **Parameterization** so oscillator timbres can be controlled from strudel patterns without
+   serializing the entire composition tree per voice
+
+### Architecture
+
+```
+Global SignalGenRegistry (sine, saw, sgpad, sgbell, ...)
+  └─ Per-playback fork() (inherits defaults, adds KlangScript-registered oscillators)
+       └─ Per-voice: factory(resolvedParams) → fresh SignalGen instance
+```
+
+Each voice gets a **fresh SignalGen instance** (factory pattern). Mutable state (phase, filter
+memory) is isolated per-voice. The composition recipe lives in the registry; only param values
+vary per voice.
+
+### Core Types
+
+#### OscParamSchema
+
+Maps parameter names to array indices. Immutable after construction. Used once at `makeVoice()`
+time to resolve `Map<String, Double>` (from VoiceData) into `DoubleArray` (for hot-loop access).
+
+```kotlin
+class OscParamSchema private constructor(
+    val params: List<ParamDef>,
+    private val nameToIndex: Map<String, Int>,
+) {
+    data class ParamDef(
+        val name: String,
+        val index: Int,
+        val default: Double,
+        val min: Double = Double.NEGATIVE_INFINITY,
+        val max: Double = Double.POSITIVE_INFINITY,
+    )
+
+    /** Resolve name→value map into indexed DoubleArray. Missing values get defaults. */
+    fun resolve(values: Map<String, Double>?): DoubleArray
+
+    companion object {
+        val EMPTY = OscParamSchema(emptyList(), emptyMap())
+        val EMPTY_PARAMS = DoubleArray(0)
+
+        fun build(block: Builder.() -> Unit): OscParamSchema
+    }
+
+    class Builder {
+        fun param(name: String, default: Double, min: Double = ..., max: Double = ...)
+    }
+}
+```
+
+#### SignalGenRegistry
+
+Two-tier lookup. Global tier populated at startup; per-playback tier created via `fork()`.
+
+```kotlin
+typealias SignalGenFactory = (params: DoubleArray) -> SignalGen
+
+class SignalGenDef(
+    val name: String,
+    val schema: OscParamSchema,
+    val factory: SignalGenFactory,
+)
+
+class SignalGenRegistry {
+    fun register(def: SignalGenDef)
+    fun get(name: String): SignalGenDef?
+    fun contains(name: String): Boolean
+    fun names(): Set<String>
+
+    /** Shallow-copy all defs into a new child registry. */
+    fun fork(): SignalGenRegistry
+}
+```
+
+**Design rationale:**
+
+- `fork()` shallow-copies the HashMap. O(1) lookup, no parent-chain traversal.
+- Factory receives resolved `DoubleArray` — params baked into closures at voice creation time.
+- Factory called at `makeVoice()`, not in hot loop. Fresh closures = independent mutable state.
+
+#### SignalContext.params
+
+Add resolved params to `SignalContext` for hot-loop indexed access:
+
+```kotlin
+class SignalContext(
+    // ... existing static per-voice fields ...
+    val params: DoubleArray = OscParamSchema.EMPTY_PARAMS,  // NEW
+    // ... existing mutable per-block fields ...
+)
+```
+
+Hot-loop access: `ctx.params[0]` — zero overhead array index. No boxing, no map lookup.
+
+### Parameter Design
+
+**Control-rate (per-block) for strudel params.** Pattern values change at note boundaries, not
+per-sample. The resolved `DoubleArray` is set once at voice creation and remains constant.
+
+**Per-sample modulation where musically necessary** is already handled by existing mechanisms:
+
+- Frequency modulation → `ctx.phaseMod`
+- Amplitude modulation → `times()` operator (ring mod)
+- Filter cutoff modulation → make `cutoffHz` accept a `SignalGen` (future, compositional approach)
+
+**No modulation bus needed.** The existing compositional approach (phaseMod, times, filter-as-SignalGen)
+covers the important cases without index-mapping complexity.
+
+### Default Oscillator Registration
+
+Migrates hard-coded `SignalGenOscillators` to parameterized registry entries:
+
+```kotlin
+fun SignalGenRegistry.registerDefaults() {
+    register(SignalGenDef(
+        name = "sgpad",
+        schema = OscParamSchema.build {
+            param("detune", default = 0.1, min = 0.0, max = 24.0)
+            param("cutoff", default = 3000.0, min = 20.0, max = 20000.0)
+        },
+        factory = { params ->
+            val osc1 = SignalGens.sawtooth()
+            val osc2 = SignalGens.sawtooth().detune(params[0])
+            (osc1 + osc2).div(2.0).onePoleLowpass(params[1])
+        }
+    ))
+
+    register(SignalGenDef(
+        name = "sgbell",
+        schema = OscParamSchema.build {
+            param("ratio", default = 1.4, min = 0.1, max = 20.0)
+            param("depth", default = 300.0, min = 0.0, max = 5000.0)
+            param("decay", default = 0.5, min = 0.01, max = 10.0)
+        },
+        factory = { params ->
+            SignalGens.sine().fm(
+                modulator = SignalGens.sine(),
+                ratio = params[0],
+                depth = params[1],
+                envAttackSec = 0.001,
+                envDecaySec = params[2],
+                envSustainLevel = 0.0,
+            )
+        }
+    ))
+
+    register(SignalGenDef(
+        name = "sgbuzz",
+        schema = OscParamSchema.build {
+            param("cutoff", default = 2000.0, min = 20.0, max = 20000.0)
+        },
+        factory = { params ->
+            SignalGens.square().lowpass(params[0])
+        }
+    ))
+}
+```
+
+### Pipeline Interaction: Stack, Don't Bypass
+
+SignalGen compositions go through the full AbstractVoice pipeline (pre-filters, main filter,
+ADSR envelope, post-filters, panning/mixing). They **stack**, they don't bypass.
+
+**Rationale:**
+
+- `sound("sgpad").lpf(2000)` must work the same as `sound("sine").lpf(2000)`
+- Pipeline handles routing (pan, orbit sends, delay/reverb, ducking, gain multiplier)
+- Pattern ADSR controls dynamics; SignalGen internal ADSR (if any) is timbral identity only
+
+**Convention:** SignalGen factories registered via KlangScript should generally NOT include
+`.adsr()` unless the envelope shape is part of the timbre identity (e.g., a bell that must
+decay regardless of pattern settings).
+
+### VoiceData Transport
+
+Add oscillator params to `VoiceData` (audio_bridge):
+
+```kotlin
+data class VoiceData(
+    // ... existing fields ...
+    val osciParams: Map<String, Double>? = null,  // NEW
+)
+```
+
+- `null` when unused — zero serialization overhead for existing voices
+- `Map<String, Double>` because strudel doesn't know the param schema (it's on the backend)
+- Resolution to indexed `DoubleArray` happens at `makeVoice()` via `OscParamSchema.resolve()`
+
+### Strudel Integration
+
+Pattern-based parameter control — each param is a regular strudel pattern:
+
+```javascript
+sound("sgpad").osciParam("detune", "0.1 0.5").osciParam("cutoff", rand.range(1000, 5000))
+sound("sgbell").osciParam("ratio", "1.4 2.8").osciParam("decay", 0.8)
+```
+
+Implementation: `.osciParam("name", value)` accumulates name-value pairs into `VoiceData.osciParams`.
+Works like any strudel control (`.gain()`, `.cutoff()`, etc.).
+
+### KlangScript Registration API
+
+```
+registerOsc("myPad", { detune: 0.1, cutoff: 3000.0 }) { params ->
+    val osc1 = sawtooth()
+    val osc2 = sawtooth().detune(params.detune)
+    (osc1 + osc2).div(2.0).lowpass(params.cutoff)
+}
+```
+
+Registers on the per-playback `SignalGenRegistry` (forked from global). The interpreter:
+
+1. Builds `OscParamSchema` from the defaults map
+2. Creates a `SignalGenFactory` that evaluates the body with resolved params
+3. Registers a `SignalGenDef` on the playback's registry
+
+### VoiceScheduler Integration
+
+```kotlin
+// In makeVoice(), the isOsci branch:
+val sgDef = options.signalGenRegistry.get(sound ?: "")
+val osc = if (sgDef != null) {
+    val resolvedParams = sgDef.schema.resolve(data.osciParams)
+    val signalGen = sgDef.factory(resolvedParams)
+    signalGen.toOscFn(
+        sampleRate = sampleRate,
+        voiceDurationFrames = voiceDurationFrames,
+        gateEndFrame = gateEndFrameRel,
+        releaseFrames = releaseFrames,
+        voiceEndFrame = voiceEndFrame,
+        scratchBuffers = scratchBuffers,
+        params = resolvedParams,
+    )
+} else {
+    data.createOscillator(oscillators = options.oscillators, freqHz = freqHz)
+}
+```
+
+### Real-Time Safety Notes
+
+**Address now:**
+
+- Pre-allocate modulation buffers in FM/vibrato/accelerate at construction time (currently
+  lazy-allocated on first `generate()` call — allocation in audio thread)
+- Pre-size `ScratchBuffers` to 8 and assert if pool grows at runtime
+- Cap voice promotions per block (~8) to limit allocation bursts on JS AudioWorklet
+
+**Performance:**
+
+- Complex SignalGen trees (~10-15 nested lambdas) are fine; V8 inlines many of them
+- Triangle `asin(sin(phase))` costs two transcendentals per sample — replace with phase-based math
+- Consider `typealias SignalBuffer = DoubleArray` now for future Float32 migration
+- Practical voice limit: 8-12 complex SignalGen voices on JS, 16-24 simple ones
+
+### Migration Path
+
+**Phase 1 — Registry infrastructure (no behavior change):**
+
+1. Create `OscParamSchema.kt`
+2. Create `SignalGenRegistry.kt` (`SignalGenDef`, `SignalGenFactory`, `SignalGenRegistry`)
+3. Create `SignalGenDefaults.kt` (migrates hard-coded oscillators with param schemas)
+4. Add `params` to `SignalContext` (backward compatible, defaults to empty array)
+5. Update `SignalGenBridge.toOscFn()` to accept `params`
+
+**Phase 2 — Wire registry into voice pipeline:**
+
+6. Add `osciParams` to `VoiceData` + update `VoiceData.empty`
+7. Add `signalGenRegistry` to `VoiceScheduler.Options`
+8. Update `VoiceScheduler.isOscillator()` and `makeVoice()` to use registry
+9. Initialize global registry with `registerDefaults()` at backend startup
+10. Delete `SignalGenOscillators.kt`
+
+**Phase 3 — Strudel + KlangScript integration:**
+
+11. Add `.osciParam()` control to strudel pattern layer
+12. Wire `osciParam` values into `VoiceData.osciParams`
+13. Add `registerOsc` to KlangScript stdlib
+14. Create per-playback registry forking from global
+
+**Optional — OscFn wrapping:**
+Existing `Oscillators` (OscFn-based) continue unchanged. The fallback path in `makeVoice()`
+checks SignalGenRegistry first, then Oscillators. OscFn oscillators can be wrapped and
+registered incrementally via `OscFn.toSignalGen()`.
+
+### Files Summary
+
+| File                                | Action     | Changes                                                        |
+|-------------------------------------|------------|----------------------------------------------------------------|
+| `signalgen/OscParamSchema.kt`       | **CREATE** | ParamDef, Builder, resolve(), defaults()                       |
+| `signalgen/SignalGenRegistry.kt`    | **CREATE** | SignalGenDef, SignalGenFactory, SignalGenRegistry              |
+| `signalgen/SignalGenDefaults.kt`    | **CREATE** | registerDefaults() with parameterized sgpad/sgbell/sgbuzz      |
+| `signalgen/SignalContext.kt`        | **MODIFY** | Add `val params: DoubleArray`                                  |
+| `signalgen/SignalGenBridge.kt`      | **MODIFY** | Add `params` parameter to `toOscFn()`                          |
+| `audio_bridge/VoiceData.kt`         | **MODIFY** | Add `val osciParams: Map<String, Double>?`                     |
+| `voices/VoiceScheduler.kt`          | **MODIFY** | Add registry to Options, use in isOscillator() and makeVoice() |
+| `signalgen/SignalGenOscillators.kt` | **DELETE** | Replaced by SignalGenDefaults.kt                               |
+| Strudel pattern layer               | **MODIFY** | Add .osciParam() control                                       |
+| KlangScript stdlib                  | **MODIFY** | Add registerOsc built-in                                       |
+
+---
+
 ## Performance Notes
 
 - **Primitive inner loops**: identical to current `OscFn` — `phaseInc` computed once per block, tight for-loop
@@ -764,12 +1205,10 @@ cases, but:
 
 ### Missing Features (by priority)
 
-1. **Feedback combinator** (from Faust's `~` operator) — highest-leverage gap
-    - Pattern: `A.feedback(delaySamples) { transform }`
-    - Collapses Karplus-Strong, comb filters, FM feedback (DX7 op6→6), waveguide into composition algebra
-    - Eliminates need for Karplus-Strong as a special-cased class
-    - Example: `sine.feedback(1) { it.times(feedbackAmount) }` = FM self-modulation
-    - Example: `noise.feedback(pitchSamples) { it.lowpass(damping) }` = Karplus-Strong
+1. ~~**Feedback combinator**~~ — ✅ **DESIGNED** (2026-03-20). See "Feedback Combinators" section above.
+    - `feedback(delaySamples, gain) { transform }` — output feedback with fractional delay
+    - `feedbackTuned(gain) { transform }` — pitch-aware variant for Karplus-Strong
+    - `phaseFeedback(delaySamples, depth)` — FM-style phase self-modulation
 
 2. **Buffer-rate frequency** — see above. At minimum, design the seam.
 
@@ -933,14 +1372,14 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 
 ### Structural Combinators
 
-| Block                 | Description                                                      | Effort | Impact | Notes                                                                         |
-|-----------------------|------------------------------------------------------------------|--------|--------|-------------------------------------------------------------------------------|
-| **Feedback**          | `A.feedback(delaySamples) { transform }` — Faust's `~` operator. | M      | H      | Gates all recursive topologies: KS, comb, FM feedback, waveguide.             |
-| **FeedInject**        | Continuous signal injection into active delay line.              | M      | H      | Bowed strings, drones, blown tubes. Commuted synthesis approach.              |
-| **Crossfade / Morph** | Smooth interpolation between two SignalGens.                     | L      | M      | Timbral animation, vector synthesis, wavetable morphing.                      |
-| **Oversample**        | Run wrapped SignalGen at Nx rate, decimate with anti-alias LPF.  | M      | H      | Essential for waveshaper/distortion. 2x-8x. Per-node, not global.             |
-| **ControlRate**       | Compute once per block, broadcast to buffer. For modulators.     | L      | M      | LFOs, envelopes, drift don't need audio-rate. Saves significant CPU.          |
-| **Waveguide**         | Bidirectional coupled delay lines with reflection filters.       | H      | M      | Tubes, strings, membranes. Needs mandatory loss filter (energy conservation). |
+| Block                 | Description                                                                             | Effort | Impact | Notes                                                                         |
+|-----------------------|-----------------------------------------------------------------------------------------|--------|--------|-------------------------------------------------------------------------------|
+| ~~**Feedback**~~      | ✅ **DESIGNED** — `feedback()`, `feedbackTuned()`, `phaseFeedback()`. See section above. | M      | H      | Gates all recursive topologies: KS, comb, FM feedback, waveguide.             |
+| **FeedInject**        | Continuous signal injection into active delay line.                                     | M      | H      | Bowed strings, drones, blown tubes. Commuted synthesis approach.              |
+| **Crossfade / Morph** | Smooth interpolation between two SignalGens.                                            | L      | M      | Timbral animation, vector synthesis, wavetable morphing.                      |
+| **Oversample**        | Run wrapped SignalGen at Nx rate, decimate with anti-alias LPF.                         | M      | H      | Essential for waveshaper/distortion. 2x-8x. Per-node, not global.             |
+| **ControlRate**       | Compute once per block, broadcast to buffer. For modulators.                            | L      | M      | LFOs, envelopes, drift don't need audio-rate. Saves significant CPU.          |
+| **Waveguide**         | Bidirectional coupled delay lines with reflection filters.                              | H      | M      | Tubes, strings, membranes. Needs mandatory loss filter (energy conservation). |
 
 ### Effects / Post-Processing
 

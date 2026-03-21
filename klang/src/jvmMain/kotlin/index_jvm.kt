@@ -24,6 +24,7 @@ private val audioDispatcher = createHighPriorityDispatcher(
  */
 actual fun klangPlayer(
     options: KlangPlayer.Options,
+    onReady: (KlangPlayer) -> Unit,
 ): KlangPlayer {
     val sampleRate = resolveBestSampleRate(options.sampleRate)
 
@@ -34,6 +35,7 @@ actual fun klangPlayer(
     return KlangPlayer(
         options = effectiveOptions,
         backendFactory = { config -> JvmAudioBackend(config) },
+        onReady = onReady,
         fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = audioDispatcher,
         callbackDispatcher = Dispatchers.Default,

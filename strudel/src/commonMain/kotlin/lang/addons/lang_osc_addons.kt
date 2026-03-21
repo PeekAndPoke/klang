@@ -6,6 +6,7 @@ import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.strudel.lang.*
 import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.strudel.withOscParam
 
 /**
  * ADDONS: Oscillator-related functions that are NOT available in the original strudel impl
@@ -20,7 +21,7 @@ var strudelLangOscAddonsInit = false
 // -- warmth() ---------------------------------------------------------------------------------------------------------
 
 private val warmthMutation = voiceModifier {
-    copy(warmth = it?.asDoubleOrNull())
+    withOscParam("warmth", it?.asDoubleOrNull())
 }
 
 private fun applyWarmth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {

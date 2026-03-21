@@ -7,7 +7,7 @@ import de.peekandpoke.kraft.utils.onResize
 import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
-import io.peekandpoke.klang.audio_bridge.createVisualizerBuffer
+import io.peekandpoke.klang.audio_bridge.analyzer.createAnalyzerBuffer
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.browser.window
@@ -83,7 +83,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     private var visualizerAnimFrame: Int? = null
 
     // FFT size is typically 2048, resulting in 1024 frequency bins
-    private val visualizerBuffer = createVisualizerBuffer(1024).also { buffer ->
+    private val visualizerBuffer = createAnalyzerBuffer(1024).also { buffer ->
         // Initialize with silence (-100 dB) so nothing displays before audio starts
         for (i in 0 until buffer.length) {
             buffer[i] = -100.0f
@@ -130,7 +130,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
     private fun processVisualizer() {
         props.player()?.let { player ->
             // This fills the buffer with frequency data in Decibels (dB)
-            player.getVisualizer()?.getFft(visualizerBuffer)
+            player.getAnalyzer()?.getFft(visualizerBuffer)
         }
 
         drawSpectrum()

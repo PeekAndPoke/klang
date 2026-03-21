@@ -150,15 +150,15 @@ class SampleVoice(
 
             // Check strict end
             if (ph >= samplePlayback.stopFrame) {
-                out[idxOut] = 0.0
+                out[idxOut] = 0.0f
             } else {
                 // Read Sample with linear interpolation
                 val base = ph.toInt()
 
                 if (base >= pcmMax) {
-                    out[idxOut] = 0.0
+                    out[idxOut] = 0.0f
                 } else if (base >= 0) {
-                    val frac = ph - base.toDouble()
+                    val frac = (ph - base.toDouble()).toFloat()
                     val a = pcm[base]
                     val b = pcm[base + 1]
                     val sampleValue = a + (b - a) * frac

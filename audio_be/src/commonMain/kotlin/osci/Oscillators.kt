@@ -16,7 +16,7 @@ fun interface OscFn {
      * Returns the next phase value.
      */
     fun process(
-        buffer: DoubleArray,
+        buffer: FloatArray,
         offset: Int,
         length: Int,
         phase: Double,
@@ -43,9 +43,9 @@ fun OscFn.withWarmth(warmthFactor: Double): OscFn {
         // 2. Apply One-Pole LPF
         val end = offset + length
         for (i in offset until end) {
-            val raw = buffer[i]
+            val raw = buffer[i].toDouble()
             val smoothed = raw + alpha * (lastSample - raw)
-            buffer[i] = smoothed
+            buffer[i] = smoothed.toFloat()
             lastSample = smoothed
         }
 
@@ -91,7 +91,7 @@ class Oscillators private constructor(
         private val namesSet = Names.entries.map { it.name }.toSet()
 
         val silenceFn = OscFn { buffer, offset, length, _, _, _ ->
-            buffer.fill(0.0, offset, offset + length)
+            buffer.fill(0.0f, offset, offset + length)
             0.0
         }
 
@@ -101,13 +101,13 @@ class Oscillators private constructor(
 
             if (phaseMod == null) {
                 for (i in offset until end) {
-                    buffer[i] = gain * sin(p)
+                    buffer[i] = (gain * sin(p)).toFloat()
                     p += phaseInc
                     if (p >= TWO_PI) p -= TWO_PI
                 }
             } else {
                 for (i in offset until end) {
-                    buffer[i] = gain * sin(p)
+                    buffer[i] = (gain * sin(p)).toFloat()
                     p += phaseInc * phaseMod[i]
                     if (p >= TWO_PI) p -= TWO_PI
                 }
@@ -129,7 +129,7 @@ class Oscillators private constructor(
                     out -= polyBlep(p, inc)
 
                     // Apply Gain
-                    buffer[i] = gain * out
+                    buffer[i] = (gain * out).toFloat()
 
                     p += inc
                     if (p >= 1.0) p -= 1.0
@@ -141,7 +141,7 @@ class Oscillators private constructor(
                     var out = 2.0 * p - 1.0
                     out -= polyBlep(p, dt)
 
-                    buffer[i] = gain * out
+                    buffer[i] = (gain * out).toFloat()
 
                     p += dt
                     if (p >= 1.0) p -= 1.0
@@ -157,13 +157,13 @@ class Oscillators private constructor(
 
             if (phaseMod == null) {
                 for (i in offset until end) {
-                    buffer[i] = gain * if (sin(p) >= 0.0) 1.0 else -1.0
+                    buffer[i] = (gain * if (sin(p) >= 0.0) 1.0 else -1.0).toFloat()
                     p += phaseInc
                     if (p >= TWO_PI) p -= TWO_PI
                 }
             } else {
                 for (i in offset until end) {
-                    buffer[i] = gain * if (sin(p) >= 0.0) 1.0 else -1.0
+                    buffer[i] = (gain * if (sin(p) >= 0.0) 1.0 else -1.0).toFloat()
                     p += phaseInc * phaseMod[i]
                     if (p >= TWO_PI) p -= TWO_PI
                 }
@@ -178,13 +178,13 @@ class Oscillators private constructor(
 
             if (phaseMod == null) {
                 for (i in offset until end) {
-                    buffer[i] = gain * norm * asin(sin(p))
+                    buffer[i] = (gain * norm * asin(sin(p))).toFloat()
                     p += phaseInc
                     if (p >= TWO_PI) p -= TWO_PI
                 }
             } else {
                 for (i in offset until end) {
-                    buffer[i] = gain * norm * asin(sin(p))
+                    buffer[i] = (gain * norm * asin(sin(p))).toFloat()
                     p += phaseInc * phaseMod[i]
                     if (p >= TWO_PI) p -= TWO_PI
                 }
@@ -201,7 +201,7 @@ class Oscillators private constructor(
                 for (i in offset until end) {
                     val x = p * invTwoPi
                     val frac = x - floor(x)
-                    buffer[i] = gain * (frac * 2.0 - 1.0)
+                    buffer[i] = (gain * (frac * 2.0 - 1.0)).toFloat()
                     p += phaseInc
                     if (p >= TWO_PI) p -= TWO_PI
                 }
@@ -209,7 +209,7 @@ class Oscillators private constructor(
                 for (i in offset until end) {
                     val x = p * invTwoPi
                     val frac = x - floor(x)
-                    buffer[i] = gain * (frac * 2.0 - 1.0)
+                    buffer[i] = (gain * (frac * 2.0 - 1.0)).toFloat()
                     p += phaseInc * phaseMod[i]
                     if (p >= TWO_PI) p -= TWO_PI
                 }
@@ -234,10 +234,6 @@ class Oscillators private constructor(
             val phases = DoubleArray(v) { rng.nextDouble() }
 
             // MONO OPTIMIZATION:
-            // In stereo, panSpread splits energy between L/R.
-            // In mono, summing L+R of a coherent signal (same phase) just sums amplitudes.
-            // To prevent volume swelling at center pan (where sqrt(0.5)+sqrt(0.5) > 1),
-            // we ignore panSpread for mono output and just normalize by voice count.
             val voiceGain = gain / v.toDouble()
 
             // Pre-calculate detunes per voice
@@ -255,23 +251,20 @@ class Oscillators private constructor(
                     // OPTIMIZED PATH: No Phase Modulation
 
                     // --- Voice 0 (Write / Overwrite Buffer) ---
-                    // We unroll the first voice to initialize the buffer instead of filling with 0.0 first
                     run {
                         var p = phases[0]
                         val dt = detunes[0]
 
                         if (dt <= blepMinDt) {
-                            // DC / Low freq path (no blep)
                             for (i in offset until end) {
-                                buffer[i] = (2.0 * p - 1.0) * voiceGain
+                                buffer[i] = ((2.0 * p - 1.0) * voiceGain).toFloat()
                                 p += dt
                                 if (p >= 1.0) p -= 1.0
                             }
                         } else {
-                            // Audio rate path (polyBlep)
                             for (i in offset until end) {
                                 val blep = polyBlep(p, dt)
-                                buffer[i] = (2.0 * p - 1.0 - blep) * voiceGain
+                                buffer[i] = ((2.0 * p - 1.0 - blep) * voiceGain).toFloat()
                                 p += dt
                                 if (p >= 1.0) p -= 1.0
                             }
@@ -286,14 +279,14 @@ class Oscillators private constructor(
 
                         if (dt <= blepMinDt) {
                             for (i in offset until end) {
-                                buffer[i] += (2.0 * p - 1.0) * voiceGain
+                                buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain).toFloat()
                                 p += dt
                                 if (p >= 1.0) p -= 1.0
                             }
                         } else {
                             for (i in offset until end) {
                                 val blep = polyBlep(p, dt)
-                                buffer[i] += (2.0 * p - 1.0 - blep) * voiceGain
+                                buffer[i] = (buffer[i] + (2.0 * p - 1.0 - blep) * voiceGain).toFloat()
                                 p += dt
                                 if (p >= 1.0) p -= 1.0
                             }
@@ -308,7 +301,6 @@ class Oscillators private constructor(
 
                         for (n in 0 until v) {
                             var p = phases[n]
-                            // Linear FM: mod is a frequency multiplier (1.0 = no change)
                             val dt = detunes[n] * mod
 
                             val s = if (dt <= blepMinDt) {
@@ -323,7 +315,7 @@ class Oscillators private constructor(
                             if (p >= 1.0) p -= 1.0
                             phases[n] = p
                         }
-                        buffer[i] = sum * voiceGain
+                        buffer[i] = (sum * voiceGain).toFloat()
                     }
                 }
 
@@ -344,7 +336,7 @@ class Oscillators private constructor(
                 for (i in offset until end) {
                     val x = p * invTwoPi
                     val cyclePos = x - floor(x)
-                    buffer[i] = gain * if (cyclePos < d) 1.0 else -1.0
+                    buffer[i] = (gain * if (cyclePos < d) 1.0 else -1.0).toFloat()
                     p += phaseInc
                     if (p >= TWO_PI) p -= TWO_PI
                 }
@@ -352,7 +344,7 @@ class Oscillators private constructor(
                 for (i in offset until end) {
                     val x = p * invTwoPi
                     val cyclePos = x - floor(x)
-                    buffer[i] = gain * if (cyclePos < d) 1.0 else -1.0
+                    buffer[i] = (gain * if (cyclePos < d) 1.0 else -1.0).toFloat()
                     p += phaseInc * phaseMod[i]
                     if (p >= TWO_PI) p -= TWO_PI
                 }
@@ -369,14 +361,14 @@ class Oscillators private constructor(
 
                 if (phaseMod == null) {
                     for (i in offset until end) {
-                        buffer[i] = if (p < lastPhase) 1.0 else 0.0
+                        buffer[i] = if (p < lastPhase) 1.0f else 0.0f
                         lastPhase = p
                         p += phaseInc
                         if (p >= TWO_PI) p -= TWO_PI
                     }
                 } else {
                     for (i in offset until end) {
-                        buffer[i] = if (p < lastPhase) 1.0 else 0.0
+                        buffer[i] = if (p < lastPhase) 1.0f else 0.0f
                         lastPhase = p
                         p += phaseInc * phaseMod[i]
                         if (p >= TWO_PI) p -= TWO_PI
@@ -392,7 +384,7 @@ class Oscillators private constructor(
         fun whiteNoiseFn(rng: Random, gain: Double = 1.0) = OscFn { buffer, offset, length, _, _, _ ->
             val end = offset + length
             for (i in offset until end) {
-                buffer[i] = gain * (rng.nextDouble() * 2.0 - 1.0)
+                buffer[i] = (gain * (rng.nextDouble() * 2.0 - 1.0)).toFloat()
             }
             0.0
         }
@@ -405,7 +397,7 @@ class Oscillators private constructor(
                 for (i in offset until end) {
                     val white = rng.nextDouble() * 2.0 - 1.0
                     out = (out + 0.02 * white) / 1.02
-                    buffer[i] = gain * out
+                    buffer[i] = (gain * out).toFloat()
                 }
                 0.0
             }
@@ -432,7 +424,7 @@ class Oscillators private constructor(
                     b5 = -0.7616 * b5 - white * 0.0168980
                     val pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362
                     b6 = white * 0.115926
-                    buffer[i] = gain * (pink * 0.11)
+                    buffer[i] = (gain * (pink * 0.11)).toFloat()
                 }
                 0.0
             }
@@ -450,7 +442,7 @@ class Oscillators private constructor(
             val end = offset + length
 
             for (i in offset until end) {
-                buffer[i] = if (rng.nextDouble() < p) rng.nextDouble() else 0.0
+                buffer[i] = if (rng.nextDouble() < p) rng.nextDouble().toFloat() else 0.0f
             }
             0.0
         }
@@ -520,13 +512,13 @@ class Oscillators private constructor(
         saw, sawtooth,
 
         // Zawtooth
-        zaw, zawtooth, z_zawtooth,
+        zaw, zawtooth,
 
         // Supersaw
-        supersaw, z_supersaw,
+        supersaw,
 
         // Pulze
-        pulze, z_pulze,
+        pulze,
 
         // Impulse
         impulse,
@@ -658,8 +650,8 @@ class Oscillators private constructor(
                 Names.sqr, Names.square, Names.pulse -> square
                 Names.tri, Names.triangle -> triangle
                 Names.sin, Names.sine -> sine
-                Names.zaw, Names.zawtooth, Names.z_zawtooth -> zawtooth
-                Names.supersaw, Names.z_supersaw -> if (freqHz != null) {
+                Names.zaw, Names.zawtooth -> zawtooth
+                Names.supersaw -> if (freqHz != null) {
                     this.supersaw(
                         /* sampleRate */ sampleRate,
                         /* baseFreqHz */  freqHz,
@@ -672,7 +664,7 @@ class Oscillators private constructor(
                     silence
                 }
 
-                Names.pulze, Names.z_pulze -> pulze // TODO: parameterize
+                Names.pulze -> pulze // TODO: parameterize
                 Names.impulse -> this.impulse()
 
                 // Noises

@@ -24,7 +24,7 @@ class TremoloFilter(
     // Pre-calculate phase increment
     private val phaseIncrement: Double = (rate * TWO_PI) / sampleRate
 
-    override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+    override fun process(buffer: FloatArray, offset: Int, length: Int) {
         // Early return if no tremolo
         if (depth <= 0.0) return
 
@@ -47,7 +47,7 @@ class TremoloFilter(
             val gain = 1.0 - (depth * (1.0 - lfoNorm))
 
             // Apply modulation
-            buffer[idx] *= gain
+            buffer[idx] = (buffer[idx] * gain).toFloat()
         }
     }
 }

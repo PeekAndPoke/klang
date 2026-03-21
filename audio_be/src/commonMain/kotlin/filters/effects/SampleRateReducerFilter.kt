@@ -14,10 +14,10 @@ class SampleRateReducerFilter(
 ) : AudioFilter {
 
     // State: holds the last sampled value and frame counter
-    private var lastValue: Double = 0.0
+    private var lastValue: Float = 0.0f
     private var counter: Double = 0.0
 
-    override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+    override fun process(buffer: FloatArray, offset: Int, length: Int) {
         // Early return if no reduction
         if (amount <= 1.0) return
 

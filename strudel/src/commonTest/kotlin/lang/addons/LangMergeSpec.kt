@@ -58,9 +58,9 @@ class LangMergeSpec : StringSpec({
 
         assertSoftly {
             events.shouldHaveSize(2)
-            events[0].data.warmth shouldBe (0.3 plusOrMinus EPSILON)  // source warmth preserved
+            events[0].data.oscParams?.get("warmth") shouldBe (0.3 plusOrMinus EPSILON)  // source warmth preserved
             events[0].data.sound shouldBe "sine"                        // sound from control
-            events[1].data.warmth shouldBe (0.7 plusOrMinus EPSILON)
+            events[1].data.oscParams?.get("warmth") shouldBe (0.7 plusOrMinus EPSILON)
             events[1].data.sound shouldBe "supersaw"
         }
     }

@@ -79,7 +79,7 @@ class Orbits(
                 val orbitLeft = orbit.mixBuffer.left
 
                 for (i in 0 until blockFrames) {
-                    masterLeft[i] += orbitLeft[i]
+                    masterLeft[i] = masterLeft[i] + orbitLeft[i]
                 }
             }
 
@@ -88,7 +88,7 @@ class Orbits(
                 val orbitRight = orbit.mixBuffer.right
 
                 for (i in 0 until blockFrames) {
-                    masterRight[i] += orbitRight[i]
+                    masterRight[i] = masterRight[i] + orbitRight[i]
                 }
             }
         }

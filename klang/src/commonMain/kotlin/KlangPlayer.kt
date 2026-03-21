@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_engine
 
 import de.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.klang.audio_be.AudioAnalyzer
 import io.peekandpoke.klang.audio_be.AudioBackend
-import io.peekandpoke.klang.audio_be.AudioVisualizer
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.samples.Samples
@@ -18,6 +18,8 @@ class KlangPlayer(
     private val backendFactory: suspend (config: AudioBackend.Config) -> AudioBackend,
     /** The coroutines scope on which the player runs */
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    /** Called when the backend is ready to receive samples */
+    val onReady: (KlangPlayer) -> Unit,
     /** The dispatcher used for the event fetcher */
     private val fetcherDispatcher: CoroutineDispatcher,
     /** The dispatcher used for the audio backend */
@@ -94,6 +96,9 @@ class KlangPlayer(
             // Store backend reference for visualizer access
             _activeBackend = backend
 
+            // Call the onReady callback
+            onReady(this@KlangPlayer)
+
             launch(backendDispatcher.limitedParallelism(1)) {
                 backend.run(this)
             }
@@ -152,9 +157,9 @@ class KlangPlayer(
     }
 
     /**
-     * Get the visualizer
+     * Get the audio analyzer for visualization data.
      */
-    fun getVisualizer(): AudioVisualizer? = _activeBackend?.visualizer
+    fun getAnalyzer(): AudioAnalyzer? = _activeBackend?.analyzer
 
     /**
      * Register a playback.

@@ -156,10 +156,7 @@ class StrudelVoiceDataSpec : StringSpec({
             bank = "MPC60",
             sound = "bd",
             soundIndex = 2,
-            density = 0.5,
-            panSpread = 0.3,
-            freqSpread = 0.1,
-            voices = 3.0,
+            oscParams = mapOf("density" to 0.5, "panSpread" to 0.3, "freqSpread" to 0.1, "voices" to 3.0),
             accelerate = 0.05,
             vibrato = 0.2,
             vibratoMod = 0.4,
@@ -190,10 +187,10 @@ class StrudelVoiceDataSpec : StringSpec({
         voiceData.bank shouldBe "MPC60"
         voiceData.sound shouldBe "bd"
         voiceData.soundIndex shouldBe 2
-        voiceData.density shouldBe 0.5
-        voiceData.panSpread shouldBe 0.3
-        voiceData.freqSpread shouldBe 0.1
-        voiceData.voices shouldBe 3.0
+        voiceData.oscParams?.get("density") shouldBe 0.5
+        voiceData.oscParams?.get("panSpread") shouldBe 0.3
+        voiceData.oscParams?.get("freqSpread") shouldBe 0.1
+        voiceData.oscParams?.get("voices") shouldBe 3.0
         voiceData.accelerate shouldBe 0.05
         voiceData.vibrato shouldBe 0.2
         voiceData.vibratoMod shouldBe 0.4

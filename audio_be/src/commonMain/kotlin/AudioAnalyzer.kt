@@ -1,28 +1,30 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.VisualizerBuffer
+import de.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBuffer
+import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBufferHistory
 
 /**
  * Audio visualization interface.
  * Provides real-time access to waveform and frequency data.
  */
-interface AudioVisualizer {
+interface AudioAnalyzer {
     /**
      * FFT size for analysis (e.g., 2048)
      */
     val fftSize: Int
 
     /**
-     * Fills [out] buffer with time-domain waveform data.
+     * Stream of time-domain waveform data, emitted at a regular interval.
      * Values range from -1.0 to 1.0.
-     * Buffer size should equal fftSize.
+     * Buffer size equals fftSize.
      */
-    fun getWaveform(out: VisualizerBuffer)
+    val waveform: Stream<AnalyzerBufferHistory>
 
     /**
      * Fills [out] buffer with frequency-domain FFT data.
      * Values are magnitudes in dB (typically -100 to 0).
      * Buffer size should equal fftSize / 2 (frequencyBinCount).
      */
-    fun getFft(out: VisualizerBuffer)
+    fun getFft(out: AnalyzerBuffer)
 }

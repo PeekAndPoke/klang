@@ -349,7 +349,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     height = 60.px
                     opacity = currentOpacity
                 }
-                Oscilloscope { Player.get() }
+                Oscilloscope(player = Player.player)
             }
 
             div {

@@ -2,6 +2,9 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
+import io.peekandpoke.klang.audio_be.signalgen.SignalContext
+import io.peekandpoke.klang.audio_be.signalgen.SignalGen
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -27,8 +30,9 @@ object VoiceTestHelpers {
             orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = DoubleArray(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames)
+            voiceBuffer = FloatArray(blockFrames),
+            freqModBuffer = DoubleArray(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
             this.blockStart = blockStart
         }
@@ -43,11 +47,12 @@ object VoiceTestHelpers {
         endFrame: Long = 1000,
         gateEndFrame: Long = 1000,
         orbitId: Int = 0,
+        sampleRate: Int = 44100,
+        blockFrames: Int = 100,
 
         // Synthesis & Pitch
         freqHz: Double = 440.0,
-        phaseInc: Double = 0.1,
-        osc: io.peekandpoke.klang.audio_be.osci.OscFn = TestOscillators.constant,
+        signal: SignalGen = TestSignalGens.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
@@ -76,6 +81,9 @@ object VoiceTestHelpers {
         crush: Voice.Crush = Voice.Crush(0.0),
         coarse: Voice.Coarse = Voice.Coarse(0.0),
     ): SynthVoice {
+        val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
+        val releaseFrames = (endFrame - gateEndFrame).toInt()
+
         return SynthVoice(
             startFrame = startFrame,
             endFrame = endFrame,
@@ -100,9 +108,16 @@ object VoiceTestHelpers {
             distort = distort,
             crush = crush,
             coarse = coarse,
-            osc = osc,
+            signal = signal,
+            signalCtx = SignalContext(
+                sampleRate = sampleRate,
+                voiceDurationFrames = voiceDurationFrames,
+                gateEndFrame = voiceDurationFrames,
+                releaseFrames = releaseFrames,
+                voiceEndFrame = voiceDurationFrames + releaseFrames,
+                scratchBuffers = ScratchBuffers(blockFrames),
+            ),
             freqHz = freqHz,
-            phaseInc = phaseInc
         )
     }
 
@@ -186,7 +201,7 @@ object VoiceTestHelpers {
      * Useful as default when you don't care about filtering.
      */
     object NoOpFilter : AudioFilter {
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             // Do nothing
         }
     }
@@ -200,7 +215,7 @@ object VoiceTestHelpers {
 
         val processCalls = mutableListOf<ProcessCall>()
 
-        override fun process(buffer: DoubleArray, offset: Int, length: Int) {
+        override fun process(buffer: FloatArray, offset: Int, length: Int) {
             processCalls.add(ProcessCall(offset, length, processCalls.size))
         }
 
@@ -294,36 +309,53 @@ object TestSamples {
 }
 
 /**
- * Test oscillators for predictable signal generation.
+ * Test oscillators for predictable signal generation (legacy OscFn interface).
  */
 object TestOscillators {
-    /**
-     * Oscillator that outputs constant 1.0 (useful for testing pipeline without signal variation).
-     */
     val constant = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
         for (i in 0 until length) {
-            buffer[offset + i] = 1.0
+            buffer[offset + i] = 1.0f
         }
         phase
     }
 
-    /**
-     * Oscillator that outputs a ramp from 0.0 to 1.0 over the buffer length.
-     */
     val ramp = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
         for (i in 0 until length) {
-            buffer[offset + i] = i.toDouble() / length
+            buffer[offset + i] = (i.toFloat() / length)
         }
         phase
     }
 
-    /**
-     * Oscillator that outputs silence (all zeros).
-     */
     val silence = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
         for (i in 0 until length) {
-            buffer[offset + i] = 0.0
+            buffer[offset + i] = 0.0f
         }
         phase
+    }
+}
+
+/**
+ * Test signal generators (SignalGen interface).
+ */
+object TestSignalGens {
+    val constant = SignalGen { buffer, _, ctx ->
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
+            buffer[i] = 1.0f
+        }
+    }
+
+    val ramp = SignalGen { buffer, _, ctx ->
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
+            buffer[i] = (i - ctx.offset).toFloat() / ctx.length
+        }
+    }
+
+    val silence = SignalGen { buffer, _, ctx ->
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
+            buffer[i] = 0.0f
+        }
     }
 }

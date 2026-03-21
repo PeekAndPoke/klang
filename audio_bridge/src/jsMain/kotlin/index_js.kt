@@ -2,8 +2,3 @@
 
 package io.peekandpoke.klang.audio_bridge
 
-import org.khronos.webgl.Float32Array
-
-actual typealias VisualizerBuffer = Float32Array
-
-actual fun createVisualizerBuffer(size: Int): VisualizerBuffer = Float32Array(size)

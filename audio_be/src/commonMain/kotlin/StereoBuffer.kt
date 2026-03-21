@@ -4,19 +4,19 @@ package io.peekandpoke.klang.audio_be
  * A stereo buffer.
  */
 class StereoBuffer(blockFrames: Int) {
-    val left = DoubleArray(blockFrames)
-    val right = DoubleArray(blockFrames)
+    val left = FloatArray(blockFrames)
+    val right = FloatArray(blockFrames)
 
     init {
         clear()
     }
 
     fun clear() {
-        left.fill(0.0)
-        right.fill(0.0)
+        left.fill(0.0f)
+        right.fill(0.0f)
     }
 
-    fun fill(value: Double) {
+    fun fill(value: Float) {
         left.fill(value)
         right.fill(value)
     }

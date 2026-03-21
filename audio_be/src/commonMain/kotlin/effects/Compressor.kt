@@ -76,11 +76,11 @@ class Compressor(
     /**
      * Process a stereo buffer in-place.
      */
-    fun process(left: DoubleArray, right: DoubleArray, blockSize: Int) {
+    fun process(left: FloatArray, right: FloatArray, blockSize: Int) {
         val makeupLinear = if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * ln(10.0) / 20.0) else 1.0
 
         for (i in 0 until blockSize) {
-            val inputLevel = max(abs(left[i]), abs(right[i]))
+            val inputLevel = max(abs(left[i].toDouble()), abs(right[i].toDouble()))
 
             // Convert to dB (with floor to avoid log(0))
             val inputDb = if (inputLevel > 1e-10) {
@@ -106,19 +106,19 @@ class Compressor(
 
             // Apply gain reduction and makeup gain
             val totalGain = gainReduction * makeupLinear
-            left[i] *= totalGain
-            right[i] *= totalGain
+            left[i] = (left[i] * totalGain).toFloat()
+            right[i] = (right[i] * totalGain).toFloat()
         }
     }
 
     /**
      * Process a mono buffer in-place.
      */
-    fun process(buffer: DoubleArray, offset: Int, length: Int) {
+    fun process(buffer: FloatArray, offset: Int, length: Int) {
         val makeupLinear = if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * ln(10.0) / 20.0) else 1.0
 
         for (i in 0 until length) {
-            val inputLevel = abs(buffer[i])
+            val inputLevel = abs(buffer[offset + i].toDouble())
 
             // Convert to dB
             val inputDb = if (inputLevel > 1e-10) {
@@ -143,7 +143,7 @@ class Compressor(
             }
 
             // Apply gain reduction and makeup gain
-            buffer[offset + i] *= (gainReduction * makeupLinear)
+            buffer[offset + i] = (buffer[offset + i] * (gainReduction * makeupLinear)).toFloat()
         }
     }
 

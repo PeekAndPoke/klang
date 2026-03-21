@@ -1,10 +1,11 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.osci.OscFn
+import io.peekandpoke.klang.audio_be.signalgen.SignalContext
+import io.peekandpoke.klang.audio_be.signalgen.SignalGen
 
 /**
- * Synthesizer voice - generates audio from oscillators.
+ * Synthesizer voice - generates audio from a [SignalGen] tree.
  * Extends AbstractVoice and only implements the signal generation logic.
  */
 class SynthVoice(
@@ -44,14 +45,12 @@ class SynthVoice(
     coarse: Voice.Coarse,
 
     // SynthVoice-Specific Parameters
-    /** Oscillator function for waveform generation */
-    private val osc: OscFn,
+    /** SignalGen tree for waveform generation */
+    private val signal: SignalGen,
+    /** Per-voice rendering context for the SignalGen tree */
+    private val signalCtx: SignalContext,
     /** Base frequency in Hz */
     private val freqHz: Double,
-    /** Phase increment per sample */
-    private val phaseInc: Double,
-    /** Current oscillator phase */
-    private var phase: Double = 0.0,
 ) : AbstractVoice(
     startFrame = startFrame,
     endFrame = endFrame,
@@ -86,14 +85,11 @@ class SynthVoice(
         length: Int,
         pitchMod: DoubleArray?,
     ) {
-        // Generate oscillator output with pitch modulation
-        phase = osc.process(
-            buffer = ctx.voiceBuffer,
-            offset = offset,
-            length = length,
-            phase = phase,
-            phaseInc = phaseInc,
-            phaseMod = pitchMod
-        )
+        signalCtx.offset = offset
+        signalCtx.length = length
+        signalCtx.voiceElapsedFrames = (ctx.blockStart - startFrame).toInt()
+        signalCtx.phaseMod = pitchMod
+
+        signal.generate(ctx.voiceBuffer, freqHz, signalCtx)
     }
 }
