@@ -55,7 +55,7 @@ class DocsPage(ctx: NoProps) : PureComponent(ctx) {
                         }
                     }
                     noui.middle.aligned.content {
-                        ui.large.header { +"Strudel" }
+                        ui.large.header { +"Sprudel" }
                     }
                 }
 

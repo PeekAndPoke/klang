@@ -280,7 +280,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 icon.wind()
                 noui.content {
                     itemContentCss(isSelected)
-                    +"Strudel"
+                    +"Sprudel"
                 }
             }
 

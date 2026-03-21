@@ -375,7 +375,7 @@ class LibrarySystemTest : StringSpec({
             engine.execute("""import * from "nonexistent" """)
         }
 
-        exception.message shouldContain "Library not found"
+        exception.message shouldContain "Library not found."
     }
 
     "Selective imports work with native library functions" {

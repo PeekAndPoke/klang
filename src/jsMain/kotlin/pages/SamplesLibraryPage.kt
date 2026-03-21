@@ -47,7 +47,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
     private val samples: Samples? by subscribingTo(Player.samples)
     private var searchText: String by value("")
     private var groupBy: GroupBy by value(GroupBy.BANK)
-    private var lastStrudelCode: String by value("")
+    private var lastSprudelCode: String by value("")
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -118,14 +118,14 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
             .slow(4)  // give enough time to ring out
 
         // Format as code string for display
-        lastStrudelCode = buildStrudelCodeString(sound, effectiveIndex, bank)
+        lastSprudelCode = buildSprudelCodeString(sound, effectiveIndex, bank)
 
         // Play once for 1 cycle
         val playback = player.playOnce(pattern, cycles = 1)
         playback.start()
     }
 
-    private fun buildStrudelCodeString(
+    private fun buildSprudelCodeString(
         sound: String,
         index: Int?,
         bank: String,
@@ -162,7 +162,7 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
                 overflow = Overflow.hidden
             }
 
-            // Fixed header section (search + strudel code display)
+            // Fixed header section (search + sprudel code display)
             div {
                 css {
                     flexShrink = 0.0  // Don't shrink
@@ -203,15 +203,15 @@ class SamplesLibraryPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                 }
 
-                // Strudel code display
-                if (lastStrudelCode.isNotEmpty()) {
+                // Sprudel code display
+                if (lastSprudelCode.isNotEmpty()) {
                     ui.secondary.segment {
                         ui.form {
                             ui.left.labeled.input {
-                                ui.basic.label { icon.code(); +"Strudel Code" }
+                                ui.basic.label { icon.code(); +"Sprudel Code" }
                                 input {
                                     type = InputType.text
-                                    value = lastStrudelCode
+                                    value = lastSprudelCode
                                     readonly = true
                                     onClick {
                                         // Select all text on click for easy copying

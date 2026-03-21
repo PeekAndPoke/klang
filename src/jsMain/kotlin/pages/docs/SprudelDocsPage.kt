@@ -179,7 +179,7 @@ class SprudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     //  REGISTRY  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Create isolated registry for Strudel docs only
+    // Create isolated registry for Sprudel docs only
     private val registry = KlangDocsRegistry().apply {
         registerSprudelDocs(this)
     }

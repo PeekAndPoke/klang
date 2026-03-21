@@ -24,7 +24,7 @@ fun main() {
     // Read CSS custom properties and establish the active look-and-feel before render
     KlangTheme.initialize()
 
-    // Initialize Strudel DSL and register documentation
+    // Initialize Sprudel DSL and register documentation
     initSprudelDsl()
 
     // Register UI tools
