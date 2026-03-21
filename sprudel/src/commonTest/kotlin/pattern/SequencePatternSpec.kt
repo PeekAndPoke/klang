@@ -7,16 +7,16 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.seq
 
 class SequencePatternSpec : StringSpec({
 
     "SequencePattern: Direct Instantiation" {
-        val p1 = AtomicPattern(StrudelVoiceData.empty.copy(note = "a"))
-        val p2 = AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
+        val p1 = AtomicPattern(SprudelVoiceData.empty.copy(note = "a"))
+        val p2 = AtomicPattern(SprudelVoiceData.empty.copy(note = "b"))
         val pattern = SequencePattern(listOf(p1, p2))
 
         verifyPattern(pattern, 2) { i, note, begin, dur ->
@@ -65,7 +65,7 @@ class SequencePatternSpec : StringSpec({
     }
 
     "SequencePattern: Compiled Code" {
-        val pattern = StrudelPattern.compile("""note("a b")""")
+        val pattern = SprudelPattern.compile("""note("a b")""")
 
         verifyPattern(pattern, 2) { i, note, begin, dur ->
             if (i == 0) {
@@ -106,7 +106,7 @@ class SequencePatternSpec : StringSpec({
             """seq("1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22")""",
             """seq("1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23")""",
             """seq("1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24")""",
-        ).map { it to StrudelPattern.compile(it)!! }
+        ).map { it to SprudelPattern.compile(it)!! }
 
         patterns.forEach { (code, pattern) ->
             val firstArc = pattern.queryArc(0.0, 1.0)

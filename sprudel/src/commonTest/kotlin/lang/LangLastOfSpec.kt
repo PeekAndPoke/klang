@@ -5,7 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLastOfSpec : StringSpec({
@@ -15,15 +15,15 @@ class LangLastOfSpec : StringSpec({
             "pattern.lastOf(n, transform)" to
                     note("a").lastOf(2) { it.note("b") },
             "script pattern.lastOf(n, transform)" to
-                    StrudelPattern.compile("""note("a").lastOf(2, x => x.note("b"))"""),
+                    SprudelPattern.compile("""note("a").lastOf(2, x => x.note("b"))"""),
             "string.lastOf(n, transform)" to
                     "a".lastOf(2) { it.note("b") },
             "script string.lastOf(n, transform)" to
-                    StrudelPattern.compile(""""a".lastOf(2, x => x.note("b"))"""),
+                    SprudelPattern.compile(""""a".lastOf(2, x => x.note("b"))"""),
             "lastOf(n, transform)" to
                     note("a").apply(lastOf(2) { it.note("b") }),
             "script lastOf(n, transform)" to
-                    StrudelPattern.compile("""note("a").apply(lastOf(2, x => x.note("b")))"""),
+                    SprudelPattern.compile("""note("a").apply(lastOf(2, x => x.note("b")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -99,7 +99,7 @@ class LangLastOfSpec : StringSpec({
     }
 
     "script apply(lastOf()) works in compiled code" {
-        val p = StrudelPattern.compile("""note("a").apply(lastOf(2, x => x.note("b")))""")!!
+        val p = SprudelPattern.compile("""note("a").apply(lastOf(2, x => x.note("b")))""")!!
 
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "a"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "b"

@@ -3,11 +3,11 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.common.math.bjorklund
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
@@ -21,8 +21,8 @@ import io.peekandpoke.klang.sprudel.TimeSpan
 internal class EuclideanMorphPattern(
     val pulsesProvider: ControlValueProvider,
     val stepsProvider: ControlValueProvider,
-    val groovePattern: StrudelPattern,
-) : StrudelPattern {
+    val groovePattern: SprudelPattern,
+) : SprudelPattern {
 
     override val weight: Double get() = groovePattern.weight
 
@@ -42,7 +42,7 @@ internal class EuclideanMorphPattern(
         fun static(
             pulses: Int,
             steps: Int,
-            groovePattern: StrudelPattern,
+            groovePattern: SprudelPattern,
         ): EuclideanMorphPattern {
             return EuclideanMorphPattern(
                 pulsesProvider = ControlValueProvider.Static(Rational(pulses).asVoiceValue()),
@@ -55,9 +55,9 @@ internal class EuclideanMorphPattern(
          * Create an EuclideanMorphPattern with control patterns for pulses and steps.
          */
         fun control(
-            pulsesPattern: StrudelPattern,
-            stepsPattern: StrudelPattern,
-            groovePattern: StrudelPattern,
+            pulsesPattern: SprudelPattern,
+            stepsPattern: SprudelPattern,
+            groovePattern: SprudelPattern,
         ): EuclideanMorphPattern {
             return EuclideanMorphPattern(
                 pulsesProvider = ControlValueProvider.Pattern(pulsesPattern),
@@ -113,7 +113,7 @@ internal class EuclideanMorphPattern(
         from: Rational,
         to: Rational,
         ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         // Query groove pattern for morph factor over time
         val grooveEvents = groovePattern.queryArcContextual(from, to, ctx)
         if (grooveEvents.isEmpty()) return emptyList()
@@ -169,10 +169,10 @@ internal class EuclideanMorphPattern(
                         val timeSpan = TimeSpan(begin = intersectStart, end = intersectEnd)
 
                         result.add(
-                            StrudelPatternEvent(
+                            SprudelPatternEvent(
                                 part = timeSpan,
                                 whole = timeSpan,
-                                data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
+                                data = SprudelVoiceData.empty.copy(value = 1.asVoiceValue())
                             )
                         )
                     }

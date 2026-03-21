@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangSpreadSpec : StringSpec({
@@ -19,15 +19,15 @@ class LangSpreadSpec : StringSpec({
             "pattern.spread(ctrl)" to
                     seq(pat).spread(ctrl),
             "script pattern.spread(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").spread("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").spread("$ctrl")"""),
             "string.spread(ctrl)" to
                     pat.spread(ctrl),
             "script string.spread(ctrl)" to
-                    StrudelPattern.compile(""""$pat".spread("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".spread("$ctrl")"""),
             "spread(ctrl)" to
                     seq(pat).apply(spread(ctrl)),
             "script spread(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(spread("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(spread("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("panSpread") shouldBe 0.0
@@ -96,7 +96,7 @@ class LangSpreadSpec : StringSpec({
     }
 
     "spread() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").spread("0.5")""")
+        val p = SprudelPattern.compile("""note("c").spread("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.oscParams?.get("panSpread") shouldBe 0.5

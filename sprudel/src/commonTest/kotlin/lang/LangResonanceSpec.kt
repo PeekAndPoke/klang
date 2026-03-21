@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangResonanceSpec : StringSpec({
@@ -19,11 +19,11 @@ class LangResonanceSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.resonance(ctrl)" to seq(pat).resonance(ctrl),
-            "script pattern.resonance(ctrl)" to StrudelPattern.compile("""seq("$pat").resonance("$ctrl")"""),
+            "script pattern.resonance(ctrl)" to SprudelPattern.compile("""seq("$pat").resonance("$ctrl")"""),
             "string.resonance(ctrl)" to pat.resonance(ctrl),
-            "script string.resonance(ctrl)" to StrudelPattern.compile(""""$pat".resonance("$ctrl")"""),
+            "script string.resonance(ctrl)" to SprudelPattern.compile(""""$pat".resonance("$ctrl")"""),
             "resonance(ctrl)" to seq(pat).apply(resonance(ctrl)),
-            "script resonance(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(resonance("$ctrl"))"""),
+            "script resonance(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(resonance("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.resonance shouldBe 5.0
@@ -95,7 +95,7 @@ class LangResonanceSpec : StringSpec({
     }
 
     "resonance() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").resonance("5.0")""")
+        val p = SprudelPattern.compile("""note("c").resonance("5.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.resonance shouldBe 5.0
@@ -125,11 +125,11 @@ class LangResonanceSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.res(ctrl)" to seq(pat).res(ctrl),
-            "script pattern.res(ctrl)" to StrudelPattern.compile("""seq("$pat").res("$ctrl")"""),
+            "script pattern.res(ctrl)" to SprudelPattern.compile("""seq("$pat").res("$ctrl")"""),
             "string.res(ctrl)" to pat.res(ctrl),
-            "script string.res(ctrl)" to StrudelPattern.compile(""""$pat".res("$ctrl")"""),
+            "script string.res(ctrl)" to SprudelPattern.compile(""""$pat".res("$ctrl")"""),
             "res(ctrl)" to seq(pat).apply(res(ctrl)),
-            "script res(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(res("$ctrl"))"""),
+            "script res(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(res("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.resonance shouldBe 5.0
@@ -155,11 +155,11 @@ class LangResonanceSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.lpq(ctrl)" to seq(pat).lpq(ctrl),
-            "script pattern.lpq(ctrl)" to StrudelPattern.compile("""seq("$pat").lpq("$ctrl")"""),
+            "script pattern.lpq(ctrl)" to SprudelPattern.compile("""seq("$pat").lpq("$ctrl")"""),
             "string.lpq(ctrl)" to pat.lpq(ctrl),
-            "script string.lpq(ctrl)" to StrudelPattern.compile(""""$pat".lpq("$ctrl")"""),
+            "script string.lpq(ctrl)" to SprudelPattern.compile(""""$pat".lpq("$ctrl")"""),
             "lpq(ctrl)" to seq(pat).apply(lpq(ctrl)),
-            "script lpq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lpq("$ctrl"))"""),
+            "script lpq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(lpq("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.resonance shouldBe 5.0
@@ -194,7 +194,7 @@ class LangResonanceSpec : StringSpec({
     }
 
     "lpq() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").lpq("8")""")
+        val p = SprudelPattern.compile("""note("c").lpq("8")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.resonance shouldBe 8.0

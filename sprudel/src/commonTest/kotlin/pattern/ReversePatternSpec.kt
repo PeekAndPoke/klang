@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
 class ReversePatternSpec : StringSpec({
 
@@ -12,8 +12,8 @@ class ReversePatternSpec : StringSpec({
         // Create a simple sequence: event at 0.0-0.5 and 0.5-1.0
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(StrudelVoiceData.empty.copy(note = "a")),
-                AtomicPattern(StrudelVoiceData.empty.copy(note = "b"))
+                AtomicPattern(SprudelVoiceData.empty.copy(note = "a")),
+                AtomicPattern(SprudelVoiceData.empty.copy(note = "b"))
             )
         )
         val reversed = ReversePattern(inner)
@@ -38,8 +38,8 @@ class ReversePatternSpec : StringSpec({
         // Create pattern with events in cycle 0 and cycle 1
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(StrudelVoiceData.empty.copy(note = "x")),
-                AtomicPattern(StrudelVoiceData.empty.copy(note = "y"))
+                AtomicPattern(SprudelVoiceData.empty.copy(note = "x")),
+                AtomicPattern(SprudelVoiceData.empty.copy(note = "y"))
             )
         )
         val reversed = ReversePattern(inner)
@@ -62,10 +62,10 @@ class ReversePatternSpec : StringSpec({
     "ReversePattern handles partial cycle queries" {
         val inner = SequencePattern(
             listOf(
-                AtomicPattern(StrudelVoiceData.empty.copy(note = "a")),
-                AtomicPattern(StrudelVoiceData.empty.copy(note = "b")),
-                AtomicPattern(StrudelVoiceData.empty.copy(note = "c")),
-                AtomicPattern(StrudelVoiceData.empty.copy(note = "d"))
+                AtomicPattern(SprudelVoiceData.empty.copy(note = "a")),
+                AtomicPattern(SprudelVoiceData.empty.copy(note = "b")),
+                AtomicPattern(SprudelVoiceData.empty.copy(note = "c")),
+                AtomicPattern(SprudelVoiceData.empty.copy(note = "d"))
             )
         )
         val reversed = ReversePattern(inner)
@@ -83,7 +83,7 @@ class ReversePatternSpec : StringSpec({
     }
 
     "ReversePattern preserves event weight" {
-        val inner = AtomicPattern(StrudelVoiceData.empty.copy(note = "test"))
+        val inner = AtomicPattern(SprudelVoiceData.empty.copy(note = "test"))
         val reversed = ReversePattern(inner)
 
         reversed.weight shouldBe inner.weight

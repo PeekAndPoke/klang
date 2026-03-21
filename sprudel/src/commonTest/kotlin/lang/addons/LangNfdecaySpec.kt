@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -20,11 +20,11 @@ class LangNfdecaySpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfdecay(ctrl)" to seq(pat).nfdecay(ctrl),
-            "script pattern.nfdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").nfdecay("$ctrl")"""),
+            "script pattern.nfdecay(ctrl)" to SprudelPattern.compile("""seq("$pat").nfdecay("$ctrl")"""),
             "string.nfdecay(ctrl)" to pat.nfdecay(ctrl),
-            "script string.nfdecay(ctrl)" to StrudelPattern.compile(""""$pat".nfdecay("$ctrl")"""),
+            "script string.nfdecay(ctrl)" to SprudelPattern.compile(""""$pat".nfdecay("$ctrl")"""),
             "nfdecay(ctrl)" to seq(pat).apply(nfdecay(ctrl)),
-            "script nfdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfdecay("$ctrl"))"""),
+            "script nfdecay(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfdecay("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfdecay shouldBe 0.5
@@ -89,7 +89,7 @@ class LangNfdecaySpec : StringSpec({
     }
 
     "nfdecay() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").nfdecay("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").nfdecay("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -104,11 +104,11 @@ class LangNfdecaySpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfd(ctrl)" to seq(pat).nfd(ctrl),
-            "script pattern.nfd(ctrl)" to StrudelPattern.compile("""seq("$pat").nfd("$ctrl")"""),
+            "script pattern.nfd(ctrl)" to SprudelPattern.compile("""seq("$pat").nfd("$ctrl")"""),
             "string.nfd(ctrl)" to pat.nfd(ctrl),
-            "script string.nfd(ctrl)" to StrudelPattern.compile(""""$pat".nfd("$ctrl")"""),
+            "script string.nfd(ctrl)" to SprudelPattern.compile(""""$pat".nfd("$ctrl")"""),
             "nfd(ctrl)" to seq(pat).apply(nfd(ctrl)),
-            "script nfd(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfd("$ctrl"))"""),
+            "script nfd(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfd("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfdecay shouldBe 0.5
@@ -144,7 +144,7 @@ class LangNfdecaySpec : StringSpec({
     }
 
     "nfd() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").nfd("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").nfd("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

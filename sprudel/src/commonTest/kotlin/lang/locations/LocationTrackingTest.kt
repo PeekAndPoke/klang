@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.common.SourceLocation
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.toListOfPatterns
 import io.peekandpoke.klang.sprudel.lang.voiceValueModifier
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
@@ -17,7 +17,7 @@ class LocationTrackingTest : StringSpec({
     "RuntimeValue with location creates AtomicPattern with sourceLocations" {
         val location =
             SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
-        val stringValue = StrudelDslArg("bd", location = location)
+        val stringValue = SprudelDslArg("bd", location = location)
 
         val patterns = listOf(stringValue).toListOfPatterns(voiceValueModifier)
 
@@ -33,7 +33,7 @@ class LocationTrackingTest : StringSpec({
 
     "NumberValue with location creates AtomicPattern with sourceLocations" {
         val location = SourceLocation(source = "test.klang", startLine = 2, startColumn = 5, endLine = 2, endColumn = 8)
-        val numberValue = StrudelDslArg(440.0, location = location)
+        val numberValue = SprudelDslArg(440.0, location = location)
 
         val patterns = listOf(numberValue).toListOfPatterns(voiceValueModifier)
 
@@ -46,7 +46,7 @@ class LocationTrackingTest : StringSpec({
     }
 
     "RuntimeValue without location creates AtomicPattern with null sourceLocations" {
-        val stringValue = StrudelDslArg("bd", location = null)
+        val stringValue = SprudelDslArg("bd", location = null)
 
         val patterns = listOf(stringValue).toListOfPatterns(voiceValueModifier)
 
@@ -61,8 +61,8 @@ class LocationTrackingTest : StringSpec({
         val loc2 = SourceLocation(source = "test.klang", startLine = 2, startColumn = 15, endLine = 2, endColumn = 17)
 
         val values = listOf(
-            StrudelDslArg("bd", location = loc1),
-            StrudelDslArg("hh", location = loc2)
+            SprudelDslArg("bd", location = loc1),
+            SprudelDslArg("hh", location = loc2)
         )
 
         val patterns = values.toListOfPatterns(voiceValueModifier)
@@ -80,7 +80,7 @@ class LocationTrackingTest : StringSpec({
 
     "Plain Kotlin values create patterns without locations" {
         val patterns = listOf("bd", 440.0, true)
-            .map { StrudelDslArg.of(it) }
+            .map { SprudelDslArg.of(it) }
             .toListOfPatterns(voiceValueModifier)
 
         patterns.size shouldBe 3
@@ -91,10 +91,10 @@ class LocationTrackingTest : StringSpec({
 
     "Nested lists preserve locations" {
         val loc = SourceLocation(source = "test.klang", startLine = 1, startColumn = 10, endLine = 1, endColumn = 12)
-        val stringValue = StrudelDslArg("bd", location = loc)
+        val stringValue = SprudelDslArg("bd", location = loc)
 
         val patterns = listOf(
-            StrudelDslArg.of(listOf(stringValue))
+            SprudelDslArg.of(listOf(stringValue))
         ).toListOfPatterns(voiceValueModifier)
 
         patterns.size shouldBe 1

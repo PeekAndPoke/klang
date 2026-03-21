@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
@@ -20,15 +20,15 @@ import io.peekandpoke.klang.sprudel.TimeSpan
  * @param nProvider Control value provider for the number of segments
  */
 internal class SegmentPattern(
-    val source: StrudelPattern,
+    val source: SprudelPattern,
     val nProvider: ControlValueProvider,
-) : StrudelPattern {
+) : SprudelPattern {
     companion object {
         /**
          * Create a SegmentPattern with a static n value.
          * Note: This is rarely used directly; static segmentation is usually done via struct(x.fast(n)).
          */
-        fun static(source: StrudelPattern, n: Int): SegmentPattern {
+        fun static(source: SprudelPattern, n: Int): SegmentPattern {
             return SegmentPattern(
                 source = source,
                 nProvider = ControlValueProvider.Static(Rational(n).asVoiceValue())
@@ -38,7 +38,7 @@ internal class SegmentPattern(
         /**
          * Create a SegmentPattern with a control pattern for n.
          */
-        fun control(source: StrudelPattern, nPattern: StrudelPattern): SegmentPattern {
+        fun control(source: SprudelPattern, nPattern: SprudelPattern): SegmentPattern {
             return SegmentPattern(
                 source = source,
                 nProvider = ControlValueProvider.Pattern(nPattern)
@@ -52,7 +52,7 @@ internal class SegmentPattern(
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         val nEvents = nProvider.queryEvents(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 

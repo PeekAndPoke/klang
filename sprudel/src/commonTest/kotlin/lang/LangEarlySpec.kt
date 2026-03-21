@@ -10,7 +10,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangEarlySpec : StringSpec({
@@ -20,11 +20,11 @@ class LangEarlySpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.early(0.5)" to s(pat).early(0.5),
-            "script pattern.early(0.5)" to StrudelPattern.compile("""s("$pat").early(0.5)"""),
+            "script pattern.early(0.5)" to SprudelPattern.compile("""s("$pat").early(0.5)"""),
             "string.early(0.5)" to pat.early(0.5),
-            "script string.early(0.5)" to StrudelPattern.compile(""""$pat".early(0.5)"""),
+            "script string.early(0.5)" to SprudelPattern.compile(""""$pat".early(0.5)"""),
             "early(0.5)" to s(pat).apply(early(0.5)),
-            "script early(0.5)" to StrudelPattern.compile("""s("$pat").apply(early(0.5))"""),
+            "script early(0.5)" to SprudelPattern.compile("""s("$pat").apply(early(0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -88,7 +88,7 @@ class LangEarlySpec : StringSpec({
         events[1].part.end.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "early() works as method on StrudelPattern" {
+    "early() works as method on SprudelPattern" {
         val subject = note("c d").early(0.25)
 
         assertSoftly {
@@ -149,7 +149,7 @@ class LangEarlySpec : StringSpec({
     }
 
     "early() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c d").early(0.5)""")
+        val p = SprudelPattern.compile("""note("c d").early(0.5)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -158,7 +158,7 @@ class LangEarlySpec : StringSpec({
     }
 
     "early() works as method in compiled code" {
-        val p = StrudelPattern.compile("""note("c d e f").early(0.5)""")
+        val p = SprudelPattern.compile("""note("c d e f").early(0.5)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         // Original: c(0-0.25), d(0.25-0.5), e(0.5-0.75), f(0.75-1.0)
@@ -171,7 +171,7 @@ class LangEarlySpec : StringSpec({
     }
 
     "early() works as string extension in compiled code" {
-        val subject = StrudelPattern.compile(""""c d".early(0.25)""")
+        val subject = SprudelPattern.compile(""""c d".early(0.25)""")
         subject.shouldNotBeNull()
 
         assertSoftly {

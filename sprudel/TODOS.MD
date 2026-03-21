@@ -1,4 +1,4 @@
-# Strudel Kotlin Port - Pending Work
+# Sprudel - Pending Work
 
 ---
 
@@ -24,7 +24,7 @@
 #### Waveshaping / Distortion
 
 - [ ] **`distort()`** - Check https://strudel.cc/learn/effects/#distort for additional parameters (especially 3rd "
-  shape" parameter); see `strudel/agent-tasks/distortion-parameters.md`
+  shape" parameter); see `sprudel/agent-tasks/distortion-parameters.md`
 
 #### Other
 

@@ -6,7 +6,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangCatSpec : StringSpec({
 
@@ -59,7 +59,7 @@ class LangCatSpec : StringSpec({
         events[2].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
-    "cat() works as a method on StrudelPattern" {
+    "cat() works as a method on SprudelPattern" {
         // Given a pattern
         val p1 = note("a")
 
@@ -99,7 +99,7 @@ class LangCatSpec : StringSpec({
     }
 
     "cat() works within compiled code" {
-        val p = StrudelPattern.compile("""cat(note("a"), note("b"))""")
+        val p = SprudelPattern.compile("""cat(note("a"), note("b"))""")
 
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
@@ -110,7 +110,7 @@ class LangCatSpec : StringSpec({
     }
 
     "cat() works as method in compiled code" {
-        val p = StrudelPattern.compile("""note("a").cat(note("b"))""")
+        val p = SprudelPattern.compile("""note("a").cat(note("b"))""")
 
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
@@ -121,7 +121,7 @@ class LangCatSpec : StringSpec({
     }
 
     "cat() works as string extension in compiled code" {
-        val p = StrudelPattern.compile(""""a".cat("b")""")
+        val p = SprudelPattern.compile(""""a".cat("b")""")
 
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 

@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangHpsustainSpec : StringSpec({
@@ -20,11 +20,11 @@ class LangHpsustainSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.hpsustain(ctrl)" to seq(pat).hpsustain(ctrl),
-            "script pattern.hpsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").hpsustain("$ctrl")"""),
+            "script pattern.hpsustain(ctrl)" to SprudelPattern.compile("""seq("$pat").hpsustain("$ctrl")"""),
             "string.hpsustain(ctrl)" to pat.hpsustain(ctrl),
-            "script string.hpsustain(ctrl)" to StrudelPattern.compile(""""$pat".hpsustain("$ctrl")"""),
+            "script string.hpsustain(ctrl)" to SprudelPattern.compile(""""$pat".hpsustain("$ctrl")"""),
             "hpsustain(ctrl)" to seq(pat).apply(hpsustain(ctrl)),
-            "script hpsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpsustain("$ctrl"))"""),
+            "script hpsustain(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpsustain("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hpsustain shouldBe 0.5
@@ -86,7 +86,7 @@ class LangHpsustainSpec : StringSpec({
     }
 
     "hpsustain() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").hpsustain("0.7")""")
+        val p = SprudelPattern.compile("""note("c").hpsustain("0.7")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.hpsustain shouldBe 0.7
@@ -104,7 +104,7 @@ class LangHpsustainSpec : StringSpec({
     }
 
     "hpsustain() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.StrudelVoiceData.empty.copy(
+        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             hcutoff = 2000.0,
             hpsustain = 0.8
         )
@@ -122,11 +122,11 @@ class LangHpsustainSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.hps(ctrl)" to seq(pat).hps(ctrl),
-            "script pattern.hps(ctrl)" to StrudelPattern.compile("""seq("$pat").hps("$ctrl")"""),
+            "script pattern.hps(ctrl)" to SprudelPattern.compile("""seq("$pat").hps("$ctrl")"""),
             "string.hps(ctrl)" to pat.hps(ctrl),
-            "script string.hps(ctrl)" to StrudelPattern.compile(""""$pat".hps("$ctrl")"""),
+            "script string.hps(ctrl)" to SprudelPattern.compile(""""$pat".hps("$ctrl")"""),
             "hps(ctrl)" to seq(pat).apply(hps(ctrl)),
-            "script hps(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hps("$ctrl"))"""),
+            "script hps(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hps("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hpsustain shouldBe 0.5
@@ -160,7 +160,7 @@ class LangHpsustainSpec : StringSpec({
     }
 
     "hps() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").hps("0.75")""")
+        val p = SprudelPattern.compile("""note("c").hps("0.75")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.hpsustain shouldBe 0.75

@@ -2,21 +2,17 @@
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.*
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.withOscParam
 
 /**
- * ADDONS: Oscillator-related functions that are NOT available in the original strudel impl
- */
-
-/**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangOscAddonsInit = false
+var sprudelLangOscAddonsInit = false
 
 // -- warmth() ---------------------------------------------------------------------------------------------------------
 
@@ -24,11 +20,11 @@ private val warmthMutation = voiceModifier {
     withOscParam("warmth", it?.asDoubleOrNull())
 }
 
-private fun applyWarmth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyWarmth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, warmthMutation)
 }
 
-internal val StrudelPattern._warmth by dslPatternExtension { p, args, /* callInfo */ _ -> applyWarmth(p, args) }
+internal val SprudelPattern._warmth by dslPatternExtension { p, args, /* callInfo */ _ -> applyWarmth(p, args) }
 internal val String._warmth by dslStringExtension { p, args, callInfo -> p._warmth(args, callInfo) }
 internal val _warmth by dslPatternMapper { args, callInfo -> { p -> p._warmth(args, callInfo) } }
 internal val PatternMapperFn._warmth by dslPatternMapperExtension { m, args, callInfo ->
@@ -60,9 +56,9 @@ internal val PatternMapperFn._warmth by dslPatternMapperExtension { m, args, cal
  * @category tonal
  * @tags warmth, oscillator, filter, low-pass, addon
  */
-@StrudelDsl
-fun StrudelPattern.warmth(amount: PatternLike? = null): StrudelPattern =
-    this._warmth(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.warmth(amount: PatternLike? = null): SprudelPattern =
+    this._warmth(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the oscillator warmth.
@@ -73,9 +69,9 @@ fun StrudelPattern.warmth(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
-@StrudelDsl
-fun String.warmth(amount: PatternLike? = null): StrudelPattern =
-    this._warmth(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.warmth(amount: PatternLike? = null): SprudelPattern =
+    this._warmth(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the oscillator warmth.
@@ -86,9 +82,9 @@ fun String.warmth(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
-@StrudelDsl
+@SprudelDsl
 fun warmth(amount: PatternLike? = null): PatternMapperFn =
-    _warmth(listOfNotNull(amount).asStrudelDslArgs())
+    _warmth(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Chains a warmth-set onto this [PatternMapperFn], applying oscillator warmth after the previous step.
@@ -99,6 +95,6 @@ fun warmth(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.warmth(amount: PatternLike? = null): PatternMapperFn =
-    _warmth(listOfNotNull(amount).asStrudelDslArgs())
+    _warmth(listOfNotNull(amount).asSprudelDslArgs())

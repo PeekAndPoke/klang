@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLog2Spec : StringSpec({
@@ -41,15 +41,15 @@ class LangLog2Spec : StringSpec({
             "pattern.log2()" to
                     seq(pat).log2(),
             "script pattern.log2()" to
-                    StrudelPattern.compile("""seq("$pat").log2()"""),
+                    SprudelPattern.compile("""seq("$pat").log2()"""),
             "string.log2()" to
                     pat.log2(),
             "script string.log2()" to
-                    StrudelPattern.compile(""""$pat".log2()"""),
+                    SprudelPattern.compile(""""$pat".log2()"""),
             "log2()" to
                     seq(pat).apply(log2()),
             "script log2()" to
-                    StrudelPattern.compile("""seq("$pat").apply(log2())"""),
+                    SprudelPattern.compile("""seq("$pat").apply(log2())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 0  // log2(1) = 0

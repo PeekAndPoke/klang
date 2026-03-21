@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -20,11 +20,11 @@ class LangNresonanceSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nresonance(ctrl)" to seq(pat).nresonance(ctrl),
-            "script pattern.nresonance(ctrl)" to StrudelPattern.compile("""seq("$pat").nresonance("$ctrl")"""),
+            "script pattern.nresonance(ctrl)" to SprudelPattern.compile("""seq("$pat").nresonance("$ctrl")"""),
             "string.nresonance(ctrl)" to pat.nresonance(ctrl),
-            "script string.nresonance(ctrl)" to StrudelPattern.compile(""""$pat".nresonance("$ctrl")"""),
+            "script string.nresonance(ctrl)" to SprudelPattern.compile(""""$pat".nresonance("$ctrl")"""),
             "nresonance(ctrl)" to seq(pat).apply(nresonance(ctrl)),
-            "script nresonance(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nresonance("$ctrl"))"""),
+            "script nresonance(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nresonance("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nresonance shouldBe 0.5
@@ -89,7 +89,7 @@ class LangNresonanceSpec : StringSpec({
     }
 
     "nresonance() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").nresonance("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").nresonance("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -104,11 +104,11 @@ class LangNresonanceSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.notchq(ctrl)" to seq(pat).notchq(ctrl),
-            "script pattern.notchq(ctrl)" to StrudelPattern.compile("""seq("$pat").notchq("$ctrl")"""),
+            "script pattern.notchq(ctrl)" to SprudelPattern.compile("""seq("$pat").notchq("$ctrl")"""),
             "string.notchq(ctrl)" to pat.notchq(ctrl),
-            "script string.notchq(ctrl)" to StrudelPattern.compile(""""$pat".notchq("$ctrl")"""),
+            "script string.notchq(ctrl)" to SprudelPattern.compile(""""$pat".notchq("$ctrl")"""),
             "notchq(ctrl)" to seq(pat).apply(notchq(ctrl)),
-            "script notchq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(notchq("$ctrl"))"""),
+            "script notchq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notchq("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nresonance shouldBe 0.5
@@ -144,7 +144,7 @@ class LangNresonanceSpec : StringSpec({
     }
 
     "notchq() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").notchq("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").notchq("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

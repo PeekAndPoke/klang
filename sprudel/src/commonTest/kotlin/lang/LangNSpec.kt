@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangNSpec : StringSpec({
 
@@ -56,7 +56,7 @@ class LangNSpec : StringSpec({
     }
 
     "n() works within compiled code" {
-        val p = StrudelPattern.compile("""n("0 1")""")
+        val p = SprudelPattern.compile("""n("0 1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -65,7 +65,7 @@ class LangNSpec : StringSpec({
     }
 
     "n() works as string extension in compiled code" {
-        val p = StrudelPattern.compile(""""0".n("1")""")
+        val p = SprudelPattern.compile(""""0".n("1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

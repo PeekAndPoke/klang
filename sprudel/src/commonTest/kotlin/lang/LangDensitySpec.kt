@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangDensitySpec : StringSpec({
@@ -19,28 +19,28 @@ class LangDensitySpec : StringSpec({
             "pattern.density(ctrl)" to
                     seq(pat).density(ctrl),
             "script pattern.density(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").density("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").density("$ctrl")"""),
             "string.density(ctrl)" to
                     pat.density(ctrl),
             "script string.density(ctrl)" to
-                    StrudelPattern.compile(""""$pat".density("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".density("$ctrl")"""),
             "density(ctrl)" to
                     seq(pat).apply(density(ctrl)),
             "script density(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(density("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(density("$ctrl"))"""),
             // comp alias
             "pattern.d(ctrl)" to
                     seq(pat).d(ctrl),
             "script pattern.d(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").d("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").d("$ctrl")"""),
             "string.d(ctrl)" to
                     pat.d(ctrl),
             "script string.d(ctrl)" to
-                    StrudelPattern.compile(""""$pat".d("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".d("$ctrl")"""),
             "d(ctrl)" to
                     seq(pat).apply(d(ctrl)),
             "script d(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(d("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(d("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("density") shouldBe 10.0
@@ -117,7 +117,7 @@ class LangDensitySpec : StringSpec({
     }
 
     "density() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").density("0.5")""")
+        val p = SprudelPattern.compile("""note("c").density("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.oscParams?.get("density") shouldBe 0.5

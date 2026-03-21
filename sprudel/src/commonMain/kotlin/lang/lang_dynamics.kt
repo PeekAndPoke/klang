@@ -3,23 +3,23 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.sprudel.*
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangDynamicsInit = false
+var sprudelLangDynamicsInit = false
 
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
 private val gainMutation = voiceModifier { copy(gain = it?.asDoubleOrNull()) }
 
-fun applyGain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, gainMutation)
 }
 
-internal val StrudelPattern._gain by dslPatternExtension { p, args, /* callInfo */ _ -> applyGain(p, args) }
+internal val SprudelPattern._gain by dslPatternExtension { p, args, /* callInfo */ _ -> applyGain(p, args) }
 
 internal val String._gain by dslStringExtension { p, args, callInfo -> p._gain(args, callInfo) }
 
@@ -45,14 +45,14 @@ internal val PatternMapperFn._gain by dslPatternMapperExtension { m, args, callI
  * ```
  *
  * @param amount The control value to use for gain.
- * @param-tool amount StrudelGainSequenceEditor
+ * @param-tool amount SprudelGainSequenceEditor
  *
  * @category dynamics
  * @tags gain, volume, amplitude, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.gain(amount: PatternLike? = null): StrudelPattern =
-    this._gain(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.gain(amount: PatternLike? = null): SprudelPattern =
+    this._gain(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the gain for each event.
@@ -63,9 +63,9 @@ fun StrudelPattern.gain(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The control value to use for gain.
  */
-@StrudelDsl
-fun String.gain(amount: PatternLike? = null): StrudelPattern =
-    this._gain(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.gain(amount: PatternLike? = null): SprudelPattern =
+    this._gain(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
@@ -76,9 +76,9 @@ fun String.gain(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The control value to use for gain.
  */
-@StrudelDsl
+@SprudelDsl
 fun gain(amount: PatternLike? = null): PatternMapperFn =
-    _gain(listOfNotNull(amount).asStrudelDslArgs())
+    _gain(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the gain after the previous mapper.
@@ -89,19 +89,19 @@ fun gain(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The control value to use for gain.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.gain(amount: PatternLike? = null): PatternMapperFn =
-    _gain(listOfNotNull(amount).asStrudelDslArgs())
+    _gain(listOfNotNull(amount).asSprudelDslArgs())
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
 private val panMutation = voiceModifier { copy(pan = it?.asDoubleOrNull()) }
 
-fun applyPan(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, panMutation)
 }
 
-internal val StrudelPattern._pan by dslPatternExtension { p, args, /* callInfo */ _ -> applyPan(p, args) }
+internal val SprudelPattern._pan by dslPatternExtension { p, args, /* callInfo */ _ -> applyPan(p, args) }
 
 internal val String._pan by dslStringExtension { p, args, callInfo -> p._pan(args, callInfo) }
 
@@ -131,14 +131,14 @@ internal val PatternMapperFn._pan by dslPatternMapperExtension { m, args, callIn
  * ```
  *
  * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
- * @param-tool amount StrudelPanSequenceEditor
+ * @param-tool amount SprudelPanSequenceEditor
  *
  * @category dynamics
  * @tags pan, stereo, panning, position
  */
-@StrudelDsl
-fun StrudelPattern.pan(amount: PatternLike? = null): StrudelPattern =
-    this._pan(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.pan(amount: PatternLike? = null): SprudelPattern =
+    this._pan(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the stereo panning position.
@@ -149,9 +149,9 @@ fun StrudelPattern.pan(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
  */
-@StrudelDsl
-fun String.pan(amount: PatternLike? = null): StrudelPattern =
-    this._pan(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.pan(amount: PatternLike? = null): SprudelPattern =
+    this._pan(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the pan for each event in a pattern.
@@ -160,9 +160,9 @@ fun String.pan(amount: PatternLike? = null): StrudelPattern =
  * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun pan(amount: PatternLike? = null): PatternMapperFn =
-    _pan(listOfNotNull(amount).asStrudelDslArgs())
+    _pan(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the pan after the previous mapper.
@@ -173,19 +173,19 @@ fun pan(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.pan(amount: PatternLike? = null): PatternMapperFn =
-    _pan(listOfNotNull(amount).asStrudelDslArgs())
+    _pan(listOfNotNull(amount).asSprudelDslArgs())
 
 // -- velocity() / vel() -----------------------------------------------------------------------------------------------
 
 private val velocityMutation = voiceModifier { copy(velocity = it?.asDoubleOrNull()) }
 
-fun applyVelocity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, velocityMutation)
 }
 
-internal val StrudelPattern._velocity by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._velocity by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyVelocity(p, args)
 }
 
@@ -197,7 +197,7 @@ internal val PatternMapperFn._velocity by dslPatternMapperExtension { m, args, c
     m.chain(_velocity(args, callInfo))
 }
 
-internal val StrudelPattern._vel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
+internal val SprudelPattern._vel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
 
 internal val String._vel by dslStringExtension { p, args, callInfo -> p._velocity(args, callInfo) }
 
@@ -230,9 +230,9 @@ internal val PatternMapperFn._vel by dslPatternMapperExtension { m, args, callIn
  * @category dynamics
  * @tags velocity, vel, volume, midi, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.velocity(amount: PatternLike? = null): StrudelPattern =
-    this._velocity(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.velocity(amount: PatternLike? = null): SprudelPattern =
+    this._velocity(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the velocity (gain multiplier) for each event.
@@ -243,9 +243,9 @@ fun StrudelPattern.velocity(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The velocity value or pattern to apply to the events.
  */
-@StrudelDsl
-fun String.velocity(amount: PatternLike? = null): StrudelPattern =
-    this._velocity(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.velocity(amount: PatternLike? = null): SprudelPattern =
+    this._velocity(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
@@ -256,9 +256,9 @@ fun String.velocity(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The velocity value or pattern to apply to the events.
  */
-@StrudelDsl
+@SprudelDsl
 fun velocity(amount: PatternLike? = null): PatternMapperFn =
-    _velocity(listOfNotNull(amount).asStrudelDslArgs())
+    _velocity(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
@@ -269,9 +269,9 @@ fun velocity(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The velocity value or pattern to apply to the events.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.velocity(amount: PatternLike? = null): PatternMapperFn =
-    _velocity(listOfNotNull(amount).asStrudelDslArgs())
+    _velocity(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Alias for [velocity]. Sets the gain 'velocity'. It is multiplied with the gain of the events.
@@ -290,9 +290,9 @@ fun PatternMapperFn.velocity(amount: PatternLike? = null): PatternMapperFn =
  * @category dynamics
  * @tags vel, velocity, volume, midi, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.vel(amount: PatternLike? = null): StrudelPattern =
-    this._vel(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.vel(amount: PatternLike? = null): SprudelPattern =
+    this._vel(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Alias for [velocity]. Sets the velocity (gain multiplier) for each event in this pattern.
@@ -303,9 +303,9 @@ fun StrudelPattern.vel(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The velocity value or pattern to apply to the events.
  */
-@StrudelDsl
-fun String.vel(amount: PatternLike? = null): StrudelPattern =
-    this._vel(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.vel(amount: PatternLike? = null): SprudelPattern =
+    this._vel(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Alias for [velocity]. Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
@@ -316,9 +316,9 @@ fun String.vel(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The velocity value or pattern to apply to the events.
  */
-@StrudelDsl
+@SprudelDsl
 fun vel(amount: PatternLike? = null): PatternMapperFn =
-    _vel(listOfNotNull(amount).asStrudelDslArgs())
+    _vel(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Alias for [velocity]. Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
@@ -329,19 +329,19 @@ fun vel(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The velocity value or pattern to apply to the events.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.vel(amount: PatternLike? = null): PatternMapperFn =
-    _vel(listOfNotNull(amount).asStrudelDslArgs())
+    _vel(listOfNotNull(amount).asSprudelDslArgs())
 
 // -- postgain() -------------------------------------------------------------------------------------------------------
 
 private val postgainMutation = voiceModifier { copy(postGain = it?.asDoubleOrNull()) }
 
-fun applyPostgain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, postgainMutation)
 }
 
-internal val StrudelPattern._postgain by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._postgain by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyPostgain(p, args)
 }
 
@@ -373,9 +373,9 @@ internal val PatternMapperFn._postgain by dslPatternMapperExtension { m, args, c
  * @category dynamics
  * @tags postgain, gain, volume, post-processing
  */
-@StrudelDsl
-fun StrudelPattern.postgain(amount: PatternLike? = null): StrudelPattern =
-    this._postgain(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.postgain(amount: PatternLike? = null): SprudelPattern =
+    this._postgain(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the post-gain for each event.
@@ -386,9 +386,9 @@ fun StrudelPattern.postgain(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The post-gain value or pattern to apply to the events.
  */
-@StrudelDsl
-fun String.postgain(amount: PatternLike? = null): StrudelPattern =
-    this._postgain(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.postgain(amount: PatternLike? = null): SprudelPattern =
+    this._postgain(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
@@ -399,9 +399,9 @@ fun String.postgain(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The post-gain value or pattern to apply to the events.
  */
-@StrudelDsl
+@SprudelDsl
 fun postgain(amount: PatternLike? = null): PatternMapperFn =
-    _postgain(listOfNotNull(amount).asStrudelDslArgs())
+    _postgain(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the post-gain after the previous mapper.
@@ -412,19 +412,19 @@ fun postgain(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The post-gain value or pattern to apply to the events.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.postgain(amount: PatternLike? = null): PatternMapperFn =
-    _postgain(listOfNotNull(amount).asStrudelDslArgs())
+    _postgain(listOfNotNull(amount).asSprudelDslArgs())
 
 // -- compressor() / comp() --------------------------------------------------------------------------------------------
 
 private val compressorMutation = voiceModifier { copy(compressor = it?.toString()) }
 
-fun applyCompressor(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyCompressor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, compressorMutation)
 }
 
-internal val StrudelPattern._compressor by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
+internal val SprudelPattern._compressor by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
 internal val String._compressor by dslStringExtension { p, args, callInfo -> p._compressor(args, callInfo) }
 internal val _compressor by dslPatternMapper { args, callInfo -> { p -> p._compressor(args, callInfo) } }
 
@@ -432,7 +432,7 @@ internal val PatternMapperFn._compressor by dslPatternMapperExtension { m, args,
     m.chain(_compressor(args, callInfo))
 }
 
-internal val StrudelPattern._comp by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
+internal val SprudelPattern._comp by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
 internal val String._comp by dslStringExtension { p, args, callInfo -> p._comp(args, callInfo) }
 internal val _comp by dslPatternMapper { args, callInfo -> { p -> p._comp(args, callInfo) } }
 
@@ -491,7 +491,7 @@ internal val PatternMapperFn._comp by dslPatternMapperExtension { m, args, callI
  *
  * @param params The compression parameters as a colon-separated string.
  *
- * @param-tool params StrudelCompressorSequenceEditor
+ * @param-tool params SprudelCompressorSequenceEditor
  * @param-sub params threshold Level in dB above which compression starts (e.g. -20)
  * @param-sub params ratio Compression ratio (e.g. 4 means 4:1 reduction above threshold)
  * @param-sub params knee Smoothness of compression onset in dB (0 = hard knee, 6+ = soft)
@@ -501,9 +501,9 @@ internal val PatternMapperFn._comp by dslPatternMapperExtension { m, args, callI
  * @category dynamics
  * @tags compressor, comp, compression, threshold, ratio, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.compressor(params: PatternLike? = null): StrudelPattern =
-    this._compressor(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.compressor(params: PatternLike? = null): SprudelPattern =
+    this._compressor(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets dynamic range compression parameters.
@@ -514,9 +514,9 @@ fun StrudelPattern.compressor(params: PatternLike? = null): StrudelPattern =
  *
  * @param params The compression parameters as a colon-separated string.
  */
-@StrudelDsl
-fun String.compressor(params: PatternLike? = null): StrudelPattern =
-    this._compressor(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.compressor(params: PatternLike? = null): SprudelPattern =
+    this._compressor(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
@@ -526,9 +526,9 @@ fun String.compressor(params: PatternLike? = null): StrudelPattern =
  * ```
 
  */
-@StrudelDsl
+@SprudelDsl
 fun compressor(params: PatternLike? = null): PatternMapperFn =
-    _compressor(listOfNotNull(params).asStrudelDslArgs())
+    _compressor(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets compressor parameters after the previous mapper.
@@ -539,9 +539,9 @@ fun compressor(params: PatternLike? = null): PatternMapperFn =
  *
  * @param params The compression parameters as a colon-separated string.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.compressor(params: PatternLike? = null): PatternMapperFn =
-    _compressor(listOfNotNull(params).asStrudelDslArgs())
+    _compressor(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Alias for [compressor]. Sets dynamic range compression parameters as a colon-separated string
@@ -557,14 +557,14 @@ fun PatternMapperFn.compressor(params: PatternLike? = null): PatternMapperFn =
  *
  * @param params The compression parameters as a colon-separated string.
  *
- * @param-tool params StrudelCompressorSequenceEditor
+ * @param-tool params SprudelCompressorSequenceEditor
  * @alias compressor
  * @category dynamics
  * @tags comp, compressor, compression, threshold, ratio, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.comp(params: PatternLike? = null): StrudelPattern =
-    this._comp(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.comp(params: PatternLike? = null): SprudelPattern =
+    this._comp(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
@@ -575,9 +575,9 @@ fun StrudelPattern.comp(params: PatternLike? = null): StrudelPattern =
  *
  * @param params The compression parameters as a colon-separated string.
  */
-@StrudelDsl
-fun String.comp(params: PatternLike? = null): StrudelPattern =
-    this._comp(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.comp(params: PatternLike? = null): SprudelPattern =
+    this._comp(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
@@ -588,9 +588,9 @@ fun String.comp(params: PatternLike? = null): StrudelPattern =
  *
  * @param params The compression parameters as a colon-separated string.
  */
-@StrudelDsl
+@SprudelDsl
 fun comp(params: PatternLike? = null): PatternMapperFn =
-    _comp(listOfNotNull(params).asStrudelDslArgs())
+    _comp(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Alias for [compressor]. Creates a chained [PatternMapperFn] that sets compressor parameters after the previous
@@ -602,19 +602,19 @@ fun comp(params: PatternLike? = null): PatternMapperFn =
  *
  * @param params The compression parameters as a colon-separated string.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.comp(params: PatternLike? = null): PatternMapperFn =
-    _comp(listOfNotNull(params).asStrudelDslArgs())
+    _comp(listOfNotNull(params).asSprudelDslArgs())
 
 // -- unison() / uni() -------------------------------------------------------------------------------------------------
 
 private val unisonMutation = voiceModifier { withOscParam("voices", it?.asDoubleOrNull()) }
 
-private fun applyUnison(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyUnison(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, unisonMutation)
 }
 
-internal val StrudelPattern._unison by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
+internal val SprudelPattern._unison by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
 internal val String._unison by dslStringExtension { p, args, callInfo -> p._unison(args, callInfo) }
 internal val _unison by dslPatternMapper { args, callInfo -> { p -> p._unison(args, callInfo) } }
 
@@ -622,7 +622,7 @@ internal val PatternMapperFn._unison by dslPatternMapperExtension { m, args, cal
     m.chain(_unison(args, callInfo))
 }
 
-internal val StrudelPattern._uni by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
+internal val SprudelPattern._uni by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
 internal val String._uni by dslStringExtension { p, args, callInfo -> p._uni(args, callInfo) }
 internal val _uni by dslPatternMapper { args, callInfo -> { p -> p._uni(args, callInfo) } }
 
@@ -652,9 +652,9 @@ internal val PatternMapperFn._uni by dslPatternMapperExtension { m, args, callIn
  * @category dynamics
  * @tags unison, uni, voices, stacking, supersaw
  */
-@StrudelDsl
-fun StrudelPattern.unison(voices: PatternLike? = null): StrudelPattern =
-    this._unison(listOfNotNull(voices).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.unison(voices: PatternLike? = null): SprudelPattern =
+    this._unison(listOfNotNull(voices).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the number of unison voices.
@@ -665,9 +665,9 @@ fun StrudelPattern.unison(voices: PatternLike? = null): StrudelPattern =
  *
  * @param voices The number of unison voices.
  */
-@StrudelDsl
-fun String.unison(voices: PatternLike? = null): StrudelPattern =
-    this._unison(listOfNotNull(voices).asStrudelDslArgs())
+@SprudelDsl
+fun String.unison(voices: PatternLike? = null): SprudelPattern =
+    this._unison(listOfNotNull(voices).asSprudelDslArgs())
 
 /**
  * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
@@ -678,9 +678,9 @@ fun String.unison(voices: PatternLike? = null): StrudelPattern =
  *
  * @param voices The number of unison voices.
  */
-@StrudelDsl
+@SprudelDsl
 fun unison(voices: PatternLike? = null): PatternMapperFn =
-    _unison(listOfNotNull(voices).asStrudelDslArgs())
+    _unison(listOfNotNull(voices).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous mapper.
@@ -691,9 +691,9 @@ fun unison(voices: PatternLike? = null): PatternMapperFn =
  *
  * @param voices The number of unison voices.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.unison(voices: PatternLike? = null): PatternMapperFn =
-    _unison(listOfNotNull(voices).asStrudelDslArgs())
+    _unison(listOfNotNull(voices).asSprudelDslArgs())
 
 /**
  * Alias for [unison]. Sets the number of unison voices for oscillator stacking effects.
@@ -712,9 +712,9 @@ fun PatternMapperFn.unison(voices: PatternLike? = null): PatternMapperFn =
  * @category dynamics
  * @tags uni, unison, voices, stacking, supersaw
  */
-@StrudelDsl
-fun StrudelPattern.uni(voices: PatternLike? = null): StrudelPattern =
-    this._uni(listOfNotNull(voices).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.uni(voices: PatternLike? = null): SprudelPattern =
+    this._uni(listOfNotNull(voices).asSprudelDslArgs())
 
 /**
  * Alias for [unison]. Parses this string as a pattern and sets the number of unison voices.
@@ -723,9 +723,9 @@ fun StrudelPattern.uni(voices: PatternLike? = null): StrudelPattern =
  * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").detune(0.3).note()  // unison pattern
  * ```
  */
-@StrudelDsl
-fun String.uni(voices: PatternLike? = null): StrudelPattern =
-    this._uni(listOfNotNull(voices).asStrudelDslArgs())
+@SprudelDsl
+fun String.uni(voices: PatternLike? = null): SprudelPattern =
+    this._uni(listOfNotNull(voices).asSprudelDslArgs())
 
 /**
  * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
@@ -736,9 +736,9 @@ fun String.uni(voices: PatternLike? = null): StrudelPattern =
  *
  * @param voices The number of unison voices.
  */
-@StrudelDsl
+@SprudelDsl
 fun uni(voices: PatternLike? = null): PatternMapperFn =
-    _uni(listOfNotNull(voices).asStrudelDslArgs())
+    _uni(listOfNotNull(voices).asSprudelDslArgs())
 
 /**
  * Alias for [unison]. Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous
@@ -750,19 +750,19 @@ fun uni(voices: PatternLike? = null): PatternMapperFn =
  *
  * @param voices The number of unison voices.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.uni(voices: PatternLike? = null): PatternMapperFn =
-    _uni(listOfNotNull(voices).asStrudelDslArgs())
+    _uni(listOfNotNull(voices).asSprudelDslArgs())
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
 private val detuneMutation = voiceModifier { withOscParam("freqSpread", it?.asDoubleOrNull()) }
 
-private fun applyDetune(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyDetune(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, detuneMutation)
 }
 
-internal val StrudelPattern._detune by dslPatternExtension { p, args, /* callInfo */ _ -> applyDetune(p, args) }
+internal val SprudelPattern._detune by dslPatternExtension { p, args, /* callInfo */ _ -> applyDetune(p, args) }
 internal val String._detune by dslStringExtension { p, args, callInfo -> p._detune(args, callInfo) }
 internal val _detune by dslPatternMapper { args, callInfo -> { p -> p._detune(args, callInfo) } }
 
@@ -791,9 +791,9 @@ internal val PatternMapperFn._detune by dslPatternMapperExtension { m, args, cal
  * @category dynamics
  * @tags detune, spread, unison, cents, supersaw
  */
-@StrudelDsl
-fun StrudelPattern.detune(amount: PatternLike? = null): StrudelPattern =
-    this._detune(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.detune(amount: PatternLike? = null): SprudelPattern =
+    this._detune(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the oscillator frequency spread.
@@ -804,9 +804,9 @@ fun StrudelPattern.detune(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The detuning in cents.
  */
-@StrudelDsl
-fun String.detune(amount: PatternLike? = null): StrudelPattern =
-    this._detune(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.detune(amount: PatternLike? = null): SprudelPattern =
+    this._detune(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the oscillator frequency spread for a pattern.
@@ -816,9 +816,9 @@ fun String.detune(amount: PatternLike? = null): StrudelPattern =
  * ```
  * @param amount The detuning in cents.
  */
-@StrudelDsl
+@SprudelDsl
 fun detune(amount: PatternLike? = null): PatternMapperFn =
-    _detune(listOfNotNull(amount).asStrudelDslArgs())
+    _detune(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator frequency spread after the previous mapper.
@@ -829,19 +829,19 @@ fun detune(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The detuning in cents.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.detune(amount: PatternLike? = null): PatternMapperFn =
-    _detune(listOfNotNull(amount).asStrudelDslArgs())
+    _detune(listOfNotNull(amount).asSprudelDslArgs())
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
 private val spreadMutation = voiceModifier { withOscParam("panSpread", it?.asDoubleOrNull()) }
 
-private fun applySpread(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applySpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, spreadMutation)
 }
 
-internal val StrudelPattern._spread by dslPatternExtension { p, args, /* callInfo */ _ -> applySpread(p, args) }
+internal val SprudelPattern._spread by dslPatternExtension { p, args, /* callInfo */ _ -> applySpread(p, args) }
 internal val String._spread by dslStringExtension { p, args, callInfo -> p._spread(args, callInfo) }
 internal val _spread by dslPatternMapper { args, callInfo -> { p -> p._spread(args, callInfo) } }
 
@@ -870,9 +870,9 @@ internal val PatternMapperFn._spread by dslPatternMapperExtension { m, args, cal
  * @category dynamics
  * @tags spread, pan, stereo, unison, supersaw
  */
-@StrudelDsl
-fun StrudelPattern.spread(amount: PatternLike? = null): StrudelPattern =
-    this._spread(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.spread(amount: PatternLike? = null): SprudelPattern =
+    this._spread(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the stereo pan spread for unison voices.
@@ -883,9 +883,9 @@ fun StrudelPattern.spread(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The stereo pan spread, between 0 and 1.
  */
-@StrudelDsl
-fun String.spread(amount: PatternLike? = null): StrudelPattern =
-    this._spread(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.spread(amount: PatternLike? = null): SprudelPattern =
+    this._spread(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
@@ -896,9 +896,9 @@ fun String.spread(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The stereo pan spread, between 0 and 1.
  */
-@StrudelDsl
+@SprudelDsl
 fun spread(amount: PatternLike? = null): PatternMapperFn =
-    _spread(listOfNotNull(amount).asStrudelDslArgs())
+    _spread(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the stereo pan spread after the previous mapper.
@@ -909,19 +909,19 @@ fun spread(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The stereo pan spread, between 0 and 1.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.spread(amount: PatternLike? = null): PatternMapperFn =
-    _spread(listOfNotNull(amount).asStrudelDslArgs())
+    _spread(listOfNotNull(amount).asSprudelDslArgs())
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 
 private val densityMutation = voiceModifier { withOscParam("density", it?.asDoubleOrNull()) }
 
-private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, densityMutation)
 }
 
-internal val StrudelPattern._density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
+internal val SprudelPattern._density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
 internal val String._density by dslStringExtension { p, args, callInfo -> p._density(args, callInfo) }
 internal val _density by dslPatternMapper { args, callInfo -> { p -> p._density(args, callInfo) } }
 
@@ -929,7 +929,7 @@ internal val PatternMapperFn._density by dslPatternMapperExtension { m, args, ca
     m.chain(_density(args, callInfo))
 }
 
-internal val StrudelPattern._d by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
+internal val SprudelPattern._d by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
 internal val String._d by dslStringExtension { p, args, callInfo -> p._d(args, callInfo) }
 internal val _d by dslPatternMapper { args, callInfo -> { p -> p._d(args, callInfo) } }
 
@@ -959,9 +959,9 @@ internal val PatternMapperFn._d by dslPatternMapperExtension { m, args, callInfo
  * @category dynamics
  * @tags density, d, supersaw, dust, noise
  */
-@StrudelDsl
-fun StrudelPattern.density(amount: PatternLike? = null): StrudelPattern =
-    this._density(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.density(amount: PatternLike? = null): SprudelPattern =
+    this._density(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the oscillator or noise density.
@@ -972,9 +972,9 @@ fun StrudelPattern.density(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The oscillator density.
  */
-@StrudelDsl
-fun String.density(amount: PatternLike? = null): StrudelPattern =
-    this._density(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.density(amount: PatternLike? = null): SprudelPattern =
+    this._density(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the oscillator or noise density.
@@ -984,9 +984,9 @@ fun String.density(amount: PatternLike? = null): StrudelPattern =
  * ```
  * @param amount The oscillator density.
  */
-@StrudelDsl
+@SprudelDsl
 fun density(amount: PatternLike? = null): PatternMapperFn =
-    _density(listOfNotNull(amount).asStrudelDslArgs())
+    _density(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the previous mapper.
@@ -997,9 +997,9 @@ fun density(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The oscillator density.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.density(amount: PatternLike? = null): PatternMapperFn =
-    _density(listOfNotNull(amount).asStrudelDslArgs())
+    _density(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Alias for [density]. Sets the oscillator density for supersaw or noise density for dust/crackle.
@@ -1016,9 +1016,9 @@ fun PatternMapperFn.density(amount: PatternLike? = null): PatternMapperFn =
  * @category dynamics
  * @tags d, density, supersaw, dust, noise
  */
-@StrudelDsl
-fun StrudelPattern.d(amount: PatternLike? = null): StrudelPattern =
-    this._d(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.d(amount: PatternLike? = null): SprudelPattern =
+    this._d(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density.
@@ -1029,9 +1029,9 @@ fun StrudelPattern.d(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The oscillator density.
  */
-@StrudelDsl
-fun String.d(amount: PatternLike? = null): StrudelPattern =
-    this._d(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.d(amount: PatternLike? = null): SprudelPattern =
+    this._d(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Alias for [density]. Creates a [PatternMapperFn] that sets the oscillator or noise density.
@@ -1042,9 +1042,9 @@ fun String.d(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The oscillator density.
  */
-@StrudelDsl
+@SprudelDsl
 fun d(amount: PatternLike? = null): PatternMapperFn =
-    _d(listOfNotNull(amount).asStrudelDslArgs())
+    _d(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Alias for [density]. Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the
@@ -1056,19 +1056,19 @@ fun d(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The oscillator density.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.d(amount: PatternLike? = null): PatternMapperFn =
-    _d(listOfNotNull(amount).asStrudelDslArgs())
+    _d(listOfNotNull(amount).asSprudelDslArgs())
 
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
 
 private val attackMutation = voiceModifier { copy(attack = it?.asDoubleOrNull()) }
 
-private fun applyAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, attackMutation)
 }
 
-internal val StrudelPattern._attack by dslPatternExtension { p, args, /* callInfo */ _ -> applyAttack(p, args) }
+internal val SprudelPattern._attack by dslPatternExtension { p, args, /* callInfo */ _ -> applyAttack(p, args) }
 
 internal val String._attack by dslStringExtension { p, args, callInfo -> p._attack(args, callInfo) }
 
@@ -1099,9 +1099,9 @@ internal val PatternMapperFn._attack by dslPatternMapperExtension { m, args, cal
  * @category dynamics
  * @tags attack, adsr, envelope, fade-in
  */
-@StrudelDsl
-fun StrudelPattern.attack(time: PatternLike? = null): StrudelPattern =
-    this._attack(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.attack(time: PatternLike? = null): SprudelPattern =
+    this._attack(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the ADSR envelope attack time.
@@ -1112,9 +1112,9 @@ fun StrudelPattern.attack(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The attack time in seconds.
  */
-@StrudelDsl
-fun String.attack(time: PatternLike? = null): StrudelPattern =
-    this._attack(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun String.attack(time: PatternLike? = null): SprudelPattern =
+    this._attack(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope attack time for each event.
@@ -1125,8 +1125,8 @@ fun String.attack(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The attack time in seconds.
  */
-@StrudelDsl
-fun attack(time: PatternLike? = null): PatternMapperFn = _attack(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun attack(time: PatternLike? = null): PatternMapperFn = _attack(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR attack time after the previous mapper.
@@ -1137,19 +1137,19 @@ fun attack(time: PatternLike? = null): PatternMapperFn = _attack(listOfNotNull(t
  *
  * @param time The attack time in seconds.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.attack(time: PatternLike? = null): PatternMapperFn =
-    _attack(listOfNotNull(time).asStrudelDslArgs())
+    _attack(listOfNotNull(time).asSprudelDslArgs())
 
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
 private val decayMutation = voiceModifier { copy(decay = it?.asDoubleOrNull()) }
 
-private fun applyDecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, decayMutation)
 }
 
-internal val StrudelPattern._decay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDecay(p, args) }
+internal val SprudelPattern._decay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDecay(p, args) }
 
 internal val String._decay by dslStringExtension { p, args, callInfo -> p._decay(args, callInfo) }
 
@@ -1179,9 +1179,9 @@ internal val PatternMapperFn._decay by dslPatternMapperExtension { m, args, call
  * @category dynamics
  * @tags decay, adsr, envelope
  */
-@StrudelDsl
-fun StrudelPattern.decay(time: PatternLike? = null): StrudelPattern =
-    this._decay(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.decay(time: PatternLike? = null): SprudelPattern =
+    this._decay(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the ADSR envelope decay time.
@@ -1192,9 +1192,9 @@ fun StrudelPattern.decay(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The decay time in seconds.
  */
-@StrudelDsl
-fun String.decay(time: PatternLike? = null): StrudelPattern =
-    this._decay(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun String.decay(time: PatternLike? = null): SprudelPattern =
+    this._decay(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope decay time for each event.
@@ -1205,8 +1205,8 @@ fun String.decay(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The decay time in seconds.
  */
-@StrudelDsl
-fun decay(time: PatternLike? = null): PatternMapperFn = _decay(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun decay(time: PatternLike? = null): PatternMapperFn = _decay(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR decay time after the previous mapper.
@@ -1217,19 +1217,19 @@ fun decay(time: PatternLike? = null): PatternMapperFn = _decay(listOfNotNull(tim
  *
  * @param time The decay time in seconds.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.decay(time: PatternLike? = null): PatternMapperFn =
-    _decay(listOfNotNull(time).asStrudelDslArgs())
+    _decay(listOfNotNull(time).asSprudelDslArgs())
 
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
 private val sustainMutation = voiceModifier { copy(sustain = it?.asDoubleOrNull()) }
 
-private fun applySustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applySustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, sustainMutation)
 }
 
-internal val StrudelPattern._sustain by dslPatternExtension { p, args, /* callInfo */ _ -> applySustain(p, args) }
+internal val SprudelPattern._sustain by dslPatternExtension { p, args, /* callInfo */ _ -> applySustain(p, args) }
 
 internal val String._sustain by dslStringExtension { p, args, callInfo -> p._sustain(args, callInfo) }
 
@@ -1260,9 +1260,9 @@ internal val PatternMapperFn._sustain by dslPatternMapperExtension { m, args, ca
  * @category dynamics
  * @tags sustain, adsr, envelope, hold
  */
-@StrudelDsl
-fun StrudelPattern.sustain(level: PatternLike? = null): StrudelPattern =
-    this._sustain(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.sustain(level: PatternLike? = null): SprudelPattern =
+    this._sustain(listOfNotNull(level).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the ADSR envelope sustain level.
@@ -1273,9 +1273,9 @@ fun StrudelPattern.sustain(level: PatternLike? = null): StrudelPattern =
  *
  * @param level The sustain level between 0 and 1.
  */
-@StrudelDsl
-fun String.sustain(level: PatternLike? = null): StrudelPattern =
-    this._sustain(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun String.sustain(level: PatternLike? = null): SprudelPattern =
+    this._sustain(listOfNotNull(level).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope sustain level for each event.
@@ -1286,8 +1286,8 @@ fun String.sustain(level: PatternLike? = null): StrudelPattern =
  *
  * @param level The sustain level between 0 and 1.
  */
-@StrudelDsl
-fun sustain(level: PatternLike? = null): PatternMapperFn = _sustain(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun sustain(level: PatternLike? = null): PatternMapperFn = _sustain(listOfNotNull(level).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR sustain level after the previous mapper.
@@ -1298,19 +1298,19 @@ fun sustain(level: PatternLike? = null): PatternMapperFn = _sustain(listOfNotNul
  *
  * @param level The sustain level between 0 and 1.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.sustain(level: PatternLike? = null): PatternMapperFn =
-    _sustain(listOfNotNull(level).asStrudelDslArgs())
+    _sustain(listOfNotNull(level).asSprudelDslArgs())
 
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 
 private val releaseMutation = voiceModifier { copy(release = it?.asDoubleOrNull()) }
 
-private fun applyRelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, releaseMutation)
 }
 
-internal val StrudelPattern._release by dslPatternExtension { p, args, /* callInfo */ _ -> applyRelease(p, args) }
+internal val SprudelPattern._release by dslPatternExtension { p, args, /* callInfo */ _ -> applyRelease(p, args) }
 
 internal val String._release by dslStringExtension { p, args, callInfo -> p._release(args, callInfo) }
 
@@ -1341,9 +1341,9 @@ internal val PatternMapperFn._release by dslPatternMapperExtension { m, args, ca
  * @category dynamics
  * @tags release, adsr, envelope, fade-out
  */
-@StrudelDsl
-fun StrudelPattern.release(time: PatternLike? = null): StrudelPattern =
-    this._release(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.release(time: PatternLike? = null): SprudelPattern =
+    this._release(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the ADSR envelope release time.
@@ -1354,9 +1354,9 @@ fun StrudelPattern.release(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The release time in seconds.
  */
-@StrudelDsl
-fun String.release(time: PatternLike? = null): StrudelPattern =
-    this._release(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun String.release(time: PatternLike? = null): SprudelPattern =
+    this._release(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope release time for each event.
@@ -1367,8 +1367,8 @@ fun String.release(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The release time in seconds.
  */
-@StrudelDsl
-fun release(time: PatternLike? = null): PatternMapperFn = _release(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun release(time: PatternLike? = null): PatternMapperFn = _release(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR release time after the previous mapper.
@@ -1379,9 +1379,9 @@ fun release(time: PatternLike? = null): PatternMapperFn = _release(listOfNotNull
  *
  * @param time The release time in seconds.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.release(time: PatternLike? = null): PatternMapperFn =
-    _release(listOfNotNull(time).asStrudelDslArgs())
+    _release(listOfNotNull(time).asSprudelDslArgs())
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
@@ -1397,7 +1397,7 @@ private val adsrMutation = voiceModifier {
     )
 }
 
-private fun applyAdsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyAdsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, adsrMutation) { src, ctrl ->
         src.copy(
             attack = ctrl.attack ?: src.attack,
@@ -1408,7 +1408,7 @@ private fun applyAdsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): 
     }
 }
 
-internal val StrudelPattern._adsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyAdsr(p, args) }
+internal val SprudelPattern._adsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyAdsr(p, args) }
 
 internal val String._adsr by dslStringExtension { p, args, callInfo -> p._adsr(args, callInfo) }
 
@@ -1445,9 +1445,9 @@ internal val PatternMapperFn._adsr by dslPatternMapperExtension { m, args, callI
  * @category dynamics
  * @tags adsr, attack, decay, sustain, release, envelope
  */
-@StrudelDsl
-fun StrudelPattern.adsr(params: PatternLike? = null): StrudelPattern =
-    this._adsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.adsr(params: PatternLike? = null): SprudelPattern =
+    this._adsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets all ADSR envelope parameters.
@@ -1458,9 +1458,9 @@ fun StrudelPattern.adsr(params: PatternLike? = null): StrudelPattern =
  *
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
  */
-@StrudelDsl
-fun String.adsr(params: PatternLike? = null): StrudelPattern =
-    this._adsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.adsr(params: PatternLike? = null): SprudelPattern =
+    this._adsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets all ADSR envelope parameters for each event.
@@ -1471,8 +1471,8 @@ fun String.adsr(params: PatternLike? = null): StrudelPattern =
  *
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
  */
-@StrudelDsl
-fun adsr(params: PatternLike? = null): PatternMapperFn = _adsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun adsr(params: PatternLike? = null): PatternMapperFn = _adsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets all ADSR parameters after the previous mapper.
@@ -1483,9 +1483,9 @@ fun adsr(params: PatternLike? = null): PatternMapperFn = _adsr(listOfNotNull(par
  *
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.adsr(params: PatternLike? = null): PatternMapperFn =
-    _adsr(listOfNotNull(params).asStrudelDslArgs())
+    _adsr(listOfNotNull(params).asSprudelDslArgs())
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
@@ -1497,11 +1497,11 @@ private val orbitMutation = voiceModifier {
     copy(orbit = it?.asIntOrNull())
 }
 
-private fun applyOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, orbitMutation)
 }
 
-internal val StrudelPattern._orbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
+internal val SprudelPattern._orbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
 internal val String._orbit by dslStringExtension { p, args, callInfo -> p._orbit(args, callInfo) }
 internal val _orbit by dslPatternMapper { args, callInfo -> { p -> p._orbit(args, callInfo) } }
 
@@ -1509,7 +1509,7 @@ internal val PatternMapperFn._orbit by dslPatternMapperExtension { m, args, call
     m.chain(_orbit(args, callInfo))
 }
 
-internal val StrudelPattern._o by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
+internal val SprudelPattern._o by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
 internal val String._o by dslStringExtension { p, args, callInfo -> p._o(args, callInfo) }
 internal val _o by dslPatternMapper { args, callInfo -> { p -> p._o(args, callInfo) } }
 
@@ -1539,9 +1539,9 @@ internal val PatternMapperFn._o by dslPatternMapperExtension { m, args, callInfo
  * @category dynamics
  * @tags orbit, o, routing, effects, bus, channel
  */
-@StrudelDsl
-fun StrudelPattern.orbit(index: PatternLike? = null): StrudelPattern =
-    this._orbit(listOfNotNull(index).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.orbit(index: PatternLike? = null): SprudelPattern =
+    this._orbit(listOfNotNull(index).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and routes it to the given audio output orbit.
@@ -1552,9 +1552,9 @@ fun StrudelPattern.orbit(index: PatternLike? = null): StrudelPattern =
  *
  * @param index The orbit index to route events to.
  */
-@StrudelDsl
-fun String.orbit(index: PatternLike? = null): StrudelPattern =
-    this._orbit(listOfNotNull(index).asStrudelDslArgs())
+@SprudelDsl
+fun String.orbit(index: PatternLike? = null): SprudelPattern =
+    this._orbit(listOfNotNull(index).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that routes events to the given audio output orbit.
@@ -1565,9 +1565,9 @@ fun String.orbit(index: PatternLike? = null): StrudelPattern =
  *
  * @param index The orbit index to route events to.
  */
-@StrudelDsl
+@SprudelDsl
 fun orbit(index: PatternLike? = null): PatternMapperFn =
-    _orbit(listOfNotNull(index).asStrudelDslArgs())
+    _orbit(listOfNotNull(index).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that routes events to the given orbit after the previous mapper.
@@ -1578,9 +1578,9 @@ fun orbit(index: PatternLike? = null): PatternMapperFn =
  *
  * @param index The orbit index to route events to.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.orbit(index: PatternLike? = null): PatternMapperFn =
-    _orbit(listOfNotNull(index).asStrudelDslArgs())
+    _orbit(listOfNotNull(index).asSprudelDslArgs())
 
 /**
  * Alias for [orbit]. Routes the pattern to an audio output orbit for independent effect processing.
@@ -1599,9 +1599,9 @@ fun PatternMapperFn.orbit(index: PatternLike? = null): PatternMapperFn =
  * @category dynamics
  * @tags o, orbit, routing, effects, bus, channel
  */
-@StrudelDsl
-fun StrudelPattern.o(index: PatternLike? = null): StrudelPattern =
-    this._o(listOfNotNull(index).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.o(index: PatternLike? = null): SprudelPattern =
+    this._o(listOfNotNull(index).asSprudelDslArgs())
 
 /**
  * Alias for [orbit]. Parses this string as a pattern and routes it to the given orbit.
@@ -1612,9 +1612,9 @@ fun StrudelPattern.o(index: PatternLike? = null): StrudelPattern =
  *
  * @param index The orbit index to route events to.
  */
-@StrudelDsl
-fun String.o(index: PatternLike? = null): StrudelPattern =
-    this._o(listOfNotNull(index).asStrudelDslArgs())
+@SprudelDsl
+fun String.o(index: PatternLike? = null): SprudelPattern =
+    this._o(listOfNotNull(index).asSprudelDslArgs())
 
 /**
  * Alias for [orbit]. Creates a [PatternMapperFn] that routes events to the given audio output orbit.
@@ -1625,9 +1625,9 @@ fun String.o(index: PatternLike? = null): StrudelPattern =
  *
  * @param index The orbit index to route events to.
  */
-@StrudelDsl
+@SprudelDsl
 fun o(index: PatternLike? = null): PatternMapperFn =
-    _o(listOfNotNull(index).asStrudelDslArgs())
+    _o(listOfNotNull(index).asSprudelDslArgs())
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Ducking / Sidechain
@@ -1639,11 +1639,11 @@ private val duckOrbitMutation = voiceModifier {
     copy(duckOrbit = it?.asIntOrNull())
 }
 
-private fun applyDuckOrbit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, duckOrbitMutation)
 }
 
-internal val StrudelPattern._duckorbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
+internal val SprudelPattern._duckorbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
 internal val String._duckorbit by dslStringExtension { p, args, callInfo -> p._duckorbit(args, callInfo) }
 internal val _duckorbit by dslPatternMapper { args, callInfo -> { p -> p._duckorbit(args, callInfo) } }
 
@@ -1651,7 +1651,7 @@ internal val PatternMapperFn._duckorbit by dslPatternMapperExtension { m, args, 
     m.chain(_duckorbit(args, callInfo))
 }
 
-internal val StrudelPattern._duck by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
+internal val SprudelPattern._duck by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
 internal val String._duck by dslStringExtension { p, args, callInfo -> p._duck(args, callInfo) }
 internal val _duck by dslPatternMapper { args, callInfo -> { p -> p._duck(args, callInfo) } }
 
@@ -1681,9 +1681,9 @@ internal val PatternMapperFn._duck by dslPatternMapperExtension { m, args, callI
  * @category dynamics
  * @tags duckorbit, duck, sidechain, ducking, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.duckorbit(orbitIndex: PatternLike? = null): StrudelPattern =
-    this._duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.duckorbit(orbitIndex: PatternLike? = null): SprudelPattern =
+    this._duckorbit(listOfNotNull(orbitIndex).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the sidechain source orbit for ducking.
@@ -1694,9 +1694,9 @@ fun StrudelPattern.duckorbit(orbitIndex: PatternLike? = null): StrudelPattern =
  *
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
-@StrudelDsl
-fun String.duckorbit(orbitIndex: PatternLike? = null): StrudelPattern =
-    this._duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
+@SprudelDsl
+fun String.duckorbit(orbitIndex: PatternLike? = null): SprudelPattern =
+    this._duckorbit(listOfNotNull(orbitIndex).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
@@ -1707,9 +1707,9 @@ fun String.duckorbit(orbitIndex: PatternLike? = null): StrudelPattern =
  *
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
-@StrudelDsl
+@SprudelDsl
 fun duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
-    _duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
+    _duckorbit(listOfNotNull(orbitIndex).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the previous mapper.
@@ -1720,9 +1720,9 @@ fun duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
  *
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
-    _duckorbit(listOfNotNull(orbitIndex).asStrudelDslArgs())
+    _duckorbit(listOfNotNull(orbitIndex).asSprudelDslArgs())
 
 /**
  * Alias for [duckorbit]. Sets the target orbit to listen to for sidechain ducking.
@@ -1740,9 +1740,9 @@ fun PatternMapperFn.duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn 
  * @category dynamics
  * @tags duck, duckorbit, sidechain, ducking, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.duck(orbitIndex: PatternLike? = null): StrudelPattern =
-    this._duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.duck(orbitIndex: PatternLike? = null): SprudelPattern =
+    this._duck(listOfNotNull(orbitIndex).asSprudelDslArgs())
 
 /**
  * Alias for [duckorbit]. Parses this string as a pattern and sets the sidechain source orbit.
@@ -1753,9 +1753,9 @@ fun StrudelPattern.duck(orbitIndex: PatternLike? = null): StrudelPattern =
  *
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
-@StrudelDsl
-fun String.duck(orbitIndex: PatternLike? = null): StrudelPattern =
-    this._duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
+@SprudelDsl
+fun String.duck(orbitIndex: PatternLike? = null): SprudelPattern =
+    this._duck(listOfNotNull(orbitIndex).asSprudelDslArgs())
 
 /**
  * Alias for [duckorbit]. Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
@@ -1766,9 +1766,9 @@ fun String.duck(orbitIndex: PatternLike? = null): StrudelPattern =
  *
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
-@StrudelDsl
+@SprudelDsl
 fun duck(orbitIndex: PatternLike? = null): PatternMapperFn =
-    _duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
+    _duck(listOfNotNull(orbitIndex).asSprudelDslArgs())
 
 /**
  * Alias for [duckorbit]. Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the
@@ -1780,19 +1780,19 @@ fun duck(orbitIndex: PatternLike? = null): PatternMapperFn =
  *
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.duck(orbitIndex: PatternLike? = null): PatternMapperFn =
-    _duck(listOfNotNull(orbitIndex).asStrudelDslArgs())
+    _duck(listOfNotNull(orbitIndex).asSprudelDslArgs())
 
 // -- duckattack() / duckatt() -----------------------------------------------------------------------------------------
 
 private val duckAttackMutation = voiceModifier { copy(duckAttack = it?.asDoubleOrNull()) }
 
-private fun applyDuckAttack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, duckAttackMutation)
 }
 
-internal val StrudelPattern._duckattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
+internal val SprudelPattern._duckattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
 internal val String._duckattack by dslStringExtension { p, args, callInfo -> p._duckattack(args, callInfo) }
 internal val _duckattack by dslPatternMapper { args, callInfo -> { p -> p._duckattack(args, callInfo) } }
 
@@ -1800,7 +1800,7 @@ internal val PatternMapperFn._duckattack by dslPatternMapperExtension { m, args,
     m.chain(_duckattack(args, callInfo))
 }
 
-internal val StrudelPattern._duckatt by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
+internal val SprudelPattern._duckatt by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
 internal val String._duckatt by dslStringExtension { p, args, callInfo -> p._duckatt(args, callInfo) }
 internal val _duckatt by dslPatternMapper { args, callInfo -> { p -> p._duckatt(args, callInfo) } }
 
@@ -1830,9 +1830,9 @@ internal val PatternMapperFn._duckatt by dslPatternMapperExtension { m, args, ca
  * @category dynamics
  * @tags duckattack, duckatt, sidechain, ducking, release, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.duckattack(time: PatternLike? = null): StrudelPattern =
-    this._duckattack(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.duckattack(time: PatternLike? = null): SprudelPattern =
+    this._duckattack(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the duck release time.
@@ -1843,9 +1843,9 @@ fun StrudelPattern.duckattack(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The recovery time in seconds.
  */
-@StrudelDsl
-fun String.duckattack(time: PatternLike? = null): StrudelPattern =
-    this._duckattack(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun String.duckattack(time: PatternLike? = null): SprudelPattern =
+    this._duckattack(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the duck release time.
@@ -1856,9 +1856,9 @@ fun String.duckattack(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The recovery time in seconds.
  */
-@StrudelDsl
+@SprudelDsl
 fun duckattack(time: PatternLike? = null): PatternMapperFn =
-    _duckattack(listOfNotNull(time).asStrudelDslArgs())
+    _duckattack(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous mapper.
@@ -1869,9 +1869,9 @@ fun duckattack(time: PatternLike? = null): PatternMapperFn =
  *
  * @param time The recovery time in seconds.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.duckattack(time: PatternLike? = null): PatternMapperFn =
-    _duckattack(listOfNotNull(time).asStrudelDslArgs())
+    _duckattack(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Alias for [duckattack]. Sets the duck release (return-to-normal) time in seconds.
@@ -1890,9 +1890,9 @@ fun PatternMapperFn.duckattack(time: PatternLike? = null): PatternMapperFn =
  * @category dynamics
  * @tags duckatt, duckattack, sidechain, ducking, release, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.duckatt(time: PatternLike? = null): StrudelPattern =
-    this._duckatt(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.duckatt(time: PatternLike? = null): SprudelPattern =
+    this._duckatt(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Alias for [duckattack]. Parses this string as a pattern and sets the duck release time.
@@ -1903,9 +1903,9 @@ fun StrudelPattern.duckatt(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The recovery time in seconds.
  */
-@StrudelDsl
-fun String.duckatt(time: PatternLike? = null): StrudelPattern =
-    this._duckatt(listOfNotNull(time).asStrudelDslArgs())
+@SprudelDsl
+fun String.duckatt(time: PatternLike? = null): SprudelPattern =
+    this._duckatt(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Alias for [duckattack]. Creates a [PatternMapperFn] that sets the duck release time.
@@ -1916,9 +1916,9 @@ fun String.duckatt(time: PatternLike? = null): StrudelPattern =
  *
  * @param time The recovery time in seconds.
  */
-@StrudelDsl
+@SprudelDsl
 fun duckatt(time: PatternLike? = null): PatternMapperFn =
-    _duckatt(listOfNotNull(time).asStrudelDslArgs())
+    _duckatt(listOfNotNull(time).asSprudelDslArgs())
 
 /**
  * Alias for [duckattack]. Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous
@@ -1930,19 +1930,19 @@ fun duckatt(time: PatternLike? = null): PatternMapperFn =
  *
  * @param time The recovery time in seconds.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.duckatt(time: PatternLike? = null): PatternMapperFn =
-    _duckatt(listOfNotNull(time).asStrudelDslArgs())
+    _duckatt(listOfNotNull(time).asSprudelDslArgs())
 
 // -- duckdepth() ------------------------------------------------------------------------------------------------------
 
 private val duckDepthMutation = voiceModifier { copy(duckDepth = it?.asDoubleOrNull()) }
 
-private fun applyDuckDepth(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, duckDepthMutation)
 }
 
-internal val StrudelPattern._duckdepth by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckDepth(p, args) }
+internal val SprudelPattern._duckdepth by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckDepth(p, args) }
 internal val String._duckdepth by dslStringExtension { p, args, callInfo -> p._duckdepth(args, callInfo) }
 internal val _duckdepth by dslPatternMapper { args, callInfo -> { p -> p._duckdepth(args, callInfo) } }
 
@@ -1971,9 +1971,9 @@ internal val PatternMapperFn._duckdepth by dslPatternMapperExtension { m, args, 
  * @category dynamics
  * @tags duckdepth, sidechain, ducking, attenuation, dynamics
  */
-@StrudelDsl
-fun StrudelPattern.duckdepth(amount: PatternLike? = null): StrudelPattern =
-    this._duckdepth(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.duckdepth(amount: PatternLike? = null): SprudelPattern =
+    this._duckdepth(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the ducking depth.
@@ -1984,9 +1984,9 @@ fun StrudelPattern.duckdepth(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
  */
-@StrudelDsl
-fun String.duckdepth(amount: PatternLike? = null): StrudelPattern =
-    this._duckdepth(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.duckdepth(amount: PatternLike? = null): SprudelPattern =
+    this._duckdepth(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that sets the ducking depth.
@@ -1997,9 +1997,9 @@ fun String.duckdepth(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
  */
-@StrudelDsl
+@SprudelDsl
 fun duckdepth(amount: PatternLike? = null): PatternMapperFn =
-    _duckdepth(listOfNotNull(amount).asStrudelDslArgs())
+    _duckdepth(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ducking depth after the previous mapper.
@@ -2010,6 +2010,6 @@ fun duckdepth(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.duckdepth(amount: PatternLike? = null): PatternMapperFn =
-    _duckdepth(listOfNotNull(amount).asStrudelDslArgs())
+    _duckdepth(listOfNotNull(amount).asSprudelDslArgs())

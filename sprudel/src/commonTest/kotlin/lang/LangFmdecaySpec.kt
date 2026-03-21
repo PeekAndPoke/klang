@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFmdecaySpec : StringSpec({
@@ -15,11 +15,11 @@ class LangFmdecaySpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fmdecay(ctrl)" to s(pat).fmdecay(ctrl),
-            "script pattern.fmdecay(ctrl)" to StrudelPattern.compile("""s("$pat").fmdecay("$ctrl")"""),
+            "script pattern.fmdecay(ctrl)" to SprudelPattern.compile("""s("$pat").fmdecay("$ctrl")"""),
             "string.fmdecay(ctrl)" to pat.fmdecay(ctrl),
-            "script string.fmdecay(ctrl)" to StrudelPattern.compile(""""$pat".fmdecay("$ctrl")"""),
+            "script string.fmdecay(ctrl)" to SprudelPattern.compile(""""$pat".fmdecay("$ctrl")"""),
             "fmdecay(ctrl)" to s(pat).apply(fmdecay(ctrl)),
-            "script fmdecay(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmdecay("$ctrl"))"""),
+            "script fmdecay(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmdecay("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmDecay shouldBe 0.1
@@ -33,11 +33,11 @@ class LangFmdecaySpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fmdec(ctrl)" to s(pat).fmdec(ctrl),
-            "script pattern.fmdec(ctrl)" to StrudelPattern.compile("""s("$pat").fmdec("$ctrl")"""),
+            "script pattern.fmdec(ctrl)" to SprudelPattern.compile("""s("$pat").fmdec("$ctrl")"""),
             "string.fmdec(ctrl)" to pat.fmdec(ctrl),
-            "script string.fmdec(ctrl)" to StrudelPattern.compile(""""$pat".fmdec("$ctrl")"""),
+            "script string.fmdec(ctrl)" to SprudelPattern.compile(""""$pat".fmdec("$ctrl")"""),
             "fmdec(ctrl)" to s(pat).apply(fmdec(ctrl)),
-            "script fmdec(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmdec("$ctrl"))"""),
+            "script fmdec(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmdec("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmDecay shouldBe 0.1
@@ -108,7 +108,7 @@ class LangFmdecaySpec : StringSpec({
     }
 
     "fmdecay() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").fmdecay("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").fmdecay("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -133,7 +133,7 @@ class LangFmdecaySpec : StringSpec({
     }
 
     "fmdec() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").fmdec("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").fmdec("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

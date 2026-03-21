@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangDuckingSpec : StringSpec({
@@ -16,28 +16,28 @@ class LangDuckingSpec : StringSpec({
             "pattern.duckorbit(ctrl)" to
                     seq(pat).duckorbit(ctrl),
             "script pattern.duckorbit(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").duckorbit("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").duckorbit("$ctrl")"""),
             "string.duckorbit(ctrl)" to
                     pat.duckorbit(ctrl),
             "script string.duckorbit(ctrl)" to
-                    StrudelPattern.compile(""""$pat".duckorbit("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".duckorbit("$ctrl")"""),
             "duckorbit(ctrl)" to
                     seq(pat).apply(duckorbit(ctrl)),
             "script duckorbit(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(duckorbit("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(duckorbit("$ctrl"))"""),
             // duck alias
             "pattern.duck(ctrl)" to
                     seq(pat).duck(ctrl),
             "script pattern.duck(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").duck("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").duck("$ctrl")"""),
             "string.duck(ctrl)" to
                     pat.duck(ctrl),
             "script string.duck(ctrl)" to
-                    StrudelPattern.compile(""""$pat".duck("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".duck("$ctrl")"""),
             "duck(ctrl)" to
                     seq(pat).apply(duck(ctrl)),
             "script duck(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(duck("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(duck("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.duckOrbit shouldBe 1
@@ -53,28 +53,28 @@ class LangDuckingSpec : StringSpec({
             "pattern.duckattack(ctrl)" to
                     seq(pat).duckattack(ctrl),
             "script pattern.duckattack(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").duckattack("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").duckattack("$ctrl")"""),
             "string.duckattack(ctrl)" to
                     pat.duckattack(ctrl),
             "script string.duckattack(ctrl)" to
-                    StrudelPattern.compile(""""$pat".duckattack("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".duckattack("$ctrl")"""),
             "duckattack(ctrl)" to
                     seq(pat).apply(duckattack(ctrl)),
             "script duckattack(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(duckattack("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(duckattack("$ctrl"))"""),
             // duckatt alias
             "pattern.duckatt(ctrl)" to
                     seq(pat).duckatt(ctrl),
             "script pattern.duckatt(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").duckatt("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").duckatt("$ctrl")"""),
             "string.duckatt(ctrl)" to
                     pat.duckatt(ctrl),
             "script string.duckatt(ctrl)" to
-                    StrudelPattern.compile(""""$pat".duckatt("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".duckatt("$ctrl")"""),
             "duckatt(ctrl)" to
                     seq(pat).apply(duckatt(ctrl)),
             "script duckatt(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(duckatt("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(duckatt("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.duckAttack shouldBe 0.1
@@ -90,15 +90,15 @@ class LangDuckingSpec : StringSpec({
             "pattern.duckdepth(ctrl)" to
                     seq(pat).duckdepth(ctrl),
             "script pattern.duckdepth(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").duckdepth("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").duckdepth("$ctrl")"""),
             "string.duckdepth(ctrl)" to
                     pat.duckdepth(ctrl),
             "script string.duckdepth(ctrl)" to
-                    StrudelPattern.compile(""""$pat".duckdepth("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".duckdepth("$ctrl")"""),
             "duckdepth(ctrl)" to
                     seq(pat).apply(duckdepth(ctrl)),
             "script duckdepth(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(duckdepth("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(duckdepth("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.duckDepth shouldBe 0.1

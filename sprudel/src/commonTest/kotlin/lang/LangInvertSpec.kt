@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangInvertSpec : StringSpec({
@@ -12,11 +12,11 @@ class LangInvertSpec : StringSpec({
         val pat = "1 0"
         dslInterfaceTests(
             "pattern.invert()" to seq(pat).invert(),
-            "script pattern.invert()" to StrudelPattern.compile("""seq("$pat").invert()"""),
+            "script pattern.invert()" to SprudelPattern.compile("""seq("$pat").invert()"""),
             "string.invert()" to pat.invert(),
-            "script string.invert()" to StrudelPattern.compile(""""$pat".invert()"""),
+            "script string.invert()" to SprudelPattern.compile(""""$pat".invert()"""),
             "invert()" to seq(pat).apply(invert()),
-            "script invert()" to StrudelPattern.compile("""seq("$pat").apply(invert())"""),
+            "script invert()" to SprudelPattern.compile("""seq("$pat").apply(invert())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -26,11 +26,11 @@ class LangInvertSpec : StringSpec({
         val pat = "1 0"
         dslInterfaceTests(
             "pattern.inv()" to seq(pat).inv(),
-            "script pattern.inv()" to StrudelPattern.compile("""seq("$pat").inv()"""),
+            "script pattern.inv()" to SprudelPattern.compile("""seq("$pat").inv()"""),
             "string.inv()" to pat.inv(),
-            "script string.inv()" to StrudelPattern.compile(""""$pat".inv()"""),
+            "script string.inv()" to SprudelPattern.compile(""""$pat".inv()"""),
             "inv()" to seq(pat).apply(inv()),
-            "script inv()" to StrudelPattern.compile("""seq("$pat").apply(inv())"""),
+            "script inv()" to SprudelPattern.compile("""seq("$pat").apply(inv())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -105,7 +105,7 @@ class LangInvertSpec : StringSpec({
     }
 
     "invert() works in compiled code" {
-        val pattern = StrudelPattern.compile("""pure(true).invert()""")
+        val pattern = SprudelPattern.compile("""pure(true).invert()""")
         val events = pattern?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

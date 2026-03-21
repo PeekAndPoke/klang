@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLayerSpec : StringSpec({
@@ -13,11 +13,11 @@ class LangLayerSpec : StringSpec({
         val transform: PatternMapperFn = { it.note("e") }
         dslInterfaceTests(
             "pattern.layer(fn)" to note(pat).layer(transform),
-            "script pattern.layer(fn)" to StrudelPattern.compile("""note("$pat").layer(x => x.note("e"))"""),
+            "script pattern.layer(fn)" to SprudelPattern.compile("""note("$pat").layer(x => x.note("e"))"""),
             "string.layer(fn)" to pat.layer(transform),
-            "script string.layer(fn)" to StrudelPattern.compile(""""$pat".layer(x => x.note("e"))"""),
+            "script string.layer(fn)" to SprudelPattern.compile(""""$pat".layer(x => x.note("e"))"""),
             "layer(fn)" to note(pat).apply(layer(transform)),
-            "script layer(fn)" to StrudelPattern.compile("""note("$pat").apply(layer(x => x.note("e")))"""),
+            "script layer(fn)" to SprudelPattern.compile("""note("$pat").apply(layer(x => x.note("e")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2  // layer with one fn returns just the transformed pattern
@@ -29,11 +29,11 @@ class LangLayerSpec : StringSpec({
         val transform: PatternMapperFn = { it.note("e") }
         dslInterfaceTests(
             "pattern.apply(fn)" to note(pat).apply(transform),
-            "script pattern.apply(fn)" to StrudelPattern.compile("""note("$pat").apply(x => x.note("e"))"""),
+            "script pattern.apply(fn)" to SprudelPattern.compile("""note("$pat").apply(x => x.note("e"))"""),
             "string.apply(fn)" to pat.apply(transform),
-            "script string.apply(fn)" to StrudelPattern.compile(""""$pat".apply(x => x.note("e"))"""),
+            "script string.apply(fn)" to SprudelPattern.compile(""""$pat".apply(x => x.note("e"))"""),
             "apply(fn)" to note(pat).apply(apply(transform)),
-            "script apply(fn)" to StrudelPattern.compile("""note("$pat").apply(apply(x => x.note("e")))"""),
+            "script apply(fn)" to SprudelPattern.compile("""note("$pat").apply(apply(x => x.note("e")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -58,7 +58,7 @@ class LangLayerSpec : StringSpec({
         // In KlangScript/JS, arguments are just a list.
         // layer(x=>x.note("b"), x=>x.note("c"))
 
-        val p = StrudelPattern.compile(
+        val p = SprudelPattern.compile(
             """
             note("a").layer(
                 x => x.note("b"),

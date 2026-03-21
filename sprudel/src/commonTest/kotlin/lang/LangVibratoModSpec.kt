@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangVibratoModSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangVibratoModSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.vibratoMod(depth)" to note(pat).vibratoMod(amount),
-            "script pattern.vibratoMod(depth)" to StrudelPattern.compile("""note("$pat").vibratoMod($amount)"""),
+            "script pattern.vibratoMod(depth)" to SprudelPattern.compile("""note("$pat").vibratoMod($amount)"""),
             "string.vibratoMod(depth)" to pat.vibratoMod(amount),
-            "script string.vibratoMod(depth)" to StrudelPattern.compile(""""$pat".vibratoMod($amount)"""),
+            "script string.vibratoMod(depth)" to SprudelPattern.compile(""""$pat".vibratoMod($amount)"""),
             "vibratoMod(depth)" to note(pat).apply(vibratoMod(amount)),
-            "script vibratoMod(depth)" to StrudelPattern.compile("""note("$pat").apply(vibratoMod($amount))"""),
+            "script vibratoMod(depth)" to SprudelPattern.compile("""note("$pat").apply(vibratoMod($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.vibratoMod shouldBe amount
@@ -33,11 +33,11 @@ class LangVibratoModSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.vibmod(depth)" to note(pat).vibmod(amount),
-            "script pattern.vibmod(depth)" to StrudelPattern.compile("""note("$pat").vibmod($amount)"""),
+            "script pattern.vibmod(depth)" to SprudelPattern.compile("""note("$pat").vibmod($amount)"""),
             "string.vibmod(depth)" to pat.vibmod(amount),
-            "script string.vibmod(depth)" to StrudelPattern.compile(""""$pat".vibmod($amount)"""),
+            "script string.vibmod(depth)" to SprudelPattern.compile(""""$pat".vibmod($amount)"""),
             "vibmod(depth)" to note(pat).apply(vibmod(amount)),
-            "script vibmod(depth)" to StrudelPattern.compile("""note("$pat").apply(vibmod($amount))"""),
+            "script vibmod(depth)" to SprudelPattern.compile("""note("$pat").apply(vibmod($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.vibratoMod shouldBe amount
@@ -101,7 +101,7 @@ class LangVibratoModSpec : StringSpec({
     }
 
     "vibratoMod() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").vibratoMod("0.1")""")
+        val p = SprudelPattern.compile("""note("c").vibratoMod("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.vibratoMod shouldBe 0.1

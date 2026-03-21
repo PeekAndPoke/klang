@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -26,11 +26,11 @@ class LangLateInCycleSpec : StringSpec({
             "lateInCycle" to
                     seq(pat).apply(lateInCycle(ctrl)),
             "script pattern.lateInCycle" to
-                    StrudelPattern.compile("""seq("$pat").lateInCycle("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").lateInCycle("$ctrl")"""),
             "script string.lateInCycle" to
-                    StrudelPattern.compile(""""$pat".lateInCycle("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".lateInCycle("$ctrl")"""),
             "script lateInCycle" to
-                    StrudelPattern.compile("""seq("$pat").apply(lateInCycle("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(lateInCycle("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -121,7 +121,7 @@ class LangLateInCycleSpec : StringSpec({
     }
 
     "script apply(lateInCycle()) works in compiled code" {
-        val p = StrudelPattern.compile("""note("c d").apply(lateInCycle(0.25))""")!!
+        val p = SprudelPattern.compile("""note("c d").apply(lateInCycle(0.25))""")!!
         val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
 
         assertSoftly {

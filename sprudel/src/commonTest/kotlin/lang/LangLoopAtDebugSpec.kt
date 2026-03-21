@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 /**
  * Debug test for loopAt() to understand the expected behavior
@@ -9,7 +9,7 @@ import io.peekandpoke.klang.sprudel.StrudelPattern
 class LangLoopAtDebugSpec : StringSpec({
 
     "loopAt(2) debug - print all events" {
-        val subject = StrudelPattern.compile("""s("bd").loopAt(2)""")!!
+        val subject = SprudelPattern.compile("""s("bd").loopAt(2)""")!!
 
         println("=== loopAt(2) Events ===")
         repeat(4) { cycle ->

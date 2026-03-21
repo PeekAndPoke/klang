@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
 /**
  * Generic pattern that overrides specific properties while delegating everything else to source.
@@ -17,11 +17,11 @@ import io.peekandpoke.klang.sprudel.StrudelPatternEvent
  * @param cycleDurationOverride Optional cycle duration to override (null = use source estimate)
  */
 internal class PropertyOverridePattern(
-    private val source: StrudelPattern,
+    private val source: SprudelPattern,
     private val weightOverride: Double? = null,
     private val stepsOverride: Rational? = null,
     private val cycleDurationOverride: Rational? = null,
-) : StrudelPattern {
+) : SprudelPattern {
 
     override val weight: Double
         get() = weightOverride ?: source.weight
@@ -36,7 +36,7 @@ internal class PropertyOverridePattern(
         from: Rational,
         to: Rational,
         ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         return source.queryArcContextual(from, to, ctx)
     }
 }

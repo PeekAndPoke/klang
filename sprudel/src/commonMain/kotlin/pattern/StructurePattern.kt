@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.sampleAt
 
 /**
@@ -13,11 +13,11 @@ import io.peekandpoke.klang.sprudel.sampleAt
  * - [filterByTruthiness] determines if we check the value of the 'other' pattern (true = keepif, false = keep).
  */
 internal class StructurePattern(
-    val source: StrudelPattern,
-    val other: StrudelPattern,
+    val source: SprudelPattern,
+    val other: SprudelPattern,
     val mode: Mode,
     val filterByTruthiness: Boolean,
-) : StrudelPattern {
+) : SprudelPattern {
 
     enum class Mode {
         In,  // Source provides structure (Mask behavior)
@@ -39,7 +39,7 @@ internal class StructurePattern(
         }
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         return when (mode) {
             Mode.In -> queryIn(from, to, ctx)
             Mode.Out -> queryOut(from, to, ctx)
@@ -50,7 +50,7 @@ internal class StructurePattern(
      * In Mode (mask/maskAll): The source provides the structure.
      * We iterate over source events and sample the 'other' pattern at the midpoint to decide inclusion.
      */
-    private fun queryIn(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    private fun queryIn(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         val sourceEvents = source.queryArcContextual(from, to, ctx)
         val result = createEventList()
 
@@ -79,7 +79,7 @@ internal class StructurePattern(
      * Out Mode (struct/structAll): The 'other' pattern provides the structure.
      * We behave like an intersection: clipping source events to the mask's duration.
      */
-    private fun queryOut(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    private fun queryOut(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         // Optimization: Inline bind logic to avoid lambda allocation and ReinterpretPattern overhead
         val maskEvents = other.queryArcContextual(from, to, ctx)
         val result = createEventList()

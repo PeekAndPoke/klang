@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangCompressorSpec : StringSpec({
@@ -17,28 +17,28 @@ class LangCompressorSpec : StringSpec({
             "pattern.compressor(ctrl)" to
                     seq(pat).compressor(ctrl),
             "script pattern.compressor(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").compressor("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").compressor("$ctrl")"""),
             "string.compressor(ctrl)" to
                     pat.compressor(ctrl),
             "script string.compressor(ctrl)" to
-                    StrudelPattern.compile(""""$pat".compressor("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".compressor("$ctrl")"""),
             "compressor(ctrl)" to
                     seq(pat).apply(compressor(ctrl)),
             "script compressor(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(compressor("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(compressor("$ctrl"))"""),
             // comp alias
             "pattern.comp(ctrl)" to
                     seq(pat).comp(ctrl),
             "script pattern.comp(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").comp("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").comp("$ctrl")"""),
             "string.comp(ctrl)" to
                     pat.comp(ctrl),
             "script string.comp(ctrl)" to
-                    StrudelPattern.compile(""""$pat".comp("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".comp("$ctrl")"""),
             "comp(ctrl)" to
                     seq(pat).apply(comp(ctrl)),
             "script comp(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(comp("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(comp("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.compressor shouldBe "0:0:0"
@@ -118,7 +118,7 @@ class LangCompressorSpec : StringSpec({
     }
 
     "compressor() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile(""""0 1".apply(compressor("0.5:2 0.8:4"))""")
+        val p = SprudelPattern.compile(""""0 1".apply(compressor("0.5:2 0.8:4"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -127,7 +127,7 @@ class LangCompressorSpec : StringSpec({
     }
 
     "compressor() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").compressor("0.5:2 0.8:4")""")
+        val p = SprudelPattern.compile("""note("a b").compressor("0.5:2 0.8:4")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -173,7 +173,7 @@ class LangCompressorSpec : StringSpec({
     }
 
     "comp() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").comp("0.2:1.5 0.9:6")""")
+        val p = SprudelPattern.compile("""note("c d").comp("0.2:1.5 0.9:6")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

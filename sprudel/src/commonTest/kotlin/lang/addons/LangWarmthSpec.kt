@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.*
 
@@ -20,15 +20,15 @@ class LangWarmthSpec : StringSpec({
             "pattern.warmth(ctrl)" to
                     seq(pat).warmth(ctrl),
             "script pattern.warmth(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").warmth("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").warmth("$ctrl")"""),
             "string.warmth(ctrl)" to
                     pat.warmth(ctrl),
             "script string.warmth(ctrl)" to
-                    StrudelPattern.compile(""""$pat".warmth("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".warmth("$ctrl")"""),
             "warmth(ctrl)" to
                     seq(pat).apply(warmth(ctrl)),
             "script warmth(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(warmth("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(warmth("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("warmth") shouldBe 0.1
@@ -97,7 +97,7 @@ class LangWarmthSpec : StringSpec({
     }
 
     "warmth() works in compiled code" {
-        val p = StrudelPattern.compile("""s("supersaw").warmth("0.4")""")
+        val p = SprudelPattern.compile("""s("supersaw").warmth("0.4")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -150,7 +150,7 @@ class LangWarmthSpec : StringSpec({
     }
 
     "script apply(mul().warmth())" {
-        val p = StrudelPattern.compile("""seq("0.2 0.4").apply(mul("2").warmth())""")!!
+        val p = SprudelPattern.compile("""seq("0.2 0.4").apply(mul("2").warmth())""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {

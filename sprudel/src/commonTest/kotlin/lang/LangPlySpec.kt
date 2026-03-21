@@ -7,7 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPlySpec : StringSpec({
@@ -18,11 +18,11 @@ class LangPlySpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.ply(n)" to s(pat).ply(n),
-            "script pattern.ply(n)" to StrudelPattern.compile("""s("$pat").ply($n)"""),
+            "script pattern.ply(n)" to SprudelPattern.compile("""s("$pat").ply($n)"""),
             "string.ply(n)" to pat.ply(n),
-            "script string.ply(n)" to StrudelPattern.compile(""""$pat".ply($n)"""),
+            "script string.ply(n)" to SprudelPattern.compile(""""$pat".ply($n)"""),
             "ply(n)" to s(pat).apply(ply(n)),
-            "script ply(n)" to StrudelPattern.compile("""s("$pat").apply(ply($n))"""),
+            "script ply(n)" to SprudelPattern.compile("""s("$pat").apply(ply($n))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -174,7 +174,7 @@ class LangPlySpec : StringSpec({
     }
 
     "ply() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c d").ply("3")""")
+        val p = SprudelPattern.compile("""note("c d").ply("3")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 6
@@ -183,7 +183,7 @@ class LangPlySpec : StringSpec({
     }
 
     "ply() with standalone function syntax" {
-        val p = StrudelPattern.compile("""note("c d").apply(ply("2"))""")
+        val p = SprudelPattern.compile("""note("c d").apply(ply("2"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4
@@ -262,7 +262,7 @@ class LangPlySpec : StringSpec({
     }
 
     "ply() with control pattern in compiled code" {
-        val p = StrudelPattern.compile("""note("c d").ply("2 3")""")
+        val p = SprudelPattern.compile("""note("c d").ply("2 3")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         // c repeated 2 times, d repeated 3 times = 5 total

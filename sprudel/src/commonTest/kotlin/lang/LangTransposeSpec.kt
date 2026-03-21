@@ -4,9 +4,9 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangTransposeSpec : StringSpec({
@@ -17,11 +17,11 @@ class LangTransposeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.transpose(v)" to note(pat).transpose(amount),
-            "script pattern.transpose(v)" to StrudelPattern.compile("""note("$pat").transpose($amount)"""),
+            "script pattern.transpose(v)" to SprudelPattern.compile("""note("$pat").transpose($amount)"""),
             "string.transpose(v)" to pat.transpose(amount),
-            "script string.transpose(v)" to StrudelPattern.compile(""""$pat".transpose($amount)"""),
+            "script string.transpose(v)" to SprudelPattern.compile(""""$pat".transpose($amount)"""),
             "transpose(v)" to note(pat).apply(transpose(amount)),
-            "script transpose(v)" to StrudelPattern.compile("""note("$pat").apply(transpose($amount))"""),
+            "script transpose(v)" to SprudelPattern.compile("""note("$pat").apply(transpose($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.note shouldBe "C4"
@@ -48,7 +48,7 @@ class LangTransposeSpec : StringSpec({
     }
 
     "transpose() works within compiled code as chained function" {
-        val p = StrudelPattern.compile("""note("c3").transpose(12)""")
+        val p = SprudelPattern.compile("""note("c3").transpose(12)""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
@@ -56,7 +56,7 @@ class LangTransposeSpec : StringSpec({
     }
 
     "transpose() works within compiled code via apply(transpose(v))" {
-        val p = StrudelPattern.compile("""note("c3").apply(transpose(12))""")
+        val p = SprudelPattern.compile("""note("c3").apply(transpose(12))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
@@ -65,8 +65,8 @@ class LangTransposeSpec : StringSpec({
 
     "debug: VoiceData.transpose with intervals from 'note'" {
         // Test that VoiceData.transpose works correctly with interval strings
-        val c2 = StrudelVoiceData.empty.copy(note = "C2")
-        val c3 = StrudelVoiceData.empty.copy(note = "C3")
+        val c2 = SprudelVoiceData.empty.copy(note = "C2")
+        val c3 = SprudelVoiceData.empty.copy(note = "C3")
 
         c2.transpose("1P").note shouldBe "C2"
         c3.transpose("1P").note shouldBe "C3"
@@ -83,8 +83,8 @@ class LangTransposeSpec : StringSpec({
 
     "debug: VoiceData.transpose with intervals from 'value'" {
         // Test that VoiceData.transpose works correctly with interval strings
-        val c2 = StrudelVoiceData.empty.copy(value = "C2".asVoiceValue())
-        val c3 = StrudelVoiceData.empty.copy(value = "C3".asVoiceValue())
+        val c2 = SprudelVoiceData.empty.copy(value = "C2".asVoiceValue())
+        val c3 = SprudelVoiceData.empty.copy(value = "C3".asVoiceValue())
 
         c2.transpose("1P").note shouldBe "C2"
         c3.transpose("1P").note shouldBe "C3"

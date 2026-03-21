@@ -5,7 +5,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangScaleTransposeSpec : StringSpec({
@@ -16,15 +16,15 @@ class LangScaleTransposeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.scaleTranspose(v)" to note(pat).scale("C:major").scaleTranspose(steps),
-            "script pattern.scaleTranspose(v)" to StrudelPattern.compile(
+            "script pattern.scaleTranspose(v)" to SprudelPattern.compile(
                 """note("$pat").scale("C:major").scaleTranspose($steps)"""
             ),
             "string.scaleTranspose(v)" to pat.scale("C:major").scaleTranspose(steps),
-            "script string.scaleTranspose(v)" to StrudelPattern.compile(
+            "script string.scaleTranspose(v)" to SprudelPattern.compile(
                 """"$pat".scale("C:major").scaleTranspose($steps)"""
             ),
             "scaleTranspose(v)" to note(pat).scale("C:major").apply(scaleTranspose(steps)),
-            "script scaleTranspose(v)" to StrudelPattern.compile(
+            "script scaleTranspose(v)" to SprudelPattern.compile(
                 """note("$pat").scale("C:major").apply(scaleTranspose($steps))"""
             ),
         ) { _, events ->
@@ -135,7 +135,7 @@ class LangScaleTransposeSpec : StringSpec({
     }
 
     "scaleTranspose() works in compiled code" {
-        val p = StrudelPattern.compile("""n("0 2").scale("C:major").scaleTranspose(1)""")
+        val p = SprudelPattern.compile("""n("0 2").scale("C:major").scaleTranspose(1)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2

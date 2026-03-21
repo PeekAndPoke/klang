@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangDelayFeedbackSpec : StringSpec({
 
@@ -33,7 +33,7 @@ class LangDelayFeedbackSpec : StringSpec({
     }
 
     "delayfeedback() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").delayfeedback("0.5")""")
+        val p = SprudelPattern.compile("""note("c").delayfeedback("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.delayFeedback shouldBe 0.5
@@ -74,7 +74,7 @@ class LangDelayFeedbackSpec : StringSpec({
     }
 
     "delayfb() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").delayfb("0.6")""")
+        val p = SprudelPattern.compile("""note("c").delayfb("0.6")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.delayFeedback shouldBe 0.6
@@ -97,7 +97,7 @@ class LangDelayFeedbackSpec : StringSpec({
     }
 
     "dfb() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").dfb("0.8")""")
+        val p = SprudelPattern.compile("""note("c").dfb("0.8")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.delayFeedback shouldBe 0.8

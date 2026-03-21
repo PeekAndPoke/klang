@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangZoomSpec : StringSpec({
@@ -12,11 +12,11 @@ class LangZoomSpec : StringSpec({
         val pat = "0 1 2 3"
         dslInterfaceTests(
             "pattern.zoom(0.5, 1.0)" to n(pat).zoom(0.5, 1.0),
-            "script pattern.zoom(0.5, 1.0)" to StrudelPattern.compile("""n("$pat").zoom(0.5, 1.0)"""),
+            "script pattern.zoom(0.5, 1.0)" to SprudelPattern.compile("""n("$pat").zoom(0.5, 1.0)"""),
             "string.zoom(0.5, 1.0)" to pat.zoom(0.5, 1.0),
-            "script string.zoom(0.5, 1.0)" to StrudelPattern.compile(""""$pat".zoom(0.5, 1.0)"""),
+            "script string.zoom(0.5, 1.0)" to SprudelPattern.compile(""""$pat".zoom(0.5, 1.0)"""),
             "zoom(0.5, 1.0)" to n(pat).apply(zoom(0.5, 1.0)),
-            "script zoom(0.5, 1.0)" to StrudelPattern.compile("""n("$pat").apply(zoom(0.5, 1.0))"""),
+            "script zoom(0.5, 1.0)" to SprudelPattern.compile("""n("$pat").apply(zoom(0.5, 1.0))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2  // second half "2 3" stretched to fill cycle

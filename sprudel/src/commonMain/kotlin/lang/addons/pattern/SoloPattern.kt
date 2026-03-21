@@ -15,9 +15,9 @@ import io.peekandpoke.klang.sprudel.*
  *    pattern from solo tracking between notes.
  */
 class SoloPattern(
-    private val source: StrudelPattern,
-    private val soloControl: StrudelPattern,
-) : StrudelPattern {
+    private val source: SprudelPattern,
+    private val soloControl: SprudelPattern,
+) : SprudelPattern {
 
     companion object {
         private var counter = 0
@@ -36,8 +36,8 @@ class SoloPattern(
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
+        ctx: SprudelPattern.QueryContext,
+    ): List<SprudelPatternEvent> {
         // 1. Query and sort source events by visible start time
         val sourceEvents = source.queryArcContextual(from, to, ctx)
             .sortedBy { it.part.begin }
@@ -45,19 +45,19 @@ class SoloPattern(
         // 2. Derive a stable patternId: prefer the one already on source events
         patternId = sourceEvents.firstOrNull()?.data?.patternId ?: patternId ?: fallbackPatternId
 
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = mutableListOf<SprudelPatternEvent>()
         var cursor = from
 
         // Sample the solo control pattern at the given time
-        fun soloSampleAt(time: Rational): StrudelPatternEvent? = soloControl.sampleAt(time, ctx)
+        fun soloSampleAt(time: Rational): SprudelPatternEvent? = soloControl.sampleAt(time, ctx)
 
         // Silent filler event: keeps the backend's solo-tracker alive during rests
-        fun filler(start: Rational, end: Rational, evt: StrudelPatternEvent?): StrudelPatternEvent {
+        fun filler(start: Rational, end: Rational, evt: SprudelPatternEvent?): SprudelPatternEvent {
             val span = TimeSpan(start, end)
-            return StrudelPatternEvent(
+            return SprudelPatternEvent(
                 part = span,
                 whole = span, // whole == part → isOnset = true, so the backend picks it up
-                data = StrudelVoiceData.empty.copy(
+                data = SprudelVoiceData.empty.copy(
                     note = "a",
                     freqHz = 440.0,
                     sound = "sine",

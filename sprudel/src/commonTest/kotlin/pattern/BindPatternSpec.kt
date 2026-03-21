@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.seq
 import io.peekandpoke.klang.sprudel.lang.silence
@@ -117,8 +117,8 @@ class BindPatternSpec : StringSpec({
 
         val pattern = BindPattern(outer) { inner }
 
-        val ctx = StrudelPattern.QueryContext().update {
-            set(StrudelPattern.QueryContext.randomSeedKey, 12345)
+        val ctx = SprudelPattern.QueryContext().update {
+            set(SprudelPattern.QueryContext.randomSeedKey, 12345)
         }
 
         val events = pattern.queryArcContextual(0.0, 1.0, ctx)

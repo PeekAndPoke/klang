@@ -4,12 +4,12 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
 class RepeatCyclesPatternSpec : StringSpec({
 
     "RepeatCyclesPattern repeats each cycle n times" {
-        val source = AtomicPattern(StrudelVoiceData.empty.copy(note = "c"))
+        val source = AtomicPattern(SprudelVoiceData.empty.copy(note = "c"))
 
         val pattern = RepeatCyclesPattern(source, 2.0.toRational())
 

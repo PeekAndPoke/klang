@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFmattackSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangFmattackSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fmattack(ctrl)" to s(pat).fmattack(ctrl),
-            "script pattern.fmattack(ctrl)" to StrudelPattern.compile("""s("$pat").fmattack("$ctrl")"""),
+            "script pattern.fmattack(ctrl)" to SprudelPattern.compile("""s("$pat").fmattack("$ctrl")"""),
             "string.fmattack(ctrl)" to pat.fmattack(ctrl),
-            "script string.fmattack(ctrl)" to StrudelPattern.compile(""""$pat".fmattack("$ctrl")"""),
+            "script string.fmattack(ctrl)" to SprudelPattern.compile(""""$pat".fmattack("$ctrl")"""),
             "fmattack(ctrl)" to s(pat).apply(fmattack(ctrl)),
-            "script fmattack(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmattack("$ctrl"))"""),
+            "script fmattack(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmattack("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmAttack shouldBe 0.1
@@ -33,11 +33,11 @@ class LangFmattackSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fmatt(ctrl)" to s(pat).fmatt(ctrl),
-            "script pattern.fmatt(ctrl)" to StrudelPattern.compile("""s("$pat").fmatt("$ctrl")"""),
+            "script pattern.fmatt(ctrl)" to SprudelPattern.compile("""s("$pat").fmatt("$ctrl")"""),
             "string.fmatt(ctrl)" to pat.fmatt(ctrl),
-            "script string.fmatt(ctrl)" to StrudelPattern.compile(""""$pat".fmatt("$ctrl")"""),
+            "script string.fmatt(ctrl)" to SprudelPattern.compile(""""$pat".fmatt("$ctrl")"""),
             "fmatt(ctrl)" to s(pat).apply(fmatt(ctrl)),
-            "script fmatt(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmatt("$ctrl"))"""),
+            "script fmatt(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmatt("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmAttack shouldBe 0.1
@@ -108,7 +108,7 @@ class LangFmattackSpec : StringSpec({
     }
 
     "fmattack() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").fmattack("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").fmattack("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -133,7 +133,7 @@ class LangFmattackSpec : StringSpec({
     }
 
     "fmatt() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").fmatt("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").fmatt("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

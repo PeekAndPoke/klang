@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFastGapSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangFastGapSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fastGap(2)" to s(pat).fastGap(2),
-            "script pattern.fastGap(2)" to StrudelPattern.compile("""s("$pat").fastGap(2)"""),
+            "script pattern.fastGap(2)" to SprudelPattern.compile("""s("$pat").fastGap(2)"""),
             "string.fastGap(2)" to pat.fastGap(2),
-            "script string.fastGap(2)" to StrudelPattern.compile(""""$pat".fastGap(2)"""),
+            "script string.fastGap(2)" to SprudelPattern.compile(""""$pat".fastGap(2)"""),
             "fastGap(2)" to s(pat).apply(fastGap(2)),
-            "script fastGap(2)" to StrudelPattern.compile("""s("$pat").apply(fastGap(2))"""),
+            "script fastGap(2)" to SprudelPattern.compile("""s("$pat").apply(fastGap(2))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -64,7 +64,7 @@ class LangFastGapSpec : StringSpec({
     }
 
     "fastGap() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").fastGap(3)""")
+        val p = SprudelPattern.compile("""note("a b").fastGap(3)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         // With factor 3, pattern is compressed to first third of cycle
@@ -99,7 +99,7 @@ class LangFastGapSpec : StringSpec({
     }
 
     "densityGap() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").densityGap(4)""")
+        val p = SprudelPattern.compile("""note("a b").densityGap(4)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

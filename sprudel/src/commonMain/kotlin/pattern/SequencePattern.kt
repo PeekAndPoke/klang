@@ -3,20 +3,20 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.sum
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
 /**
  * Sequence Pattern: Squashes multiple patterns into a single cycle.
  * Implementation of `seq(a, b)`.
  */
 internal class SequencePattern(
-    val patterns: List<StrudelPattern>,
-) : StrudelPattern.FixedWeight {
+    val patterns: List<SprudelPattern>,
+) : SprudelPattern.FixedWeight {
 
     companion object {
-        fun create(patterns: List<StrudelPattern>): StrudelPattern = when {
+        fun create(patterns: List<SprudelPattern>): SprudelPattern = when {
             patterns.isEmpty() -> EmptyPattern
             patterns.size == 1 -> patterns.first()
             else -> SequencePattern(patterns)
@@ -40,7 +40,7 @@ internal class SequencePattern(
         }
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
 
         val events = createEventList()

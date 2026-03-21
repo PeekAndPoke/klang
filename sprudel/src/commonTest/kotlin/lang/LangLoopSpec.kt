@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLoopSpec : StringSpec({
@@ -13,11 +13,11 @@ class LangLoopSpec : StringSpec({
         val ctrl = "1 0"
         dslInterfaceTests(
             "pattern.loop(ctrl)" to seq(pat).loop(ctrl),
-            "script pattern.loop(ctrl)" to StrudelPattern.compile("""seq("$pat").loop("$ctrl")"""),
+            "script pattern.loop(ctrl)" to SprudelPattern.compile("""seq("$pat").loop("$ctrl")"""),
             "string.loop(ctrl)" to pat.loop(ctrl),
-            "script string.loop(ctrl)" to StrudelPattern.compile(""""$pat".loop("$ctrl")"""),
+            "script string.loop(ctrl)" to SprudelPattern.compile(""""$pat".loop("$ctrl")"""),
             "loop(ctrl)" to seq(pat).apply(loop(ctrl)),
-            "script loop(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(loop("$ctrl"))"""),
+            "script loop(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(loop("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.loop shouldBe true
@@ -54,7 +54,7 @@ class LangLoopSpec : StringSpec({
     }
 
     "loop() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").loop("1 0")""")
+        val p = SprudelPattern.compile("""note("a b").loop("1 0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 2
         events.map { it.data.loop } shouldBe listOf(true, false)

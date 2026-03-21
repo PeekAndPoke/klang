@@ -5,7 +5,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangWhenSpec : FunSpec({
@@ -15,15 +15,15 @@ class LangWhenSpec : FunSpec({
             "pattern.when(condition, transform)" to
                     note("a").`when`("1") { it.note("b") },
             "script pattern.when(condition, transform)" to
-                    StrudelPattern.compile("""note("a").when("1", x => x.note("b"))"""),
+                    SprudelPattern.compile("""note("a").when("1", x => x.note("b"))"""),
             "string.when(condition, transform)" to
                     "a".`when`("1") { it.note("b") },
             "script string.when(condition, transform)" to
-                    StrudelPattern.compile(""""a".when("1", x => x.note("b"))"""),
+                    SprudelPattern.compile(""""a".when("1", x => x.note("b"))"""),
             "when(condition, transform)" to
                     note("a").apply(`when`("1") { it.note("b") }),
             "script when(condition, transform)" to
-                    StrudelPattern.compile("""note("a").apply(when("1", x => x.note("b")))"""),
+                    SprudelPattern.compile("""note("a").apply(when("1", x => x.note("b")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -95,7 +95,7 @@ class LangWhenSpec : FunSpec({
     }
 
     test("when() should work with alternating condition") {
-        val pat = StrudelPattern.compile(
+        val pat = SprudelPattern.compile(
             """
                 note("c3 d3 e3 f3").when(pure(1).slowcat(pure(0)), x => x.transpose(12))
             """.trimIndent()
@@ -147,7 +147,7 @@ class LangWhenSpec : FunSpec({
     }
 
     test("script apply(when()) works in compiled code") {
-        val p = StrudelPattern.compile("""note("c3 d3").apply(when("1 0", x => x.note("e3")))""")!!
+        val p = SprudelPattern.compile("""note("c3 d3").apply(when("1 0", x => x.note("e3")))""")!!
         val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
 
         events.size shouldBe 2

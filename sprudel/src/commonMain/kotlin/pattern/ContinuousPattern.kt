@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
@@ -13,7 +13,7 @@ import io.peekandpoke.klang.sprudel.TimeSpan
  */
 class ContinuousPattern private constructor(
     val getValue: (from: Double, to: Double, ctx: QueryContext) -> Double,
-) : StrudelPattern.FixedWeight {
+) : SprudelPattern.FixedWeight {
     companion object {
         val minKey = QueryContext.Key<Double>("rangeMin")
         val maxKey = QueryContext.Key<Double>("rangeMax")
@@ -29,7 +29,7 @@ class ContinuousPattern private constructor(
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
 
         val value = getValue(
             min = ctx.getOrDefault(minKey, 0.0),
@@ -49,10 +49,10 @@ class ContinuousPattern private constructor(
 
             val span = TimeSpan(begin = currentFrom, end = nextFrom)
 
-            val event = StrudelPatternEvent(
+            val event = SprudelPatternEvent(
                 part = span,
                 whole = span,
-                data = StrudelVoiceData.empty.copy(value = value)
+                data = SprudelVoiceData.empty.copy(value = value)
             )
 
             result.add(event)

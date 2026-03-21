@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangLoopControlSpec : StringSpec({
 
@@ -41,7 +41,7 @@ class LangLoopControlSpec : StringSpec({
     }
 
     "loopBegin() works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd").loopBegin("0.25")""")
+        val p = SprudelPattern.compile("""sound("bd").loopBegin("0.25")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.loopBegin shouldBe 0.25
@@ -88,7 +88,7 @@ class LangLoopControlSpec : StringSpec({
     }
 
     "loopEnd() works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd").loopEnd("0.75")""")
+        val p = SprudelPattern.compile("""sound("bd").loopEnd("0.75")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.loopEnd shouldBe 0.75

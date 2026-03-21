@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBrakSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangBrakSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.brak()" to s(pat).brak(),
-            "script pattern.brak()" to StrudelPattern.compile("""s("$pat").brak()"""),
+            "script pattern.brak()" to SprudelPattern.compile("""s("$pat").brak()"""),
             "string.brak()" to pat.brak(),
-            "script string.brak()" to StrudelPattern.compile(""""$pat".brak()"""),
+            "script string.brak()" to SprudelPattern.compile(""""$pat".brak()"""),
             "brak()" to s(pat).apply(brak()),
-            "script brak()" to StrudelPattern.compile("""s("$pat").apply(brak())"""),
+            "script brak()" to SprudelPattern.compile("""s("$pat").apply(brak())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -90,7 +90,7 @@ class LangBrakSpec : StringSpec({
     }
 
     "brak() works in compiled code" {
-        val pattern = StrudelPattern.compile("""seq("a", "b").brak()""")
+        val pattern = SprudelPattern.compile("""seq("a", "b").brak()""")
         val events = pattern?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

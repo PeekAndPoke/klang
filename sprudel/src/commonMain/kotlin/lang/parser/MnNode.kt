@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.sprudel.lang.parser
 
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 
 /**
  * Intermediate AST node for mini-notation patterns.
  *
- * Used as the bridge between the raw string input and the [StrudelPattern] objects
+ * Used as the bridge between the raw string input and the [SprudelPattern] objects
  * the runtime executes. Storing this intermediate tree allows:
  *  - the visual editor to display and edit patterns without runtime dependencies
  *  - a clean round-trip: String → MnPattern → String
@@ -137,7 +137,7 @@ sealed class MnNode {
      * Repeat `node!count` — deferred expansion of the bang operator.
      *
      * Keeps `a!8` as a single AST node so the renderer can produce `a!8` again
-     * instead of `a a a a a a a a`. Phase 2 ([MnPatternToStrudelPattern]) expands it.
+     * instead of `a a a a a a a a`. Phase 2 ([MnPatternToSprudelPattern]) expands it.
      *
      * [mods] are applied to the whole group of expanded copies (equivalent to wrapping
      * them in a [Group] with the same mods). When [mods] is empty the copies are

@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangEffectsRoutingSpec : StringSpec({
 
@@ -156,7 +156,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "distort() works within compiled code as top-level PatternMapper" {
-        val p = StrudelPattern.compile("""note("a b").apply(distort("0 1"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(distort("0 1"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -165,7 +165,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "distort() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").distort("0 1")""")
+        val p = SprudelPattern.compile("""note("a b").distort("0 1")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -174,7 +174,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "crush() works within compiled code as top-level PatternMapper" {
-        val p = StrudelPattern.compile("""note("a b").apply(crush("8 4"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(crush("8 4"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -183,7 +183,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "crush() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").crush("8 4")""")
+        val p = SprudelPattern.compile("""note("a b").crush("8 4")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -192,7 +192,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "coarse() works within compiled code as top-level PatternMapper" {
-        val p = StrudelPattern.compile("""note("a b").apply(coarse("1 2"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(coarse("1 2"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -201,7 +201,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "coarse() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").coarse("1 2")""")
+        val p = SprudelPattern.compile("""note("a b").coarse("1 2")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -210,7 +210,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "room() works within compiled code as top-level PatternMapper" {
-        val p = StrudelPattern.compile("""note("a b").apply(room("0.1 0.9"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(room("0.1 0.9"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -219,7 +219,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "room() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").room("0.1 0.9")""")
+        val p = SprudelPattern.compile("""note("a b").room("0.1 0.9")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -228,7 +228,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "roomsize() works within compiled code as top-level PatternMapper" {
-        val p = StrudelPattern.compile("""note("a b").apply(roomsize("0.2 0.8"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(roomsize("0.2 0.8"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -237,7 +237,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "roomsize() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").roomsize("0.2 0.8")""")
+        val p = SprudelPattern.compile("""note("a b").roomsize("0.2 0.8")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -246,7 +246,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delay() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""note("a b").apply(delay("0.0 1.0"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(delay("0.0 1.0"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -255,7 +255,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delay() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").delay("0.0 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").delay("0.0 1.0")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -264,7 +264,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delaytime() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""note("a b").apply(delaytime("0.125 0.25"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(delaytime("0.125 0.25"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -273,7 +273,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delaytime() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").delaytime("0.125 0.25")""")
+        val p = SprudelPattern.compile("""note("a b").delaytime("0.125 0.25")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -282,7 +282,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delayfeedback() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""note("a b").apply(delayfeedback("0.25 0.75"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(delayfeedback("0.25 0.75"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -291,7 +291,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "delayfeedback() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").delayfeedback("0.25 0.75")""")
+        val p = SprudelPattern.compile("""note("a b").delayfeedback("0.25 0.75")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -300,7 +300,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "orbit() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""note("a b").apply(orbit("0 2"))""")
+        val p = SprudelPattern.compile("""note("a b").apply(orbit("0 2"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -309,7 +309,7 @@ class LangEffectsRoutingSpec : StringSpec({
     }
 
     "orbit() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").orbit("0 2")""")
+        val p = SprudelPattern.compile("""note("a b").orbit("0 2")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

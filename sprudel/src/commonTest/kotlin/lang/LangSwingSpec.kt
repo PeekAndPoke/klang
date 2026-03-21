@@ -9,7 +9,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangSwingSpec : StringSpec({
@@ -21,11 +21,11 @@ class LangSwingSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.swingBy(swing, n)" to s(pat).swingBy(swingAmount, n),
-            "script pattern.swingBy(swing, n)" to StrudelPattern.compile("""s("$pat").swingBy($swingAmount, $n)"""),
+            "script pattern.swingBy(swing, n)" to SprudelPattern.compile("""s("$pat").swingBy($swingAmount, $n)"""),
             "string.swingBy(swing, n)" to pat.swingBy(swingAmount, n),
-            "script string.swingBy(swing, n)" to StrudelPattern.compile(""""$pat".swingBy($swingAmount, $n)"""),
+            "script string.swingBy(swing, n)" to SprudelPattern.compile(""""$pat".swingBy($swingAmount, $n)"""),
             "swingBy(swing, n)" to s(pat).apply(swingBy(swingAmount, n)),
-            "script swingBy(swing, n)" to StrudelPattern.compile("""s("$pat").apply(swingBy($swingAmount, $n))"""),
+            "script swingBy(swing, n)" to SprudelPattern.compile("""s("$pat").apply(swingBy($swingAmount, $n))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -38,11 +38,11 @@ class LangSwingSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.swing(n)" to s(pat).swing(n),
-            "script pattern.swing(n)" to StrudelPattern.compile("""s("$pat").swing($n)"""),
+            "script pattern.swing(n)" to SprudelPattern.compile("""s("$pat").swing($n)"""),
             "string.swing(n)" to pat.swing(n),
-            "script string.swing(n)" to StrudelPattern.compile(""""$pat".swing($n)"""),
+            "script string.swing(n)" to SprudelPattern.compile(""""$pat".swing($n)"""),
             "swing(n)" to s(pat).apply(swing(n)),
-            "script swing(n)" to StrudelPattern.compile("""s("$pat").apply(swing($n))"""),
+            "script swing(n)" to SprudelPattern.compile("""s("$pat").apply(swing($n))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2

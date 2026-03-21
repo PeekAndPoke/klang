@@ -7,7 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPlyForEachSpec : StringSpec({
@@ -18,11 +18,11 @@ class LangPlyForEachSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.plyForEach(n)" to s(pat).plyForEach(n) { p, _ -> p },
-            "script pattern.plyForEach(n)" to StrudelPattern.compile("""s("$pat").plyForEach($n, (p, i) => p)"""),
+            "script pattern.plyForEach(n)" to SprudelPattern.compile("""s("$pat").plyForEach($n, (p, i) => p)"""),
             "string.plyForEach(n)" to pat.plyForEach(n) { p, _ -> p },
-            "script string.plyForEach(n)" to StrudelPattern.compile(""""$pat".plyForEach($n, (p, i) => p)"""),
+            "script string.plyForEach(n)" to SprudelPattern.compile(""""$pat".plyForEach($n, (p, i) => p)"""),
             "plyForEach(n)" to s(pat).apply(plyForEach(n) { p, _ -> p }),
-            "script plyForEach(n)" to StrudelPattern.compile("""s("$pat").apply(plyForEach($n, (p, i) => p))"""),
+            "script plyForEach(n)" to SprudelPattern.compile("""s("$pat").apply(plyForEach($n, (p, i) => p))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -161,7 +161,7 @@ class LangPlyForEachSpec : StringSpec({
     // Compile tests
 
     "plyForEach() with compile - basic" {
-        val p = StrudelPattern.compile("""seq("1").plyForEach(4, (p, n) => p.add(n * 2))""")!!
+        val p = SprudelPattern.compile("""seq("1").plyForEach(4, (p, n) => p.add(n * 2))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -172,7 +172,7 @@ class LangPlyForEachSpec : StringSpec({
     }
 
     "plyForEach() with compile - multiple events" {
-        val p = StrudelPattern.compile("""seq("0 10").plyForEach(3, (p, n) => p.add(n * 10))""")!!
+        val p = SprudelPattern.compile("""seq("0 10").plyForEach(3, (p, n) => p.add(n * 10))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 6
@@ -185,7 +185,7 @@ class LangPlyForEachSpec : StringSpec({
     }
 
     "plyforeach() with compile - lowercase alias" {
-        val p = StrudelPattern.compile("""seq("0").plyforeach(2, (p, n) => p.add(n * 5))""")!!
+        val p = SprudelPattern.compile("""seq("0").plyforeach(2, (p, n) => p.add(n * 5))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -194,7 +194,7 @@ class LangPlyForEachSpec : StringSpec({
     }
 
     "plyForEach() with compile - note pattern" {
-        val p = StrudelPattern.compile("""note("c3").plyForEach(3, (p, n) => p.transpose(n * 12))""")!!
+        val p = SprudelPattern.compile("""note("c3").plyForEach(3, (p, n) => p.transpose(n * 12))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3

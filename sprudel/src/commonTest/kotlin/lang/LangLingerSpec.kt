@@ -8,7 +8,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLingerSpec : StringSpec({
@@ -17,11 +17,11 @@ class LangLingerSpec : StringSpec({
         val pat = "bd sd ht lt"
         dslInterfaceTests(
             "pattern.linger(0.5)" to s(pat).linger(0.5),
-            "script pattern.linger(0.5)" to StrudelPattern.compile("""s("$pat").linger(0.5)"""),
+            "script pattern.linger(0.5)" to SprudelPattern.compile("""s("$pat").linger(0.5)"""),
             "string.linger(0.5)" to pat.linger(0.5),
-            "script string.linger(0.5)" to StrudelPattern.compile(""""$pat".linger(0.5)"""),
+            "script string.linger(0.5)" to SprudelPattern.compile(""""$pat".linger(0.5)"""),
             "linger(0.5)" to s(pat).apply(linger(0.5)),
-            "script linger(0.5)" to StrudelPattern.compile("""s("$pat").apply(linger(0.5))"""),
+            "script linger(0.5)" to SprudelPattern.compile("""s("$pat").apply(linger(0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4  // first half (bd sd) repeated to fill cycle

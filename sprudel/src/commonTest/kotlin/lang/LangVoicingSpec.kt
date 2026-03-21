@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.tones.note.Note
 
 class LangVoicingSpec : StringSpec({
@@ -84,7 +84,7 @@ class LangVoicingSpec : StringSpec({
     }
 
     "voicing() works in compiled code" {
-        val p = StrudelPattern.compile("""chord("Cmaj7").voicing()""")
+        val p = SprudelPattern.compile("""chord("Cmaj7").voicing()""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4
@@ -159,7 +159,7 @@ class LangVoicingSpec : StringSpec({
     }
 
     "voicing() works via apply(voicing()) in compiled code" {
-        val p = StrudelPattern.compile("""chord("Cmaj7").apply(voicing())""")
+        val p = SprudelPattern.compile("""chord("Cmaj7").apply(voicing())""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4
@@ -168,7 +168,7 @@ class LangVoicingSpec : StringSpec({
     }
 
     "voicing() with range works in compiled code" {
-        val p = StrudelPattern.compile("""chord("Dm7 G7").apply(voicing("C3", "C5"))""")
+        val p = SprudelPattern.compile("""chord("Dm7 G7").apply(voicing("C3", "C5"))""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         // 2 chords × 4 notes

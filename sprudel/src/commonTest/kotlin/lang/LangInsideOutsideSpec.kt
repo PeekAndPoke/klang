@@ -6,7 +6,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangInsideOutsideSpec : StringSpec({
@@ -17,11 +17,11 @@ class LangInsideOutsideSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.outside(factor)" to s(pat).outside(factor) { it },
-            "script pattern.outside(factor)" to StrudelPattern.compile("""s("$pat").outside($factor, p => p)"""),
+            "script pattern.outside(factor)" to SprudelPattern.compile("""s("$pat").outside($factor, p => p)"""),
             "string.outside(factor)" to pat.outside(factor) { it },
-            "script string.outside(factor)" to StrudelPattern.compile(""""$pat".outside($factor, p => p)"""),
+            "script string.outside(factor)" to SprudelPattern.compile(""""$pat".outside($factor, p => p)"""),
             "outside(factor)" to s(pat).apply(outside(factor) { it }),
-            "script outside(factor)" to StrudelPattern.compile("""s("$pat").apply(outside($factor, p => p))"""),
+            "script outside(factor)" to SprudelPattern.compile("""s("$pat").apply(outside($factor, p => p))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2

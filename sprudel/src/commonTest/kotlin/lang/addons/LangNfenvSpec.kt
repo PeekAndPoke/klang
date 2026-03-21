@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -20,11 +20,11 @@ class LangNfenvSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfenv(ctrl)" to seq(pat).nfenv(ctrl),
-            "script pattern.nfenv(ctrl)" to StrudelPattern.compile("""seq("$pat").nfenv("$ctrl")"""),
+            "script pattern.nfenv(ctrl)" to SprudelPattern.compile("""seq("$pat").nfenv("$ctrl")"""),
             "string.nfenv(ctrl)" to pat.nfenv(ctrl),
-            "script string.nfenv(ctrl)" to StrudelPattern.compile(""""$pat".nfenv("$ctrl")"""),
+            "script string.nfenv(ctrl)" to SprudelPattern.compile(""""$pat".nfenv("$ctrl")"""),
             "nfenv(ctrl)" to seq(pat).apply(nfenv(ctrl)),
-            "script nfenv(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfenv("$ctrl"))"""),
+            "script nfenv(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfenv("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfenv shouldBe 0.5
@@ -89,7 +89,7 @@ class LangNfenvSpec : StringSpec({
     }
 
     "nfenv() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").nfenv("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").nfenv("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -104,11 +104,11 @@ class LangNfenvSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfe(ctrl)" to seq(pat).nfe(ctrl),
-            "script pattern.nfe(ctrl)" to StrudelPattern.compile("""seq("$pat").nfe("$ctrl")"""),
+            "script pattern.nfe(ctrl)" to SprudelPattern.compile("""seq("$pat").nfe("$ctrl")"""),
             "string.nfe(ctrl)" to pat.nfe(ctrl),
-            "script string.nfe(ctrl)" to StrudelPattern.compile(""""$pat".nfe("$ctrl")"""),
+            "script string.nfe(ctrl)" to SprudelPattern.compile(""""$pat".nfe("$ctrl")"""),
             "nfe(ctrl)" to seq(pat).apply(nfe(ctrl)),
-            "script nfe(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfe("$ctrl"))"""),
+            "script nfe(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfe("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfenv shouldBe 0.5
@@ -144,7 +144,7 @@ class LangNfenvSpec : StringSpec({
     }
 
     "nfe() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").nfe("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").nfe("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

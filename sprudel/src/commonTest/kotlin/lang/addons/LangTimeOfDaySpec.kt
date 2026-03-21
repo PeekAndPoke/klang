@@ -8,7 +8,7 @@ import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 
 class LangTimeOfDaySpec : StringSpec({
 

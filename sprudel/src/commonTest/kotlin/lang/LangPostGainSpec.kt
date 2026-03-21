@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPostGainSpec : StringSpec({
@@ -19,15 +19,15 @@ class LangPostGainSpec : StringSpec({
             "pattern.postgain(ctrl)" to
                     seq(pat).postgain(ctrl),
             "script pattern.postgain(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").postgain("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").postgain("$ctrl")"""),
             "string.postgain(ctrl)" to
                     pat.postgain(ctrl),
             "script string.postgain(ctrl)" to
-                    StrudelPattern.compile(""""$pat".postgain("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".postgain("$ctrl")"""),
             "postgain(ctrl)" to
                     seq(pat).apply(postgain(ctrl)),
             "script postgain(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(postgain("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(postgain("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.postGain shouldBe 0.0
@@ -107,7 +107,7 @@ class LangPostGainSpec : StringSpec({
     }
 
     "postgain() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile(""""a b".apply(postgain("0.5 1.0"))""")
+        val p = SprudelPattern.compile(""""a b".apply(postgain("0.5 1.0"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -116,7 +116,7 @@ class LangPostGainSpec : StringSpec({
     }
 
     "postgain() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").postgain("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").postgain("0.5 1.0")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

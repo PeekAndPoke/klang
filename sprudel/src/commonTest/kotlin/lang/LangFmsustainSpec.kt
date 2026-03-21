@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFmsustainSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangFmsustainSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fmsustain(ctrl)" to s(pat).fmsustain(ctrl),
-            "script pattern.fmsustain(ctrl)" to StrudelPattern.compile("""s("$pat").fmsustain("$ctrl")"""),
+            "script pattern.fmsustain(ctrl)" to SprudelPattern.compile("""s("$pat").fmsustain("$ctrl")"""),
             "string.fmsustain(ctrl)" to pat.fmsustain(ctrl),
-            "script string.fmsustain(ctrl)" to StrudelPattern.compile(""""$pat".fmsustain("$ctrl")"""),
+            "script string.fmsustain(ctrl)" to SprudelPattern.compile(""""$pat".fmsustain("$ctrl")"""),
             "fmsustain(ctrl)" to s(pat).apply(fmsustain(ctrl)),
-            "script fmsustain(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmsustain("$ctrl"))"""),
+            "script fmsustain(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmsustain("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmSustain shouldBe 0.0
@@ -33,11 +33,11 @@ class LangFmsustainSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fmsus(ctrl)" to s(pat).fmsus(ctrl),
-            "script pattern.fmsus(ctrl)" to StrudelPattern.compile("""s("$pat").fmsus("$ctrl")"""),
+            "script pattern.fmsus(ctrl)" to SprudelPattern.compile("""s("$pat").fmsus("$ctrl")"""),
             "string.fmsus(ctrl)" to pat.fmsus(ctrl),
-            "script string.fmsus(ctrl)" to StrudelPattern.compile(""""$pat".fmsus("$ctrl")"""),
+            "script string.fmsus(ctrl)" to SprudelPattern.compile(""""$pat".fmsus("$ctrl")"""),
             "fmsus(ctrl)" to s(pat).apply(fmsus(ctrl)),
-            "script fmsus(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmsus("$ctrl"))"""),
+            "script fmsus(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmsus("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmSustain shouldBe 0.0
@@ -108,7 +108,7 @@ class LangFmsustainSpec : StringSpec({
     }
 
     "fmsustain() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").fmsustain("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").fmsustain("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -133,7 +133,7 @@ class LangFmsustainSpec : StringSpec({
     }
 
     "fmsus() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").fmsus("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").fmsus("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

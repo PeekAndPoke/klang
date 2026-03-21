@@ -1,20 +1,20 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
 /**
  * Pattern that selects from a lookup table and resets the selected pattern at the event start.
  * "Reset" means the inner pattern cycle start is aligned with the outer event cycle position.
  */
 internal class PickResetPattern(
-    private val selector: StrudelPattern,
-    private val lookup: Map<Any, StrudelPattern>,
+    private val selector: SprudelPattern,
+    private val lookup: Map<Any, SprudelPattern>,
     private val modulo: Boolean,
-    private val extractKey: (StrudelVoiceData, Boolean, Int) -> Any?,
-) : StrudelPattern {
+    private val extractKey: (SprudelVoiceData, Boolean, Int) -> Any?,
+) : SprudelPattern {
 
     override val weight: Double get() = selector.weight
     override val numSteps: Rational? get() = selector.numSteps
@@ -23,10 +23,10 @@ internal class PickResetPattern(
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
+        ctx: SprudelPattern.QueryContext,
+    ): List<SprudelPatternEvent> {
         val selectorEvents = selector.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = mutableListOf<SprudelPatternEvent>()
 
         for (selectorEvent in selectorEvents) {
             val key: Any? = extractKey(selectorEvent.data, modulo, lookup.size)

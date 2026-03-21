@@ -2,8 +2,8 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
 /**
  * Pattern that shifts events in time based on a control value provider.
@@ -18,10 +18,10 @@ import io.peekandpoke.klang.sprudel.StrudelPatternEvent
  * @param factor Multiplier for the offset (1.0 for late, -1.0 for early)
  */
 internal class TimeShiftPattern(
-    private val source: StrudelPattern,
+    private val source: SprudelPattern,
     private val offsetProvider: ControlValueProvider,
     private val factor: Rational = Rational.ONE,
-) : StrudelPattern {
+) : SprudelPattern {
 
     override val weight: Double get() = source.weight
     override val numSteps: Rational? get() = source.numSteps
@@ -30,8 +30,8 @@ internal class TimeShiftPattern(
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
+        ctx: SprudelPattern.QueryContext,
+    ): List<SprudelPatternEvent> {
         // 1. Query control events
         val controlEvents = offsetProvider
             .queryEvents(from - Rational.ONE, to + Rational.ONE, ctx)

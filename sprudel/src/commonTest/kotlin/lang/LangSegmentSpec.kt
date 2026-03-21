@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangSegmentSpec : StringSpec({
@@ -12,11 +12,11 @@ class LangSegmentSpec : StringSpec({
         val pat = "0"
         dslInterfaceTests(
             "pattern.segment(4)" to seq(pat).segment(4),
-            "script pattern.segment(4)" to StrudelPattern.compile("""seq("$pat").segment(4)"""),
+            "script pattern.segment(4)" to SprudelPattern.compile("""seq("$pat").segment(4)"""),
             "string.segment(4)" to pat.segment(4),
-            "script string.segment(4)" to StrudelPattern.compile(""""$pat".segment(4)"""),
+            "script string.segment(4)" to SprudelPattern.compile(""""$pat".segment(4)"""),
             "segment(4)" to seq(pat).apply(segment(4)),
-            "script segment(4)" to StrudelPattern.compile("""seq("$pat").apply(segment(4))"""),
+            "script segment(4)" to SprudelPattern.compile("""seq("$pat").apply(segment(4))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4
@@ -27,11 +27,11 @@ class LangSegmentSpec : StringSpec({
         val pat = "0"
         dslInterfaceTests(
             "pattern.seg(4)" to seq(pat).seg(4),
-            "script pattern.seg(4)" to StrudelPattern.compile("""seq("$pat").seg(4)"""),
+            "script pattern.seg(4)" to SprudelPattern.compile("""seq("$pat").seg(4)"""),
             "string.seg(4)" to pat.seg(4),
-            "script string.seg(4)" to StrudelPattern.compile(""""$pat".seg(4)"""),
+            "script string.seg(4)" to SprudelPattern.compile(""""$pat".seg(4)"""),
             "seg(4)" to seq(pat).apply(seg(4)),
-            "script seg(4)" to StrudelPattern.compile("""seq("$pat").apply(seg(4))"""),
+            "script seg(4)" to SprudelPattern.compile("""seq("$pat").apply(seg(4))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4

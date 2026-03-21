@@ -8,9 +8,9 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.sprudel.lang.strudelLib
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.graal.GraalSprudelCompiler
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import kotlinx.coroutines.delay
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
@@ -30,7 +30,7 @@ private suspend fun helloStrudel() {
     // Song collections:
     // https://github.com/eefano/strudel-songs-collection
 
-    val strudel = GraalStrudelCompiler(
+    val strudel = GraalSprudelCompiler(
 //        Path.of("./build/strudel-bundle.mjs").toFile()
     )
 
@@ -39,7 +39,7 @@ private suspend fun helloStrudel() {
 //        val pattern = strudel.compile(code).await()
 
         val engine = klangScript {
-            registerLibrary(strudelLib)
+            registerLibrary(sprudelLib)
         }
 
         val compiled = strudel.compile(
@@ -100,7 +100,7 @@ private suspend fun helloStrudel() {
 
 //        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
 
-        val pattern1 = StrudelPattern.compile(TestTextPatterns.aTruthWorthLyingFor)!!
+        val pattern1 = SprudelPattern.compile(TestTextPatterns.aTruthWorthLyingFor)!!
 //        val pattern1 = s("hh!4").apply(gain("1.0 0.75 0.5 0.25"))
 //        val pattern1 = note("c d e f").swingBy("[0.5 0.0]", 2)
 //        val pattern1 = note("a b c d").pan(cosine.range(0.0, 1.0))

@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangSuperimposeSpec : StringSpec({
@@ -13,11 +13,11 @@ class LangSuperimposeSpec : StringSpec({
         val transform: PatternMapperFn = { it.note("e") }
         dslInterfaceTests(
             "pattern.superimpose(fn)" to note(pat).superimpose(transform),
-            "script pattern.superimpose(fn)" to StrudelPattern.compile("""note("$pat").superimpose(x => x.note("e"))"""),
+            "script pattern.superimpose(fn)" to SprudelPattern.compile("""note("$pat").superimpose(x => x.note("e"))"""),
             "string.superimpose(fn)" to pat.superimpose(transform),
-            "script string.superimpose(fn)" to StrudelPattern.compile(""""$pat".superimpose(x => x.note("e"))"""),
+            "script string.superimpose(fn)" to SprudelPattern.compile(""""$pat".superimpose(x => x.note("e"))"""),
             "superimpose(fn)" to note(pat).apply(superimpose(transform)),
-            "script superimpose(fn)" to StrudelPattern.compile("""note("$pat").apply(superimpose(x => x.note("e")))"""),
+            "script superimpose(fn)" to SprudelPattern.compile("""note("$pat").apply(superimpose(x => x.note("e")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4  // original 2 + transformed copy 2
@@ -58,7 +58,7 @@ class LangSuperimposeSpec : StringSpec({
 
     "superimpose() works within compiled code" {
         // We compile code that uses superimpose with a transformation function
-        val p = StrudelPattern.compile(
+        val p = SprudelPattern.compile(
             """
                 note("a").superimpose(p => p.note("b"))
             """.trimIndent()

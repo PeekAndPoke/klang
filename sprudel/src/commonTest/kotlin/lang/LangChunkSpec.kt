@@ -5,8 +5,8 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.sprudel.StrudelPattern.Companion.compile
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern.Companion.compile
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 
 class LangChunkSpec : FunSpec({
 
@@ -21,7 +21,7 @@ class LangChunkSpec : FunSpec({
 
                     events.forEachIndexed { index, value ->
                         withClue("Event $index should have a num voice value") {
-                            value.data.value?.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+                            value.data.value?.shouldBeInstanceOf<SprudelVoiceValue.Num>()
                         }
                     }
 

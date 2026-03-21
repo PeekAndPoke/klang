@@ -6,7 +6,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.range
 import io.peekandpoke.klang.sprudel.lang.sine
 
@@ -40,7 +40,7 @@ class ContinuousPatternSpec : StringSpec({
     }
 
     "ContinuousPattern: Compiled Code" {
-        val pattern = StrudelPattern.compile("sine")
+        val pattern = SprudelPattern.compile("sine")
 
         pattern.shouldNotBeNull()
         // at t=0.5, (sin(PI) + 1) / 2 = (0 + 1) / 2 = 0.5

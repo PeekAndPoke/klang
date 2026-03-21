@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel._applyControl
 
 /**
@@ -12,15 +12,15 @@ import io.peekandpoke.klang.sprudel._applyControl
  *
  * @param source The pattern defining the rhythm/structure (e.g. note("..."))
  * @param control The pattern defining the values (e.g. seq(0.5, 1.0))
- * @param mapper additional mapper from StrudelVoiceData to StrudelVoiceData
- * @param combiner Function to merge the source StrudelVoiceData with the control event's StrudelVoiceData
+ * @param mapper additional mapper from SprudelVoiceData to SprudelVoiceData
+ * @param combiner Function to merge the source SprudelVoiceData with the control event's SprudelVoiceData
  */
 internal class ControlPattern(
-    val source: StrudelPattern,
-    val control: StrudelPattern,
-    val mapper: (StrudelVoiceData) -> StrudelVoiceData,
-    val combiner: (StrudelVoiceData, StrudelVoiceData) -> StrudelVoiceData,
-) : StrudelPattern {
+    val source: SprudelPattern,
+    val control: SprudelPattern,
+    val mapper: (SprudelVoiceData) -> SprudelVoiceData,
+    val combiner: (SprudelVoiceData, SprudelVoiceData) -> SprudelVoiceData,
+) : SprudelPattern {
 
     // Control patterns wrap a source pattern and should preserve its weight.
     // E.g. (bd@2).gain(0.5) should still have a weight of 2.
@@ -30,7 +30,7 @@ internal class ControlPattern(
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         return source._applyControl(control, from, to, ctx) { src, ctrl ->
             if (ctrl != null) {
                 val mappedControl = mapper(ctrl.data)

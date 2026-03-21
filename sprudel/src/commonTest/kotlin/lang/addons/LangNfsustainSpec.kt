@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -20,11 +20,11 @@ class LangNfsustainSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfsustain(ctrl)" to seq(pat).nfsustain(ctrl),
-            "script pattern.nfsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").nfsustain("$ctrl")"""),
+            "script pattern.nfsustain(ctrl)" to SprudelPattern.compile("""seq("$pat").nfsustain("$ctrl")"""),
             "string.nfsustain(ctrl)" to pat.nfsustain(ctrl),
-            "script string.nfsustain(ctrl)" to StrudelPattern.compile(""""$pat".nfsustain("$ctrl")"""),
+            "script string.nfsustain(ctrl)" to SprudelPattern.compile(""""$pat".nfsustain("$ctrl")"""),
             "nfsustain(ctrl)" to seq(pat).apply(nfsustain(ctrl)),
-            "script nfsustain(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfsustain("$ctrl"))"""),
+            "script nfsustain(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfsustain("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfsustain shouldBe 0.5
@@ -89,7 +89,7 @@ class LangNfsustainSpec : StringSpec({
     }
 
     "nfsustain() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").nfsustain("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").nfsustain("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -104,11 +104,11 @@ class LangNfsustainSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfs(ctrl)" to seq(pat).nfs(ctrl),
-            "script pattern.nfs(ctrl)" to StrudelPattern.compile("""seq("$pat").nfs("$ctrl")"""),
+            "script pattern.nfs(ctrl)" to SprudelPattern.compile("""seq("$pat").nfs("$ctrl")"""),
             "string.nfs(ctrl)" to pat.nfs(ctrl),
-            "script string.nfs(ctrl)" to StrudelPattern.compile(""""$pat".nfs("$ctrl")"""),
+            "script string.nfs(ctrl)" to SprudelPattern.compile(""""$pat".nfs("$ctrl")"""),
             "nfs(ctrl)" to seq(pat).apply(nfs(ctrl)),
-            "script nfs(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfs("$ctrl"))"""),
+            "script nfs(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfs("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfsustain shouldBe 0.5
@@ -144,7 +144,7 @@ class LangNfsustainSpec : StringSpec({
     }
 
     "nfs() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").nfs("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").nfs("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangVowelSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangVowelSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.vowel(v)" to note(pat).vowel(vowelVal),
-            "script pattern.vowel(v)" to StrudelPattern.compile("""note("$pat").vowel("$vowelVal")"""),
+            "script pattern.vowel(v)" to SprudelPattern.compile("""note("$pat").vowel("$vowelVal")"""),
             "string.vowel(v)" to pat.vowel(vowelVal),
-            "script string.vowel(v)" to StrudelPattern.compile(""""$pat".vowel("$vowelVal")"""),
+            "script string.vowel(v)" to SprudelPattern.compile(""""$pat".vowel("$vowelVal")"""),
             "vowel(v)" to note(pat).apply(vowel(vowelVal)),
-            "script vowel(v)" to StrudelPattern.compile("""note("$pat").apply(vowel("$vowelVal"))"""),
+            "script vowel(v)" to SprudelPattern.compile("""note("$pat").apply(vowel("$vowelVal"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.vowel shouldBe "a"

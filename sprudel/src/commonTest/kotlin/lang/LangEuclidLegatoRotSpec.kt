@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangEuclidLegatoRotSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangEuclidLegatoRotSpec : StringSpec({
         val pat = "hh"
         dslInterfaceTests(
             "pattern.euclidLegatoRot(3, 8, 1)" to s(pat).euclidLegatoRot(3, 8, 1),
-            "script pattern.euclidLegatoRot(3, 8, 1)" to StrudelPattern.compile("""s("$pat").euclidLegatoRot(3, 8, 1)"""),
+            "script pattern.euclidLegatoRot(3, 8, 1)" to SprudelPattern.compile("""s("$pat").euclidLegatoRot(3, 8, 1)"""),
             "string.euclidLegatoRot(3, 8, 1)" to pat.euclidLegatoRot(3, 8, 1),
-            "script string.euclidLegatoRot(3, 8, 1)" to StrudelPattern.compile(""""$pat".euclidLegatoRot(3, 8, 1)"""),
+            "script string.euclidLegatoRot(3, 8, 1)" to SprudelPattern.compile(""""$pat".euclidLegatoRot(3, 8, 1)"""),
             "euclidLegatoRot(3, 8, 1)" to s(pat).apply(euclidLegatoRot(3, 8, 1)),
-            "script euclidLegatoRot(3, 8, 1)" to StrudelPattern.compile("""s("$pat").apply(euclidLegatoRot(3, 8, 1))"""),
+            "script euclidLegatoRot(3, 8, 1)" to SprudelPattern.compile("""s("$pat").apply(euclidLegatoRot(3, 8, 1))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4  // 3 onsets + 1 non-onset (wrapped tail from previous cycle)

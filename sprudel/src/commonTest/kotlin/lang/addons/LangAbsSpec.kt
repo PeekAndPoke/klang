@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.add
 import io.peekandpoke.klang.sprudel.lang.apply
@@ -25,11 +25,11 @@ class LangAbsSpec : StringSpec({
             "abs()" to
                     seq(pat).apply(abs),
             "script pattern.abs" to
-                    StrudelPattern.compile("""seq("$pat").abs()"""),
+                    SprudelPattern.compile("""seq("$pat").abs()"""),
             "script string.abs" to
-                    StrudelPattern.compile(""""$pat".abs()"""),
+                    SprudelPattern.compile(""""$pat".abs()"""),
             "script abs()" to
-                    StrudelPattern.compile("""seq("$pat").apply(abs)"""),
+                    SprudelPattern.compile("""seq("$pat").apply(abs)"""),
         ) { _, events ->
             events.shouldHaveSize(4)
             events[0].data.value?.asDouble shouldBe (3.0 plusOrMinus EPSILON)   // abs(-3) = 3
@@ -68,7 +68,7 @@ class LangAbsSpec : StringSpec({
     }
 
     "script apply(add().abs())" {
-        val p = StrudelPattern.compile("""seq("1 -2").apply(add("-4").abs())""")!!
+        val p = SprudelPattern.compile("""seq("1 -2").apply(add("-4").abs())""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {

@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
 /**
  * Generic pattern that applies a transformation to events after querying the source.
@@ -17,9 +17,9 @@ import io.peekandpoke.klang.sprudel.StrudelPatternEvent
  * @param transform Function that transforms the list of events after querying
  */
 internal class MapPattern(
-    private val source: StrudelPattern,
-    private val transform: (List<StrudelPatternEvent>) -> List<StrudelPatternEvent>,
-) : StrudelPattern {
+    private val source: SprudelPattern,
+    private val transform: (List<SprudelPatternEvent>) -> List<SprudelPatternEvent>,
+) : SprudelPattern {
 
     override val weight: Double get() = source.weight
     override val numSteps: Rational? get() = source.numSteps
@@ -29,7 +29,7 @@ internal class MapPattern(
         from: Rational,
         to: Rational,
         ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         return transform(source.queryArcContextual(from, to, ctx))
     }
 }

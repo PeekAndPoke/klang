@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangHresonanceSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangHresonanceSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.hresonance(ctrl)" to seq(pat).hresonance(ctrl),
-            "script pattern.hresonance(ctrl)" to StrudelPattern.compile("""seq("$pat").hresonance("$ctrl")"""),
+            "script pattern.hresonance(ctrl)" to SprudelPattern.compile("""seq("$pat").hresonance("$ctrl")"""),
             "string.hresonance(ctrl)" to pat.hresonance(ctrl),
-            "script string.hresonance(ctrl)" to StrudelPattern.compile(""""$pat".hresonance("$ctrl")"""),
+            "script string.hresonance(ctrl)" to SprudelPattern.compile(""""$pat".hresonance("$ctrl")"""),
             "hresonance(ctrl)" to seq(pat).apply(hresonance(ctrl)),
-            "script hresonance(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hresonance("$ctrl"))"""),
+            "script hresonance(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hresonance("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hresonance shouldBe 0.5
@@ -85,7 +85,7 @@ class LangHresonanceSpec : StringSpec({
     }
 
     "hresonance() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").hresonance("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").hresonance("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -99,11 +99,11 @@ class LangHresonanceSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.hres(ctrl)" to seq(pat).hres(ctrl),
-            "script pattern.hres(ctrl)" to StrudelPattern.compile("""seq("$pat").hres("$ctrl")"""),
+            "script pattern.hres(ctrl)" to SprudelPattern.compile("""seq("$pat").hres("$ctrl")"""),
             "string.hres(ctrl)" to pat.hres(ctrl),
-            "script string.hres(ctrl)" to StrudelPattern.compile(""""$pat".hres("$ctrl")"""),
+            "script string.hres(ctrl)" to SprudelPattern.compile(""""$pat".hres("$ctrl")"""),
             "hres(ctrl)" to seq(pat).apply(hres(ctrl)),
-            "script hres(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hres("$ctrl"))"""),
+            "script hres(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hres("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hresonance shouldBe 0.5
@@ -155,7 +155,7 @@ class LangHresonanceSpec : StringSpec({
     }
 
     "hres() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").hres("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").hres("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -169,11 +169,11 @@ class LangHresonanceSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.hpq(ctrl)" to seq(pat).hpq(ctrl),
-            "script pattern.hpq(ctrl)" to StrudelPattern.compile("""seq("$pat").hpq("$ctrl")"""),
+            "script pattern.hpq(ctrl)" to SprudelPattern.compile("""seq("$pat").hpq("$ctrl")"""),
             "string.hpq(ctrl)" to pat.hpq(ctrl),
-            "script string.hpq(ctrl)" to StrudelPattern.compile(""""$pat".hpq("$ctrl")"""),
+            "script string.hpq(ctrl)" to SprudelPattern.compile(""""$pat".hpq("$ctrl")"""),
             "hpq(ctrl)" to seq(pat).apply(hpq(ctrl)),
-            "script hpq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpq("$ctrl"))"""),
+            "script hpq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpq("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hresonance shouldBe 0.5

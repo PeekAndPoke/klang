@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern.Companion.compile
+import io.peekandpoke.klang.sprudel.SprudelPattern.Companion.compile
 
 class LangSynthesisSpec : FunSpec({
 

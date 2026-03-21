@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPitchEnvelopeSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangPitchEnvelopeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.pattack(v)" to note(pat).pattack(amount),
-            "script pattern.pattack(v)" to StrudelPattern.compile("""note("$pat").pattack($amount)"""),
+            "script pattern.pattack(v)" to SprudelPattern.compile("""note("$pat").pattack($amount)"""),
             "string.pattack(v)" to pat.pattack(amount),
-            "script string.pattack(v)" to StrudelPattern.compile(""""$pat".pattack($amount)"""),
+            "script string.pattack(v)" to SprudelPattern.compile(""""$pat".pattack($amount)"""),
             "pattack(v)" to note(pat).apply(pattack(amount)),
-            "script pattack(v)" to StrudelPattern.compile("""note("$pat").apply(pattack($amount))"""),
+            "script pattack(v)" to SprudelPattern.compile("""note("$pat").apply(pattack($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pAttack shouldBe amount
@@ -60,7 +60,7 @@ class LangPitchEnvelopeSpec : StringSpec({
     }
 
     "pattack() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").pattack("0.1")""")
+        val p = SprudelPattern.compile("""note("c").pattack("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.pAttack shouldBe 0.1
@@ -80,11 +80,11 @@ class LangPitchEnvelopeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.pdecay(v)" to note(pat).pdecay(amount),
-            "script pattern.pdecay(v)" to StrudelPattern.compile("""note("$pat").pdecay($amount)"""),
+            "script pattern.pdecay(v)" to SprudelPattern.compile("""note("$pat").pdecay($amount)"""),
             "string.pdecay(v)" to pat.pdecay(amount),
-            "script string.pdecay(v)" to StrudelPattern.compile(""""$pat".pdecay($amount)"""),
+            "script string.pdecay(v)" to SprudelPattern.compile(""""$pat".pdecay($amount)"""),
             "pdecay(v)" to note(pat).apply(pdecay(amount)),
-            "script pdecay(v)" to StrudelPattern.compile("""note("$pat").apply(pdecay($amount))"""),
+            "script pdecay(v)" to SprudelPattern.compile("""note("$pat").apply(pdecay($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pDecay shouldBe amount
@@ -129,11 +129,11 @@ class LangPitchEnvelopeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.prelease(v)" to note(pat).prelease(amount),
-            "script pattern.prelease(v)" to StrudelPattern.compile("""note("$pat").prelease($amount)"""),
+            "script pattern.prelease(v)" to SprudelPattern.compile("""note("$pat").prelease($amount)"""),
             "string.prelease(v)" to pat.prelease(amount),
-            "script string.prelease(v)" to StrudelPattern.compile(""""$pat".prelease($amount)"""),
+            "script string.prelease(v)" to SprudelPattern.compile(""""$pat".prelease($amount)"""),
             "prelease(v)" to note(pat).apply(prelease(amount)),
-            "script prelease(v)" to StrudelPattern.compile("""note("$pat").apply(prelease($amount))"""),
+            "script prelease(v)" to SprudelPattern.compile("""note("$pat").apply(prelease($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pRelease shouldBe amount
@@ -178,11 +178,11 @@ class LangPitchEnvelopeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.penv(v)" to note(pat).penv(amount),
-            "script pattern.penv(v)" to StrudelPattern.compile("""note("$pat").penv($amount)"""),
+            "script pattern.penv(v)" to SprudelPattern.compile("""note("$pat").penv($amount)"""),
             "string.penv(v)" to pat.penv(amount),
-            "script string.penv(v)" to StrudelPattern.compile(""""$pat".penv($amount)"""),
+            "script string.penv(v)" to SprudelPattern.compile(""""$pat".penv($amount)"""),
             "penv(v)" to note(pat).apply(penv(amount)),
-            "script penv(v)" to StrudelPattern.compile("""note("$pat").apply(penv($amount))"""),
+            "script penv(v)" to SprudelPattern.compile("""note("$pat").apply(penv($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pEnv shouldBe amount
@@ -227,11 +227,11 @@ class LangPitchEnvelopeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.pcurve(v)" to note(pat).pcurve(amount),
-            "script pattern.pcurve(v)" to StrudelPattern.compile("""note("$pat").pcurve($amount)"""),
+            "script pattern.pcurve(v)" to SprudelPattern.compile("""note("$pat").pcurve($amount)"""),
             "string.pcurve(v)" to pat.pcurve(amount),
-            "script string.pcurve(v)" to StrudelPattern.compile(""""$pat".pcurve($amount)"""),
+            "script string.pcurve(v)" to SprudelPattern.compile(""""$pat".pcurve($amount)"""),
             "pcurve(v)" to note(pat).apply(pcurve(amount)),
-            "script pcurve(v)" to StrudelPattern.compile("""note("$pat").apply(pcurve($amount))"""),
+            "script pcurve(v)" to SprudelPattern.compile("""note("$pat").apply(pcurve($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pCurve shouldBe amount
@@ -276,11 +276,11 @@ class LangPitchEnvelopeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.panchor(v)" to note(pat).panchor(amount),
-            "script pattern.panchor(v)" to StrudelPattern.compile("""note("$pat").panchor($amount)"""),
+            "script pattern.panchor(v)" to SprudelPattern.compile("""note("$pat").panchor($amount)"""),
             "string.panchor(v)" to pat.panchor(amount),
-            "script string.panchor(v)" to StrudelPattern.compile(""""$pat".panchor($amount)"""),
+            "script string.panchor(v)" to SprudelPattern.compile(""""$pat".panchor($amount)"""),
             "panchor(v)" to note(pat).apply(panchor(amount)),
-            "script panchor(v)" to StrudelPattern.compile("""note("$pat").apply(panchor($amount))"""),
+            "script panchor(v)" to SprudelPattern.compile("""note("$pat").apply(panchor($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pAnchor shouldBe amount

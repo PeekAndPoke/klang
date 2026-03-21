@@ -2,11 +2,11 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 // Helper to verify pattern output
 fun verifyPattern(
-    pattern: StrudelPattern?,
+    pattern: SprudelPattern?,
     expectedCount: Int,
     check: (index: Int, note: String?, begin: Double, dur: Double) -> Unit,
 ) {

@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBlshiftSpec : StringSpec({
@@ -39,15 +39,15 @@ class LangBlshiftSpec : StringSpec({
             "pattern.blshift(ctrl)" to
                     seq(pat).blshift(ctrl),
             "script pattern.blshift(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").blshift("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").blshift("$ctrl")"""),
             "string.blshift(ctrl)" to
                     pat.blshift(ctrl),
             "script string.blshift(ctrl)" to
-                    StrudelPattern.compile(""""$pat".blshift("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".blshift("$ctrl")"""),
             "blshift(ctrl)" to
                     seq(pat).apply(blshift(ctrl)),
             "script blshift(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(blshift("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(blshift("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 4   // 1 << 2 = 4

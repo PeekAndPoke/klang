@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLpenvSpec : StringSpec({
@@ -20,11 +20,11 @@ class LangLpenvSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.lpenv(ctrl)" to seq(pat).lpenv(ctrl),
-            "script pattern.lpenv(ctrl)" to StrudelPattern.compile("""seq("$pat").lpenv("$ctrl")"""),
+            "script pattern.lpenv(ctrl)" to SprudelPattern.compile("""seq("$pat").lpenv("$ctrl")"""),
             "string.lpenv(ctrl)" to pat.lpenv(ctrl),
-            "script string.lpenv(ctrl)" to StrudelPattern.compile(""""$pat".lpenv("$ctrl")"""),
+            "script string.lpenv(ctrl)" to SprudelPattern.compile(""""$pat".lpenv("$ctrl")"""),
             "lpenv(ctrl)" to seq(pat).apply(lpenv(ctrl)),
-            "script lpenv(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lpenv("$ctrl"))"""),
+            "script lpenv(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(lpenv("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.lpenv shouldBe 0.5
@@ -86,7 +86,7 @@ class LangLpenvSpec : StringSpec({
     }
 
     "lpenv() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").lpenv("0.5")""")
+        val p = SprudelPattern.compile("""note("c").lpenv("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.lpenv shouldBe 0.5
@@ -109,7 +109,7 @@ class LangLpenvSpec : StringSpec({
     }
 
     "lpenv() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.StrudelVoiceData.empty.copy(
+        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             cutoff = 1000.0,
             lpenv = 0.7
         )
@@ -127,11 +127,11 @@ class LangLpenvSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.lpe(ctrl)" to seq(pat).lpe(ctrl),
-            "script pattern.lpe(ctrl)" to StrudelPattern.compile("""seq("$pat").lpe("$ctrl")"""),
+            "script pattern.lpe(ctrl)" to SprudelPattern.compile("""seq("$pat").lpe("$ctrl")"""),
             "string.lpe(ctrl)" to pat.lpe(ctrl),
-            "script string.lpe(ctrl)" to StrudelPattern.compile(""""$pat".lpe("$ctrl")"""),
+            "script string.lpe(ctrl)" to SprudelPattern.compile(""""$pat".lpe("$ctrl")"""),
             "lpe(ctrl)" to seq(pat).apply(lpe(ctrl)),
-            "script lpe(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lpe("$ctrl"))"""),
+            "script lpe(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(lpe("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.lpenv shouldBe 0.5
@@ -165,7 +165,7 @@ class LangLpenvSpec : StringSpec({
     }
 
     "lpe() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").lpe("0.6")""")
+        val p = SprudelPattern.compile("""note("c").lpe("0.6")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.lpenv shouldBe 0.6

@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangSlowSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangSlowSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.slow(factor)" to s(pat).slow(factor),
-            "script pattern.slow(factor)" to StrudelPattern.compile("""s("$pat").slow($factor)"""),
+            "script pattern.slow(factor)" to SprudelPattern.compile("""s("$pat").slow($factor)"""),
             "string.slow(factor)" to pat.slow(factor),
-            "script string.slow(factor)" to StrudelPattern.compile(""""$pat".slow($factor)"""),
+            "script string.slow(factor)" to SprudelPattern.compile(""""$pat".slow($factor)"""),
             "slow(factor)" to s(pat).apply(slow(factor)),
-            "script slow(factor)" to StrudelPattern.compile("""s("$pat").apply(slow($factor))"""),
+            "script slow(factor)" to SprudelPattern.compile("""s("$pat").apply(slow($factor))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 1
@@ -131,7 +131,7 @@ class LangSlowSpec : StringSpec({
     }
 
     "slow() works within compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").slow(2)""")
+        val p = SprudelPattern.compile("""sound("bd hh").slow(2)""")
 
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
@@ -142,7 +142,7 @@ class LangSlowSpec : StringSpec({
     }
 
     "slow() as function works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").apply(slow(2))""")
+        val p = SprudelPattern.compile("""sound("bd hh").apply(slow(2))""")
 
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
@@ -170,7 +170,7 @@ class LangSlowSpec : StringSpec({
     }
 
     "slow() with control pattern works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").slow("1 2")""")
+        val p = SprudelPattern.compile("""sound("bd hh").slow("1 2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         // Should work with pattern control

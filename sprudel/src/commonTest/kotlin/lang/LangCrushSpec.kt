@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangCrushSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangCrushSpec : StringSpec({
     "crush dsl interface" {
         dslInterfaceTests(
             "pattern.crush(amount)" to note("c").crush(4),
-            "script pattern.crush(amount)" to StrudelPattern.compile("""note("c").crush(4)"""),
+            "script pattern.crush(amount)" to SprudelPattern.compile("""note("c").crush(4)"""),
             "string.crush(amount)" to "c".crush(4),
-            "script string.crush(amount)" to StrudelPattern.compile(""""c".crush(4)"""),
+            "script string.crush(amount)" to SprudelPattern.compile(""""c".crush(4)"""),
             "crush(amount)" to note("c").apply(crush(4)),
-            "script crush(amount)" to StrudelPattern.compile("""note("c").apply(crush(4))"""),
+            "script crush(amount)" to SprudelPattern.compile("""note("c").apply(crush(4))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
@@ -83,7 +83,7 @@ class LangCrushSpec : StringSpec({
     }
 
     "crush() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").crush("4")""")
+        val p = SprudelPattern.compile("""note("c").crush("4")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.crush shouldBe 4.0

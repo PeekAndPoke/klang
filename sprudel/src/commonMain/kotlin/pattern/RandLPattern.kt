@@ -1,21 +1,21 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
 
 /**
  * Dynamic randL pattern: length varies according to a control pattern.
  */
 internal class RandLPattern(
-    private val nPattern: StrudelPattern,
-) : StrudelPattern.FixedWeight {
+    private val nPattern: SprudelPattern,
+) : SprudelPattern.FixedWeight {
 
     companion object {
-        fun create(nPattern: StrudelPattern, staticN: Int?): StrudelPattern {
+        fun create(nPattern: SprudelPattern, staticN: Int?): SprudelPattern {
             return if (staticN != null) {
                 createStatic(staticN)
             } else {
@@ -23,7 +23,7 @@ internal class RandLPattern(
             }
         }
 
-        private fun createStatic(n: Int): StrudelPattern {
+        private fun createStatic(n: Int): SprudelPattern {
             if (n < 1) {
                 return EmptyPattern
             }
@@ -51,7 +51,7 @@ internal class RandLPattern(
         from: Rational,
         to: Rational,
         ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 

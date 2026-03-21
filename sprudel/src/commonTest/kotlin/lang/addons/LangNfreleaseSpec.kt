@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -20,11 +20,11 @@ class LangNfreleaseSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfrelease(ctrl)" to seq(pat).nfrelease(ctrl),
-            "script pattern.nfrelease(ctrl)" to StrudelPattern.compile("""seq("$pat").nfrelease("$ctrl")"""),
+            "script pattern.nfrelease(ctrl)" to SprudelPattern.compile("""seq("$pat").nfrelease("$ctrl")"""),
             "string.nfrelease(ctrl)" to pat.nfrelease(ctrl),
-            "script string.nfrelease(ctrl)" to StrudelPattern.compile(""""$pat".nfrelease("$ctrl")"""),
+            "script string.nfrelease(ctrl)" to SprudelPattern.compile(""""$pat".nfrelease("$ctrl")"""),
             "nfrelease(ctrl)" to seq(pat).apply(nfrelease(ctrl)),
-            "script nfrelease(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfrelease("$ctrl"))"""),
+            "script nfrelease(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfrelease("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfrelease shouldBe 0.5
@@ -89,7 +89,7 @@ class LangNfreleaseSpec : StringSpec({
     }
 
     "nfrelease() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").nfrelease("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").nfrelease("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -104,11 +104,11 @@ class LangNfreleaseSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfr(ctrl)" to seq(pat).nfr(ctrl),
-            "script pattern.nfr(ctrl)" to StrudelPattern.compile("""seq("$pat").nfr("$ctrl")"""),
+            "script pattern.nfr(ctrl)" to SprudelPattern.compile("""seq("$pat").nfr("$ctrl")"""),
             "string.nfr(ctrl)" to pat.nfr(ctrl),
-            "script string.nfr(ctrl)" to StrudelPattern.compile(""""$pat".nfr("$ctrl")"""),
+            "script string.nfr(ctrl)" to SprudelPattern.compile(""""$pat".nfr("$ctrl")"""),
             "nfr(ctrl)" to seq(pat).apply(nfr(ctrl)),
-            "script nfr(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfr("$ctrl"))"""),
+            "script nfr(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfr("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfrelease shouldBe 0.5
@@ -144,7 +144,7 @@ class LangNfreleaseSpec : StringSpec({
     }
 
     "nfr() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").nfr("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").nfr("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

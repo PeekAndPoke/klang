@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFastSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangFastSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fast(factor)" to s(pat).fast(factor),
-            "script pattern.fast(factor)" to StrudelPattern.compile("""s("$pat").fast($factor)"""),
+            "script pattern.fast(factor)" to SprudelPattern.compile("""s("$pat").fast($factor)"""),
             "string.fast(factor)" to pat.fast(factor),
-            "script string.fast(factor)" to StrudelPattern.compile(""""$pat".fast($factor)"""),
+            "script string.fast(factor)" to SprudelPattern.compile(""""$pat".fast($factor)"""),
             "fast(factor)" to s(pat).apply(fast(factor)),
-            "script fast(factor)" to StrudelPattern.compile("""s("$pat").apply(fast($factor))"""),
+            "script fast(factor)" to SprudelPattern.compile("""s("$pat").apply(fast($factor))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4
@@ -72,7 +72,7 @@ class LangFastSpec : StringSpec({
     }
 
     "fast() works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").fast(2)""")
+        val p = SprudelPattern.compile("""sound("bd hh").fast(2)""")
         val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -81,7 +81,7 @@ class LangFastSpec : StringSpec({
     }
 
     "fast() as function works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").apply(fast(2))""")
+        val p = SprudelPattern.compile("""sound("bd hh").apply(fast(2))""")
         val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -110,7 +110,7 @@ class LangFastSpec : StringSpec({
     }
 
     "fast() with control pattern works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").fast("2 4")""")
+        val p = SprudelPattern.compile("""sound("bd hh").fast("2 4")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         // Should work with pattern control

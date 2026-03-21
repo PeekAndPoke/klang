@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
@@ -18,8 +18,8 @@ import io.peekandpoke.klang.sprudel.TimeSpan
  * @param nPattern The pattern controlling the sequence length
  */
 internal class RandrunPattern(
-    val nPattern: StrudelPattern,
-) : StrudelPattern {
+    val nPattern: SprudelPattern,
+) : SprudelPattern {
     override val weight = 1.0
 
     override val numSteps: Rational? = null
@@ -30,7 +30,7 @@ internal class RandrunPattern(
         from: Rational,
         to: Rational,
         ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 
@@ -61,10 +61,10 @@ internal class RandrunPattern(
                 val timeSpan = TimeSpan(begin = eventBegin, end = eventEnd)
 
                 result.add(
-                    StrudelPatternEvent(
+                    SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = StrudelVoiceData.empty.copy(value = value)
+                        data = SprudelVoiceData.empty.copy(value = value)
                     )
                 )
             }

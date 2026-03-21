@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangHurrySpec : StringSpec({
@@ -18,11 +18,11 @@ class LangHurrySpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.hurry(2)" to s(pat).hurry(2),
-            "script pattern.hurry(2)" to StrudelPattern.compile("""s("$pat").hurry(2)"""),
+            "script pattern.hurry(2)" to SprudelPattern.compile("""s("$pat").hurry(2)"""),
             "string.hurry(2)" to pat.hurry(2),
-            "script string.hurry(2)" to StrudelPattern.compile(""""$pat".hurry(2)"""),
+            "script string.hurry(2)" to SprudelPattern.compile(""""$pat".hurry(2)"""),
             "hurry(2)" to s(pat).apply(hurry(2)),
-            "script hurry(2)" to StrudelPattern.compile("""s("$pat").apply(hurry(2))"""),
+            "script hurry(2)" to SprudelPattern.compile("""s("$pat").apply(hurry(2))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4
@@ -154,7 +154,7 @@ class LangHurrySpec : StringSpec({
     }
 
     "hurry() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c d").hurry("2")""")
+        val p = SprudelPattern.compile("""note("c d").hurry("2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4
@@ -162,7 +162,7 @@ class LangHurrySpec : StringSpec({
     }
 
     "hurry() with standalone function syntax" {
-        val p = StrudelPattern.compile("""note("c d").apply(hurry("2"))""")
+        val p = SprudelPattern.compile("""note("c d").apply(hurry("2"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4
@@ -208,7 +208,7 @@ class LangHurrySpec : StringSpec({
     }
 
     "hurry() with control pattern in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").hurry("2 3")""")
+        val p = SprudelPattern.compile("""sound("bd hh").hurry("2 3")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         // Verified against JavaScript implementation via JsCompat test

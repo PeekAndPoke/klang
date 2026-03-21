@@ -7,8 +7,8 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 /**
@@ -30,7 +30,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().mul())" {
-        val p = StrudelPattern.compile("""seq("1 2").apply(add("1").mul("3"))""")!!
+        val p = SprudelPattern.compile("""seq("1 2").apply(add("1").mul("3"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -52,7 +52,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().add())" {
-        val p = StrudelPattern.compile("""seq("1 2").apply(mul("3").add("4"))""")!!
+        val p = SprudelPattern.compile("""seq("1 2").apply(mul("3").add("4"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -81,12 +81,12 @@ class LangArithmeticSpec : StringSpec({
 
         events.size shouldBe 2
         // Verify that the value is stored as Num (Rational), not Text (Double converted to string)
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
-        events[1].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
+        events[1].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
 
         // Verify the underlying Rational value
-        val value0 = events[0].data.value as StrudelVoiceValue.Num
-        val value1 = events[1].data.value as StrudelVoiceValue.Num
+        val value0 = events[0].data.value as SprudelVoiceValue.Num
+        val value1 = events[1].data.value as SprudelVoiceValue.Num
         value0.value.toInt() shouldBe 2
         value1.value.toInt() shouldBe 3
     }
@@ -118,15 +118,15 @@ class LangArithmeticSpec : StringSpec({
             "pattern.add(ctrl)" to
                     seq(pat).add(ctrl),
             "script pattern.add(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").add("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").add("$ctrl")"""),
             "string.add(ctrl)" to
                     pat.add(ctrl),
             "script string.add(ctrl)" to
-                    StrudelPattern.compile(""""$pat".add("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".add("$ctrl")"""),
             "add(ctrl)" to
                     seq(pat).apply(add(ctrl)),
             "script add(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(add("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(add("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 2  // 0 + 2 = 2
@@ -149,7 +149,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "add() works in compiled code" {
-        val p = StrudelPattern.compile("""seq("0 1").add("2")""")
+        val p = SprudelPattern.compile("""seq("0 1").add("2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -173,11 +173,11 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
-        events[1].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
+        events[1].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
 
-        val value0 = events[0].data.value as StrudelVoiceValue.Num
-        val value1 = events[1].data.value as StrudelVoiceValue.Num
+        val value0 = events[0].data.value as SprudelVoiceValue.Num
+        val value1 = events[1].data.value as SprudelVoiceValue.Num
         value0.value.toInt() shouldBe 5
         value1.value.toInt() shouldBe 15
     }
@@ -199,15 +199,15 @@ class LangArithmeticSpec : StringSpec({
             "pattern.sub(ctrl)" to
                     seq(pat).sub(ctrl),
             "script pattern.sub(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").sub("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").sub("$ctrl")"""),
             "string.sub(ctrl)" to
                     pat.sub(ctrl),
             "script string.sub(ctrl)" to
-                    StrudelPattern.compile(""""$pat".sub("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".sub("$ctrl")"""),
             "sub(ctrl)" to
                     seq(pat).apply(sub(ctrl)),
             "script sub(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(sub("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(sub("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 7   // 10 - 3 = 7
@@ -240,11 +240,11 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
-        events[1].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
+        events[1].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
 
-        val value0 = events[0].data.value as StrudelVoiceValue.Num
-        val value1 = events[1].data.value as StrudelVoiceValue.Num
+        val value0 = events[0].data.value as SprudelVoiceValue.Num
+        val value1 = events[1].data.value as SprudelVoiceValue.Num
         value0.value.toInt() shouldBe 8
         value1.value.toInt() shouldBe 12
     }
@@ -266,15 +266,15 @@ class LangArithmeticSpec : StringSpec({
             "pattern.mul(ctrl)" to
                     seq(pat).mul(ctrl),
             "script pattern.mul(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").mul("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").mul("$ctrl")"""),
             "string.mul(ctrl)" to
                     pat.mul(ctrl),
             "script string.mul(ctrl)" to
-                    StrudelPattern.compile(""""$pat".mul("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".mul("$ctrl")"""),
             "mul(ctrl)" to
                     seq(pat).apply(mul(ctrl)),
             "script mul(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(mul("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(mul("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 8   // 2 * 4 = 8
@@ -303,7 +303,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().div())" {
-        val p = StrudelPattern.compile("""seq("10 20").apply(mul("2").div("4"))""")!!
+        val p = SprudelPattern.compile("""seq("10 20").apply(mul("2").div("4"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -329,11 +329,11 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
-        events[1].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
+        events[1].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
 
-        val value0 = events[0].data.value as StrudelVoiceValue.Num
-        val value1 = events[1].data.value as StrudelVoiceValue.Num
+        val value0 = events[0].data.value as SprudelVoiceValue.Num
+        val value1 = events[1].data.value as SprudelVoiceValue.Num
         value0.value.toInt() shouldBe 5
         value1.value.toInt() shouldBe 10
     }
@@ -355,15 +355,15 @@ class LangArithmeticSpec : StringSpec({
             "pattern.div(ctrl)" to
                     seq(pat).div(ctrl),
             "script pattern.div(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").div("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").div("$ctrl")"""),
             "string.div(ctrl)" to
                     pat.div(ctrl),
             "script string.div(ctrl)" to
-                    StrudelPattern.compile(""""$pat".div("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".div("$ctrl")"""),
             "div(ctrl)" to
                     seq(pat).apply(div(ctrl)),
             "script div(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(div("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(div("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 5   // 10 / 2 = 5
@@ -392,7 +392,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().mod())" {
-        val p = StrudelPattern.compile("""seq("10 11").apply(add("1").mod("4"))""")!!
+        val p = SprudelPattern.compile("""seq("10 11").apply(add("1").mod("4"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -418,11 +418,11 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
-        events[1].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
+        events[1].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
 
-        val value0 = events[0].data.value as StrudelVoiceValue.Num
-        val value1 = events[1].data.value as StrudelVoiceValue.Num
+        val value0 = events[0].data.value as SprudelVoiceValue.Num
+        val value1 = events[1].data.value as SprudelVoiceValue.Num
         value0.value.toInt() shouldBe 1
         value1.value.toInt() shouldBe 2
     }
@@ -453,15 +453,15 @@ class LangArithmeticSpec : StringSpec({
             "pattern.mod(ctrl)" to
                     seq(pat).mod(ctrl),
             "script pattern.mod(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").mod("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").mod("$ctrl")"""),
             "string.mod(ctrl)" to
                     pat.mod(ctrl),
             "script string.mod(ctrl)" to
-                    StrudelPattern.compile(""""$pat".mod("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".mod("$ctrl")"""),
             "mod(ctrl)" to
                     seq(pat).apply(mod(ctrl)),
             "script mod(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(mod("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(mod("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 1  // 10 % 3 = 1
@@ -487,7 +487,7 @@ class LangArithmeticSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.value?.asInt shouldBe 27
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
     }
 
     "Arithmetic operations preserve Rational type through chain" {
@@ -500,7 +500,7 @@ class LangArithmeticSpec : StringSpec({
 
         // Verify it's still Rational
         val value = events[0].data.value
-        value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
         value.value.toInt() shouldBe 9
     }
 
@@ -510,9 +510,9 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
 
-        val value = events[0].data.value as StrudelVoiceValue.Num
+        val value = events[0].data.value as SprudelVoiceValue.Num
         // Check that it's approximately 3.333
         val doubleValue = value.value.toDouble()
         doubleValue shouldBe (3.333333 plusOrMinus 1e-5)
@@ -530,7 +530,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().pow())" {
-        val p = StrudelPattern.compile("""seq("2 3").apply(add("1").pow("2"))""")!!
+        val p = SprudelPattern.compile("""seq("2 3").apply(add("1").pow("2"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -556,8 +556,8 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
-        events[1].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
+        events[1].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
     }
 
     "pow() works as top-level PatternMapper" {
@@ -577,15 +577,15 @@ class LangArithmeticSpec : StringSpec({
             "pattern.pow(ctrl)" to
                     seq(pat).pow(ctrl),
             "script pattern.pow(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").pow("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").pow("$ctrl")"""),
             "string.pow(ctrl)" to
                     pat.pow(ctrl),
             "script string.pow(ctrl)" to
-                    StrudelPattern.compile(""""$pat".pow("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".pow("$ctrl")"""),
             "pow(ctrl)" to
                     seq(pat).apply(pow(ctrl)),
             "script pow(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(pow("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(pow("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 8  // 2^3 = 8
@@ -605,7 +605,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().band())" {
-        val p = StrudelPattern.compile("""seq("12 15").apply(add("3").band("10"))""")!!
+        val p = SprudelPattern.compile("""seq("12 15").apply(add("3").band("10"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -638,7 +638,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().bor())" {
-        val p = StrudelPattern.compile("""seq("8 4").apply(add("1").bor("2"))""")!!
+        val p = SprudelPattern.compile("""seq("8 4").apply(add("1").bor("2"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -669,7 +669,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().bxor())" {
-        val p = StrudelPattern.compile("""seq("12 10").apply(add("2").bxor("6"))""")!!
+        val p = SprudelPattern.compile("""seq("12 10").apply(add("2").bxor("6"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -700,7 +700,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().blshift())" {
-        val p = StrudelPattern.compile("""seq("1 2").apply(add("1").blshift("2"))""")!!
+        val p = SprudelPattern.compile("""seq("1 2").apply(add("1").blshift("2"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -731,7 +731,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().brshift())" {
-        val p = StrudelPattern.compile("""seq("8 16").apply(mul("2").brshift("3"))""")!!
+        val p = SprudelPattern.compile("""seq("8 16").apply(mul("2").brshift("3"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -762,7 +762,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().log2())" {
-        val p = StrudelPattern.compile("""seq("2 4").apply(mul("4").log2())""")!!
+        val p = SprudelPattern.compile("""seq("2 4").apply(mul("4").log2())""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -795,7 +795,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().lt())" {
-        val p = StrudelPattern.compile("""seq("5 10").apply(add("3").lt("9"))""")!!
+        val p = SprudelPattern.compile("""seq("5 10").apply(add("3").lt("9"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -828,7 +828,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().gt())" {
-        val p = StrudelPattern.compile("""seq("5 10").apply(add("3").gt("9"))""")!!
+        val p = SprudelPattern.compile("""seq("5 10").apply(add("3").gt("9"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -859,7 +859,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().lte())" {
-        val p = StrudelPattern.compile("""seq("5 10").apply(add("3").lte("11"))""")!!
+        val p = SprudelPattern.compile("""seq("5 10").apply(add("3").lte("11"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -891,7 +891,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().gte())" {
-        val p = StrudelPattern.compile("""seq("5 10").apply(add("3").gte("11"))""")!!
+        val p = SprudelPattern.compile("""seq("5 10").apply(add("3").gte("11"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -923,7 +923,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().eq())" {
-        val p = StrudelPattern.compile("""seq("5 8").apply(add("3").eq("11"))""")!!
+        val p = SprudelPattern.compile("""seq("5 8").apply(add("3").eq("11"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -956,7 +956,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(add().ne())" {
-        val p = StrudelPattern.compile("""seq("5 8").apply(add("3").ne("11"))""")!!
+        val p = SprudelPattern.compile("""seq("5 8").apply(add("3").ne("11"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -987,7 +987,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().eqt())" {
-        val p = StrudelPattern.compile("""seq("0 5").apply(mul("3").eqt("0"))""")!!
+        val p = SprudelPattern.compile("""seq("0 5").apply(mul("3").eqt("0"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -1018,7 +1018,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().net())" {
-        val p = StrudelPattern.compile("""seq("0 5").apply(mul("3").net("0"))""")!!
+        val p = SprudelPattern.compile("""seq("0 5").apply(mul("3").net("0"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -1049,7 +1049,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(sub().and())" {
-        val p = StrudelPattern.compile("""seq("1 5").apply(sub("1").and("7"))""")!!
+        val p = SprudelPattern.compile("""seq("1 5").apply(sub("1").and("7"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -1082,7 +1082,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().or())" {
-        val p = StrudelPattern.compile("""seq("0 5").apply(mul("1").or("7"))""")!!
+        val p = SprudelPattern.compile("""seq("0 5").apply(mul("1").or("7"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -1113,7 +1113,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().round())" {
-        val p = StrudelPattern.compile("""seq("2.1 3.7").apply(mul("2").round())""")!!
+        val p = SprudelPattern.compile("""seq("2.1 3.7").apply(mul("2").round())""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -1158,11 +1158,11 @@ class LangArithmeticSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.round()" to seq(pat).round(),
-            "script pattern.round()" to StrudelPattern.compile("""seq("$pat").round()"""),
+            "script pattern.round()" to SprudelPattern.compile("""seq("$pat").round()"""),
             "string.round()" to pat.round(),
-            "script string.round()" to StrudelPattern.compile(""""$pat".round()"""),
+            "script string.round()" to SprudelPattern.compile(""""$pat".round()"""),
             "round()" to seq(pat).apply(round()),
-            "script round()" to StrudelPattern.compile("""seq("$pat").apply(round())"""),
+            "script round()" to SprudelPattern.compile("""seq("$pat").apply(round())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 2  // round(2.4) = 2
@@ -1182,7 +1182,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().floor())" {
-        val p = StrudelPattern.compile("""seq("2.1 3.9").apply(mul("2").floor())""")!!
+        val p = SprudelPattern.compile("""seq("2.1 3.9").apply(mul("2").floor())""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -1225,11 +1225,11 @@ class LangArithmeticSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.floor()" to seq(pat).floor(),
-            "script pattern.floor()" to StrudelPattern.compile("""seq("$pat").floor()"""),
+            "script pattern.floor()" to SprudelPattern.compile("""seq("$pat").floor()"""),
             "string.floor()" to pat.floor(),
-            "script string.floor()" to StrudelPattern.compile(""""$pat".floor()"""),
+            "script string.floor()" to SprudelPattern.compile(""""$pat".floor()"""),
             "floor()" to seq(pat).apply(floor()),
-            "script floor()" to StrudelPattern.compile("""seq("$pat").apply(floor())"""),
+            "script floor()" to SprudelPattern.compile("""seq("$pat").apply(floor())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 2  // floor(2.1) = 2
@@ -1249,7 +1249,7 @@ class LangArithmeticSpec : StringSpec({
     }
 
     "script apply(mul().ceil())" {
-        val p = StrudelPattern.compile("""seq("2.1 3.9").apply(mul("2").ceil())""")!!
+        val p = SprudelPattern.compile("""seq("2.1 3.9").apply(mul("2").ceil())""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -1292,11 +1292,11 @@ class LangArithmeticSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.ceil()" to seq(pat).ceil(),
-            "script pattern.ceil()" to StrudelPattern.compile("""seq("$pat").ceil()"""),
+            "script pattern.ceil()" to SprudelPattern.compile("""seq("$pat").ceil()"""),
             "string.ceil()" to pat.ceil(),
-            "script string.ceil()" to StrudelPattern.compile(""""$pat".ceil()"""),
+            "script string.ceil()" to SprudelPattern.compile(""""$pat".ceil()"""),
             "ceil()" to seq(pat).apply(ceil()),
-            "script ceil()" to StrudelPattern.compile("""seq("$pat").apply(ceil())"""),
+            "script ceil()" to SprudelPattern.compile("""seq("$pat").apply(ceil())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 3  // ceil(2.1) = 3
@@ -1309,7 +1309,7 @@ class LangArithmeticSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.value.shouldBeInstanceOf<StrudelVoiceValue.Num>()
-        (events[0].data.value as StrudelVoiceValue.Num).value.toInt() shouldBe 3
+        events[0].data.value.shouldBeInstanceOf<SprudelVoiceValue.Num>()
+        (events[0].data.value as SprudelVoiceValue.Num).value.toInt() shouldBe 3
     }
 })

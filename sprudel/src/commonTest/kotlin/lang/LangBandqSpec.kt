@@ -7,7 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBandqSpec : StringSpec({
@@ -19,11 +19,11 @@ class LangBandqSpec : StringSpec({
         val ctrl = "1.2 1.8"
         dslInterfaceTests(
             "pattern.bandq(ctrl)" to seq(pat).bandq(ctrl),
-            "script pattern.bandq(ctrl)" to StrudelPattern.compile("""seq("$pat").bandq("$ctrl")"""),
+            "script pattern.bandq(ctrl)" to SprudelPattern.compile("""seq("$pat").bandq("$ctrl")"""),
             "string.bandq(ctrl)" to pat.bandq(ctrl),
-            "script string.bandq(ctrl)" to StrudelPattern.compile(""""$pat".bandq("$ctrl")"""),
+            "script string.bandq(ctrl)" to SprudelPattern.compile(""""$pat".bandq("$ctrl")"""),
             "bandq(ctrl)" to seq(pat).apply(bandq(ctrl)),
-            "script bandq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bandq("$ctrl"))"""),
+            "script bandq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bandq("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bandq shouldBe 1.2
@@ -101,7 +101,7 @@ class LangBandqSpec : StringSpec({
     }
 
     "bandq() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bandq("1.5")""")
+        val p = SprudelPattern.compile("""note("c").bandq("1.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bandq shouldBe 1.5
@@ -130,11 +130,11 @@ class LangBandqSpec : StringSpec({
         val ctrl = "1.2 1.8"
         dslInterfaceTests(
             "pattern.bpq(ctrl)" to seq(pat).bpq(ctrl),
-            "script pattern.bpq(ctrl)" to StrudelPattern.compile("""seq("$pat").bpq("$ctrl")"""),
+            "script pattern.bpq(ctrl)" to SprudelPattern.compile("""seq("$pat").bpq("$ctrl")"""),
             "string.bpq(ctrl)" to pat.bpq(ctrl),
-            "script string.bpq(ctrl)" to StrudelPattern.compile(""""$pat".bpq("$ctrl")"""),
+            "script string.bpq(ctrl)" to SprudelPattern.compile(""""$pat".bpq("$ctrl")"""),
             "bpq(ctrl)" to seq(pat).apply(bpq(ctrl)),
-            "script bpq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpq("$ctrl"))"""),
+            "script bpq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bpq("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bandq shouldBe 1.2
@@ -169,7 +169,7 @@ class LangBandqSpec : StringSpec({
     }
 
     "bpq() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bpq("2.5")""")
+        val p = SprudelPattern.compile("""note("c").bpq("2.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bandq shouldBe 2.5

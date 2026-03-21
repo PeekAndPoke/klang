@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangJuxSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangJuxSpec : StringSpec({
         val transform: PatternMapperFn = { it.rev() }
         dslInterfaceTests(
             "pattern.jux(fn)" to note(pat).jux(transform),
-            "script pattern.jux(fn)" to StrudelPattern.compile("""note("$pat").jux(x => x.rev())"""),
+            "script pattern.jux(fn)" to SprudelPattern.compile("""note("$pat").jux(x => x.rev())"""),
             "string.jux(fn)" to pat.jux(transform),
-            "script string.jux(fn)" to StrudelPattern.compile(""""$pat".jux(x => x.rev())"""),
+            "script string.jux(fn)" to SprudelPattern.compile(""""$pat".jux(x => x.rev())"""),
             "jux(fn)" to note(pat).apply(jux(transform)),
-            "script jux(fn)" to StrudelPattern.compile("""note("$pat").apply(jux(x => x.rev()))"""),
+            "script jux(fn)" to SprudelPattern.compile("""note("$pat").apply(jux(x => x.rev()))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events shouldHaveSize 4  // 2 notes × 2 (left + right)

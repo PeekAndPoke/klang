@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangComparisonAndLogicSpec : StringSpec({
@@ -42,11 +42,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.lt(ctrl)" to seq(pat).lt(ctrl),
-            "script pattern.lt(ctrl)" to StrudelPattern.compile("""seq("$pat").lt("$ctrl")"""),
+            "script pattern.lt(ctrl)" to SprudelPattern.compile("""seq("$pat").lt("$ctrl")"""),
             "string.lt(ctrl)" to pat.lt(ctrl),
-            "script string.lt(ctrl)" to StrudelPattern.compile(""""$pat".lt("$ctrl")"""),
+            "script string.lt(ctrl)" to SprudelPattern.compile(""""$pat".lt("$ctrl")"""),
             "lt(ctrl)" to seq(pat).apply(lt(ctrl)),
-            "script lt(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lt("$ctrl"))"""),
+            "script lt(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(lt("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 1  // 1 < 2 → 1
@@ -87,11 +87,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.gt(ctrl)" to seq(pat).gt(ctrl),
-            "script pattern.gt(ctrl)" to StrudelPattern.compile("""seq("$pat").gt("$ctrl")"""),
+            "script pattern.gt(ctrl)" to SprudelPattern.compile("""seq("$pat").gt("$ctrl")"""),
             "string.gt(ctrl)" to pat.gt(ctrl),
-            "script string.gt(ctrl)" to StrudelPattern.compile(""""$pat".gt("$ctrl")"""),
+            "script string.gt(ctrl)" to SprudelPattern.compile(""""$pat".gt("$ctrl")"""),
             "gt(ctrl)" to seq(pat).apply(gt(ctrl)),
-            "script gt(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(gt("$ctrl"))"""),
+            "script gt(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(gt("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 0  // 1 > 2 → 0
@@ -132,11 +132,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.lte(ctrl)" to seq(pat).lte(ctrl),
-            "script pattern.lte(ctrl)" to StrudelPattern.compile("""seq("$pat").lte("$ctrl")"""),
+            "script pattern.lte(ctrl)" to SprudelPattern.compile("""seq("$pat").lte("$ctrl")"""),
             "string.lte(ctrl)" to pat.lte(ctrl),
-            "script string.lte(ctrl)" to StrudelPattern.compile(""""$pat".lte("$ctrl")"""),
+            "script string.lte(ctrl)" to SprudelPattern.compile(""""$pat".lte("$ctrl")"""),
             "lte(ctrl)" to seq(pat).apply(lte(ctrl)),
-            "script lte(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(lte("$ctrl"))"""),
+            "script lte(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(lte("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 1  // 2 <= 2 → 1
@@ -177,11 +177,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.gte(ctrl)" to seq(pat).gte(ctrl),
-            "script pattern.gte(ctrl)" to StrudelPattern.compile("""seq("$pat").gte("$ctrl")"""),
+            "script pattern.gte(ctrl)" to SprudelPattern.compile("""seq("$pat").gte("$ctrl")"""),
             "string.gte(ctrl)" to pat.gte(ctrl),
-            "script string.gte(ctrl)" to StrudelPattern.compile(""""$pat".gte("$ctrl")"""),
+            "script string.gte(ctrl)" to SprudelPattern.compile(""""$pat".gte("$ctrl")"""),
             "gte(ctrl)" to seq(pat).apply(gte(ctrl)),
-            "script gte(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(gte("$ctrl"))"""),
+            "script gte(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(gte("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 0  // 1 >= 2 → 0
@@ -222,11 +222,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.eq(ctrl)" to seq(pat).eq(ctrl),
-            "script pattern.eq(ctrl)" to StrudelPattern.compile("""seq("$pat").eq("$ctrl")"""),
+            "script pattern.eq(ctrl)" to SprudelPattern.compile("""seq("$pat").eq("$ctrl")"""),
             "string.eq(ctrl)" to pat.eq(ctrl),
-            "script string.eq(ctrl)" to StrudelPattern.compile(""""$pat".eq("$ctrl")"""),
+            "script string.eq(ctrl)" to SprudelPattern.compile(""""$pat".eq("$ctrl")"""),
             "eq(ctrl)" to seq(pat).apply(eq(ctrl)),
-            "script eq(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(eq("$ctrl"))"""),
+            "script eq(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(eq("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 1  // 2 == 2 → 1
@@ -268,11 +268,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.eqt(ctrl)" to seq(pat).eqt(ctrl),
-            "script pattern.eqt(ctrl)" to StrudelPattern.compile("""seq("$pat").eqt("$ctrl")"""),
+            "script pattern.eqt(ctrl)" to SprudelPattern.compile("""seq("$pat").eqt("$ctrl")"""),
             "string.eqt(ctrl)" to pat.eqt(ctrl),
-            "script string.eqt(ctrl)" to StrudelPattern.compile(""""$pat".eqt("$ctrl")"""),
+            "script string.eqt(ctrl)" to SprudelPattern.compile(""""$pat".eqt("$ctrl")"""),
             "eqt(ctrl)" to seq(pat).apply(eqt(ctrl)),
-            "script eqt(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(eqt("$ctrl"))"""),
+            "script eqt(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(eqt("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 0  // 0 (falsy) ~= 1 (truthy) → 0
@@ -313,11 +313,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.ne(ctrl)" to seq(pat).ne(ctrl),
-            "script pattern.ne(ctrl)" to StrudelPattern.compile("""seq("$pat").ne("$ctrl")"""),
+            "script pattern.ne(ctrl)" to SprudelPattern.compile("""seq("$pat").ne("$ctrl")"""),
             "string.ne(ctrl)" to pat.ne(ctrl),
-            "script string.ne(ctrl)" to StrudelPattern.compile(""""$pat".ne("$ctrl")"""),
+            "script string.ne(ctrl)" to SprudelPattern.compile(""""$pat".ne("$ctrl")"""),
             "ne(ctrl)" to seq(pat).apply(ne(ctrl)),
-            "script ne(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(ne("$ctrl"))"""),
+            "script ne(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(ne("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 0  // 2 != 2 → 0
@@ -359,11 +359,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.net(ctrl)" to seq(pat).net(ctrl),
-            "script pattern.net(ctrl)" to StrudelPattern.compile("""seq("$pat").net("$ctrl")"""),
+            "script pattern.net(ctrl)" to SprudelPattern.compile("""seq("$pat").net("$ctrl")"""),
             "string.net(ctrl)" to pat.net(ctrl),
-            "script string.net(ctrl)" to StrudelPattern.compile(""""$pat".net("$ctrl")"""),
+            "script string.net(ctrl)" to SprudelPattern.compile(""""$pat".net("$ctrl")"""),
             "net(ctrl)" to seq(pat).apply(net(ctrl)),
-            "script net(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(net("$ctrl"))"""),
+            "script net(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(net("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 0  // 0 (falsy) ~!= 0 (falsy) → 0
@@ -405,11 +405,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.and(ctrl)" to seq(pat).and(ctrl),
-            "script pattern.and(ctrl)" to StrudelPattern.compile("""seq("$pat").and("$ctrl")"""),
+            "script pattern.and(ctrl)" to SprudelPattern.compile("""seq("$pat").and("$ctrl")"""),
             "string.and(ctrl)" to pat.and(ctrl),
-            "script string.and(ctrl)" to StrudelPattern.compile(""""$pat".and("$ctrl")"""),
+            "script string.and(ctrl)" to SprudelPattern.compile(""""$pat".and("$ctrl")"""),
             "and(ctrl)" to seq(pat).apply(and(ctrl)),
-            "script and(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(and("$ctrl"))"""),
+            "script and(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(and("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 0   // 0 && 10 → 0
@@ -451,11 +451,11 @@ class LangComparisonAndLogicSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.or(ctrl)" to seq(pat).or(ctrl),
-            "script pattern.or(ctrl)" to StrudelPattern.compile("""seq("$pat").or("$ctrl")"""),
+            "script pattern.or(ctrl)" to SprudelPattern.compile("""seq("$pat").or("$ctrl")"""),
             "string.or(ctrl)" to pat.or(ctrl),
-            "script string.or(ctrl)" to StrudelPattern.compile(""""$pat".or("$ctrl")"""),
+            "script string.or(ctrl)" to SprudelPattern.compile(""""$pat".or("$ctrl")"""),
             "or(ctrl)" to seq(pat).apply(or(ctrl)),
-            "script or(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(or("$ctrl"))"""),
+            "script or(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(or("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 10  // 0 || 10 → 10

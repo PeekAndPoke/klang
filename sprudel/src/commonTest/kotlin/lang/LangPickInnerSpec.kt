@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 /**
@@ -22,11 +22,11 @@ class LangPickInnerSpec : StringSpec({
         val pat = "0 1 2"
         dslInterfaceTests(
             "pattern.pick()" to seq(pat).pick("bd", "hh", "sn"),
-            "script pattern.pick()" to StrudelPattern.compile("""seq("$pat").pick("bd", "hh", "sn")"""),
+            "script pattern.pick()" to SprudelPattern.compile("""seq("$pat").pick("bd", "hh", "sn")"""),
             "string.pick()" to pat.pick("bd", "hh", "sn"),
-            "script string.pick()" to StrudelPattern.compile(""""$pat".pick("bd", "hh", "sn")"""),
+            "script string.pick()" to SprudelPattern.compile(""""$pat".pick("bd", "hh", "sn")"""),
             "pattern.apply(pick())" to seq(pat).apply(pick("bd", "hh", "sn")),
-            "script pattern.apply(pick())" to StrudelPattern.compile("""seq("$pat").apply(pick("bd", "hh", "sn"))"""),
+            "script pattern.apply(pick())" to SprudelPattern.compile("""seq("$pat").apply(pick("bd", "hh", "sn"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asString shouldBe "bd"
@@ -62,11 +62,11 @@ class LangPickInnerSpec : StringSpec({
         val pat = "0 1 2 3 4"
         dslInterfaceTests(
             "pattern.pickmod()" to seq(pat).pickmod("bd", "hh", "sn"),
-            "script pattern.pickmod()" to StrudelPattern.compile("""seq("$pat").pickmod("bd", "hh", "sn")"""),
+            "script pattern.pickmod()" to SprudelPattern.compile("""seq("$pat").pickmod("bd", "hh", "sn")"""),
             "string.pickmod()" to pat.pickmod("bd", "hh", "sn"),
-            "script string.pickmod()" to StrudelPattern.compile(""""$pat".pickmod("bd", "hh", "sn")"""),
+            "script string.pickmod()" to SprudelPattern.compile(""""$pat".pickmod("bd", "hh", "sn")"""),
             "pattern.apply(pickmod())" to seq(pat).apply(pickmod("bd", "hh", "sn")),
-            "script pattern.apply(pickmod())" to StrudelPattern.compile(
+            "script pattern.apply(pickmod())" to SprudelPattern.compile(
                 """seq("$pat").apply(pickmod("bd", "hh", "sn"))"""
             ),
         ) { _, events ->

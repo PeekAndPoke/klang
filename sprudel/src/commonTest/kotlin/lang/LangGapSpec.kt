@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangGapSpec : StringSpec({
 
@@ -38,7 +38,7 @@ class LangGapSpec : StringSpec({
         p1.queryArc(0.0, 2.0).size shouldBe 0
     }
 
-    "gap() works as method on StrudelPattern" {
+    "gap() works as method on SprudelPattern" {
         // note("c d").gap(2) -> silence lasting 2 cycles
         val p = note("c d").gap(2)
         val events = p.queryArc(0.0, 2.0)
@@ -55,7 +55,7 @@ class LangGapSpec : StringSpec({
     }
 
     "gap() works in compiled code" {
-        val p = StrudelPattern.compile("""gap(2)""")
+        val p = SprudelPattern.compile("""gap(2)""")
         val events = p?.queryArc(0.0, 2.0) ?: emptyList()
 
         events.size shouldBe 0
@@ -63,7 +63,7 @@ class LangGapSpec : StringSpec({
 
     "gap() works as method in compiled code" {
         // note("c d").gap(2)
-        val p = StrudelPattern.compile("""note("c d").gap(2)""")
+        val p = SprudelPattern.compile("""note("c d").gap(2)""")
         val events = p?.queryArc(0.0, 2.0) ?: emptyList()
 
         events.size shouldBe 0
@@ -71,7 +71,7 @@ class LangGapSpec : StringSpec({
 
     "gap() works as string extension in compiled code" {
         // "a b c".gap(3)
-        val p = StrudelPattern.compile(""""a b c".gap(3)""")
+        val p = SprudelPattern.compile(""""a b c".gap(3)""")
         val events = p?.queryArc(0.0, 3.0) ?: emptyList()
 
         events.size shouldBe 0
@@ -104,7 +104,7 @@ class LangGapSpec : StringSpec({
     }
 
     "gap() with control pattern works in compiled code" {
-        val p = StrudelPattern.compile("""gap("1 2")""")
+        val p = SprudelPattern.compile("""gap("1 2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 0

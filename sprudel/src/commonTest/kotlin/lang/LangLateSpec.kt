@@ -7,7 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLateSpec : StringSpec({
@@ -17,11 +17,11 @@ class LangLateSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.late(0.5)" to s(pat).late(0.5),
-            "script pattern.late(0.5)" to StrudelPattern.compile("""s("$pat").late(0.5)"""),
+            "script pattern.late(0.5)" to SprudelPattern.compile("""s("$pat").late(0.5)"""),
             "string.late(0.5)" to pat.late(0.5),
-            "script string.late(0.5)" to StrudelPattern.compile(""""$pat".late(0.5)"""),
+            "script string.late(0.5)" to SprudelPattern.compile(""""$pat".late(0.5)"""),
             "late(0.5)" to s(pat).apply(late(0.5)),
-            "script late(0.5)" to StrudelPattern.compile("""s("$pat").apply(late(0.5))"""),
+            "script late(0.5)" to SprudelPattern.compile("""s("$pat").apply(late(0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -86,7 +86,7 @@ class LangLateSpec : StringSpec({
         events[1].part.end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
-    "late() works as method on StrudelPattern" {
+    "late() works as method on SprudelPattern" {
         val p = note("c d").late(0.25)
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
@@ -108,7 +108,7 @@ class LangLateSpec : StringSpec({
     }
 
     "late() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c d").late(0.5)""")
+        val p = SprudelPattern.compile("""note("c d").late(0.5)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -117,7 +117,7 @@ class LangLateSpec : StringSpec({
     }
 
     "late() works as method in compiled code" {
-        val p = StrudelPattern.compile("""note("c d e f").late(0.5)""")
+        val p = SprudelPattern.compile("""note("c d e f").late(0.5)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         // Original: c(0-0.25), d(0.25-0.5), e(0.5-0.75), f(0.75-1.0)
@@ -130,7 +130,7 @@ class LangLateSpec : StringSpec({
     }
 
     "late() works as string extension in compiled code" {
-        val p = StrudelPattern.compile(""""c d".late(0.25)""")
+        val p = SprudelPattern.compile(""""c d".late(0.25)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         assertSoftly {

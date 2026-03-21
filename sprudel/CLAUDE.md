@@ -1,20 +1,22 @@
-# Strudel — Dispatcher
+# Sprudel — Dispatcher
 
-Kotlin/Multiplatform port of the JavaScript Strudel pattern language for live coding music.
+Klang's pattern language for live coding music. Sprudel is a sibling of the JavaScript
+[Strudel](https://strudel.cc) pattern language — sharing the same roots and many of the same ideas,
+but now taking its own direction as part of Klang.
 Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measure).
 
 ## Key Files
 
 | File                                           | Role                                      |
 |------------------------------------------------|-------------------------------------------|
-| `StrudelPatternEvent.kt`                       | Event definition (part/whole/isOnset)     |
-| `StrudelPattern.kt`                            | Pattern interface + helpers               |
-| `StrudelVoiceData.kt` / `StrudelVoiceValue.kt` | Voice data; values inc. `Pattern` variant |
+| `SprudelPatternEvent.kt`                       | Event definition (part/whole/isOnset)     |
+| `SprudelPattern.kt`                            | Pattern interface + helpers               |
+| `SprudelVoiceData.kt` / `SprudelVoiceValue.kt` | Voice data; values inc. `Pattern` variant |
 | `BindPattern.kt`                               | Inner join (clipping)                     |
 | `TempoModifierPattern.kt`                      | fast/slow (scaling)                       |
 | `RepeatCyclesPattern.kt`                       | Cycle repetition (shifting)               |
 | `AtomicPattern.kt`                             | Basic event creation                      |
-| `StrudelPlayback.kt`                           | Schedules events, filters by `isOnset`    |
+| `SprudelPlayback.kt`                           | Schedules events, filters by `isOnset`    |
 | `lang_*.kt`                                    | User-facing DSL API                       |
 
 ## Reference Files — Read Only What You Need
@@ -31,7 +33,7 @@ Patterns generate musical events scheduled over cyclic time (1 cycle ≈ 1 measu
 ## Build & Test
 
 ```bash
-./gradlew :strudel:jvmTest                          # preferred (fast)
-./gradlew :strudel:jvmTest --tests LangBpmSpec      # specific class — NO quotes
-./gradlew :strudel:jsTest                           # browser-specific only
+./gradlew :sprudel:jvmTest                          # preferred (fast)
+./gradlew :sprudel:jvmTest --tests LangBpmSpec      # specific class — NO quotes
+./gradlew :sprudel:jsTest                           # browser-specific only
 ```

@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -23,11 +23,11 @@ class LangNotchfSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.notchf(ctrl)" to seq(pat).notchf(ctrl),
-            "script pattern.notchf(ctrl)" to StrudelPattern.compile("""seq("$pat").notchf("$ctrl")"""),
+            "script pattern.notchf(ctrl)" to SprudelPattern.compile("""seq("$pat").notchf("$ctrl")"""),
             "string.notchf(ctrl)" to pat.notchf(ctrl),
-            "script string.notchf(ctrl)" to StrudelPattern.compile(""""$pat".notchf("$ctrl")"""),
+            "script string.notchf(ctrl)" to SprudelPattern.compile(""""$pat".notchf("$ctrl")"""),
             "notchf(ctrl)" to seq(pat).apply(notchf(ctrl)),
-            "script notchf(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(notchf("$ctrl"))"""),
+            "script notchf(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(notchf("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.notchf shouldBe 1000.0
@@ -91,7 +91,7 @@ class LangNotchfSpec : StringSpec({
     }
 
     "notchf() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").notchf("1000")""")
+        val p = SprudelPattern.compile("""note("c").notchf("1000")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

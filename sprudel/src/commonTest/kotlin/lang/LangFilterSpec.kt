@@ -1,4 +1,3 @@
-// strudel/src/commonTest/kotlin/lang/LangFilterSpec.kt
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
@@ -7,12 +6,12 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
 class LangFilterSpec : StringSpec({
 
     "filter dsl interface" {
-        val predicate: (StrudelPatternEvent) -> Boolean = {
+        val predicate: (SprudelPatternEvent) -> Boolean = {
             it.data.value?.asString == "a"
         }
         // All 3 call styles produce: only "a" from "a b" passes

@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.*
 
@@ -22,11 +22,11 @@ class LangMergeSpec : StringSpec({
             "merge(ctrl)" to
                     seq("1.0 2.0").apply(merge(s("sine supersaw"))),
             "script pattern.merge(ctrl)" to
-                    StrudelPattern.compile("""seq("1.0 2.0").merge(s("sine supersaw"))"""),
+                    SprudelPattern.compile("""seq("1.0 2.0").merge(s("sine supersaw"))"""),
             "script string.merge(ctrl)" to
-                    StrudelPattern.compile(""""1.0 2.0".merge(s("sine supersaw"))"""),
+                    SprudelPattern.compile(""""1.0 2.0".merge(s("sine supersaw"))"""),
             "script merge(ctrl)" to
-                    StrudelPattern.compile("""seq("1.0 2.0").apply(merge(s("sine supersaw")))"""),
+                    SprudelPattern.compile("""seq("1.0 2.0").apply(merge(s("sine supersaw")))"""),
         ) { _, events ->
             events.shouldHaveSize(2)
             events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)  // source value preserved
@@ -94,7 +94,7 @@ class LangMergeSpec : StringSpec({
     }
 
     "script apply(mul().merge())" {
-        val p = StrudelPattern.compile(
+        val p = SprudelPattern.compile(
             """seq("1.0 2.0").apply(mul("2").merge(s("sine supersaw")))"""
         )!!
         val events = p.queryArc(0.0, 1.0)

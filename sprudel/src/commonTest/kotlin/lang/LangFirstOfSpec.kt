@@ -1,11 +1,10 @@
-// strudel/src/commonTest/kotlin/lang/LangFirstOfSpec.kt
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFirstOfSpec : StringSpec({
@@ -15,15 +14,15 @@ class LangFirstOfSpec : StringSpec({
             "pattern.firstOf(n, transform)" to
                     note("a").firstOf(2) { it.note("b") },
             "script pattern.firstOf(n, transform)" to
-                    StrudelPattern.compile("""note("a").firstOf(2, x => x.note("b"))"""),
+                    SprudelPattern.compile("""note("a").firstOf(2, x => x.note("b"))"""),
             "string.firstOf(n, transform)" to
                     "a".firstOf(2) { it.note("b") },
             "script string.firstOf(n, transform)" to
-                    StrudelPattern.compile(""""a".firstOf(2, x => x.note("b"))"""),
+                    SprudelPattern.compile(""""a".firstOf(2, x => x.note("b"))"""),
             "firstOf(n, transform)" to
                     note("a").apply(firstOf(2) { it.note("b") }),
             "script firstOf(n, transform)" to
-                    StrudelPattern.compile("""note("a").apply(firstOf(2, x => x.note("b")))"""),
+                    SprudelPattern.compile("""note("a").apply(firstOf(2, x => x.note("b")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -34,15 +33,15 @@ class LangFirstOfSpec : StringSpec({
             "pattern.every(n, transform)" to
                     note("a").every(2) { it.note("b") },
             "script pattern.every(n, transform)" to
-                    StrudelPattern.compile("""note("a").every(2, x => x.note("b"))"""),
+                    SprudelPattern.compile("""note("a").every(2, x => x.note("b"))"""),
             "string.every(n, transform)" to
                     "a".every(2) { it.note("b") },
             "script string.every(n, transform)" to
-                    StrudelPattern.compile(""""a".every(2, x => x.note("b"))"""),
+                    SprudelPattern.compile(""""a".every(2, x => x.note("b"))"""),
             "every(n, transform)" to
                     note("a").apply(every(2) { it.note("b") }),
             "script every(n, transform)" to
-                    StrudelPattern.compile("""note("a").apply(every(2, x => x.note("b")))"""),
+                    SprudelPattern.compile("""note("a").apply(every(2, x => x.note("b")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -131,7 +130,7 @@ class LangFirstOfSpec : StringSpec({
     }
 
     "script apply(firstOf()) works in compiled code" {
-        val p = StrudelPattern.compile("""note("a").apply(firstOf(2, x => x.note("b")))""")!!
+        val p = SprudelPattern.compile("""note("a").apply(firstOf(2, x => x.note("b")))""")!!
 
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
@@ -149,7 +148,7 @@ class LangFirstOfSpec : StringSpec({
     }
 
     "script apply(every()) works in compiled code" {
-        val p = StrudelPattern.compile("""note("a").apply(every(2, x => x.note("b")))""")!!
+        val p = SprudelPattern.compile("""note("a").apply(every(2, x => x.note("b")))""")!!
 
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"

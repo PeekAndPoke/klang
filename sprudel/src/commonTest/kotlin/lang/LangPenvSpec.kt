@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangPenvSpec : StringSpec({
 
@@ -33,7 +33,7 @@ class LangPenvSpec : StringSpec({
     }
 
     "penv() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").penv("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").penv("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -58,7 +58,7 @@ class LangPenvSpec : StringSpec({
     }
 
     "pamt() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").pamt("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").pamt("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

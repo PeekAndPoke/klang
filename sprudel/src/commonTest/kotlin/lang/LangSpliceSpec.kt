@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangSpliceSpec : StringSpec({
 
@@ -57,7 +57,7 @@ class LangSpliceSpec : StringSpec({
     }
 
     "splice() works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd").splice(4, 1)""")
+        val p = SprudelPattern.compile("""sound("bd").splice(4, 1)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

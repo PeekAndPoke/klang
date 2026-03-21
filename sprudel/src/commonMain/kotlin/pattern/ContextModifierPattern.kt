@@ -1,21 +1,21 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
 /**
  * A pattern that modifies the query context before querying the source pattern.
  */
 internal class ContextModifierPattern(
     /** The wrapped pattern. */
-    val source: StrudelPattern,
+    val source: SprudelPattern,
     /** The context modifier function. */
     val modifier: QueryContext.Updater.() -> Unit,
-) : StrudelPattern {
+) : SprudelPattern {
     companion object {
-        fun StrudelPattern.withContext(modifier: QueryContext.Updater.() -> Unit) =
+        fun SprudelPattern.withContext(modifier: QueryContext.Updater.() -> Unit) =
             ContextModifierPattern(this, modifier)
     }
 
@@ -25,7 +25,7 @@ internal class ContextModifierPattern(
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         val updated = ctx.update(modifier)
 
         return source.queryArcContextual(from, to, updated)

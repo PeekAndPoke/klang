@@ -7,8 +7,8 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.lang.strudelLib
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
 
 /**
  * Integration tests for source location tracking through the complete pipeline:
@@ -16,9 +16,9 @@ import io.peekandpoke.klang.sprudel.lang.strudelLib
  */
 class SourceLocationIntegrationTest : StringSpec({
 
-    fun executeAndGetPattern(code: String): StrudelPattern {
+    fun executeAndGetPattern(code: String): SprudelPattern {
         val engine = klangScript {
-            registerLibrary(strudelLib)
+            registerLibrary(sprudelLib)
         }
 
         val result = engine.execute(code)
@@ -26,7 +26,7 @@ class SourceLocationIntegrationTest : StringSpec({
         result shouldNotBe null
         result.shouldBeInstanceOf<NativeObjectValue<*>>()
 
-        val pattern = result.value.shouldBeInstanceOf<StrudelPattern>()
+        val pattern = result.value.shouldBeInstanceOf<SprudelPattern>()
 
         return pattern
     }

@@ -4,14 +4,14 @@ package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.lang.*
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArg
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.addons.pattern.MergePattern
 import io.peekandpoke.klang.sprudel.lang.addons.pattern.SoloPattern
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
@@ -19,14 +19,10 @@ import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 
 /**
- * ADDONS: Structural functions that are NOT available in the original strudel impl
- */
-
-/**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangStructuralAddonsInit = false
+var sprudelLangStructuralAddonsInit = false
 
 // -- morse() ----------------------------------------------------------------------------------------------------------
 
@@ -65,22 +61,22 @@ private fun Char.stripAccents(): Char {
     return if (index >= 0) BASE_CHARS[index] else this
 }
 
-private fun applyMorse(textArg: StrudelDslArg<Any?>?): StrudelPattern {
+private fun applyMorse(textArg: SprudelDslArg<Any?>?): SprudelPattern {
     val text = textArg?.value?.toString() ?: return silence
     if (text.isEmpty()) return silence
 
     val baseLoc = textArg.location
-    val patterns = mutableListOf<StrudelPattern>()
+    val patterns = mutableListOf<SprudelPattern>()
     var totalWeight = 0.0
 
     // Helper to add a weighted pattern
-    fun add(p: StrudelPattern, weight: Double) {
+    fun add(p: SprudelPattern, weight: Double) {
         patterns.add(PropertyOverridePattern(p, weightOverride = weight))
         totalWeight += weight
     }
 
     // Helper to create a note pattern with location
-    fun createNote(charIndex: Int): StrudelPattern {
+    fun createNote(charIndex: Int): SprudelPattern {
         val loc = baseLoc?.let {
             // Adjust for quotes: startColumn points to the opening quote.
             // So the content starts at startColumn + 1.
@@ -97,7 +93,7 @@ private fun applyMorse(textArg: StrudelDslArg<Any?>?): StrudelPattern {
 
         // "x" is the standard note for rhythm/struct
         return AtomicPattern(
-            data = StrudelVoiceData.empty.copy(value = StrudelVoiceValue.Num(Rational.ONE)),
+            data = SprudelVoiceData.empty.copy(value = SprudelVoiceValue.Num(Rational.ONE)),
             sourceLocations = chain
         )
     }
@@ -161,7 +157,7 @@ private fun applyMorse(textArg: StrudelDslArg<Any?>?): StrudelPattern {
     return seq.slow(totalWeight / 16.0) // using 1/16th cycle per unit for a tighter rhythm
 }
 
-internal val StrudelPattern._morse by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._morse by dslPatternExtension { p, args, /* callInfo */ _ ->
     p.struct(applyMorse(args.firstOrNull()))
 }
 
@@ -192,8 +188,8 @@ internal val _morse by dslPatternFunction { args, /* callInfo */ _ ->
  * @category structural
  * @tags morse, code, rhythm, structure, pattern, addon
  */
-@StrudelDsl
-fun StrudelPattern.morse(text: PatternLike): StrudelPattern = this._morse(listOf(text).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.morse(text: PatternLike): SprudelPattern = this._morse(listOf(text).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and structures it using a Morse code rhythm.
@@ -204,8 +200,8 @@ fun StrudelPattern.morse(text: PatternLike): StrudelPattern = this._morse(listOf
  *
  * @param text The text to encode as Morse code. Case-insensitive; unknown characters are skipped.
  */
-@StrudelDsl
-fun String.morse(text: PatternLike): StrudelPattern = this._morse(listOf(text).asStrudelDslArgs())
+@SprudelDsl
+fun String.morse(text: PatternLike): SprudelPattern = this._morse(listOf(text).asSprudelDslArgs())
 
 /**
  * Creates a rhythmic pattern from a string using Morse code timing.
@@ -223,17 +219,17 @@ fun String.morse(text: PatternLike): StrudelPattern = this._morse(listOf(text).a
  *
  * @param text The text to encode as Morse code. Case-insensitive; unknown characters are skipped.
  */
-@StrudelDsl
-fun morse(text: PatternLike): StrudelPattern = _morse(listOf(text).asStrudelDslArgs())
+@SprudelDsl
+fun morse(text: PatternLike): SprudelPattern = _morse(listOf(text).asSprudelDslArgs())
 
 // -- merge() ----------------------------------------------------------------------------------------------------------
 
-private fun applyMerge(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyMerge(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val ctrl = args.toPattern()
     return MergePattern(source = pattern, control = ctrl)
 }
 
-internal val StrudelPattern._merge by dslPatternExtension { p, args, _ -> applyMerge(p, args) }
+internal val SprudelPattern._merge by dslPatternExtension { p, args, _ -> applyMerge(p, args) }
 internal val String._merge by dslStringExtension { p, args, callInfo -> p._merge(args, callInfo) }
 internal val _merge by dslPatternMapper { args, callInfo -> { p -> p._merge(args, callInfo) } }
 internal val PatternMapperFn._merge by dslPatternMapperExtension { m, args, callInfo ->
@@ -246,7 +242,7 @@ internal val PatternMapperFn._merge by dslPatternMapperExtension { m, args, call
  * Overlays voice properties from a control pattern onto this pattern's events.
  *
  * For each source event the control is sampled at the event's onset time. Non-null fields
- * from the control's [StrudelVoiceData] override the corresponding fields in the source event.
+ * from the control's [SprudelVoiceData] override the corresponding fields in the source event.
  * Source fields that the control leaves `null` are kept unchanged.
  *
  * ```KlangScript
@@ -270,9 +266,9 @@ internal val PatternMapperFn._merge by dslPatternMapperExtension { m, args, call
  * @category structural
  * @tags merge, overlay, combine, voice, data, addon
  */
-@StrudelDsl
-fun StrudelPattern.merge(ctrl: PatternLike): StrudelPattern =
-    this._merge(ctrl.asStrudelDslArg())
+@SprudelDsl
+fun SprudelPattern.merge(ctrl: PatternLike): SprudelPattern =
+    this._merge(ctrl.asSprudelDslArg())
 
 /**
  * Parses this string as a pattern and overlays voice properties from the control pattern.
@@ -283,9 +279,9 @@ fun StrudelPattern.merge(ctrl: PatternLike): StrudelPattern =
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
  */
-@StrudelDsl
-fun String.merge(ctrl: PatternLike): StrudelPattern =
-    this._merge(ctrl.asStrudelDslArg())
+@SprudelDsl
+fun String.merge(ctrl: PatternLike): SprudelPattern =
+    this._merge(ctrl.asSprudelDslArg())
 
 /**
  * Creates a [PatternMapperFn] that overlays voice properties from the control pattern.
@@ -296,16 +292,16 @@ fun String.merge(ctrl: PatternLike): StrudelPattern =
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
  */
-@StrudelDsl
-fun merge(ctrl: PatternLike): PatternMapperFn = _merge(ctrl.asStrudelDslArg())
+@SprudelDsl
+fun merge(ctrl: PatternLike): PatternMapperFn = _merge(ctrl.asSprudelDslArg())
 
 /**
  * Chains a voice-data overlay onto this [PatternMapperFn].
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
  */
-@StrudelDsl
-fun PatternMapperFn.merge(ctrl: PatternLike): PatternMapperFn = _merge(ctrl.asStrudelDslArg())
+@SprudelDsl
+fun PatternMapperFn.merge(ctrl: PatternLike): PatternMapperFn = _merge(ctrl.asSprudelDslArg())
 
 // -- timeLoop() -------------------------------------------------------------------------------------------------------
 
@@ -313,17 +309,17 @@ fun PatternMapperFn.merge(ctrl: PatternLike): PatternMapperFn = _merge(ctrl.asSt
  * Core implementation: loops this pattern within the given duration in cycles.
  * Effectively repeats the pattern segment `[0, duration]` every `duration` cycles.
  */
-fun StrudelPattern.timeLoop(duration: Rational): StrudelPattern {
+fun SprudelPattern.timeLoop(duration: Rational): SprudelPattern {
     if (duration <= Rational.ZERO) return silence
 
     val source = this
-    return object : StrudelPattern {
+    return object : SprudelPattern {
         override val weight: Double get() = source.weight
         override val numSteps: Rational? get() = source.numSteps
         override fun estimateCycleDuration(): Rational = duration
 
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
-            val result = mutableListOf<StrudelPatternEvent>()
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+            val result = mutableListOf<SprudelPatternEvent>()
 
             // Calculate loop range covering [from, to]
             val startLoop = (from / duration).floor()
@@ -364,12 +360,12 @@ fun StrudelPattern.timeLoop(duration: Rational): StrudelPattern {
     }
 }
 
-private fun applyTimeLoop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyTimeLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val duration = args.firstOrNull()?.value?.asRationalOrNull() ?: return source
     return source.timeLoop(duration)
 }
 
-internal val StrudelPattern._timeLoop by dslPatternExtension { p, args, _ -> applyTimeLoop(p, args) }
+internal val SprudelPattern._timeLoop by dslPatternExtension { p, args, _ -> applyTimeLoop(p, args) }
 
 internal val String._timeLoop by dslStringExtension { p, args, callInfo -> p._timeLoop(args, callInfo) }
 
@@ -405,9 +401,9 @@ internal val PatternMapperFn._timeLoop by dslPatternMapperExtension { m, args, c
  * @category structural
  * @tags timeLoop, loop, repeat, cycle, ostinato, window, addon
  */
-@StrudelDsl
-fun StrudelPattern.timeLoop(duration: PatternLike): StrudelPattern =
-    this._timeLoop(listOf(duration).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.timeLoop(duration: PatternLike): SprudelPattern =
+    this._timeLoop(listOf(duration).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and loops it within a fixed window of `duration` cycles.
@@ -418,9 +414,9 @@ fun StrudelPattern.timeLoop(duration: PatternLike): StrudelPattern =
  *
  * @param duration The loop window length in cycles. Must be greater than zero.
  */
-@StrudelDsl
-fun String.timeLoop(duration: PatternLike): StrudelPattern =
-    this._timeLoop(listOf(duration).asStrudelDslArgs())
+@SprudelDsl
+fun String.timeLoop(duration: PatternLike): SprudelPattern =
+    this._timeLoop(listOf(duration).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that loops its input within a fixed window of `duration` cycles.
@@ -438,9 +434,9 @@ fun String.timeLoop(duration: PatternLike): StrudelPattern =
  * @category structural
  * @tags timeLoop, loop, repeat, cycle, ostinato, window, addon
  */
-@StrudelDsl
+@SprudelDsl
 fun timeLoop(duration: PatternLike): PatternMapperFn =
-    _timeLoop(listOf(duration).asStrudelDslArgs())
+    _timeLoop(listOf(duration).asSprudelDslArgs())
 
 /**
  * Chains a timeLoop operation onto this [PatternMapperFn], looping the result within `duration` cycles.
@@ -451,13 +447,13 @@ fun timeLoop(duration: PatternLike): PatternMapperFn =
  *
  * @param duration The loop window length in cycles. Must be greater than zero.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.timeLoop(duration: PatternLike): PatternMapperFn =
-    _timeLoop(listOf(duration).asStrudelDslArgs())
+    _timeLoop(listOf(duration).asSprudelDslArgs())
 
 // -- repeat() ---------------------------------------------------------------------------------------------------------
 
-private fun applyRepeat(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyRepeat(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val times = args.firstOrNull()?.value?.asIntOrNull() ?: 1
     if (times <= 0) return silence
     if (times == 1) return pattern
@@ -465,7 +461,7 @@ private fun applyRepeat(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>
     return applyCat(patterns)
 }
 
-internal val StrudelPattern._repeat by dslPatternExtension { p, args, _ -> applyRepeat(p, args) }
+internal val SprudelPattern._repeat by dslPatternExtension { p, args, _ -> applyRepeat(p, args) }
 internal val String._repeat by dslStringExtension { p, args, callInfo -> p._repeat(args, callInfo) }
 internal val _repeat by dslPatternMapper { args, callInfo -> { p -> p._repeat(args, callInfo) } }
 internal val PatternMapperFn._repeat by dslPatternMapperExtension { m, args, callInfo ->
@@ -499,8 +495,8 @@ internal val PatternMapperFn._repeat by dslPatternMapperExtension { m, args, cal
  * @category structural
  * @tags repeat, loop, duplicate, sequence, addon
  */
-@StrudelDsl
-fun StrudelPattern.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(times).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.repeat(times: PatternLike): SprudelPattern = this._repeat(listOf(times).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and repeats it `times` times sequentially.
@@ -515,8 +511,8 @@ fun StrudelPattern.repeat(times: PatternLike): StrudelPattern = this._repeat(lis
  *
  * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
  */
-@StrudelDsl
-fun String.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(times).asStrudelDslArgs())
+@SprudelDsl
+fun String.repeat(times: PatternLike): SprudelPattern = this._repeat(listOf(times).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that repeats the input pattern `times` times sequentially.
@@ -534,8 +530,8 @@ fun String.repeat(times: PatternLike): StrudelPattern = this._repeat(listOf(time
  * @category structural
  * @tags repeat, loop, duplicate, sequence, addon
  */
-@StrudelDsl
-fun repeat(times: PatternLike): PatternMapperFn = _repeat(listOf(times).asStrudelDslArgs())
+@SprudelDsl
+fun repeat(times: PatternLike): PatternMapperFn = _repeat(listOf(times).asSprudelDslArgs())
 
 /**
  * Chains a repeat operation onto this [PatternMapperFn], repeating the result `times` times.
@@ -546,18 +542,18 @@ fun repeat(times: PatternLike): PatternMapperFn = _repeat(listOf(times).asStrude
  *
  * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
  */
-@StrudelDsl
-fun PatternMapperFn.repeat(times: PatternLike): PatternMapperFn = _repeat(listOf(times).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.repeat(times: PatternLike): PatternMapperFn = _repeat(listOf(times).asSprudelDslArgs())
 
 // -- solo() -----------------------------------------------------------------------------------------------------------
 
-private fun applySolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(0.97)) }
+private fun applySolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    val effectiveArgs = args.ifEmpty { listOf(SprudelDslArg.of(0.97)) }
     val soloControl = effectiveArgs.first().toPattern()
     return SoloPattern(source = source, soloControl = soloControl)
 }
 
-internal val StrudelPattern._solo by dslPatternExtension { p, args, _ -> applySolo(p, args) }
+internal val SprudelPattern._solo by dslPatternExtension { p, args, _ -> applySolo(p, args) }
 internal val String._solo by dslStringExtension { p, args, callInfo -> p._solo(args, callInfo) }
 internal val _solo by dslPatternMapper { args, callInfo -> { p -> p._solo(args, callInfo) } }
 internal val PatternMapperFn._solo by dslPatternMapperExtension { m, args, callInfo -> m.chain(_solo(args, callInfo)) }
@@ -594,9 +590,9 @@ internal val PatternMapperFn._solo by dslPatternMapperExtension { m, args, callI
  * @category structural
  * @tags solo, mute, isolate, playback, addon
  */
-@StrudelDsl
-fun StrudelPattern.solo(amount: PatternLike? = null): StrudelPattern =
-    this._solo(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.solo(amount: PatternLike? = null): SprudelPattern =
+    this._solo(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and solos it, muting all non-soloed patterns.
@@ -611,9 +607,9 @@ fun StrudelPattern.solo(amount: PatternLike? = null): StrudelPattern =
  *
  * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.97`. Accepts control patterns.
  */
-@StrudelDsl
-fun String.solo(amount: PatternLike? = null): StrudelPattern =
-    this._solo(listOfNotNull(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.solo(amount: PatternLike? = null): SprudelPattern =
+    this._solo(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that solos the input pattern, muting all non-soloed patterns.
@@ -635,9 +631,9 @@ fun String.solo(amount: PatternLike? = null): StrudelPattern =
  * @category structural
  * @tags solo, mute, isolate, playback, addon
  */
-@StrudelDsl
+@SprudelDsl
 fun solo(amount: PatternLike? = null): PatternMapperFn =
-    _solo(listOfNotNull(amount).asStrudelDslArgs())
+    _solo(listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Chains a solo operation onto this [PatternMapperFn].
@@ -652,6 +648,6 @@ fun solo(amount: PatternLike? = null): PatternMapperFn =
  *
  * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.97`. Accepts control patterns.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.solo(amount: PatternLike? = null): PatternMapperFn =
-    _solo(listOfNotNull(amount).asStrudelDslArgs())
+    _solo(listOfNotNull(amount).asSprudelDslArgs())

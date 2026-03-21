@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangVibratoSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangVibratoSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.vibrato(hz)" to note(pat).vibrato(amount),
-            "script pattern.vibrato(hz)" to StrudelPattern.compile("""note("$pat").vibrato($amount)"""),
+            "script pattern.vibrato(hz)" to SprudelPattern.compile("""note("$pat").vibrato($amount)"""),
             "string.vibrato(hz)" to pat.vibrato(amount),
-            "script string.vibrato(hz)" to StrudelPattern.compile(""""$pat".vibrato($amount)"""),
+            "script string.vibrato(hz)" to SprudelPattern.compile(""""$pat".vibrato($amount)"""),
             "vibrato(hz)" to note(pat).apply(vibrato(amount)),
-            "script vibrato(hz)" to StrudelPattern.compile("""note("$pat").apply(vibrato($amount))"""),
+            "script vibrato(hz)" to SprudelPattern.compile("""note("$pat").apply(vibrato($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.vibrato shouldBe amount
@@ -33,11 +33,11 @@ class LangVibratoSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.vib(hz)" to note(pat).vib(amount),
-            "script pattern.vib(hz)" to StrudelPattern.compile("""note("$pat").vib($amount)"""),
+            "script pattern.vib(hz)" to SprudelPattern.compile("""note("$pat").vib($amount)"""),
             "string.vib(hz)" to pat.vib(amount),
-            "script string.vib(hz)" to StrudelPattern.compile(""""$pat".vib($amount)"""),
+            "script string.vib(hz)" to SprudelPattern.compile(""""$pat".vib($amount)"""),
             "vib(hz)" to note(pat).apply(vib(amount)),
-            "script vib(hz)" to StrudelPattern.compile("""note("$pat").apply(vib($amount))"""),
+            "script vib(hz)" to SprudelPattern.compile("""note("$pat").apply(vib($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.vibrato shouldBe amount
@@ -101,7 +101,7 @@ class LangVibratoSpec : StringSpec({
     }
 
     "vibrato() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").vibrato("5.0")""")
+        val p = SprudelPattern.compile("""note("c").vibrato("5.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.vibrato shouldBe 5.0

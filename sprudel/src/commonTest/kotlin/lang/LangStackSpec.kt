@@ -5,8 +5,8 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 
 class LangStackSpec : StringSpec({
 
@@ -28,7 +28,7 @@ class LangStackSpec : StringSpec({
         events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
-    "stack() works as method on StrudelPattern" {
+    "stack() works as method on SprudelPattern" {
         // note("a").stack(note("b")) -> stack(note("a"), note("b"))
         val p = note("a").stack(note("b"))
 
@@ -56,12 +56,12 @@ class LangStackSpec : StringSpec({
         // Second event (from "b")
 
         // Since sort by note, "a" comes first.
-        events[0].data.value shouldBe StrudelVoiceValue.Text("a")
-        events[1].data.value shouldBe StrudelVoiceValue.Text("b")
+        events[0].data.value shouldBe SprudelVoiceValue.Text("a")
+        events[1].data.value shouldBe SprudelVoiceValue.Text("b")
     }
 
     "stack() works in compiled code" {
-        val p = StrudelPattern.compile("""stack(note("a"), note("b"))""")
+        val p = SprudelPattern.compile("""stack(note("a"), note("b"))""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.data.note } ?: emptyList()
 
         events.size shouldBe 2
@@ -70,7 +70,7 @@ class LangStackSpec : StringSpec({
     }
 
     "stack() works as method in compiled code" {
-        val p = StrudelPattern.compile("""note("a").stack(note("b"))""")
+        val p = SprudelPattern.compile("""note("a").stack(note("b"))""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.data.note } ?: emptyList()
 
         events.size shouldBe 2
@@ -79,11 +79,11 @@ class LangStackSpec : StringSpec({
     }
 
     "stack() works as string extension in compiled code" {
-        val p = StrudelPattern.compile(""""a".stack("b")""")
+        val p = SprudelPattern.compile(""""a".stack("b")""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.data.note ?: "z" } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.value shouldBe StrudelVoiceValue.Text("a")
-        events[1].data.value shouldBe StrudelVoiceValue.Text("b")
+        events[0].data.value shouldBe SprudelVoiceValue.Text("a")
+        events[1].data.value shouldBe SprudelVoiceValue.Text("b")
     }
 })

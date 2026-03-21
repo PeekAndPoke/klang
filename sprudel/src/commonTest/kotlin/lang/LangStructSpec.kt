@@ -8,7 +8,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangStructSpec : StringSpec({
@@ -18,11 +18,11 @@ class LangStructSpec : StringSpec({
         val ctrl = "x x"
         dslInterfaceTests(
             "pattern.struct(ctrl)" to note(pat).struct(ctrl),
-            "script pattern.struct(ctrl)" to StrudelPattern.compile("""note("$pat").struct("$ctrl")"""),
+            "script pattern.struct(ctrl)" to SprudelPattern.compile("""note("$pat").struct("$ctrl")"""),
             "string.struct(ctrl)" to pat.struct(ctrl),
-            "script string.struct(ctrl)" to StrudelPattern.compile(""""$pat".struct("$ctrl")"""),
+            "script string.struct(ctrl)" to SprudelPattern.compile(""""$pat".struct("$ctrl")"""),
             "struct(ctrl)" to note(pat).apply(struct(ctrl)),
-            "script struct(ctrl)" to StrudelPattern.compile("""note("$pat").apply(struct("$ctrl"))"""),
+            "script struct(ctrl)" to SprudelPattern.compile("""note("$pat").apply(struct("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2  // "x x" gives 2 beats
@@ -174,7 +174,7 @@ class LangStructSpec : StringSpec({
     }
 
     "struct() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c e g").struct("x ~ x")""")
+        val p = SprudelPattern.compile("""note("c e g").struct("x ~ x")""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2

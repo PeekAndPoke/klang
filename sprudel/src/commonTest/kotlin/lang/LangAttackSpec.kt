@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangAttackSpec : StringSpec({
@@ -19,15 +19,15 @@ class LangAttackSpec : StringSpec({
             "pattern.attack(ctrl)" to
                     seq(pat).attack(ctrl),
             "script pattern.attack(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").attack("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").attack("$ctrl")"""),
             "string.attack(ctrl)" to
                     pat.attack(ctrl),
             "script string.attack(ctrl)" to
-                    StrudelPattern.compile(""""$pat".attack("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".attack("$ctrl")"""),
             "attack(ctrl)" to
                     seq(pat).apply(attack(ctrl)),
             "script attack(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(attack("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(attack("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.attack shouldBe 0.1
@@ -96,7 +96,7 @@ class LangAttackSpec : StringSpec({
     }
 
     "attack() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").attack("0.1")""")
+        val p = SprudelPattern.compile("""note("c").attack("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.attack shouldBe (0.1 plusOrMinus EPSILON)

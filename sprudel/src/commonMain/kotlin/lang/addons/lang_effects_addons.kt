@@ -2,10 +2,10 @@
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel.lang.*
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 /**
  * ADDONS: Effect functions that are NOT available in the original strudel impl
@@ -15,7 +15,7 @@ import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArg
  * Accessing this property forces the initialization of this file's class,
  * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
  */
-var strudelLangEffectsAddonsInit = false
+var sprudelLangEffectsAddonsInit = false
 
 // -- reverb() ---------------------------------------------------------------------------------------------------------
 
@@ -32,7 +32,7 @@ private val reverbMutation = voiceModifier {
     )
 }
 
-private fun applyReverb(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, reverbMutation) { src, ctrl ->
         src.copy(
             room = ctrl.room ?: src.room,
@@ -45,7 +45,7 @@ private fun applyReverb(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 internal val _reverb by dslPatternMapper { args, callInfo -> { p -> p._reverb(args, callInfo) } }
-internal val StrudelPattern._reverb by dslPatternExtension { p, args, /* callInfo */ _ -> applyReverb(p, args) }
+internal val SprudelPattern._reverb by dslPatternExtension { p, args, /* callInfo */ _ -> applyReverb(p, args) }
 internal val String._reverb by dslStringExtension { p, args, callInfo -> p._reverb(args, callInfo) }
 internal val PatternMapperFn._reverb by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_reverb(args, callInfo))
@@ -89,9 +89,9 @@ internal val PatternMapperFn._reverb by dslPatternMapperExtension { m, args, cal
  * @category effects
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
-@StrudelDsl
-fun StrudelPattern.reverb(params: PatternLike? = null): StrudelPattern =
-    this._reverb(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.reverb(params: PatternLike? = null): SprudelPattern =
+    this._reverb(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets all reverb parameters.
@@ -105,9 +105,9 @@ fun StrudelPattern.reverb(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
-@StrudelDsl
-fun String.reverb(params: PatternLike? = null): StrudelPattern =
-    this._reverb(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.reverb(params: PatternLike? = null): SprudelPattern =
+    this._reverb(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets all reverb parameters.
@@ -128,8 +128,8 @@ fun String.reverb(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
-@StrudelDsl
-fun reverb(params: PatternLike? = null): PatternMapperFn = _reverb(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun reverb(params: PatternLike? = null): PatternMapperFn = _reverb(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets all reverb parameters after the previous mapper.
@@ -145,9 +145,9 @@ fun reverb(params: PatternLike? = null): PatternMapperFn = _reverb(listOfNotNull
  * note("c3*4").every(4, delay(0.5).reverb("0.9:4"))   // delay + reverb every 4th cycle
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.reverb(params: PatternLike? = null): PatternMapperFn =
-    _reverb(listOfNotNull(params).asStrudelDslArgs())
+    _reverb(listOfNotNull(params).asSprudelDslArgs())
 
 // -- lpadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -163,7 +163,7 @@ private val lpadsrMutation = voiceModifier {
     )
 }
 
-private fun applyLpadsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyLpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, lpadsrMutation) { src, ctrl ->
         src.copy(
             lpattack = ctrl.lpattack ?: src.lpattack,
@@ -175,7 +175,7 @@ private fun applyLpadsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 internal val _lpadsr by dslPatternMapper { args, callInfo -> { p -> p._lpadsr(args, callInfo) } }
-internal val StrudelPattern._lpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpadsr(p, args) }
+internal val SprudelPattern._lpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpadsr(p, args) }
 internal val String._lpadsr by dslStringExtension { p, args, callInfo -> p._lpadsr(args, callInfo) }
 internal val PatternMapperFn._lpadsr by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_lpadsr(args, callInfo))
@@ -202,9 +202,9 @@ internal val PatternMapperFn._lpadsr by dslPatternMapperExtension { m, args, cal
  * @category effects
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun StrudelPattern.lpadsr(params: PatternLike? = null): StrudelPattern =
-    this._lpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.lpadsr(params: PatternLike? = null): SprudelPattern =
+    this._lpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets all LPF envelope parameters.
@@ -218,9 +218,9 @@ fun StrudelPattern.lpadsr(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun String.lpadsr(params: PatternLike? = null): StrudelPattern =
-    this._lpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.lpadsr(params: PatternLike? = null): SprudelPattern =
+    this._lpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets all LPF envelope parameters.
@@ -234,8 +234,8 @@ fun String.lpadsr(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun lpadsr(params: PatternLike? = null): PatternMapperFn = _lpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun lpadsr(params: PatternLike? = null): PatternMapperFn = _lpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets all LPF envelope parameters after the previous mapper.
@@ -244,9 +244,9 @@ fun lpadsr(params: PatternLike? = null): PatternMapperFn = _lpadsr(listOfNotNull
  * note("c3 e3").apply(gain(0.8).lpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.lpadsr(params: PatternLike? = null): PatternMapperFn =
-    _lpadsr(listOfNotNull(params).asStrudelDslArgs())
+    _lpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 // -- hpadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -262,7 +262,7 @@ private val hpadsrMutation = voiceModifier {
     )
 }
 
-private fun applyHpadsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyHpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, hpadsrMutation) { src, ctrl ->
         src.copy(
             hpattack = ctrl.hpattack ?: src.hpattack,
@@ -274,7 +274,7 @@ private fun applyHpadsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 internal val _hpadsr by dslPatternMapper { args, callInfo -> { p -> p._hpadsr(args, callInfo) } }
-internal val StrudelPattern._hpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpadsr(p, args) }
+internal val SprudelPattern._hpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpadsr(p, args) }
 internal val String._hpadsr by dslStringExtension { p, args, callInfo -> p._hpadsr(args, callInfo) }
 internal val PatternMapperFn._hpadsr by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_hpadsr(args, callInfo))
@@ -301,9 +301,9 @@ internal val PatternMapperFn._hpadsr by dslPatternMapperExtension { m, args, cal
  * @category effects
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun StrudelPattern.hpadsr(params: PatternLike? = null): StrudelPattern =
-    this._hpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.hpadsr(params: PatternLike? = null): SprudelPattern =
+    this._hpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets all HPF envelope parameters.
@@ -317,9 +317,9 @@ fun StrudelPattern.hpadsr(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun String.hpadsr(params: PatternLike? = null): StrudelPattern =
-    this._hpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.hpadsr(params: PatternLike? = null): SprudelPattern =
+    this._hpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets all HPF envelope parameters.
@@ -333,8 +333,8 @@ fun String.hpadsr(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun hpadsr(params: PatternLike? = null): PatternMapperFn = _hpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun hpadsr(params: PatternLike? = null): PatternMapperFn = _hpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets all HPF envelope parameters after the previous mapper.
@@ -343,9 +343,9 @@ fun hpadsr(params: PatternLike? = null): PatternMapperFn = _hpadsr(listOfNotNull
  * note("c3 e3").apply(gain(0.8).hpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.hpadsr(params: PatternLike? = null): PatternMapperFn =
-    _hpadsr(listOfNotNull(params).asStrudelDslArgs())
+    _hpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 // -- bpadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -361,7 +361,7 @@ private val bpadsrMutation = voiceModifier {
     )
 }
 
-private fun applyBpadsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyBpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, bpadsrMutation) { src, ctrl ->
         src.copy(
             bpattack = ctrl.bpattack ?: src.bpattack,
@@ -373,7 +373,7 @@ private fun applyBpadsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 internal val _bpadsr by dslPatternMapper { args, callInfo -> { p -> p._bpadsr(args, callInfo) } }
-internal val StrudelPattern._bpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpadsr(p, args) }
+internal val SprudelPattern._bpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpadsr(p, args) }
 internal val String._bpadsr by dslStringExtension { p, args, callInfo -> p._bpadsr(args, callInfo) }
 internal val PatternMapperFn._bpadsr by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_bpadsr(args, callInfo))
@@ -400,9 +400,9 @@ internal val PatternMapperFn._bpadsr by dslPatternMapperExtension { m, args, cal
  * @category effects
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun StrudelPattern.bpadsr(params: PatternLike? = null): StrudelPattern =
-    this._bpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.bpadsr(params: PatternLike? = null): SprudelPattern =
+    this._bpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets all BPF envelope parameters.
@@ -416,9 +416,9 @@ fun StrudelPattern.bpadsr(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun String.bpadsr(params: PatternLike? = null): StrudelPattern =
-    this._bpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.bpadsr(params: PatternLike? = null): SprudelPattern =
+    this._bpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets all BPF envelope parameters.
@@ -432,8 +432,8 @@ fun String.bpadsr(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun bpadsr(params: PatternLike? = null): PatternMapperFn = _bpadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun bpadsr(params: PatternLike? = null): PatternMapperFn = _bpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets all BPF envelope parameters after the previous mapper.
@@ -442,9 +442,9 @@ fun bpadsr(params: PatternLike? = null): PatternMapperFn = _bpadsr(listOfNotNull
  * note("c3 e3").apply(gain(0.8).bpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.bpadsr(params: PatternLike? = null): PatternMapperFn =
-    _bpadsr(listOfNotNull(params).asStrudelDslArgs())
+    _bpadsr(listOfNotNull(params).asSprudelDslArgs())
 
 // -- tremolo() --------------------------------------------------------------------------------------------------------
 
@@ -460,7 +460,7 @@ private val tremoloMutation = voiceModifier {
     )
 }
 
-private fun applyTremolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyTremolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, tremoloMutation) { src, ctrl ->
         src.copy(
             tremoloDepth = ctrl.tremoloDepth ?: src.tremoloDepth,
@@ -473,7 +473,7 @@ private fun applyTremolo(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
 }
 
 internal val _tremolo by dslPatternMapper { args, callInfo -> { p -> p._tremolo(args, callInfo) } }
-internal val StrudelPattern._tremolo by dslPatternExtension { p, args, /* callInfo */ _ -> applyTremolo(p, args) }
+internal val SprudelPattern._tremolo by dslPatternExtension { p, args, /* callInfo */ _ -> applyTremolo(p, args) }
 internal val String._tremolo by dslStringExtension { p, args, callInfo -> p._tremolo(args, callInfo) }
 internal val PatternMapperFn._tremolo by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_tremolo(args, callInfo))
@@ -515,9 +515,9 @@ internal val PatternMapperFn._tremolo by dslPatternMapperExtension { m, args, ca
  * @category effects
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
-@StrudelDsl
-fun StrudelPattern.tremolo(params: PatternLike? = null): StrudelPattern =
-    this._tremolo(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.tremolo(params: PatternLike? = null): SprudelPattern =
+    this._tremolo(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets all tremolo parameters.
@@ -531,9 +531,9 @@ fun StrudelPattern.tremolo(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
-@StrudelDsl
-fun String.tremolo(params: PatternLike? = null): StrudelPattern =
-    this._tremolo(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.tremolo(params: PatternLike? = null): SprudelPattern =
+    this._tremolo(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets all tremolo parameters.
@@ -551,8 +551,8 @@ fun String.tremolo(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
-@StrudelDsl
-fun tremolo(params: PatternLike? = null): PatternMapperFn = _tremolo(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun tremolo(params: PatternLike? = null): PatternMapperFn = _tremolo(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets all tremolo parameters after the previous mapper.
@@ -565,9 +565,9 @@ fun tremolo(params: PatternLike? = null): PatternMapperFn = _tremolo(listOfNotNu
  * note("c3*4").every(4, delay(0.5).tremolo("0.8:8"))   // delay + tremolo every 4th cycle
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.tremolo(params: PatternLike? = null): PatternMapperFn =
-    _tremolo(listOfNotNull(params).asStrudelDslArgs())
+    _tremolo(listOfNotNull(params).asSprudelDslArgs())
 
 // -- nfadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -583,7 +583,7 @@ private val nfadsrMutation = voiceModifier {
     )
 }
 
-private fun applyNfadsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyNfadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, nfadsrMutation) { src, ctrl ->
         src.copy(
             nfattack = ctrl.nfattack ?: src.nfattack,
@@ -595,7 +595,7 @@ private fun applyNfadsr(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 internal val _nfadsr by dslPatternMapper { args, callInfo -> { p -> p._nfadsr(args, callInfo) } }
-internal val StrudelPattern._nfadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfadsr(p, args) }
+internal val SprudelPattern._nfadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfadsr(p, args) }
 internal val String._nfadsr by dslStringExtension { p, args, callInfo -> p._nfadsr(args, callInfo) }
 internal val PatternMapperFn._nfadsr by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfadsr(args, callInfo))
@@ -622,9 +622,9 @@ internal val PatternMapperFn._nfadsr by dslPatternMapperExtension { m, args, cal
  * @category effects
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun StrudelPattern.nfadsr(params: PatternLike? = null): StrudelPattern =
-    this._nfadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfadsr(params: PatternLike? = null): SprudelPattern =
+    this._nfadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets all notch filter envelope parameters.
@@ -638,9 +638,9 @@ fun StrudelPattern.nfadsr(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun String.nfadsr(params: PatternLike? = null): StrudelPattern =
-    this._nfadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfadsr(params: PatternLike? = null): SprudelPattern =
+    this._nfadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets all notch filter envelope parameters.
@@ -654,8 +654,8 @@ fun String.nfadsr(params: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@StrudelDsl
-fun nfadsr(params: PatternLike? = null): PatternMapperFn = _nfadsr(listOfNotNull(params).asStrudelDslArgs())
+@SprudelDsl
+fun nfadsr(params: PatternLike? = null): PatternMapperFn = _nfadsr(listOfNotNull(params).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets all notch filter envelope parameters after the previous mapper.
@@ -664,6 +664,6 @@ fun nfadsr(params: PatternLike? = null): PatternMapperFn = _nfadsr(listOfNotNull
  * note("c3 e3").apply(gain(0.8).nfadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfadsr(params: PatternLike? = null): PatternMapperFn =
-    _nfadsr(listOfNotNull(params).asStrudelDslArgs())
+    _nfadsr(listOfNotNull(params).asSprudelDslArgs())

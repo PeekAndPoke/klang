@@ -3,11 +3,11 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.common.math.recursiveBjorklund
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.lang.struct
 import kotlin.math.abs
@@ -30,12 +30,12 @@ import kotlin.math.min
  */
 @Suppress("DuplicatedCode")
 internal class EuclideanPattern(
-    val inner: StrudelPattern,
+    val inner: SprudelPattern,
     val pulsesProvider: ControlValueProvider,
     val stepsProvider: ControlValueProvider,
     val rotationProvider: ControlValueProvider?,
     val legato: Boolean = false,
-) : StrudelPattern {
+) : SprudelPattern {
 
     override val weight: Double get() = inner.weight
 
@@ -55,7 +55,7 @@ internal class EuclideanPattern(
          * Create a EuclideanPattern with static values.
          */
         fun static(
-            inner: StrudelPattern,
+            inner: SprudelPattern,
             pulses: Int,
             steps: Int,
             rotation: Int = 0,
@@ -74,10 +74,10 @@ internal class EuclideanPattern(
          * Create a EuclideanPattern with control patterns.
          */
         fun control(
-            inner: StrudelPattern,
-            pulsesPattern: StrudelPattern,
-            stepsPattern: StrudelPattern,
-            rotationPattern: StrudelPattern?,
+            inner: SprudelPattern,
+            pulsesPattern: SprudelPattern,
+            stepsPattern: SprudelPattern,
+            rotationPattern: SprudelPattern?,
             legato: Boolean = false,
         ): EuclideanPattern {
             return EuclideanPattern(
@@ -94,11 +94,11 @@ internal class EuclideanPattern(
          * Returns the inner pattern if inputs are invalid (e.g. steps <= 0).
          */
         internal fun create(
-            inner: StrudelPattern,
+            inner: SprudelPattern,
             pulses: Int,
             steps: Int,
             rotation: Int = 0,
-        ): StrudelPattern {
+        ): SprudelPattern {
             if (steps <= 0 || steps < abs(pulses)) return inner
             // pulses < 0 is valid (inversion)
             // pulses > steps is valid (returns all 1s)
@@ -111,11 +111,11 @@ internal class EuclideanPattern(
          * In this version, pulses are held until the next pulse (no gaps).
          */
         internal fun createLegato(
-            inner: StrudelPattern,
+            inner: SprudelPattern,
             pulses: Int,
             steps: Int,
             rotation: Int = 0,
-        ): StrudelPattern {
+        ): SprudelPattern {
             return static(inner, pulses, steps, rotation, legato = true)
         }
 
@@ -123,16 +123,16 @@ internal class EuclideanPattern(
          * Internal implementation for static legato euclidean pattern.
          */
         private fun createLegatoStatic(
-            inner: StrudelPattern,
+            inner: SprudelPattern,
             pulses: Int,
             steps: Int,
             rotation: Int,
-        ): StrudelPattern {
+        ): SprudelPattern {
             if (pulses <= 0 || steps <= 0) return EmptyPattern
 
             // 1. Rotate the bitmap directly
-            // We use bjorklundStrudel to handle negative pulses consistency
-            val bitmap = bjorklundStrudel(pulses, steps)
+            // We use bjorklundSprudel to handle negative pulses consistency
+            val bitmap = bjorklundSprudel(pulses, steps)
             // Normalize rotation to handle large numbers and correct direction
             // Strudel JS rotates by shifting right for positive numbers.
             // rotateJs(n) performs left rotate for positive n, right for negative n.
@@ -176,7 +176,7 @@ internal class EuclideanPattern(
             // Create a custom pattern that repeats the segments every cycle.
             // This ensures alignment with the metric grid (1 cycle = 1 unit)
             // even if events overhang into the next cycle.
-            val geometry = object : StrudelPattern {
+            val geometry = object : SprudelPattern {
                 override val weight = 1.0
                 override val numSteps: Rational = ratSteps
 
@@ -186,7 +186,7 @@ internal class EuclideanPattern(
                     from: Rational,
                     to: Rational,
                     ctx: QueryContext,
-                ): List<StrudelPatternEvent> {
+                ): List<SprudelPatternEvent> {
                     val results = createEventList()
 
                     val startCycle = from.floor().toInt()
@@ -206,10 +206,10 @@ internal class EuclideanPattern(
 
                             if (s < e) {
                                 results.add(
-                                    StrudelPatternEvent(
+                                    SprudelPatternEvent(
                                         part = TimeSpan(s, e),
                                         whole = TimeSpan(absStart, absEnd),
-                                        data = StrudelVoiceData.empty.copy(value = 1.asVoiceValue())
+                                        data = SprudelVoiceData.empty.copy(value = 1.asVoiceValue())
                                     )
                                 )
                             }
@@ -247,7 +247,7 @@ internal class EuclideanPattern(
             return list.jsSlice(n) + list.jsSlice(0, n)
         }
 
-        private fun bjorklundStrudel(pulses: Int, steps: Int): List<Int> {
+        private fun bjorklundSprudel(pulses: Int, steps: Int): List<Int> {
             val k = abs(pulses)
             if (steps <= 0) return emptyList()
 
@@ -277,7 +277,7 @@ internal class EuclideanPattern(
         from: Rational,
         to: Rational,
         ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         val pulsesEvents = pulsesProvider.queryEvents(from, to, ctx)
         val stepsEvents = stepsProvider.queryEvents(from, to, ctx)
 
@@ -286,10 +286,10 @@ internal class EuclideanPattern(
                 val timeSpan = TimeSpan(begin = from, end = to)
 
                 listOf(
-                    StrudelPatternEvent(
+                    SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = StrudelVoiceData.empty.copy(value = Rational.ONE.asVoiceValue())
+                        data = SprudelVoiceData.empty.copy(value = Rational.ONE.asVoiceValue())
                     )
                 )
             }
@@ -316,7 +316,7 @@ internal class EuclideanPattern(
                     val steps = stepsEvent.data.value?.asInt ?: 0
                     val rotation = rotationEvent.data.value?.asInt ?: 0
 
-                    val events: List<StrudelPatternEvent> =
+                    val events: List<SprudelPatternEvent> =
                         applyEuclideanRhythm(overlapBegin, overlapEnd, ctx, pulses, steps, rotation)
 
                     result.addAll(events)
@@ -334,7 +334,7 @@ internal class EuclideanPattern(
         pulses: Int,
         steps: Int,
         rotation: Int,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         return if (legato) {
             queryLegatoStatic(from, to, ctx, pulses, steps, rotation)
         } else {
@@ -349,11 +349,11 @@ internal class EuclideanPattern(
         pulses: Int,
         steps: Int,
         rotation: Int,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         if (steps <= 0 || steps < abs(pulses)) return emptyList()
 
         val events = createEventList()
-        val rhythm = rotateJs(bjorklundStrudel(pulses, steps), -rotation)
+        val rhythm = rotateJs(bjorklundSprudel(pulses, steps), -rotation)
 
         val startCycle = from.floor().toInt()
         val endCycle = to.ceil().toInt()
@@ -401,7 +401,7 @@ internal class EuclideanPattern(
         pulses: Int,
         steps: Int,
         rotation: Int,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         val legatoPattern = createLegatoStatic(inner, pulses, steps, rotation)
         return legatoPattern.queryArcContextual(from, to, ctx)
     }

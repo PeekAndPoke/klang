@@ -6,7 +6,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFocusSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangFocusSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.focus(0,0.5)" to s(pat).focus("0", "0.5"),
-            "script pattern.focus(0,0.5)" to StrudelPattern.compile("""s("$pat").focus("0", "0.5")"""),
+            "script pattern.focus(0,0.5)" to SprudelPattern.compile("""s("$pat").focus("0", "0.5")"""),
             "string.focus(0,0.5)" to pat.focus("0", "0.5"),
-            "script string.focus(0,0.5)" to StrudelPattern.compile(""""$pat".focus("0", "0.5")"""),
+            "script string.focus(0,0.5)" to SprudelPattern.compile(""""$pat".focus("0", "0.5")"""),
             "focus(0,0.5)" to s(pat).apply(focus("0", "0.5")),
-            "script focus(0,0.5)" to StrudelPattern.compile("""s("$pat").apply(focus("0", "0.5"))"""),
+            "script focus(0,0.5)" to SprudelPattern.compile("""s("$pat").apply(focus("0", "0.5"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -142,7 +142,7 @@ class LangFocusSpec : StringSpec({
     }
 
     "focus() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c d e f").focus("0", "0.5")""")
+        val p = SprudelPattern.compile("""note("c d e f").focus("0", "0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 8  // 2 full cycles compressed
@@ -150,7 +150,7 @@ class LangFocusSpec : StringSpec({
     }
 
     "focus() with standalone function syntax" {
-        val p = StrudelPattern.compile("""note("c d e f").apply(focus("0.25", "0.75"))""")
+        val p = SprudelPattern.compile("""note("c d e f").apply(focus("0.25", "0.75"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 8
@@ -214,7 +214,7 @@ class LangFocusSpec : StringSpec({
     }
 
     "focus() with control pattern in compiled code" {
-        val p = StrudelPattern.compile("""note("c d e f").focus("0 0.5", 1)""")
+        val p = SprudelPattern.compile("""note("c d e f").focus("0 0.5", 1)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         // Verified against JavaScript implementation via JsCompat test

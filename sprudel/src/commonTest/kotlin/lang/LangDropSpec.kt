@@ -9,7 +9,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangDropSpec : StringSpec({
@@ -19,11 +19,11 @@ class LangDropSpec : StringSpec({
         val ctrl = "1"
         dslInterfaceTests(
             "pattern.drop(ctrl)" to note(pat).drop(ctrl),
-            "script pattern.drop(ctrl)" to StrudelPattern.compile("""note("$pat").drop("$ctrl")"""),
+            "script pattern.drop(ctrl)" to SprudelPattern.compile("""note("$pat").drop("$ctrl")"""),
             "string.drop(ctrl)" to pat.drop(ctrl),
-            "script string.drop(ctrl)" to StrudelPattern.compile(""""$pat".drop("$ctrl")"""),
+            "script string.drop(ctrl)" to SprudelPattern.compile(""""$pat".drop("$ctrl")"""),
             "drop(ctrl)" to note(pat).apply(drop(ctrl)),
-            "script drop(ctrl)" to StrudelPattern.compile("""note("$pat").apply(drop("$ctrl"))"""),
+            "script drop(ctrl)" to SprudelPattern.compile("""note("$pat").apply(drop("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }

@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangStructAllSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangStructAllSpec : StringSpec({
         val ctrl = "x x"
         dslInterfaceTests(
             "pattern.structAll(ctrl)" to note(pat).structAll(ctrl),
-            "script pattern.structAll(ctrl)" to StrudelPattern.compile("""note("$pat").structAll("$ctrl")"""),
+            "script pattern.structAll(ctrl)" to SprudelPattern.compile("""note("$pat").structAll("$ctrl")"""),
             "string.structAll(ctrl)" to pat.structAll(ctrl),
-            "script string.structAll(ctrl)" to StrudelPattern.compile(""""$pat".structAll("$ctrl")"""),
+            "script string.structAll(ctrl)" to SprudelPattern.compile(""""$pat".structAll("$ctrl")"""),
             "structAll(ctrl)" to note(pat).apply(structAll(ctrl)),
-            "script structAll(ctrl)" to StrudelPattern.compile("""note("$pat").apply(structAll("$ctrl"))"""),
+            "script structAll(ctrl)" to SprudelPattern.compile("""note("$pat").apply(structAll("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -57,7 +57,7 @@ class LangStructAllSpec : StringSpec({
     }
 
     "structAll() works in compiled code" {
-        val p = StrudelPattern.compile("""note("a b").structAll("x")""")
+        val p = SprudelPattern.compile("""note("a b").structAll("x")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 2
     }

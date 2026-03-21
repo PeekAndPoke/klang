@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -15,10 +15,10 @@ class LangTremoloSpec : StringSpec({
         dslInterfaceTests(
             "pattern.tremolo()" to note("c3").tremolo("0.5:4"),
             "string.tremolo()" to "c3".tremolo("0.5:4"),
-            "script pattern.tremolo()" to StrudelPattern.compile("""note("c3").tremolo("0.5:4")"""),
-            "script string.tremolo()" to StrudelPattern.compile(""""c3".tremolo("0.5:4")"""),
+            "script pattern.tremolo()" to SprudelPattern.compile("""note("c3").tremolo("0.5:4")"""),
+            "script string.tremolo()" to SprudelPattern.compile(""""c3".tremolo("0.5:4")"""),
             "apply(tremolo())" to note("c3").apply(tremolo("0.5:4")),
-            "script apply(tremolo())" to StrudelPattern.compile("""note("c3").apply(tremolo("0.5:4"))"""),
+            "script apply(tremolo())" to SprudelPattern.compile("""note("c3").apply(tremolo("0.5:4"))"""),
         ) { _, events ->
             events.size shouldBe 1
             events[0].data.tremoloDepth shouldBe 0.5
@@ -104,7 +104,7 @@ class LangTremoloSpec : StringSpec({
     // -- compiled scripts --------------------------------------------------------------------------------------------
 
     "tremolo() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c3").tremolo("0.5:4:sine")""")
+        val p = SprudelPattern.compile("""note("c3").tremolo("0.5:4:sine")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -114,7 +114,7 @@ class LangTremoloSpec : StringSpec({
     }
 
     "tremolo() chained with apply() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c3").apply(tremolo("0.8:8:square"))""")
+        val p = SprudelPattern.compile("""note("c3").apply(tremolo("0.8:8:square"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

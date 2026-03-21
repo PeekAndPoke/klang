@@ -2,28 +2,24 @@
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.lang.*
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
 
 /**
- * ADDONS: function that are NOT available in the original strudel impl
- */
-
-/**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangArithmeticAddonsInit = false
+var sprudelLangArithmeticAddonsInit = false
 
 // -- negateValue  -----------------------------------------------------------------------------------------------------
 
-private fun applyFlipSign(pattern: StrudelPattern): StrudelPattern {
+private fun applyFlipSign(pattern: SprudelPattern): SprudelPattern {
     return pattern.mul(-1.0)
 }
 
-internal val StrudelPattern._flipSign by dslPatternExtension { pattern, _, _ -> applyFlipSign(pattern) }
+internal val SprudelPattern._flipSign by dslPatternExtension { pattern, _, _ -> applyFlipSign(pattern) }
 
 internal val String._flipSign by dslStringExtension { pattern, _, _ -> applyFlipSign(pattern) }
 
@@ -49,8 +45,8 @@ internal val PatternMapperFn._flipSign by dslPatternMapperExtension { m, _, _ ->
  * @category arithmetic
  * @tags flipSign, negate, invert, arithmetic, value, addon
  */
-@StrudelDsl
-fun StrudelPattern.flipSign(): StrudelPattern = this._flipSign(emptyList())
+@SprudelDsl
+fun SprudelPattern.flipSign(): SprudelPattern = this._flipSign(emptyList())
 
 /**
  * Flips the sign of numerical values in a string pattern.
@@ -59,8 +55,8 @@ fun StrudelPattern.flipSign(): StrudelPattern = this._flipSign(emptyList())
  * "<[1 2 3 4] [-1 -2 -3 -4]>".flipSign().scale("C4:major").n()
  * ```
  */
-@StrudelDsl
-fun String.flipSign(): StrudelPattern = this._flipSign(emptyList())
+@SprudelDsl
+fun String.flipSign(): SprudelPattern = this._flipSign(emptyList())
 
 /**
  * Flips the sign of numerical values in a string pattern.
@@ -69,7 +65,7 @@ fun String.flipSign(): StrudelPattern = this._flipSign(emptyList())
  * flipSign("<[1 2 3 4] [-1 -2 -3 -4]>").scale("C4:major").n()
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 val flipSign: PatternMapperFn get() = _flipSign
 
 /**
@@ -79,12 +75,12 @@ val flipSign: PatternMapperFn get() = _flipSign
  * seq("1 -2").apply(add(1).flipSign())  // flipSign(1+1)=-2, flipSign(-2+1)=1
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.flipSign(): PatternMapperFn = this._flipSign()
 
 // -- oneMinus ---------------------------------------------------------------------------------------------------------
 
-private fun applyOneMinusValue(pattern: StrudelPattern): StrudelPattern {
+private fun applyOneMinusValue(pattern: SprudelPattern): SprudelPattern {
     return pattern.reinterpret { evt ->
         val current = evt.data.value?.asDouble ?: 0.0
         val oneMinusCurrent = 1.0 - current
@@ -93,7 +89,7 @@ private fun applyOneMinusValue(pattern: StrudelPattern): StrudelPattern {
     }
 }
 
-internal val StrudelPattern._oneMinusValue by dslPatternExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
+internal val SprudelPattern._oneMinusValue by dslPatternExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
 
 internal val String._oneMinusValue by dslStringExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
 
@@ -119,15 +115,15 @@ internal val PatternMapperFn._oneMinusValue by dslPatternMapperExtension { m, _,
  * @category arithmetic
  * @tags oneMinusValue, invert, complement, arithmetic, value, addon
  */
-@StrudelDsl
-fun StrudelPattern.oneMinusValue(): StrudelPattern = this._oneMinusValue(emptyList())
+@SprudelDsl
+fun SprudelPattern.oneMinusValue(): SprudelPattern = this._oneMinusValue(emptyList())
 
 /** Calculates `1.0 - value` for a string pattern. */
-@StrudelDsl
-fun String.oneMinusValue(): StrudelPattern = this._oneMinusValue(emptyList())
+@SprudelDsl
+fun String.oneMinusValue(): SprudelPattern = this._oneMinusValue(emptyList())
 
 /** Calculates `1.0 - value` for a string pattern. */
-@StrudelDsl
+@SprudelDsl
 val oneMinusValue: PatternMapperFn get() = _oneMinusValue
 
 /**
@@ -137,12 +133,12 @@ val oneMinusValue: PatternMapperFn get() = _oneMinusValue
  * seq("0.2 0.8").apply(mul(2).oneMinusValue())  // 1-(0.2*2)=0.6, 1-(0.8*2)=-0.6
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.oneMinusValue(): PatternMapperFn = this._oneMinusValue()
 
 // -- not --------------------------------------------------------------------------------------------------------------
 
-private fun applyNot(pattern: StrudelPattern): StrudelPattern {
+private fun applyNot(pattern: SprudelPattern): SprudelPattern {
     return pattern.reinterpret { evt ->
         val current = evt.data.isTruthy()
         val withNot = !current
@@ -151,7 +147,7 @@ private fun applyNot(pattern: StrudelPattern): StrudelPattern {
     }
 }
 
-internal val StrudelPattern._not by dslPatternExtension { pattern, _, _ -> applyNot(pattern) }
+internal val SprudelPattern._not by dslPatternExtension { pattern, _, _ -> applyNot(pattern) }
 
 internal val String._not by dslStringExtension { pattern, _, _ -> applyNot(pattern) }
 
@@ -173,8 +169,8 @@ internal val PatternMapperFn._not by dslPatternMapperExtension { m, _, _ -> m.ch
  * @category arithmetic
  * @tags not, logical, boolean, gate, invert, addon
  */
-@StrudelDsl
-fun StrudelPattern.not(): StrudelPattern = this._not(emptyList())
+@SprudelDsl
+fun SprudelPattern.not(): SprudelPattern = this._not(emptyList())
 
 /**
  * Applies logical NOT to a string pattern's boolean values.
@@ -183,8 +179,8 @@ fun StrudelPattern.not(): StrudelPattern = this._not(emptyList())
  * "1 0 0 1".not().scale("c4:minor").n()   // becomes: false true true false
  * ```
  */
-@StrudelDsl
-fun String.not(): StrudelPattern = this._not(emptyList())
+@SprudelDsl
+fun String.not(): SprudelPattern = this._not(emptyList())
 
 /**
  * Applies logical NOT as a [PatternMapperFn], inverting each event's boolean value.
@@ -193,7 +189,7 @@ fun String.not(): StrudelPattern = this._not(emptyList())
  * note("c d e f").degradeBy("1 0 1 0".apply(not))   // invert a degrade pattern into a gate
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 val not: PatternMapperFn get() = _not
 
 /**
@@ -203,16 +199,16 @@ val not: PatternMapperFn get() = _not
  * seq("1 0").apply(mul(1).not())  // not(1*1)=false, not(0*1)=true
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.not(): PatternMapperFn = this._not()
 
 // -- abs --------------------------------------------------------------------------------------------------------------
 
-private fun applyAbs(pattern: StrudelPattern): StrudelPattern {
+private fun applyAbs(pattern: SprudelPattern): SprudelPattern {
     return applyUnaryOp(pattern) { v -> v.asRational?.abs()?.asVoiceValue() ?: v }
 }
 
-internal val StrudelPattern._abs by dslPatternExtension { pattern, _, _ -> applyAbs(pattern) }
+internal val SprudelPattern._abs by dslPatternExtension { pattern, _, _ -> applyAbs(pattern) }
 internal val String._abs by dslStringExtension { pattern, _, _ -> applyAbs(pattern) }
 internal val _abs: PatternMapperFn by dslObject { { p -> p._abs() } }
 internal val PatternMapperFn._abs by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._abs() } }
@@ -236,8 +232,8 @@ internal val PatternMapperFn._abs by dslPatternMapperExtension { m, _, _ -> m.ch
  * @category arithmetic
  * @tags abs, absolute, value, arithmetic, addon
  */
-@StrudelDsl
-fun StrudelPattern.abs(): StrudelPattern = this._abs(emptyList())
+@SprudelDsl
+fun SprudelPattern.abs(): SprudelPattern = this._abs(emptyList())
 
 /**
  * Returns the absolute value of each event's numeric data in a string pattern.
@@ -246,8 +242,8 @@ fun StrudelPattern.abs(): StrudelPattern = this._abs(emptyList())
  * "-3 -1 0 2".abs()   // becomes: 3 1 0 2
  * ```
  */
-@StrudelDsl
-fun String.abs(): StrudelPattern = this._abs(emptyList())
+@SprudelDsl
+fun String.abs(): SprudelPattern = this._abs(emptyList())
 
 /**
  * Applies absolute-value as a [PatternMapperFn], making every numeric value non-negative.
@@ -256,7 +252,7 @@ fun String.abs(): StrudelPattern = this._abs(emptyList())
  * seq("-3 -1 0 2").apply(abs)   // becomes: 3 1 0 2
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 val abs: PatternMapperFn get() = _abs
 
 /**
@@ -266,5 +262,5 @@ val abs: PatternMapperFn get() = _abs
  * seq("1 -2").apply(add(-4).abs())  // abs(1-4)=abs(-3)=3, abs(-2-4)=abs(-6)=6
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.abs(): PatternMapperFn = this._abs()

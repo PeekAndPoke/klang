@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBpreleaseSpec : StringSpec({
@@ -20,11 +20,11 @@ class LangBpreleaseSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.bprelease(ctrl)" to seq(pat).bprelease(ctrl),
-            "script pattern.bprelease(ctrl)" to StrudelPattern.compile("""seq("$pat").bprelease("$ctrl")"""),
+            "script pattern.bprelease(ctrl)" to SprudelPattern.compile("""seq("$pat").bprelease("$ctrl")"""),
             "string.bprelease(ctrl)" to pat.bprelease(ctrl),
-            "script string.bprelease(ctrl)" to StrudelPattern.compile(""""$pat".bprelease("$ctrl")"""),
+            "script string.bprelease(ctrl)" to SprudelPattern.compile(""""$pat".bprelease("$ctrl")"""),
             "bprelease(ctrl)" to seq(pat).apply(bprelease(ctrl)),
-            "script bprelease(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bprelease("$ctrl"))"""),
+            "script bprelease(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bprelease("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bprelease shouldBe 0.5
@@ -86,7 +86,7 @@ class LangBpreleaseSpec : StringSpec({
     }
 
     "bprelease() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bprelease("0.4")""")
+        val p = SprudelPattern.compile("""note("c").bprelease("0.4")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bprelease shouldBe 0.4
@@ -109,7 +109,7 @@ class LangBpreleaseSpec : StringSpec({
     }
 
     "bprelease() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.StrudelVoiceData.empty.copy(
+        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             bandf = 1000.0,
             bprelease = 0.4
         )
@@ -127,11 +127,11 @@ class LangBpreleaseSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.bpr(ctrl)" to seq(pat).bpr(ctrl),
-            "script pattern.bpr(ctrl)" to StrudelPattern.compile("""seq("$pat").bpr("$ctrl")"""),
+            "script pattern.bpr(ctrl)" to SprudelPattern.compile("""seq("$pat").bpr("$ctrl")"""),
             "string.bpr(ctrl)" to pat.bpr(ctrl),
-            "script string.bpr(ctrl)" to StrudelPattern.compile(""""$pat".bpr("$ctrl")"""),
+            "script string.bpr(ctrl)" to SprudelPattern.compile(""""$pat".bpr("$ctrl")"""),
             "bpr(ctrl)" to seq(pat).apply(bpr(ctrl)),
-            "script bpr(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpr("$ctrl"))"""),
+            "script bpr(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bpr("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bprelease shouldBe 0.5
@@ -165,7 +165,7 @@ class LangBpreleaseSpec : StringSpec({
     }
 
     "bpr() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bpr("0.45")""")
+        val p = SprudelPattern.compile("""note("c").bpr("0.45")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bprelease shouldBe 0.45

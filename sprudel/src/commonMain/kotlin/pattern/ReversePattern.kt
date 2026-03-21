@@ -2,10 +2,10 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
@@ -18,14 +18,14 @@ import io.peekandpoke.klang.sprudel.TimeSpan
  * @param nProvider Control value provider for the reversal factor (default: 1.0)
  */
 internal class ReversePattern(
-    val inner: StrudelPattern,
+    val inner: SprudelPattern,
     val nProvider: ControlValueProvider = ControlValueProvider.Static.ONE,
-) : StrudelPattern {
+) : SprudelPattern {
     companion object {
         /**
          * Create a ReversePattern with a static n value.
          */
-        fun static(inner: StrudelPattern, n: Rational = Rational.ONE): ReversePattern {
+        fun static(inner: SprudelPattern, n: Rational = Rational.ONE): ReversePattern {
             return ReversePattern(
                 inner = inner,
                 nProvider = ControlValueProvider.Static(n.asVoiceValue())
@@ -35,7 +35,7 @@ internal class ReversePattern(
         /**
          * Create a ReversePattern with a control pattern for n.
          */
-        fun control(inner: StrudelPattern, nPattern: StrudelPattern): ReversePattern {
+        fun control(inner: SprudelPattern, nPattern: SprudelPattern): ReversePattern {
             return ReversePattern(
                 inner = inner,
                 nProvider = ControlValueProvider.Pattern(nPattern)
@@ -49,7 +49,7 @@ internal class ReversePattern(
 
     override fun estimateCycleDuration(): Rational = inner.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         val nEvents = nProvider.queryEvents(from, to, ctx)
         if (nEvents.isEmpty()) return querySimpleReverse(from, to, ctx)
 
@@ -83,7 +83,7 @@ internal class ReversePattern(
         return result
     }
 
-    private fun querySimpleReverse(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    private fun querySimpleReverse(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         val startCycle = from.floor()
         val endCycle = to.ceil()
         val events = createEventList()
@@ -121,7 +121,7 @@ internal class ReversePattern(
         to: Rational,
         ctx: QueryContext,
         nRat: Rational,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         // Multi-cycle reversal using fast/slow approach
         // fast(n).rev().slow(n)
         val fast: TempoModifierPattern =

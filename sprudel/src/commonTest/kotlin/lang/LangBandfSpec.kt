@@ -7,7 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef.BandPass
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBandfSpec : StringSpec({
@@ -19,11 +19,11 @@ class LangBandfSpec : StringSpec({
         val ctrl = "1000 500"
         dslInterfaceTests(
             "pattern.bandf(ctrl)" to seq(pat).bandf(ctrl),
-            "script pattern.bandf(ctrl)" to StrudelPattern.compile("""seq("$pat").bandf("$ctrl")"""),
+            "script pattern.bandf(ctrl)" to SprudelPattern.compile("""seq("$pat").bandf("$ctrl")"""),
             "string.bandf(ctrl)" to pat.bandf(ctrl),
-            "script string.bandf(ctrl)" to StrudelPattern.compile(""""$pat".bandf("$ctrl")"""),
+            "script string.bandf(ctrl)" to SprudelPattern.compile(""""$pat".bandf("$ctrl")"""),
             "bandf(ctrl)" to seq(pat).apply(bandf(ctrl)),
-            "script bandf(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bandf("$ctrl"))"""),
+            "script bandf(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bandf("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bandf shouldBe 1000.0
@@ -61,7 +61,7 @@ class LangBandfSpec : StringSpec({
         }
     }
 
-    "bandf() sets StrudelVoiceData.bandf and converts to FilterDef.BandPass" {
+    "bandf() sets SprudelVoiceData.bandf and converts to FilterDef.BandPass" {
         val p = note("a b").apply(bandf("1000 500"))
         val events = p.queryArc(0.0, 1.0)
 
@@ -80,11 +80,11 @@ class LangBandfSpec : StringSpec({
         val ctrl = "1000 500"
         dslInterfaceTests(
             "pattern.bpf(ctrl)" to seq(pat).bpf(ctrl),
-            "script pattern.bpf(ctrl)" to StrudelPattern.compile("""seq("$pat").bpf("$ctrl")"""),
+            "script pattern.bpf(ctrl)" to SprudelPattern.compile("""seq("$pat").bpf("$ctrl")"""),
             "string.bpf(ctrl)" to pat.bpf(ctrl),
-            "script string.bpf(ctrl)" to StrudelPattern.compile(""""$pat".bpf("$ctrl")"""),
+            "script string.bpf(ctrl)" to SprudelPattern.compile(""""$pat".bpf("$ctrl")"""),
             "bpf(ctrl)" to seq(pat).apply(bpf(ctrl)),
-            "script bpf(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpf("$ctrl"))"""),
+            "script bpf(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bpf("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bandf shouldBe 1000.0
@@ -127,7 +127,7 @@ class LangBandfSpec : StringSpec({
     }
 
     "bandf() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bandf("1000")""")
+        val p = SprudelPattern.compile("""note("c").bandf("1000")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bandf shouldBe 1000.0
@@ -159,11 +159,11 @@ class LangBandfSpec : StringSpec({
         val ctrl = "1000 500"
         dslInterfaceTests(
             "pattern.bp(ctrl)" to seq(pat).bp(ctrl),
-            "script pattern.bp(ctrl)" to StrudelPattern.compile("""seq("$pat").bp("$ctrl")"""),
+            "script pattern.bp(ctrl)" to SprudelPattern.compile("""seq("$pat").bp("$ctrl")"""),
             "string.bp(ctrl)" to pat.bp(ctrl),
-            "script string.bp(ctrl)" to StrudelPattern.compile(""""$pat".bp("$ctrl")"""),
+            "script string.bp(ctrl)" to SprudelPattern.compile(""""$pat".bp("$ctrl")"""),
             "bp(ctrl)" to seq(pat).apply(bp(ctrl)),
-            "script bp(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bp("$ctrl"))"""),
+            "script bp(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bp("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bandf shouldBe 1000.0
@@ -198,7 +198,7 @@ class LangBandfSpec : StringSpec({
     }
 
     "bp() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bp("1500")""")
+        val p = SprudelPattern.compile("""note("c").bp("1500")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bandf shouldBe 1500.0

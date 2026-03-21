@@ -8,23 +8,23 @@ import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.*
 import io.peekandpoke.klang.sprudel.lang.note
 
-class StaticStrudelPatternSpec : StringSpec({
+class StaticSprudelPatternSpec : StringSpec({
 
-    "StaticStrudelPattern: Direct Instantiation" {
+    "StaticSprudelPattern: Direct Instantiation" {
         // Manually create two events in a 1-cycle window
         val events = listOf(
-            StrudelPatternEvent(
+            SprudelPatternEvent(
                 part = TimeSpan(0.0.toRational(), 0.5.toRational()),
                 whole = TimeSpan(0.0.toRational(), 0.5.toRational()),
-                data = StrudelVoiceData.empty.copy(note = "a"),
+                data = SprudelVoiceData.empty.copy(note = "a"),
             ),
-            StrudelPatternEvent(
+            SprudelPatternEvent(
                 part = TimeSpan(0.5.toRational(), 1.0.toRational()),
                 whole = TimeSpan(0.5.toRational(), 1.0.toRational()),
-                data = StrudelVoiceData.empty.copy(note = "b"),
+                data = SprudelVoiceData.empty.copy(note = "b"),
             )
         )
-        val pattern = StaticStrudelPattern(events)
+        val pattern = StaticSprudelPattern(events)
 
         // It should implement Fixed, so weight is 1.0
         pattern.weight shouldBe (1.0 plusOrMinus EPSILON)
@@ -41,15 +41,15 @@ class StaticStrudelPatternSpec : StringSpec({
         }
     }
 
-    "StaticStrudelPattern: query multiple cycles (looping)" {
+    "StaticSprudelPattern: query multiple cycles (looping)" {
         val events = listOf(
-            StrudelPatternEvent(
+            SprudelPatternEvent(
                 part = TimeSpan(0.0.toRational(), 1.0.toRational()),
                 whole = TimeSpan(0.0.toRational(), 1.0.toRational()),
-                data = StrudelVoiceData.empty.copy(note = "kick"),
+                data = SprudelVoiceData.empty.copy(note = "kick"),
             )
         )
-        val pattern = StaticStrudelPattern(events)
+        val pattern = StaticSprudelPattern(events)
 
         // Query cycle 5
         val result = pattern.queryArc(5.0, 6.0)
@@ -58,12 +58,12 @@ class StaticStrudelPatternSpec : StringSpec({
         result[0].data.note shouldBe "kick"
     }
 
-    "StaticStrudelPattern: creation via makeStatic helper" {
+    "StaticSprudelPattern: creation via makeStatic helper" {
         // Create a sequence and "freeze" it using makeStatic
         val source = note("a b c d")
         val frozen = source.makeStatic(0.0, 1.0)
 
-        frozen shouldBe io.kotest.matchers.types.beInstanceOf<StaticStrudelPattern>()
+        frozen shouldBe io.kotest.matchers.types.beInstanceOf<StaticSprudelPattern>()
 
         // Query the frozen pattern at a different cycle offset
         val events = frozen.queryArc(10.0, 11.0).sortedBy { it.part.begin }

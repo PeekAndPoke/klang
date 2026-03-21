@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern.Companion.compile
+import io.peekandpoke.klang.sprudel.SprudelPattern.Companion.compile
 
 class LangIterCycleSpec : FunSpec({
     test("iter(2) cycles after 2 cycles") {

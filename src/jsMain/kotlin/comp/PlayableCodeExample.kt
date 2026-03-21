@@ -23,8 +23,8 @@ import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.lang.strudelLib
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -120,7 +120,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
                 // Use compile() to maintain accurate source locations
                 // This pre-executes imports without prepending lines, so highlighting line numbers match the editor
-                val pattern = StrudelPattern.compile(currentCode)
+                val pattern = SprudelPattern.compile(currentCode)
 
                 if (pattern == null) {
                     console.error("PlayableCodeExample: Pattern compilation returned null for code:", currentCode)
@@ -271,7 +271,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     currentCode = newCode
                     editorRef { it.setErrors(emptyList()) }
                 },
-                availableLibraries = listOf(stdlibLib, strudelLib),
+                availableLibraries = listOf(stdlibLib, sprudelLib),
                 hoverPopup = hoverPopup,
                 hoverContent = hoverContent,
                 popups = popups,

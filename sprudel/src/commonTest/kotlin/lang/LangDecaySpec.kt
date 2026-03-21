@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangDecaySpec : StringSpec({
@@ -19,15 +19,15 @@ class LangDecaySpec : StringSpec({
             "pattern.decay(ctrl)" to
                     seq(pat).decay(ctrl),
             "script pattern.decay(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").decay("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").decay("$ctrl")"""),
             "string.decay(ctrl)" to
                     pat.decay(ctrl),
             "script string.decay(ctrl)" to
-                    StrudelPattern.compile(""""$pat".decay("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".decay("$ctrl")"""),
             "decay(ctrl)" to
                     seq(pat).apply(decay(ctrl)),
             "script decay(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(decay("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(decay("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.decay shouldBe 0.1
@@ -96,7 +96,7 @@ class LangDecaySpec : StringSpec({
     }
 
     "decay() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").decay("0.1")""")
+        val p = SprudelPattern.compile("""note("c").decay("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.decay shouldBe 0.1

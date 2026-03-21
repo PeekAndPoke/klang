@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -26,11 +26,11 @@ class LangEarlyInCycleSpec : StringSpec({
             "earlyInCycle" to
                     seq(pat).apply(earlyInCycle(ctrl)),
             "script pattern.earlyInCycle" to
-                    StrudelPattern.compile("""seq("$pat").earlyInCycle("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").earlyInCycle("$ctrl")"""),
             "script string.earlyInCycle" to
-                    StrudelPattern.compile(""""$pat".earlyInCycle("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".earlyInCycle("$ctrl")"""),
             "script earlyInCycle" to
-                    StrudelPattern.compile("""seq("$pat").apply(earlyInCycle("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(earlyInCycle("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -90,7 +90,7 @@ class LangEarlyInCycleSpec : StringSpec({
     }
 
     "script apply(earlyInCycle()) works in compiled code" {
-        val p = StrudelPattern.compile("""note("c d").apply(earlyInCycle(0.25))""")!!
+        val p = SprudelPattern.compile("""note("c d").apply(earlyInCycle(0.25))""")!!
         val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
 
         assertSoftly {

@@ -2,9 +2,9 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
@@ -14,16 +14,16 @@ import io.peekandpoke.klang.sprudel.TimeSpan
  * Unlike [AtomicPattern] which usually represents a single event at 0..1, this pattern
  * conceptually exists across all time.
  */
-class AtomicInfinitePattern(val data: StrudelVoiceData) : StrudelPattern {
+class AtomicInfinitePattern(val data: SprudelVoiceData) : SprudelPattern {
     override val weight: Double = 1.0
     override val numSteps: Rational? = null // Infinite pattern has no defined step count
 
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
-        val result = mutableListOf<StrudelPatternEvent>()
+        ctx: SprudelPattern.QueryContext,
+    ): List<SprudelPatternEvent> {
+        val result = mutableListOf<SprudelPatternEvent>()
 
         // Determine which cycles overlap with the query range
         val startCycle = from.floor().toInt()
@@ -38,7 +38,7 @@ class AtomicInfinitePattern(val data: StrudelVoiceData) : StrudelPattern {
                 val timeSpan = TimeSpan(begin = cycleStart, end = cycleEnd)
 
                 result.add(
-                    StrudelPatternEvent(part = timeSpan, whole = timeSpan, data = data)
+                    SprudelPatternEvent(part = timeSpan, whole = timeSpan, data = data)
                 )
             }
         }

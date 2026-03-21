@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangEndSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangEndSpec : StringSpec({
         val ctrl = "0.25 0.75"
         dslInterfaceTests(
             "pattern.end(ctrl)" to seq(pat).end(ctrl),
-            "script pattern.end(ctrl)" to StrudelPattern.compile("""seq("$pat").end("$ctrl")"""),
+            "script pattern.end(ctrl)" to SprudelPattern.compile("""seq("$pat").end("$ctrl")"""),
             "string.end(ctrl)" to pat.end(ctrl),
-            "script string.end(ctrl)" to StrudelPattern.compile(""""$pat".end("$ctrl")"""),
+            "script string.end(ctrl)" to SprudelPattern.compile(""""$pat".end("$ctrl")"""),
             "end(ctrl)" to seq(pat).apply(end(ctrl)),
-            "script end(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(end("$ctrl"))"""),
+            "script end(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(end("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.end shouldBe 0.25
@@ -79,7 +79,7 @@ class LangEndSpec : StringSpec({
     }
 
     "end() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").end("0.25 0.75")""")
+        val p = SprudelPattern.compile("""note("a b").end("0.25 0.75")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 2
         events.map { it.data.end } shouldBe listOf(0.25, 0.75)

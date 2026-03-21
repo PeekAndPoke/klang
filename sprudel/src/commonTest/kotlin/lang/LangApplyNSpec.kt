@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangApplyNSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangApplyNSpec : StringSpec({
         val transform: PatternMapperFn = { it.fast(2) }
         dslInterfaceTests(
             "pattern.applyN(2, fn)" to note(pat).applyN(2, transform),
-            "script pattern.applyN(2, fn)" to StrudelPattern.compile("""note("$pat").applyN(2, x => x.fast(2))"""),
+            "script pattern.applyN(2, fn)" to SprudelPattern.compile("""note("$pat").applyN(2, x => x.fast(2))"""),
             "string.applyN(2, fn)" to pat.applyN(2, transform),
-            "script string.applyN(2, fn)" to StrudelPattern.compile(""""$pat".applyN(2, x => x.fast(2))"""),
+            "script string.applyN(2, fn)" to SprudelPattern.compile(""""$pat".applyN(2, x => x.fast(2))"""),
             "applyN(2, fn)" to note(pat).apply(applyN(2, transform)),
-            "script applyN(2, fn)" to StrudelPattern.compile("""note("$pat").apply(applyN(2, x => x.fast(2)))"""),
+            "script applyN(2, fn)" to SprudelPattern.compile("""note("$pat").apply(applyN(2, x => x.fast(2)))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 8  // fast(2) applied twice = fast(4), 2 notes × 4 = 8
@@ -79,7 +79,7 @@ class LangApplyNSpec : StringSpec({
     }
 
     "applyN() works as PatternMapperFn" {
-        val pattern = note("a").apply(applyN(2) { p: StrudelPattern -> p.fast(2) })
+        val pattern = note("a").apply(applyN(2) { p: SprudelPattern -> p.fast(2) })
         val events = pattern.queryArc(0.0, 1.0)
 
         // Should have 4 events (fast(2) applied twice)
@@ -95,7 +95,7 @@ class LangApplyNSpec : StringSpec({
     }
 
     "applyN() works in compiled code" {
-        val pattern = StrudelPattern.compile("""note("a").applyN(2, x => x.fast(2))""")
+        val pattern = SprudelPattern.compile("""note("a").applyN(2, x => x.fast(2))""")
         val events = pattern?.queryArc(0.0, 1.0) ?: emptyList()
 
         // Should have 4 events

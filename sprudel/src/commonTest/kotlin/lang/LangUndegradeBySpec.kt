@@ -6,7 +6,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangUndegradeBySpec : StringSpec({
 
@@ -31,7 +31,7 @@ class LangUndegradeBySpec : StringSpec({
     }
 
     "undegradeBy() works in compiled code" {
-        val p = StrudelPattern.compile("""note("a").undegradeBy(1.0)""")
+        val p = SprudelPattern.compile("""note("a").undegradeBy(1.0)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.note shouldBeEqualIgnoringCase "a"

@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPaceSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangPaceSpec : StringSpec({
         val ctrl = "4"
         dslInterfaceTests(
             "pattern.pace(ctrl)" to note(pat).pace(ctrl),
-            "script pattern.pace(ctrl)" to StrudelPattern.compile("""note("$pat").pace("$ctrl")"""),
+            "script pattern.pace(ctrl)" to SprudelPattern.compile("""note("$pat").pace("$ctrl")"""),
             "string.pace(ctrl)" to pat.pace(ctrl),
-            "script string.pace(ctrl)" to StrudelPattern.compile(""""$pat".pace("$ctrl")"""),
+            "script string.pace(ctrl)" to SprudelPattern.compile(""""$pat".pace("$ctrl")"""),
             "pace(ctrl)" to note(pat).apply(pace(ctrl)),
-            "script pace(ctrl)" to StrudelPattern.compile("""note("$pat").apply(pace("$ctrl"))"""),
+            "script pace(ctrl)" to SprudelPattern.compile("""note("$pat").apply(pace("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -29,11 +29,11 @@ class LangPaceSpec : StringSpec({
         val ctrl = "4"
         dslInterfaceTests(
             "pattern.steps(ctrl)" to note(pat).steps(ctrl),
-            "script pattern.steps(ctrl)" to StrudelPattern.compile("""note("$pat").steps("$ctrl")"""),
+            "script pattern.steps(ctrl)" to SprudelPattern.compile("""note("$pat").steps("$ctrl")"""),
             "string.steps(ctrl)" to pat.steps(ctrl),
-            "script string.steps(ctrl)" to StrudelPattern.compile(""""$pat".steps("$ctrl")"""),
+            "script string.steps(ctrl)" to SprudelPattern.compile(""""$pat".steps("$ctrl")"""),
             "steps(ctrl)" to note(pat).apply(steps(ctrl)),
-            "script steps(ctrl)" to StrudelPattern.compile("""note("$pat").apply(steps("$ctrl"))"""),
+            "script steps(ctrl)" to SprudelPattern.compile("""note("$pat").apply(steps("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }

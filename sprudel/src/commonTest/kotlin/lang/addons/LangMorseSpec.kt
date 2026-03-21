@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang.addons
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.s
@@ -123,7 +123,7 @@ class LangMorseSpec : StringSpec({
     }
 
     "morse() works in compiled code" {
-        val p = StrudelPattern.compile("""morse("SOS")""")
+        val p = SprudelPattern.compile("""morse("SOS")""")
         val events = p?.queryArc(0.0, 2.0) ?: emptyList()
 
         events.shouldNotBeEmpty()
@@ -131,7 +131,7 @@ class LangMorseSpec : StringSpec({
     }
 
     "morse() pattern extension works in compiled code" {
-        val p = StrudelPattern.compile("""note("c3 d3 e3").morse("HI")""")
+        val p = SprudelPattern.compile("""note("c3 d3 e3").morse("HI")""")
         val events = p?.queryArc(0.0, 2.0) ?: emptyList()
 
         events.shouldNotBeEmpty()

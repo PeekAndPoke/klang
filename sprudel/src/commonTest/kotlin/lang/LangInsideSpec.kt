@@ -8,7 +8,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.addons.lateInCycle
 
@@ -20,11 +20,11 @@ class LangInsideSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.inside(factor)" to s(pat).inside(factor) { it },
-            "script pattern.inside(factor)" to StrudelPattern.compile("""s("$pat").inside($factor, p => p)"""),
+            "script pattern.inside(factor)" to SprudelPattern.compile("""s("$pat").inside($factor, p => p)"""),
             "string.inside(factor)" to pat.inside(factor) { it },
-            "script string.inside(factor)" to StrudelPattern.compile(""""$pat".inside($factor, p => p)"""),
+            "script string.inside(factor)" to SprudelPattern.compile(""""$pat".inside($factor, p => p)"""),
             "inside(factor)" to s(pat).apply(inside(factor) { it }),
-            "script inside(factor)" to StrudelPattern.compile("""s("$pat").apply(inside($factor, p => p))"""),
+            "script inside(factor)" to SprudelPattern.compile("""s("$pat").apply(inside($factor, p => p))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -34,7 +34,7 @@ class LangInsideSpec : StringSpec({
     "p.inside(1, x => x)" {
 
         val p = seq("0 1")
-        val transform: (StrudelPattern) -> StrudelPattern = { inner -> inner }
+        val transform: (SprudelPattern) -> SprudelPattern = { inner -> inner }
 
         val subject = p.inside(1, transform)
 
@@ -63,7 +63,7 @@ class LangInsideSpec : StringSpec({
     "p.inside(2, x => x.add(\"0 10\"))" {
 
         val p = seq("0 1 2 3")
-        val transform: (StrudelPattern) -> StrudelPattern = { inner -> inner.add("0 10") }
+        val transform: (SprudelPattern) -> SprudelPattern = { inner -> inner.add("0 10") }
 
         val subject = p.inside(1, transform)
 
@@ -102,7 +102,7 @@ class LangInsideSpec : StringSpec({
     "p.inside(2, x => x.late(0.1))" {
 
         val p = seq("0 1 2 3")
-        val transform: (StrudelPattern) -> StrudelPattern = { inner -> inner.late(0.1) }
+        val transform: (SprudelPattern) -> SprudelPattern = { inner -> inner.late(0.1) }
 
         val subject = p.inside(1, transform)
 
@@ -182,7 +182,7 @@ class LangInsideSpec : StringSpec({
     "p.inside(2, x => x.late(\"0 0.1\"))" {
 
         val p = seq("0 1 2 3")
-        val transform: (StrudelPattern) -> StrudelPattern = { inner -> inner.lateInCycle("0 0.1") }
+        val transform: (SprudelPattern) -> SprudelPattern = { inner -> inner.lateInCycle("0 0.1") }
 
         val subject = p.inside(1, transform)
 

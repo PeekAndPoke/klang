@@ -3,22 +3,22 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel._innerJoin
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.sampleAt
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangConditionalInit = false
+var sprudelLangConditionalInit = false
 
 // -- firstOf() --------------------------------------------------------------------------------------------------------
 
-private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyFirstOf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val transform = args.getOrNull(1).toPatternMapper() ?: return source
 
     return source._innerJoin(args.take(1)) { src, nValue ->
@@ -26,7 +26,7 @@ private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
         if (n <= 1) {
             transform(src)
         } else {
-            val patterns = ArrayList<StrudelPattern>(n)
+            val patterns = ArrayList<SprudelPattern>(n)
             patterns.add(transform(src))
             repeat(n - 1) { patterns.add(src) }
             applySlowcatPrime(patterns)
@@ -35,7 +35,7 @@ private fun applyFirstOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>
 }
 
 internal val _firstOf by dslPatternMapper { args, callInfo -> { p -> p._firstOf(args, callInfo) } }
-internal val StrudelPattern._firstOf by dslPatternExtension { source, args, _ -> applyFirstOf(source, args) }
+internal val SprudelPattern._firstOf by dslPatternExtension { source, args, _ -> applyFirstOf(source, args) }
 internal val String._firstOf by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 internal val PatternMapperFn._firstOf by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(
@@ -69,9 +69,9 @@ internal val PatternMapperFn._firstOf by dslPatternMapperExtension { m, args, ca
  * @category conditional
  * @tags firstOf, every, conditional, cycle, periodic, transform
  */
-@StrudelDsl
-fun StrudelPattern.firstOf(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
-    this._firstOf(listOf(n, transform).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.firstOf(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
+    this._firstOf(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then applies [transform] on the first of every [n] cycles.
@@ -84,9 +84,9 @@ fun StrudelPattern.firstOf(n: PatternLike, transform: PatternMapperFn): StrudelP
  * "c3 d3 e3 g3".firstOf(4, x => x.rev()).note()  // reverse every 4th cycle
  * ```
  */
-@StrudelDsl
-fun String.firstOf(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
-    this._firstOf(listOf(n, transform).asStrudelDslArgs())
+@SprudelDsl
+fun String.firstOf(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
+    this._firstOf(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies [transform] on the **first** cycle of every [n] cycles.
@@ -108,9 +108,9 @@ fun String.firstOf(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
  * @category conditional
  * @tags firstOf, every, conditional, cycle, periodic, transform
  */
-@StrudelDsl
+@SprudelDsl
 fun firstOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
-    _firstOf(listOf(n, transform).asStrudelDslArgs())
+    _firstOf(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the first of every [n] cycles.
@@ -122,14 +122,14 @@ fun firstOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
  * @param n How many cycles make one period. The transform fires on the first of these.
  * @param transform The function to apply on the first cycle of each period.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.firstOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
-    _firstOf(listOf(n, transform).asStrudelDslArgs())
+    _firstOf(listOf(n, transform).asSprudelDslArgs())
 
 // -- every() ----------------------------------------------------------------------------------------------------------
 
 internal val _every by dslPatternMapper { args, callInfo -> _firstOf(args, callInfo) }
-internal val StrudelPattern._every by dslPatternExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
+internal val SprudelPattern._every by dslPatternExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 internal val String._every by dslStringExtension { source, args, callInfo -> source._firstOf(args, callInfo) }
 internal val PatternMapperFn._every by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_every(args, callInfo))
@@ -155,9 +155,9 @@ internal val PatternMapperFn._every by dslPatternMapperExtension { m, args, call
  * @category conditional
  * @tags every, firstOf, conditional, cycle, periodic, transform
  */
-@StrudelDsl
-fun StrudelPattern.every(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
-    this._every(listOf(n, transform).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.every(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
+    this._every(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then applies [transform] on the first of every [n] cycles.
@@ -170,9 +170,9 @@ fun StrudelPattern.every(n: PatternLike, transform: PatternMapperFn): StrudelPat
  * "c3 d3 e3 g3".every(4, x => x.rev()).note()  // reverse every 4th cycle
  * ```
  */
-@StrudelDsl
-fun String.every(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
-    this._every(listOf(n, transform).asStrudelDslArgs())
+@SprudelDsl
+fun String.every(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
+    this._every(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies [transform] on the **first** cycle of every [n] cycles.
@@ -194,9 +194,9 @@ fun String.every(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
  * @category conditional
  * @tags every, firstOf, conditional, cycle, periodic, transform
  */
-@StrudelDsl
+@SprudelDsl
 fun every(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
-    _every(listOf(n, transform).asStrudelDslArgs())
+    _every(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the first of every [n] cycles.
@@ -209,13 +209,13 @@ fun every(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
  * @param transform The function to apply on the first cycle of each period.
  * @alias firstOf
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.every(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
-    _every(listOf(n, transform).asStrudelDslArgs())
+    _every(listOf(n, transform).asSprudelDslArgs())
 
 // -- lastOf() ---------------------------------------------------------------------------------------------------------
 
-private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyLastOf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1).toPatternMapper() ?: return source
 
@@ -224,7 +224,7 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
         if (n <= 1) {
             transform(src)
         } else {
-            val patterns = ArrayList<StrudelPattern>(n)
+            val patterns = ArrayList<SprudelPattern>(n)
             repeat(n - 1) { patterns.add(src) }
             patterns.add(transform(src))
             applySlowcatPrime(patterns)
@@ -233,7 +233,7 @@ private fun applyLastOf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 internal val _lastOf by dslPatternMapper { args, callInfo -> { p -> p._lastOf(args, callInfo) } }
-internal val StrudelPattern._lastOf by dslPatternExtension { source, args, _ -> applyLastOf(source, args) }
+internal val SprudelPattern._lastOf by dslPatternExtension { source, args, _ -> applyLastOf(source, args) }
 internal val String._lastOf by dslStringExtension { source, args, callInfo -> source._lastOf(args, callInfo) }
 internal val PatternMapperFn._lastOf by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(
@@ -266,9 +266,9 @@ internal val PatternMapperFn._lastOf by dslPatternMapperExtension { m, args, cal
  * @category conditional
  * @tags lastOf, conditional, cycle, periodic, transform
  */
-@StrudelDsl
-fun StrudelPattern.lastOf(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
-    this._lastOf(listOf(n, transform).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.lastOf(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
+    this._lastOf(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then applies [transform] on the last of every [n] cycles.
@@ -281,9 +281,9 @@ fun StrudelPattern.lastOf(n: PatternLike, transform: PatternMapperFn): StrudelPa
  * "c3 d3 e3 g3".lastOf(4, x => x.rev()).note()  // reverse on the 4th of every 4 cycles
  * ```
  */
-@StrudelDsl
-fun String.lastOf(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
-    this._lastOf(listOf(n, transform).asStrudelDslArgs())
+@SprudelDsl
+fun String.lastOf(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
+    this._lastOf(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies [transform] on the **last** cycle of every [n] cycles.
@@ -304,9 +304,9 @@ fun String.lastOf(n: PatternLike, transform: PatternMapperFn): StrudelPattern =
  * @category conditional
  * @tags lastOf, conditional, cycle, periodic, transform
  */
-@StrudelDsl
+@SprudelDsl
 fun lastOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
-    _lastOf(listOf(n, transform).asStrudelDslArgs())
+    _lastOf(listOf(n, transform).asSprudelDslArgs())
 
 /**
  * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the last of every [n] cycles.
@@ -318,20 +318,20 @@ fun lastOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
  * @param n How many cycles make one period. The transform fires on the last of these.
  * @param transform The function to apply on the last cycle of each period.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.lastOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
-    _lastOf(listOf(n, transform).asStrudelDslArgs())
+    _lastOf(listOf(n, transform).asSprudelDslArgs())
 
 // -- when() -----------------------------------------------------------------------------------------------------------
 
 internal val _when by dslPatternMapper { args, callInfo -> { p -> p._when(args, callInfo) } }
-internal val StrudelPattern._when by dslPatternExtension { p, args, _ ->
+internal val SprudelPattern._when by dslPatternExtension { p, args, _ ->
     val condition = args.getOrNull(0)?.toPattern() ?: return@dslPatternExtension p
     val transform = args.getOrNull(1).toPatternMapper() ?: { it }
 
     // The true part: events where the condition is sampled as truthy.
-    val truePart = object : StrudelPattern by p {
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    val truePart = object : SprudelPattern by p {
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
             return p.queryArcContextual(from, to, ctx).filter { event ->
                 // Keep if condition is missing OR if the found event is not truthy
                 condition.sampleAt(event.part.begin, ctx)?.data?.isTruthy() ?: false
@@ -341,8 +341,8 @@ internal val StrudelPattern._when by dslPatternExtension { p, args, _ ->
 
     // The false part: events where the condition is NOT truthy (falsy OR silent).
     // We implement this as a custom pattern to ensure complete coverage of the source pattern.
-    val falsePart = object : StrudelPattern by p {
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    val falsePart = object : SprudelPattern by p {
+        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
             return p.queryArcContextual(from, to, ctx).filter { event ->
                 // Keep if condition is missing OR if the found event is not truthy
                 condition.sampleAt(event.part.begin, ctx)?.data?.isNotTruthy() ?: true
@@ -383,9 +383,9 @@ internal val PatternMapperFn._when by dslPatternMapperExtension { m, args, callI
  * @category conditional
  * @tags when, conditional, binary, gate, transform
  */
-@StrudelDsl
-fun StrudelPattern.`when`(condition: PatternLike, transform: PatternMapperFn): StrudelPattern =
-    this._when(listOf(condition, transform).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.`when`(condition: PatternLike, transform: PatternMapperFn): SprudelPattern =
+    this._when(listOf(condition, transform).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then applies [transform] whenever [condition] is truthy.
@@ -399,9 +399,9 @@ fun StrudelPattern.`when`(condition: PatternLike, transform: PatternMapperFn): S
  * "c d e f".when("1 0 1 0", x => x.add(12)).note()
  * ```
  */
-@StrudelDsl
-fun String.`when`(condition: PatternLike, transform: PatternMapperFn): StrudelPattern =
-    this._when(listOf(condition, transform).asStrudelDslArgs())
+@SprudelDsl
+fun String.`when`(condition: PatternLike, transform: PatternMapperFn): SprudelPattern =
+    this._when(listOf(condition, transform).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that conditionally applies [transform] to events where [condition] is truthy.
@@ -423,9 +423,9 @@ fun String.`when`(condition: PatternLike, transform: PatternMapperFn): StrudelPa
  * @category conditional
  * @tags when, conditional, binary, gate, transform
  */
-@StrudelDsl
+@SprudelDsl
 fun `when`(condition: PatternLike, transform: PatternMapperFn): PatternMapperFn =
-    _when(listOf(condition, transform).asStrudelDslArgs())
+    _when(listOf(condition, transform).asSprudelDslArgs())
 
 /**
  * Chains a conditional transform onto this [PatternMapperFn], applying [transform] whenever [condition] is truthy.
@@ -437,6 +437,6 @@ fun `when`(condition: PatternLike, transform: PatternMapperFn): PatternMapperFn 
  * @param condition A pattern whose values determine when to apply [transform].
  * @param transform The function to apply when [condition] is truthy.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.`when`(condition: PatternLike, transform: PatternMapperFn): PatternMapperFn =
-    _when(listOf(condition, transform).asStrudelDslArgs())
+    _when(listOf(condition, transform).asSprudelDslArgs())

@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLegatoSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangLegatoSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.legato(amount)" to note(pat).legato(amount),
-            "script pattern.legato(amount)" to StrudelPattern.compile("""note("$pat").legato($amount)"""),
+            "script pattern.legato(amount)" to SprudelPattern.compile("""note("$pat").legato($amount)"""),
             "string.legato(amount)" to pat.legato(amount),
-            "script string.legato(amount)" to StrudelPattern.compile(""""$pat".legato($amount)"""),
+            "script string.legato(amount)" to SprudelPattern.compile(""""$pat".legato($amount)"""),
             "legato(amount)" to note(pat).apply(legato(amount)),
-            "script legato(amount)" to StrudelPattern.compile("""note("$pat").apply(legato($amount))"""),
+            "script legato(amount)" to SprudelPattern.compile("""note("$pat").apply(legato($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.legato shouldBe amount
@@ -33,11 +33,11 @@ class LangLegatoSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.clip(amount)" to note(pat).clip(amount),
-            "script pattern.clip(amount)" to StrudelPattern.compile("""note("$pat").clip($amount)"""),
+            "script pattern.clip(amount)" to SprudelPattern.compile("""note("$pat").clip($amount)"""),
             "string.clip(amount)" to pat.clip(amount),
-            "script string.clip(amount)" to StrudelPattern.compile(""""$pat".clip($amount)"""),
+            "script string.clip(amount)" to SprudelPattern.compile(""""$pat".clip($amount)"""),
             "clip(amount)" to note(pat).apply(clip(amount)),
-            "script clip(amount)" to StrudelPattern.compile("""note("$pat").apply(clip($amount))"""),
+            "script clip(amount)" to SprudelPattern.compile("""note("$pat").apply(clip($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.legato shouldBe amount
@@ -117,7 +117,7 @@ class LangLegatoSpec : StringSpec({
     }
 
     "legato() works within compiled code as chained function" {
-        val p = StrudelPattern.compile("""note("a b").legato("0.25 0.75")""")
+        val p = SprudelPattern.compile("""note("a b").legato("0.25 0.75")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -126,7 +126,7 @@ class LangLegatoSpec : StringSpec({
     }
 
     "clip() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a").clip("0.5")""")
+        val p = SprudelPattern.compile("""note("a").clip("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

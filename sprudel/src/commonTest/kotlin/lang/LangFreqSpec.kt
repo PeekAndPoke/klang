@@ -5,7 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFreqSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangFreqSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.freq(v)" to s(pat).freq(amount),
-            "script pattern.freq(v)" to StrudelPattern.compile("""s("$pat").freq($amount)"""),
+            "script pattern.freq(v)" to SprudelPattern.compile("""s("$pat").freq($amount)"""),
             "string.freq(v)" to pat.freq(amount),
-            "script string.freq(v)" to StrudelPattern.compile(""""$pat".freq($amount)"""),
+            "script string.freq(v)" to SprudelPattern.compile(""""$pat".freq($amount)"""),
             "freq(v)" to s(pat).apply(freq(amount)),
-            "script freq(v)" to StrudelPattern.compile("""s("$pat").apply(freq($amount))"""),
+            "script freq(v)" to SprudelPattern.compile("""s("$pat").apply(freq($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.freqHz shouldBe 440.0

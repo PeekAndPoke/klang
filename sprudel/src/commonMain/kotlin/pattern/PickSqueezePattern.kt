@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
 /**
  * Pattern that selects from a lookup table based on a selector pattern and flattens with innerJoin.
@@ -14,11 +14,11 @@ import io.peekandpoke.klang.sprudel.StrudelVoiceData
  * @param extractKey Function to extract the lookup key from a selector event value
  */
 internal class PickSqueezePattern(
-    private val selector: StrudelPattern,
-    private val lookup: Map<Any, StrudelPattern>,
+    private val selector: SprudelPattern,
+    private val lookup: Map<Any, SprudelPattern>,
     private val modulo: Boolean,
-    private val extractKey: (StrudelVoiceData, Boolean, Int) -> Any?,
-) : StrudelPattern {
+    private val extractKey: (SprudelVoiceData, Boolean, Int) -> Any?,
+) : SprudelPattern {
 
     override val weight: Double get() = selector.weight
     override val numSteps: Rational? get() = selector.numSteps
@@ -27,11 +27,11 @@ internal class PickSqueezePattern(
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
+        ctx: SprudelPattern.QueryContext,
+    ): List<SprudelPatternEvent> {
         // Query the selector pattern to get selection events
         val selectorEvents = selector.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = mutableListOf<SprudelPatternEvent>()
 
         // For each selector event, look up the corresponding pattern and query it
         for (selectorEvent in selectorEvents) {

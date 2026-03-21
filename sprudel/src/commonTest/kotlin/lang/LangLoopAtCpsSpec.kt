@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangLoopAtCpsSpec : StringSpec({
 
@@ -109,7 +109,7 @@ class LangLoopAtCpsSpec : StringSpec({
     // Compile tests
 
     "loopAtCps() with compile - default cps" {
-        val p = StrudelPattern.compile("""s("bd").loopAtCps(2, 0.5)""")!!
+        val p = SprudelPattern.compile("""s("bd").loopAtCps(2, 0.5)""")!!
         val allEvents = p.queryArc(0.0, 2.0)
         allEvents.size shouldBe 2
 
@@ -125,7 +125,7 @@ class LangLoopAtCpsSpec : StringSpec({
     }
 
     "loopAtCps() with compile - custom cps" {
-        val p = StrudelPattern.compile("""s("bd").loopAtCps(4, 1.0)""")!!
+        val p = SprudelPattern.compile("""s("bd").loopAtCps(4, 1.0)""")!!
         val allEvents = p.queryArc(0.0, 4.0)
         allEvents.size shouldBe 4
 
@@ -141,7 +141,7 @@ class LangLoopAtCpsSpec : StringSpec({
     }
 
     "loopatcps() with compile - lowercase alias" {
-        val p = StrudelPattern.compile("""s("bd").loopatcps(2, 1.0)""")!!
+        val p = SprudelPattern.compile("""s("bd").loopatcps(2, 1.0)""")!!
         val events = p.queryArc(0.0, 2.0)
 
         events.size shouldBe 2

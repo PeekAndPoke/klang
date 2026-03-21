@@ -6,7 +6,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPlyWithSpec : StringSpec({
@@ -17,11 +17,11 @@ class LangPlyWithSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.plyWith(n)" to s(pat).plyWith(n) { it },
-            "script pattern.plyWith(n)" to StrudelPattern.compile("""s("$pat").plyWith($n, p => p)"""),
+            "script pattern.plyWith(n)" to SprudelPattern.compile("""s("$pat").plyWith($n, p => p)"""),
             "string.plyWith(n)" to pat.plyWith(n) { it },
-            "script string.plyWith(n)" to StrudelPattern.compile(""""$pat".plyWith($n, p => p)"""),
+            "script string.plyWith(n)" to SprudelPattern.compile(""""$pat".plyWith($n, p => p)"""),
             "plyWith(n)" to s(pat).apply(plyWith(n) { it }),
-            "script plyWith(n)" to StrudelPattern.compile("""s("$pat").apply(plyWith($n, p => p))"""),
+            "script plyWith(n)" to SprudelPattern.compile("""s("$pat").apply(plyWith($n, p => p))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -130,7 +130,7 @@ class LangPlyWithSpec : StringSpec({
     // Compile tests
 
     "plyWith() with compile - basic" {
-        val p = StrudelPattern.compile("""seq("5").plyWith(3, p => p.add("1"))""")!!
+        val p = SprudelPattern.compile("""seq("5").plyWith(3, p => p.add("1"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
@@ -140,7 +140,7 @@ class LangPlyWithSpec : StringSpec({
     }
 
     "plyWith() with compile - multiple events" {
-        val p = StrudelPattern.compile("""seq("0 2").plyWith(2, p => p.add("5"))""")!!
+        val p = SprudelPattern.compile("""seq("0 2").plyWith(2, p => p.add("5"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -151,7 +151,7 @@ class LangPlyWithSpec : StringSpec({
     }
 
     "plywith() with compile - lowercase alias" {
-        val p = StrudelPattern.compile("""seq("0").plywith(2, p => p.add("5"))""")!!
+        val p = SprudelPattern.compile("""seq("0").plywith(2, p => p.add("5"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -160,7 +160,7 @@ class LangPlyWithSpec : StringSpec({
     }
 
     "plyWith() with compile - note pattern" {
-        val p = StrudelPattern.compile("""note("c3 d3").plyWith(2, p => p.transpose("12"))""")!!
+        val p = SprudelPattern.compile("""note("c3 d3").plyWith(2, p => p.transpose("12"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

@@ -134,7 +134,7 @@ class LangRandCycleSpec : StringSpec({
     }
 
     "randCycle works in compiled code" {
-        val p = io.peekandpoke.klang.sprudel.StrudelPattern.compile(
+        val p = io.peekandpoke.klang.sprudel.SprudelPattern.compile(
             """note("a").degradeByWith(randCycle, 0.5).seed(42)"""
         )
 

@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangRootNotesSpec : StringSpec({
 
@@ -87,7 +87,7 @@ class LangRootNotesSpec : StringSpec({
     }
 
     "rootNotes() works in compiled code" {
-        val p = StrudelPattern.compile("""chord("Cm7").rootNotes()""")
+        val p = SprudelPattern.compile("""chord("Cm7").rootNotes()""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -95,7 +95,7 @@ class LangRootNotesSpec : StringSpec({
     }
 
     "rootNotes() with octave in compiled code" {
-        val p = StrudelPattern.compile("""chord("Dm7 G7 Cmaj7").rootNotes(3)""")
+        val p = SprudelPattern.compile("""chord("Dm7 G7 Cmaj7").rootNotes(3)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 3
@@ -138,7 +138,7 @@ class LangRootNotesSpec : StringSpec({
     }
 
     "rootNotes() works via apply(rootNotes()) in compiled code" {
-        val p = StrudelPattern.compile("""chord("Cm7").apply(rootNotes())""")
+        val p = SprudelPattern.compile("""chord("Cm7").apply(rootNotes())""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -146,7 +146,7 @@ class LangRootNotesSpec : StringSpec({
     }
 
     "rootNotes() with octave works via apply(rootNotes(octave)) in compiled code" {
-        val p = StrudelPattern.compile("""chord("Dm7 G7").apply(rootNotes(3))""")
+        val p = SprudelPattern.compile("""chord("Dm7 G7").apply(rootNotes(3))""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2

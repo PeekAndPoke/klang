@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangSustainSpec : StringSpec({
@@ -19,15 +19,15 @@ class LangSustainSpec : StringSpec({
             "pattern.sustain(ctrl)" to
                     seq(pat).sustain(ctrl),
             "script pattern.sustain(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").sustain("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").sustain("$ctrl")"""),
             "string.sustain(ctrl)" to
                     pat.sustain(ctrl),
             "script string.sustain(ctrl)" to
-                    StrudelPattern.compile(""""$pat".sustain("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".sustain("$ctrl")"""),
             "sustain(ctrl)" to
                     seq(pat).apply(sustain(ctrl)),
             "script sustain(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(sustain("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(sustain("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.sustain shouldBe 0.1
@@ -96,7 +96,7 @@ class LangSustainSpec : StringSpec({
     }
 
     "sustain() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").sustain("0.1")""")
+        val p = SprudelPattern.compile("""note("c").sustain("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.sustain shouldBe 0.1

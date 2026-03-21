@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -20,11 +20,11 @@ class LangNfattackSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfattack(ctrl)" to seq(pat).nfattack(ctrl),
-            "script pattern.nfattack(ctrl)" to StrudelPattern.compile("""seq("$pat").nfattack("$ctrl")"""),
+            "script pattern.nfattack(ctrl)" to SprudelPattern.compile("""seq("$pat").nfattack("$ctrl")"""),
             "string.nfattack(ctrl)" to pat.nfattack(ctrl),
-            "script string.nfattack(ctrl)" to StrudelPattern.compile(""""$pat".nfattack("$ctrl")"""),
+            "script string.nfattack(ctrl)" to SprudelPattern.compile(""""$pat".nfattack("$ctrl")"""),
             "nfattack(ctrl)" to seq(pat).apply(nfattack(ctrl)),
-            "script nfattack(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfattack("$ctrl"))"""),
+            "script nfattack(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfattack("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfattack shouldBe 0.5
@@ -89,7 +89,7 @@ class LangNfattackSpec : StringSpec({
     }
 
     "nfattack() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").nfattack("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").nfattack("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -104,11 +104,11 @@ class LangNfattackSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.nfa(ctrl)" to seq(pat).nfa(ctrl),
-            "script pattern.nfa(ctrl)" to StrudelPattern.compile("""seq("$pat").nfa("$ctrl")"""),
+            "script pattern.nfa(ctrl)" to SprudelPattern.compile("""seq("$pat").nfa("$ctrl")"""),
             "string.nfa(ctrl)" to pat.nfa(ctrl),
-            "script string.nfa(ctrl)" to StrudelPattern.compile(""""$pat".nfa("$ctrl")"""),
+            "script string.nfa(ctrl)" to SprudelPattern.compile(""""$pat".nfa("$ctrl")"""),
             "nfa(ctrl)" to seq(pat).apply(nfa(ctrl)),
-            "script nfa(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(nfa("$ctrl"))"""),
+            "script nfa(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(nfa("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.nfattack shouldBe 0.5
@@ -144,7 +144,7 @@ class LangNfattackSpec : StringSpec({
     }
 
     "nfa() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").nfa("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").nfa("0.2 0.9")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

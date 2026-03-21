@@ -3,28 +3,28 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel._liftData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangSampleInit = false
+var sprudelLangSampleInit = false
 
 // -- begin() ----------------------------------------------------------------------------------------------------------
 
 private val beginMutation = voiceModifier { copy(begin = it?.asDoubleOrNull()) }
 
-fun applyBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern =
+fun applyBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, beginMutation)
 
 internal val _begin by dslPatternMapper { args, callInfo -> { p -> p._begin(args, callInfo) } }
-internal val StrudelPattern._begin by dslPatternExtension { p, args, /* callInfo */ _ -> applyBegin(p, args) }
+internal val SprudelPattern._begin by dslPatternExtension { p, args, /* callInfo */ _ -> applyBegin(p, args) }
 internal val String._begin by dslStringExtension { p, args, callInfo -> p._begin(args, callInfo) }
 internal val PatternMapperFn._begin by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_begin(args, callInfo))
@@ -51,20 +51,20 @@ internal val PatternMapperFn._begin by dslPatternMapperExtension { m, args, call
  * @category sampling
  * @tags begin, start, sample, position, offset
  */
-@StrudelDsl
-fun StrudelPattern.begin(pos: PatternLike): StrudelPattern = this._begin(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.begin(pos: PatternLike): SprudelPattern = this._begin(listOf(pos).asSprudelDslArgs())
 
 /** Reinterprets this pattern's values as sample start positions (0–1). */
-@StrudelDsl
-fun StrudelPattern.begin(): StrudelPattern = this._begin(emptyList())
+@SprudelDsl
+fun SprudelPattern.begin(): SprudelPattern = this._begin(emptyList())
 
 /** Sets the sample start position (0–1) on a string pattern. */
-@StrudelDsl
-fun String.begin(pos: PatternLike): StrudelPattern = this._begin(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun String.begin(pos: PatternLike): SprudelPattern = this._begin(listOf(pos).asSprudelDslArgs())
 
 /** Reinterprets this string pattern's values as sample start positions (0–1). */
-@StrudelDsl
-fun String.begin(): StrudelPattern = this._begin(emptyList())
+@SprudelDsl
+fun String.begin(): SprudelPattern = this._begin(emptyList())
 
 /**
  * Returns a [PatternMapperFn] that sets the sample start position (0–1).
@@ -79,26 +79,26 @@ fun String.begin(): StrudelPattern = this._begin(emptyList())
  * @category sampling
  * @tags begin, start, sample, position, offset
  */
-@StrudelDsl
-fun begin(pos: PatternLike): PatternMapperFn = _begin(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun begin(pos: PatternLike): PatternMapperFn = _begin(listOf(pos).asSprudelDslArgs())
 
 /** Returns a [PatternMapperFn] that reinterprets the source pattern's values as sample start positions. */
-@StrudelDsl
+@SprudelDsl
 fun begin(): PatternMapperFn = _begin(emptyList())
 
 /** Chains a begin onto this [PatternMapperFn]; sets the sample start position (0–1). */
-@StrudelDsl
-fun PatternMapperFn.begin(pos: PatternLike): PatternMapperFn = this._begin(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.begin(pos: PatternLike): PatternMapperFn = this._begin(listOf(pos).asSprudelDslArgs())
 
 // -- end() ------------------------------------------------------------------------------------------------------------
 
 private val endMutation = voiceModifier { copy(end = it?.asDoubleOrNull()) }
 
-fun applyEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern =
+fun applyEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, endMutation)
 
 internal val _end by dslPatternMapper { args, callInfo -> { p -> p._end(args, callInfo) } }
-internal val StrudelPattern._end by dslPatternExtension { p, args, /* callInfo */ _ -> applyEnd(p, args) }
+internal val SprudelPattern._end by dslPatternExtension { p, args, /* callInfo */ _ -> applyEnd(p, args) }
 internal val String._end by dslStringExtension { p, args, callInfo -> p._end(args, callInfo) }
 internal val PatternMapperFn._end by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_end(args, callInfo))
@@ -124,20 +124,20 @@ internal val PatternMapperFn._end by dslPatternMapperExtension { m, args, callIn
  * @category sampling
  * @tags end, stop, sample, position, offset
  */
-@StrudelDsl
-fun StrudelPattern.end(pos: PatternLike): StrudelPattern = this._end(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.end(pos: PatternLike): SprudelPattern = this._end(listOf(pos).asSprudelDslArgs())
 
 /** Reinterprets this pattern's values as sample end positions (0–1). */
-@StrudelDsl
-fun StrudelPattern.end(): StrudelPattern = this._end(emptyList())
+@SprudelDsl
+fun SprudelPattern.end(): SprudelPattern = this._end(emptyList())
 
 /** Sets the sample end position (0–1) on a string pattern. */
-@StrudelDsl
-fun String.end(pos: PatternLike): StrudelPattern = this._end(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun String.end(pos: PatternLike): SprudelPattern = this._end(listOf(pos).asSprudelDslArgs())
 
 /** Reinterprets this string pattern's values as sample end positions (0–1). */
-@StrudelDsl
-fun String.end(): StrudelPattern = this._end(emptyList())
+@SprudelDsl
+fun String.end(): SprudelPattern = this._end(emptyList())
 
 /**
  * Returns a [PatternMapperFn] that sets the sample end position (0–1).
@@ -152,26 +152,26 @@ fun String.end(): StrudelPattern = this._end(emptyList())
  * @category sampling
  * @tags end, stop, sample, position, offset
  */
-@StrudelDsl
-fun end(pos: PatternLike): PatternMapperFn = _end(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun end(pos: PatternLike): PatternMapperFn = _end(listOf(pos).asSprudelDslArgs())
 
 /** Returns a [PatternMapperFn] that reinterprets the source pattern's values as sample end positions. */
-@StrudelDsl
+@SprudelDsl
 fun end(): PatternMapperFn = _end(emptyList())
 
 /** Chains an end onto this [PatternMapperFn]; sets the sample end position (0–1). */
-@StrudelDsl
-fun PatternMapperFn.end(pos: PatternLike): PatternMapperFn = this._end(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.end(pos: PatternLike): PatternMapperFn = this._end(listOf(pos).asSprudelDslArgs())
 
 // -- speed() ----------------------------------------------------------------------------------------------------------
 
 private val speedMutation = voiceModifier { copy(speed = it?.asDoubleOrNull()) }
 
-fun applySpeed(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern =
+fun applySpeed(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, speedMutation)
 
 internal val _speed by dslPatternMapper { args, callInfo -> { p -> p._speed(args, callInfo) } }
-internal val StrudelPattern._speed by dslPatternExtension { p, args, /* callInfo */ _ -> applySpeed(p, args) }
+internal val SprudelPattern._speed by dslPatternExtension { p, args, /* callInfo */ _ -> applySpeed(p, args) }
 internal val String._speed by dslStringExtension { p, args, callInfo -> p._speed(args, callInfo) }
 internal val PatternMapperFn._speed by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_speed(args, callInfo))
@@ -197,20 +197,20 @@ internal val PatternMapperFn._speed by dslPatternMapperExtension { m, args, call
  * @category sampling
  * @tags speed, playback, pitch, rate, reverse
  */
-@StrudelDsl
-fun StrudelPattern.speed(rate: PatternLike): StrudelPattern = this._speed(listOf(rate).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.speed(rate: PatternLike): SprudelPattern = this._speed(listOf(rate).asSprudelDslArgs())
 
 /** Reinterprets this pattern's values as playback speed multipliers. */
-@StrudelDsl
-fun StrudelPattern.speed(): StrudelPattern = this._speed(emptyList())
+@SprudelDsl
+fun SprudelPattern.speed(): SprudelPattern = this._speed(emptyList())
 
 /** Sets the sample playback speed on a string pattern. */
-@StrudelDsl
-fun String.speed(rate: PatternLike): StrudelPattern = this._speed(listOf(rate).asStrudelDslArgs())
+@SprudelDsl
+fun String.speed(rate: PatternLike): SprudelPattern = this._speed(listOf(rate).asSprudelDslArgs())
 
 /** Reinterprets this string pattern's values as playback speed multipliers. */
-@StrudelDsl
-fun String.speed(): StrudelPattern = this._speed(emptyList())
+@SprudelDsl
+fun String.speed(): SprudelPattern = this._speed(emptyList())
 
 /**
  * Returns a [PatternMapperFn] that sets the sample playback speed.
@@ -225,29 +225,29 @@ fun String.speed(): StrudelPattern = this._speed(emptyList())
  * @category sampling
  * @tags speed, playback, pitch, rate, reverse
  */
-@StrudelDsl
-fun speed(rate: PatternLike): PatternMapperFn = _speed(listOf(rate).asStrudelDslArgs())
+@SprudelDsl
+fun speed(rate: PatternLike): PatternMapperFn = _speed(listOf(rate).asSprudelDslArgs())
 
 /** Returns a [PatternMapperFn] that reinterprets the source pattern's values as playback speed multipliers. */
-@StrudelDsl
+@SprudelDsl
 fun speed(): PatternMapperFn = _speed(emptyList())
 
 /** Chains a speed onto this [PatternMapperFn]; sets the sample playback speed. */
-@StrudelDsl
-fun PatternMapperFn.speed(rate: PatternLike): PatternMapperFn = this._speed(listOf(rate).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.speed(rate: PatternLike): PatternMapperFn = this._speed(listOf(rate).asSprudelDslArgs())
 
 // -- unit() -----------------------------------------------------------------------------------------------------------
 
 private val unitMutation = voiceModifier { copy(unit = it?.asVoiceValue()?.asString) }
 
-fun applyUnit(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyUnit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.isEmpty()) return source
     val control = args.toPattern(unitMutation)
     return source._liftData(control)
 }
 
 internal val _unit by dslPatternMapper { args, callInfo -> { p -> p._unit(args, callInfo) } }
-internal val StrudelPattern._unit by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnit(p, args) }
+internal val SprudelPattern._unit by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnit(p, args) }
 internal val String._unit by dslStringExtension { p, args, callInfo -> p._unit(args, callInfo) }
 internal val PatternMapperFn._unit by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_unit(args, callInfo))
@@ -274,12 +274,12 @@ internal val PatternMapperFn._unit by dslPatternMapperExtension { m, args, callI
  * @category sampling
  * @tags unit, time unit, cycles, sample, timing
  */
-@StrudelDsl
-fun StrudelPattern.unit(value: PatternLike): StrudelPattern = this._unit(listOf(value).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.unit(value: PatternLike): SprudelPattern = this._unit(listOf(value).asSprudelDslArgs())
 
 /** Sets the time unit for sample playback on a string pattern. */
-@StrudelDsl
-fun String.unit(value: PatternLike): StrudelPattern = this._unit(listOf(value).asStrudelDslArgs())
+@SprudelDsl
+fun String.unit(value: PatternLike): SprudelPattern = this._unit(listOf(value).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets the time unit for sample playback.
@@ -294,25 +294,25 @@ fun String.unit(value: PatternLike): StrudelPattern = this._unit(listOf(value).a
  * @category sampling
  * @tags unit, time unit, cycles, sample, timing
  */
-@StrudelDsl
-fun unit(value: PatternLike): PatternMapperFn = _unit(listOf(value).asStrudelDslArgs())
+@SprudelDsl
+fun unit(value: PatternLike): PatternMapperFn = _unit(listOf(value).asSprudelDslArgs())
 
 /** Chains a unit onto this [PatternMapperFn]; sets the time unit for sample playback. */
-@StrudelDsl
-fun PatternMapperFn.unit(value: PatternLike): PatternMapperFn = this._unit(listOf(value).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.unit(value: PatternLike): PatternMapperFn = this._unit(listOf(value).asSprudelDslArgs())
 
 // -- loop() -----------------------------------------------------------------------------------------------------------
 
 private val loopMutation = voiceModifier { copy(loop = it?.asVoiceValue()?.asBoolean) }
 
-fun applyLoop(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
-    val effectiveArgs = args.ifEmpty { listOf(StrudelDslArg.of(1.0)) }
+fun applyLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    val effectiveArgs = args.ifEmpty { listOf(SprudelDslArg.of(1.0)) }
     val control = effectiveArgs.toPattern(loopMutation)
     return source._liftData(control)
 }
 
 internal val _loop by dslPatternMapper { args, callInfo -> { p -> p._loop(args, callInfo) } }
-internal val StrudelPattern._loop by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoop(p, args) }
+internal val SprudelPattern._loop by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoop(p, args) }
 internal val String._loop by dslStringExtension { p, args, callInfo -> p._loop(args, callInfo) }
 internal val PatternMapperFn._loop by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_loop(args, callInfo))
@@ -338,12 +338,12 @@ internal val PatternMapperFn._loop by dslPatternMapperExtension { m, args, callI
  * @category sampling
  * @tags loop, looping, repeat, sample
  */
-@StrudelDsl
-fun StrudelPattern.loop(flag: PatternLike = true): StrudelPattern = this._loop(listOf(flag).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loop(flag: PatternLike = true): SprudelPattern = this._loop(listOf(flag).asSprudelDslArgs())
 
 /** Enables sample looping on a string pattern. */
-@StrudelDsl
-fun String.loop(flag: PatternLike = true): StrudelPattern = this._loop(listOf(flag).asStrudelDslArgs())
+@SprudelDsl
+fun String.loop(flag: PatternLike = true): SprudelPattern = this._loop(listOf(flag).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that enables sample looping.
@@ -358,29 +358,29 @@ fun String.loop(flag: PatternLike = true): StrudelPattern = this._loop(listOf(fl
  * @category sampling
  * @tags loop, looping, repeat, sample
  */
-@StrudelDsl
-fun loop(flag: PatternLike = true): PatternMapperFn = _loop(listOf(flag).asStrudelDslArgs())
+@SprudelDsl
+fun loop(flag: PatternLike = true): PatternMapperFn = _loop(listOf(flag).asSprudelDslArgs())
 
 /** Chains a loop onto this [PatternMapperFn]; enables sample looping. */
-@StrudelDsl
-fun PatternMapperFn.loop(flag: PatternLike = true): PatternMapperFn = this._loop(listOf(flag).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.loop(flag: PatternLike = true): PatternMapperFn = this._loop(listOf(flag).asSprudelDslArgs())
 
 // -- loopBegin() / loopb() --------------------------------------------------------------------------------------------
 
 private val loopBeginMutation = voiceModifier { copy(loopBegin = it?.asDoubleOrNull()) }
 
-fun applyLoopBegin(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern =
+fun applyLoopBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, loopBeginMutation)
 
 internal val _loopBegin by dslPatternMapper { args, callInfo -> { p -> p._loopBegin(args, callInfo) } }
-internal val StrudelPattern._loopBegin by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopBegin(p, args) }
+internal val SprudelPattern._loopBegin by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopBegin(p, args) }
 internal val String._loopBegin by dslStringExtension { p, args, callInfo -> p._loopBegin(args, callInfo) }
 internal val PatternMapperFn._loopBegin by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_loopBegin(args, callInfo))
 }
 
 internal val _loopb by dslPatternMapper { args, callInfo -> _loopBegin(args, callInfo) }
-internal val StrudelPattern._loopb by dslPatternExtension { p, args, callInfo -> p._loopBegin(args, callInfo) }
+internal val SprudelPattern._loopb by dslPatternExtension { p, args, callInfo -> p._loopBegin(args, callInfo) }
 internal val String._loopb by dslStringExtension { p, args, callInfo -> p._loopb(args, callInfo) }
 internal val PatternMapperFn._loopb by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_loopBegin(args, callInfo))
@@ -407,20 +407,20 @@ internal val PatternMapperFn._loopb by dslPatternMapperExtension { m, args, call
  * @category sampling
  * @tags loopBegin, loopb, loop, start, sample, position
  */
-@StrudelDsl
-fun StrudelPattern.loopBegin(pos: PatternLike): StrudelPattern = this._loopBegin(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loopBegin(pos: PatternLike): SprudelPattern = this._loopBegin(listOf(pos).asSprudelDslArgs())
 
 /** Reinterprets this pattern's values as loop start positions (0–1). */
-@StrudelDsl
-fun StrudelPattern.loopBegin(): StrudelPattern = this._loopBegin(emptyList())
+@SprudelDsl
+fun SprudelPattern.loopBegin(): SprudelPattern = this._loopBegin(emptyList())
 
 /** Sets the loop start position (0–1) on a string pattern. */
-@StrudelDsl
-fun String.loopBegin(pos: PatternLike): StrudelPattern = this._loopBegin(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun String.loopBegin(pos: PatternLike): SprudelPattern = this._loopBegin(listOf(pos).asSprudelDslArgs())
 
 /** Reinterprets this string pattern's values as loop start positions (0–1). */
-@StrudelDsl
-fun String.loopBegin(): StrudelPattern = this._loopBegin(emptyList())
+@SprudelDsl
+fun String.loopBegin(): SprudelPattern = this._loopBegin(emptyList())
 
 /**
  * Returns a [PatternMapperFn] that sets the loop start position (0–1).
@@ -436,16 +436,16 @@ fun String.loopBegin(): StrudelPattern = this._loopBegin(emptyList())
  * @category sampling
  * @tags loopBegin, loopb, loop, start, sample, position
  */
-@StrudelDsl
-fun loopBegin(pos: PatternLike): PatternMapperFn = _loopBegin(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun loopBegin(pos: PatternLike): PatternMapperFn = _loopBegin(listOf(pos).asSprudelDslArgs())
 
 /** Returns a [PatternMapperFn] that reinterprets source values as loop start positions. */
-@StrudelDsl
+@SprudelDsl
 fun loopBegin(): PatternMapperFn = _loopBegin(emptyList())
 
 /** Chains a loopBegin onto this [PatternMapperFn]; sets the loop start position. */
-@StrudelDsl
-fun PatternMapperFn.loopBegin(pos: PatternLike): PatternMapperFn = this._loopBegin(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.loopBegin(pos: PatternLike): PatternMapperFn = this._loopBegin(listOf(pos).asSprudelDslArgs())
 
 /**
  * Alias for [loopBegin]. Sets the loop start position.
@@ -454,37 +454,37 @@ fun PatternMapperFn.loopBegin(pos: PatternLike): PatternMapperFn = this._loopBeg
  * @category sampling
  * @tags loopb, loopBegin, loop, start, sample, position
  */
-@StrudelDsl
-fun StrudelPattern.loopb(pos: PatternLike): StrudelPattern = this._loopb(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loopb(pos: PatternLike): SprudelPattern = this._loopb(listOf(pos).asSprudelDslArgs())
 
 /** Alias for [loopBegin] on a string pattern. */
-@StrudelDsl
-fun String.loopb(pos: PatternLike): StrudelPattern = this._loopb(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun String.loopb(pos: PatternLike): SprudelPattern = this._loopb(listOf(pos).asSprudelDslArgs())
 
 /** Alias for [loopBegin] — returns a [PatternMapperFn]. */
-@StrudelDsl
-fun loopb(pos: PatternLike): PatternMapperFn = _loopb(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun loopb(pos: PatternLike): PatternMapperFn = _loopb(listOf(pos).asSprudelDslArgs())
 
 /** Chains a loopb (alias for [loopBegin]) onto this [PatternMapperFn]. */
-@StrudelDsl
-fun PatternMapperFn.loopb(pos: PatternLike): PatternMapperFn = this._loopb(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.loopb(pos: PatternLike): PatternMapperFn = this._loopb(listOf(pos).asSprudelDslArgs())
 
 // -- loopEnd() / loope() ----------------------------------------------------------------------------------------------
 
 private val loopEndMutation = voiceModifier { copy(loopEnd = it?.asDoubleOrNull()) }
 
-fun applyLoopEnd(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern =
+fun applyLoopEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, loopEndMutation)
 
 internal val _loopEnd by dslPatternMapper { args, callInfo -> { p -> p._loopEnd(args, callInfo) } }
-internal val StrudelPattern._loopEnd by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopEnd(p, args) }
+internal val SprudelPattern._loopEnd by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopEnd(p, args) }
 internal val String._loopEnd by dslStringExtension { p, args, callInfo -> p._loopEnd(args, callInfo) }
 internal val PatternMapperFn._loopEnd by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_loopEnd(args, callInfo))
 }
 
 internal val _loope by dslPatternMapper { args, callInfo -> _loopEnd(args, callInfo) }
-internal val StrudelPattern._loope by dslPatternExtension { p, args, callInfo -> p._loopEnd(args, callInfo) }
+internal val SprudelPattern._loope by dslPatternExtension { p, args, callInfo -> p._loopEnd(args, callInfo) }
 internal val String._loope by dslStringExtension { p, args, callInfo -> p._loope(args, callInfo) }
 internal val PatternMapperFn._loope by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_loopEnd(args, callInfo))
@@ -511,20 +511,20 @@ internal val PatternMapperFn._loope by dslPatternMapperExtension { m, args, call
  * @category sampling
  * @tags loopEnd, loope, loop, end, sample, position
  */
-@StrudelDsl
-fun StrudelPattern.loopEnd(pos: PatternLike): StrudelPattern = this._loopEnd(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loopEnd(pos: PatternLike): SprudelPattern = this._loopEnd(listOf(pos).asSprudelDslArgs())
 
 /** Reinterprets this pattern's values as loop end positions (0–1). */
-@StrudelDsl
-fun StrudelPattern.loopEnd(): StrudelPattern = this._loopEnd(emptyList())
+@SprudelDsl
+fun SprudelPattern.loopEnd(): SprudelPattern = this._loopEnd(emptyList())
 
 /** Sets the loop end position (0–1) on a string pattern. */
-@StrudelDsl
-fun String.loopEnd(pos: PatternLike): StrudelPattern = this._loopEnd(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun String.loopEnd(pos: PatternLike): SprudelPattern = this._loopEnd(listOf(pos).asSprudelDslArgs())
 
 /** Reinterprets this string pattern's values as loop end positions (0–1). */
-@StrudelDsl
-fun String.loopEnd(): StrudelPattern = this._loopEnd(emptyList())
+@SprudelDsl
+fun String.loopEnd(): SprudelPattern = this._loopEnd(emptyList())
 
 /**
  * Returns a [PatternMapperFn] that sets the loop end position (0–1).
@@ -540,16 +540,16 @@ fun String.loopEnd(): StrudelPattern = this._loopEnd(emptyList())
  * @category sampling
  * @tags loopEnd, loope, loop, end, sample, position
  */
-@StrudelDsl
-fun loopEnd(pos: PatternLike): PatternMapperFn = _loopEnd(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun loopEnd(pos: PatternLike): PatternMapperFn = _loopEnd(listOf(pos).asSprudelDslArgs())
 
 /** Returns a [PatternMapperFn] that reinterprets source values as loop end positions. */
-@StrudelDsl
+@SprudelDsl
 fun loopEnd(): PatternMapperFn = _loopEnd(emptyList())
 
 /** Chains a loopEnd onto this [PatternMapperFn]; sets the loop end position. */
-@StrudelDsl
-fun PatternMapperFn.loopEnd(pos: PatternLike): PatternMapperFn = this._loopEnd(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.loopEnd(pos: PatternLike): PatternMapperFn = this._loopEnd(listOf(pos).asSprudelDslArgs())
 
 /**
  * Alias for [loopEnd]. Sets the loop end position.
@@ -558,20 +558,20 @@ fun PatternMapperFn.loopEnd(pos: PatternLike): PatternMapperFn = this._loopEnd(l
  * @category sampling
  * @tags loope, loopEnd, loop, end, sample, position
  */
-@StrudelDsl
-fun StrudelPattern.loope(pos: PatternLike): StrudelPattern = this._loope(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loope(pos: PatternLike): SprudelPattern = this._loope(listOf(pos).asSprudelDslArgs())
 
 /** Alias for [loopEnd] on a string pattern. */
-@StrudelDsl
-fun String.loope(pos: PatternLike): StrudelPattern = this._loope(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun String.loope(pos: PatternLike): SprudelPattern = this._loope(listOf(pos).asSprudelDslArgs())
 
 /** Alias for [loopEnd] — returns a [PatternMapperFn]. */
-@StrudelDsl
-fun loope(pos: PatternLike): PatternMapperFn = _loope(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun loope(pos: PatternLike): PatternMapperFn = _loope(listOf(pos).asSprudelDslArgs())
 
 /** Chains a loope (alias for [loopEnd]) onto this [PatternMapperFn]. */
-@StrudelDsl
-fun PatternMapperFn.loope(pos: PatternLike): PatternMapperFn = this._loope(listOf(pos).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.loope(pos: PatternLike): PatternMapperFn = this._loope(listOf(pos).asSprudelDslArgs())
 
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 
@@ -580,7 +580,7 @@ private val loopAtSpeedMutation = voiceModifier {
     if (value == null) copy(speed = null) else copy(speed = 1.0 / (2.0 * value))
 }
 
-fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.isEmpty()) return source
 
     // Get the loopAt factor
@@ -599,7 +599,7 @@ fun applyLoopAt(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
 }
 
 internal val _loopAt by dslPatternMapper { args, callInfo -> { p -> p._loopAt(args, callInfo) } }
-internal val StrudelPattern._loopAt by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAt(p, args) }
+internal val SprudelPattern._loopAt by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAt(p, args) }
 internal val String._loopAt by dslStringExtension { p, args, callInfo -> p._loopAt(args, callInfo) }
 internal val PatternMapperFn._loopAt by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_loopAt(args, callInfo))
@@ -626,12 +626,12 @@ internal val PatternMapperFn._loopAt by dslPatternMapperExtension { m, args, cal
  * @category sampling
  * @tags loopAt, loop, fit, cycles, tempo, stretch
  */
-@StrudelDsl
-fun StrudelPattern.loopAt(cycles: PatternLike): StrudelPattern = this._loopAt(listOf(cycles).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loopAt(cycles: PatternLike): SprudelPattern = this._loopAt(listOf(cycles).asSprudelDslArgs())
 
 /** Fits the sample to the specified number of cycles on a string pattern. */
-@StrudelDsl
-fun String.loopAt(cycles: PatternLike): StrudelPattern = this._loopAt(listOf(cycles).asStrudelDslArgs())
+@SprudelDsl
+fun String.loopAt(cycles: PatternLike): SprudelPattern = this._loopAt(listOf(cycles).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that fits the sample to the given number of cycles.
@@ -646,16 +646,16 @@ fun String.loopAt(cycles: PatternLike): StrudelPattern = this._loopAt(listOf(cyc
  * @category sampling
  * @tags loopAt, loop, fit, cycles, tempo, stretch
  */
-@StrudelDsl
-fun loopAt(cycles: PatternLike): PatternMapperFn = _loopAt(listOf(cycles).asStrudelDslArgs())
+@SprudelDsl
+fun loopAt(cycles: PatternLike): PatternMapperFn = _loopAt(listOf(cycles).asSprudelDslArgs())
 
 /** Chains a loopAt onto this [PatternMapperFn]; fits the sample to the given number of cycles. */
-@StrudelDsl
-fun PatternMapperFn.loopAt(cycles: PatternLike): PatternMapperFn = this._loopAt(listOf(cycles).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.loopAt(cycles: PatternLike): PatternMapperFn = this._loopAt(listOf(cycles).asSprudelDslArgs())
 
 // -- loopAtCps() ------------------------------------------------------------------------------------------------------
 
-fun applyLoopAtCps(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyLoopAtCps(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._innerJoin(args) { pat, factorValue, cpsValue ->
         val factor = factorValue?.asRational ?: return@_innerJoin silence
         val cps = cpsValue?.asRational ?: Rational.HALF
@@ -669,14 +669,14 @@ fun applyLoopAtCps(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
 }
 
 internal val _loopAtCps by dslPatternMapper { args, callInfo -> { p -> p._loopAtCps(args, callInfo) } }
-internal val StrudelPattern._loopAtCps by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAtCps(p, args) }
+internal val SprudelPattern._loopAtCps by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAtCps(p, args) }
 internal val String._loopAtCps by dslStringExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
 internal val PatternMapperFn._loopAtCps by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_loopAtCps(args, callInfo))
 }
 
 internal val _loopatcps by dslPatternMapper { args, callInfo -> _loopAtCps(args, callInfo) }
-internal val StrudelPattern._loopatcps by dslPatternExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
+internal val SprudelPattern._loopatcps by dslPatternExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
 internal val String._loopatcps by dslStringExtension { p, args, callInfo -> p._loopatcps(args, callInfo) }
 internal val PatternMapperFn._loopatcps by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_loopAtCps(args, callInfo))
@@ -702,24 +702,24 @@ internal val PatternMapperFn._loopatcps by dslPatternMapperExtension { m, args, 
  * @tags loopAtCps, loopatcps, loop, fit, cycles, cps, tempo, stretch
  */
 /** Fits the sample to the given number of cycles and cps value on this pattern. */
-@StrudelDsl
-fun StrudelPattern.loopAtCps(factor: PatternLike, cps: PatternLike): StrudelPattern =
-    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loopAtCps(factor: PatternLike, cps: PatternLike): SprudelPattern =
+    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
 
 /** Fits the sample to the given number of cycles and cps value on this pattern (numeric overload). */
-@StrudelDsl
-fun StrudelPattern.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern =
-    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
+    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
 
 /** Fits the sample to the given number of cycles and cps value on a string pattern. */
-@StrudelDsl
-fun String.loopAtCps(factor: PatternLike, cps: PatternLike): StrudelPattern =
-    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
+@SprudelDsl
+fun String.loopAtCps(factor: PatternLike, cps: PatternLike): SprudelPattern =
+    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
 
 /** Fits the sample to the given number of cycles and cps value on a string pattern (numeric overload). */
-@StrudelDsl
-fun String.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern =
-    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
+@SprudelDsl
+fun String.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
+    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that fits the sample to the given number of cycles and cps.
@@ -736,14 +736,14 @@ fun String.loopAtCps(factor: Number, cps: Number = 0.5): StrudelPattern =
  * @category sampling
  * @tags loopAtCps, loopatcps, loop, fit, cycles, cps, tempo, stretch
  */
-@StrudelDsl
+@SprudelDsl
 fun loopAtCps(factor: PatternLike, cps: PatternLike): PatternMapperFn =
-    _loopAtCps(listOf(factor, cps).asStrudelDslArgs())
+    _loopAtCps(listOf(factor, cps).asSprudelDslArgs())
 
 /** Chains a loopAtCps onto this [PatternMapperFn]; fits the sample to the given cycles and cps. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.loopAtCps(factor: PatternLike, cps: PatternLike): PatternMapperFn =
-    this._loopAtCps(listOf(factor, cps).asStrudelDslArgs())
+    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
 
 /**
  * Alias for [loopAtCps]. Fits the sample to the given number of cycles and cps.
@@ -752,42 +752,42 @@ fun PatternMapperFn.loopAtCps(factor: PatternLike, cps: PatternLike): PatternMap
  * @category sampling
  * @tags loopatcps, loopAtCps, loop, fit, cycles, cps, tempo, stretch
  */
-@StrudelDsl
-fun StrudelPattern.loopatcps(factor: PatternLike, cps: PatternLike): StrudelPattern =
-    this._loopatcps(listOf(factor, cps).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.loopatcps(factor: PatternLike, cps: PatternLike): SprudelPattern =
+    this._loopatcps(listOf(factor, cps).asSprudelDslArgs())
 
 /** Alias for [loopAtCps] on this pattern (numeric overload). */
-@StrudelDsl
-fun StrudelPattern.loopatcps(factor: Number, cps: Number = 0.5): StrudelPattern = this.loopAtCps(factor, cps)
+@SprudelDsl
+fun SprudelPattern.loopatcps(factor: Number, cps: Number = 0.5): SprudelPattern = this.loopAtCps(factor, cps)
 
 /** Alias for [loopAtCps] on a string pattern. */
-@StrudelDsl
-fun String.loopatcps(factor: PatternLike, cps: PatternLike): StrudelPattern =
-    this._loopatcps(listOf(factor, cps).asStrudelDslArgs())
+@SprudelDsl
+fun String.loopatcps(factor: PatternLike, cps: PatternLike): SprudelPattern =
+    this._loopatcps(listOf(factor, cps).asSprudelDslArgs())
 
 /** Alias for [loopAtCps] on a string pattern (numeric overload). */
-@StrudelDsl
-fun String.loopatcps(factor: Number, cps: Number = 0.5): StrudelPattern = this.loopAtCps(factor, cps)
+@SprudelDsl
+fun String.loopatcps(factor: Number, cps: Number = 0.5): SprudelPattern = this.loopAtCps(factor, cps)
 
 /** Alias for [loopAtCps] — returns a [PatternMapperFn]. */
-@StrudelDsl
+@SprudelDsl
 fun loopatcps(factor: PatternLike, cps: PatternLike): PatternMapperFn =
-    _loopatcps(listOf(factor, cps).asStrudelDslArgs())
+    _loopatcps(listOf(factor, cps).asSprudelDslArgs())
 
 /** Chains a loopatcps (alias for [loopAtCps]) onto this [PatternMapperFn]. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.loopatcps(factor: PatternLike, cps: PatternLike): PatternMapperFn =
-    this._loopatcps(listOf(factor, cps).asStrudelDslArgs())
+    this._loopatcps(listOf(factor, cps).asSprudelDslArgs())
 
 // -- cut() ------------------------------------------------------------------------------------------------------------
 
 private val cutMutation = voiceModifier { copy(cut = it?.asIntOrNull()) }
 
-fun applyCut(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern =
+fun applyCut(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, cutMutation)
 
 internal val _cut by dslPatternMapper { args, callInfo -> { p -> p._cut(args, callInfo) } }
-internal val StrudelPattern._cut by dslPatternExtension { p, args, /* callInfo */ _ -> applyCut(p, args) }
+internal val SprudelPattern._cut by dslPatternExtension { p, args, /* callInfo */ _ -> applyCut(p, args) }
 internal val String._cut by dslStringExtension { p, args, callInfo -> p._cut(args, callInfo) }
 internal val PatternMapperFn._cut by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_cut(args, callInfo))
@@ -814,20 +814,20 @@ internal val PatternMapperFn._cut by dslPatternMapperExtension { m, args, callIn
  * @category sampling
  * @tags cut, choke, group, hi-hat, sample
  */
-@StrudelDsl
-fun StrudelPattern.cut(group: PatternLike): StrudelPattern = this._cut(listOf(group).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.cut(group: PatternLike): SprudelPattern = this._cut(listOf(group).asSprudelDslArgs())
 
 /** Reinterprets this pattern's values as cut group numbers. */
-@StrudelDsl
-fun StrudelPattern.cut(): StrudelPattern = this._cut(emptyList())
+@SprudelDsl
+fun SprudelPattern.cut(): SprudelPattern = this._cut(emptyList())
 
 /** Assigns the sample to a cut group (choke group) on a string pattern. */
-@StrudelDsl
-fun String.cut(group: PatternLike): StrudelPattern = this._cut(listOf(group).asStrudelDslArgs())
+@SprudelDsl
+fun String.cut(group: PatternLike): SprudelPattern = this._cut(listOf(group).asSprudelDslArgs())
 
 /** Reinterprets this string pattern's values as cut group numbers. */
-@StrudelDsl
-fun String.cut(): StrudelPattern = this._cut(emptyList())
+@SprudelDsl
+fun String.cut(): SprudelPattern = this._cut(emptyList())
 
 /**
  * Returns a [PatternMapperFn] that assigns the sample to a cut group.
@@ -842,20 +842,20 @@ fun String.cut(): StrudelPattern = this._cut(emptyList())
  * @category sampling
  * @tags cut, choke, group, hi-hat, sample
  */
-@StrudelDsl
-fun cut(group: PatternLike): PatternMapperFn = _cut(listOf(group).asStrudelDslArgs())
+@SprudelDsl
+fun cut(group: PatternLike): PatternMapperFn = _cut(listOf(group).asSprudelDslArgs())
 
 /** Returns a [PatternMapperFn] that reinterprets the source pattern's values as cut group numbers. */
-@StrudelDsl
+@SprudelDsl
 fun cut(): PatternMapperFn = _cut(emptyList())
 
 /** Chains a cut onto this [PatternMapperFn]; assigns the sample to the given cut group. */
-@StrudelDsl
-fun PatternMapperFn.cut(group: PatternLike): PatternMapperFn = this._cut(listOf(group).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.cut(group: PatternLike): PatternMapperFn = this._cut(listOf(group).asSprudelDslArgs())
 
 // -- slice() ----------------------------------------------------------------------------------------------------------
 
-fun applySlice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applySlice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nArg = args.getOrNull(0)
     val nVal = maxOf(1, nArg?.value?.asIntOrNull() ?: 1)
 
@@ -871,7 +871,7 @@ fun applySlice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strudel
 }
 
 internal val _slice by dslPatternMapper { args, callInfo -> { p -> p._slice(args, callInfo) } }
-internal val StrudelPattern._slice by dslPatternExtension { p, args, /* callInfo */ _ -> applySlice(p, args) }
+internal val SprudelPattern._slice by dslPatternExtension { p, args, /* callInfo */ _ -> applySlice(p, args) }
 internal val String._slice by dslStringExtension { p, args, callInfo -> p._slice(args, callInfo) }
 internal val PatternMapperFn._slice by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_slice(args, callInfo))
@@ -895,17 +895,17 @@ internal val PatternMapperFn._slice by dslPatternMapperExtension { m, args, call
  * @category sampling
  * @tags slice, segment, chop, sample, begin, end
  */
-@StrudelDsl
-fun StrudelPattern.slice(n: PatternLike, index: PatternLike): StrudelPattern =
-    this._slice(listOf(n, index).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.slice(n: PatternLike, index: PatternLike): SprudelPattern =
+    this._slice(listOf(n, index).asSprudelDslArgs())
 
 /**
  * Plays a specific slice of the sample on a string pattern.
- * See [StrudelPattern.slice] for full documentation.
+ * See [SprudelPattern.slice] for full documentation.
  */
-@StrudelDsl
-fun String.slice(n: PatternLike, index: PatternLike): StrudelPattern =
-    this._slice(listOf(n, index).asStrudelDslArgs())
+@SprudelDsl
+fun String.slice(n: PatternLike, index: PatternLike): SprudelPattern =
+    this._slice(listOf(n, index).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that plays a specific slice of the sample.
@@ -921,17 +921,17 @@ fun String.slice(n: PatternLike, index: PatternLike): StrudelPattern =
  * @category sampling
  * @tags slice, segment, chop, sample, begin, end
  */
-@StrudelDsl
-fun slice(n: PatternLike, index: PatternLike): PatternMapperFn = _slice(listOf(n, index).asStrudelDslArgs())
+@SprudelDsl
+fun slice(n: PatternLike, index: PatternLike): PatternMapperFn = _slice(listOf(n, index).asSprudelDslArgs())
 
 /** Chains a slice onto this [PatternMapperFn]; plays the given slice of the sample. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.slice(n: PatternLike, index: PatternLike): PatternMapperFn =
-    this._slice(listOf(n, index).asStrudelDslArgs())
+    this._slice(listOf(n, index).asSprudelDslArgs())
 
 // -- splice() ---------------------------------------------------------------------------------------------------------
 
-fun applySplice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applySplice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // Get number of slices (also used as speed multiplier)
     val nArg = args.getOrNull(0)
     val nVal = maxOf(1, nArg?.value?.asIntOrNull() ?: 1)
@@ -941,7 +941,7 @@ fun applySplice(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
 }
 
 internal val _splice by dslPatternMapper { args, callInfo -> { p -> p._splice(args, callInfo) } }
-internal val StrudelPattern._splice by dslPatternExtension { p, args, /* callInfo */ _ -> applySplice(p, args) }
+internal val SprudelPattern._splice by dslPatternExtension { p, args, /* callInfo */ _ -> applySplice(p, args) }
 internal val String._splice by dslStringExtension { p, args, callInfo -> p._splice(args, callInfo) }
 internal val PatternMapperFn._splice by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_splice(args, callInfo))
@@ -965,17 +965,17 @@ internal val PatternMapperFn._splice by dslPatternMapperExtension { m, args, cal
  * @category sampling
  * @tags splice, slice, chop, sample, speed, tempo
  */
-@StrudelDsl
-fun StrudelPattern.splice(n: PatternLike, index: PatternLike): StrudelPattern =
-    this._splice(listOf(n, index).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.splice(n: PatternLike, index: PatternLike): SprudelPattern =
+    this._splice(listOf(n, index).asSprudelDslArgs())
 
 /**
  * Plays a specific slice of the sample at the original tempo on a string pattern.
- * See [StrudelPattern.splice] for full documentation.
+ * See [SprudelPattern.splice] for full documentation.
  */
-@StrudelDsl
-fun String.splice(n: PatternLike, index: PatternLike): StrudelPattern =
-    this._splice(listOf(n, index).asStrudelDslArgs())
+@SprudelDsl
+fun String.splice(n: PatternLike, index: PatternLike): SprudelPattern =
+    this._splice(listOf(n, index).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that plays a specific slice at the original sample tempo.
@@ -991,10 +991,10 @@ fun String.splice(n: PatternLike, index: PatternLike): StrudelPattern =
  * @category sampling
  * @tags splice, slice, chop, sample, speed, tempo
  */
-@StrudelDsl
-fun splice(n: PatternLike, index: PatternLike): PatternMapperFn = _splice(listOf(n, index).asStrudelDslArgs())
+@SprudelDsl
+fun splice(n: PatternLike, index: PatternLike): PatternMapperFn = _splice(listOf(n, index).asSprudelDslArgs())
 
 /** Chains a splice onto this [PatternMapperFn]; plays the given slice at original sample tempo. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.splice(n: PatternLike, index: PatternLike): PatternMapperFn =
-    this._splice(listOf(n, index).asStrudelDslArgs())
+    this._splice(listOf(n, index).asSprudelDslArgs())

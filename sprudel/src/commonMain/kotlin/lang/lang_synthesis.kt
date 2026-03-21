@@ -2,16 +2,16 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftNumericField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangSynthesisInit = false
+var sprudelLangSynthesisInit = false
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FM Synthesis
@@ -82,11 +82,11 @@ note("c3*4")
 
 private val fmhMutation = voiceModifier { copy(fmh = it?.asDoubleOrNull()) }
 
-fun applyFmh(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmh(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, fmhMutation)
 }
 
-internal val StrudelPattern._fmh by dslPatternExtension { p, args, _ -> applyFmh(p, args) }
+internal val SprudelPattern._fmh by dslPatternExtension { p, args, _ -> applyFmh(p, args) }
 internal val String._fmh by dslStringExtension { p, args, callInfo -> p._fmh(args, callInfo) }
 internal val _fmh by dslPatternMapper { args, callInfo -> { p -> p._fmh(args, callInfo) } }
 internal val PatternMapperFn._fmh by dslPatternMapperExtension { m, args, callInfo ->
@@ -113,14 +113,14 @@ internal val PatternMapperFn._fmh by dslPatternMapperExtension { m, args, callIn
  * @category synthesis
  * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
  */
-@StrudelDsl
-fun StrudelPattern.fmh(ratio: PatternLike? = null): StrudelPattern =
-    this._fmh(listOfNotNull(ratio).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmh(ratio: PatternLike? = null): SprudelPattern =
+    this._fmh(listOfNotNull(ratio).asSprudelDslArgs())
 
 /** Sets the FM harmonicity ratio on a string pattern. */
-@StrudelDsl
-fun String.fmh(ratio: PatternLike? = null): StrudelPattern =
-    this._fmh(listOfNotNull(ratio).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmh(ratio: PatternLike? = null): SprudelPattern =
+    this._fmh(listOfNotNull(ratio).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets the FM harmonicity ratio on the source pattern.
@@ -132,31 +132,31 @@ fun String.fmh(ratio: PatternLike? = null): StrudelPattern =
  * @category synthesis
  * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
  */
-@StrudelDsl
+@SprudelDsl
 fun fmh(ratio: PatternLike? = null): PatternMapperFn =
-    _fmh(listOfNotNull(ratio).asStrudelDslArgs())
+    _fmh(listOfNotNull(ratio).asSprudelDslArgs())
 
 /** Chains a fmh onto this [PatternMapperFn]; sets the FM harmonicity ratio on the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.fmh(ratio: PatternLike? = null): PatternMapperFn =
-    this._fmh(listOfNotNull(ratio).asStrudelDslArgs())
+    this._fmh(listOfNotNull(ratio).asSprudelDslArgs())
 
 // -- fmattack() / fmatt() ---------------------------------------------------------------------------------------------
 
 private val fmattackMutation = voiceModifier { copy(fmAttack = it?.asDoubleOrNull()) }
 
-fun applyFmattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, fmattackMutation)
 }
 
-internal val StrudelPattern._fmattack by dslPatternExtension { p, args, _ -> applyFmattack(p, args) }
+internal val SprudelPattern._fmattack by dslPatternExtension { p, args, _ -> applyFmattack(p, args) }
 internal val String._fmattack by dslStringExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
 internal val _fmattack by dslPatternMapper { args, callInfo -> { p -> p._fmattack(args, callInfo) } }
 internal val PatternMapperFn._fmattack by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_fmattack(args, callInfo))
 }
 
-internal val StrudelPattern._fmatt by dslPatternExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
+internal val SprudelPattern._fmatt by dslPatternExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
 internal val String._fmatt by dslStringExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
 internal val _fmatt by dslPatternMapper { args, callInfo -> { p -> p._fmattack(args, callInfo) } }
 internal val PatternMapperFn._fmatt by dslPatternMapperExtension { m, args, callInfo ->
@@ -184,14 +184,14 @@ internal val PatternMapperFn._fmatt by dslPatternMapperExtension { m, args, call
  * @category synthesis
  * @tags fmattack, fmatt, FM, attack, envelope, synthesis
  */
-@StrudelDsl
-fun StrudelPattern.fmattack(seconds: PatternLike? = null): StrudelPattern =
-    this._fmattack(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmattack(seconds: PatternLike? = null): SprudelPattern =
+    this._fmattack(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Sets the FM modulation envelope attack time on a string pattern. */
-@StrudelDsl
-fun String.fmattack(seconds: PatternLike? = null): StrudelPattern =
-    this._fmattack(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmattack(seconds: PatternLike? = null): SprudelPattern =
+    this._fmattack(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets the FM modulation envelope attack time on the source pattern.
@@ -204,14 +204,14 @@ fun String.fmattack(seconds: PatternLike? = null): StrudelPattern =
  * @category synthesis
  * @tags fmattack, fmatt, FM, attack, envelope, synthesis
  */
-@StrudelDsl
+@SprudelDsl
 fun fmattack(seconds: PatternLike? = null): PatternMapperFn =
-    _fmattack(listOfNotNull(seconds).asStrudelDslArgs())
+    _fmattack(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Chains a fmattack onto this [PatternMapperFn]; sets the FM envelope attack time on the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.fmattack(seconds: PatternLike? = null): PatternMapperFn =
-    this._fmattack(listOfNotNull(seconds).asStrudelDslArgs())
+    this._fmattack(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Alias for [fmattack]. Sets the FM modulation envelope attack time.
@@ -220,14 +220,14 @@ fun PatternMapperFn.fmattack(seconds: PatternLike? = null): PatternMapperFn =
  * @category synthesis
  * @tags fmatt, fmattack, FM, attack, envelope, synthesis
  */
-@StrudelDsl
-fun StrudelPattern.fmatt(seconds: PatternLike? = null): StrudelPattern =
-    this._fmatt(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmatt(seconds: PatternLike? = null): SprudelPattern =
+    this._fmatt(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Alias for [fmattack] on a string pattern. */
-@StrudelDsl
-fun String.fmatt(seconds: PatternLike? = null): StrudelPattern =
-    this._fmatt(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmatt(seconds: PatternLike? = null): SprudelPattern =
+    this._fmatt(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [fmattack].
@@ -240,31 +240,31 @@ fun String.fmatt(seconds: PatternLike? = null): StrudelPattern =
  * @category synthesis
  * @tags fmatt, fmattack, FM, attack, envelope, synthesis
  */
-@StrudelDsl
+@SprudelDsl
 fun fmatt(seconds: PatternLike? = null): PatternMapperFn =
-    _fmatt(listOfNotNull(seconds).asStrudelDslArgs())
+    _fmatt(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Chains a fmatt onto this [PatternMapperFn]; alias for [PatternMapperFn.fmattack]. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.fmatt(seconds: PatternLike? = null): PatternMapperFn =
-    this._fmatt(listOfNotNull(seconds).asStrudelDslArgs())
+    this._fmatt(listOfNotNull(seconds).asSprudelDslArgs())
 
 // -- fmdecay() / fmdec() ----------------------------------------------------------------------------------------------
 
 private val fmdecayMutation = voiceModifier { copy(fmDecay = it?.asDoubleOrNull()) }
 
-fun applyFmdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, fmdecayMutation)
 }
 
-internal val StrudelPattern._fmdecay by dslPatternExtension { p, args, _ -> applyFmdecay(p, args) }
+internal val SprudelPattern._fmdecay by dslPatternExtension { p, args, _ -> applyFmdecay(p, args) }
 internal val String._fmdecay by dslStringExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
 internal val _fmdecay by dslPatternMapper { args, callInfo -> { p -> p._fmdecay(args, callInfo) } }
 internal val PatternMapperFn._fmdecay by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_fmdecay(args, callInfo))
 }
 
-internal val StrudelPattern._fmdec by dslPatternExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
+internal val SprudelPattern._fmdec by dslPatternExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
 internal val String._fmdec by dslStringExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
 internal val _fmdec by dslPatternMapper { args, callInfo -> { p -> p._fmdecay(args, callInfo) } }
 internal val PatternMapperFn._fmdec by dslPatternMapperExtension { m, args, callInfo ->
@@ -292,14 +292,14 @@ internal val PatternMapperFn._fmdec by dslPatternMapperExtension { m, args, call
  * @category synthesis
  * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
  */
-@StrudelDsl
-fun StrudelPattern.fmdecay(seconds: PatternLike? = null): StrudelPattern =
-    this._fmdecay(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmdecay(seconds: PatternLike? = null): SprudelPattern =
+    this._fmdecay(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Sets the FM modulation envelope decay time on a string pattern. */
-@StrudelDsl
-fun String.fmdecay(seconds: PatternLike? = null): StrudelPattern =
-    this._fmdecay(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmdecay(seconds: PatternLike? = null): SprudelPattern =
+    this._fmdecay(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets the FM modulation envelope decay time on the source pattern.
@@ -312,14 +312,14 @@ fun String.fmdecay(seconds: PatternLike? = null): StrudelPattern =
  * @category synthesis
  * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
  */
-@StrudelDsl
+@SprudelDsl
 fun fmdecay(seconds: PatternLike? = null): PatternMapperFn =
-    _fmdecay(listOfNotNull(seconds).asStrudelDslArgs())
+    _fmdecay(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Chains a fmdecay onto this [PatternMapperFn]; sets the FM envelope decay time on the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.fmdecay(seconds: PatternLike? = null): PatternMapperFn =
-    this._fmdecay(listOfNotNull(seconds).asStrudelDslArgs())
+    this._fmdecay(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Alias for [fmdecay]. Sets the FM modulation envelope decay time.
@@ -328,14 +328,14 @@ fun PatternMapperFn.fmdecay(seconds: PatternLike? = null): PatternMapperFn =
  * @category synthesis
  * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
  */
-@StrudelDsl
-fun StrudelPattern.fmdec(seconds: PatternLike? = null): StrudelPattern =
-    this._fmdec(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmdec(seconds: PatternLike? = null): SprudelPattern =
+    this._fmdec(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Alias for [fmdecay] on a string pattern. */
-@StrudelDsl
-fun String.fmdec(seconds: PatternLike? = null): StrudelPattern =
-    this._fmdec(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmdec(seconds: PatternLike? = null): SprudelPattern =
+    this._fmdec(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [fmdecay].
@@ -348,31 +348,31 @@ fun String.fmdec(seconds: PatternLike? = null): StrudelPattern =
  * @category synthesis
  * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
  */
-@StrudelDsl
+@SprudelDsl
 fun fmdec(seconds: PatternLike? = null): PatternMapperFn =
-    _fmdec(listOfNotNull(seconds).asStrudelDslArgs())
+    _fmdec(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Chains a fmdec onto this [PatternMapperFn]; alias for [PatternMapperFn.fmdecay]. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.fmdec(seconds: PatternLike? = null): PatternMapperFn =
-    this._fmdec(listOfNotNull(seconds).asStrudelDslArgs())
+    this._fmdec(listOfNotNull(seconds).asSprudelDslArgs())
 
 // -- fmsustain() / fmsus() --------------------------------------------------------------------------------------------
 
 private val fmsustainMutation = voiceModifier { copy(fmSustain = it?.asDoubleOrNull()) }
 
-fun applyFmsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, fmsustainMutation)
 }
 
-internal val StrudelPattern._fmsustain by dslPatternExtension { p, args, _ -> applyFmsustain(p, args) }
+internal val SprudelPattern._fmsustain by dslPatternExtension { p, args, _ -> applyFmsustain(p, args) }
 internal val String._fmsustain by dslStringExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
 internal val _fmsustain by dslPatternMapper { args, callInfo -> { p -> p._fmsustain(args, callInfo) } }
 internal val PatternMapperFn._fmsustain by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_fmsustain(args, callInfo))
 }
 
-internal val StrudelPattern._fmsus by dslPatternExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
+internal val SprudelPattern._fmsus by dslPatternExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
 internal val String._fmsus by dslStringExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
 internal val _fmsus by dslPatternMapper { args, callInfo -> { p -> p._fmsustain(args, callInfo) } }
 internal val PatternMapperFn._fmsus by dslPatternMapperExtension { m, args, callInfo ->
@@ -400,14 +400,14 @@ internal val PatternMapperFn._fmsus by dslPatternMapperExtension { m, args, call
  * @category synthesis
  * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
  */
-@StrudelDsl
-fun StrudelPattern.fmsustain(level: PatternLike? = null): StrudelPattern =
-    this._fmsustain(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmsustain(level: PatternLike? = null): SprudelPattern =
+    this._fmsustain(listOfNotNull(level).asSprudelDslArgs())
 
 /** Sets the FM modulation envelope sustain level on a string pattern. */
-@StrudelDsl
-fun String.fmsustain(level: PatternLike? = null): StrudelPattern =
-    this._fmsustain(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmsustain(level: PatternLike? = null): SprudelPattern =
+    this._fmsustain(listOfNotNull(level).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets the FM modulation envelope sustain level on the source pattern.
@@ -420,14 +420,14 @@ fun String.fmsustain(level: PatternLike? = null): StrudelPattern =
  * @category synthesis
  * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
  */
-@StrudelDsl
+@SprudelDsl
 fun fmsustain(level: PatternLike? = null): PatternMapperFn =
-    _fmsustain(listOfNotNull(level).asStrudelDslArgs())
+    _fmsustain(listOfNotNull(level).asSprudelDslArgs())
 
 /** Chains a fmsustain onto this [PatternMapperFn]; sets the FM envelope sustain level on the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.fmsustain(level: PatternLike? = null): PatternMapperFn =
-    this._fmsustain(listOfNotNull(level).asStrudelDslArgs())
+    this._fmsustain(listOfNotNull(level).asSprudelDslArgs())
 
 /**
  * Alias for [fmsustain]. Sets the FM modulation envelope sustain level.
@@ -436,14 +436,14 @@ fun PatternMapperFn.fmsustain(level: PatternLike? = null): PatternMapperFn =
  * @category synthesis
  * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
  */
-@StrudelDsl
-fun StrudelPattern.fmsus(level: PatternLike? = null): StrudelPattern =
-    this._fmsus(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmsus(level: PatternLike? = null): SprudelPattern =
+    this._fmsus(listOfNotNull(level).asSprudelDslArgs())
 
 /** Alias for [fmsustain] on a string pattern. */
-@StrudelDsl
-fun String.fmsus(level: PatternLike? = null): StrudelPattern =
-    this._fmsus(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmsus(level: PatternLike? = null): SprudelPattern =
+    this._fmsus(listOfNotNull(level).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [fmsustain].
@@ -456,29 +456,29 @@ fun String.fmsus(level: PatternLike? = null): StrudelPattern =
  * @category synthesis
  * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
  */
-@StrudelDsl
+@SprudelDsl
 fun fmsus(level: PatternLike? = null): PatternMapperFn =
-    _fmsus(listOfNotNull(level).asStrudelDslArgs())
+    _fmsus(listOfNotNull(level).asSprudelDslArgs())
 
 /** Chains a fmsus onto this [PatternMapperFn]; alias for [PatternMapperFn.fmsustain]. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.fmsus(level: PatternLike? = null): PatternMapperFn =
-    this._fmsus(listOfNotNull(level).asStrudelDslArgs())
+    this._fmsus(listOfNotNull(level).asSprudelDslArgs())
 
 // -- fmenv() / fmmod() ------------------------------------------------------------------------------------------------
 
 private val fmenvMutation = voiceModifier { copy(fmEnv = it?.asDoubleOrNull()) }
 
-fun applyFmenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyFmenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, fmenvMutation)
 }
 
 internal val _fmenv by dslPatternFunction { args, _ -> args.toPattern(fmenvMutation) }
-internal val StrudelPattern._fmenv by dslPatternExtension { p, args, _ -> applyFmenv(p, args) }
+internal val SprudelPattern._fmenv by dslPatternExtension { p, args, _ -> applyFmenv(p, args) }
 internal val String._fmenv by dslStringExtension { p, args, callInfo -> p._fmenv(args, callInfo) }
 
 internal val _fmmod by dslPatternFunction { args, callInfo -> _fmenv(args, callInfo) }
-internal val StrudelPattern._fmmod by dslPatternExtension { p, args, callInfo -> p._fmenv(args, callInfo) }
+internal val SprudelPattern._fmmod by dslPatternExtension { p, args, callInfo -> p._fmenv(args, callInfo) }
 internal val String._fmmod by dslStringExtension { p, args, callInfo -> p._fmmod(args, callInfo) }
 
 /**
@@ -500,16 +500,16 @@ internal val String._fmmod by dslStringExtension { p, args, callInfo -> p._fmmod
  * @category synthesis
  * @tags fmenv, fmmod, FM, modulation, depth, amount, synthesis
  */
-@StrudelDsl
-fun fmenv(depth: PatternLike): StrudelPattern = _fmenv(listOf(depth).asStrudelDslArgs())
+@SprudelDsl
+fun fmenv(depth: PatternLike): SprudelPattern = _fmenv(listOf(depth).asSprudelDslArgs())
 
 /** Sets the FM modulation depth on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmenv(depth: PatternLike): StrudelPattern = this._fmenv(listOf(depth).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmenv(depth: PatternLike): SprudelPattern = this._fmenv(listOf(depth).asSprudelDslArgs())
 
 /** Sets the FM modulation depth on a string pattern. */
-@StrudelDsl
-fun String.fmenv(depth: PatternLike): StrudelPattern = this._fmenv(listOf(depth).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmenv(depth: PatternLike): SprudelPattern = this._fmenv(listOf(depth).asSprudelDslArgs())
 
 /**
  * Alias for [fmenv]. Sets the FM modulation depth.
@@ -518,13 +518,13 @@ fun String.fmenv(depth: PatternLike): StrudelPattern = this._fmenv(listOf(depth)
  * @category synthesis
  * @tags fmmod, fmenv, FM, modulation, depth, amount, synthesis
  */
-@StrudelDsl
-fun fmmod(depth: PatternLike): StrudelPattern = _fmmod(listOf(depth).asStrudelDslArgs())
+@SprudelDsl
+fun fmmod(depth: PatternLike): SprudelPattern = _fmmod(listOf(depth).asSprudelDslArgs())
 
 /** Alias for [fmenv] on this pattern. */
-@StrudelDsl
-fun StrudelPattern.fmmod(depth: PatternLike): StrudelPattern = this._fmmod(listOf(depth).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.fmmod(depth: PatternLike): SprudelPattern = this._fmmod(listOf(depth).asSprudelDslArgs())
 
 /** Alias for [fmenv] on a string pattern. */
-@StrudelDsl
-fun String.fmmod(depth: PatternLike): StrudelPattern = this._fmmod(listOf(depth).asStrudelDslArgs())
+@SprudelDsl
+fun String.fmmod(depth: PatternLike): SprudelPattern = this._fmmod(listOf(depth).asSprudelDslArgs())

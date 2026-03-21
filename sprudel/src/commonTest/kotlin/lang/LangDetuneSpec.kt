@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangDetuneSpec : StringSpec({
@@ -19,15 +19,15 @@ class LangDetuneSpec : StringSpec({
             "pattern.detune(ctrl)" to
                     seq(pat).detune(ctrl),
             "script pattern.detune(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").detune("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").detune("$ctrl")"""),
             "string.detune(ctrl)" to
                     pat.detune(ctrl),
             "script string.detune(ctrl)" to
-                    StrudelPattern.compile(""""$pat".detune("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".detune("$ctrl")"""),
             "detune(ctrl)" to
                     seq(pat).apply(detune(ctrl)),
             "script detune(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(detune("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(detune("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("freqSpread") shouldBe 0.0
@@ -96,7 +96,7 @@ class LangDetuneSpec : StringSpec({
     }
 
     "detune() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").detune("0.1")""")
+        val p = SprudelPattern.compile("""note("c").detune("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.oscParams?.get("freqSpread") shouldBe 0.1

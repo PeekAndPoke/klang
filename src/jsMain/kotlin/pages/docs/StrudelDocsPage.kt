@@ -16,7 +16,7 @@ import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.*
-import io.peekandpoke.klang.sprudel.lang.docs.registerStrudelDocs
+import io.peekandpoke.klang.sprudel.lang.docs.registerSprudelDocs
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
@@ -181,7 +181,7 @@ class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     // Create isolated registry for Strudel docs only
     private val registry = KlangDocsRegistry().apply {
-        registerStrudelDocs(this)
+        registerSprudelDocs(this)
     }
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////

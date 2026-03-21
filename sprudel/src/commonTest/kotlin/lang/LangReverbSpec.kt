@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.addons.reverb
 
@@ -223,7 +223,7 @@ class LangReverbSpec : StringSpec({
     }
 
     "reverb functions work in compiled code" {
-        val p = StrudelPattern.compile("""note("c3").room(0.8).roomfade(0.5).roomlp(1000).iresponse("hall")""")
+        val p = SprudelPattern.compile("""note("c3").room(0.8).roomfade(0.5).roomlp(1000).iresponse("hall")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -243,15 +243,15 @@ class LangReverbSpec : StringSpec({
             "pattern.reverb(ctrl)" to
                     seq(pat).reverb(ctrl),
             "script pattern.reverb(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").reverb("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").reverb("$ctrl")"""),
             "string.reverb(ctrl)" to
                     pat.reverb(ctrl),
             "script string.reverb(ctrl)" to
-                    StrudelPattern.compile(""""$pat".reverb("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".reverb("$ctrl")"""),
             "reverb(ctrl)" to
                     seq(pat).apply(reverb(ctrl)),
             "script reverb(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(reverb("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(reverb("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -316,7 +316,7 @@ class LangReverbSpec : StringSpec({
     }
 
     "reverb() addon works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").reverb("0.8:2:0.5")""")
+        val p = SprudelPattern.compile("""note("c").reverb("0.8:2:0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {

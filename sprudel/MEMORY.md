@@ -1,10 +1,10 @@
-# Strudel — Memory
+# Sprudel — Memory
 
 ## Current Status
 
 - **Features**: ~263 / 303 implemented (~87%)
 - **Tests**: All JVM tests passing ✅
-- **KDoc**: All `@StrudelDsl` items fully documented across all `lang_*.kt` files ✅
+- **KDoc**: All `@SprudelDsl` items fully documented across all `lang_*.kt` files ✅
 
 ## Recent Work (2026-02)
 
@@ -12,7 +12,7 @@
 - `@sample` replaced with fenced ` ```KlangScript ``` ` blocks (348 occurrences)
 - KSP: `MethodTooLargeException` fixed by chunking generated map; `@alias` tag support added
 - `press()` / `pressBy()` implemented with `_innerJoin` control pattern support
-- `StrudelDocsPage` smart search (`category:`, `tag:`, `function:` prefixes + logical AND)
+- `SprudelDocsPage` smart search (`category:`, `tag:`, `function:` prefixes + logical AND)
 
 ## Lessons Learned
 

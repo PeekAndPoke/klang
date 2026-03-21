@@ -3,10 +3,10 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern.Companion.withContext
@@ -17,20 +17,20 @@ class ContextModifierPatternSpec : StringSpec({
 
     "ContextModifierPattern: Direct Instantiation" {
         // A pattern that returns its context's 'test_key' value as the note name
-        val contextAwarePattern = object : StrudelPattern.FixedWeight {
+        val contextAwarePattern = object : SprudelPattern.FixedWeight {
             override val numSteps: Rational = Rational.ONE
 
             override fun queryArcContextual(
                 from: Rational,
                 to: Rational,
                 ctx: QueryContext,
-            ): List<StrudelPatternEvent> {
+            ): List<SprudelPatternEvent> {
                 val testVal = ctx.getOrNull(testKey) ?: "none"
                 return listOf(
-                    StrudelPatternEvent(
+                    SprudelPatternEvent(
                         part = TimeSpan(from, to),
                         whole = TimeSpan(from, to),
-                        data = StrudelVoiceData.empty.copy(note = testVal)
+                        data = SprudelVoiceData.empty.copy(note = testVal)
                     )
                 )
             }
@@ -51,14 +51,14 @@ class ContextModifierPatternSpec : StringSpec({
 
         var capturedValue: String? = null
 
-        val inspector = object : StrudelPattern.FixedWeight {
+        val inspector = object : SprudelPattern.FixedWeight {
             override val numSteps: Rational = Rational.ONE
 
             override fun queryArcContextual(
                 from: Rational,
                 to: Rational,
                 ctx: QueryContext,
-            ): List<StrudelPatternEvent> {
+            ): List<SprudelPatternEvent> {
                 capturedValue = ctx.getOrNull(flagKey)
                 return base.queryArcContextual(from, to, ctx)
             }

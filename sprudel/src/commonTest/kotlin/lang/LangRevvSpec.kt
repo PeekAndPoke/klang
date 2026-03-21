@@ -7,7 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangRevvSpec : StringSpec({
@@ -17,11 +17,11 @@ class LangRevvSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.revv()" to s(pat).revv(),
-            "script pattern.revv()" to StrudelPattern.compile("""s("$pat").revv()"""),
+            "script pattern.revv()" to SprudelPattern.compile("""s("$pat").revv()"""),
             "string.revv()" to pat.revv(),
-            "script string.revv()" to StrudelPattern.compile(""""$pat".revv()"""),
+            "script string.revv()" to SprudelPattern.compile(""""$pat".revv()"""),
             "revv()" to s(pat).apply(revv()),
-            "script revv()" to StrudelPattern.compile("""s("$pat").apply(revv())"""),
+            "script revv()" to SprudelPattern.compile("""s("$pat").apply(revv())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -123,7 +123,7 @@ class LangRevvSpec : StringSpec({
     }
 
     "revv() works in compiled code" {
-        val pattern = StrudelPattern.compile("""note("a b c").revv()""")
+        val pattern = SprudelPattern.compile("""note("a b c").revv()""")
         val events = pattern?.queryArc(-1.0, 0.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 3

@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangSeqSpec : StringSpec({
 
@@ -78,7 +78,7 @@ class LangSeqSpec : StringSpec({
         events[3].whole.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
-    "seq() works as method on StrudelPattern" {
+    "seq() works as method on SprudelPattern" {
         // note("a").seq("b") -> sequence of a then b
         val p = note("a").seq("b")
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
@@ -104,7 +104,7 @@ class LangSeqSpec : StringSpec({
     }
 
     "seq() works in compiled code" {
-        val p = StrudelPattern.compile("""seq("a", "b")""")
+        val p = SprudelPattern.compile("""seq("a", "b")""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -114,7 +114,7 @@ class LangSeqSpec : StringSpec({
 
     "seq() works as method in compiled code" {
         // note("a").seq("b")
-        val p = StrudelPattern.compile("""note("a").seq("b")""")
+        val p = SprudelPattern.compile("""note("a").seq("b")""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -124,7 +124,7 @@ class LangSeqSpec : StringSpec({
 
     "seq() works as string extension in compiled code" {
         // "a".seq("b")
-        val p = StrudelPattern.compile(""""a".seq("b")""")
+        val p = SprudelPattern.compile(""""a".seq("b")""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2

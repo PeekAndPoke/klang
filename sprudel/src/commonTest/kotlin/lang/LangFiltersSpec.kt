@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.addons.notchf
 import io.peekandpoke.klang.sprudel.lang.addons.notchq
 import io.peekandpoke.klang.sprudel.lang.addons.nresonance
@@ -185,7 +185,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "lpf() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""seq("200 400").lpf()""")
+        val p = SprudelPattern.compile("""seq("200 400").lpf()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -194,7 +194,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "lpf() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").lpf("200 400")""")
+        val p = SprudelPattern.compile("""note("a b").lpf("200 400")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -203,7 +203,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "hpf() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""seq("100 250").hpf()""")
+        val p = SprudelPattern.compile("""seq("100 250").hpf()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -212,7 +212,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "hpf() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").hpf("100 250")""")
+        val p = SprudelPattern.compile("""note("a b").hpf("100 250")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -221,7 +221,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "bandf() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""seq("700 900").bandf()""")
+        val p = SprudelPattern.compile("""seq("700 900").bandf()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -230,7 +230,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "bandf() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").bandf("700 900")""")
+        val p = SprudelPattern.compile("""note("a b").bandf("700 900")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -239,7 +239,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "notchf() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""seq("400 500").notchf()""")
+        val p = SprudelPattern.compile("""seq("400 500").notchf()""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -248,7 +248,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "notchf() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").notchf("400 500")""")
+        val p = SprudelPattern.compile("""note("a b").notchf("400 500")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -257,7 +257,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "resonance() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile("""seq("200 400").lpf().resonance("1.5 2.5")""")
+        val p = SprudelPattern.compile("""seq("200 400").lpf().resonance("1.5 2.5")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -266,7 +266,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "resonance() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").lpf("200 400").resonance("1.5 2.5")""")
+        val p = SprudelPattern.compile("""note("a b").lpf("200 400").resonance("1.5 2.5")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -298,7 +298,7 @@ class LangFiltersSpec : StringSpec({
 
     // Compiled code tests for new resonance functions
     "hresonance() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").hpf("100 250").hresonance("1.5 2.5")""")
+        val p = SprudelPattern.compile("""note("a b").hpf("100 250").hresonance("1.5 2.5")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -307,7 +307,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "bandq() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").bandf("700 900").bandq("1.2 1.8")""")
+        val p = SprudelPattern.compile("""note("a b").bandf("700 900").bandq("1.2 1.8")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -316,7 +316,7 @@ class LangFiltersSpec : StringSpec({
     }
 
     "nresonance() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").notchf("400 500").nresonance("0.5 0.9")""")
+        val p = SprudelPattern.compile("""note("a b").notchf("400 500").nresonance("0.5 0.9")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

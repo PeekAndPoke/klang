@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangCoarseSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangCoarseSpec : StringSpec({
     "coarse dsl interface" {
         dslInterfaceTests(
             "pattern.coarse(amount)" to note("c").coarse(4),
-            "script pattern.coarse(amount)" to StrudelPattern.compile("""note("c").coarse(4)"""),
+            "script pattern.coarse(amount)" to SprudelPattern.compile("""note("c").coarse(4)"""),
             "string.coarse(amount)" to "c".coarse(4),
-            "script string.coarse(amount)" to StrudelPattern.compile(""""c".coarse(4)"""),
+            "script string.coarse(amount)" to SprudelPattern.compile(""""c".coarse(4)"""),
             "coarse(amount)" to note("c").apply(coarse(4)),
-            "script coarse(amount)" to StrudelPattern.compile("""note("c").apply(coarse(4))"""),
+            "script coarse(amount)" to SprudelPattern.compile("""note("c").apply(coarse(4))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
@@ -83,7 +83,7 @@ class LangCoarseSpec : StringSpec({
     }
 
     "coarse() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").coarse("2")""")
+        val p = SprudelPattern.compile("""note("c").coarse("2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.coarse shouldBe 2.0

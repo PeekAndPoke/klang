@@ -2,11 +2,11 @@
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel.lang.*
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 /**
  * ADDONS: Filter functions that are NOT available in the original strudel impl
@@ -16,7 +16,7 @@ import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArg
  * Accessing this property forces the initialization of this file's class,
  * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
  */
-var strudelLangFiltersAddonsInit = false
+var sprudelLangFiltersAddonsInit = false
 
 // -- notchf() ---------------------------------------------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ private val notchfMutation = voiceModifier {
     }
 }
 
-fun applyNotchf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNotchf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, notchfMutation) { src, ctrl ->
@@ -50,7 +50,7 @@ fun applyNotchf(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Strude
 }
 
 internal val _notchf by dslPatternMapper { args, callInfo -> { p -> p._notchf(args, callInfo) } }
-internal val StrudelPattern._notchf by dslPatternExtension { p, args, _ -> applyNotchf(p, args) }
+internal val SprudelPattern._notchf by dslPatternExtension { p, args, _ -> applyNotchf(p, args) }
 internal val String._notchf by dslStringExtension { p, args, callInfo -> p._notchf(args, callInfo) }
 internal val PatternMapperFn._notchf by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_notchf(args, callInfo))
@@ -85,9 +85,9 @@ internal val PatternMapperFn._notchf by dslPatternMapperExtension { m, args, cal
  * @category effects
  * @tags notchf, notch filter, filter, frequency
  */
-@StrudelDsl
-fun StrudelPattern.notchf(freq: PatternLike? = null): StrudelPattern =
-    this._notchf(listOfNotNull(freq).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.notchf(freq: PatternLike? = null): SprudelPattern =
+    this._notchf(listOfNotNull(freq).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then applies a Notch Filter.
@@ -102,9 +102,9 @@ fun StrudelPattern.notchf(freq: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags notchf, notch filter, filter, frequency
  */
-@StrudelDsl
-fun String.notchf(freq: PatternLike? = null): StrudelPattern =
-    this._notchf(listOfNotNull(freq).asStrudelDslArgs())
+@SprudelDsl
+fun String.notchf(freq: PatternLike? = null): SprudelPattern =
+    this._notchf(listOfNotNull(freq).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies a Notch Filter.
@@ -123,8 +123,8 @@ fun String.notchf(freq: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags notchf, notch filter, filter, frequency
  */
-@StrudelDsl
-fun notchf(freq: PatternLike? = null): PatternMapperFn = _notchf(listOfNotNull(freq).asStrudelDslArgs())
+@SprudelDsl
+fun notchf(freq: PatternLike? = null): PatternMapperFn = _notchf(listOfNotNull(freq).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that applies a Notch Filter after the previous mapper.
@@ -140,27 +140,27 @@ fun notchf(freq: PatternLike? = null): PatternMapperFn = _notchf(listOfNotNull(f
  * note("c3*4").firstOf(4, notchf(500).nresonance(10)) // notch chain
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.notchf(freq: PatternLike? = null): PatternMapperFn =
-    _notchf(listOfNotNull(freq).asStrudelDslArgs())
+    _notchf(listOfNotNull(freq).asSprudelDslArgs())
 
 // -- nresonance() / nres() - Notch Filter resonance ------------------------------------------------------------------
 
 private val nresonanceMutation = voiceModifier { copy(nresonance = it?.asDoubleOrNull()) }
 
-fun applyNresonance(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNresonance(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nresonanceMutation)
 }
 
 internal val _nresonance by dslPatternMapper { args, callInfo -> { p -> p._nresonance(args, callInfo) } }
-internal val StrudelPattern._nresonance by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
+internal val SprudelPattern._nresonance by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
 internal val String._nresonance by dslStringExtension { p, args, callInfo -> p._nresonance(args, callInfo) }
 internal val PatternMapperFn._nresonance by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nresonance(args, callInfo))
 }
 
 internal val _notchq by dslPatternMapper { args, callInfo -> { p -> p._notchq(args, callInfo) } }
-internal val StrudelPattern._notchq by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
+internal val SprudelPattern._notchq by dslPatternExtension { p, args, _ -> applyNresonance(p, args) }
 internal val String._notchq by dslStringExtension { p, args, callInfo -> p._notchq(args, callInfo) }
 internal val PatternMapperFn._notchq by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_notchq(args, callInfo))
@@ -196,9 +196,9 @@ internal val PatternMapperFn._notchq by dslPatternMapperExtension { m, args, cal
  * @category effects
  * @tags nresonance, nres, notch filter, Q, resonance
  */
-@StrudelDsl
-fun StrudelPattern.nresonance(q: PatternLike? = null): StrudelPattern =
-    this._nresonance(listOfNotNull(q).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nresonance(q: PatternLike? = null): SprudelPattern =
+    this._nresonance(listOfNotNull(q).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then sets notch filter resonance.
@@ -214,9 +214,9 @@ fun StrudelPattern.nresonance(q: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags nresonance, nres, notch filter, Q, resonance
  */
-@StrudelDsl
-fun String.nresonance(q: PatternLike? = null): StrudelPattern =
-    this._nresonance(listOfNotNull(q).asStrudelDslArgs())
+@SprudelDsl
+fun String.nresonance(q: PatternLike? = null): SprudelPattern =
+    this._nresonance(listOfNotNull(q).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that sets notch filter resonance.
@@ -236,8 +236,8 @@ fun String.nresonance(q: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags nresonance, nres, notch filter, Q, resonance
  */
-@StrudelDsl
-fun nresonance(q: PatternLike? = null): PatternMapperFn = _nresonance(listOfNotNull(q).asStrudelDslArgs())
+@SprudelDsl
+fun nresonance(q: PatternLike? = null): PatternMapperFn = _nresonance(listOfNotNull(q).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets notch resonance after the previous mapper.
@@ -253,9 +253,9 @@ fun nresonance(q: PatternLike? = null): PatternMapperFn = _nresonance(listOfNotN
  * note("c3*4").firstOf(4, notchf(1000).nresonance(15))  // narrow notch chain
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nresonance(q: PatternLike? = null): PatternMapperFn =
-    _nresonance(listOfNotNull(q).asStrudelDslArgs())
+    _nresonance(listOfNotNull(q).asSprudelDslArgs())
 
 /**
  * Alias for [nresonance]. Sets the notch filter Q.
@@ -276,9 +276,9 @@ fun PatternMapperFn.nresonance(q: PatternLike? = null): PatternMapperFn =
  * @category effects
  * @tags nres, nresonance, notch filter, Q
  */
-@StrudelDsl
-fun StrudelPattern.notchq(q: PatternLike? = null): StrudelPattern =
-    this._notchq(listOfNotNull(q).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.notchq(q: PatternLike? = null): SprudelPattern =
+    this._notchq(listOfNotNull(q).asSprudelDslArgs())
 
 /**
  * Alias for [nresonance] on a string pattern.
@@ -290,9 +290,9 @@ fun StrudelPattern.notchq(q: PatternLike? = null): StrudelPattern =
  * "c4".notchf(500).nres(10)         // alias for String.nresonance
  * ```
  */
-@StrudelDsl
-fun String.notchq(q: PatternLike? = null): StrudelPattern =
-    this._notchq(listOfNotNull(q).asStrudelDslArgs())
+@SprudelDsl
+fun String.notchq(q: PatternLike? = null): SprudelPattern =
+    this._notchq(listOfNotNull(q).asSprudelDslArgs())
 
 /**
  * Alias for [nresonance]. Returns a [PatternMapperFn] that sets notch filter resonance.
@@ -312,8 +312,8 @@ fun String.notchq(q: PatternLike? = null): StrudelPattern =
  * @category effects
  * @tags nres, nresonance, notch filter, Q
  */
-@StrudelDsl
-fun notchq(q: PatternLike? = null): PatternMapperFn = _notchq(listOfNotNull(q).asStrudelDslArgs())
+@SprudelDsl
+fun notchq(q: PatternLike? = null): PatternMapperFn = _notchq(listOfNotNull(q).asSprudelDslArgs())
 
 /**
  * Creates a chained [PatternMapperFn] that sets notch resonance (alias for [nresonance]) after the previous mapper.
@@ -329,27 +329,27 @@ fun notchq(q: PatternLike? = null): PatternMapperFn = _notchq(listOfNotNull(q).a
  * note("c3*4").firstOf(4, notchf(1000).nres(15))  // chain
  * ```
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.notchq(q: PatternLike? = null): PatternMapperFn =
-    _notchq(listOfNotNull(q).asStrudelDslArgs())
+    _notchq(listOfNotNull(q).asSprudelDslArgs())
 
 // -- nfattack() / nfa() - Notch Filter Envelope Attack -----------------------------------------------------------------
 
 private val nfattackMutation = voiceModifier { copy(nfattack = it?.asDoubleOrNull()) }
 
-fun applyNfattack(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfattackMutation)
 }
 
 internal val _nfattack by dslPatternMapper { args, callInfo -> { p -> p._nfattack(args, callInfo) } }
-internal val StrudelPattern._nfattack by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
+internal val SprudelPattern._nfattack by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
 internal val String._nfattack by dslStringExtension { p, args, callInfo -> p._nfattack(args, callInfo) }
 internal val PatternMapperFn._nfattack by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfattack(args, callInfo))
 }
 
 internal val _nfa by dslPatternMapper { args, callInfo -> { p -> p._nfa(args, callInfo) } }
-internal val StrudelPattern._nfa by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
+internal val SprudelPattern._nfa by dslPatternExtension { p, args, _ -> applyNfattack(p, args) }
 internal val String._nfa by dslStringExtension { p, args, callInfo -> p._nfa(args, callInfo) }
 internal val PatternMapperFn._nfa by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfa(args, callInfo))
@@ -372,29 +372,29 @@ internal val PatternMapperFn._nfa by dslPatternMapperExtension { m, args, callIn
  * ```
  *
  * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter attack time, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter attack time, or [SprudelPattern] when called on a pattern.
  * @param-tool seconds StrudelNfAttackSequenceEditor
  * @alias nfa
  * @category effects
  * @tags nfattack, nfa, notch filter, envelope, attack
  */
-@StrudelDsl
-fun StrudelPattern.nfattack(seconds: PatternLike? = null): StrudelPattern =
-    this._nfattack(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfattack(seconds: PatternLike? = null): SprudelPattern =
+    this._nfattack(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Sets the notch filter envelope attack time on a string pattern. */
-@StrudelDsl
-fun String.nfattack(seconds: PatternLike? = null): StrudelPattern =
-    this._nfattack(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfattack(seconds: PatternLike? = null): SprudelPattern =
+    this._nfattack(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope attack time. */
-@StrudelDsl
-fun nfattack(seconds: PatternLike? = null): PatternMapperFn = _nfattack(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun nfattack(seconds: PatternLike? = null): PatternMapperFn = _nfattack(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter envelope attack time after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfattack(seconds: PatternLike? = null): PatternMapperFn =
-    _nfattack(listOfNotNull(seconds).asStrudelDslArgs())
+    _nfattack(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Alias for [nfattack]. Sets the notch filter envelope attack time.
@@ -408,47 +408,47 @@ fun PatternMapperFn.nfattack(seconds: PatternLike? = null): PatternMapperFn =
  * ```
  *
  * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter attack time, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter attack time, or [SprudelPattern] when called on a pattern.
  * @param-tool seconds StrudelNfAttackSequenceEditor
  * @alias nfattack
  * @category effects
  * @tags nfa, nfattack, notch filter, envelope, attack
  */
-@StrudelDsl
-fun StrudelPattern.nfa(seconds: PatternLike? = null): StrudelPattern =
-    this._nfa(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfa(seconds: PatternLike? = null): SprudelPattern =
+    this._nfa(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Alias for [nfattack] on a string pattern. */
-@StrudelDsl
-fun String.nfa(seconds: PatternLike? = null): StrudelPattern =
-    this._nfa(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfa(seconds: PatternLike? = null): SprudelPattern =
+    this._nfa(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope attack time (alias for [nfattack]). */
-@StrudelDsl
-fun nfa(seconds: PatternLike? = null): PatternMapperFn = _nfa(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun nfa(seconds: PatternLike? = null): PatternMapperFn = _nfa(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets notch filter attack (alias for [nfattack]) after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfa(seconds: PatternLike? = null): PatternMapperFn =
-    _nfa(listOfNotNull(seconds).asStrudelDslArgs())
+    _nfa(listOfNotNull(seconds).asSprudelDslArgs())
 
 // -- nfdecay() / nfd() - Notch Filter Envelope Decay -------------------------------------------------------------------
 
 private val nfdecayMutation = voiceModifier { copy(nfdecay = it?.asDoubleOrNull()) }
 
-fun applyNfdecay(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfdecayMutation)
 }
 
 internal val _nfdecay by dslPatternMapper { args, callInfo -> { p -> p._nfdecay(args, callInfo) } }
-internal val StrudelPattern._nfdecay by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
+internal val SprudelPattern._nfdecay by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
 internal val String._nfdecay by dslStringExtension { p, args, callInfo -> p._nfdecay(args, callInfo) }
 internal val PatternMapperFn._nfdecay by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfdecay(args, callInfo))
 }
 
 internal val _nfd by dslPatternMapper { args, callInfo -> { p -> p._nfd(args, callInfo) } }
-internal val StrudelPattern._nfd by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
+internal val SprudelPattern._nfd by dslPatternExtension { p, args, _ -> applyNfdecay(p, args) }
 internal val String._nfd by dslStringExtension { p, args, callInfo -> p._nfd(args, callInfo) }
 internal val PatternMapperFn._nfd by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfd(args, callInfo))
@@ -471,29 +471,29 @@ internal val PatternMapperFn._nfd by dslPatternMapperExtension { m, args, callIn
  * ```
  *
  * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter decay time, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter decay time, or [SprudelPattern] when called on a pattern.
  * @param-tool seconds StrudelNfDecaySequenceEditor
  * @alias nfd
  * @category effects
  * @tags nfdecay, nfd, notch filter, envelope, decay
  */
-@StrudelDsl
-fun StrudelPattern.nfdecay(seconds: PatternLike? = null): StrudelPattern =
-    this._nfdecay(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfdecay(seconds: PatternLike? = null): SprudelPattern =
+    this._nfdecay(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Sets the notch filter envelope decay time on a string pattern. */
-@StrudelDsl
-fun String.nfdecay(seconds: PatternLike? = null): StrudelPattern =
-    this._nfdecay(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfdecay(seconds: PatternLike? = null): SprudelPattern =
+    this._nfdecay(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope decay time. */
-@StrudelDsl
-fun nfdecay(seconds: PatternLike? = null): PatternMapperFn = _nfdecay(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun nfdecay(seconds: PatternLike? = null): PatternMapperFn = _nfdecay(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter envelope decay time after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfdecay(seconds: PatternLike? = null): PatternMapperFn =
-    _nfdecay(listOfNotNull(seconds).asStrudelDslArgs())
+    _nfdecay(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Alias for [nfdecay]. Sets the notch filter envelope decay time.
@@ -507,47 +507,47 @@ fun PatternMapperFn.nfdecay(seconds: PatternLike? = null): PatternMapperFn =
  * ```
  *
  * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter decay time, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter decay time, or [SprudelPattern] when called on a pattern.
  * @param-tool seconds StrudelNfDecaySequenceEditor
  * @alias nfdecay
  * @category effects
  * @tags nfd, nfdecay, notch filter, envelope, decay
  */
-@StrudelDsl
-fun StrudelPattern.nfd(seconds: PatternLike? = null): StrudelPattern =
-    this._nfd(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfd(seconds: PatternLike? = null): SprudelPattern =
+    this._nfd(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Alias for [nfdecay] on a string pattern. */
-@StrudelDsl
-fun String.nfd(seconds: PatternLike? = null): StrudelPattern =
-    this._nfd(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfd(seconds: PatternLike? = null): SprudelPattern =
+    this._nfd(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope decay time (alias for [nfdecay]). */
-@StrudelDsl
-fun nfd(seconds: PatternLike? = null): PatternMapperFn = _nfd(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun nfd(seconds: PatternLike? = null): PatternMapperFn = _nfd(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets notch filter decay (alias for [nfdecay]) after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfd(seconds: PatternLike? = null): PatternMapperFn =
-    _nfd(listOfNotNull(seconds).asStrudelDslArgs())
+    _nfd(listOfNotNull(seconds).asSprudelDslArgs())
 
 // -- nfsustain() / nfs() - Notch Filter Envelope Sustain ---------------------------------------------------------------
 
 private val nfsustainMutation = voiceModifier { copy(nfsustain = it?.asDoubleOrNull()) }
 
-fun applyNfsustain(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfsustainMutation)
 }
 
 internal val _nfsustain by dslPatternMapper { args, callInfo -> { p -> p._nfsustain(args, callInfo) } }
-internal val StrudelPattern._nfsustain by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
+internal val SprudelPattern._nfsustain by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
 internal val String._nfsustain by dslStringExtension { p, args, callInfo -> p._nfsustain(args, callInfo) }
 internal val PatternMapperFn._nfsustain by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfsustain(args, callInfo))
 }
 
 internal val _nfs by dslPatternMapper { args, callInfo -> { p -> p._nfs(args, callInfo) } }
-internal val StrudelPattern._nfs by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
+internal val SprudelPattern._nfs by dslPatternExtension { p, args, _ -> applyNfsustain(p, args) }
 internal val String._nfs by dslStringExtension { p, args, callInfo -> p._nfs(args, callInfo) }
 internal val PatternMapperFn._nfs by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfs(args, callInfo))
@@ -571,29 +571,29 @@ internal val PatternMapperFn._nfs by dslPatternMapperExtension { m, args, callIn
  * ```
  *
  * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter sustain level, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter sustain level, or [SprudelPattern] when called on a pattern.
  * @param-tool level StrudelNfSustainSequenceEditor
  * @alias nfs
  * @category effects
  * @tags nfsustain, nfs, notch filter, envelope, sustain
  */
-@StrudelDsl
-fun StrudelPattern.nfsustain(level: PatternLike? = null): StrudelPattern =
-    this._nfsustain(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfsustain(level: PatternLike? = null): SprudelPattern =
+    this._nfsustain(listOfNotNull(level).asSprudelDslArgs())
 
 /** Sets the notch filter envelope sustain level on a string pattern. */
-@StrudelDsl
-fun String.nfsustain(level: PatternLike? = null): StrudelPattern =
-    this._nfsustain(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfsustain(level: PatternLike? = null): SprudelPattern =
+    this._nfsustain(listOfNotNull(level).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level. */
-@StrudelDsl
-fun nfsustain(level: PatternLike? = null): PatternMapperFn = _nfsustain(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun nfsustain(level: PatternLike? = null): PatternMapperFn = _nfsustain(listOfNotNull(level).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter sustain level after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfsustain(level: PatternLike? = null): PatternMapperFn =
-    _nfsustain(listOfNotNull(level).asStrudelDslArgs())
+    _nfsustain(listOfNotNull(level).asSprudelDslArgs())
 
 /**
  * Alias for [nfsustain]. Sets the notch filter envelope sustain level.
@@ -607,47 +607,47 @@ fun PatternMapperFn.nfsustain(level: PatternLike? = null): PatternMapperFn =
  * ```
  *
  * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter sustain level, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter sustain level, or [SprudelPattern] when called on a pattern.
  * @param-tool level StrudelNfSustainSequenceEditor
  * @alias nfsustain
  * @category effects
  * @tags nfs, nfsustain, notch filter, envelope, sustain
  */
-@StrudelDsl
-fun StrudelPattern.nfs(level: PatternLike? = null): StrudelPattern =
-    this._nfs(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfs(level: PatternLike? = null): SprudelPattern =
+    this._nfs(listOfNotNull(level).asSprudelDslArgs())
 
 /** Alias for [nfsustain] on a string pattern. */
-@StrudelDsl
-fun String.nfs(level: PatternLike? = null): StrudelPattern =
-    this._nfs(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfs(level: PatternLike? = null): SprudelPattern =
+    this._nfs(listOfNotNull(level).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level (alias for [nfsustain]). */
-@StrudelDsl
-fun nfs(level: PatternLike? = null): PatternMapperFn = _nfs(listOfNotNull(level).asStrudelDslArgs())
+@SprudelDsl
+fun nfs(level: PatternLike? = null): PatternMapperFn = _nfs(listOfNotNull(level).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets notch filter sustain (alias for [nfsustain]) after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfs(level: PatternLike? = null): PatternMapperFn =
-    _nfs(listOfNotNull(level).asStrudelDslArgs())
+    _nfs(listOfNotNull(level).asSprudelDslArgs())
 
 // -- nfrelease() / nfr() - Notch Filter Envelope Release ---------------------------------------------------------------
 
 private val nfreleaseMutation = voiceModifier { copy(nfrelease = it?.asDoubleOrNull()) }
 
-fun applyNfrelease(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfrelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfreleaseMutation)
 }
 
 internal val _nfrelease by dslPatternMapper { args, callInfo -> { p -> p._nfrelease(args, callInfo) } }
-internal val StrudelPattern._nfrelease by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
+internal val SprudelPattern._nfrelease by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
 internal val String._nfrelease by dslStringExtension { p, args, callInfo -> p._nfrelease(args, callInfo) }
 internal val PatternMapperFn._nfrelease by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfrelease(args, callInfo))
 }
 
 internal val _nfr by dslPatternMapper { args, callInfo -> { p -> p._nfr(args, callInfo) } }
-internal val StrudelPattern._nfr by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
+internal val SprudelPattern._nfr by dslPatternExtension { p, args, _ -> applyNfrelease(p, args) }
 internal val String._nfr by dslStringExtension { p, args, callInfo -> p._nfr(args, callInfo) }
 internal val PatternMapperFn._nfr by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfr(args, callInfo))
@@ -670,29 +670,29 @@ internal val PatternMapperFn._nfr by dslPatternMapperExtension { m, args, callIn
  * ```
  *
  * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter release time, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter release time, or [SprudelPattern] when called on a pattern.
  * @param-tool seconds StrudelNfReleaseSequenceEditor
  * @alias nfr
  * @category effects
  * @tags nfrelease, nfr, notch filter, envelope, release
  */
-@StrudelDsl
-fun StrudelPattern.nfrelease(seconds: PatternLike? = null): StrudelPattern =
-    this._nfrelease(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfrelease(seconds: PatternLike? = null): SprudelPattern =
+    this._nfrelease(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Sets the notch filter envelope release time on a string pattern. */
-@StrudelDsl
-fun String.nfrelease(seconds: PatternLike? = null): StrudelPattern =
-    this._nfrelease(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfrelease(seconds: PatternLike? = null): SprudelPattern =
+    this._nfrelease(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope release time. */
-@StrudelDsl
-fun nfrelease(seconds: PatternLike? = null): PatternMapperFn = _nfrelease(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun nfrelease(seconds: PatternLike? = null): PatternMapperFn = _nfrelease(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter envelope release time after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfrelease(seconds: PatternLike? = null): PatternMapperFn =
-    _nfrelease(listOfNotNull(seconds).asStrudelDslArgs())
+    _nfrelease(listOfNotNull(seconds).asSprudelDslArgs())
 
 /**
  * Alias for [nfrelease]. Sets the notch filter envelope release time.
@@ -706,47 +706,47 @@ fun PatternMapperFn.nfrelease(seconds: PatternLike? = null): PatternMapperFn =
  * ```
  *
  * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter release time, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter release time, or [SprudelPattern] when called on a pattern.
  * @param-tool seconds StrudelNfReleaseSequenceEditor
  * @alias nfrelease
  * @category effects
  * @tags nfr, nfrelease, notch filter, envelope, release
  */
-@StrudelDsl
-fun StrudelPattern.nfr(seconds: PatternLike? = null): StrudelPattern =
-    this._nfr(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfr(seconds: PatternLike? = null): SprudelPattern =
+    this._nfr(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Alias for [nfrelease] on a string pattern. */
-@StrudelDsl
-fun String.nfr(seconds: PatternLike? = null): StrudelPattern =
-    this._nfr(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfr(seconds: PatternLike? = null): SprudelPattern =
+    this._nfr(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope release time (alias for [nfrelease]). */
-@StrudelDsl
-fun nfr(seconds: PatternLike? = null): PatternMapperFn = _nfr(listOfNotNull(seconds).asStrudelDslArgs())
+@SprudelDsl
+fun nfr(seconds: PatternLike? = null): PatternMapperFn = _nfr(listOfNotNull(seconds).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets notch filter release (alias for [nfrelease]) after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfr(seconds: PatternLike? = null): PatternMapperFn =
-    _nfr(listOfNotNull(seconds).asStrudelDslArgs())
+    _nfr(listOfNotNull(seconds).asSprudelDslArgs())
 
 // -- nfenv() / nfe() - Notch Filter Envelope Depth ---------------------------------------------------------------------
 
 private val nfenvMutation = voiceModifier { copy(nfenv = it?.asDoubleOrNull()) }
 
-fun applyNfenv(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyNfenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, nfenvMutation)
 }
 
 internal val _nfenv by dslPatternMapper { args, callInfo -> { p -> p._nfenv(args, callInfo) } }
-internal val StrudelPattern._nfenv by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
+internal val SprudelPattern._nfenv by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
 internal val String._nfenv by dslStringExtension { p, args, callInfo -> p._nfenv(args, callInfo) }
 internal val PatternMapperFn._nfenv by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfenv(args, callInfo))
 }
 
 internal val _nfe by dslPatternMapper { args, callInfo -> { p -> p._nfe(args, callInfo) } }
-internal val StrudelPattern._nfe by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
+internal val SprudelPattern._nfe by dslPatternExtension { p, args, _ -> applyNfenv(p, args) }
 internal val String._nfe by dslStringExtension { p, args, callInfo -> p._nfe(args, callInfo) }
 internal val PatternMapperFn._nfe by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_nfe(args, callInfo))
@@ -790,29 +790,29 @@ internal val PatternMapperFn._nfe by dslPatternMapperExtension { m, args, callIn
  * ```
  *
  * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth StrudelNfEnvSequenceEditor
  * @alias nfe
  * @category effects
  * @tags nfenv, nfe, notch filter, envelope, depth, modulation
  */
-@StrudelDsl
-fun StrudelPattern.nfenv(depth: PatternLike? = null): StrudelPattern =
-    this._nfenv(listOfNotNull(depth).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfenv(depth: PatternLike? = null): SprudelPattern =
+    this._nfenv(listOfNotNull(depth).asSprudelDslArgs())
 
 /** Sets the notch filter envelope depth/amount on a string pattern. */
-@StrudelDsl
-fun String.nfenv(depth: PatternLike? = null): StrudelPattern =
-    this._nfenv(listOfNotNull(depth).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfenv(depth: PatternLike? = null): SprudelPattern =
+    this._nfenv(listOfNotNull(depth).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope depth. */
-@StrudelDsl
-fun nfenv(depth: PatternLike? = null): PatternMapperFn = _nfenv(listOfNotNull(depth).asStrudelDslArgs())
+@SprudelDsl
+fun nfenv(depth: PatternLike? = null): PatternMapperFn = _nfenv(listOfNotNull(depth).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets the notch filter envelope depth after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfenv(depth: PatternLike? = null): PatternMapperFn =
-    _nfenv(listOfNotNull(depth).asStrudelDslArgs())
+    _nfenv(listOfNotNull(depth).asSprudelDslArgs())
 
 /**
  * Alias for [nfenv]. Sets the notch filter envelope depth.
@@ -826,26 +826,26 @@ fun PatternMapperFn.nfenv(depth: PatternLike? = null): PatternMapperFn =
  * ```
  *
  * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
- * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [StrudelPattern] when called on a pattern.
+ * @return A [PatternMapperFn] that sets the notch filter envelope depth, or [SprudelPattern] when called on a pattern.
  * @param-tool depth StrudelNfEnvSequenceEditor
  * @alias nfenv
  * @category effects
  * @tags nfe, nfenv, notch filter, envelope, depth, modulation
  */
-@StrudelDsl
-fun StrudelPattern.nfe(depth: PatternLike? = null): StrudelPattern =
-    this._nfe(listOfNotNull(depth).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.nfe(depth: PatternLike? = null): SprudelPattern =
+    this._nfe(listOfNotNull(depth).asSprudelDslArgs())
 
 /** Alias for [nfenv] on a string pattern. */
-@StrudelDsl
-fun String.nfe(depth: PatternLike? = null): StrudelPattern =
-    this._nfe(listOfNotNull(depth).asStrudelDslArgs())
+@SprudelDsl
+fun String.nfe(depth: PatternLike? = null): SprudelPattern =
+    this._nfe(listOfNotNull(depth).asSprudelDslArgs())
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope depth (alias for [nfenv]). */
-@StrudelDsl
-fun nfe(depth: PatternLike? = null): PatternMapperFn = _nfe(listOfNotNull(depth).asStrudelDslArgs())
+@SprudelDsl
+fun nfe(depth: PatternLike? = null): PatternMapperFn = _nfe(listOfNotNull(depth).asSprudelDslArgs())
 
 /** Creates a chained [PatternMapperFn] that sets notch filter envelope depth (alias for [nfenv]) after the previous mapper. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.nfe(depth: PatternLike? = null): PatternMapperFn =
-    _nfe(listOfNotNull(depth).asStrudelDslArgs())
+    _nfe(listOfNotNull(depth).asSprudelDslArgs())

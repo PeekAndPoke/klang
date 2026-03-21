@@ -6,12 +6,12 @@ import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.ast.CallInfo
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.sprudel.pattern.*
 
@@ -19,9 +19,9 @@ import io.peekandpoke.klang.sprudel.pattern.*
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangHelpersInit = false
+var sprudelLangHelpersInit = false
 
 // --- Source ID Generation ---
 
@@ -48,38 +48,38 @@ internal fun generateSourceId(sourceLocation: SourceLocation? = null): String {
 
 // --- Registry ---
 
-object StrudelRegistry {
+object SprudelRegistry {
     val symbols = mutableMapOf<String, Any>()
-    val patternCreationFunctions = mutableMapOf<String, StrudelDslTopLevelFn<StrudelPattern>>()
-    val patternExtensionMethods = mutableMapOf<String, StrudelDslPatternExtFn<StrudelPattern>>()
-    val stringExtensionMethods = mutableMapOf<String, StrudelDslPatternExtFn<String>>()
-    val patternMapperFunctions = mutableMapOf<String, StrudelDslTopLevelFn<PatternMapperFn>>()
-    val patternMapperExtensionMethods = mutableMapOf<String, StrudelDslPatternMapperExtFn<PatternMapperFn>>()
+    val patternCreationFunctions = mutableMapOf<String, SprudelDslTopLevelFn<SprudelPattern>>()
+    val patternExtensionMethods = mutableMapOf<String, SprudelDslPatternExtFn<SprudelPattern>>()
+    val stringExtensionMethods = mutableMapOf<String, SprudelDslPatternExtFn<String>>()
+    val patternMapperFunctions = mutableMapOf<String, SprudelDslTopLevelFn<PatternMapperFn>>()
+    val patternMapperExtensionMethods = mutableMapOf<String, SprudelDslPatternMapperExtFn<PatternMapperFn>>()
 }
 
-data class StrudelDslArg<out T>(
+data class SprudelDslArg<out T>(
     val value: T,
     val location: SourceLocation?,
 ) {
     companion object {
-        fun <T> of(value: T): StrudelDslArg<T> = StrudelDslArg(value = value, location = null)
+        fun <T> of(value: T): SprudelDslArg<T> = SprudelDslArg(value = value, location = null)
 
-        fun Any?.asStrudelDslArg(location: SourceLocation? = null): StrudelDslArg<Any?> {
-            return StrudelDslArg(value = this, location = location)
+        fun Any?.asSprudelDslArg(location: SourceLocation? = null): SprudelDslArg<Any?> {
+            return SprudelDslArg(value = this, location = location)
         }
 
-        fun List<Any?>.asStrudelDslArgs(callInfo: CallInfo? = null): List<StrudelDslArg<Any?>> {
+        fun List<Any?>.asSprudelDslArgs(callInfo: CallInfo? = null): List<SprudelDslArg<Any?>> {
             return mapIndexed { index, arg ->
                 when (arg) {
-                    is StrudelDslArg<*> -> arg
-                    else -> arg.asStrudelDslArg(location = callInfo?.paramLocations?.getOrNull(index))
+                    is SprudelDslArg<*> -> arg
+                    else -> arg.asSprudelDslArg(location = callInfo?.paramLocations?.getOrNull(index))
                 }
             }
         }
     }
 }
 
-fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): ControlValueProvider {
+fun <T> SprudelDslArg<T>?.asControlValueProvider(default: SprudelVoiceValue): ControlValueProvider {
     val arg = this
     val argVal = arg?.value ?: return ControlValueProvider.Static(default)
     val argRat = argVal.asRationalOrNull()?.asVoiceValue()
@@ -89,11 +89,11 @@ fun <T> StrudelDslArg<T>?.asControlValueProvider(default: StrudelVoiceValue): Co
     }
 
     val pattern = when (argVal) {
-        is StrudelPattern -> argVal
+        is SprudelPattern -> argVal
 
         else -> parseMiniNotation(arg) { text, loc ->
             AtomicPattern(
-                data = StrudelVoiceData.empty.voiceValueModifier(text),
+                data = SprudelVoiceData.empty.voiceValueModifier(text),
                 sourceLocations = loc
             )
         }
@@ -115,7 +115,7 @@ internal fun Any.asRationalOrNull(): Rational? = when (this) {
     is Rational -> this
     is Number -> Rational(this.toDouble())
     is String -> this.toDoubleOrNull()?.let { Rational(it) }
-    is StrudelVoiceValue -> this.asRational
+    is SprudelVoiceValue -> this.asRational
     else -> null
 }
 
@@ -124,7 +124,7 @@ internal fun Any.asDoubleOrNull(): Double? = when (this) {
     is Rational -> this.toDouble()
     is Number -> this.toDouble()
     is String -> this.toDoubleOrNull()
-    is StrudelVoiceValue -> this.asDouble
+    is SprudelVoiceValue -> this.asDouble
     else -> null
 }
 
@@ -133,7 +133,7 @@ internal fun Any.asIntOrNull(): Int? = when (this) {
     is Rational -> this.toInt()
     is Number -> this.toInt()
     is String -> this.toDoubleOrNull()?.toInt()
-    is StrudelVoiceValue -> this.asInt
+    is SprudelVoiceValue -> this.asInt
     else -> null
 }
 
@@ -160,13 +160,13 @@ fun PatternMapperFn.chain(next: PatternMapperFn?): PatternMapperFn {
 }
 
 /** Converts a dsl arg into a pattern mapper, and chains it with the current mapper */
-fun PatternMapperFn.chain(arg: StrudelDslArg<Any?>?): PatternMapperFn = chain(arg.toPatternMapper())
+fun PatternMapperFn.chain(arg: SprudelDslArg<Any?>?): PatternMapperFn = chain(arg.toPatternMapper())
 
 /** Creates a pattern mapper */
 fun patternMapper(mapper: Any?): PatternMapperFn? {
     return when (mapper) {
         // If we have a pattern we simple return it
-        is StrudelPattern -> { _ -> mapper }
+        is SprudelPattern -> { _ -> mapper }
 
         // Is it already a mapper function?
         is Function1<*, *> -> {
@@ -175,7 +175,7 @@ fun patternMapper(mapper: Any?): PatternMapperFn? {
                     @Suppress("UNCHECKED_CAST")
                     val result: Any? = (mapper as? PatternMapperFn)?.invoke(input)
 
-                    (result as? StrudelPattern) ?: input
+                    (result as? SprudelPattern) ?: input
                 } catch (e: Exception) {
                     println("Error while invoking pattern mapper: $mapper: \n${e.stackTraceToString()}")
                     input
@@ -187,13 +187,13 @@ fun patternMapper(mapper: Any?): PatternMapperFn? {
     }
 }
 
-fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPattern>> {
+fun List<SprudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, SprudelPattern>> {
     val args = this
 
     return args.mapNotNull { arg ->
         when (val argVal = arg.value) {
             // Case: pattern (defaults to 1 cycle)
-            is StrudelPattern -> 1.0 to argVal
+            is SprudelPattern -> 1.0 to argVal
 
             // Case: [duration, pattern] or [pattern]
             is List<*> -> {
@@ -215,9 +215,9 @@ fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPatt
                 if (dur <= 0.0) return@mapNotNull null
 
                 val pat = when (patVal) {
-                    is StrudelPattern -> patVal
+                    is SprudelPattern -> patVal
                     else -> parseMiniNotation(patVal.toString()) { text, _ ->
-                        AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+                        AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
                     }
                 }
 
@@ -232,16 +232,16 @@ fun List<StrudelDslArg<Any?>>.parseWeightedArgs(): List<Pair<Double, StrudelPatt
 /**
  * Safely converts a single argument into a [PatternMapperFn].
  */
-fun StrudelDslArg<Any?>?.toPatternMapper(): PatternMapperFn? = patternMapper(this?.value)
+fun SprudelDslArg<Any?>?.toPatternMapper(): PatternMapperFn? = patternMapper(this?.value)
 
 /**
  * Extracts choice arguments for choose* functions.
  * If args is a single List, unwraps it. Otherwise returns args as-is.
  */
-fun List<StrudelDslArg<Any?>>.extractChoiceArgs(): List<StrudelDslArg<Any?>> {
+fun List<SprudelDslArg<Any?>>.extractChoiceArgs(): List<SprudelDslArg<Any?>> {
     return if (size == 1 && get(0).value is List<*>) {
         @Suppress("UNCHECKED_CAST")
-        (get(0).value as List<Any?>).asStrudelDslArgs()
+        (get(0).value as List<Any?>).asSprudelDslArgs()
     } else {
         this
     }
@@ -252,15 +252,15 @@ fun List<StrudelDslArg<Any?>>.extractChoiceArgs(): List<StrudelDslArg<Any?>> {
  * Expects arguments in the format: [[item1, weight1], [item2, weight2], ...]
  * Returns a pair of (items, weights) lists.
  */
-fun List<StrudelDslArg<Any?>>.extractWeightedPairs(): Pair<List<StrudelDslArg<Any?>>, List<StrudelDslArg<Any?>>> {
-    val items = mutableListOf<StrudelDslArg<Any?>>()
-    val weights = mutableListOf<StrudelDslArg<Any?>>()
+fun List<SprudelDslArg<Any?>>.extractWeightedPairs(): Pair<List<SprudelDslArg<Any?>>, List<SprudelDslArg<Any?>>> {
+    val items = mutableListOf<SprudelDslArg<Any?>>()
+    val weights = mutableListOf<SprudelDslArg<Any?>>()
 
     val inputs = if (
         size == 1 && get(0).value is List<*> && (get(0).value as List<*>).all { it is List<*> }
     ) {
         @Suppress("UNCHECKED_CAST")
-        (get(0).value as List<Any?>).asStrudelDslArgs()
+        (get(0).value as List<Any?>).asSprudelDslArgs()
     } else {
         this
     }
@@ -268,26 +268,26 @@ fun List<StrudelDslArg<Any?>>.extractWeightedPairs(): Pair<List<StrudelDslArg<An
     inputs.forEach { item ->
         if (item.value is List<*> && item.value.size >= 2) {
             val list = item.value
-            items.add(StrudelDslArg(list[0], null))
-            weights.add(StrudelDslArg(list[1], null))
+            items.add(SprudelDslArg(list[0], null))
+            weights.add(SprudelDslArg(list[1], null))
         }
     }
     return items to weights
 }
 
 /**
- * Converts a single argument into a StrudelPattern.
+ * Converts a single argument into a SprudelPattern.
  */
-fun StrudelDslArg<Any?>.toPattern(modify: VoiceModifierFn = voiceValueModifier): StrudelPattern =
+fun SprudelDslArg<Any?>.toPattern(modify: VoiceModifierFn = voiceValueModifier): SprudelPattern =
     listOf(this).toPattern(modify)
 
 /**
- * Converts a list of arguments into a single StrudelPattern.
+ * Converts a list of arguments into a single SprudelPattern.
  * - Single Pattern arg -> returns it.
  * - Single String/Number -> parses to AtomicPattern using [modify].
  * - Multiple args -> returns a SequencePattern of the parsed items.
  */
-fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceModifierFn = voiceValueModifier): StrudelPattern {
+fun List<SprudelDslArg<Any?>>.toPattern(modify: VoiceModifierFn = voiceValueModifier): SprudelPattern {
     val patterns = this.toListOfPatterns(modify)
 
     return when {
@@ -298,11 +298,11 @@ fun List<StrudelDslArg<Any?>>.toPattern(modify: VoiceModifierFn = voiceValueModi
 }
 
 /**
- * Recursively flattens arguments into a list of StrudelPatterns.
+ * Recursively flattens arguments into a list of SprudelPatterns.
  */
-internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
+internal fun List<SprudelDslArg<Any?>>.toListOfPatterns(
     modify: VoiceModifierFn = voiceValueModifier,
-): List<StrudelPattern> {
+): List<SprudelPattern> {
     // Generate a unique source ID for all patterns created from this call
     // This ensures all events from expressions like sound("bd hh") share the same source ID
     // Use first available source location for stable IDs across code re-evaluation
@@ -311,7 +311,7 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
 
     val atomFactory = { text: Any?, sourceLocations: SourceLocationChain? ->
         AtomicPattern(
-            data = StrudelVoiceData.empty.modify(text).copy(patternId = sourceId),
+            data = SprudelVoiceData.empty.modify(text).copy(patternId = sourceId),
             sourceLocations = sourceLocations,
         )
     }
@@ -321,9 +321,9 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
         val locChain = loc?.asChain()
 
         when (val arg = dslArg.value) {
-            is StrudelPattern -> arg
+            is SprudelPattern -> arg
 
-            is StrudelPatternEvent -> AtomicPattern(arg.data, locChain)
+            is SprudelPatternEvent -> AtomicPattern(arg.data, locChain)
 
             // -- Plain values from Kotlin DSL - no location information -----------------------------------------------
             is String -> parseMiniNotation(input = arg, baseLocation = loc, atomFactory = atomFactory)
@@ -337,8 +337,8 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
             is List<*> -> {
                 val innerPatterns = arg.map {
                     when (it) {
-                        is StrudelDslArg<*> -> it
-                        else -> StrudelDslArg(value = it, location = loc)
+                        is SprudelDslArg<*> -> it
+                        else -> SprudelDslArg(value = it, location = loc)
                     }
                 }.toListOfPatterns(modify)
 
@@ -357,11 +357,11 @@ internal fun List<StrudelDslArg<Any?>>.toListOfPatterns(
  * The structure comes from [this] pattern.
  * The values are taken from [control] pattern sampled at each event.
  */
-fun StrudelPattern.applyControl(
-    control: StrudelPattern,
-    mapper: (StrudelVoiceData) -> StrudelVoiceData,
+fun SprudelPattern.applyControl(
+    control: SprudelPattern,
+    mapper: (SprudelVoiceData) -> SprudelVoiceData,
     combiner: VoiceMergerFn,
-): StrudelPattern = ControlPattern(
+): SprudelPattern = ControlPattern(
     source = this,
     control = control,
     mapper = mapper,

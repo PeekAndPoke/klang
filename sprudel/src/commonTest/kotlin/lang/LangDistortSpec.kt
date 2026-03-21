@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangDistortSpec : StringSpec({
@@ -14,22 +14,22 @@ class LangDistortSpec : StringSpec({
     "distort dsl interface" {
         dslInterfaceTests(
             "pattern.distort(amount)" to note("c").distort(0.5),
-            "script pattern.distort(amount)" to StrudelPattern.compile("""note("c").distort(0.5)"""),
+            "script pattern.distort(amount)" to SprudelPattern.compile("""note("c").distort(0.5)"""),
             "string.distort(amount)" to "c".distort(0.5),
-            "script string.distort(amount)" to StrudelPattern.compile(""""c".distort(0.5)"""),
+            "script string.distort(amount)" to SprudelPattern.compile(""""c".distort(0.5)"""),
             "distort(amount)" to note("c").apply(distort(0.5)),
-            "script distort(amount)" to StrudelPattern.compile("""note("c").apply(distort(0.5))"""),
+            "script distort(amount)" to SprudelPattern.compile("""note("c").apply(distort(0.5))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
     "dist dsl interface" {
         dslInterfaceTests(
             "pattern.dist(amount)" to note("c").dist(0.5),
-            "script pattern.dist(amount)" to StrudelPattern.compile("""note("c").dist(0.5)"""),
+            "script pattern.dist(amount)" to SprudelPattern.compile("""note("c").dist(0.5)"""),
             "string.dist(amount)" to "c".dist(0.5),
-            "script string.dist(amount)" to StrudelPattern.compile(""""c".dist(0.5)"""),
+            "script string.dist(amount)" to SprudelPattern.compile(""""c".dist(0.5)"""),
             "dist(amount)" to note("c").apply(dist(0.5)),
-            "script dist(amount)" to StrudelPattern.compile("""note("c").apply(dist(0.5))"""),
+            "script dist(amount)" to SprudelPattern.compile("""note("c").apply(dist(0.5))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
@@ -94,7 +94,7 @@ class LangDistortSpec : StringSpec({
     }
 
     "distort() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").distort("0.5")""")
+        val p = SprudelPattern.compile("""note("c").distort("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.distort shouldBe 0.5
@@ -135,7 +135,7 @@ class LangDistortSpec : StringSpec({
     }
 
     "dist() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").dist("3.0")""")
+        val p = SprudelPattern.compile("""note("c").dist("3.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.distort shouldBe 3.0
@@ -175,7 +175,7 @@ class LangDistortSpec : StringSpec({
     }
 
     "distort() combined works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").distort("0.5:soft")""")
+        val p = SprudelPattern.compile("""note("c").distort("0.5:soft")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {
@@ -229,13 +229,13 @@ class LangDistortSpec : StringSpec({
         dslInterfaceTests(
             "pattern.distortshape(shape)" to note("c").distortshape("fold"),
             "script pattern.distortshape(shape)" to
-                    StrudelPattern.compile("""note("c").distortshape("fold")"""),
+                    SprudelPattern.compile("""note("c").distortshape("fold")"""),
             "string.distortshape(shape)" to "c".distortshape("fold"),
             "script string.distortshape(shape)" to
-                    StrudelPattern.compile(""""c".distortshape("fold")"""),
+                    SprudelPattern.compile(""""c".distortshape("fold")"""),
             "distortshape(shape)" to note("c").apply(distortshape("fold")),
             "script distortshape(shape)" to
-                    StrudelPattern.compile("""note("c").apply(distortshape("fold"))"""),
+                    SprudelPattern.compile("""note("c").apply(distortshape("fold"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.distortShape shouldBe "fold"
@@ -246,13 +246,13 @@ class LangDistortSpec : StringSpec({
         dslInterfaceTests(
             "pattern.distshape(shape)" to note("c").distshape("hard"),
             "script pattern.distshape(shape)" to
-                    StrudelPattern.compile("""note("c").distshape("hard")"""),
+                    SprudelPattern.compile("""note("c").distshape("hard")"""),
             "string.distshape(shape)" to "c".distshape("hard"),
             "script string.distshape(shape)" to
-                    StrudelPattern.compile(""""c".distshape("hard")"""),
+                    SprudelPattern.compile(""""c".distshape("hard")"""),
             "distshape(shape)" to note("c").apply(distshape("hard")),
             "script distshape(shape)" to
-                    StrudelPattern.compile("""note("c").apply(distshape("hard"))"""),
+                    SprudelPattern.compile("""note("c").apply(distshape("hard"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.distortShape shouldBe "hard"
@@ -263,13 +263,13 @@ class LangDistortSpec : StringSpec({
         dslInterfaceTests(
             "pattern.dshape(shape)" to note("c").dshape("exp"),
             "script pattern.dshape(shape)" to
-                    StrudelPattern.compile("""note("c").dshape("exp")"""),
+                    SprudelPattern.compile("""note("c").dshape("exp")"""),
             "string.dshape(shape)" to "c".dshape("exp"),
             "script string.dshape(shape)" to
-                    StrudelPattern.compile(""""c".dshape("exp")"""),
+                    SprudelPattern.compile(""""c".dshape("exp")"""),
             "dshape(shape)" to note("c").apply(dshape("exp")),
             "script dshape(shape)" to
-                    StrudelPattern.compile("""note("c").apply(dshape("exp"))"""),
+                    SprudelPattern.compile("""note("c").apply(dshape("exp"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.distortShape shouldBe "exp"
@@ -318,7 +318,7 @@ class LangDistortSpec : StringSpec({
     }
 
     "distortshape() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").distort(0.5).distortshape("fold")""")
+        val p = SprudelPattern.compile("""note("c").distort(0.5).distortshape("fold")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {

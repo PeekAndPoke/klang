@@ -5,7 +5,7 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangHushSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangHushSpec : StringSpec({
         val pat = "a b"
         dslInterfaceTests(
             "pattern.hush()" to note(pat).hush(),
-            "script pattern.hush()" to StrudelPattern.compile("""note("$pat").hush()"""),
+            "script pattern.hush()" to SprudelPattern.compile("""note("$pat").hush()"""),
             "string.hush()" to pat.hush(),
-            "script string.hush()" to StrudelPattern.compile(""""$pat".hush()"""),
+            "script string.hush()" to SprudelPattern.compile(""""$pat".hush()"""),
             "hush()" to note(pat).apply(hush()),
-            "script hush()" to StrudelPattern.compile("""note("$pat").apply(hush())"""),
+            "script hush()" to SprudelPattern.compile("""note("$pat").apply(hush())"""),
         ) { _, events ->
             events.size shouldBe 0  // hush() unconditionally silences
         }
@@ -30,11 +30,11 @@ class LangHushSpec : StringSpec({
         val pat = "a b"
         dslInterfaceTests(
             "pattern.mute()" to note(pat).mute(),
-            "script pattern.mute()" to StrudelPattern.compile("""note("$pat").mute()"""),
+            "script pattern.mute()" to SprudelPattern.compile("""note("$pat").mute()"""),
             "string.mute()" to pat.mute(),
-            "script string.mute()" to StrudelPattern.compile(""""$pat".mute()"""),
+            "script string.mute()" to SprudelPattern.compile(""""$pat".mute()"""),
             "mute()" to note(pat).apply(mute()),
-            "script mute()" to StrudelPattern.compile("""note("$pat").apply(mute())"""),
+            "script mute()" to SprudelPattern.compile("""note("$pat").apply(mute())"""),
         ) { _, events ->
             events.size shouldBe 0
         }
@@ -44,11 +44,11 @@ class LangHushSpec : StringSpec({
         val pat = "a b"
         dslInterfaceTests(
             "pattern.bypass()" to note(pat).bypass(),
-            "script pattern.bypass()" to StrudelPattern.compile("""note("$pat").bypass()"""),
+            "script pattern.bypass()" to SprudelPattern.compile("""note("$pat").bypass()"""),
             "string.bypass()" to pat.bypass(),
-            "script string.bypass()" to StrudelPattern.compile(""""$pat".bypass()"""),
+            "script string.bypass()" to SprudelPattern.compile(""""$pat".bypass()"""),
             "bypass()" to note(pat).apply(bypass()),
-            "script bypass()" to StrudelPattern.compile("""note("$pat").apply(bypass())"""),
+            "script bypass()" to SprudelPattern.compile("""note("$pat").apply(bypass())"""),
         ) { _, events ->
             events.size shouldBe 0
         }
@@ -64,13 +64,13 @@ class LangHushSpec : StringSpec({
     }
 
     "hush() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c d").hush()""")
+        val p = SprudelPattern.compile("""note("c d").hush()""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 0
     }
 
-    "hush() works as method on StrudelPattern without arguments" {
+    "hush() works as method on SprudelPattern without arguments" {
         // note("c d").hush() -> silence
         val p = note("c d").hush()
         val events = p.queryArc(0.0, 1.0)
@@ -170,7 +170,7 @@ class LangHushSpec : StringSpec({
         events.size shouldBe 0
     }
 
-    "mute() works as method on StrudelPattern without arguments" {
+    "mute() works as method on SprudelPattern without arguments" {
         val p = note("c d").mute()
         val events = p.queryArc(0.0, 1.0)
 

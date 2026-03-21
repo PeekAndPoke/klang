@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.mul
@@ -23,11 +23,11 @@ class LangNotSpec : StringSpec({
             "not()" to
                     seq(pat).apply(not),
             "script pattern.not" to
-                    StrudelPattern.compile("""seq("$pat").not()"""),
+                    SprudelPattern.compile("""seq("$pat").not()"""),
             "script string.not" to
-                    StrudelPattern.compile(""""$pat".not()"""),
+                    SprudelPattern.compile(""""$pat".not()"""),
             "script not()" to
-                    StrudelPattern.compile("""seq("$pat").apply(not)"""),
+                    SprudelPattern.compile("""seq("$pat").apply(not)"""),
         ) { _, events ->
             events.shouldHaveSize(2)
             events[0].data.isTruthy() shouldBe false   // NOT 1 = false
@@ -64,7 +64,7 @@ class LangNotSpec : StringSpec({
     }
 
     "script apply(mul().not())" {
-        val p = StrudelPattern.compile("""seq("1 0").apply(mul("1").not())""")!!
+        val p = SprudelPattern.compile("""seq("1 0").apply(mul("1").not())""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {

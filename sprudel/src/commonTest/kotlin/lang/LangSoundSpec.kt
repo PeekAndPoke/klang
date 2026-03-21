@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangSoundSpec : StringSpec({
 
@@ -101,7 +101,7 @@ class LangSoundSpec : StringSpec({
     }
 
     "sound() works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd sd")""")
+        val p = SprudelPattern.compile("""sound("bd sd")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -110,7 +110,7 @@ class LangSoundSpec : StringSpec({
     }
 
     "s() alias works in compiled code" {
-        val p = StrudelPattern.compile("""s("bd:1")""")
+        val p = SprudelPattern.compile("""s("bd:1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

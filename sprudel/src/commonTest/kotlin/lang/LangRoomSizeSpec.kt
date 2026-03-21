@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangRoomSizeSpec : StringSpec({
@@ -14,44 +14,44 @@ class LangRoomSizeSpec : StringSpec({
     "roomsize dsl interface" {
         dslInterfaceTests(
             "pattern.roomsize(amount)" to note("c").roomsize(4.0),
-            "script pattern.roomsize(amount)" to StrudelPattern.compile("""note("c").roomsize(4)"""),
+            "script pattern.roomsize(amount)" to SprudelPattern.compile("""note("c").roomsize(4)"""),
             "string.roomsize(amount)" to "c".roomsize(4.0),
-            "script string.roomsize(amount)" to StrudelPattern.compile(""""c".roomsize(4)"""),
+            "script string.roomsize(amount)" to SprudelPattern.compile(""""c".roomsize(4)"""),
             "roomsize(amount)" to note("c").apply(roomsize(4.0)),
-            "script roomsize(amount)" to StrudelPattern.compile("""note("c").apply(roomsize(4))"""),
+            "script roomsize(amount)" to SprudelPattern.compile("""note("c").apply(roomsize(4))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
     "rsize dsl interface" {
         dslInterfaceTests(
             "pattern.rsize(amount)" to note("c").rsize(4.0),
-            "script pattern.rsize(amount)" to StrudelPattern.compile("""note("c").rsize(4)"""),
+            "script pattern.rsize(amount)" to SprudelPattern.compile("""note("c").rsize(4)"""),
             "string.rsize(amount)" to "c".rsize(4.0),
-            "script string.rsize(amount)" to StrudelPattern.compile(""""c".rsize(4)"""),
+            "script string.rsize(amount)" to SprudelPattern.compile(""""c".rsize(4)"""),
             "rsize(amount)" to note("c").apply(rsize(4.0)),
-            "script rsize(amount)" to StrudelPattern.compile("""note("c").apply(rsize(4))"""),
+            "script rsize(amount)" to SprudelPattern.compile("""note("c").apply(rsize(4))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
     "sz dsl interface" {
         dslInterfaceTests(
             "pattern.sz(amount)" to note("c").sz(4.0),
-            "script pattern.sz(amount)" to StrudelPattern.compile("""note("c").sz(4)"""),
+            "script pattern.sz(amount)" to SprudelPattern.compile("""note("c").sz(4)"""),
             "string.sz(amount)" to "c".sz(4.0),
-            "script string.sz(amount)" to StrudelPattern.compile(""""c".sz(4)"""),
+            "script string.sz(amount)" to SprudelPattern.compile(""""c".sz(4)"""),
             "sz(amount)" to note("c").apply(sz(4.0)),
-            "script sz(amount)" to StrudelPattern.compile("""note("c").apply(sz(4))"""),
+            "script sz(amount)" to SprudelPattern.compile("""note("c").apply(sz(4))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
     "size dsl interface" {
         dslInterfaceTests(
             "pattern.size(amount)" to note("c").size(4.0),
-            "script pattern.size(amount)" to StrudelPattern.compile("""note("c").size(4)"""),
+            "script pattern.size(amount)" to SprudelPattern.compile("""note("c").size(4)"""),
             "string.size(amount)" to "c".size(4.0),
-            "script string.size(amount)" to StrudelPattern.compile(""""c".size(4)"""),
+            "script string.size(amount)" to SprudelPattern.compile(""""c".size(4)"""),
             "size(amount)" to note("c").apply(size(4.0)),
-            "script size(amount)" to StrudelPattern.compile("""note("c").apply(size(4))"""),
+            "script size(amount)" to SprudelPattern.compile("""note("c").apply(size(4))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
@@ -123,7 +123,7 @@ class LangRoomSizeSpec : StringSpec({
     }
 
     "roomsize() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").roomsize("2.0")""")
+        val p = SprudelPattern.compile("""note("c").roomsize("2.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.roomSize shouldBe 2.0

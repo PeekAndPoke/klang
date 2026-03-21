@@ -2,15 +2,15 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.lcm
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
 /**
  * Stack Pattern: Plays multiple patterns simultaneously.
  * Implementation of `stack(a, b)`.
  */
-internal class StackPattern(val patterns: List<StrudelPattern>) : StrudelPattern.FixedWeight {
+internal class StackPattern(val patterns: List<SprudelPattern>) : SprudelPattern.FixedWeight {
 
     override val numSteps: Rational?
         get() {
@@ -23,7 +23,7 @@ internal class StackPattern(val patterns: List<StrudelPattern>) : StrudelPattern
         return patterns.maxOfOrNull { it.estimateCycleDuration() } ?: Rational.ONE
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         return patterns
             .flatMap { it.queryArcContextual(from, to, ctx) }
             .sortedBy { it.part.begin } // Sort them to keep order nice (optional but good for debugging)

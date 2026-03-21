@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangTremoloSpec : StringSpec({
 
@@ -185,7 +185,7 @@ class LangTremoloSpec : StringSpec({
     }
 
     "tremolo functions work in compiled code" {
-        val p = StrudelPattern.compile("""note("c3").tremolosync(4).tremolodepth(0.5).tremoloshape("sine")""")
+        val p = SprudelPattern.compile("""note("c3").tremolosync(4).tremolodepth(0.5).tremoloshape("sine")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

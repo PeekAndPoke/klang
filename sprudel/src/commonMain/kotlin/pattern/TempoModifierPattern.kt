@@ -2,10 +2,10 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 
 /**
  * Modifies tempo (speed) of a pattern using a control value provider.
@@ -18,10 +18,10 @@ import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
  * @param invertPattern If true, uses fast mode (1/factor); if false, uses slow mode (factor)
  */
 internal class TempoModifierPattern(
-    val source: StrudelPattern,
+    val source: SprudelPattern,
     val factorProvider: ControlValueProvider,
     val invertPattern: Boolean = false,
-) : StrudelPattern {
+) : SprudelPattern {
     companion object {
         /**
          * Minimum query length to avoid Rational precision issues with very small numbers.
@@ -33,7 +33,7 @@ internal class TempoModifierPattern(
          * Create a TempoModifierPattern with a static factor value.
          */
         fun static(
-            source: StrudelPattern,
+            source: SprudelPattern,
             factor: Rational,
             invertPattern: Boolean = false,
         ): TempoModifierPattern {
@@ -48,8 +48,8 @@ internal class TempoModifierPattern(
          * Create a TempoModifierPattern with a control pattern for the factor.
          */
         fun control(
-            source: StrudelPattern,
-            factorPattern: StrudelPattern,
+            source: SprudelPattern,
+            factorPattern: SprudelPattern,
             invertPattern: Boolean = false,
         ): TempoModifierPattern {
             return TempoModifierPattern(
@@ -64,7 +64,7 @@ internal class TempoModifierPattern(
 
     override val numSteps: Rational? get() = source.numSteps
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return emptyList()
 
@@ -90,7 +90,7 @@ internal class TempoModifierPattern(
         to: Rational,
         ctx: QueryContext,
         factor: Rational,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         // invertPattern=true means fast (use factor as-is)
         // invertPattern=false means slow (use 1/factor)
         val scale = if (invertPattern) {

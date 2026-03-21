@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangAdsrSpec : StringSpec({
@@ -17,15 +17,15 @@ class LangAdsrSpec : StringSpec({
             "pattern.adsr(ctrl)" to
                     seq(pat).adsr(ctrl),
             "script pattern.adsr(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").adsr("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").adsr("$ctrl")"""),
             "string.adsr(ctrl)" to
                     pat.adsr(ctrl),
             "script string.adsr(ctrl)" to
-                    StrudelPattern.compile(""""$pat".adsr("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".adsr("$ctrl")"""),
             "adsr(ctrl)" to
                     seq(pat).apply(adsr(ctrl)),
             "script adsr(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(adsr("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(adsr("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
@@ -77,7 +77,7 @@ class LangAdsrSpec : StringSpec({
     }
 
     "adsr() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").adsr("0.1:0.2:0.8:0.5")""")
+        val p = SprudelPattern.compile("""note("c").adsr("0.1:0.2:0.8:0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {

@@ -320,7 +320,7 @@ data class ResolvedVoiceHighlight(
  * Converts a [KlangPlaybackSignal.VoicesScheduled.VoiceEvent]'s innermost [SourceLocation] to an [IntRange] within the
  * mini-notation string, using the [base] source location (position of the opening quote).
  *
- * This reverses the formula in `MnPatternToStrudelPattern.toLocation()`:
+ * This reverses the formula in `MnPatternToSprudelPattern.toLocation()`:
  * - For line 1:  `absoluteCol = base.startColumn + (sourceRange.first + 1)`
  * - For line N:  `absoluteCol = sourceColumn` (column within that line of the MN string)
  *

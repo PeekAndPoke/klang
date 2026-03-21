@@ -7,8 +7,8 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.fast
@@ -19,7 +19,7 @@ class LangSoloSpec : StringSpec({
 
     // SoloPattern fills silent gaps with filler events (gain=0.000001, sound="sine").
     // Source events have gain=null, so we filter by that to get the real events.
-    fun List<StrudelPatternEvent>.sourceEvents() =
+    fun List<SprudelPatternEvent>.sourceEvents() =
         filter { it.data.gain == null }
 
     // -- dsl interface tests -----------------------------------------------------------------------------------------
@@ -28,10 +28,10 @@ class LangSoloSpec : StringSpec({
         dslInterfaceTests(
             "pattern.solo()" to s("bd").solo(),
             "string.solo()" to "bd".solo(),
-            "script pattern.solo()" to StrudelPattern.compile("""s("bd").solo()"""),
-            "script string.solo()" to StrudelPattern.compile(""""bd".solo()"""),
+            "script pattern.solo()" to SprudelPattern.compile("""s("bd").solo()"""),
+            "script string.solo()" to SprudelPattern.compile(""""bd".solo()"""),
             "apply(solo())" to s("bd").apply(solo()),
-            "script apply(solo())" to StrudelPattern.compile("""s("bd").apply(solo())"""),
+            "script apply(solo())" to SprudelPattern.compile("""s("bd").apply(solo())"""),
         ) { _, events ->
             val onsets = events.filter { it.isOnset }
             onsets shouldHaveSize 1
@@ -43,8 +43,8 @@ class LangSoloSpec : StringSpec({
         dslInterfaceTests(
             "pattern.solo(1)" to s("bd").solo(1),
             "string.solo(1)" to "bd".solo(1),
-            "script pattern.solo(1)" to StrudelPattern.compile("""s("bd").solo(1)"""),
-            "script string.solo(1)" to StrudelPattern.compile(""""bd".solo(1)"""),
+            "script pattern.solo(1)" to SprudelPattern.compile("""s("bd").solo(1)"""),
+            "script string.solo(1)" to SprudelPattern.compile(""""bd".solo(1)"""),
         ) { _, events ->
             val onsets = events.filter { it.isOnset }
             onsets shouldHaveSize 1
@@ -312,7 +312,7 @@ class LangSoloSpec : StringSpec({
     // -- compiled scripts --------------------------------------------------------------------------------------------
 
     "script apply(solo()) works in compiled code" {
-        val p = StrudelPattern.compile("""s("bd sd").apply(solo())""")!!
+        val p = SprudelPattern.compile("""s("bd sd").apply(solo())""")!!
         val events = p.queryArc(0.0, 1.0).sourceEvents()
 
         assertSoftly {
@@ -322,7 +322,7 @@ class LangSoloSpec : StringSpec({
     }
 
     "script apply(solo(0)) disables solo in compiled code" {
-        val p = StrudelPattern.compile("""s("bd sd").apply(solo(0))""")!!
+        val p = SprudelPattern.compile("""s("bd sd").apply(solo(0))""")!!
         val events = p.queryArc(0.0, 1.0).sourceEvents()
 
         assertSoftly {

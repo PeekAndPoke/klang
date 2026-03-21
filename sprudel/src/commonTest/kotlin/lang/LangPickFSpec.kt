@@ -7,12 +7,12 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangPickFSpec : StringSpec({
 
     "pickF() applies function based on index" {
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it.fast(2) },
             { it.slow(2) },
             { it.rev() }
@@ -60,7 +60,7 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickF() clamps index to list bounds" {
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it.fast(2) },
             { it.fast(3) }
         )
@@ -74,7 +74,7 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickF() works as standalone function" {
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it.fast(2) }
         )
 
@@ -85,14 +85,14 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickF() works in compiled code" {
-        val pattern = StrudelPattern.compile("""note("c e g").pickF("0", [x => x.fast(2)])""")
+        val pattern = SprudelPattern.compile("""note("c e g").pickF("0", [x => x.fast(2)])""")
         val events = pattern?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 6
     }
 
     "pickmodF() wraps index with modulo" {
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it.fast(2) },
             { it.fast(3) }
         )
@@ -106,7 +106,7 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickmodF() handles large indices" {
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it }, // identity
             { it.fast(2) },
             { it.fast(3) }
@@ -121,7 +121,7 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickmodF() works as standalone function" {
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it.fast(2) }
         )
 
@@ -133,7 +133,7 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickmodF() works with control pattern" {
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it }, // identity
             { it.add(1) }
         )
@@ -154,7 +154,7 @@ class LangPickFSpec : StringSpec({
     }
 
     "pickF() with rev function" {
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it.rev() }
         )
 
@@ -170,7 +170,7 @@ class LangPickFSpec : StringSpec({
 
     "pickF() with add - matching compat test case" {
         // Direct Kotlin equivalent of: seq("2 4").pickF("<0 1>", [x => x.add(1), x => x.add(2)])
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it.add(1) },
             { it.add(2) }
         )
@@ -203,7 +203,7 @@ class LangPickFSpec : StringSpec({
         // Cycle 0: index 0 -> add(1) applied to seq("2 4") -> values 3, 5
         // Cycle 1: index 1 -> add(2) applied to seq("2 4") -> values 4, 6
 
-        val functions = listOf<(StrudelPattern) -> StrudelPattern>(
+        val functions = listOf<(SprudelPattern) -> SprudelPattern>(
             { it.add(1) },
             { it.add(2) }
         )

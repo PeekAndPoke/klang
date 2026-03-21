@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangVelocitySpec : StringSpec({
@@ -19,28 +19,28 @@ class LangVelocitySpec : StringSpec({
             "pattern.velocity(ctrl)" to
                     seq(pat).velocity(ctrl),
             "script pattern.velocity(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").velocity("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").velocity("$ctrl")"""),
             "string.velocity(ctrl)" to
                     pat.velocity(ctrl),
             "script string.velocity(ctrl)" to
-                    StrudelPattern.compile(""""$pat".velocity("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".velocity("$ctrl")"""),
             "velocity(ctrl)" to
                     seq(pat).apply(velocity(ctrl)),
             "script velocity(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(velocity("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(velocity("$ctrl"))"""),
             // vel alias
             "pattern.vel(ctrl)" to
                     seq(pat).vel(ctrl),
             "script pattern.vel(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").vel("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").vel("$ctrl")"""),
             "string.vel(ctrl)" to
                     pat.vel(ctrl),
             "script string.vel(ctrl)" to
-                    StrudelPattern.compile(""""$pat".vel("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".vel("$ctrl")"""),
             "vel(ctrl)" to
                     seq(pat).apply(vel(ctrl)),
             "script vel(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(vel("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(vel("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.velocity shouldBe 0.0
@@ -120,7 +120,7 @@ class LangVelocitySpec : StringSpec({
     }
 
     "velocity() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile(""""1 0".apply(velocity("0.5 1.0"))""")
+        val p = SprudelPattern.compile(""""1 0".apply(velocity("0.5 1.0"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -129,7 +129,7 @@ class LangVelocitySpec : StringSpec({
     }
 
     "velocity() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").velocity("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").velocity("0.5 1.0")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -184,7 +184,7 @@ class LangVelocitySpec : StringSpec({
     }
 
     "vel() alias works within compiled code" {
-        val p = StrudelPattern.compile("""note("c d").vel("0.2 0.9")""")
+        val p = SprudelPattern.compile("""note("c d").vel("0.2 0.9")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

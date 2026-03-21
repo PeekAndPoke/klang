@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangWithinSpec : StringSpec({
@@ -13,11 +13,11 @@ class LangWithinSpec : StringSpec({
         val transform: PatternMapperFn = add(1)
         dslInterfaceTests(
             "pattern.within(0.5, 1.0, add(1))" to n(pat).within(0.5, 1.0, transform),
-            "script pattern.within(0.5, 1.0, add(1))" to StrudelPattern.compile("""n("$pat").within(0.5, 1.0, x => x.add(1))"""),
+            "script pattern.within(0.5, 1.0, add(1))" to SprudelPattern.compile("""n("$pat").within(0.5, 1.0, x => x.add(1))"""),
             "string.within(0.5, 1.0, add(1))" to pat.within(0.5, 1.0, transform),
-            "script string.within(0.5, 1.0, add(1))" to StrudelPattern.compile(""""$pat".within(0.5, 1.0, x => x.add(1))"""),
+            "script string.within(0.5, 1.0, add(1))" to SprudelPattern.compile(""""$pat".within(0.5, 1.0, x => x.add(1))"""),
             "within(0.5, 1.0, add(1))" to n(pat).apply(within(0.5, 1.0, transform)),
-            "script within(0.5, 1.0, add(1))" to StrudelPattern.compile("""n("$pat").apply(within(0.5, 1.0, x => x.add(1)))"""),
+            "script within(0.5, 1.0, add(1))" to SprudelPattern.compile("""n("$pat").apply(within(0.5, 1.0, x => x.add(1)))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4  // transform changes values but not event count

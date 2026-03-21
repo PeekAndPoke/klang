@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import kotlin.math.pow
 
@@ -14,11 +14,11 @@ class LangScaleSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.scale(name)" to n(pat).scale("C4:major"),
-            "script pattern.scale(name)" to StrudelPattern.compile("""n("$pat").scale("C4:major")"""),
+            "script pattern.scale(name)" to SprudelPattern.compile("""n("$pat").scale("C4:major")"""),
             "string.scale(name)" to pat.scale("C4:major"),
-            "script string.scale(name)" to StrudelPattern.compile(""""$pat".scale("C4:major")"""),
+            "script string.scale(name)" to SprudelPattern.compile(""""$pat".scale("C4:major")"""),
             "scale(name)" to n(pat).apply(scale("C4:major")),
-            "script scale(name)" to StrudelPattern.compile("""n("$pat").apply(scale("C4:major"))"""),
+            "script scale(name)" to SprudelPattern.compile("""n("$pat").apply(scale("C4:major"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.note shouldBe "C4"
@@ -134,7 +134,7 @@ class LangScaleSpec : StringSpec({
     }
 
     "scale() works in compiled code" {
-        val p = StrudelPattern.compile("""n("0 2").scale("C4:major")""")
+        val p = SprudelPattern.compile("""n("0 2").scale("C4:major")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -143,7 +143,7 @@ class LangScaleSpec : StringSpec({
     }
 
     "scale() as string extension works in compiled code" {
-        val p = StrudelPattern.compile(""""0".scale("C4:major")""")
+        val p = SprudelPattern.compile(""""0".scale("C4:major")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

@@ -5,7 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangOffSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangOffSpec : StringSpec({
         val transform: PatternMapperFn = { it.note("e") }
         dslInterfaceTests(
             "pattern.off(0.25, fn)" to note(pat).off(0.25, transform),
-            "script pattern.off(0.25, fn)" to StrudelPattern.compile("""note("$pat").off(0.25, x => x.note("e"))"""),
+            "script pattern.off(0.25, fn)" to SprudelPattern.compile("""note("$pat").off(0.25, x => x.note("e"))"""),
             "string.off(0.25, fn)" to pat.off(0.25, transform),
-            "script string.off(0.25, fn)" to StrudelPattern.compile(""""$pat".off(0.25, x => x.note("e"))"""),
+            "script string.off(0.25, fn)" to SprudelPattern.compile(""""$pat".off(0.25, x => x.note("e"))"""),
             "off(0.25, fn)" to note(pat).apply(off(0.25, transform)),
-            "script off(0.25, fn)" to StrudelPattern.compile("""note("$pat").apply(off(0.25, x => x.note("e")))"""),
+            "script off(0.25, fn)" to SprudelPattern.compile("""note("$pat").apply(off(0.25, x => x.note("e")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 5  // original 2 + delayed copy 2

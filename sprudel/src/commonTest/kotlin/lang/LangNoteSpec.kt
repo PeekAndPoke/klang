@@ -7,7 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.tones.Tones
 
 class LangNoteSpec : StringSpec({
@@ -142,7 +142,7 @@ class LangNoteSpec : StringSpec({
     }
 
     "note() works within compiled code" {
-        val p = StrudelPattern.compile("""note("c3 e3")""")
+        val p = SprudelPattern.compile("""note("c3 e3")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -150,7 +150,7 @@ class LangNoteSpec : StringSpec({
     }
 
     "note() re-interpretation works within compiled code" {
-        val p = StrudelPattern.compile("""seq("0 2").scale("C4:minor").note()""")
+        val p = SprudelPattern.compile("""seq("0 2").scale("C4:minor").note()""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

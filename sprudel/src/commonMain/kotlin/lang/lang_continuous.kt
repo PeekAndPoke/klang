@@ -4,11 +4,11 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel._mapRangeContext
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern.Companion.withContext
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
@@ -18,13 +18,13 @@ import kotlin.math.sin
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangContinuousInit = false
+var sprudelLangContinuousInit = false
 
 // -- toBipolar --------------------------------------------------------------------------------------------------------
 
-internal val StrudelPattern._toBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+internal val SprudelPattern._toBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     val contextAware = p._mapRangeContext(
         transformMin = { (it + 1.0) / 2.0 },
         transformMax = { (it + 1.0) / 2.0 }
@@ -63,12 +63,12 @@ internal val PatternMapperFn._toBipolar by dslPatternMapperExtension { m, args, 
  * @category continuous
  * @tags toBipolar, bipolar, unipolar, range, lfo, oscillator
  */
-@StrudelDsl
-fun StrudelPattern.toBipolar(): StrudelPattern = this._toBipolar(emptyList())
+@SprudelDsl
+fun SprudelPattern.toBipolar(): SprudelPattern = this._toBipolar(emptyList())
 
 /** Parses this string as a pattern, then maps its values from `0..1` to `-1..1`. */
-@StrudelDsl
-fun String.toBipolar(): StrudelPattern = this._toBipolar(emptyList())
+@SprudelDsl
+fun String.toBipolar(): SprudelPattern = this._toBipolar(emptyList())
 
 /**
  * Returns a [PatternMapperFn] that maps values from the unipolar range `0..1` to the bipolar range `-1..1`.
@@ -85,7 +85,7 @@ fun String.toBipolar(): StrudelPattern = this._toBipolar(emptyList())
  * @category continuous
  * @tags toBipolar, bipolar, unipolar, range, lfo, mapper
  */
-@StrudelDsl
+@SprudelDsl
 fun toBipolar(): PatternMapperFn = _toBipolar(emptyList())
 
 /**
@@ -97,12 +97,12 @@ fun toBipolar(): PatternMapperFn = _toBipolar(emptyList())
  *
  * @return A [PatternMapperFn] that maps values from `0..1` to `-1..1`.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.toBipolar(): PatternMapperFn = _toBipolar(emptyList())
 
 // -- fromBipolar ------------------------------------------------------------------------------------------------------
 
-internal val StrudelPattern._fromBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
+internal val SprudelPattern._fromBipolar by dslPatternExtension { p, /* args */ _, /* callInfo */ _ ->
     val contextAware = p._mapRangeContext(
         transformMin = { it * 2.0 - 1.0 },
         transformMax = { it * 2.0 - 1.0 }
@@ -140,12 +140,12 @@ internal val PatternMapperFn._fromBipolar by dslPatternMapperExtension { m, args
  * @category continuous
  * @tags fromBipolar, bipolar, unipolar, range, lfo, oscillator
  */
-@StrudelDsl
-fun StrudelPattern.fromBipolar(): StrudelPattern = this._fromBipolar(emptyList())
+@SprudelDsl
+fun SprudelPattern.fromBipolar(): SprudelPattern = this._fromBipolar(emptyList())
 
 /** Parses this string as a pattern, then maps its values from `-1..1` to `0..1`. */
-@StrudelDsl
-fun String.fromBipolar(): StrudelPattern = this._fromBipolar(emptyList())
+@SprudelDsl
+fun String.fromBipolar(): SprudelPattern = this._fromBipolar(emptyList())
 
 /**
  * Returns a [PatternMapperFn] that maps values from the bipolar range `-1..1` to the unipolar range `0..1`.
@@ -162,7 +162,7 @@ fun String.fromBipolar(): StrudelPattern = this._fromBipolar(emptyList())
  * @category continuous
  * @tags fromBipolar, bipolar, unipolar, range, lfo, mapper
  */
-@StrudelDsl
+@SprudelDsl
 fun fromBipolar(): PatternMapperFn = _fromBipolar(emptyList())
 
 /**
@@ -174,12 +174,12 @@ fun fromBipolar(): PatternMapperFn = _fromBipolar(emptyList())
  *
  * @return A [PatternMapperFn] that maps values from `-1..1` to `0..1`.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.fromBipolar(): PatternMapperFn = _fromBipolar(emptyList())
 
 // -- range ------------------------------------------------------------------------------------------------------------
 
-private fun applyRange(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): ContextModifierPattern {
+private fun applyRange(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): ContextModifierPattern {
     val min = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
     val max = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 1.0
 
@@ -190,7 +190,7 @@ private fun applyRange(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>)
 }
 
 internal val _range by dslPatternMapper { args, callInfo -> { p -> p._range(args, callInfo) } }
-internal val StrudelPattern._range by dslPatternExtension { p, args, /* callInfo */ _ -> applyRange(p, args) }
+internal val SprudelPattern._range by dslPatternExtension { p, args, /* callInfo */ _ -> applyRange(p, args) }
 internal val String._range by dslStringExtension { p, args, /* callInfo */ _ -> applyRange(p, args) }
 internal val PatternMapperFn._range by dslPatternMapperExtension { m, args, callInfo -> m.chain(_range(args, callInfo)) }
 
@@ -220,9 +220,9 @@ internal val PatternMapperFn._range by dslPatternMapperExtension { m, args, call
  * @category continuous
  * @tags range, scale, min, max, oscillator, lfo, continuous
  */
-@StrudelDsl
-fun StrudelPattern.range(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
-    this._range(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.range(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
+    this._range(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then linearly scales its values to `[min, max]`.
@@ -231,9 +231,9 @@ fun StrudelPattern.range(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
  * @param max The target maximum value (default `1.0`).
  * @return A new pattern with values linearly scaled to `[min, max]`.
  */
-@StrudelDsl
-fun String.range(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
-    this._range(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+@SprudelDsl
+fun String.range(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
+    this._range(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that linearly scales pattern values to `[min, max]`.
@@ -254,9 +254,9 @@ fun String.range(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
  * @category continuous
  * @tags range, scale, min, max, oscillator, lfo, continuous
  */
-@StrudelDsl
+@SprudelDsl
 fun range(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
-    _range(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+    _range(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Chains a linear range-scaling onto this [PatternMapperFn], mapping values to `[min, max]`.
@@ -268,13 +268,13 @@ fun range(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
  * @param min The target minimum value (default `0.0`).
  * @param max The target maximum value (default `1.0`).
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.range(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
-    _range(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+    _range(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 // -- rangex -----------------------------------------------------------------------------------------------------------
 
-private fun applyRangex(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyRangex(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val min = args.getOrNull(0)?.value?.asDoubleOrNull() ?: 0.0
     val max = args.getOrNull(1)?.value?.asDoubleOrNull() ?: 1.0
 
@@ -294,7 +294,7 @@ private fun applyRangex(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>
 }
 
 internal val _rangex by dslPatternMapper { args, callInfo -> { p -> p._rangex(args, callInfo) } }
-internal val StrudelPattern._rangex by dslPatternExtension { p, args, /* callInfo */ _ -> applyRangex(p, args) }
+internal val SprudelPattern._rangex by dslPatternExtension { p, args, /* callInfo */ _ -> applyRangex(p, args) }
 internal val String._rangex by dslStringExtension { p, args, /* callInfo */ _ -> applyRangex(p, args) }
 internal val PatternMapperFn._rangex by dslPatternMapperExtension { m, args, callInfo -> m.chain(_rangex(args, callInfo)) }
 
@@ -325,9 +325,9 @@ internal val PatternMapperFn._rangex by dslPatternMapperExtension { m, args, cal
  * @category continuous
  * @tags rangex, range, exponential, logarithmic, scale, frequency, oscillator, lfo, continuous
  */
-@StrudelDsl
-fun StrudelPattern.rangex(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
-    this._rangex(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.rangex(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
+    this._rangex(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then exponentially scales its values to `[min, max]`.
@@ -340,9 +340,9 @@ fun StrudelPattern.rangex(min: Number = 0.0, max: Number = 1.0): StrudelPattern 
  * "0 0.5 1".rangex(100, 1000).freq()  // manual values scaled exponentially to frequency range
  * ```
  */
-@StrudelDsl
-fun String.rangex(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
-    this._rangex(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+@SprudelDsl
+fun String.rangex(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
+    this._rangex(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that exponentially scales pattern values to `[min, max]`.
@@ -363,9 +363,9 @@ fun String.rangex(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
  * @category continuous
  * @tags rangex, range, exponential, logarithmic, scale, frequency, oscillator, lfo, continuous
  */
-@StrudelDsl
+@SprudelDsl
 fun rangex(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
-    _rangex(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+    _rangex(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Chains an exponential range-scaling onto this [PatternMapperFn], mapping values to `[min, max]`.
@@ -377,19 +377,19 @@ fun rangex(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
  * @param min The target minimum value (default `0.0`; use a small positive number for frequencies).
  * @param max The target maximum value (default `1.0`).
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.rangex(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
-    _rangex(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+    _rangex(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 // -- range2 -----------------------------------------------------------------------------------------------------------
 
-private fun applyRange2(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyRange2(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // Convert bipolar (-1 to 1) to unipolar (0 to 1), then apply range
     return applyRange(pattern.fromBipolar(), args)
 }
 
 internal val _range2 by dslPatternMapper { args, callInfo -> { p -> p._range2(args, callInfo) } }
-internal val StrudelPattern._range2 by dslPatternExtension { p, args, /* callInfo */ _ -> applyRange2(p, args) }
+internal val SprudelPattern._range2 by dslPatternExtension { p, args, /* callInfo */ _ -> applyRange2(p, args) }
 internal val String._range2 by dslStringExtension { p, args, /* callInfo */ _ -> applyRange2(p, args) }
 internal val PatternMapperFn._range2 by dslPatternMapperExtension { m, args, callInfo -> m.chain(_range2(args, callInfo)) }
 
@@ -416,9 +416,9 @@ internal val PatternMapperFn._range2 by dslPatternMapperExtension { m, args, cal
  * @category continuous
  * @tags range2, bipolar, range, scale, lfo, oscillator, continuous
  */
-@StrudelDsl
-fun StrudelPattern.range2(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
-    this._range2(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.range2(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
+    this._range2(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern, then converts its bipolar values to `[min, max]`.
@@ -431,9 +431,9 @@ fun StrudelPattern.range2(min: Number = 0.0, max: Number = 1.0): StrudelPattern 
  * "0 0.5 -0.5".range2(0, 100)  // manual bipolar values scaled to range
  * ```
  */
-@StrudelDsl
-fun String.range2(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
-    this._range2(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+@SprudelDsl
+fun String.range2(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
+    this._range2(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that scales bipolar values (`-1..1`) to `[min, max]`.
@@ -454,9 +454,9 @@ fun String.range2(min: Number = 0.0, max: Number = 1.0): StrudelPattern =
  * @category continuous
  * @tags range2, bipolar, range, scale, lfo, oscillator, continuous
  */
-@StrudelDsl
+@SprudelDsl
 fun range2(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
-    _range2(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+    _range2(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 /**
  * Chains a bipolar range-scaling onto this [PatternMapperFn], converting bipolar values (`-1..1`) to `[min, max]`.
@@ -468,16 +468,16 @@ fun range2(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
  * @param min The target minimum value (default `0.0`).
  * @param max The target maximum value (default `1.0`).
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.range2(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
-    _range2(listOf(min.toDouble(), max.toDouble()).asStrudelDslArgs())
+    _range2(listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs())
 
 // -- silence / rest / nothing -----------------------------------------------------------------------------------------
 
 /**
  * An empty pattern that produces no events.
  *
- * Use `silence` wherever a [StrudelPattern] argument is required but nothing should play.
+ * Use `silence` wherever a [SprudelPattern] argument is required but nothing should play.
  * It is the identity element for [stack] and acts as a rest in sequencing functions like [cat].
  *
  *
@@ -492,7 +492,7 @@ fun PatternMapperFn.range2(min: Number = 0.0, max: Number = 1.0): PatternMapperF
  * @category continuous
  * @tags silence, rest, empty, quiet
  */
-@StrudelDsl
+@SprudelDsl
 val silence by dslObject { EmptyPattern }
 
 /**
@@ -510,7 +510,7 @@ val silence by dslObject { EmptyPattern }
  * @category continuous
  * @tags rest, silence, empty, quiet
  */
-@StrudelDsl
+@SprudelDsl
 val rest by dslObject { EmptyPattern }
 
 /**
@@ -528,7 +528,7 @@ val rest by dslObject { EmptyPattern }
  * @category continuous
  * @tags nothing, silence, rest, empty, quiet
  */
-@StrudelDsl
+@SprudelDsl
 val nothing by dslObject { EmptyPattern }
 
 // -- signal -----------------------------------------------------------------------------------------------------------
@@ -563,8 +563,8 @@ internal val _signal by dslPatternFunction { args, /* callInfo */ _ ->
  * @category continuous
  * @tags signal, continuous, lfo, function, custom, oscillator
  */
-@StrudelDsl
-fun signal(f: (Double) -> Double): StrudelPattern = _signal { t -> f(t) }
+@SprudelDsl
+fun signal(f: (Double) -> Double): SprudelPattern = _signal { t -> f(t) }
 
 // -- steady -----------------------------------------------------------------------------------------------------------
 
@@ -594,12 +594,12 @@ internal val _steady by dslPatternFunction { args, /* callInfo */ _ ->
  * @category continuous
  * @tags steady, constant, continuous, signal, dc
  */
-@StrudelDsl
-fun steady(value: Number): StrudelPattern = _steady(value.toDouble())
+@SprudelDsl
+fun steady(value: Number): SprudelPattern = _steady(value.toDouble())
 
 // -- time -------------------------------------------------------------------------------------------------------------
 
-private val timeBase: StrudelPattern by lazy { signal { t -> t } }
+private val timeBase: SprudelPattern by lazy { signal { t -> t } }
 
 /**
  * Continuous ramp — current cycle time, increases linearly by `1.0` per cycle.
@@ -619,13 +619,13 @@ private val timeBase: StrudelPattern by lazy { signal { t -> t } }
  * @category continuous
  * @tags time, continuous, linear, ramp
  */
-@StrudelDsl
+@SprudelDsl
 val time by dslObject { timeBase }
 
 // -- sine / sine2 -----------------------------------------------------------------------------------------------------
 
-private val sineBase: StrudelPattern by lazy { signal { t -> (sin(t * 2.0 * PI) + 1.0) / 2.0 } }
-private val sine2Base: StrudelPattern by lazy { sineBase.toBipolar() }
+private val sineBase: SprudelPattern by lazy { signal { t -> (sin(t * 2.0 * PI) + 1.0) / 2.0 } }
+private val sine2Base: SprudelPattern by lazy { sineBase.toBipolar() }
 
 /**
  * Sine oscillator — unscaled continuous values in `0..1`.
@@ -645,7 +645,7 @@ private val sine2Base: StrudelPattern by lazy { sineBase.toBipolar() }
  * @category continuous
  * @tags sine, oscillator, lfo, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val sine by dslObject { sineBase }
 
 /**
@@ -664,13 +664,13 @@ val sine by dslObject { sineBase }
  * @category continuous
  * @tags sine2, sine, oscillator, lfo, bipolar, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val sine2 by dslObject { sine2Base }
 
 // -- cosine / cosine2 -------------------------------------------------------------------------------------------------
 
-private val cosineBase: StrudelPattern by lazy { signal { t -> (sin(t * 2.0 * PI + PI / 2.0) + 1.0) / 2.0 } }
-private val cosine2Base: StrudelPattern by lazy { cosineBase.toBipolar() }
+private val cosineBase: SprudelPattern by lazy { signal { t -> (sin(t * 2.0 * PI + PI / 2.0) + 1.0) / 2.0 } }
+private val cosine2Base: SprudelPattern by lazy { cosineBase.toBipolar() }
 
 /**
  * Cosine oscillator — unscaled continuous values in `0..1`.
@@ -690,7 +690,7 @@ private val cosine2Base: StrudelPattern by lazy { cosineBase.toBipolar() }
  * @category continuous
  * @tags cosine, oscillator, lfo, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val cosine by dslObject { cosineBase }
 
 /**
@@ -709,13 +709,13 @@ val cosine by dslObject { cosineBase }
  * @category continuous
  * @tags cosine2, cosine, oscillator, lfo, bipolar, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val cosine2 by dslObject { cosine2Base }
 
 // -- saw / saw2 -------------------------------------------------------------------------------------------------------
 
-private val sawBase: StrudelPattern by lazy { signal { t -> t % 1.0 } }
-private val saw2Base: StrudelPattern by lazy { sawBase.toBipolar() }
+private val sawBase: SprudelPattern by lazy { signal { t -> t % 1.0 } }
+private val saw2Base: SprudelPattern by lazy { sawBase.toBipolar() }
 
 /**
  * Sawtooth oscillator — unscaled continuous values in `0..1`.
@@ -734,7 +734,7 @@ private val saw2Base: StrudelPattern by lazy { sawBase.toBipolar() }
  * @category continuous
  * @tags saw, sawtooth, oscillator, lfo, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val saw by dslObject { sawBase }
 
 /**
@@ -753,13 +753,13 @@ val saw by dslObject { sawBase }
  * @category continuous
  * @tags saw2, saw, sawtooth, oscillator, lfo, bipolar, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val saw2 by dslObject { saw2Base }
 
 // -- isaw / isaw2 -----------------------------------------------------------------------------------------------------
 
-private val isawBase: StrudelPattern by lazy { signal { t -> 1.0 - (t % 1.0) } }
-private val isaw2Base: StrudelPattern by lazy { isawBase.toBipolar() }
+private val isawBase: SprudelPattern by lazy { signal { t -> 1.0 - (t % 1.0) } }
+private val isaw2Base: SprudelPattern by lazy { isawBase.toBipolar() }
 
 /**
  * Inverse sawtooth oscillator — unscaled continuous values in `0..1`.
@@ -778,7 +778,7 @@ private val isaw2Base: StrudelPattern by lazy { isawBase.toBipolar() }
  * @category continuous
  * @tags isaw, sawtooth, oscillator, lfo, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val isaw by dslObject { isawBase }
 
 /**
@@ -797,18 +797,18 @@ val isaw by dslObject { isawBase }
  * @category continuous
  * @tags isaw2, isaw, sawtooth, oscillator, lfo, bipolar, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val isaw2 by dslObject { isaw2Base }
 
 // -- tri / tri2 -------------------------------------------------------------------------------------------------------
 
-private val triBase: StrudelPattern by lazy {
+private val triBase: SprudelPattern by lazy {
     signal { t ->
         val phase = t % 1.0
         if (phase < 0.5) phase * 2.0 else 2.0 - (phase * 2.0)
     }
 }
-private val tri2Base: StrudelPattern by lazy { triBase.toBipolar() }
+private val tri2Base: SprudelPattern by lazy { triBase.toBipolar() }
 
 /**
  * Triangle oscillator — unscaled continuous values in `0..1`.
@@ -827,7 +827,7 @@ private val tri2Base: StrudelPattern by lazy { triBase.toBipolar() }
  * @category continuous
  * @tags tri, triangle, oscillator, lfo, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val tri by dslObject { triBase }
 
 /**
@@ -846,18 +846,18 @@ val tri by dslObject { triBase }
  * @category continuous
  * @tags tri2, tri, triangle, oscillator, lfo, bipolar, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val tri2 by dslObject { tri2Base }
 
 // -- itri / itri2 -----------------------------------------------------------------------------------------------------
 
-private val itriBase: StrudelPattern by lazy {
+private val itriBase: SprudelPattern by lazy {
     signal { t ->
         val phase = t % 1.0
         if (phase < 0.5) 1.0 - phase * 2.0 else phase * 2.0 - 1.0
     }
 }
-private val itri2Base: StrudelPattern by lazy { itriBase.toBipolar() }
+private val itri2Base: SprudelPattern by lazy { itriBase.toBipolar() }
 
 /**
  * Inverse triangle oscillator — unscaled continuous values in `0..1`.
@@ -876,7 +876,7 @@ private val itri2Base: StrudelPattern by lazy { itriBase.toBipolar() }
  * @category continuous
  * @tags itri, triangle, oscillator, lfo, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val itri by dslObject { itriBase }
 
 /**
@@ -895,13 +895,13 @@ val itri by dslObject { itriBase }
  * @category continuous
  * @tags itri2, itri, triangle, oscillator, lfo, bipolar, continuous, wave
  */
-@StrudelDsl
+@SprudelDsl
 val itri2 by dslObject { itri2Base }
 
 // -- square / square2 -------------------------------------------------------------------------------------------------
 
-private val squareBase: StrudelPattern by lazy { signal { t -> if (t % 1.0 < 0.5) 0.0 else 1.0 } }
-private val square2Base: StrudelPattern by lazy { squareBase.toBipolar() }
+private val squareBase: SprudelPattern by lazy { signal { t -> if (t % 1.0 < 0.5) 0.0 else 1.0 } }
+private val square2Base: SprudelPattern by lazy { squareBase.toBipolar() }
 
 /**
  * Square oscillator — unscaled continuous values alternating `0` / `1`.
@@ -920,7 +920,7 @@ private val square2Base: StrudelPattern by lazy { squareBase.toBipolar() }
  * @category continuous
  * @tags square, oscillator, lfo, continuous, wave, gate
  */
-@StrudelDsl
+@SprudelDsl
 val square by dslObject { squareBase }
 
 /**
@@ -939,12 +939,12 @@ val square by dslObject { squareBase }
  * @category continuous
  * @tags square2, square, oscillator, lfo, bipolar, continuous, wave, gate
  */
-@StrudelDsl
+@SprudelDsl
 val square2 by dslObject { square2Base }
 
 // -- perlin / perlin2 -------------------------------------------------------------------------------------------------
 
-private fun createPerlin(): StrudelPattern {
+private fun createPerlin(): SprudelPattern {
     val cache = mutableMapOf<Int?, PerlinNoise>()
 
     return ContinuousPattern { from, _, ctx ->
@@ -972,7 +972,7 @@ private fun createPerlin(): StrudelPattern {
  * @category continuous
  * @tags perlin, noise, random, smooth, continuous, lfo
  */
-@StrudelDsl
+@SprudelDsl
 val perlin by dslObject { createPerlin() }
 
 /**
@@ -991,12 +991,12 @@ val perlin by dslObject { createPerlin() }
  * @category continuous
  * @tags perlin2, perlin, noise, random, bipolar, smooth, continuous, lfo
  */
-@StrudelDsl
+@SprudelDsl
 val perlin2 by dslObject { createPerlin().toBipolar() }
 
 // -- berlin / berlin2 -------------------------------------------------------------------------------------------------
 
-private fun createBerlin(): StrudelPattern {
+private fun createBerlin(): SprudelPattern {
     val cache = mutableMapOf<Int?, BerlinNoise>()
 
     return ContinuousPattern { from, _, ctx ->
@@ -1006,7 +1006,7 @@ private fun createBerlin(): StrudelPattern {
     }
 }
 
-private fun createBerlin2(): StrudelPattern {
+private fun createBerlin2(): SprudelPattern {
     return createBerlin().toBipolar()
 }
 
@@ -1028,7 +1028,7 @@ private fun createBerlin2(): StrudelPattern {
  * @category continuous
  * @tags berlin, noise, random, sawtooth, continuous, lfo
  */
-@StrudelDsl
+@SprudelDsl
 val berlin by dslObject { createBerlin() }
 
 /**
@@ -1047,5 +1047,5 @@ val berlin by dslObject { createBerlin() }
  * @category continuous
  * @tags berlin2, berlin, noise, random, bipolar, sawtooth, continuous, lfo
  */
-@StrudelDsl
+@SprudelDsl
 val berlin2 by dslObject { createBerlin2() }

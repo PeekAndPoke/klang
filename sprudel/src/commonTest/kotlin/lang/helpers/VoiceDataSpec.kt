@@ -5,14 +5,14 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.lang.resolveNote
 
 class VoiceDataSpec : StringSpec({
 
     "resolveNote() with scale and index should resolve note and frequency" {
-        val voice = StrudelVoiceData.empty.copy(scale = "C major")
+        val voice = SprudelVoiceData.empty.copy(scale = "C major")
 
         val result = voice.resolveNote(newIndex = 0)
 
@@ -26,7 +26,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with scale containing colon should clean it" {
-        val voice = StrudelVoiceData.empty.copy(scale = "C3:major")
+        val voice = SprudelVoiceData.empty.copy(scale = "C3:major")
 
         val result = voice.resolveNote(newIndex = 2)
 
@@ -38,7 +38,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with soundIndex and scale should use soundIndex" {
-        val voice = StrudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData.empty.copy(
             scale = "C major",
             soundIndex = 4
         )
@@ -50,7 +50,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with value and scale should interpret value as index" {
-        val voice = StrudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData.empty.copy(
             scale = "C4 major",
             value = 2.asVoiceValue()
         )
@@ -62,7 +62,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with newIndex but no scale should set soundIndex" {
-        val voice = StrudelVoiceData.empty
+        val voice = SprudelVoiceData.empty
 
         val result = voice.resolveNote(newIndex = 5)
 
@@ -72,7 +72,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with note but no scale should preserve note and compute frequency" {
-        val voice = StrudelVoiceData.empty.copy(note = "A4")
+        val voice = SprudelVoiceData.empty.copy(note = "A4")
 
         val result = voice.resolveNote()
 
@@ -81,7 +81,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with value as note string should use it as fallback" {
-        val voice = StrudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData.empty.copy(
             value = "C4".asVoiceValue()
         )
 
@@ -95,7 +95,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() priority: newIndex over soundIndex" {
-        val voice = StrudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData.empty.copy(
             scale = "C3:major",
             soundIndex = 0
         )
@@ -106,7 +106,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() priority: soundIndex over value" {
-        val voice = StrudelVoiceData.empty.copy(
+        val voice = SprudelVoiceData.empty.copy(
             scale = "C major",
             soundIndex = 2,
             value = 4.asVoiceValue()
@@ -118,7 +118,7 @@ class VoiceDataSpec : StringSpec({
     }
 
     "resolveNote() with empty voice should return empty voice" {
-        val voice = StrudelVoiceData.empty
+        val voice = SprudelVoiceData.empty
 
         val result = voice.resolveNote()
 

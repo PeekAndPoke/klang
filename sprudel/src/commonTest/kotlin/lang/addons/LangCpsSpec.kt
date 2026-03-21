@@ -3,8 +3,8 @@ package io.peekandpoke.klang.sprudel.lang.addons
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangCpsSpec : StringSpec({
@@ -12,7 +12,7 @@ class LangCpsSpec : StringSpec({
     "cps dsl interface" {
         dslInterfaceTests(
             "cps" to cps,
-            "script cps" to StrudelPattern.compile("cps"),
+            "script cps" to SprudelPattern.compile("cps"),
         ) { _, events ->
             events.size shouldBe 1
             events[0].data.value?.asDouble shouldBe 0.5

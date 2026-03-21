@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangUnisonSpec : StringSpec({
@@ -19,28 +19,28 @@ class LangUnisonSpec : StringSpec({
             "pattern.unison(ctrl)" to
                     seq(pat).unison(ctrl),
             "script pattern.unison(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").unison("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").unison("$ctrl")"""),
             "string.unison(ctrl)" to
                     pat.unison(ctrl),
             "script string.unison(ctrl)" to
-                    StrudelPattern.compile(""""$pat".unison("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".unison("$ctrl")"""),
             "unison(ctrl)" to
                     seq(pat).apply(unison(ctrl)),
             "script unison(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(unison("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(unison("$ctrl"))"""),
             // comp alias
             "pattern.uni(ctrl)" to
                     seq(pat).uni(ctrl),
             "script pattern.uni(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").uni("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").uni("$ctrl")"""),
             "string.uni(ctrl)" to
                     pat.uni(ctrl),
             "script string.uni(ctrl)" to
-                    StrudelPattern.compile(""""$pat".uni("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".uni("$ctrl")"""),
             "uni(ctrl)" to
                     seq(pat).apply(uni(ctrl)),
             "script uni(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(uni("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(uni("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.oscParams?.get("voices") shouldBe 2
@@ -133,7 +133,7 @@ class LangUnisonSpec : StringSpec({
     }
 
     "unison() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").unison("4")""")
+        val p = SprudelPattern.compile("""note("c").unison("4")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.oscParams?.get("voices") shouldBe 4.0

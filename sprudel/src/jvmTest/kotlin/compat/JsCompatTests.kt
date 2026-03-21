@@ -5,11 +5,11 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.formatAsTable
-import io.peekandpoke.klang.sprudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.sprudel.graal.GraalSprudelCompiler
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.fail
 import kotlin.math.abs
@@ -32,7 +32,7 @@ class JsCompatTests : StringSpec() {
         RECOVERED,
     }
 
-    private val graalCompiler = GraalStrudelCompiler()
+    private val graalCompiler = GraalSprudelCompiler()
     private val json = Json { prettyPrint = true }
 
     init {
@@ -56,7 +56,7 @@ class JsCompatTests : StringSpec() {
         val code = example.code
 
         val nativePattern = withClue("Compiling '$name' natively") {
-            StrudelPattern.compile(code)
+            SprudelPattern.compile(code)
                 ?: fail("Failed to compile '$name' natively")
         }
 
@@ -70,7 +70,7 @@ class JsCompatTests : StringSpec() {
             result.shouldNotBeNull()
         }
 
-        fun List<StrudelPatternEvent>.sort() = sortedWith(
+        fun List<SprudelPatternEvent>.sort() = sortedWith(
             compareBy(
                 { it.part.begin.toDouble() },
                 { it.data.note },
@@ -133,8 +133,8 @@ ${comparison.report}
     }
 
     private fun buildComparisonReport(
-        graal: StrudelPatternEvent,
-        native: StrudelPatternEvent,
+        graal: SprudelPatternEvent,
+        native: SprudelPatternEvent,
         example: Example,
     ): ComparisonReport {
         val ignore = example.ignoreFields
@@ -250,7 +250,7 @@ ${comparison.report}
         )
     }
 
-    private fun printEventComparison(graalArc: List<StrudelPatternEvent>, nativeArc: List<StrudelPatternEvent>) {
+    private fun printEventComparison(graalArc: List<SprudelPatternEvent>, nativeArc: List<SprudelPatternEvent>) {
 
         val zippedArc = graalArc.zipAll(nativeArc).take(32)
 
@@ -258,7 +258,7 @@ ${comparison.report}
 
         fun TimeSpan.str() = "${begin.toDouble().toFixed(5)}-${end.toDouble().toFixed(5)}"
 
-        fun StrudelPatternEvent.str(): String {
+        fun SprudelPatternEvent.str(): String {
             val parts = listOf(
                 data.value?.asString,
                 data.note,

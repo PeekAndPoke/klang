@@ -2,17 +2,17 @@ package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.silence
 
 // ── Backward-compatible public API ────────────────────────────────────────────
 
 fun <T> parseMiniNotation(
-    input: StrudelDslArg<T>,
-    atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
-): StrudelPattern = when (val v = input.value) {
-    is StrudelPattern -> v
+    input: SprudelDslArg<T>,
+    atomFactory: (String, SourceLocationChain?) -> SprudelPattern,
+): SprudelPattern = when (val v = input.value) {
+    is SprudelPattern -> v
     null -> silence
     else -> parseMiniNotation(
         input = v.toString(),
@@ -25,8 +25,8 @@ fun <T> parseMiniNotation(
 fun parseMiniNotation(
     input: String,
     baseLocation: SourceLocation? = null,
-    atomFactory: (String, SourceLocationChain?) -> StrudelPattern,
-): StrudelPattern = MnPatternToStrudelPattern.convert(
+    atomFactory: (String, SourceLocationChain?) -> SprudelPattern,
+): SprudelPattern = MnPatternToSprudelPattern.convert(
     pattern = parseMiniNotationMnPattern(input, baseLocation),
     baseLocation = baseLocation,
     atomFactory = atomFactory,
@@ -41,10 +41,10 @@ fun parseMiniNotationMnPattern(input: String, baseLocation: SourceLocation? = nu
 /**
  * Phase-1 parser: tokenises [input] and builds an [MnPattern] AST.
  *
- * No strudel runtime dependency — the result can be used by the visual editor
- * and round-tripped through [MnRenderer] without ever touching [StrudelPattern].
+ * No sprudel runtime dependency — the result can be used by the visual editor
+ * and round-tripped through [MnRenderer] without ever touching [SprudelPattern].
  *
- * Phase 2 ([MnPatternToStrudelPattern]) converts the tree to a [StrudelPattern].
+ * Phase 2 ([MnPatternToSprudelPattern]) converts the tree to a [SprudelPattern].
  *
  * [baseLocation] is optional and used only for error message formatting.
  */

@@ -10,7 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.sampleAt
 
@@ -21,15 +21,15 @@ class LangContinuousPatternsSpec : StringSpec({
             "pattern.toBipolar()" to
                     sine.toBipolar(),
             "script pattern.toBipolar()" to
-                    StrudelPattern.compile("sine.toBipolar()"),
+                    SprudelPattern.compile("sine.toBipolar()"),
             "string.toBipolar()" to
                     "0.5".toBipolar(),
             "script string.toBipolar()" to
-                    StrudelPattern.compile(""""0.5".toBipolar()"""),
+                    SprudelPattern.compile(""""0.5".toBipolar()"""),
             "toBipolar()" to
                     sine.apply(toBipolar()),
             "script toBipolar()" to
-                    StrudelPattern.compile("sine.apply(toBipolar())"),
+                    SprudelPattern.compile("sine.apply(toBipolar())"),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -40,15 +40,15 @@ class LangContinuousPatternsSpec : StringSpec({
             "pattern.fromBipolar()" to
                     sine2.fromBipolar(),
             "script pattern.fromBipolar()" to
-                    StrudelPattern.compile("sine2.fromBipolar()"),
+                    SprudelPattern.compile("sine2.fromBipolar()"),
             "string.fromBipolar()" to
                     "-0.5".fromBipolar(),
             "script string.fromBipolar()" to
-                    StrudelPattern.compile(""""-0.5".fromBipolar()"""),
+                    SprudelPattern.compile(""""-0.5".fromBipolar()"""),
             "fromBipolar()" to
                     sine2.apply(fromBipolar()),
             "script fromBipolar()" to
-                    StrudelPattern.compile("sine2.apply(fromBipolar())"),
+                    SprudelPattern.compile("sine2.apply(fromBipolar())"),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -59,15 +59,15 @@ class LangContinuousPatternsSpec : StringSpec({
             "pattern.range(min, max)" to
                     sine.range(0.0, 100.0),
             "script pattern.range(min, max)" to
-                    StrudelPattern.compile("sine.range(0, 100)"),
+                    SprudelPattern.compile("sine.range(0, 100)"),
             "string.range(min, max)" to
                     "0.5".range(0.0, 100.0),
             "script string.range(min, max)" to
-                    StrudelPattern.compile(""""0.5".range(0, 100)"""),
+                    SprudelPattern.compile(""""0.5".range(0, 100)"""),
             "range(min, max)" to
                     sine.apply(range(0.0, 100.0)),
             "script range(min, max)" to
-                    StrudelPattern.compile("sine.apply(range(0, 100))"),
+                    SprudelPattern.compile("sine.apply(range(0, 100))"),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -78,15 +78,15 @@ class LangContinuousPatternsSpec : StringSpec({
             "pattern.rangex(min, max)" to
                     sine.rangex(100.0, 1000.0),
             "script pattern.rangex(min, max)" to
-                    StrudelPattern.compile("sine.rangex(100, 1000)"),
+                    SprudelPattern.compile("sine.rangex(100, 1000)"),
             "string.rangex(min, max)" to
                     "0.5".rangex(100.0, 1000.0),
             "script string.rangex(min, max)" to
-                    StrudelPattern.compile(""""0.5".rangex(100, 1000)"""),
+                    SprudelPattern.compile(""""0.5".rangex(100, 1000)"""),
             "rangex(min, max)" to
                     sine.apply(rangex(100.0, 1000.0)),
             "script rangex(min, max)" to
-                    StrudelPattern.compile("sine.apply(rangex(100, 1000))"),
+                    SprudelPattern.compile("sine.apply(rangex(100, 1000))"),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -97,15 +97,15 @@ class LangContinuousPatternsSpec : StringSpec({
             "pattern.range2(min, max)" to
                     sine2.range2(0.0, 100.0),
             "script pattern.range2(min, max)" to
-                    StrudelPattern.compile("sine2.range2(0, 100)"),
+                    SprudelPattern.compile("sine2.range2(0, 100)"),
             "string.range2(min, max)" to
                     "0.5".range2(0.0, 100.0),
             "script string.range2(min, max)" to
-                    StrudelPattern.compile(""""0.5".range2(0, 100)"""),
+                    SprudelPattern.compile(""""0.5".range2(0, 100)"""),
             "range2(min, max)" to
                     sine2.apply(range2(0.0, 100.0)),
             "script range2(min, max)" to
-                    StrudelPattern.compile("sine2.apply(range2(0, 100))"),
+                    SprudelPattern.compile("sine2.apply(range2(0, 100))"),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -126,13 +126,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("steady compiled") {
-            val pattern = StrudelPattern.compile("steady(0.75)")!!
+            val pattern = SprudelPattern.compile("steady(0.75)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.75 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.75 plusOrMinus EPSILON)
         }
 
         withClue("steady compiled with range") {
-            val pattern = StrudelPattern.compile("steady(0.5).range(10, 20)")!!
+            val pattern = SprudelPattern.compile("steady(0.5).range(10, 20)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (15.0 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (15.0 plusOrMinus EPSILON)
         }
@@ -154,13 +154,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("signal compiled") {
-            val pattern = StrudelPattern.compile("signal(t => t * 3)")!!
+            val pattern = SprudelPattern.compile("signal(t => t * 3)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (3.0 plusOrMinus EPSILON)
         }
 
         withClue("signal compiled with range") {
-            val pattern = StrudelPattern.compile("signal(t => t).range(0, 10)")!!
+            val pattern = SprudelPattern.compile("signal(t => t).range(0, 10)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
         }
@@ -183,14 +183,14 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("time compiled") {
-            val pattern = StrudelPattern.compile("time")!!
+            val pattern = SprudelPattern.compile("time")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(10.0, 10.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
         }
 
         withClue("time compiled with range") {
-            val pattern = StrudelPattern.compile("time.range(0, 100)")!!
+            val pattern = SprudelPattern.compile("time.range(0, 100)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
@@ -215,7 +215,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("sine compiled") {
-            val pattern = StrudelPattern.compile("sine")!!
+            val pattern = SprudelPattern.compile("sine")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
             pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
@@ -223,7 +223,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("sine compiled with range") {
-            val pattern = StrudelPattern.compile("sine.range(-0.5, 0.5)")!!
+            val pattern = SprudelPattern.compile("sine.range(-0.5, 0.5)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
@@ -249,7 +249,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("sine2 compiled") {
-            val pattern = StrudelPattern.compile("sine2")!!
+            val pattern = SprudelPattern.compile("sine2")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
@@ -257,7 +257,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("sine2 compiled with range") {
-            val pattern = StrudelPattern.compile("sine2.range(0, 100)")!!
+            val pattern = SprudelPattern.compile("sine2.range(0, 100)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
             pattern.queryArc(0.25, 0.25 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
             pattern.queryArc(0.75, 0.75 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
@@ -280,13 +280,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("cosine compiled") {
-            val pattern = StrudelPattern.compile("cosine")!!
+            val pattern = SprudelPattern.compile("cosine")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         }
 
         withClue("cosine compiled with range") {
-            val pattern = StrudelPattern.compile("cosine.range(-1, 1)")!!
+            val pattern = SprudelPattern.compile("cosine.range(-1, 1)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
         }
@@ -308,13 +308,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("cosine2 compiled") {
-            val pattern = StrudelPattern.compile("cosine2")!!
+            val pattern = SprudelPattern.compile("cosine2")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
         }
 
         withClue("cosine2 compiled with range") {
-            val pattern = StrudelPattern.compile("cosine2.range(0, 100)")!!
+            val pattern = SprudelPattern.compile("cosine2.range(0, 100)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         }
@@ -334,13 +334,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("saw compiled") {
-            val pattern = StrudelPattern.compile("saw")!!
+            val pattern = SprudelPattern.compile("saw")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
         }
 
         withClue("saw compiled with range") {
-            val pattern = StrudelPattern.compile("saw.range(10, 20)")!!
+            val pattern = SprudelPattern.compile("saw.range(10, 20)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (15.0 plusOrMinus EPSILON)
         }
@@ -361,13 +361,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("saw2 compiled") {
-            val pattern = StrudelPattern.compile("saw2")!!
+            val pattern = SprudelPattern.compile("saw2")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         }
 
         withClue("saw2 compiled with range") {
-            val pattern = StrudelPattern.compile("saw2.range(0, 100)")!!
+            val pattern = SprudelPattern.compile("saw2.range(0, 100)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
         }
@@ -388,13 +388,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("isaw compiled") {
-            val pattern = StrudelPattern.compile("isaw")!!
+            val pattern = SprudelPattern.compile("isaw")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
         }
 
         withClue("isaw compiled with range") {
-            val pattern = StrudelPattern.compile("isaw.range(0, 10)")!!
+            val pattern = SprudelPattern.compile("isaw.range(0, 10)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (5.0 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
@@ -416,13 +416,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("isaw2 compiled") {
-            val pattern = StrudelPattern.compile("isaw2")!!
+            val pattern = SprudelPattern.compile("isaw2")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         }
 
         withClue("isaw2 compiled with range") {
-            val pattern = StrudelPattern.compile("isaw2.range(-10, 10)")!!
+            val pattern = SprudelPattern.compile("isaw2.range(-10, 10)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(1.0, 1.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
@@ -444,13 +444,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("tri compiled") {
-            val pattern = StrudelPattern.compile("tri")!!
+            val pattern = SprudelPattern.compile("tri")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
         }
 
         withClue("tri compiled with range") {
-            val pattern = StrudelPattern.compile("tri.range(-1, 1)")!!
+            val pattern = SprudelPattern.compile("tri.range(-1, 1)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
         }
@@ -472,13 +472,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("tri2 compiled") {
-            val pattern = StrudelPattern.compile("tri2")!!
+            val pattern = SprudelPattern.compile("tri2")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
         }
 
         withClue("tri2 compiled with range") {
-            val pattern = StrudelPattern.compile("tri2.range(-10, 10)")!!
+            val pattern = SprudelPattern.compile("tri2.range(-10, 10)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
         }
@@ -500,13 +500,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("itri compiled") {
-            val pattern = StrudelPattern.compile("itri")!!
+            val pattern = SprudelPattern.compile("itri")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         }
 
         withClue("itri compiled with range") {
-            val pattern = StrudelPattern.compile("itri.range(0, 100)")!!
+            val pattern = SprudelPattern.compile("itri.range(0, 100)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (100.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
         }
@@ -528,13 +528,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("itri2 compiled") {
-            val pattern = StrudelPattern.compile("itri2")!!
+            val pattern = SprudelPattern.compile("itri2")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
         }
 
         withClue("itri2 compiled with range") {
-            val pattern = StrudelPattern.compile("itri2.range(-10, 10)")!!
+            val pattern = SprudelPattern.compile("itri2.range(-10, 10)")!!
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.5, 0.5 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
         }
@@ -554,13 +554,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("square compiled") {
-            val pattern = StrudelPattern.compile("square")!!
+            val pattern = SprudelPattern.compile("square")!!
             pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
         }
 
         withClue("square compiled with range") {
-            val pattern = StrudelPattern.compile("square.range(0, 10)")!!
+            val pattern = SprudelPattern.compile("square.range(0, 10)")!!
             pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
         }
@@ -580,13 +580,13 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("square2 compiled") {
-            val pattern = StrudelPattern.compile("square2")!!
+            val pattern = SprudelPattern.compile("square2")!!
             pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (-1.0 plusOrMinus EPSILON)
             pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
         }
 
         withClue("square2 compiled with range") {
-            val pattern = StrudelPattern.compile("square2.range(-10, 10)")!!
+            val pattern = SprudelPattern.compile("square2.range(-10, 10)")!!
             pattern.queryArc(0.1, 0.1 + EPSILON)[0].data.value?.asDouble shouldBe (-10.0 plusOrMinus EPSILON)
             pattern.queryArc(0.6, 0.6 + EPSILON)[0].data.value?.asDouble shouldBe (10.0 plusOrMinus EPSILON)
         }
@@ -610,8 +610,8 @@ class LangContinuousPatternsSpec : StringSpec({
         withClue("compiled: slow(2).range vs range.slow(2)") {
             val t = 1.5 // t=1.5 at slow(2) means phase 0.75
 
-            val patA = StrudelPattern.compile("sine.slow(2).range(0, 100)")!!
-            val patB = StrudelPattern.compile("sine.range(0, 100).slow(2)")!!
+            val patA = SprudelPattern.compile("sine.slow(2).range(0, 100)")!!
+            val patB = SprudelPattern.compile("sine.range(0, 100).slow(2)")!!
 
             val valA = patA.queryArc(t, t + EPSILON)[0].data.value?.asDouble
             val valB = patB.queryArc(t, t + EPSILON)[0].data.value?.asDouble
@@ -816,7 +816,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("rangex compiled") {
-            val pattern = StrudelPattern.compile("sine.rangex(100, 1000)")!!
+            val pattern = SprudelPattern.compile("sine.rangex(100, 1000)")!!
             val events = pattern.queryArc(0.0, 0.0 + EPSILON)
 
             val expected = kotlin.math.sqrt(100.0 * 1000.0)
@@ -838,7 +838,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("range2 compiled") {
-            val pattern = StrudelPattern.compile("sine2.range2(500, 4000)")!!
+            val pattern = SprudelPattern.compile("sine2.range2(500, 4000)")!!
 
             // At phase 0, sine2 is 0, should map to middle value 2250
             pattern.queryArc(0.0, 0.0 + EPSILON)[0].data.value?.asDouble shouldBe (2250.0 plusOrMinus EPSILON)
@@ -867,7 +867,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("round compiled") {
-            val p = StrudelPattern.compile("""seq("0.3 1.7 2.5").round()""")!!
+            val p = SprudelPattern.compile("""seq("0.3 1.7 2.5").round()""")!!
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 3
@@ -909,7 +909,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("floor compiled") {
-            val p = StrudelPattern.compile("""seq("42.7 43.2").floor()""")!!
+            val p = SprudelPattern.compile("""seq("42.7 43.2").floor()""")!!
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 2
@@ -951,7 +951,7 @@ class LangContinuousPatternsSpec : StringSpec({
         }
 
         withClue("ceil compiled") {
-            val p = StrudelPattern.compile("""seq("42.2 43.8").ceil()""")!!
+            val p = SprudelPattern.compile("""seq("42.2 43.8").ceil()""")!!
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 2
@@ -1016,7 +1016,7 @@ class LangContinuousPatternsSpec : StringSpec({
     "sine.slow(8) can be sampled with sampleAt()" {
         // Verify that sampleAt works on sine.slow(8)
         val pattern = sine.slow(8.0)
-        val ctx = StrudelPattern.QueryContext.empty
+        val ctx = SprudelPattern.QueryContext.empty
 
         val event0 = pattern.sampleAt(0.0.toRational(), ctx)
         withClue("sampleAt(0.0) should return event") {
@@ -1119,7 +1119,7 @@ class LangContinuousPatternsSpec : StringSpec({
 
     "script apply(toBipolar()) works in compiled code" {
         // sine at t=0: 0.5 -> toBipolar -> 0.0
-        val p = StrudelPattern.compile("sine.apply(toBipolar())")!!
+        val p = SprudelPattern.compile("sine.apply(toBipolar())")!!
 
         p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (0.0 plusOrMinus 0.01)
     }
@@ -1135,7 +1135,7 @@ class LangContinuousPatternsSpec : StringSpec({
 
     "script apply(fromBipolar()) works in compiled code" {
         // sine2 at t=0: 0.0 -> fromBipolar -> 0.5
-        val p = StrudelPattern.compile("sine2.apply(fromBipolar())")!!
+        val p = SprudelPattern.compile("sine2.apply(fromBipolar())")!!
 
         p.queryArc(0.0, EPSILON)[0].data.value?.asDouble shouldBe (0.5 plusOrMinus 0.01)
     }
@@ -1186,7 +1186,7 @@ class LangContinuousPatternsSpec : StringSpec({
 
     "compiled: note(\"a b\").pan(sine.slow(4)) - continuous pattern from compiled code" {
         // Test that compiled patterns also work with continuous properties
-        val pattern = StrudelPattern.compile("""note("a b").pan(sine.slow(4))""")
+        val pattern = SprudelPattern.compile("""note("a b").pan(sine.slow(4))""")
 
         pattern.shouldNotBeNull()
 

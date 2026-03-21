@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangReleaseSpec : StringSpec({
@@ -19,15 +19,15 @@ class LangReleaseSpec : StringSpec({
             "pattern.release(ctrl)" to
                     seq(pat).release(ctrl),
             "script pattern.release(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").release("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").release("$ctrl")"""),
             "string.release(ctrl)" to
                     pat.release(ctrl),
             "script string.release(ctrl)" to
-                    StrudelPattern.compile(""""$pat".release("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".release("$ctrl")"""),
             "release(ctrl)" to
                     seq(pat).apply(release(ctrl)),
             "script release(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(release("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(release("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.release shouldBe 0.1
@@ -96,7 +96,7 @@ class LangReleaseSpec : StringSpec({
     }
 
     "release() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").release("0.1")""")
+        val p = SprudelPattern.compile("""note("c").release("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.release shouldBe 0.1

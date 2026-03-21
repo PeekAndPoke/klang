@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBjorkSpec : StringSpec({
@@ -13,11 +13,11 @@ class LangBjorkSpec : StringSpec({
         val pat = "hh"
         dslInterfaceTests(
             "pattern.bjork(3, 8, 0)" to s(pat).bjork(3, 8, 0),
-            "script pattern.bjork(3, 8, 0)" to StrudelPattern.compile("""s("$pat").bjork(3, 8, 0)"""),
+            "script pattern.bjork(3, 8, 0)" to SprudelPattern.compile("""s("$pat").bjork(3, 8, 0)"""),
             "string.bjork(3, 8, 0)" to pat.bjork(3, 8, 0),
-            "script string.bjork(3, 8, 0)" to StrudelPattern.compile(""""$pat".bjork(3, 8, 0)"""),
+            "script string.bjork(3, 8, 0)" to SprudelPattern.compile(""""$pat".bjork(3, 8, 0)"""),
             "bjork(3, 8, 0)" to s(pat).apply(bjork(3, 8, 0)),
-            "script bjork(3, 8, 0)" to StrudelPattern.compile("""s("$pat").apply(bjork(3, 8, 0))"""),
+            "script bjork(3, 8, 0)" to SprudelPattern.compile("""s("$pat").apply(bjork(3, 8, 0))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 3

@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangHpenvSpec : StringSpec({
@@ -20,11 +20,11 @@ class LangHpenvSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.hpenv(ctrl)" to seq(pat).hpenv(ctrl),
-            "script pattern.hpenv(ctrl)" to StrudelPattern.compile("""seq("$pat").hpenv("$ctrl")"""),
+            "script pattern.hpenv(ctrl)" to SprudelPattern.compile("""seq("$pat").hpenv("$ctrl")"""),
             "string.hpenv(ctrl)" to pat.hpenv(ctrl),
-            "script string.hpenv(ctrl)" to StrudelPattern.compile(""""$pat".hpenv("$ctrl")"""),
+            "script string.hpenv(ctrl)" to SprudelPattern.compile(""""$pat".hpenv("$ctrl")"""),
             "hpenv(ctrl)" to seq(pat).apply(hpenv(ctrl)),
-            "script hpenv(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpenv("$ctrl"))"""),
+            "script hpenv(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpenv("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hpenv shouldBe 0.5
@@ -86,7 +86,7 @@ class LangHpenvSpec : StringSpec({
     }
 
     "hpenv() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").hpenv("0.6")""")
+        val p = SprudelPattern.compile("""note("c").hpenv("0.6")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.hpenv shouldBe 0.6
@@ -104,7 +104,7 @@ class LangHpenvSpec : StringSpec({
     }
 
     "hpenv() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.StrudelVoiceData.empty.copy(
+        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             hcutoff = 2000.0,
             hpenv = 0.7
         )
@@ -122,11 +122,11 @@ class LangHpenvSpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.hpe(ctrl)" to seq(pat).hpe(ctrl),
-            "script pattern.hpe(ctrl)" to StrudelPattern.compile("""seq("$pat").hpe("$ctrl")"""),
+            "script pattern.hpe(ctrl)" to SprudelPattern.compile("""seq("$pat").hpe("$ctrl")"""),
             "string.hpe(ctrl)" to pat.hpe(ctrl),
-            "script string.hpe(ctrl)" to StrudelPattern.compile(""""$pat".hpe("$ctrl")"""),
+            "script string.hpe(ctrl)" to SprudelPattern.compile(""""$pat".hpe("$ctrl")"""),
             "hpe(ctrl)" to seq(pat).apply(hpe(ctrl)),
-            "script hpe(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpe("$ctrl"))"""),
+            "script hpe(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpe("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hpenv shouldBe 0.5
@@ -160,7 +160,7 @@ class LangHpenvSpec : StringSpec({
     }
 
     "hpe() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").hpe("0.65")""")
+        val p = SprudelPattern.compile("""note("c").hpe("0.65")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.hpenv shouldBe 0.65

@@ -8,8 +8,8 @@ import kotlin.math.max
 const val EPSILON = 1e-5
 
 fun dslInterfaceTests(
-    vararg cases: Pair<String, StrudelPattern?>,
-    assertions: (cycle: Double, events: List<StrudelPatternEvent>) -> Unit,
+    vararg cases: Pair<String, SprudelPattern?>,
+    assertions: (cycle: Double, events: List<SprudelPatternEvent>) -> Unit,
 ) {
     assertSoftly {
         cases.forEach { (name, pattern) ->

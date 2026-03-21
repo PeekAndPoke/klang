@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangFmhSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangFmhSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.fmh(ctrl)" to s(pat).fmh(ctrl),
-            "script pattern.fmh(ctrl)" to StrudelPattern.compile("""s("$pat").fmh("$ctrl")"""),
+            "script pattern.fmh(ctrl)" to SprudelPattern.compile("""s("$pat").fmh("$ctrl")"""),
             "string.fmh(ctrl)" to pat.fmh(ctrl),
-            "script string.fmh(ctrl)" to StrudelPattern.compile(""""$pat".fmh("$ctrl")"""),
+            "script string.fmh(ctrl)" to SprudelPattern.compile(""""$pat".fmh("$ctrl")"""),
             "fmh(ctrl)" to s(pat).apply(fmh(ctrl)),
-            "script fmh(ctrl)" to StrudelPattern.compile("""s("$pat").apply(fmh("$ctrl"))"""),
+            "script fmh(ctrl)" to SprudelPattern.compile("""s("$pat").apply(fmh("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.fmh shouldBe 0.5
@@ -90,7 +90,7 @@ class LangFmhSpec : StringSpec({
     }
 
     "fmh() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").fmh("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").fmh("0.5 1.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

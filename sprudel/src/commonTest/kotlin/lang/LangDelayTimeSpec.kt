@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangDelayTimeSpec : StringSpec({
 
@@ -33,7 +33,7 @@ class LangDelayTimeSpec : StringSpec({
     }
 
     "delaytime() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").delaytime("0.25")""")
+        val p = SprudelPattern.compile("""note("c").delaytime("0.25")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.delayTime shouldBe 0.25

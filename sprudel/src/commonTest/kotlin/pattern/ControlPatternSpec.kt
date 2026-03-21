@@ -5,15 +5,15 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.*
 
 class ControlPatternSpec : StringSpec({
 
     "ControlPattern: Direct Instantiation" {
-        val source = AtomicPattern(StrudelVoiceData.empty.copy(note = "c3"))
-        val control = AtomicPattern(StrudelVoiceData.empty.copy(gain = 0.5))
+        val source = AtomicPattern(SprudelVoiceData.empty.copy(note = "c3"))
+        val control = AtomicPattern(SprudelVoiceData.empty.copy(gain = 0.5))
 
         val pattern = ControlPattern(
             source = source,
@@ -47,7 +47,7 @@ class ControlPatternSpec : StringSpec({
     }
 
     "ControlPattern: Compiled Code" {
-        val pattern = StrudelPattern.compile("""note("c3").gain(0.2)""")
+        val pattern = SprudelPattern.compile("""note("c3").gain(0.2)""")
 
         verifyPattern(pattern, 1) { _, note, _, _ ->
             note shouldBeEqualIgnoringCase "c3"

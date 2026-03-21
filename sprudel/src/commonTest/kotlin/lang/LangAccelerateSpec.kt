@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangAccelerateSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangAccelerateSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.accelerate(v)" to note(pat).accelerate(amount),
-            "script pattern.accelerate(v)" to StrudelPattern.compile("""note("$pat").accelerate($amount)"""),
+            "script pattern.accelerate(v)" to SprudelPattern.compile("""note("$pat").accelerate($amount)"""),
             "string.accelerate(v)" to pat.accelerate(amount),
-            "script string.accelerate(v)" to StrudelPattern.compile(""""$pat".accelerate($amount)"""),
+            "script string.accelerate(v)" to SprudelPattern.compile(""""$pat".accelerate($amount)"""),
             "accelerate(v)" to note(pat).apply(accelerate(amount)),
-            "script accelerate(v)" to StrudelPattern.compile("""note("$pat").apply(accelerate($amount))"""),
+            "script accelerate(v)" to SprudelPattern.compile("""note("$pat").apply(accelerate($amount))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.accelerate shouldBe amount
@@ -62,7 +62,7 @@ class LangAccelerateSpec : StringSpec({
     }
 
     "accelerate() works within compiled code as chained function" {
-        val p = StrudelPattern.compile("""note("a b").accelerate("0 1")""")
+        val p = SprudelPattern.compile("""note("a b").accelerate("0 1")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

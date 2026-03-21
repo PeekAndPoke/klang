@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangHpfSpec : StringSpec({
@@ -19,11 +19,11 @@ class LangHpfSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.hpf(ctrl)" to seq(pat).hpf(ctrl),
-            "script pattern.hpf(ctrl)" to StrudelPattern.compile("""seq("$pat").hpf("$ctrl")"""),
+            "script pattern.hpf(ctrl)" to SprudelPattern.compile("""seq("$pat").hpf("$ctrl")"""),
             "string.hpf(ctrl)" to pat.hpf(ctrl),
-            "script string.hpf(ctrl)" to StrudelPattern.compile(""""$pat".hpf("$ctrl")"""),
+            "script string.hpf(ctrl)" to SprudelPattern.compile(""""$pat".hpf("$ctrl")"""),
             "hpf(ctrl)" to seq(pat).apply(hpf(ctrl)),
-            "script hpf(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hpf("$ctrl"))"""),
+            "script hpf(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hpf("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hcutoff shouldBe 1000.0
@@ -87,7 +87,7 @@ class LangHpfSpec : StringSpec({
     }
 
     "hpf() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").hpf("1000")""")
+        val p = SprudelPattern.compile("""note("c").hpf("1000")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.hcutoff shouldBe 1000.0
@@ -117,11 +117,11 @@ class LangHpfSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.hp(ctrl)" to seq(pat).hp(ctrl),
-            "script pattern.hp(ctrl)" to StrudelPattern.compile("""seq("$pat").hp("$ctrl")"""),
+            "script pattern.hp(ctrl)" to SprudelPattern.compile("""seq("$pat").hp("$ctrl")"""),
             "string.hp(ctrl)" to pat.hp(ctrl),
-            "script string.hp(ctrl)" to StrudelPattern.compile(""""$pat".hp("$ctrl")"""),
+            "script string.hp(ctrl)" to SprudelPattern.compile(""""$pat".hp("$ctrl")"""),
             "hp(ctrl)" to seq(pat).apply(hp(ctrl)),
-            "script hp(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hp("$ctrl"))"""),
+            "script hp(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hp("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hcutoff shouldBe 1000.0
@@ -156,7 +156,7 @@ class LangHpfSpec : StringSpec({
     }
 
     "hp() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").hp("800")""")
+        val p = SprudelPattern.compile("""note("c").hp("800")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.hcutoff shouldBe 800.0
@@ -170,11 +170,11 @@ class LangHpfSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.hcutoff(ctrl)" to seq(pat).hcutoff(ctrl),
-            "script pattern.hcutoff(ctrl)" to StrudelPattern.compile("""seq("$pat").hcutoff("$ctrl")"""),
+            "script pattern.hcutoff(ctrl)" to SprudelPattern.compile("""seq("$pat").hcutoff("$ctrl")"""),
             "string.hcutoff(ctrl)" to pat.hcutoff(ctrl),
-            "script string.hcutoff(ctrl)" to StrudelPattern.compile(""""$pat".hcutoff("$ctrl")"""),
+            "script string.hcutoff(ctrl)" to SprudelPattern.compile(""""$pat".hcutoff("$ctrl")"""),
             "hcutoff(ctrl)" to seq(pat).apply(hcutoff(ctrl)),
-            "script hcutoff(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(hcutoff("$ctrl"))"""),
+            "script hcutoff(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(hcutoff("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.hcutoff shouldBe 1000.0

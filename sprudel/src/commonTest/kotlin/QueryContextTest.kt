@@ -7,18 +7,18 @@ import io.kotest.matchers.shouldNotBe
 class QueryContextTest : StringSpec({
 
     "empty context has no keys" {
-        val ctx = StrudelPattern.QueryContext()
-        val key = StrudelPattern.QueryContext.Key<String>("test")
+        val ctx = SprudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("test")
 
         ctx.has(key) shouldBe false
         ctx.getOrNull(key) shouldBe null
     }
 
     "can store and retrieve values by key" {
-        val key1 = StrudelPattern.QueryContext.Key<String>("key1")
-        val key2 = StrudelPattern.QueryContext.Key<Int>("key2")
+        val key1 = SprudelPattern.QueryContext.Key<String>("key1")
+        val key2 = SprudelPattern.QueryContext.Key<Int>("key2")
 
-        val ctx = StrudelPattern.QueryContext()
+        val ctx = SprudelPattern.QueryContext()
             .update { set(key1, "value1") }
             .update { set(key2, 42) }
 
@@ -29,31 +29,31 @@ class QueryContextTest : StringSpec({
     }
 
     "get throws error when key not found" {
-        val ctx = StrudelPattern.QueryContext()
-        val key = StrudelPattern.QueryContext.Key<String>("missing")
+        val ctx = SprudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("missing")
 
         val result = runCatching { ctx.get(key) }
         result.isFailure shouldBe true
     }
 
     "getOrDefault returns default when key not found" {
-        val ctx = StrudelPattern.QueryContext()
-        val key = StrudelPattern.QueryContext.Key<String>("missing")
+        val ctx = SprudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("missing")
 
         ctx.getOrDefault(key, "default") shouldBe "default"
     }
 
     "getOrDefault returns value when key exists" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val ctx = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val ctx = SprudelPattern.QueryContext()
             .update { set(key, "value") }
 
         ctx.getOrDefault(key, "default") shouldBe "value"
     }
 
     "update with set creates new context" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val original = SprudelPattern.QueryContext()
         val updated = original.update { set(key, "value") }
 
         original shouldNotBe updated
@@ -62,8 +62,8 @@ class QueryContextTest : StringSpec({
     }
 
     "update without changes returns same context" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val original = SprudelPattern.QueryContext()
             .update { set(key, "value") }
 
         val updated = original.update { set(key, "value") }
@@ -72,8 +72,8 @@ class QueryContextTest : StringSpec({
     }
 
     "update with same value returns same context (copy-on-write optimization)" {
-        val key = StrudelPattern.QueryContext.Key<Int>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<Int>("key")
+        val original = SprudelPattern.QueryContext()
             .update { set(key, 42) }
 
         val updated = original.update { set(key, 42) }
@@ -82,8 +82,8 @@ class QueryContextTest : StringSpec({
     }
 
     "update with different value creates new context" {
-        val key = StrudelPattern.QueryContext.Key<Int>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<Int>("key")
+        val original = SprudelPattern.QueryContext()
             .update { set(key, 42) }
 
         val updated = original.update { set(key, 100) }
@@ -94,16 +94,16 @@ class QueryContextTest : StringSpec({
     }
 
     "setIfAbsent sets value when key is absent" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val ctx = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val ctx = SprudelPattern.QueryContext()
             .update { setIfAbsent(key, "value") }
 
         ctx.getOrNull(key) shouldBe "value"
     }
 
     "setIfAbsent does not set value when key exists" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val ctx = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val ctx = SprudelPattern.QueryContext()
             .update { set(key, "first") }
             .update { setIfAbsent(key, "second") }
 
@@ -111,8 +111,8 @@ class QueryContextTest : StringSpec({
     }
 
     "setIfAbsent returns same context when key exists (copy-on-write)" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val original = SprudelPattern.QueryContext()
             .update { set(key, "value") }
 
         val updated = original.update { setIfAbsent(key, "other") }
@@ -121,24 +121,24 @@ class QueryContextTest : StringSpec({
     }
 
     "setWhen sets value when condition is true" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val ctx = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val ctx = SprudelPattern.QueryContext()
             .update { setWhen(key, "value") { true } }
 
         ctx.getOrNull(key) shouldBe "value"
     }
 
     "setWhen does not set value when condition is false" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val ctx = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val ctx = SprudelPattern.QueryContext()
             .update { setWhen(key, "value") { false } }
 
         ctx.has(key) shouldBe false
     }
 
     "setWhen returns same context when condition is false (copy-on-write)" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val original = SprudelPattern.QueryContext()
 
         val updated = original.update { setWhen(key, "value") { false } }
 
@@ -146,10 +146,10 @@ class QueryContextTest : StringSpec({
     }
 
     "setWhen can access current context in condition" {
-        val key1 = StrudelPattern.QueryContext.Key<Int>("key1")
-        val key2 = StrudelPattern.QueryContext.Key<String>("key2")
+        val key1 = SprudelPattern.QueryContext.Key<Int>("key1")
+        val key2 = SprudelPattern.QueryContext.Key<String>("key2")
 
-        val ctx = StrudelPattern.QueryContext()
+        val ctx = SprudelPattern.QueryContext()
             .update { set(key1, 42) }
             .update {
                 setWhen(key2, "set") { it.getOrNull(key1) == 42 }
@@ -159,8 +159,8 @@ class QueryContextTest : StringSpec({
     }
 
     "remove removes the key" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val ctx = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val ctx = SprudelPattern.QueryContext()
             .update { set(key, "value") }
             .update { remove(key) }
 
@@ -169,8 +169,8 @@ class QueryContextTest : StringSpec({
     }
 
     "remove creates new context when key exists" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val original = SprudelPattern.QueryContext()
             .update { set(key, "value") }
 
         val updated = original.update { remove(key) }
@@ -181,8 +181,8 @@ class QueryContextTest : StringSpec({
     }
 
     "remove returns same context when key does not exist (copy-on-write)" {
-        val key = StrudelPattern.QueryContext.Key<String>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String>("key")
+        val original = SprudelPattern.QueryContext()
 
         val updated = original.update { remove(key) }
 
@@ -190,9 +190,9 @@ class QueryContextTest : StringSpec({
     }
 
     "multiple updates in single block - only one copy when needed" {
-        val key1 = StrudelPattern.QueryContext.Key<String>("key1")
-        val key2 = StrudelPattern.QueryContext.Key<String>("key2")
-        val original = StrudelPattern.QueryContext()
+        val key1 = SprudelPattern.QueryContext.Key<String>("key1")
+        val key2 = SprudelPattern.QueryContext.Key<String>("key2")
+        val original = SprudelPattern.QueryContext()
 
         val updated = original.update {
             set(key1, "value1")
@@ -205,9 +205,9 @@ class QueryContextTest : StringSpec({
     }
 
     "multiple updates with no actual changes returns same context" {
-        val key1 = StrudelPattern.QueryContext.Key<String>("key1")
-        val key2 = StrudelPattern.QueryContext.Key<String>("key2")
-        val original = StrudelPattern.QueryContext()
+        val key1 = SprudelPattern.QueryContext.Key<String>("key1")
+        val key2 = SprudelPattern.QueryContext.Key<String>("key2")
+        val original = SprudelPattern.QueryContext()
             .update {
                 set(key1, "value1")
                 set(key2, "value2")
@@ -222,11 +222,11 @@ class QueryContextTest : StringSpec({
     }
 
     "mixed updates: some change, some don't - creates new context only once" {
-        val key1 = StrudelPattern.QueryContext.Key<String>("key1")
-        val key2 = StrudelPattern.QueryContext.Key<String>("key2")
-        val key3 = StrudelPattern.QueryContext.Key<String>("key3")
+        val key1 = SprudelPattern.QueryContext.Key<String>("key1")
+        val key2 = SprudelPattern.QueryContext.Key<String>("key2")
+        val key3 = SprudelPattern.QueryContext.Key<String>("key3")
 
-        val original = StrudelPattern.QueryContext()
+        val original = SprudelPattern.QueryContext()
             .update {
                 set(key1, "v1")
                 set(key2, "v2")
@@ -245,10 +245,10 @@ class QueryContextTest : StringSpec({
     }
 
     "context initialized with data" {
-        val key1 = StrudelPattern.QueryContext.Key<String>("key1")
-        val key2 = StrudelPattern.QueryContext.Key<Int>("key2")
+        val key1 = SprudelPattern.QueryContext.Key<String>("key1")
+        val key2 = SprudelPattern.QueryContext.Key<Int>("key2")
 
-        val ctx = StrudelPattern.QueryContext(
+        val ctx = SprudelPattern.QueryContext(
             mapOf(
                 key1 to "value",
                 key2 to 42
@@ -260,10 +260,10 @@ class QueryContextTest : StringSpec({
     }
 
     "different key instances with same name are different keys" {
-        val key1a = StrudelPattern.QueryContext.Key<String>("key")
-        val key1b = StrudelPattern.QueryContext.Key<String>("key")
+        val key1a = SprudelPattern.QueryContext.Key<String>("key")
+        val key1b = SprudelPattern.QueryContext.Key<String>("key")
 
-        val ctx = StrudelPattern.QueryContext()
+        val ctx = SprudelPattern.QueryContext()
             .update { set(key1a, "value1") }
             .update { set(key1b, "value2") }
 
@@ -274,8 +274,8 @@ class QueryContextTest : StringSpec({
     }
 
     "can store null values" {
-        val key = StrudelPattern.QueryContext.Key<String?>("key")
-        val ctx = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String?>("key")
+        val ctx = SprudelPattern.QueryContext()
             .update { set(key, null) }
 
         ctx.has(key) shouldBe true
@@ -283,8 +283,8 @@ class QueryContextTest : StringSpec({
     }
 
     "setting null value is different from not having key" {
-        val key = StrudelPattern.QueryContext.Key<String?>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String?>("key")
+        val original = SprudelPattern.QueryContext()
 
         val withNull = original.update { set(key, null) }
 
@@ -294,8 +294,8 @@ class QueryContextTest : StringSpec({
     }
 
     "changing from null to value creates new context" {
-        val key = StrudelPattern.QueryContext.Key<String?>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String?>("key")
+        val original = SprudelPattern.QueryContext()
             .update { set(key, null) }
 
         val updated = original.update { set(key, "value") }
@@ -306,8 +306,8 @@ class QueryContextTest : StringSpec({
     }
 
     "changing from value to null creates new context" {
-        val key = StrudelPattern.QueryContext.Key<String?>("key")
-        val original = StrudelPattern.QueryContext()
+        val key = SprudelPattern.QueryContext.Key<String?>("key")
+        val original = SprudelPattern.QueryContext()
             .update { set(key, "value") }
 
         val updated = original.update { set(key, null) }
@@ -318,11 +318,11 @@ class QueryContextTest : StringSpec({
     }
 
     "complex scenario: chaining multiple updates" {
-        val depth = StrudelPattern.QueryContext.Key<Int>("depth")
-        val name = StrudelPattern.QueryContext.Key<String>("name")
-        val flag = StrudelPattern.QueryContext.Key<Boolean>("flag")
+        val depth = SprudelPattern.QueryContext.Key<Int>("depth")
+        val name = SprudelPattern.QueryContext.Key<String>("name")
+        val flag = SprudelPattern.QueryContext.Key<Boolean>("flag")
 
-        val ctx0 = StrudelPattern.QueryContext()
+        val ctx0 = SprudelPattern.QueryContext()
         val ctx1 = ctx0.update { set(depth, 0) }
         val ctx2 = ctx1.update { set(depth, 1) }
         val ctx3 = ctx2.update {

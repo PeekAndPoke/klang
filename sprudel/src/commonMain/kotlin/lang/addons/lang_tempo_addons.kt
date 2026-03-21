@@ -4,30 +4,26 @@ package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel._outerJoin
 import io.peekandpoke.klang.sprudel._splitQueries
 import io.peekandpoke.klang.sprudel.lang.*
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-
-/**
- * ADDONS: Tempo and timing functions that are NOT available in the original strudel impl
- */
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangTempoAddonsInit = false
+var sprudelLangTempoAddonsInit = false
 
 // -- helpers ----------------------------------------------------------------------------------------------------------
 
 private fun applyTimeMoveInCycle(
-    pattern: StrudelPattern,
-    args: List<StrudelDslArg<Any?>>,
+    pattern: SprudelPattern,
+    args: List<SprudelDslArg<Any?>>,
     factor: Rational,
-): StrudelPattern {
+): SprudelPattern {
     if (args.isEmpty()) return pattern
     val control = args.toPattern()
 
@@ -55,7 +51,7 @@ private fun applyTimeMoveInCycle(
 
 // -- lateInCycle() ----------------------------------------------------------------------------------------------------
 
-internal val StrudelPattern._lateInCycle by dslPatternExtension { p, args, _ ->
+internal val SprudelPattern._lateInCycle by dslPatternExtension { p, args, _ ->
     applyTimeMoveInCycle(pattern = p, args = args, factor = Rational.ONE)
 }
 internal val String._lateInCycle by dslStringExtension { p, args, callInfo -> p._lateInCycle(args, callInfo) }
@@ -85,9 +81,9 @@ internal val PatternMapperFn._lateInCycle by dslPatternMapperExtension { m, args
  * @category tempo
  * @tags lateInCycle, timing, swing, nudge, offset, addon
  */
-@StrudelDsl
-fun StrudelPattern.lateInCycle(amount: PatternLike): StrudelPattern =
-    this._lateInCycle(listOf(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.lateInCycle(amount: PatternLike): SprudelPattern =
+    this._lateInCycle(listOf(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and nudges events later within their cycle.
@@ -98,9 +94,9 @@ fun StrudelPattern.lateInCycle(amount: PatternLike): StrudelPattern =
  *
  * @param amount Fraction of a cycle to nudge events later.
  */
-@StrudelDsl
-fun String.lateInCycle(amount: PatternLike): StrudelPattern =
-    this._lateInCycle(listOf(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.lateInCycle(amount: PatternLike): SprudelPattern =
+    this._lateInCycle(listOf(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that nudges events later within their cycle.
@@ -114,9 +110,9 @@ fun String.lateInCycle(amount: PatternLike): StrudelPattern =
  * @category tempo
  * @tags lateInCycle, timing, swing, nudge, offset, addon
  */
-@StrudelDsl
+@SprudelDsl
 fun lateInCycle(amount: PatternLike): PatternMapperFn =
-    _lateInCycle(listOf(amount).asStrudelDslArgs())
+    _lateInCycle(listOf(amount).asSprudelDslArgs())
 
 /**
  * Chains a late-nudge onto this [PatternMapperFn], shifting events later within their cycle.
@@ -127,13 +123,13 @@ fun lateInCycle(amount: PatternLike): PatternMapperFn =
  *
  * @param amount Fraction of a cycle to nudge events later.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.lateInCycle(amount: PatternLike): PatternMapperFn =
-    _lateInCycle(listOf(amount).asStrudelDslArgs())
+    _lateInCycle(listOf(amount).asSprudelDslArgs())
 
 // -- earlyInCycle() ---------------------------------------------------------------------------------------------------
 
-internal val StrudelPattern._earlyInCycle by dslPatternExtension { p, args, _ ->
+internal val SprudelPattern._earlyInCycle by dslPatternExtension { p, args, _ ->
     applyTimeMoveInCycle(pattern = p, args = args, factor = Rational.MINUS_ONE)
 }
 internal val String._earlyInCycle by dslStringExtension { p, args, callInfo -> p._earlyInCycle(args, callInfo) }
@@ -163,9 +159,9 @@ internal val PatternMapperFn._earlyInCycle by dslPatternMapperExtension { m, arg
  * @category tempo
  * @tags earlyInCycle, timing, nudge, offset, addon
  */
-@StrudelDsl
-fun StrudelPattern.earlyInCycle(amount: PatternLike): StrudelPattern =
-    this._earlyInCycle(listOf(amount).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.earlyInCycle(amount: PatternLike): SprudelPattern =
+    this._earlyInCycle(listOf(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and nudges events earlier within their cycle.
@@ -176,9 +172,9 @@ fun StrudelPattern.earlyInCycle(amount: PatternLike): StrudelPattern =
  *
  * @param amount Fraction of a cycle to nudge events earlier.
  */
-@StrudelDsl
-fun String.earlyInCycle(amount: PatternLike): StrudelPattern =
-    this._earlyInCycle(listOf(amount).asStrudelDslArgs())
+@SprudelDsl
+fun String.earlyInCycle(amount: PatternLike): SprudelPattern =
+    this._earlyInCycle(listOf(amount).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that nudges events earlier within their cycle.
@@ -192,9 +188,9 @@ fun String.earlyInCycle(amount: PatternLike): StrudelPattern =
  * @category tempo
  * @tags earlyInCycle, timing, nudge, offset, addon
  */
-@StrudelDsl
+@SprudelDsl
 fun earlyInCycle(amount: PatternLike): PatternMapperFn =
-    _earlyInCycle(listOf(amount).asStrudelDslArgs())
+    _earlyInCycle(listOf(amount).asSprudelDslArgs())
 
 /**
  * Chains an early-nudge onto this [PatternMapperFn], shifting events earlier within their cycle.
@@ -205,13 +201,13 @@ fun earlyInCycle(amount: PatternLike): PatternMapperFn =
  *
  * @param amount Fraction of a cycle to nudge events earlier.
  */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.earlyInCycle(amount: PatternLike): PatternMapperFn =
-    _earlyInCycle(listOf(amount).asStrudelDslArgs())
+    _earlyInCycle(listOf(amount).asSprudelDslArgs())
 
 // -- stretchBy() ------------------------------------------------------------------------------------------------------
 
-private fun applyStretchBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+private fun applyStretchBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.isEmpty()) return pattern
 
     val control = args.toPattern(voiceValueModifier)
@@ -230,7 +226,7 @@ private fun applyStretchBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any
     }
 }
 
-internal val StrudelPattern._stretchBy by dslPatternExtension { p, args, _ -> applyStretchBy(p, args) }
+internal val SprudelPattern._stretchBy by dslPatternExtension { p, args, _ -> applyStretchBy(p, args) }
 internal val String._stretchBy by dslStringExtension { p, args, callInfo -> p._stretchBy(args, callInfo) }
 internal val _stretchBy by dslPatternMapper { args, callInfo -> { p -> p._stretchBy(args, callInfo) } }
 internal val PatternMapperFn._stretchBy by dslPatternMapperExtension { m, args, callInfo ->
@@ -258,9 +254,9 @@ internal val PatternMapperFn._stretchBy by dslPatternMapperExtension { m, args, 
  * @category tempo
  * @tags stretchBy, duration, stretch, event length, addon
  */
-@StrudelDsl
-fun StrudelPattern.stretchBy(factor: PatternLike): StrudelPattern =
-    this._stretchBy(listOf(factor).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.stretchBy(factor: PatternLike): SprudelPattern =
+    this._stretchBy(listOf(factor).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and multiplies the duration of each event by the given factor.
@@ -271,8 +267,8 @@ fun StrudelPattern.stretchBy(factor: PatternLike): StrudelPattern =
  *
  * @param factor The duration multiplier. Values > 1 extend events; values < 1 shorten them.
  */
-@StrudelDsl
-fun String.stretchBy(factor: PatternLike): StrudelPattern = this._stretchBy(listOf(factor).asStrudelDslArgs())
+@SprudelDsl
+fun String.stretchBy(factor: PatternLike): SprudelPattern = this._stretchBy(listOf(factor).asSprudelDslArgs())
 
 /**
  * Creates a [PatternMapperFn] that multiplies the duration of each event by the given factor.
@@ -290,8 +286,8 @@ fun String.stretchBy(factor: PatternLike): StrudelPattern = this._stretchBy(list
  * @category tempo
  * @tags stretchBy, duration, stretch, event length, addon
  */
-@StrudelDsl
-fun stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).asStrudelDslArgs())
+@SprudelDsl
+fun stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).asSprudelDslArgs())
 
 /**
  * Chains a duration-stretch onto this [PatternMapperFn], multiplying each event's duration.
@@ -302,5 +298,5 @@ fun stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).
  *
  * @param factor The duration multiplier. Values > 1 extend events; values < 1 shorten them.
  */
-@StrudelDsl
-fun PatternMapperFn.stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).asStrudelDslArgs())
+@SprudelDsl
+fun PatternMapperFn.stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).asSprudelDslArgs())

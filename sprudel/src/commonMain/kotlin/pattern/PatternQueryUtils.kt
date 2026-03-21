@@ -3,7 +3,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.TimeSpan
 import kotlin.math.floor
 
@@ -27,7 +27,7 @@ import kotlin.math.floor
  * Creates a mutable event list.
  * Centralized to enable future pooling/reuse strategies.
  */
-internal inline fun createEventList(): MutableList<StrudelPatternEvent> {
+internal inline fun createEventList(): MutableList<SprudelPatternEvent> {
     return mutableListOf()
 }
 
@@ -35,7 +35,7 @@ internal inline fun createEventList(): MutableList<StrudelPatternEvent> {
  * Creates a mutable event list with expected capacity hint.
  * Reduces allocations when result size is predictable.
  */
-internal inline fun createEventList(capacityHint: Int): MutableList<StrudelPatternEvent> {
+internal inline fun createEventList(capacityHint: Int): MutableList<SprudelPatternEvent> {
     return ArrayList(capacityHint)
 }
 
@@ -108,7 +108,7 @@ internal inline fun calculateOverlapRange(
  * Returns (scaledPart, scaledWhole).
  */
 internal inline fun mapEventTimeByScale(
-    event: StrudelPatternEvent,
+    event: SprudelPatternEvent,
     scale: Rational,
 ): Pair<TimeSpan, TimeSpan> {
     return Pair(
@@ -124,7 +124,7 @@ internal inline fun mapEventTimeByScale(
  * Returns (shiftedPart, shiftedWhole).
  */
 internal inline fun offsetEventTime(
-    event: StrudelPatternEvent,
+    event: SprudelPatternEvent,
     offset: Rational,
 ): Pair<TimeSpan, TimeSpan> {
     return Pair(
@@ -145,7 +145,7 @@ internal inline fun offsetEventTime(
  * @return (mappedPart, mappedWhole)
  */
 internal inline fun mapEventTimeBySpan(
-    event: StrudelPatternEvent,
+    event: SprudelPatternEvent,
     cycleBase: Rational,
     compressedStart: Rational,
     span: Rational,

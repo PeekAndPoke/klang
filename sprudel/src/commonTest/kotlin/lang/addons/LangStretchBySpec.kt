@@ -7,7 +7,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -19,15 +19,15 @@ class LangStretchBySpec : StringSpec({
             "pattern.stretchBy(factor)" to
                     note("c3").stretchBy(2.0),
             "script pattern.stretchBy(factor)" to
-                    StrudelPattern.compile("""note("c3").stretchBy(2.0)"""),
+                    SprudelPattern.compile("""note("c3").stretchBy(2.0)"""),
             "string.stretchBy(factor)" to
                     "c3".stretchBy(2.0),
             "script string.stretchBy(factor)" to
-                    StrudelPattern.compile(""""c3".stretchBy(2.0)"""),
+                    SprudelPattern.compile(""""c3".stretchBy(2.0)"""),
             "stretchBy(factor)" to
                     note("c3").apply(stretchBy(2.0)),
             "script stretchBy(factor)" to
-                    StrudelPattern.compile("""note("c3").apply(stretchBy(2.0))"""),
+                    SprudelPattern.compile("""note("c3").apply(stretchBy(2.0))"""),
         ) { _, events ->
             val onsets = events.filter { it.isOnset }
             onsets shouldHaveSize 1
@@ -144,7 +144,7 @@ class LangStretchBySpec : StringSpec({
     }
 
     "script apply(stretchBy()) works in compiled code" {
-        val p = StrudelPattern.compile("""note("c3 d3").apply(stretchBy(2.0))""")
+        val p = SprudelPattern.compile("""note("c3 d3").apply(stretchBy(2.0))""")
         val events = p?.queryArc(0.0, 1.0)?.filter { it.isOnset } ?: emptyList()
 
         assertSoftly {
@@ -155,7 +155,7 @@ class LangStretchBySpec : StringSpec({
     }
 
     "stretchBy in compiled code" {
-        val p = StrudelPattern.compile("""note("c3 d3").stretchBy(2.0)""")
+        val p = SprudelPattern.compile("""note("c3 d3").stretchBy(2.0)""")
         val events = p?.queryArc(0.0, 1.0)?.filter { it.isOnset } ?: emptyList()
 
         assertSoftly {

@@ -6,7 +6,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangMaskSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangMaskSpec : StringSpec({
         val ctrl = "1 0"
         dslInterfaceTests(
             "pattern.mask(ctrl)" to note(pat).mask(ctrl),
-            "script pattern.mask(ctrl)" to StrudelPattern.compile("""note("$pat").mask("$ctrl")"""),
+            "script pattern.mask(ctrl)" to SprudelPattern.compile("""note("$pat").mask("$ctrl")"""),
             "string.mask(ctrl)" to pat.mask(ctrl),
-            "script string.mask(ctrl)" to StrudelPattern.compile(""""$pat".mask("$ctrl")"""),
+            "script string.mask(ctrl)" to SprudelPattern.compile(""""$pat".mask("$ctrl")"""),
             "mask(ctrl)" to note(pat).apply(mask(ctrl)),
-            "script mask(ctrl)" to StrudelPattern.compile("""note("$pat").apply(mask("$ctrl"))"""),
+            "script mask(ctrl)" to SprudelPattern.compile("""note("$pat").apply(mask("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 1  // only the truthy "1" slot passes
@@ -74,7 +74,7 @@ class LangMaskSpec : StringSpec({
 
     "mask() works in compiled code" {
         // We use "1 0" to strictly test half-cycle masking in a single cycle
-        val p = StrudelPattern.compile("""note("c [eb,g]").mask("1 0")""")
+        val p = SprudelPattern.compile("""note("c [eb,g]").mask("1 0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         // "1 0" means keep first half, silence second half.

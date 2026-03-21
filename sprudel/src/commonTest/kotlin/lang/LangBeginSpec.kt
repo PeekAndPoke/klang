@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBeginSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangBeginSpec : StringSpec({
         val ctrl = "0.25 0.75"
         dslInterfaceTests(
             "pattern.begin(ctrl)" to seq(pat).begin(ctrl),
-            "script pattern.begin(ctrl)" to StrudelPattern.compile("""seq("$pat").begin("$ctrl")"""),
+            "script pattern.begin(ctrl)" to SprudelPattern.compile("""seq("$pat").begin("$ctrl")"""),
             "string.begin(ctrl)" to pat.begin(ctrl),
-            "script string.begin(ctrl)" to StrudelPattern.compile(""""$pat".begin("$ctrl")"""),
+            "script string.begin(ctrl)" to SprudelPattern.compile(""""$pat".begin("$ctrl")"""),
             "begin(ctrl)" to seq(pat).apply(begin(ctrl)),
-            "script begin(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(begin("$ctrl"))"""),
+            "script begin(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(begin("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.begin shouldBe 0.25
@@ -79,7 +79,7 @@ class LangBeginSpec : StringSpec({
     }
 
     "begin() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").begin("0.25 0.75")""")
+        val p = SprudelPattern.compile("""note("a b").begin("0.25 0.75")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 2
         events.map { it.data.begin } shouldBe listOf(0.25, 0.75)

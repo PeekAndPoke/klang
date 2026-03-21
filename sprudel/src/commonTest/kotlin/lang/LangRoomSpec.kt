@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangRoomSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangRoomSpec : StringSpec({
     "room dsl interface" {
         dslInterfaceTests(
             "pattern.room(amount)" to note("c").room(0.5),
-            "script pattern.room(amount)" to StrudelPattern.compile("""note("c").room(0.5)"""),
+            "script pattern.room(amount)" to SprudelPattern.compile("""note("c").room(0.5)"""),
             "string.room(amount)" to "c".room(0.5),
-            "script string.room(amount)" to StrudelPattern.compile(""""c".room(0.5)"""),
+            "script string.room(amount)" to SprudelPattern.compile(""""c".room(0.5)"""),
             "room(amount)" to note("c").apply(room(0.5)),
-            "script room(amount)" to StrudelPattern.compile("""note("c").apply(room(0.5))"""),
+            "script room(amount)" to SprudelPattern.compile("""note("c").apply(room(0.5))"""),
         ) { _, events -> events.shouldNotBeEmpty() }
     }
 
@@ -83,7 +83,7 @@ class LangRoomSpec : StringSpec({
     }
 
     "room() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").room("0.5")""")
+        val p = SprudelPattern.compile("""note("c").room("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.room shouldBe 0.5

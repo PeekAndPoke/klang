@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBorSpec : StringSpec({
@@ -39,15 +39,15 @@ class LangBorSpec : StringSpec({
             "pattern.bor(ctrl)" to
                     seq(pat).bor(ctrl),
             "script pattern.bor(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").bor("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").bor("$ctrl")"""),
             "string.bor(ctrl)" to
                     pat.bor(ctrl),
             "script string.bor(ctrl)" to
-                    StrudelPattern.compile(""""$pat".bor("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".bor("$ctrl")"""),
             "bor(ctrl)" to
                     seq(pat).apply(bor(ctrl)),
             "script bor(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(bor("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(bor("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.value?.asInt shouldBe 10  // 8 | 2 = 10

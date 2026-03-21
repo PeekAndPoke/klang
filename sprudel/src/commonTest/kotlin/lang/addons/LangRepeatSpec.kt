@@ -7,7 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -25,15 +25,15 @@ class LangRepeatSpec : StringSpec({
             "pattern.repeat(times)" to
                     note(pat).repeat(times),
             "script pattern.repeat(times)" to
-                    StrudelPattern.compile("""note("$pat").repeat($times)"""),
+                    SprudelPattern.compile("""note("$pat").repeat($times)"""),
             "string.repeat(times)" to
                     pat.repeat(times).note(),
             "script string.repeat(times)" to
-                    StrudelPattern.compile(""""$pat".repeat($times).note()"""),
+                    SprudelPattern.compile(""""$pat".repeat($times).note()"""),
             "repeat(times)" to
                     note(pat).apply(repeat(times)),
             "script repeat(times)" to
-                    StrudelPattern.compile("""note("$pat").apply(repeat($times))"""),
+                    SprudelPattern.compile("""note("$pat").apply(repeat($times))"""),
         ) { _, events ->
             events.shouldHaveSize(2)
             events[0].data.note shouldBeEqualIgnoringCase "a"
@@ -152,7 +152,7 @@ class LangRepeatSpec : StringSpec({
     }
 
     "script apply(repeat()) works in compiled code" {
-        val p = StrudelPattern.compile("""note("a b").apply(repeat(2))""")!!
+        val p = SprudelPattern.compile("""note("a b").apply(repeat(2))""")!!
         val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         assertSoftly {

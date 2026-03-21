@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangOrbitSpec : StringSpec({
@@ -16,28 +16,28 @@ class LangOrbitSpec : StringSpec({
             "pattern.orbit(ctrl)" to
                     seq(pat).orbit(ctrl),
             "script pattern.orbit(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").orbit("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").orbit("$ctrl")"""),
             "string.orbit(ctrl)" to
                     pat.orbit(ctrl),
             "script string.orbit(ctrl)" to
-                    StrudelPattern.compile(""""$pat".orbit("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".orbit("$ctrl")"""),
             "orbit(ctrl)" to
                     seq(pat).apply(orbit(ctrl)),
             "script orbit(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(orbit("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(orbit("$ctrl"))"""),
             // o alias
             "pattern.o(ctrl)" to
                     seq(pat).o(ctrl),
             "script pattern.o(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").o("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").o("$ctrl")"""),
             "string.o(ctrl)" to
                     pat.o(ctrl),
             "script string.o(ctrl)" to
-                    StrudelPattern.compile(""""$pat".o("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".o("$ctrl")"""),
             "o(ctrl)" to
                     seq(pat).apply(o(ctrl)),
             "script o(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(o("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(o("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.orbit shouldBe 1
@@ -90,7 +90,7 @@ class LangOrbitSpec : StringSpec({
     }
 
     "orbit() works in compiled code" {
-        val p = StrudelPattern.compile("""note("a b c d").orbit("0 1 2 3")""")
+        val p = SprudelPattern.compile("""note("a b c d").orbit("0 1 2 3")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4
@@ -101,7 +101,7 @@ class LangOrbitSpec : StringSpec({
     }
 
     "orbit() as modifier works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").orbit("0 2")""")
+        val p = SprudelPattern.compile("""sound("bd hh").orbit("0 2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2

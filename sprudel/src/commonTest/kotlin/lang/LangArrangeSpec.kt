@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangArrangeSpec : StringSpec({
 
@@ -50,7 +50,7 @@ class LangArrangeSpec : StringSpec({
         events[2].part.end.toDouble() shouldBe (3.0 plusOrMinus EPSILON)
     }
 
-    "arrange() works as method on StrudelPattern" {
+    "arrange() works as method on SprudelPattern" {
         // sound("bd").arrange(sound("hh")) -> arrange(sound("bd"), sound("hh"))
         val p = sound("bd").arrange(sound("hh"))
 
@@ -84,7 +84,7 @@ class LangArrangeSpec : StringSpec({
     }
 
     "arrange() works in compiled code" {
-        val p = StrudelPattern.compile("""arrange(sound("bd"), sound("hh"))""")
+        val p = SprudelPattern.compile("""arrange(sound("bd"), sound("hh"))""")
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -93,7 +93,7 @@ class LangArrangeSpec : StringSpec({
     }
 
     "arrange() works as method in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd").arrange(sound("hh"))""")
+        val p = SprudelPattern.compile("""sound("bd").arrange(sound("hh"))""")
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2

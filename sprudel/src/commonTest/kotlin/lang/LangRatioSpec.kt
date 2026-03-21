@@ -5,7 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangRatioSpec : StringSpec({
 
@@ -53,7 +53,7 @@ class LangRatioSpec : StringSpec({
         }
 
         withClue("ratio compiled") {
-            val p = StrudelPattern.compile("""ratio("1 5:4 3:2")""")!!
+            val p = SprudelPattern.compile("""ratio("1 5:4 3:2")""")!!
             val events = p.queryArc(0.0, 1.0)
 
             events.size shouldBe 3

@@ -3,32 +3,32 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.TimeSpan
 
 class ContextRangeMapPatternSpec : StringSpec({
 
     "ContextRangeMapPattern remaps min/max in context" {
-        val base = object : StrudelPattern.FixedWeight {
+        val base = object : SprudelPattern.FixedWeight {
             override val numSteps: Rational = Rational.ONE
 
             override fun queryArcContextual(
                 from: Rational,
                 to: Rational,
                 ctx: QueryContext,
-            ): List<StrudelPatternEvent> {
+            ): List<SprudelPatternEvent> {
                 val min = ctx.getOrDefault(ContinuousPattern.minKey, 0.0)
                 val max = ctx.getOrDefault(ContinuousPattern.maxKey, 0.0)
 
                 return listOf(
-                    StrudelPatternEvent(
+                    SprudelPatternEvent(
                         part = TimeSpan(from, to),
                         whole = TimeSpan(from, to),
-                        data = StrudelVoiceData.empty.copy(
+                        data = SprudelVoiceData.empty.copy(
                             value = (min + max).asVoiceValue()
                         )
                     )

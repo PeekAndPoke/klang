@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangGainSpec : StringSpec({
@@ -19,15 +19,15 @@ class LangGainSpec : StringSpec({
             "pattern.gain(ctrl)" to
                     seq(pat).gain(ctrl),
             "script pattern.gain(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").gain("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").gain("$ctrl")"""),
             "string.gain(ctrl)" to
                     pat.gain(ctrl),
             "script string.gain(ctrl)" to
-                    StrudelPattern.compile(""""$pat".gain("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".gain("$ctrl")"""),
             "gain(ctrl)" to
                     seq(pat).apply(gain(ctrl)),
             "script gain(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(gain("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(gain("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.gain shouldBe 0.0
@@ -107,7 +107,7 @@ class LangGainSpec : StringSpec({
     }
 
     "gain() works within compiled code as top-level function" {
-        val p = StrudelPattern.compile(""""a b".apply(gain("0.5 1.0"))""")
+        val p = SprudelPattern.compile(""""a b".apply(gain("0.5 1.0"))""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
@@ -116,7 +116,7 @@ class LangGainSpec : StringSpec({
     }
 
     "gain() works within compiled code as chained-level function" {
-        val p = StrudelPattern.compile("""note("a b").gain("0.5 1.0")""")
+        val p = SprudelPattern.compile("""note("a b").gain("0.5 1.0")""")
 
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 

@@ -2,8 +2,8 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -17,16 +17,16 @@ import kotlin.math.floor
  * For static patterns (like note("c")), this acts as identity.
  */
 class RepeatCyclesPattern(
-    private val source: StrudelPattern,
+    private val source: SprudelPattern,
     private val n: Rational,
-) : StrudelPattern.FixedWeight {
+) : SprudelPattern.FixedWeight {
 
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
-        val result = mutableListOf<StrudelPatternEvent>()
+        ctx: SprudelPattern.QueryContext,
+    ): List<SprudelPatternEvent> {
+        val result = mutableListOf<SprudelPatternEvent>()
         val nDouble = n.toDouble()
 
         // Iterate through each cycle in the output range
@@ -85,15 +85,15 @@ class RepeatCyclesPattern(
          * Creates a RepeatCyclesPattern from a control pattern.
          */
         fun control(
-            source: StrudelPattern,
-            repetitionsPattern: StrudelPattern,
-        ): StrudelPattern {
-            return object : StrudelPattern.FixedWeight {
+            source: SprudelPattern,
+            repetitionsPattern: SprudelPattern,
+        ): SprudelPattern {
+            return object : SprudelPattern.FixedWeight {
                 override fun queryArcContextual(
                     from: Rational,
                     to: Rational,
-                    ctx: StrudelPattern.QueryContext,
-                ): List<StrudelPatternEvent> {
+                    ctx: SprudelPattern.QueryContext,
+                ): List<SprudelPatternEvent> {
                     val repsEvents = repetitionsPattern.queryArcContextual(from, from + 1.0.toRational(), ctx)
                     val repsValue = repsEvents.firstOrNull()?.data?.value?.asDouble ?: 1.0
                     val repetitions = repsValue.toRational()

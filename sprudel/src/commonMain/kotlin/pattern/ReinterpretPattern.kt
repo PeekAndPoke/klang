@@ -1,24 +1,24 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 
 internal class ReinterpretPattern internal constructor(
-    val source: StrudelPattern,
-    val interpret: (evt: StrudelPatternEvent, ctx: QueryContext) -> StrudelPatternEvent,
-) : StrudelPattern {
+    val source: SprudelPattern,
+    val interpret: (evt: SprudelPatternEvent, ctx: QueryContext) -> SprudelPatternEvent,
+) : SprudelPattern {
 
     companion object {
-        fun StrudelPattern.reinterpret(interpret: (StrudelPatternEvent) -> StrudelPatternEvent): StrudelPattern =
+        fun SprudelPattern.reinterpret(interpret: (SprudelPatternEvent) -> SprudelPatternEvent): SprudelPattern =
             ReinterpretPattern(this) { evt, _ -> interpret(evt) }
 
-        fun StrudelPattern.reinterpret(interpret: (StrudelPatternEvent, QueryContext) -> StrudelPatternEvent): StrudelPattern =
+        fun SprudelPattern.reinterpret(interpret: (SprudelPatternEvent, QueryContext) -> SprudelPatternEvent): SprudelPattern =
             ReinterpretPattern(this, interpret)
 
-        fun StrudelPattern.reinterpretVoice(interpret: (voice: StrudelVoiceData) -> StrudelVoiceData): StrudelPattern =
+        fun SprudelPattern.reinterpretVoice(interpret: (voice: SprudelVoiceData) -> SprudelVoiceData): SprudelPattern =
             ReinterpretPattern(this, { evt, _ -> evt.copy(data = interpret(evt.data)) })
     }
 
@@ -28,7 +28,7 @@ internal class ReinterpretPattern internal constructor(
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         val sourceEvents = source.queryArcContextual(from, to, ctx)
 
         return sourceEvents.map { interpret(it, ctx) }

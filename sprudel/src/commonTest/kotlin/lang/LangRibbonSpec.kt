@@ -7,7 +7,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangRibbonSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangRibbonSpec : StringSpec({
         val pat = "0 1 2 3"
         dslInterfaceTests(
             "pattern.ribbon(0, 1)" to n(pat).ribbon(0, 1),
-            "script pattern.ribbon(0, 1)" to StrudelPattern.compile("""n("$pat").ribbon(0, 1)"""),
+            "script pattern.ribbon(0, 1)" to SprudelPattern.compile("""n("$pat").ribbon(0, 1)"""),
             "string.ribbon(0, 1)" to pat.ribbon(0, 1),
-            "script string.ribbon(0, 1)" to StrudelPattern.compile(""""$pat".ribbon(0, 1)"""),
+            "script string.ribbon(0, 1)" to SprudelPattern.compile(""""$pat".ribbon(0, 1)"""),
             "ribbon(0, 1)" to n(pat).apply(ribbon(0, 1)),
-            "script ribbon(0, 1)" to StrudelPattern.compile("""n("$pat").apply(ribbon(0, 1))"""),
+            "script ribbon(0, 1)" to SprudelPattern.compile("""n("$pat").apply(ribbon(0, 1))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4
@@ -31,11 +31,11 @@ class LangRibbonSpec : StringSpec({
         val pat = "0 1 2 3"
         dslInterfaceTests(
             "pattern.rib(0, 1)" to n(pat).rib(0, 1),
-            "script pattern.rib(0, 1)" to StrudelPattern.compile("""n("$pat").rib(0, 1)"""),
+            "script pattern.rib(0, 1)" to SprudelPattern.compile("""n("$pat").rib(0, 1)"""),
             "string.rib(0, 1)" to pat.rib(0, 1),
-            "script string.rib(0, 1)" to StrudelPattern.compile(""""$pat".rib(0, 1)"""),
+            "script string.rib(0, 1)" to SprudelPattern.compile(""""$pat".rib(0, 1)"""),
             "rib(0, 1)" to n(pat).apply(rib(0, 1)),
-            "script rib(0, 1)" to StrudelPattern.compile("""n("$pat").apply(rib(0, 1))"""),
+            "script rib(0, 1)" to SprudelPattern.compile("""n("$pat").apply(rib(0, 1))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 4

@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangEuclidishSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangEuclidishSpec : StringSpec({
         val pat = "hh"
         dslInterfaceTests(
             "pattern.euclidish(3, 8, 0.0)" to s(pat).euclidish(3, 8, 0.0),
-            "script pattern.euclidish(3, 8, 0.0)" to StrudelPattern.compile("""s("$pat").euclidish(3, 8, 0.0)"""),
+            "script pattern.euclidish(3, 8, 0.0)" to SprudelPattern.compile("""s("$pat").euclidish(3, 8, 0.0)"""),
             "string.euclidish(3, 8, 0.0)" to pat.euclidish(3, 8, 0.0),
-            "script string.euclidish(3, 8, 0.0)" to StrudelPattern.compile(""""$pat".euclidish(3, 8, 0.0)"""),
+            "script string.euclidish(3, 8, 0.0)" to SprudelPattern.compile(""""$pat".euclidish(3, 8, 0.0)"""),
             "euclidish(3, 8, 0.0)" to s(pat).apply(euclidish(3, 8, 0.0)),
-            "script euclidish(3, 8, 0.0)" to StrudelPattern.compile("""s("$pat").apply(euclidish(3, 8, 0.0))"""),
+            "script euclidish(3, 8, 0.0)" to SprudelPattern.compile("""s("$pat").apply(euclidish(3, 8, 0.0))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 3
@@ -29,11 +29,11 @@ class LangEuclidishSpec : StringSpec({
         val pat = "hh"
         dslInterfaceTests(
             "pattern.eish(3, 8, 0.0)" to s(pat).eish(3, 8, 0.0),
-            "script pattern.eish(3, 8, 0.0)" to StrudelPattern.compile("""s("$pat").eish(3, 8, 0.0)"""),
+            "script pattern.eish(3, 8, 0.0)" to SprudelPattern.compile("""s("$pat").eish(3, 8, 0.0)"""),
             "string.eish(3, 8, 0.0)" to pat.eish(3, 8, 0.0),
-            "script string.eish(3, 8, 0.0)" to StrudelPattern.compile(""""$pat".eish(3, 8, 0.0)"""),
+            "script string.eish(3, 8, 0.0)" to SprudelPattern.compile(""""$pat".eish(3, 8, 0.0)"""),
             "eish(3, 8, 0.0)" to s(pat).apply(eish(3, 8, 0.0)),
-            "script eish(3, 8, 0.0)" to StrudelPattern.compile("""s("$pat").apply(eish(3, 8, 0.0))"""),
+            "script eish(3, 8, 0.0)" to SprudelPattern.compile("""s("$pat").apply(eish(3, 8, 0.0))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 3

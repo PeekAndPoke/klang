@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangSpeedSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangSpeedSpec : StringSpec({
         val ctrl = "0.5 2.0"
         dslInterfaceTests(
             "pattern.speed(ctrl)" to seq(pat).speed(ctrl),
-            "script pattern.speed(ctrl)" to StrudelPattern.compile("""seq("$pat").speed("$ctrl")"""),
+            "script pattern.speed(ctrl)" to SprudelPattern.compile("""seq("$pat").speed("$ctrl")"""),
             "string.speed(ctrl)" to pat.speed(ctrl),
-            "script string.speed(ctrl)" to StrudelPattern.compile(""""$pat".speed("$ctrl")"""),
+            "script string.speed(ctrl)" to SprudelPattern.compile(""""$pat".speed("$ctrl")"""),
             "speed(ctrl)" to seq(pat).apply(speed(ctrl)),
-            "script speed(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(speed("$ctrl"))"""),
+            "script speed(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(speed("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.speed shouldBe 0.5
@@ -79,7 +79,7 @@ class LangSpeedSpec : StringSpec({
     }
 
     "speed() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").speed("0.5 2.0")""")
+        val p = SprudelPattern.compile("""note("a b").speed("0.5 2.0")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 2
         events.map { it.data.speed } shouldBe listOf(0.5, 2.0)

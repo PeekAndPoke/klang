@@ -8,7 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBpdecaySpec : StringSpec({
@@ -20,11 +20,11 @@ class LangBpdecaySpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.bpdecay(ctrl)" to seq(pat).bpdecay(ctrl),
-            "script pattern.bpdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").bpdecay("$ctrl")"""),
+            "script pattern.bpdecay(ctrl)" to SprudelPattern.compile("""seq("$pat").bpdecay("$ctrl")"""),
             "string.bpdecay(ctrl)" to pat.bpdecay(ctrl),
-            "script string.bpdecay(ctrl)" to StrudelPattern.compile(""""$pat".bpdecay("$ctrl")"""),
+            "script string.bpdecay(ctrl)" to SprudelPattern.compile(""""$pat".bpdecay("$ctrl")"""),
             "bpdecay(ctrl)" to seq(pat).apply(bpdecay(ctrl)),
-            "script bpdecay(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpdecay("$ctrl"))"""),
+            "script bpdecay(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bpdecay("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bpdecay shouldBe 0.5
@@ -86,7 +86,7 @@ class LangBpdecaySpec : StringSpec({
     }
 
     "bpdecay() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bpdecay("0.2")""")
+        val p = SprudelPattern.compile("""note("c").bpdecay("0.2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bpdecay shouldBe 0.2
@@ -109,7 +109,7 @@ class LangBpdecaySpec : StringSpec({
     }
 
     "bpdecay() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.sprudel.StrudelVoiceData.empty.copy(
+        val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             bandf = 1000.0,
             bpdecay = 0.2
         )
@@ -127,11 +127,11 @@ class LangBpdecaySpec : StringSpec({
         val ctrl = "0.5 1.0"
         dslInterfaceTests(
             "pattern.bpd(ctrl)" to seq(pat).bpd(ctrl),
-            "script pattern.bpd(ctrl)" to StrudelPattern.compile("""seq("$pat").bpd("$ctrl")"""),
+            "script pattern.bpd(ctrl)" to SprudelPattern.compile("""seq("$pat").bpd("$ctrl")"""),
             "string.bpd(ctrl)" to pat.bpd(ctrl),
-            "script string.bpd(ctrl)" to StrudelPattern.compile(""""$pat".bpd("$ctrl")"""),
+            "script string.bpd(ctrl)" to SprudelPattern.compile(""""$pat".bpd("$ctrl")"""),
             "bpd(ctrl)" to seq(pat).apply(bpd(ctrl)),
-            "script bpd(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(bpd("$ctrl"))"""),
+            "script bpd(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(bpd("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bpdecay shouldBe 0.5
@@ -165,7 +165,7 @@ class LangBpdecaySpec : StringSpec({
     }
 
     "bpd() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bpd("0.25")""")
+        val p = SprudelPattern.compile("""note("c").bpd("0.25")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         events[0].data.bpdecay shouldBe 0.25

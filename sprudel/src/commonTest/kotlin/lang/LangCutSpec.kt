@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangCutSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangCutSpec : StringSpec({
         val ctrl = "1 2"
         dslInterfaceTests(
             "pattern.cut(ctrl)" to seq(pat).cut(ctrl),
-            "script pattern.cut(ctrl)" to StrudelPattern.compile("""seq("$pat").cut("$ctrl")"""),
+            "script pattern.cut(ctrl)" to SprudelPattern.compile("""seq("$pat").cut("$ctrl")"""),
             "string.cut(ctrl)" to pat.cut(ctrl),
-            "script string.cut(ctrl)" to StrudelPattern.compile(""""$pat".cut("$ctrl")"""),
+            "script string.cut(ctrl)" to SprudelPattern.compile(""""$pat".cut("$ctrl")"""),
             "cut(ctrl)" to seq(pat).apply(cut(ctrl)),
-            "script cut(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(cut("$ctrl"))"""),
+            "script cut(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(cut("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.cut shouldBe 1
@@ -71,7 +71,7 @@ class LangCutSpec : StringSpec({
     }
 
     "cut() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").cut("1 2")""")
+        val p = SprudelPattern.compile("""note("a b").cut("1 2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 2
         events.map { it.data.cut } shouldBe listOf(1, 2)

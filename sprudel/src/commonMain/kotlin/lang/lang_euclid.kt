@@ -2,9 +2,9 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelVoiceData
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.EuclideanMorphPattern
@@ -14,11 +14,11 @@ import io.peekandpoke.klang.sprudel.pattern.EuclideanPattern
  * Accessing this property forces the initialization of this file's class,
  * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
  */
-var strudelLangEuclidInit = false
+var sprudelLangEuclidInit = false
 
 // -- euclid() ---------------------------------------------------------------------------------------------------------
 
-fun applyEuclid(source: StrudelPattern, pulses: Int, steps: Int, rotation: Int): StrudelPattern {
+fun applyEuclid(source: SprudelPattern, pulses: Int, steps: Int, rotation: Int): SprudelPattern {
     return EuclideanPattern.create(
         inner = source,
         pulses = pulses,
@@ -29,25 +29,25 @@ fun applyEuclid(source: StrudelPattern, pulses: Int, steps: Int, rotation: Int):
 
 internal val _euclid by dslPatternMapper { args, callInfo -> { p -> p._euclid(args, callInfo) } }
 
-internal val StrudelPattern._euclid by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._euclid by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
     val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
     val stepsVal = stepsArg?.value
 
-    val pulsesPattern: StrudelPattern = when (pulsesVal) {
-        is StrudelPattern -> pulsesVal
+    val pulsesPattern: SprudelPattern = when (pulsesVal) {
+        is SprudelPattern -> pulsesVal
 
-        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val stepsPattern: StrudelPattern = when (stepsVal) {
-        is StrudelPattern -> stepsVal
+    val stepsPattern: SprudelPattern = when (stepsVal) {
+        is SprudelPattern -> stepsVal
 
-        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -89,9 +89,9 @@ internal val PatternMapperFn._euclid by dslPatternMapperExtension { m, args, cal
  * @category structural
  * @tags euclid, rhythm, euclidean, structure, pattern
  */
-@StrudelDsl
-fun euclid(pulses: Int, steps: Int, pattern: PatternLike): StrudelPattern =
-    euclid(pulses, steps)(listOf(pattern).asStrudelDslArgs().toPattern())
+@SprudelDsl
+fun euclid(pulses: Int, steps: Int, pattern: PatternLike): SprudelPattern =
+    euclid(pulses, steps)(listOf(pattern).asSprudelDslArgs().toPattern())
 
 /**
  * Applies a Euclidean rhythm structure to the pattern.
@@ -107,9 +107,9 @@ fun euclid(pulses: Int, steps: Int, pattern: PatternLike): StrudelPattern =
  * @category structural
  * @tags euclid, rhythm, euclidean, structure, pattern
  */
-@StrudelDsl
-fun StrudelPattern.euclid(pulses: Int, steps: Int): StrudelPattern =
-    this._euclid(listOf(pulses, steps).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.euclid(pulses: Int, steps: Int): SprudelPattern =
+    this._euclid(listOf(pulses, steps).asSprudelDslArgs())
 
 /**
  * Applies a Euclidean rhythm structure to the mini-notation string.
@@ -125,9 +125,9 @@ fun StrudelPattern.euclid(pulses: Int, steps: Int): StrudelPattern =
  * @category structural
  * @tags euclid, rhythm, euclidean, structure, pattern
  */
-@StrudelDsl
-fun String.euclid(pulses: Int, steps: Int): StrudelPattern =
-    this._euclid(listOf(pulses, steps).asStrudelDslArgs())
+@SprudelDsl
+fun String.euclid(pulses: Int, steps: Int): SprudelPattern =
+    this._euclid(listOf(pulses, steps).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies a Euclidean rhythm structure to the source pattern.
@@ -143,18 +143,18 @@ fun String.euclid(pulses: Int, steps: Int): StrudelPattern =
  * @category structural
  * @tags euclid, rhythm, euclidean, structure, pattern
  */
-@StrudelDsl
+@SprudelDsl
 fun euclid(pulses: Int, steps: Int): PatternMapperFn =
-    _euclid(listOf(pulses, steps).asStrudelDslArgs())
+    _euclid(listOf(pulses, steps).asSprudelDslArgs())
 
 /** Chains a euclid onto this [PatternMapperFn]; applies Euclidean rhythm structure to the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.euclid(pulses: Int, steps: Int): PatternMapperFn =
-    this._euclid(listOf(pulses, steps).asStrudelDslArgs())
+    this._euclid(listOf(pulses, steps).asSprudelDslArgs())
 
 // -- euclidRot() ------------------------------------------------------------------------------------------------------
 
-internal val StrudelPattern._euclidRot by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._euclidRot by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
     val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
@@ -162,27 +162,27 @@ internal val StrudelPattern._euclidRot by dslPatternExtension { p, args, /* call
     val rotationArg = args.getOrNull(2)
     val rotationVal = rotationArg?.value
 
-    val pulsesPattern: StrudelPattern = when (pulsesVal) {
-        is StrudelPattern -> pulsesVal
+    val pulsesPattern: SprudelPattern = when (pulsesVal) {
+        is SprudelPattern -> pulsesVal
 
-        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val stepsPattern: StrudelPattern = when (stepsVal) {
-        is StrudelPattern -> stepsVal
+    val stepsPattern: SprudelPattern = when (stepsVal) {
+        is SprudelPattern -> stepsVal
 
-        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val rotationPattern: StrudelPattern = when (rotationVal) {
-        is StrudelPattern -> rotationVal
+    val rotationPattern: SprudelPattern = when (rotationVal) {
+        is SprudelPattern -> rotationVal
 
-        else -> parseMiniNotation(rotationArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(rotationArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -203,7 +203,7 @@ internal val PatternMapperFn._euclidRot by dslPatternMapperExtension { m, args, 
     m.chain(_euclidRot(args, callInfo))
 }
 
-internal val StrudelPattern._euclidrot by dslPatternExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
+internal val SprudelPattern._euclidrot by dslPatternExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
 internal val String._euclidrot by dslStringExtension { p, args, callInfo -> p._euclidRot(args, callInfo) }
 internal val _euclidrot by dslPatternMapper { args, callInfo -> { p -> p._euclidRot(args, callInfo) } }
 internal val PatternMapperFn._euclidrot by dslPatternMapperExtension { m, args, callInfo ->
@@ -232,9 +232,9 @@ internal val PatternMapperFn._euclidrot by dslPatternMapperExtension { m, args, 
  * @category structural
  * @tags euclidRot, euclid, rhythm, rotation, structure
  */
-@StrudelDsl
-fun euclidRot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): StrudelPattern =
-    euclidRot(pulses, steps, rotation)(listOf(pattern).asStrudelDslArgs().toPattern())
+@SprudelDsl
+fun euclidRot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): SprudelPattern =
+    euclidRot(pulses, steps, rotation)(listOf(pattern).asSprudelDslArgs().toPattern())
 
 /**
  * Applies a rotated Euclidean rhythm structure to the pattern.
@@ -252,9 +252,9 @@ fun euclidRot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): Str
  * @category structural
  * @tags euclidRot, euclid, rhythm, rotation, structure
  */
-@StrudelDsl
-fun StrudelPattern.euclidRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
-    this._euclidRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.euclidRot(pulses: Int, steps: Int, rotation: Int): SprudelPattern =
+    this._euclidRot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /**
  * Applies a rotated Euclidean rhythm structure to the mini-notation string.
@@ -272,9 +272,9 @@ fun StrudelPattern.euclidRot(pulses: Int, steps: Int, rotation: Int): StrudelPat
  * @category structural
  * @tags euclidRot, euclid, rhythm, rotation, structure
  */
-@StrudelDsl
-fun String.euclidRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
-    this._euclidRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+@SprudelDsl
+fun String.euclidRot(pulses: Int, steps: Int, rotation: Int): SprudelPattern =
+    this._euclidRot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies a rotated Euclidean rhythm to the source pattern.
@@ -292,14 +292,14 @@ fun String.euclidRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
  * @category structural
  * @tags euclidRot, euclid, rhythm, rotation, structure
  */
-@StrudelDsl
+@SprudelDsl
 fun euclidRot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
-    _euclidRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+    _euclidRot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /** Chains a euclidRot onto this [PatternMapperFn]; applies rotated Euclidean rhythm to the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.euclidRot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
-    this._euclidRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+    this._euclidRot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /**
  * Alias for [euclidRot] — Euclidean rhythm with rotation.
@@ -321,9 +321,9 @@ fun PatternMapperFn.euclidRot(pulses: Int, steps: Int, rotation: Int): PatternMa
  * @category structural
  * @tags euclidrot, euclidRot, euclid, rhythm, rotation
  */
-@StrudelDsl
-fun euclidrot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): StrudelPattern =
-    euclidrot(pulses, steps, rotation)(listOf(pattern).asStrudelDslArgs().toPattern())
+@SprudelDsl
+fun euclidrot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): SprudelPattern =
+    euclidrot(pulses, steps, rotation)(listOf(pattern).asSprudelDslArgs().toPattern())
 
 /**
  * Alias for [euclidRot] applied to the pattern.
@@ -341,9 +341,9 @@ fun euclidrot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): Str
  * @category structural
  * @tags euclidrot, euclidRot, euclid, rhythm, rotation
  */
-@StrudelDsl
-fun StrudelPattern.euclidrot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
-    this._euclidrot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.euclidrot(pulses: Int, steps: Int, rotation: Int): SprudelPattern =
+    this._euclidrot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /**
  * Alias for [euclidRot] applied to the mini-notation string.
@@ -361,9 +361,9 @@ fun StrudelPattern.euclidrot(pulses: Int, steps: Int, rotation: Int): StrudelPat
  * @category structural
  * @tags euclidrot, euclidRot, euclid, rhythm, rotation
  */
-@StrudelDsl
-fun String.euclidrot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
-    this._euclidrot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+@SprudelDsl
+fun String.euclidrot(pulses: Int, steps: Int, rotation: Int): SprudelPattern =
+    this._euclidrot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [euclidRot] — applies a rotated Euclidean rhythm.
@@ -381,20 +381,20 @@ fun String.euclidrot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
  * @category structural
  * @tags euclidrot, euclidRot, euclid, rhythm, rotation
  */
-@StrudelDsl
+@SprudelDsl
 fun euclidrot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
-    _euclidrot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+    _euclidrot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /** Chains a euclidrot onto this [PatternMapperFn]; alias for [PatternMapperFn.euclidRot]. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.euclidrot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
-    this._euclidrot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+    this._euclidrot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 // -- bjork() ----------------------------------------------------------------------------------------------------------
 
 internal val _bjork by dslPatternMapper { args, callInfo -> { p -> p._bjork(args, callInfo) } }
 
-internal val StrudelPattern._bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._bjork by dslPatternExtension { p, args, /* callInfo */ _ ->
     val list = args.getOrNull(0)?.value as? List<*>
         ?: args.map { it.value }
 
@@ -403,26 +403,26 @@ internal val StrudelPattern._bjork by dslPatternExtension { p, args, /* callInfo
     val rotationVal = list.getOrNull(2)
 
     val pulsesPattern = when (pulsesVal) {
-        is StrudelPattern -> pulsesVal
+        is SprudelPattern -> pulsesVal
 
         else -> parseMiniNotation(pulsesVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
     val stepsPattern = when (stepsVal) {
-        is StrudelPattern -> stepsVal
+        is SprudelPattern -> stepsVal
 
         else -> parseMiniNotation(stepsVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
     val rotationPattern = when (rotationVal) {
-        is StrudelPattern -> rotationVal
+        is SprudelPattern -> rotationVal
 
         else -> parseMiniNotation(rotationVal?.toString() ?: "0") { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -471,14 +471,14 @@ internal val PatternMapperFn._bjork by dslPatternMapperExtension { m, args, call
  * @category structural
  * @tags bjork, euclid, rhythm, rotation
  */
-@StrudelDsl
-fun StrudelPattern.bjork(pulses: Int, steps: Int, rotation: Int = 0): StrudelPattern =
-    this._bjork(listOf(listOf(pulses, steps, rotation)).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.bjork(pulses: Int, steps: Int, rotation: Int = 0): SprudelPattern =
+    this._bjork(listOf(listOf(pulses, steps, rotation)).asSprudelDslArgs())
 
 /** Like [bjork] applied to a mini-notation string. */
-@StrudelDsl
-fun String.bjork(pulses: Int, steps: Int, rotation: Int = 0): StrudelPattern =
-    this._bjork(listOf(listOf(pulses, steps, rotation)).asStrudelDslArgs())
+@SprudelDsl
+fun String.bjork(pulses: Int, steps: Int, rotation: Int = 0): SprudelPattern =
+    this._bjork(listOf(listOf(pulses, steps, rotation)).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies a Euclidean rhythm specified as (pulses, steps, rotation).
@@ -495,43 +495,43 @@ fun String.bjork(pulses: Int, steps: Int, rotation: Int = 0): StrudelPattern =
  * @category structural
  * @tags bjork, euclid, rhythm, rotation
  */
-@StrudelDsl
+@SprudelDsl
 fun bjork(pulses: Int, steps: Int, rotation: Int = 0): PatternMapperFn =
-    _bjork(listOf(listOf(pulses, steps, rotation)).asStrudelDslArgs())
+    _bjork(listOf(listOf(pulses, steps, rotation)).asSprudelDslArgs())
 
 /** Chains a bjork onto this [PatternMapperFn]; applies a Euclidean rhythm (pulses, steps, rotation). */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.bjork(pulses: Int, steps: Int, rotation: Int = 0): PatternMapperFn =
-    this._bjork(listOf(listOf(pulses, steps, rotation)).asStrudelDslArgs())
+    this._bjork(listOf(listOf(pulses, steps, rotation)).asSprudelDslArgs())
 
 /** Like [bjork] as a top-level function taking an explicit pattern argument. */
-@StrudelDsl
-fun bjork(pulses: Int, steps: Int, rotation: Int = 0, pattern: PatternLike): StrudelPattern =
-    bjork(pulses, steps, rotation)(listOf(pattern).asStrudelDslArgs().toPattern())
+@SprudelDsl
+fun bjork(pulses: Int, steps: Int, rotation: Int = 0, pattern: PatternLike): SprudelPattern =
+    bjork(pulses, steps, rotation)(listOf(pattern).asSprudelDslArgs().toPattern())
 
 // -- euclidLegato() ---------------------------------------------------------------------------------------------------
 
 internal val _euclidLegato by dslPatternMapper { args, callInfo -> { p -> p._euclidLegato(args, callInfo) } }
 
-internal val StrudelPattern._euclidLegato by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._euclidLegato by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
     val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
     val stepsVal = stepsArg?.value
 
-    val pulsesPattern: StrudelPattern = when (pulsesVal) {
-        is StrudelPattern -> pulsesVal
+    val pulsesPattern: SprudelPattern = when (pulsesVal) {
+        is SprudelPattern -> pulsesVal
 
-        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val stepsPattern: StrudelPattern = when (stepsVal) {
-        is StrudelPattern -> stepsVal
+    val stepsPattern: SprudelPattern = when (stepsVal) {
+        is SprudelPattern -> stepsVal
 
-        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -572,14 +572,14 @@ internal val PatternMapperFn._euclidLegato by dslPatternMapperExtension { m, arg
  * @category structural
  * @tags euclidLegato, euclid, legato, rhythm, structure
  */
-@StrudelDsl
-fun StrudelPattern.euclidLegato(pulses: Int, steps: Int): StrudelPattern =
-    this._euclidLegato(listOf(pulses, steps).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.euclidLegato(pulses: Int, steps: Int): SprudelPattern =
+    this._euclidLegato(listOf(pulses, steps).asSprudelDslArgs())
 
 /** Applies legato Euclidean structure to the mini-notation string. */
-@StrudelDsl
-fun String.euclidLegato(pulses: Int, steps: Int): StrudelPattern =
-    this._euclidLegato(listOf(pulses, steps).asStrudelDslArgs())
+@SprudelDsl
+fun String.euclidLegato(pulses: Int, steps: Int): SprudelPattern =
+    this._euclidLegato(listOf(pulses, steps).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies legato Euclidean rhythm structure to the source pattern.
@@ -595,25 +595,25 @@ fun String.euclidLegato(pulses: Int, steps: Int): StrudelPattern =
  * @category structural
  * @tags euclidLegato, euclid, legato, rhythm, structure
  */
-@StrudelDsl
+@SprudelDsl
 fun euclidLegato(pulses: Int, steps: Int): PatternMapperFn =
-    _euclidLegato(listOf(pulses, steps).asStrudelDslArgs())
+    _euclidLegato(listOf(pulses, steps).asSprudelDslArgs())
 
 /** Chains a euclidLegato onto this [PatternMapperFn]; applies legato Euclidean rhythm to the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.euclidLegato(pulses: Int, steps: Int): PatternMapperFn =
-    this._euclidLegato(listOf(pulses, steps).asStrudelDslArgs())
+    this._euclidLegato(listOf(pulses, steps).asSprudelDslArgs())
 
 /** Like [euclidLegato] as a top-level function taking an explicit pattern argument. */
-@StrudelDsl
-fun euclidLegato(pulses: Int, steps: Int, pattern: PatternLike): StrudelPattern =
-    euclidLegato(pulses, steps)(listOf(pattern).asStrudelDslArgs().toPattern())
+@SprudelDsl
+fun euclidLegato(pulses: Int, steps: Int, pattern: PatternLike): SprudelPattern =
+    euclidLegato(pulses, steps)(listOf(pattern).asSprudelDslArgs().toPattern())
 
 // -- euclidLegatoRot() ------------------------------------------------------------------------------------------------
 
 internal val _euclidLegatoRot by dslPatternMapper { args, callInfo -> { p -> p._euclidLegatoRot(args, callInfo) } }
 
-internal val StrudelPattern._euclidLegatoRot by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._euclidLegatoRot by dslPatternExtension { p, args, /* callInfo */ _ ->
     val pulsesArg = args.getOrNull(0)
     val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
@@ -621,27 +621,27 @@ internal val StrudelPattern._euclidLegatoRot by dslPatternExtension { p, args, /
     val rotationArg = args.getOrNull(2)
     val rotationVal = rotationArg?.value
 
-    val pulsesPattern: StrudelPattern = when (pulsesVal) {
-        is StrudelPattern -> pulsesVal
+    val pulsesPattern: SprudelPattern = when (pulsesVal) {
+        is SprudelPattern -> pulsesVal
 
-        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val stepsPattern: StrudelPattern = when (stepsVal) {
-        is StrudelPattern -> stepsVal
+    val stepsPattern: SprudelPattern = when (stepsVal) {
+        is SprudelPattern -> stepsVal
 
-        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val rotationPattern: StrudelPattern = when (rotationVal) {
-        is StrudelPattern -> rotationVal
+    val rotationPattern: SprudelPattern = when (rotationVal) {
+        is SprudelPattern -> rotationVal
 
-        else -> parseMiniNotation(rotationArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(rotationArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
@@ -692,14 +692,14 @@ internal val PatternMapperFn._euclidLegatoRot by dslPatternMapperExtension { m, 
  * @category structural
  * @tags euclidLegatoRot, euclid, legato, rotation, rhythm
  */
-@StrudelDsl
-fun StrudelPattern.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
-    this._euclidLegatoRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int): SprudelPattern =
+    this._euclidLegatoRot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /** Applies legato Euclidean structure with rotation to the mini-notation string. */
-@StrudelDsl
-fun String.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int): StrudelPattern =
-    this._euclidLegatoRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+@SprudelDsl
+fun String.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int): SprudelPattern =
+    this._euclidLegatoRot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies legato Euclidean rhythm with rotation to the source pattern.
@@ -716,23 +716,23 @@ fun String.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int): StrudelPatte
  * @category structural
  * @tags euclidLegatoRot, euclid, legato, rotation, rhythm
  */
-@StrudelDsl
+@SprudelDsl
 fun euclidLegatoRot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
-    _euclidLegatoRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+    _euclidLegatoRot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /** Chains a euclidLegatoRot onto this [PatternMapperFn]; applies rotated legato Euclidean rhythm to the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int): PatternMapperFn =
-    this._euclidLegatoRot(listOf(pulses, steps, rotation).asStrudelDslArgs())
+    this._euclidLegatoRot(listOf(pulses, steps, rotation).asSprudelDslArgs())
 
 /** Like [euclidLegatoRot] as a top-level function taking an explicit pattern argument. */
-@StrudelDsl
-fun euclidLegatoRot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): StrudelPattern =
-    euclidLegatoRot(pulses, steps, rotation)(listOf(pattern).asStrudelDslArgs().toPattern())
+@SprudelDsl
+fun euclidLegatoRot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): SprudelPattern =
+    euclidLegatoRot(pulses, steps, rotation)(listOf(pattern).asSprudelDslArgs().toPattern())
 
 // -- euclidish() ------------------------------------------------------------------------------------------------------
 
-fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyEuclidish(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val pulsesArg = args.getOrNull(0)
     val pulsesVal = pulsesArg?.value
     val stepsArg = args.getOrNull(1)
@@ -740,28 +740,28 @@ fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
     val grooveArg = args.getOrNull(2)
     val grooveVal = grooveArg?.value
 
-    val pulsesPattern: StrudelPattern = when (pulsesVal) {
-        is StrudelPattern -> pulsesVal
+    val pulsesPattern: SprudelPattern = when (pulsesVal) {
+        is SprudelPattern -> pulsesVal
 
-        else -> parseMiniNotation(pulsesArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(pulsesArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
-    val stepsPattern: StrudelPattern = when (stepsVal) {
-        is StrudelPattern -> stepsVal
+    val stepsPattern: SprudelPattern = when (stepsVal) {
+        is SprudelPattern -> stepsVal
 
-        else -> parseMiniNotation(stepsArg ?: StrudelDslArg.of("0")) { text, _ ->
-            AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+        else -> parseMiniNotation(stepsArg ?: SprudelDslArg.of("0")) { text, _ ->
+            AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
         }
     }
 
     // groove defaults to 0 (straight euclid)
     val groovePattern = when (grooveVal) {
-        is StrudelPattern -> grooveVal
+        is SprudelPattern -> grooveVal
         else -> {
-            parseMiniNotation(grooveArg ?: StrudelDslArg.of("0")) { text, _ ->
-                AtomicPattern(StrudelVoiceData.empty.voiceValueModifier(text))
+            parseMiniNotation(grooveArg ?: SprudelDslArg.of("0")) { text, _ ->
+                AtomicPattern(SprudelVoiceData.empty.voiceValueModifier(text))
             }
         }
     }
@@ -791,7 +791,7 @@ fun applyEuclidish(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): Str
 
 internal val _euclidish by dslPatternMapper { args, callInfo -> { p -> p._euclidish(args, callInfo) } }
 
-internal val StrudelPattern._euclidish by dslPatternExtension { p, args, /* callInfo */ _ ->
+internal val SprudelPattern._euclidish by dslPatternExtension { p, args, /* callInfo */ _ ->
     applyEuclidish(p, args)
 }
 
@@ -801,7 +801,7 @@ internal val PatternMapperFn._euclidish by dslPatternMapperExtension { m, args, 
 }
 
 internal val _eish by dslPatternMapper { args, callInfo -> { p -> p._euclidish(args, callInfo) } }
-internal val StrudelPattern._eish by dslPatternExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
+internal val SprudelPattern._eish by dslPatternExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
 internal val String._eish by dslStringExtension { p, args, callInfo -> p._euclidish(args, callInfo) }
 internal val PatternMapperFn._eish by dslPatternMapperExtension { m, args, callInfo ->
     m.chain(_eish(args, callInfo))
@@ -829,14 +829,14 @@ internal val PatternMapperFn._eish by dslPatternMapperExtension { m, args, callI
  * @category structural
  * @tags euclidish, euclid, groove, morph, rhythm
  */
-@StrudelDsl
-fun StrudelPattern.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPattern =
-    this._euclidish(listOf(pulses, steps, groove).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): SprudelPattern =
+    this._euclidish(listOf(pulses, steps, groove).asSprudelDslArgs())
 
 /** Applies morphed Euclidean structure to the mini-notation string. */
-@StrudelDsl
-fun String.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPattern =
-    this._euclidish(listOf(pulses, steps, groove).asStrudelDslArgs())
+@SprudelDsl
+fun String.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): SprudelPattern =
+    this._euclidish(listOf(pulses, steps, groove).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that applies morphed Euclidean rhythm structure to the source pattern.
@@ -854,14 +854,14 @@ fun String.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): Strude
  * @category structural
  * @tags euclidish, euclid, groove, morph, rhythm
  */
-@StrudelDsl
+@SprudelDsl
 fun euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): PatternMapperFn =
-    _euclidish(listOf(pulses, steps, groove).asStrudelDslArgs())
+    _euclidish(listOf(pulses, steps, groove).asSprudelDslArgs())
 
 /** Chains a euclidish onto this [PatternMapperFn]; applies morphed Euclidean rhythm to the result. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): PatternMapperFn =
-    this._euclidish(listOf(pulses, steps, groove).asStrudelDslArgs())
+    this._euclidish(listOf(pulses, steps, groove).asSprudelDslArgs())
 
 /**
  * Alias for [euclidish] — `euclid` variant with groove morphing.
@@ -883,14 +883,14 @@ fun PatternMapperFn.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0
  * @category structural
  * @tags eish, euclidish, euclid, groove, morph, rhythm
  */
-@StrudelDsl
-fun StrudelPattern.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPattern =
-    this._eish(listOf(pulses, steps, groove).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): SprudelPattern =
+    this._eish(listOf(pulses, steps, groove).asSprudelDslArgs())
 
 /** Alias for [euclidish]. */
-@StrudelDsl
-fun String.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPattern =
-    this._eish(listOf(pulses, steps, groove).asStrudelDslArgs())
+@SprudelDsl
+fun String.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): SprudelPattern =
+    this._eish(listOf(pulses, steps, groove).asSprudelDslArgs())
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [euclidish] — applies morphed Euclidean rhythm.
@@ -908,11 +908,11 @@ fun String.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): StrudelPatt
  * @category structural
  * @tags eish, euclidish, euclid, groove, morph, rhythm
  */
-@StrudelDsl
+@SprudelDsl
 fun eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): PatternMapperFn =
-    _eish(listOf(pulses, steps, groove).asStrudelDslArgs())
+    _eish(listOf(pulses, steps, groove).asSprudelDslArgs())
 
 /** Chains an eish onto this [PatternMapperFn]; alias for [PatternMapperFn.euclidish]. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): PatternMapperFn =
-    this._eish(listOf(pulses, steps, groove).asStrudelDslArgs())
+    this._eish(listOf(pulses, steps, groove).asSprudelDslArgs())

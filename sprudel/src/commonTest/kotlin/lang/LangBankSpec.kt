@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBankSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangBankSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.bank(name)" to s(pat).bank(bankName),
-            "script pattern.bank(name)" to StrudelPattern.compile("""s("$pat").bank("$bankName")"""),
+            "script pattern.bank(name)" to SprudelPattern.compile("""s("$pat").bank("$bankName")"""),
             "string.bank(name)" to pat.bank(bankName),
-            "script string.bank(name)" to StrudelPattern.compile(""""$pat".bank("$bankName")"""),
+            "script string.bank(name)" to SprudelPattern.compile(""""$pat".bank("$bankName")"""),
             "bank(name)" to s(pat).apply(bank(bankName)),
-            "script bank(name)" to StrudelPattern.compile("""s("$pat").apply(bank("$bankName"))"""),
+            "script bank(name)" to SprudelPattern.compile("""s("$pat").apply(bank("$bankName"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.bank shouldBe bankName
@@ -80,7 +80,7 @@ class LangBankSpec : StringSpec({
     }
 
     "bank() works in compiled code" {
-        val p = StrudelPattern.compile("""note("c").bank("RolandCR78")""")
+        val p = SprudelPattern.compile("""note("c").bank("RolandCR78")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

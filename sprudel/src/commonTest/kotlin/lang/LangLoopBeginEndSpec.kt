@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLoopBeginEndSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangLoopBeginEndSpec : StringSpec({
         val ctrl = "0.25 0.5"
         dslInterfaceTests(
             "pattern.loopBegin(ctrl)" to seq(pat).loopBegin(ctrl),
-            "script pattern.loopBegin(ctrl)" to StrudelPattern.compile("""seq("$pat").loopBegin("$ctrl")"""),
+            "script pattern.loopBegin(ctrl)" to SprudelPattern.compile("""seq("$pat").loopBegin("$ctrl")"""),
             "string.loopBegin(ctrl)" to pat.loopBegin(ctrl),
-            "script string.loopBegin(ctrl)" to StrudelPattern.compile(""""$pat".loopBegin("$ctrl")"""),
+            "script string.loopBegin(ctrl)" to SprudelPattern.compile(""""$pat".loopBegin("$ctrl")"""),
             "loopBegin(ctrl)" to seq(pat).apply(loopBegin(ctrl)),
-            "script loopBegin(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(loopBegin("$ctrl"))"""),
+            "script loopBegin(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(loopBegin("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.loopBegin shouldBe 0.25
@@ -60,11 +60,11 @@ class LangLoopBeginEndSpec : StringSpec({
         val ctrl = "0.25 0.5"
         dslInterfaceTests(
             "pattern.loopb(ctrl)" to seq(pat).loopb(ctrl),
-            "script pattern.loopb(ctrl)" to StrudelPattern.compile("""seq("$pat").loopb("$ctrl")"""),
+            "script pattern.loopb(ctrl)" to SprudelPattern.compile("""seq("$pat").loopb("$ctrl")"""),
             "string.loopb(ctrl)" to pat.loopb(ctrl),
-            "script string.loopb(ctrl)" to StrudelPattern.compile(""""$pat".loopb("$ctrl")"""),
+            "script string.loopb(ctrl)" to SprudelPattern.compile(""""$pat".loopb("$ctrl")"""),
             "loopb(ctrl)" to seq(pat).apply(loopb(ctrl)),
-            "script loopb(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(loopb("$ctrl"))"""),
+            "script loopb(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(loopb("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.loopBegin shouldBe 0.25
@@ -79,11 +79,11 @@ class LangLoopBeginEndSpec : StringSpec({
         val ctrl = "0.5 0.75"
         dslInterfaceTests(
             "pattern.loopEnd(ctrl)" to seq(pat).loopEnd(ctrl),
-            "script pattern.loopEnd(ctrl)" to StrudelPattern.compile("""seq("$pat").loopEnd("$ctrl")"""),
+            "script pattern.loopEnd(ctrl)" to SprudelPattern.compile("""seq("$pat").loopEnd("$ctrl")"""),
             "string.loopEnd(ctrl)" to pat.loopEnd(ctrl),
-            "script string.loopEnd(ctrl)" to StrudelPattern.compile(""""$pat".loopEnd("$ctrl")"""),
+            "script string.loopEnd(ctrl)" to SprudelPattern.compile(""""$pat".loopEnd("$ctrl")"""),
             "loopEnd(ctrl)" to seq(pat).apply(loopEnd(ctrl)),
-            "script loopEnd(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(loopEnd("$ctrl"))"""),
+            "script loopEnd(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(loopEnd("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.loopEnd shouldBe 0.5
@@ -123,11 +123,11 @@ class LangLoopBeginEndSpec : StringSpec({
         val ctrl = "0.5 0.75"
         dslInterfaceTests(
             "pattern.loope(ctrl)" to seq(pat).loope(ctrl),
-            "script pattern.loope(ctrl)" to StrudelPattern.compile("""seq("$pat").loope("$ctrl")"""),
+            "script pattern.loope(ctrl)" to SprudelPattern.compile("""seq("$pat").loope("$ctrl")"""),
             "string.loope(ctrl)" to pat.loope(ctrl),
-            "script string.loope(ctrl)" to StrudelPattern.compile(""""$pat".loope("$ctrl")"""),
+            "script string.loope(ctrl)" to SprudelPattern.compile(""""$pat".loope("$ctrl")"""),
             "loope(ctrl)" to seq(pat).apply(loope(ctrl)),
-            "script loope(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(loope("$ctrl"))"""),
+            "script loope(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(loope("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.loopEnd shouldBe 0.5

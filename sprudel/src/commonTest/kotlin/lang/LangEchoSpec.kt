@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangEchoSpec : StringSpec({
@@ -12,11 +12,11 @@ class LangEchoSpec : StringSpec({
         val pat = "bd sd"
         dslInterfaceTests(
             "pattern.echo(3, 0.125, 0.5)" to s(pat).echo(3, 0.125, 0.5),
-            "script pattern.echo(3, 0.125, 0.5)" to StrudelPattern.compile("""s("$pat").echo(3, 0.125, 0.5)"""),
+            "script pattern.echo(3, 0.125, 0.5)" to SprudelPattern.compile("""s("$pat").echo(3, 0.125, 0.5)"""),
             "string.echo(3, 0.125, 0.5)" to pat.echo(3, 0.125, 0.5),
-            "script string.echo(3, 0.125, 0.5)" to StrudelPattern.compile(""""$pat".echo(3, 0.125, 0.5)"""),
+            "script string.echo(3, 0.125, 0.5)" to SprudelPattern.compile(""""$pat".echo(3, 0.125, 0.5)"""),
             "echo(3, 0.125, 0.5)" to s(pat).apply(echo(3, 0.125, 0.5)),
-            "script echo(3, 0.125, 0.5)" to StrudelPattern.compile("""s("$pat").apply(echo(3, 0.125, 0.5))"""),
+            "script echo(3, 0.125, 0.5)" to SprudelPattern.compile("""s("$pat").apply(echo(3, 0.125, 0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }
@@ -26,11 +26,11 @@ class LangEchoSpec : StringSpec({
         val pat = "bd sd"
         dslInterfaceTests(
             "pattern.stut(3, 0.125, 0.5)" to s(pat).stut(3, 0.125, 0.5),
-            "script pattern.stut(3, 0.125, 0.5)" to StrudelPattern.compile("""s("$pat").stut(3, 0.125, 0.5)"""),
+            "script pattern.stut(3, 0.125, 0.5)" to SprudelPattern.compile("""s("$pat").stut(3, 0.125, 0.5)"""),
             "string.stut(3, 0.125, 0.5)" to pat.stut(3, 0.125, 0.5),
-            "script string.stut(3, 0.125, 0.5)" to StrudelPattern.compile(""""$pat".stut(3, 0.125, 0.5)"""),
+            "script string.stut(3, 0.125, 0.5)" to SprudelPattern.compile(""""$pat".stut(3, 0.125, 0.5)"""),
             "stut(3, 0.125, 0.5)" to s(pat).apply(stut(3, 0.125, 0.5)),
-            "script stut(3, 0.125, 0.5)" to StrudelPattern.compile("""s("$pat").apply(stut(3, 0.125, 0.5))"""),
+            "script stut(3, 0.125, 0.5)" to SprudelPattern.compile("""s("$pat").apply(stut(3, 0.125, 0.5))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }

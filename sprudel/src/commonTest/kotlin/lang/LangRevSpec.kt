@@ -5,7 +5,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangRevSpec : StringSpec({
@@ -15,11 +15,11 @@ class LangRevSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.rev()" to s(pat).rev(),
-            "script pattern.rev()" to StrudelPattern.compile("""s("$pat").rev()"""),
+            "script pattern.rev()" to SprudelPattern.compile("""s("$pat").rev()"""),
             "string.rev()" to pat.rev(),
-            "script string.rev()" to StrudelPattern.compile(""""$pat".rev()"""),
+            "script string.rev()" to SprudelPattern.compile(""""$pat".rev()"""),
             "rev()" to s(pat).apply(rev()),
-            "script rev()" to StrudelPattern.compile("""s("$pat").apply(rev())"""),
+            "script rev()" to SprudelPattern.compile("""s("$pat").apply(rev())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -81,7 +81,7 @@ class LangRevSpec : StringSpec({
     }
 
     "rev() works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").rev()""")
+        val p = SprudelPattern.compile("""sound("bd hh").rev()""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -89,7 +89,7 @@ class LangRevSpec : StringSpec({
     }
 
     "rev(n) works in compiled code" {
-        val p = StrudelPattern.compile("""sound("a b").rev(2)""")
+        val p = SprudelPattern.compile("""sound("a b").rev(2)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
@@ -119,7 +119,7 @@ class LangRevSpec : StringSpec({
     }
 
     "rev() with control pattern works in compiled code" {
-        val p = StrudelPattern.compile("""sound("bd hh").rev("1 2")""")
+        val p = SprudelPattern.compile("""sound("bd hh").rev("1 2")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         // Should produce events

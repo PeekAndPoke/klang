@@ -6,7 +6,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPalindromeSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangPalindromeSpec : StringSpec({
 
         dslInterfaceTests(
             "pattern.palindrome()" to s(pat).palindrome(),
-            "script pattern.palindrome()" to StrudelPattern.compile("""s("$pat").palindrome()"""),
+            "script pattern.palindrome()" to SprudelPattern.compile("""s("$pat").palindrome()"""),
             "string.palindrome()" to pat.palindrome(),
-            "script string.palindrome()" to StrudelPattern.compile(""""$pat".palindrome()"""),
+            "script string.palindrome()" to SprudelPattern.compile(""""$pat".palindrome()"""),
             "palindrome()" to s(pat).apply(palindrome()),
-            "script palindrome()" to StrudelPattern.compile("""s("$pat").apply(palindrome())"""),
+            "script palindrome()" to SprudelPattern.compile("""s("$pat").apply(palindrome())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 2
@@ -75,7 +75,7 @@ class LangPalindromeSpec : StringSpec({
     }
 
     "palindrome() works in compiled code" {
-        val p = StrudelPattern.compile("""note("a b").palindrome()""")
+        val p = SprudelPattern.compile("""note("a b").palindrome()""")
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 4

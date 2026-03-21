@@ -3,7 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangUnitSpec : StringSpec({
@@ -13,11 +13,11 @@ class LangUnitSpec : StringSpec({
         val ctrl = "c s"
         dslInterfaceTests(
             "pattern.unit(ctrl)" to seq(pat).unit(ctrl),
-            "script pattern.unit(ctrl)" to StrudelPattern.compile("""seq("$pat").unit("$ctrl")"""),
+            "script pattern.unit(ctrl)" to SprudelPattern.compile("""seq("$pat").unit("$ctrl")"""),
             "string.unit(ctrl)" to pat.unit(ctrl),
-            "script string.unit(ctrl)" to StrudelPattern.compile(""""$pat".unit("$ctrl")"""),
+            "script string.unit(ctrl)" to SprudelPattern.compile(""""$pat".unit("$ctrl")"""),
             "unit(ctrl)" to seq(pat).apply(unit(ctrl)),
-            "script unit(ctrl)" to StrudelPattern.compile("""seq("$pat").apply(unit("$ctrl"))"""),
+            "script unit(ctrl)" to SprudelPattern.compile("""seq("$pat").apply(unit("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.unit shouldBe "c"
@@ -48,7 +48,7 @@ class LangUnitSpec : StringSpec({
     }
 
     "unit() works within compiled code" {
-        val p = StrudelPattern.compile("""note("a b").unit("c s")""")
+        val p = SprudelPattern.compile("""note("a b").unit("c s")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 2
         events.map { it.data.unit } shouldBe listOf("c", "s")

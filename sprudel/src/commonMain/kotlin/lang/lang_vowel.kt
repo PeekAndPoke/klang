@@ -2,23 +2,23 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
-import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangVowelInit = false
+var sprudelLangVowelInit = false
 
 // -- vowel() ----------------------------------------------------------------------------------------------------------
 
-fun applyVowel(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args) { v -> copy(vowel = v?.lowercase()) }
 }
 
-internal val StrudelPattern._vowel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVowel(p, args) }
+internal val SprudelPattern._vowel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVowel(p, args) }
 
 internal val String._vowel by dslStringExtension { p, args, callInfo -> p._vowel(args, callInfo) }
 
@@ -61,20 +61,20 @@ internal val PatternMapperFn._vowel by dslPatternMapperExtension { m, args, call
  * @category tonal
  * @tags vowel, formant, vocal, filter, singing
  */
-@StrudelDsl
-fun StrudelPattern.vowel(vowel: PatternLike? = null): StrudelPattern =
-    this._vowel(listOfNotNull(vowel).asStrudelDslArgs())
+@SprudelDsl
+fun SprudelPattern.vowel(vowel: PatternLike? = null): SprudelPattern =
+    this._vowel(listOfNotNull(vowel).asSprudelDslArgs())
 
 /** Sets the vowel formant filter on a string pattern. */
-@StrudelDsl
-fun String.vowel(vowel: PatternLike? = null): StrudelPattern =
-    this._vowel(listOfNotNull(vowel).asStrudelDslArgs())
+@SprudelDsl
+fun String.vowel(vowel: PatternLike? = null): SprudelPattern =
+    this._vowel(listOfNotNull(vowel).asSprudelDslArgs())
 
 /** Returns a [PatternMapperFn] that sets the vowel formant filter. */
-@StrudelDsl
-fun vowel(vowel: PatternLike? = null): PatternMapperFn = _vowel(listOfNotNull(vowel).asStrudelDslArgs())
+@SprudelDsl
+fun vowel(vowel: PatternLike? = null): PatternMapperFn = _vowel(listOfNotNull(vowel).asSprudelDslArgs())
 
 /** Chains a vowel step onto this [PatternMapperFn]. */
-@StrudelDsl
+@SprudelDsl
 fun PatternMapperFn.vowel(vowel: PatternLike? = null): PatternMapperFn =
-    this._vowel(listOfNotNull(vowel).asStrudelDslArgs())
+    this._vowel(listOfNotNull(vowel).asSprudelDslArgs())

@@ -8,7 +8,7 @@ import io.kotest.matchers.ranges.shouldBeIn
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangRandomSpec : StringSpec({
     "rand oscillator" {
@@ -40,7 +40,7 @@ class LangRandomSpec : StringSpec({
         }
 
         withClue("rand compiled") {
-            val pattern = StrudelPattern.compile("rand.seed(123)")!!
+            val pattern = SprudelPattern.compile("rand.seed(123)")!!
             val events = pattern.queryArc(0.0, 1.0)
             events.size shouldBe 1
 
@@ -49,7 +49,7 @@ class LangRandomSpec : StringSpec({
         }
 
         withClue("rand compiled with range") {
-            val pattern = StrudelPattern.compile("rand.seed(123).range(0, 100)")!!
+            val pattern = SprudelPattern.compile("rand.seed(123).range(0, 100)")!!
             val events = pattern.queryArc(0.0, 1.0)
 
             val value = events[0].data.value?.asDouble!!
@@ -86,7 +86,7 @@ class LangRandomSpec : StringSpec({
         }
 
         withClue("rand2 compiled") {
-            val pattern = StrudelPattern.compile("rand2.seed(456)")!!
+            val pattern = SprudelPattern.compile("rand2.seed(456)")!!
             val events = pattern.queryArc(0.0, 1.0)
             events.size shouldBe 1
 
@@ -95,7 +95,7 @@ class LangRandomSpec : StringSpec({
         }
 
         withClue("rand2 compiled with range") {
-            val pattern = StrudelPattern.compile("rand2.seed(456).range2(0, 50)")!!
+            val pattern = SprudelPattern.compile("rand2.seed(456).range2(0, 50)")!!
             val events = pattern.queryArc(0.0, 1.0)
 
             val value = events[0].data.value?.asDouble!!
@@ -143,7 +143,7 @@ class LangRandomSpec : StringSpec({
         }
 
         withClue("brand compiled") {
-            val pattern = StrudelPattern.compile("brand.seed(789)")!!
+            val pattern = SprudelPattern.compile("brand.seed(789)")!!
             val events = pattern.queryArc(0.0, 5.0)
 
             events.forEach { event ->
@@ -153,7 +153,7 @@ class LangRandomSpec : StringSpec({
         }
 
         withClue("brand compiled with range") {
-            val pattern = StrudelPattern.compile("brand.seed(789).range(-5, 5)")!!
+            val pattern = SprudelPattern.compile("brand.seed(789).range(-5, 5)")!!
             val events = pattern.queryArc(0.0, 5.0)
 
             events.forEach { event ->
@@ -223,7 +223,7 @@ class LangRandomSpec : StringSpec({
         }
 
         withClue("brandBy compiled") {
-            val pattern = StrudelPattern.compile("brandBy(0.3).seed(999)")!!
+            val pattern = SprudelPattern.compile("brandBy(0.3).seed(999)")!!
             val events = (1..<50).flatMap { pattern.queryArc(it.toDouble(), it + 1.0) }
 
             var ones = 0
@@ -238,7 +238,7 @@ class LangRandomSpec : StringSpec({
         }
 
         withClue("brandBy compiled with range") {
-            val pattern = StrudelPattern.compile("brandBy(0.5).seed(999).range(0, 100)")!!
+            val pattern = SprudelPattern.compile("brandBy(0.5).seed(999).range(0, 100)")!!
             val events = (1..<10).flatMap { pattern.queryArc(it.toDouble(), it + 1.0) }
 
             events.forEach { event ->
@@ -251,12 +251,6 @@ class LangRandomSpec : StringSpec({
     "randL oscillator".config(enabled = false) {
         withClue("randL(4) produces integers in [0, 3] and changes over time") {
             val n = 4
-            // Without explicit seed, it should be random but deterministic per run if context is not seeded?
-            // Wait, StrudelPattern.queryArc uses empty context which has no seed.
-            // But QueryContext.getSeededRandom uses Random.Default if no seed is in context?
-            // No, context.getSeededRandom logic:
-            // fun getRandom(): Random = getOrNull(randomSeed)?.let { Random(it) } ?: Random.Default
-            // If randomSeed is not set, it uses Random.Default which IS random.
 
             val pattern = randL(n)
             val events1 = pattern.queryArc(0.0, 1.0)

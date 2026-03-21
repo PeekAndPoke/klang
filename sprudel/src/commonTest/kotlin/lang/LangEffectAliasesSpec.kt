@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 
 class LangEffectAliasesSpec : StringSpec({
 
@@ -75,7 +75,7 @@ class LangEffectAliasesSpec : StringSpec({
     }
 
     "roomsize() aliases work in compiled code" {
-        val p = StrudelPattern.compile("""note("c3").room(0.5).sz(0.9)""")
+        val p = SprudelPattern.compile("""note("c3").room(0.5).sz(0.9)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -119,7 +119,7 @@ class LangEffectAliasesSpec : StringSpec({
     }
 
     "orbit() alias 'o' works in compiled code" {
-        val p = StrudelPattern.compile("""note("c3").o(1)""")
+        val p = SprudelPattern.compile("""note("c3").o(1)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

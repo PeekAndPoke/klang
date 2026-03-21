@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangTakeSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangTakeSpec : StringSpec({
         val ctrl = "2"
         dslInterfaceTests(
             "pattern.take(ctrl)" to note(pat).take(ctrl),
-            "script pattern.take(ctrl)" to StrudelPattern.compile("""note("$pat").take("$ctrl")"""),
+            "script pattern.take(ctrl)" to SprudelPattern.compile("""note("$pat").take("$ctrl")"""),
             "string.take(ctrl)" to pat.take(ctrl),
-            "script string.take(ctrl)" to StrudelPattern.compile(""""$pat".take("$ctrl")"""),
+            "script string.take(ctrl)" to SprudelPattern.compile(""""$pat".take("$ctrl")"""),
             "take(ctrl)" to note(pat).apply(take(ctrl)),
-            "script take(ctrl)" to StrudelPattern.compile("""note("$pat").apply(take("$ctrl"))"""),
+            "script take(ctrl)" to SprudelPattern.compile("""note("$pat").apply(take("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
         }

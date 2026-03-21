@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.add
 import io.peekandpoke.klang.sprudel.lang.apply
@@ -26,11 +26,11 @@ class LangFlipSignSpec : StringSpec({
             "flipSign()" to
                     seq(pat).apply(flipSign),
             "script pattern.flipSign" to
-                    StrudelPattern.compile("""seq("$pat").flipSign()"""),
+                    SprudelPattern.compile("""seq("$pat").flipSign()"""),
             "script string.flipSign" to
-                    StrudelPattern.compile(""""$pat".flipSign()"""),
+                    SprudelPattern.compile(""""$pat".flipSign()"""),
             "script flipSign()" to
-                    StrudelPattern.compile("""seq("$pat").apply(flipSign)"""),
+                    SprudelPattern.compile("""seq("$pat").apply(flipSign)"""),
         ) { _, events ->
             events.shouldHaveSize(3)
             events[0].data.value?.asDouble shouldBe 0.0
@@ -70,7 +70,7 @@ class LangFlipSignSpec : StringSpec({
     }
 
     "script apply(add().flipSign())" {
-        val p = StrudelPattern.compile("""seq("1 -2").apply(add("1").flipSign())""")!!
+        val p = SprudelPattern.compile("""seq("1 -2").apply(add("1").flipSign())""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {

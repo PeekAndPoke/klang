@@ -4,7 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPhaserSpec : StringSpec({
@@ -14,11 +14,11 @@ class LangPhaserSpec : StringSpec({
     "phaser dsl interface" {
         dslInterfaceTests(
             "pattern.phaser(rate)" to note("c3").phaser("2.0"),
-            "script pattern.phaser(rate)" to StrudelPattern.compile("""note("c3").phaser("2.0")"""),
+            "script pattern.phaser(rate)" to SprudelPattern.compile("""note("c3").phaser("2.0")"""),
             "string.phaser(rate)" to "c3".phaser("2.0"),
-            "script string.phaser(rate)" to StrudelPattern.compile(""""c3".phaser("2.0")"""),
+            "script string.phaser(rate)" to SprudelPattern.compile(""""c3".phaser("2.0")"""),
             "phaser(rate)" to note("c3").apply(phaser("2.0")),
-            "script phaser(rate)" to StrudelPattern.compile("""note("c3").apply(phaser("2.0"))"""),
+            "script phaser(rate)" to SprudelPattern.compile("""note("c3").apply(phaser("2.0"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.phaserRate shouldBe 2.0
@@ -28,11 +28,11 @@ class LangPhaserSpec : StringSpec({
     "ph dsl interface" {
         dslInterfaceTests(
             "pattern.ph(rate)" to note("c3").ph("2.0"),
-            "script pattern.ph(rate)" to StrudelPattern.compile("""note("c3").ph("2.0")"""),
+            "script pattern.ph(rate)" to SprudelPattern.compile("""note("c3").ph("2.0")"""),
             "string.ph(rate)" to "c3".ph("2.0"),
-            "script string.ph(rate)" to StrudelPattern.compile(""""c3".ph("2.0")"""),
+            "script string.ph(rate)" to SprudelPattern.compile(""""c3".ph("2.0")"""),
             "ph(rate)" to note("c3").apply(ph("2.0")),
-            "script ph(rate)" to StrudelPattern.compile("""note("c3").apply(ph("2.0"))"""),
+            "script ph(rate)" to SprudelPattern.compile("""note("c3").apply(ph("2.0"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.phaserRate shouldBe 2.0
@@ -175,7 +175,7 @@ class LangPhaserSpec : StringSpec({
     }
 
     "phaser functions work in compiled code" {
-        val p = StrudelPattern.compile("""note("c3").phaser(2).phaserdepth(0.8)""")
+        val p = SprudelPattern.compile("""note("c3").phaser(2).phaserdepth(0.8)""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
@@ -225,7 +225,7 @@ class LangPhaserSpec : StringSpec({
     }
 
     "phaser() combined works in compiled code" {
-        val p = StrudelPattern.compile("""note("c3").phaser("2.0:0.8:500:1000")""")
+        val p = SprudelPattern.compile("""note("c3").phaser("2.0:0.8:500:1000")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
         with(events[0].data) {

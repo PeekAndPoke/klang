@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
 /**
  * Generic pattern that applies bind (inner join) operation.
@@ -13,10 +13,10 @@ import io.peekandpoke.klang.sprudel.StrudelPatternEvent
  *                         If false, they are reset (1.0 and null). Defaults to true.
  */
 internal class BindPattern(
-    private val outer: StrudelPattern,
+    private val outer: SprudelPattern,
     private val preserveMetadata: Boolean = true,
-    private val transform: (StrudelPatternEvent) -> StrudelPattern?,
-) : StrudelPattern {
+    private val transform: (SprudelPatternEvent) -> SprudelPattern?,
+) : SprudelPattern {
 
     override val weight: Double
         get() = if (preserveMetadata) outer.weight else 1.0
@@ -30,12 +30,12 @@ internal class BindPattern(
     override fun queryArcContextual(
         from: Rational,
         to: Rational,
-        ctx: StrudelPattern.QueryContext,
-    ): List<StrudelPatternEvent> {
+        ctx: SprudelPattern.QueryContext,
+    ): List<SprudelPatternEvent> {
         // ... (The inner join logic we normalized previously) ...
         // 1. Query outer pattern
         val outerEvents = outer.queryArcContextual(from, to, ctx)
-        val result = mutableListOf<StrudelPatternEvent>()
+        val result = mutableListOf<SprudelPatternEvent>()
 
         // val f = from
         // val t = to

@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
@@ -24,15 +24,15 @@ class LangTimeLoopSpec : StringSpec({
             "pattern.timeLoop(duration)" to
                     seq(pat).timeLoop(duration),
             "script pattern.timeLoop(duration)" to
-                    StrudelPattern.compile("""seq("$pat").timeLoop($duration)"""),
+                    SprudelPattern.compile("""seq("$pat").timeLoop($duration)"""),
             "string.timeLoop(duration)" to
                     pat.timeLoop(duration),
             "script string.timeLoop(duration)" to
-                    StrudelPattern.compile(""""$pat".timeLoop($duration)"""),
+                    SprudelPattern.compile(""""$pat".timeLoop($duration)"""),
             "timeLoop(duration)" to
                     seq(pat).apply(timeLoop(duration)),
             "script timeLoop(duration)" to
-                    StrudelPattern.compile("""seq("$pat").apply(timeLoop($duration))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(timeLoop($duration))"""),
         ) { _, events ->
             events.shouldHaveSize(2)
             events[0].data.value?.asDouble shouldBe 1.0
@@ -129,7 +129,7 @@ class LangTimeLoopSpec : StringSpec({
     }
 
     "timeLoop() in compiled code" {
-        val p = StrudelPattern.compile("""note("c3 d3 e3 f3").timeLoop(0.5)""")
+        val p = SprudelPattern.compile("""note("c3 d3 e3 f3").timeLoop(0.5)""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         assertSoftly {
@@ -142,7 +142,7 @@ class LangTimeLoopSpec : StringSpec({
     }
 
     "timeLoop() top-level PatternMapperFn in compiled code" {
-        val p = StrudelPattern.compile("""note("c3 d3 e3 f3").apply(timeLoop(0.5))""")
+        val p = SprudelPattern.compile("""note("c3 d3 e3 f3").apply(timeLoop(0.5))""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         assertSoftly {
@@ -186,7 +186,7 @@ class LangTimeLoopSpec : StringSpec({
     }
 
     "script apply(PatternMapperFn.timeLoop()) chains" {
-        val p = StrudelPattern.compile("""note("c3 d3 e3 f3").apply(timeLoop(0.5))""")!!
+        val p = SprudelPattern.compile("""note("c3 d3 e3 f3").apply(timeLoop(0.5))""")!!
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         assertSoftly {

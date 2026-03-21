@@ -1,18 +1,18 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.lang.*
 import io.peekandpoke.klang.sprudel.sampleAt
 
 internal class ChoicePattern(
-    val selector: StrudelPattern,
-    val choices: List<StrudelPattern>,
-    val weights: List<StrudelPattern>? = null,
+    val selector: SprudelPattern,
+    val choices: List<SprudelPattern>,
+    val weights: List<SprudelPattern>? = null,
     val mode: StructurePattern.Mode = StructurePattern.Mode.Out,
-) : StrudelPattern {
+) : SprudelPattern {
 
     companion object {
         // This matches what the parser calls: pattern.choice(right)
@@ -23,7 +23,7 @@ internal class ChoicePattern(
         // we can use a specific selector.
         // The previous implementation used `ctx.getSeededRandom` which is effectively `rand.segment(1)`.
 
-        fun StrudelPattern.choice(other: StrudelPattern): StrudelPattern {
+        fun SprudelPattern.choice(other: SprudelPattern): SprudelPattern {
             // Flatten both sides to ensure equal probability for all items in a sequence like a|b|c
             // BUT: ChoicePattern structure changed. It now has a selector.
             // If `this` is already a ChoicePattern with a specific "random per cycle" selector, we can merge choices.
@@ -56,9 +56,9 @@ internal class ChoicePattern(
         }
 
         fun create(
-            selector: StrudelPattern,
-            choices: List<StrudelPattern>,
-            weights: List<StrudelPattern>? = null,
+            selector: SprudelPattern,
+            choices: List<SprudelPattern>,
+            weights: List<SprudelPattern>? = null,
             mode: StructurePattern.Mode = StructurePattern.Mode.Out,
         ): ChoicePattern {
             return ChoicePattern(selector, choices, weights, mode)
@@ -66,11 +66,11 @@ internal class ChoicePattern(
 
         // Helper to handle raw lists
         fun createFromRaw(
-            selector: StrudelPattern,
-            choices: List<StrudelDslArg<Any?>>,
-            weights: List<StrudelDslArg<Any?>>? = null,
+            selector: SprudelPattern,
+            choices: List<SprudelDslArg<Any?>>,
+            weights: List<SprudelDslArg<Any?>>? = null,
             mode: StructurePattern.Mode = StructurePattern.Mode.Out,
-        ): StrudelPattern {
+        ): SprudelPattern {
             val choicePatterns = choices.toListOfPatterns(voiceValueModifier)
             if (choicePatterns.isEmpty()) return silence
 
@@ -95,7 +95,7 @@ internal class ChoicePattern(
         from: Rational,
         to: Rational,
         ctx: QueryContext,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         // Query the selector to find out which choice to pick at what time
         val selectorEvents = selector.queryArcContextual(from, to, ctx)
 
@@ -132,13 +132,6 @@ internal class ChoicePattern(
             }
 
             val chosenPat = choices.getOrNull(selectedIndex) ?: return@flatMap emptyList()
-
-            // Mode.Out (default for chooseWith): Constrain to selector's timeframe.
-            // Mode.In (default for chooseInWith): Preserve inner structure?
-            // In Strudel JS, innerJoin vs outerJoin determines where the 'whole' comes from.
-            // For playback purposes (queryArc), both effectively restrict the events to the window
-            // where the selector was active.
-            // We pass the selector event's timeframe to query the chosen pattern.
 
             chosenPat.queryArcContextual(ev.part.begin, ev.part.end, ctx)
         }

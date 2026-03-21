@@ -6,7 +6,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangPanSpec : StringSpec({
@@ -19,15 +19,15 @@ class LangPanSpec : StringSpec({
             "pattern.pan(ctrl)" to
                     seq(pat).pan(ctrl),
             "script pattern.pan(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").pan("$ctrl")"""),
+                    SprudelPattern.compile("""seq("$pat").pan("$ctrl")"""),
             "string.pan(ctrl)" to
                     pat.pan(ctrl),
             "script string.pan(ctrl)" to
-                    StrudelPattern.compile(""""$pat".pan("$ctrl")"""),
+                    SprudelPattern.compile(""""$pat".pan("$ctrl")"""),
             "pan(ctrl)" to
                     seq(pat).apply(pan(ctrl)),
             "script pan(ctrl)" to
-                    StrudelPattern.compile("""seq("$pat").apply(pan("$ctrl"))"""),
+                    SprudelPattern.compile("""seq("$pat").apply(pan("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events[0].data.pan shouldBe 0.0
@@ -99,7 +99,7 @@ class LangPanSpec : StringSpec({
     }
 
     "pan() works within compiled code" {
-        val p = StrudelPattern.compile(""""0 1".apply(pan("-0.5 0.5"))""")
+        val p = SprudelPattern.compile(""""0 1".apply(pan("-0.5 0.5"))""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
@@ -107,7 +107,7 @@ class LangPanSpec : StringSpec({
     }
 
     "pan() as method works within compiled code" {
-        val p = StrudelPattern.compile("""note("c").pan("0.5")""")
+        val p = SprudelPattern.compile("""note("c").pan("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1

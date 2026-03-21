@@ -7,7 +7,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangEuclidSpec : StringSpec({
@@ -16,11 +16,11 @@ class LangEuclidSpec : StringSpec({
         val pat = "hh"
         dslInterfaceTests(
             "pattern.euclid(3, 8)" to s(pat).euclid(3, 8),
-            "script pattern.euclid(3, 8)" to StrudelPattern.compile("""s("$pat").euclid(3, 8)"""),
+            "script pattern.euclid(3, 8)" to SprudelPattern.compile("""s("$pat").euclid(3, 8)"""),
             "string.euclid(3, 8)" to pat.euclid(3, 8),
-            "script string.euclid(3, 8)" to StrudelPattern.compile(""""$pat".euclid(3, 8)"""),
+            "script string.euclid(3, 8)" to SprudelPattern.compile(""""$pat".euclid(3, 8)"""),
             "euclid(3, 8)" to s(pat).apply(euclid(3, 8)),
-            "script euclid(3, 8)" to StrudelPattern.compile("""s("$pat").apply(euclid(3, 8))"""),
+            "script euclid(3, 8)" to SprudelPattern.compile("""s("$pat").apply(euclid(3, 8))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
             events.size shouldBe 3  // 3 pulses from 8 steps

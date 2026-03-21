@@ -2,10 +2,10 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.StrudelPatternEvent
-import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 
 /**
  * Speeds up a pattern like fast, but plays it only once per cycle in the compressed time, leaving a gap.
@@ -22,14 +22,14 @@ import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
  * @param factorProvider Control value provider for the factor
  */
 internal class FastGapPattern(
-    val source: StrudelPattern,
+    val source: SprudelPattern,
     val factorProvider: ControlValueProvider,
-) : StrudelPattern {
+) : SprudelPattern {
     companion object {
         /**
          * Create a FastGapPattern with a static factor value.
          */
-        fun static(source: StrudelPattern, factor: Rational): FastGapPattern {
+        fun static(source: SprudelPattern, factor: Rational): FastGapPattern {
             return FastGapPattern(
                 source = source,
                 factorProvider = ControlValueProvider.Static(factor.asVoiceValue())
@@ -45,7 +45,7 @@ internal class FastGapPattern(
         return source.estimateCycleDuration()
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<StrudelPatternEvent> {
+    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
 
@@ -65,7 +65,7 @@ internal class FastGapPattern(
         to: Rational,
         ctx: QueryContext,
         factor: Rational,
-    ): List<StrudelPatternEvent> {
+    ): List<SprudelPatternEvent> {
         // Handle edge case where factor <= 0
         if (factor.toDouble() <= 0.0) {
             return emptyList()

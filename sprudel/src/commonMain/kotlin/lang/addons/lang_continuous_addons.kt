@@ -3,22 +3,18 @@
 package io.peekandpoke.klang.sprudel.lang.addons
 
 import de.peekandpoke.ultra.common.datetime.Kronos
-import io.peekandpoke.klang.sprudel.StrudelPattern
-import io.peekandpoke.klang.sprudel.lang.StrudelDsl
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.lang.dslObject
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * ADDONS: Continuous functions that are NOT available in the original strudel impl
- */
-
-/**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
-var strudelLangContinuousAddonsInit = false
+var sprudelLangContinuousAddonsInit = false
 
 // -- cps() ------------------------------------------------------------------------------------------------------------
 
@@ -34,8 +30,8 @@ internal val _cps by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() }
  * @category continuous
  * @tags cps, tempo, playback speed, continuous, addon
  */
-@StrudelDsl
-val cps: StrudelPattern get() = _cps
+@SprudelDsl
+val cps: SprudelPattern get() = _cps
 
 // -- bpm() ------------------------------------------------------------------------------------------------------------
 
@@ -51,8 +47,8 @@ internal val _bpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() *
  * @category continuous
  * @tags bpm, tempo, beats per minute, continuous, addon
  */
-@StrudelDsl
-val bpm: StrudelPattern get() = _bpm
+@SprudelDsl
+val bpm: SprudelPattern get() = _bpm
 
 // -- Time of Day Functions --------------------------------------------------------------------------------------------
 
@@ -88,8 +84,8 @@ internal val _timeOfDay by dslObject {
  * @category continuous
  * @tags timeOfDay, time, clock, continuous, addon
  */
-@StrudelDsl
-val timeOfDay: StrudelPattern get() = _timeOfDay
+@SprudelDsl
+val timeOfDay: SprudelPattern get() = _timeOfDay
 
 internal val _sinOfDay by dslObject {
     ContinuousPattern { _, _, ctx ->
@@ -112,8 +108,8 @@ internal val _sinOfDay by dslObject {
  * @category continuous
  * @tags sinOfDay, time, sine, clock, continuous, addon
  */
-@StrudelDsl
-val sinOfDay: StrudelPattern get() = _sinOfDay
+@SprudelDsl
+val sinOfDay: SprudelPattern get() = _sinOfDay
 
 internal val _sinOfDay2 by dslObject {
     ContinuousPattern { _, _, ctx ->
@@ -136,8 +132,8 @@ internal val _sinOfDay2 by dslObject {
  * @category continuous
  * @tags sinOfDay2, time, sine, bipolar, clock, continuous, addon
  */
-@StrudelDsl
-val sinOfDay2: StrudelPattern get() = _sinOfDay2
+@SprudelDsl
+val sinOfDay2: SprudelPattern get() = _sinOfDay2
 
 internal val _timeOfNight by dslObject {
     ContinuousPattern { _, _, ctx ->
@@ -159,8 +155,8 @@ internal val _timeOfNight by dslObject {
  * @category continuous
  * @tags timeOfNight, time, clock, night, continuous, addon
  */
-@StrudelDsl
-val timeOfNight: StrudelPattern get() = _timeOfNight
+@SprudelDsl
+val timeOfNight: SprudelPattern get() = _timeOfNight
 
 internal val _sinOfNight by dslObject {
     ContinuousPattern { _, _, ctx ->
@@ -183,8 +179,8 @@ internal val _sinOfNight by dslObject {
  * @category continuous
  * @tags sinOfNight, time, sine, night, clock, continuous, addon
  */
-@StrudelDsl
-val sinOfNight: StrudelPattern get() = _sinOfNight
+@SprudelDsl
+val sinOfNight: SprudelPattern get() = _sinOfNight
 
 internal val _sinOfNight2 by dslObject {
     ContinuousPattern { _, _, ctx ->
@@ -208,5 +204,5 @@ internal val _sinOfNight2 by dslObject {
  * @category continuous
  * @tags sinOfNight2, time, sine, bipolar, night, clock, continuous, addon
  */
-@StrudelDsl
-val sinOfNight2: StrudelPattern get() = _sinOfNight2
+@SprudelDsl
+val sinOfNight2: SprudelPattern get() = _sinOfNight2
