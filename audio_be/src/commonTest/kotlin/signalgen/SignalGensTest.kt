@@ -8,6 +8,8 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.osci.Oscillators
 import io.peekandpoke.klang.audio_bridge.SignalGenDsl
 import kotlin.math.abs
 import kotlin.random.Random
@@ -752,5 +754,53 @@ class SignalGensTest : StringSpec({
         val countOverride = bufOverride.count { it > 0.0f }
         val countDefault = bufDefault.count { it > 0.0f }
         countOverride shouldBeGreaterThanOrEqual countDefault
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Supersaw: new SignalGen vs legacy OscFn — sample-exact comparison
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "supersaw - new SignalGen matches legacy OscFn sample-for-sample" {
+        val seed = 42
+        val voices = 7
+        val freqSpread = 0.3
+        val gain = 0.6
+        val freqHz = 440.0
+        val blockFrames = 4410
+
+        // ── New SignalGen path ──
+        val newSig = SignalGens.supersaw(
+            voices = voices,
+            freqSpread = freqSpread,
+            gain = gain,
+            rng = Random(seed),
+        )
+        val newBuf = FloatArray(blockFrames)
+        val newCtx = createCtx(blockFrames)
+        newSig.generate(newBuf, freqHz, newCtx)
+
+        // ── Legacy OscFn path ──
+        val legacyOsc = Oscillators.supersawFn(
+            sampleRate = sampleRate,
+            baseFreqHz = freqHz,
+            voices = voices,
+            freqSpread = freqSpread,
+            panSpread = 0.0,
+            rng = Random(seed),
+            gain = gain,
+        )
+        val legacyBuf = FloatArray(blockFrames)
+        legacyOsc.process(legacyBuf, 0, blockFrames, 0.0, TWO_PI * freqHz / sampleRate, null)
+
+        // ── Compare sample-by-sample ──
+        var maxDiff = 0.0
+        for (i in 0 until blockFrames) {
+            val diff = abs(newBuf[i] - legacyBuf[i]).toDouble()
+            if (diff > maxDiff) maxDiff = diff
+        }
+
+        // Should be bit-identical (same algorithm, same seed, same params)
+        println("supersaw comparison: maxDiff = $maxDiff")
+        maxDiff shouldBeLessThan 0.001
     }
 })

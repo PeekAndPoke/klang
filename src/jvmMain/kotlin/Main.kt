@@ -10,7 +10,6 @@ import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.strudel.StrudelPattern
 import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.lang.pan
 import io.peekandpoke.klang.strudel.lang.strudelLib
 import kotlinx.coroutines.delay
 
@@ -112,7 +111,7 @@ private suspend fun helloStrudel() {
 //        """.trimIndent()
 //        )!!
 
-        val pattern2 = TestKotlinPatterns.strangerThings.pan(1.0)
+        val pattern2 = TestKotlinPatterns.strangerThings
 
         val samples = Samples.create(catalogue = SampleCatalogue.default)
         val playerOptions = KlangPlayer.Options(
@@ -122,13 +121,13 @@ private suspend fun helloStrudel() {
 
         val player = klangPlayer(
             options = playerOptions,
-        )
+        ) {}
 
         println("start 1 ...")
         val playback1 = player.play(pattern1)
         playback1.start(
             KlangCyclicPlayback.Options(
-                cyclesPerSecond = 0.5,
+                cyclesPerSecond = 0.54,
             )
         )
 
