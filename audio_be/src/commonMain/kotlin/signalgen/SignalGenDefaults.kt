@@ -20,14 +20,23 @@ fun SignalGenRegistry.registerDefaults() {
     val square = SignalGenDsl.Square()
     register("square", square)
     register("sqr", square)
+    register("pulse", square)
 
     val triangle = SignalGenDsl.Triangle()
     register("triangle", triangle)
     register("tri", triangle)
 
+    val zawtooth = SignalGenDsl.Zawtooth()
+    register("zawtooth", zawtooth)
+    register("zaw", zawtooth)
+
+    register("impulse", SignalGenDsl.Impulse())
+
+    register("silence", SignalGenDsl.Silence)
+
     val whiteNoise = SignalGenDsl.WhiteNoise()
-    register("white-noise", whiteNoise)
     register("whitenoise", whiteNoise)
+    register("white", whiteNoise)
 
     // ─── SignalGen compositions ──────────────────────────────────────────────
 

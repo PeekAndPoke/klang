@@ -512,13 +512,13 @@ class Oscillators private constructor(
         saw, sawtooth,
 
         // Zawtooth
-        zaw, zawtooth, z_zawtooth,
+        zaw, zawtooth,
 
         // Supersaw
-        supersaw, z_supersaw,
+        supersaw,
 
         // Pulze
-        pulze, z_pulze,
+        pulze,
 
         // Impulse
         impulse,
@@ -650,8 +650,8 @@ class Oscillators private constructor(
                 Names.sqr, Names.square, Names.pulse -> square
                 Names.tri, Names.triangle -> triangle
                 Names.sin, Names.sine -> sine
-                Names.zaw, Names.zawtooth, Names.z_zawtooth -> zawtooth
-                Names.supersaw, Names.z_supersaw -> if (freqHz != null) {
+                Names.zaw, Names.zawtooth -> zawtooth
+                Names.supersaw -> if (freqHz != null) {
                     this.supersaw(
                         /* sampleRate */ sampleRate,
                         /* baseFreqHz */  freqHz,
@@ -664,7 +664,7 @@ class Oscillators private constructor(
                     silence
                 }
 
-                Names.pulze, Names.z_pulze -> pulze // TODO: parameterize
+                Names.pulze -> pulze // TODO: parameterize
                 Names.impulse -> this.impulse()
 
                 // Noises

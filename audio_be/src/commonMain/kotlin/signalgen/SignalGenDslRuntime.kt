@@ -16,12 +16,9 @@ fun SignalGenDsl.toSignalGen(): SignalGen = when (this) {
     is SignalGenDsl.Square -> SignalGens.square(gain)
     is SignalGenDsl.Triangle -> SignalGens.triangle(gain)
     is SignalGenDsl.WhiteNoise -> SignalGens.whiteNoise(Random, gain)
-    is SignalGenDsl.Silence -> SignalGen { buffer, _, ctx ->
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            buffer[i] = 0.0f
-        }
-    }
+    is SignalGenDsl.Zawtooth -> SignalGens.zawtooth(gain)
+    is SignalGenDsl.Impulse -> SignalGens.impulse(gain)
+    is SignalGenDsl.Silence -> SignalGens.silence()
 
     // Arithmetic
     is SignalGenDsl.Plus -> left.toSignalGen() + right.toSignalGen()

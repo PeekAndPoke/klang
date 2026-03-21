@@ -31,6 +31,14 @@ sealed class SignalGenDsl {
     data class WhiteNoise(val gain: Double = 1.0) : SignalGenDsl()
 
     @Serializable
+    @SerialName("zawtooth")
+    data class Zawtooth(val gain: Double = 1.0) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("impulse")
+    data class Impulse(val gain: Double = 1.0) : SignalGenDsl()
+
+    @Serializable
     @SerialName("silence")
     data object Silence : SignalGenDsl()
 

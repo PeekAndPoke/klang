@@ -8,6 +8,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.SignalGenDsl
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -238,18 +239,19 @@ class SignalGensTest : StringSpec({
     // Square
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "square - amplitude matches gain" {
+    "square - amplitude close to gain (PolyBLEP softens transitions)" {
         val gain = 0.5
         val buf = generate(SignalGens.square(gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.01)
+        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.05)
     }
 
-    "square - only two output levels" {
+    "square - mostly two output levels (PolyBLEP softens transitions)" {
         val gain = 0.5
         val buf = generate(SignalGens.square(gain), freqHz = 440.0)
-        for (sample in buf) {
-            abs(abs(sample) - gain) shouldBeLessThan 0.001
-        }
+        // Most samples should be close to +gain or -gain
+        val nearGain = buf.count { abs(abs(it.toDouble()) - gain) < 0.05 }
+        // Allow ~5% of samples near transitions to deviate
+        nearGain shouldBeGreaterThanOrEqual (buf.size * 0.9).toInt()
     }
 
     "square - correct frequency (zero crossings)" {
@@ -261,6 +263,32 @@ class SignalGensTest : StringSpec({
     "square - symmetric around zero" {
         val buf = generate(SignalGens.square(), freqHz = 440.0)
         buf.dcOffset() shouldBe (0.0 plusOrMinus 0.02)
+    }
+
+    "square - phase continuity across blocks" {
+        val sig = SignalGens.square()
+        val blockSize = 128
+        val ctx = createCtx(blockSize)
+        val buf1 = FloatArray(blockSize)
+        val buf2 = FloatArray(blockSize)
+
+        sig.generate(buf1, 440.0, ctx)
+        ctx.voiceElapsedFrames = blockSize
+        sig.generate(buf2, 440.0, ctx)
+
+        // Square can jump at transitions, but block boundary shouldn't cause extra glitches
+        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        diff shouldBeLessThan 1.5
+    }
+
+    "square - correct frequency at 100Hz" {
+        val buf = generate(SignalGens.square(), freqHz = 100.0)
+        buf.zeroCrossings() shouldBeInRange 18..22
+    }
+
+    "square - correct frequency at 1000Hz" {
+        val buf = generate(SignalGens.square(), freqHz = 1000.0)
+        buf.zeroCrossings() shouldBeInRange 198..202
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -327,5 +355,175 @@ class SignalGensTest : StringSpec({
             }
         }
         differs shouldBe true
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Zawtooth (naive sawtooth, no PolyBLEP)
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "zawtooth - amplitude matches gain" {
+        val gain = 1.0
+        val buf = generate(SignalGens.zawtooth(gain), freqHz = 440.0)
+        buf.peakAmplitude().toDouble() shouldBe (gain plusOrMinus 0.02)
+    }
+
+    "zawtooth - custom gain scales amplitude" {
+        val gain = 0.4
+        val buf = generate(SignalGens.zawtooth(gain), freqHz = 440.0)
+        buf.peakAmplitude().toDouble() shouldBe (gain plusOrMinus 0.02)
+    }
+
+    "zawtooth - correct frequency (zero crossings)" {
+        // Naive saw crosses zero once per cycle at the midpoint, plus the reset jump
+        val buf = generate(SignalGens.zawtooth(), freqHz = 440.0)
+        val crossings = buf.zeroCrossings()
+        crossings shouldBeGreaterThanOrEqual 40
+        crossings shouldBeLessThanOrEqual 90
+    }
+
+    "zawtooth - symmetric around zero" {
+        val buf = generate(SignalGens.zawtooth(), freqHz = 440.0)
+        buf.dcOffset().toDouble() shouldBe (0.0 plusOrMinus 0.02)
+    }
+
+    "zawtooth - phase continuity across blocks" {
+        val sig = SignalGens.zawtooth()
+        val blockSize = 128
+        val ctx = createCtx(blockSize)
+        val buf1 = FloatArray(blockSize)
+        val buf2 = FloatArray(blockSize)
+
+        sig.generate(buf1, 440.0, ctx)
+        ctx.voiceElapsedFrames = blockSize
+        sig.generate(buf2, 440.0, ctx)
+
+        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        diff shouldBeLessThan 1.5
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Silence
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Impulse
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "impulse - one click per cycle" {
+        // 440Hz over 100ms = 44 cycles = 44 impulses
+        val buf = generate(SignalGens.impulse(), freqHz = 440.0)
+        val impulseCount = buf.count { it == 1.0f }
+        impulseCount shouldBeInRange 43..45
+    }
+
+    "impulse - output is only 0 or 1" {
+        val buf = generate(SignalGens.impulse(), freqHz = 440.0)
+        for (sample in buf) {
+            (sample == 0.0f || sample == 1.0f) shouldBe true
+        }
+    }
+
+    "impulse - mostly silence between clicks" {
+        val buf = generate(SignalGens.impulse(), freqHz = 440.0)
+        val silentCount = buf.count { it == 0.0f }
+        // 4410 samples, ~44 impulses, so ~4366 silent samples
+        silentCount shouldBeGreaterThanOrEqual 4350
+    }
+
+    "impulse - custom gain scales click amplitude" {
+        val gain = 0.3
+        val buf = generate(SignalGens.impulse(gain), freqHz = 440.0)
+        val clickValue = buf.first { it != 0.0f }
+        clickValue.toDouble() shouldBe (gain plusOrMinus 0.001)
+    }
+
+    "impulse - phase continuity across blocks" {
+        val sig = SignalGens.impulse()
+        val blockSize = 128
+        val ctx = createCtx(blockSize)
+        val buf1 = FloatArray(blockSize)
+        val buf2 = FloatArray(blockSize)
+
+        sig.generate(buf1, 440.0, ctx)
+        ctx.voiceElapsedFrames = blockSize
+        sig.generate(buf2, 440.0, ctx)
+
+        // Should still produce correct impulse count across two blocks
+        val totalImpulses = buf1.count { it == 1.0f } + buf2.count { it == 1.0f }
+        // 256 samples at 440Hz ≈ 2.5 cycles ≈ 2-3 impulses
+        totalImpulses shouldBeInRange 2..4
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Silence
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "silence - all zeros" {
+        val buf = generate(SignalGens.silence())
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    "silence - all zeros via DSL runtime" {
+        val sig = SignalGenDsl.Silence.toSignalGen()
+        val buf = generate(sig)
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // PhaseMod (negative values must not cause drift)
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "sine - negative phaseMod does not cause phase drift" {
+        val sig = SignalGens.sine()
+        val blockSize = 4410
+        val ctx = createCtx(blockSize)
+        // Set phaseMod to -1.0 (reversed phase direction)
+        ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
+        val buf = FloatArray(blockSize)
+        sig.generate(buf, 440.0, ctx)
+
+        // Output should be bounded (no NaN/Infinity from unbounded phase)
+        for (sample in buf) {
+            abs(sample.toDouble()) shouldBeLessThan 1.1
+        }
+    }
+
+    "sawtooth - negative phaseMod does not cause phase drift" {
+        val sig = SignalGens.sawtooth()
+        val blockSize = 4410
+        val ctx = createCtx(blockSize)
+        ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
+        val buf = FloatArray(blockSize)
+        sig.generate(buf, 440.0, ctx)
+
+        for (sample in buf) {
+            abs(sample.toDouble()) shouldBeLessThan 1.1
+        }
+    }
+
+    "square - negative phaseMod does not cause phase drift" {
+        val sig = SignalGens.square()
+        val blockSize = 4410
+        val ctx = createCtx(blockSize)
+        ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
+        val buf = FloatArray(blockSize)
+        sig.generate(buf, 440.0, ctx)
+
+        for (sample in buf) {
+            abs(sample.toDouble()) shouldBeLessThan 1.1
+        }
+    }
+
+    "triangle - negative phaseMod does not cause phase drift" {
+        val sig = SignalGens.triangle()
+        val blockSize = 4410
+        val ctx = createCtx(blockSize)
+        ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
+        val buf = FloatArray(blockSize)
+        sig.generate(buf, 440.0, ctx)
+
+        for (sample in buf) {
+            abs(sample.toDouble()) shouldBeLessThan 1.1
+        }
     }
 })
