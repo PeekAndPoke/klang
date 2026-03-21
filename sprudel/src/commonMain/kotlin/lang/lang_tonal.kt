@@ -1392,7 +1392,7 @@ fun PatternMapperFn.accelerate(amount: PatternLike? = null): PatternMapperFn =
 // -- transpose() ------------------------------------------------------------------------------------------------------
 
 /**
- * Applies transposition logic to a StrudelVoiceData instance.
+ * Applies transposition logic to a SprudelVoiceData instance.
  * Accepts either a numeric value (semitones) or a string (interval name).
  */
 fun SprudelVoiceData.transpose(amount: Any?): SprudelVoiceData {

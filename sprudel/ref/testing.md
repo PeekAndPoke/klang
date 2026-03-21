@@ -1,11 +1,11 @@
-# Strudel — Testing Strategy
+# Sprudel — Testing Strategy
 
 ## Commands
 
 ```bash
-./gradlew :strudel:jvmTest                          # preferred (fast)
-./gradlew :strudel:jvmTest --tests LangBpmSpec      # specific class — NO quotes
-./gradlew :strudel:jsTest                           # browser-specific only
+./gradlew :sprudel:jvmTest                          # preferred (fast)
+./gradlew :sprudel:jvmTest --tests LangBpmSpec      # specific class — NO quotes
+./gradlew :sprudel:jsTest                           # browser-specific only
 ```
 
 ## Rules

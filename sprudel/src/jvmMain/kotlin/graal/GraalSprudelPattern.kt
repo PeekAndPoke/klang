@@ -40,7 +40,7 @@ class GraalSprudelPattern(
 //            println("---------------------------------------------------------------------------------------------")
 //            println(graal.prettyFormat(item))
 
-            val event = item.toStrudelEvent()
+            val event = item.toSprudelEvent()
             events += event
 
 //            println("${event.note} ${event.scale}")
@@ -52,7 +52,7 @@ class GraalSprudelPattern(
     /**
      * Converts the js-value into a SprudelEvent.
      */
-    fun Value.toStrudelEvent(): SprudelPatternEvent {
+    fun Value.toSprudelEvent(): SprudelPatternEvent {
         val event = this
 
         val partJs = event.safeGetMember("part")
@@ -305,7 +305,7 @@ class GraalSprudelPattern(
 
         // add event
         return SprudelPatternEvent(
-            // Strudel Timing
+            // Timing
             part = part,
             whole = whole ?: part,
             // Voice data

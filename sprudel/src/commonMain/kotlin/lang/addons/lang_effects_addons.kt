@@ -8,12 +8,8 @@ import io.peekandpoke.klang.sprudel.lang.*
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 
 /**
- * ADDONS: Effect functions that are NOT available in the original strudel impl
- */
-
-/**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in StrudelRegistry.
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
 var sprudelLangEffectsAddonsInit = false
 
@@ -79,7 +75,7 @@ internal val PatternMapperFn._reverb by dslPatternMapperExtension { m, args, cal
  * ```
  *
  * @param params The reverb parameters as a colon-separated string `"room:size:fade:lowpass:dim"`.
- * @param-tool params StrudelReverbSequenceEditor
+ * @param-tool params SprudelReverbSequenceEditor
  * @param-sub params room Wet/dry mix (0 = fully dry, 1 = fully wet)
  * @param-sub params size Room size — larger values produce longer reverb tails
  * @param-sub params fade Reverb tail fade time in seconds
@@ -197,7 +193,7 @@ internal val PatternMapperFn._lpadsr by dslPatternMapperExtension { m, args, cal
  * ```
  *
  * @param params The ADSR parameters as `"attack:decay:sustain:release"`.
- * @param-tool params StrudelLpAdsrSequenceEditor
+ * @param-tool params SprudelLpAdsrSequenceEditor
  * @return A new pattern with all specified LPF envelope parameters applied.
  * @category effects
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
@@ -296,7 +292,7 @@ internal val PatternMapperFn._hpadsr by dslPatternMapperExtension { m, args, cal
  * ```
  *
  * @param params The ADSR parameters as `"attack:decay:sustain:release"`.
- * @param-tool params StrudelHpAdsrSequenceEditor
+ * @param-tool params SprudelHpAdsrSequenceEditor
  * @return A new pattern with all specified HPF envelope parameters applied.
  * @category effects
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
@@ -395,7 +391,7 @@ internal val PatternMapperFn._bpadsr by dslPatternMapperExtension { m, args, cal
  * ```
  *
  * @param params The ADSR parameters as `"attack:decay:sustain:release"`.
- * @param-tool params StrudelBpAdsrSequenceEditor
+ * @param-tool params SprudelBpAdsrSequenceEditor
  * @return A new pattern with all specified BPF envelope parameters applied.
  * @category effects
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
@@ -505,7 +501,7 @@ internal val PatternMapperFn._tremolo by dslPatternMapperExtension { m, args, ca
  * ```
  *
  * @param params The tremolo parameters as a colon-separated string `"depth:rate:shape:skew:phase"`.
- * @param-tool params StrudelTremoloSequenceEditor
+ * @param-tool params SprudelTremoloSequenceEditor
  * @param-sub params depth Modulation intensity (0 = no effect, 1 = full tremolo)
  * @param-sub params rate LFO speed in cycles per pattern cycle
  * @param-sub params shape LFO waveform: sine, triangle, square, saw
@@ -617,7 +613,7 @@ internal val PatternMapperFn._nfadsr by dslPatternMapperExtension { m, args, cal
  * ```
  *
  * @param params The ADSR parameters as `"attack:decay:sustain:release"`.
- * @param-tool params StrudelNfAdsrSequenceEditor
+ * @param-tool params SprudelNfAdsrSequenceEditor
  * @return A new pattern with all specified notch filter envelope parameters applied.
  * @category effects
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon

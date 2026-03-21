@@ -1,4 +1,4 @@
-# Strudel — Control Patterns & Pattern Composition
+# Sprudel — Control Patterns & Pattern Composition
 
 ## `_innerJoin` (CRITICAL)
 
@@ -7,12 +7,12 @@ work but control patterns (e.g. `pressBy("<0 0.5>")`) silently break.
 
 ```kotlin
 // ✅ Correct
-fun applyPressBy(pattern: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
+fun applyPressBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val rArg = args.getOrNull(0) ?: return pattern
     return pattern._innerJoin(rArg) { src, rVal ->
         val r = rVal?.asDouble ?: return@_innerJoin src
         src.fmap { AtomicPattern.value(it) }
-            .let { applyCompress(it, listOf(StrudelDslArg.of(r), StrudelDslArg.of(1.0))) }
+            .let { applyCompress(it, listOf(SprudelDslArg.of(r), SprudelDslArg.of(1.0))) }
             .squeezeJoin()
     }
 }

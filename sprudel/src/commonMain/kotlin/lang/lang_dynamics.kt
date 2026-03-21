@@ -1436,7 +1436,7 @@ internal val PatternMapperFn._adsr by dslPatternMapperExtension { m, args, callI
  * ```
  *
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
- * @param-tool params StrudelAdsrSequenceEditor
+ * @param-tool params SprudelAdsrSequenceEditor
  * @param-sub params attack Attack time in seconds — how quickly the note rises from silence to full volume
  * @param-sub params decay Decay time in seconds — how quickly the volume falls from peak to sustain level
  * @param-sub params sustain Sustain level (0–1) — the volume held while the note is pressed

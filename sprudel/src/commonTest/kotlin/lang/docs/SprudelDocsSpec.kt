@@ -15,7 +15,7 @@ import io.kotest.matchers.string.shouldContain as stringShouldContain
 class SprudelDocsSpec : StringSpec({
 
     beforeTest {
-        // Ensure Strudel is initialized and docs are registered
+        // Ensure Sprudel is initialized and docs are registered
         initSprudelDsl()
     }
 
@@ -25,7 +25,7 @@ class SprudelDocsSpec : StringSpec({
         seqDoc shouldNotBe null
         seqDoc!!.name shouldBe "seq"
         seqDoc.category shouldBe "structural"
-        seqDoc.library shouldBe "strudel"
+        seqDoc.library shouldBe "sprudel"
         seqDoc.tags shouldContain "sequence"
     }
 
@@ -94,7 +94,7 @@ class SprudelDocsSpec : StringSpec({
         doc shouldNotBe null
         doc!!.name shouldBe "sine"
         doc.category shouldBe "continuous"
-        doc.library shouldBe "strudel"
+        doc.library shouldBe "sprudel"
         doc.tags shouldContain "oscillator"
 
         val variant = doc.variants.filterIsInstance<KlangProperty>().first()

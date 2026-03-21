@@ -1,4 +1,4 @@
-# Strudel — DSL Conventions (`lang_*.kt`)
+# Sprudel — DSL Conventions (`lang_*.kt`)
 
 ## Before Adding Any DSL Function — Ask First
 
@@ -15,7 +15,7 @@ See `ref/dsl-addons.md` for addon rules and conventions.
 
 ```kotlin
 private val _foo by dslFunction { args, _ -> applyFoo(args) }
-private val StrudelPattern._foo by dslPatternExtension { p, args, _ -> applyFoo(p, args) }
+private val SprudelPattern._foo by dslPatternExtension { p, args, _ -> applyFoo(p, args) }
 private val String._foo by dslStringExtension { p, args, callInfo -> p._foo(args, callInfo) }
 ```
 
@@ -39,9 +39,9 @@ private val String._foo by dslStringExtension { p, args, callInfo -> p._foo(args
 * @category structural
 * @tags foo, rhythm
   */
-  @StrudelDsl fun foo(vararg patterns: PatternLike): StrudelPattern = _foo(patterns.toList())
-  @StrudelDsl fun StrudelPattern.foo(vararg patterns: PatternLike): StrudelPattern = this._foo(patterns.toList())
-  @StrudelDsl fun String.foo(vararg patterns: PatternLike): StrudelPattern = this._foo(patterns.toList())
+  @SprudelDsl fun foo(vararg patterns: PatternLike): SprudelPattern = _foo(patterns.toList())
+  @SprudelDsl fun SprudelPattern.foo(vararg patterns: PatternLike): SprudelPattern = this._foo(patterns.toList())
+  @SprudelDsl fun String.foo(vararg patterns: PatternLike): SprudelPattern = this._foo(patterns.toList())
 
 ```
 
@@ -65,7 +65,7 @@ Every alias must cross-reference all others:
 
 ## KSP
 
-- `strudel-ksp` extracts KDoc from all `@StrudelDsl`-annotated `fun` and `val` items
-- After changing KDoc: `./gradlew :strudel:jvmTest` — KSP regenerates docs automatically
-- `StrudelDocsSpec` tests verify docs are correctly registered
+- `sprudel-ksp` extracts KDoc from all `@SprudelDsl`-annotated `fun` and `val` items
+- After changing KDoc: `./gradlew :sprudel:jvmTest` — KSP regenerates docs automatically
+- `SprudelDocsSpec` tests verify docs are correctly registered
 - Examples use fenced ` ```KlangScript ``` ` blocks (KSP reads these, not `@sample`)

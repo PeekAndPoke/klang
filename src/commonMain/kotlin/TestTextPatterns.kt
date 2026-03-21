@@ -21,7 +21,7 @@ object TestTextPatterns {
 
     val smallTownBoy = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 stack(
     // melody
@@ -46,7 +46,7 @@ stack(
 
     val tetris = """
 import * from "stdlib"                                              ////////                   ////////
-import * from "strudel"                                              ////////                   ////////
+import * from "sprudel"                                              ////////                   ////////
                                                                       ////////                   ////////
 stack(                                                                 ////////                   ////////
   note(`<
@@ -106,7 +106,7 @@ stack(                                                                 //////// 
 
     val strangerThingsNetflix = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 let wait = 16
 let keep = 32 * 6
@@ -168,7 +168,7 @@ stack(
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
     val aTruthWorthLyingFor = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 let stay = 48
 let tp = "[0 -1 -3 -5 -6  -2  1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ...

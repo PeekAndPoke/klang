@@ -61,7 +61,7 @@ class LangBandqSpec : StringSpec({
         }
     }
 
-    "bandq() sets StrudelVoiceData.bandq" {
+    "bandq() sets SprudelVoiceData.bandq" {
         val p = note("a b").apply(bandq("1.2 1.8"))
         val events = p.queryArc(0.0, 1.0)
 

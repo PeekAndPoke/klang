@@ -8,7 +8,7 @@ class LangLoopControlSpec : StringSpec({
 
     // loopBegin tests
 
-    "loopBegin() sets StrudelVoiceData.loopBegin" {
+    "loopBegin() sets SprudelVoiceData.loopBegin" {
         val p = sound("bd").loopBegin("0.25")
         val events = p.queryArc(0.0, 1.0)
 
@@ -55,7 +55,7 @@ class LangLoopControlSpec : StringSpec({
 
     // loopEnd tests
 
-    "loopEnd() sets StrudelVoiceData.loopEnd" {
+    "loopEnd() sets SprudelVoiceData.loopEnd" {
         val p = sound("bd").loopEnd("0.75")
         val events = p.queryArc(0.0, 1.0)
 

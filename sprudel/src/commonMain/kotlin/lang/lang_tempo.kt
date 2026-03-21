@@ -1202,7 +1202,7 @@ fun applyInside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprud
     val factorArg = args[0]
     val func = args[1].toPatternMapper() ?: return pattern
 
-    // Use apply functions directly to avoid double-wrapping StrudelDslArg
+    // Use apply functions directly to avoid double-wrapping SprudelDslArg
     val slowed = applySlow(pattern, listOf(factorArg))
     val transformed = func(slowed)
 

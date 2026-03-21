@@ -34,7 +34,7 @@ class SourceLocationIntegrationTest : StringSpec({
     "sound(\"bd hh sd oh\") - basic pattern with correct atom locations" {
         val code = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 sound("bd hh sd oh")
         """.trimIndent()
@@ -74,7 +74,7 @@ sound("bd hh sd oh")
     "sound(\" bd  hh   sd    oh  \") - pattern with extra whitespace" {
         val code = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 sound(" bd  hh   sd    oh  ")
         """.trimIndent()
@@ -108,7 +108,7 @@ sound(" bd  hh   sd    oh  ")
     "\"bd hh sd oh\".sound() - method call syntax" {
         val code = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 "bd hh sd oh".sound()
         """.trimIndent()
@@ -146,7 +146,7 @@ import * from "strudel"
     "sound(`bd hh sd oh`) - multiline string" {
         val code = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 sound(`
 bd hh sd oh
@@ -186,7 +186,7 @@ bd hh sd oh
     "`bd hh sd oh`.sound() - multiline method call" {
         val code = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 `
 bd hh sd oh

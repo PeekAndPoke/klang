@@ -167,11 +167,11 @@ private object DocSearch {
 }
 
 @Suppress("FunctionName")
-fun Tag.StrudelDocsPage() = comp {
-    StrudelDocsPage(it)
+fun Tag.SprudelDocsPage() = comp {
+    SprudelDocsPage(it)
 }
 
-class StrudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
+class SprudelDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
     companion object {
         const val PARAM_SEARCH = "search"

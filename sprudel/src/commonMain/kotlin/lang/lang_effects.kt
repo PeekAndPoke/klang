@@ -742,7 +742,7 @@ internal val String._chebyshev by dslStringExtension { p, args, callInfo -> p._c
  * Generates pure 3rd harmonics using a T3 Chebyshev polynomial. Tape-saturation feel.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = strong harmonic addition).
- * @param-tool amount StrudelDistortAmountSequenceEditor
+ * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with Chebyshev distortion applied.
  *
  * ```KlangScript
@@ -775,7 +775,7 @@ internal val String._rectify by dslStringExtension { p, args, callInfo -> p._rec
  * Includes DC offset compensation.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = full rectification).
- * @param-tool amount StrudelDistortAmountSequenceEditor
+ * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with rectification applied.
  *
  * ```KlangScript
@@ -808,7 +808,7 @@ internal val String._expClip by dslStringExtension { p, args, callInfo -> p._exp
  * Punchy and defined.
  *
  * @param amount The distortion amount (0.0 = clean, 1.0+ = transistor crunch).
- * @param-tool amount StrudelDistortAmountSequenceEditor
+ * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with exponential distortion applied.
  *
  * ```KlangScript
@@ -1079,7 +1079,7 @@ internal val PatternMapperFn._room by dslPatternMapperExtension { m, args, callI
  * ```
  *
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
- * @param-tool amount StrudelReverbSequenceEditor
+ * @param-tool amount SprudelReverbSequenceEditor
  * @return A new pattern with reverb wet/dry mix applied.
  * @category effects
  * @tags room, reverb, wet, mix, space
@@ -1206,7 +1206,7 @@ internal val PatternMapperFn._size by dslPatternMapperExtension { m, args, callI
  * seq("1 2 4 8").roomsize()                       // reinterpret values as room size
  * ```
  *
- * @param-tool amount StrudelRoomSizeSequenceEditor
+ * @param-tool amount SprudelRoomSizeSequenceEditor
  * @alias rsize, sz, size
  * @category effects
  * @tags roomsize, rsize, sz, size, reverb, room, tail
@@ -1285,7 +1285,7 @@ fun PatternMapperFn.roomsize(amount: PatternLike? = null): PatternMapperFn =
  * note("c3 e3").clip(0.5).room(0.5).rsize(4)   // long reverb tail
  * ```
  *
- * @param-tool amount StrudelRoomSizeSequenceEditor
+ * @param-tool amount SprudelRoomSizeSequenceEditor
  * @alias roomsize, sz, size
  * @category effects
  * @tags rsize, roomsize, sz, size, reverb, room, tail
@@ -1352,7 +1352,7 @@ fun PatternMapperFn.rsize(amount: PatternLike? = null): PatternMapperFn =
  * note("c3 e3").clip(0.5).room(0.5).sz(4)   // long reverb tail
  * ```
  *
- * @param-tool amount StrudelRoomSizeSequenceEditor
+ * @param-tool amount SprudelRoomSizeSequenceEditor
  * @alias roomsize, rsize, size
  * @category effects
  * @tags sz, roomsize, rsize, size, reverb, room, tail
@@ -2291,7 +2291,7 @@ internal val PatternMapperFn._delay by dslPatternMapperExtension { m, args, call
  * note("c3*4").delay("<0.3:0.125 0.6:0.25:0.8>")   // alternating delay per cycle
  * ```
  *
- * @param-tool amount StrudelDelaySequenceEditor
+ * @param-tool amount SprudelDelaySequenceEditor
  * @param-sub amount wet Wet/dry mix (0 = fully dry, 1 = fully wet)
  * @param-sub amount time Delay interval in seconds
  * @param-sub amount feedback Feedback amount (0–1), higher values produce more repeats
@@ -2397,7 +2397,7 @@ internal val PatternMapperFn._delaytime by dslPatternMapperExtension { m, args, 
  * seq("0.125 0.25 0.5").delaytime()   // reinterpret values as delay time
  * ```
  *
- * @param-tool time StrudelDelayTimeSequenceEditor
+ * @param-tool time SprudelDelayTimeSequenceEditor
  * @category effects
  * @tags delaytime, delay, echo, time, interval
  */
@@ -2518,7 +2518,7 @@ internal val PatternMapperFn._dfb by dslPatternMapperExtension { m, args, callIn
  * seq("0.2 0.4 0.6 0.8").delayfeedback()   // reinterpret values as feedback
  * ```
  *
- * @param-tool amount StrudelDelayFeedbackSequenceEditor
+ * @param-tool amount SprudelDelayFeedbackSequenceEditor
  * @alias delayfb, dfb
  * @category effects
  * @tags delayfeedback, delayfb, dfb, delay, echo, feedback, repeats
@@ -2605,7 +2605,7 @@ fun PatternMapperFn.delayfeedback(amount: PatternLike? = null): PatternMapperFn 
  * seq("0.2 0.4 0.6 0.8").delayfb()   // reinterpret values as feedback
  * ```
  *
- * @param-tool amount StrudelDelayFeedbackSequenceEditor
+ * @param-tool amount SprudelDelayFeedbackSequenceEditor
  * @alias delayfeedback, dfb
  * @category effects
  * @tags delayfb, delayfeedback, dfb, delay, echo, feedback, repeats
@@ -2806,7 +2806,7 @@ internal val PatternMapperFn._ph by dslPatternMapperExtension { m, args, callInf
  *
  * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
  *   Omit to reinterpret the pattern's values as phaser rate.
- * @param-tool rate StrudelPhaserSequenceEditor
+ * @param-tool rate SprudelPhaserSequenceEditor
  * @param-sub rate rate LFO speed in Hz controlling the sweep rate
  * @param-sub rate depth Modulation depth (0–1), how far the filters sweep
  * @param-sub rate center Center frequency in Hz for the all-pass filter bank
@@ -2860,7 +2860,7 @@ fun String.phaser(rate: PatternLike? = null): SprudelPattern =
  *
  * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
  *   Omit to reinterpret the pattern's values as phaser rate.
- * @param-tool rate StrudelPhaserSequenceEditor
+ * @param-tool rate SprudelPhaserSequenceEditor
  * @param-sub rate rate LFO speed in Hz controlling the sweep rate
  * @param-sub rate depth Modulation depth (0–1), how far the filters sweep
  * @param-sub rate center Center frequency in Hz for the all-pass filter bank
@@ -2907,7 +2907,7 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null): PatternMapperFn =
  *
  * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
  *   Omit to reinterpret the pattern's values as phaser rate.
- * @param-tool rate StrudelPhaserSequenceEditor
+ * @param-tool rate SprudelPhaserSequenceEditor
  * @param-sub rate rate LFO speed in Hz controlling the sweep rate
  * @param-sub rate depth Modulation depth (0–1), how far the filters sweep
  * @param-sub rate center Center frequency in Hz for the all-pass filter bank
@@ -2954,7 +2954,7 @@ fun String.ph(rate: PatternLike? = null): SprudelPattern =
  *
  * @param rate The phaser LFO rate in Hz, or `"rate:depth:center:sweep"` compound string.
  *   Omit to reinterpret the pattern's values as phaser rate.
- * @param-tool rate StrudelPhaserSequenceEditor
+ * @param-tool rate SprudelPhaserSequenceEditor
  * @param-sub rate rate LFO speed in Hz controlling the sweep rate
  * @param-sub rate depth Modulation depth (0–1), how far the filters sweep
  * @param-sub rate center Center frequency in Hz for the all-pass filter bank

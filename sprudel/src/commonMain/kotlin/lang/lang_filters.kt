@@ -851,7 +851,7 @@ fun PatternMapperFn.bandf(freq: PatternLike? = null): PatternMapperFn =
  * note("c4").bpf("<500 2000>")      // alternating centre per cycle
  * ```
  *
- * @param-tool freq StrudelBpFilterSequenceEditor
+ * @param-tool freq SprudelBpFilterSequenceEditor
  * @alias bandf, bp
  * @category effects
  * @tags bpf, bandf, band pass filter, filter, frequency
@@ -927,7 +927,7 @@ fun PatternMapperFn.bpf(freq: PatternLike? = null): PatternMapperFn =
  * note("c4").bp("<500 2000>")       // alternating centre per cycle
  * ```
  *
- * @param-tool freq StrudelBpFilterSequenceEditor
+ * @param-tool freq SprudelBpFilterSequenceEditor
  * @alias bandf, bpf
  * @category effects
  * @tags bp, bandf, band pass filter, filter, frequency
@@ -1043,7 +1043,7 @@ internal val PatternMapperFn._lpq by dslPatternMapperExtension { m, args, callIn
  * seq("0 5 10 20").resonance()            // reinterpret values as resonance Q
  * ```
  *
- * @param-tool q StrudelLpResonanceSequenceEditor
+ * @param-tool q SprudelLpResonanceSequenceEditor
  * @alias res, lpq
  * @category effects
  * @tags resonance, res, lpq, low pass filter, Q
@@ -1123,7 +1123,7 @@ fun PatternMapperFn.resonance(q: PatternLike? = null): PatternMapperFn =
  * note("c4").res("<0 20>")          // sweeping resonance
  * ```
  *
- * @param-tool q StrudelLpResonanceSequenceEditor
+ * @param-tool q SprudelLpResonanceSequenceEditor
  * @alias resonance, lpq
  * @category effects
  * @tags res, resonance, lpq, low pass filter, Q
@@ -1199,7 +1199,7 @@ fun PatternMapperFn.res(q: PatternLike? = null): PatternMapperFn =
  * note("c4").lpq("<0 20>")          // sweeping Q
  * ```
  *
- * @param-tool q StrudelLpResonanceSequenceEditor
+ * @param-tool q SprudelLpResonanceSequenceEditor
  * @alias resonance, res
  * @category effects
  * @tags lpq, resonance, res, low pass filter, Q
@@ -1315,7 +1315,7 @@ internal val PatternMapperFn._hpq by dslPatternMapperExtension { m, args, callIn
  * seq("0 5 15").hresonance()                // reinterpret values as HPF Q
  * ```
  *
- * @param-tool q StrudelHpResonanceSequenceEditor
+ * @param-tool q SprudelHpResonanceSequenceEditor
  * @alias hres, hpq
  * @category effects
  * @tags hresonance, hres, hpq, high pass filter, Q, resonance
@@ -1395,7 +1395,7 @@ fun PatternMapperFn.hresonance(q: PatternLike? = null): PatternMapperFn =
  * note("c4").hres("<0 20>")         // sweeping HPF Q
  * ```
  *
- * @param-tool q StrudelHpResonanceSequenceEditor
+ * @param-tool q SprudelHpResonanceSequenceEditor
  * @alias hresonance, hpq
  * @category effects
  * @tags hres, hresonance, hpq, high pass filter, Q
@@ -1471,7 +1471,7 @@ fun PatternMapperFn.hres(q: PatternLike? = null): PatternMapperFn =
  * note("c4").hpq("<0 20>")          // sweeping HPF Q
  * ```
  *
- * @param-tool q StrudelHpResonanceSequenceEditor
+ * @param-tool q SprudelHpResonanceSequenceEditor
  * @alias hresonance, hres
  * @category effects
  * @tags hpq, hresonance, hres, high pass filter, Q
@@ -1573,7 +1573,7 @@ internal val PatternMapperFn._bandq by dslPatternMapperExtension { m, args, call
  * seq("1 5 10 20").bandq()                // reinterpret values as BPF Q
  * ```
  *
- * @param-tool q StrudelBpQSequenceEditor
+ * @param-tool q SprudelBpQSequenceEditor
  * @alias bpq
  * @category effects
  * @tags bandq, bpq, band pass filter, Q, bandwidth
@@ -1656,7 +1656,7 @@ internal val PatternMapperFn._bpq by dslPatternMapperExtension { m, args, callIn
  * note("c4").bpq("<1 20>")          // sweeping BPF Q
  * ```
  *
- * @param-tool q StrudelBpQSequenceEditor
+ * @param-tool q SprudelBpQSequenceEditor
  * @alias bandq
  * @category effects
  * @tags bpq, bandq, band pass filter, Q, bandwidth
@@ -1754,7 +1754,7 @@ internal val PatternMapperFn._lpattack by dslPatternMapperExtension { m, args, c
  * note("c4").lpattack("<0.01 0.5>")              // fast vs slow filter attack per cycle
  * ```
  *
- * @param-tool seconds StrudelLpAttackSequenceEditor
+ * @param-tool seconds SprudelLpAttackSequenceEditor
  * @alias lpa
  * @category effects
  * @tags lpattack, lpa, low pass filter, envelope, attack
@@ -1837,7 +1837,7 @@ internal val PatternMapperFn._lpa by dslPatternMapperExtension { m, args, callIn
  * s("bd").lpf(200).lpenv(5000).lpa(0.1)   // filter opens over 100 ms
  * ```
  *
- * @param-tool seconds StrudelLpAttackSequenceEditor
+ * @param-tool seconds SprudelLpAttackSequenceEditor
  * @alias lpattack
  * @category effects
  * @tags lpa, lpattack, low pass filter, envelope, attack
@@ -1914,7 +1914,7 @@ internal val PatternMapperFn._lpd by dslPatternMapperExtension { m, args, callIn
  * note("c4").lpdecay("<0.05 0.5>")              // short vs long filter decay per cycle
  * ```
  *
- * @param-tool seconds StrudelLpDecaySequenceEditor
+ * @param-tool seconds SprudelLpDecaySequenceEditor
  * @alias lpd
  * @category effects
  * @tags lpdecay, lpd, low pass filter, envelope, decay
@@ -1960,7 +1960,7 @@ fun PatternMapperFn.lpdecay(seconds: PatternLike? = null): PatternMapperFn =
  * s("bd").lpf(200).lpenv(5000).lpd(0.2)   // alias for lpdecay
  * ```
  *
- * @param-tool seconds StrudelLpDecaySequenceEditor
+ * @param-tool seconds SprudelLpDecaySequenceEditor
  * @alias lpdecay
  * @category effects
  * @tags lpd, lpdecay, low pass filter, envelope, decay
@@ -2036,7 +2036,7 @@ internal val PatternMapperFn._lps by dslPatternMapperExtension { m, args, callIn
  *
  * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF sustain level, or [SprudelPattern] when called on a pattern.
- * @param-tool level StrudelLpSustainSequenceEditor
+ * @param-tool level SprudelLpSustainSequenceEditor
  * @alias lps
  * @category effects
  * @tags lpsustain, lps, low pass filter, envelope, sustain
@@ -2072,7 +2072,7 @@ fun PatternMapperFn.lpsustain(level: PatternLike? = null): PatternMapperFn =
  *
  * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF sustain level, or [SprudelPattern] when called on a pattern.
- * @param-tool level StrudelLpSustainSequenceEditor
+ * @param-tool level SprudelLpSustainSequenceEditor
  * @alias lpsustain
  * @category effects
  * @tags lps, lpsustain, low pass filter, envelope, sustain
@@ -2135,7 +2135,7 @@ internal val PatternMapperFn._lpr by dslPatternMapperExtension { m, args, callIn
  *
  * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF release time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds StrudelLpReleaseSequenceEditor
+ * @param-tool seconds SprudelLpReleaseSequenceEditor
  * @alias lpr
  * @category effects
  * @tags lprelease, lpr, low pass filter, envelope, release
@@ -2171,7 +2171,7 @@ fun PatternMapperFn.lprelease(seconds: PatternLike? = null): PatternMapperFn =
  *
  * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF release time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds StrudelLpReleaseSequenceEditor
+ * @param-tool seconds SprudelLpReleaseSequenceEditor
  * @alias lprelease
  * @category effects
  * @tags lpr, lprelease, low pass filter, envelope, release
@@ -2255,7 +2255,7 @@ internal val PatternMapperFn._lpe by dslPatternMapperExtension { m, args, callIn
  *
  * @param depth Envelope depth as a ratio (e.g. 1.0 = one octave sweep); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth StrudelLpEnvSequenceEditor
+ * @param-tool depth SprudelLpEnvSequenceEditor
  * @alias lpe
  * @category effects
  * @tags lpenv, lpe, low pass filter, envelope, depth, modulation
@@ -2291,7 +2291,7 @@ fun PatternMapperFn.lpenv(depth: PatternLike? = null): PatternMapperFn =
  *
  * @param depth Envelope depth in Hz; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the LPF envelope depth, or [SprudelPattern] when called on a pattern.
- * @param-tool depth StrudelLpEnvSequenceEditor
+ * @param-tool depth SprudelLpEnvSequenceEditor
  * @alias lpenv
  * @category effects
  * @tags lpe, lpenv, low pass filter, envelope, depth, modulation
@@ -2354,7 +2354,7 @@ internal val PatternMapperFn._hpa by dslPatternMapperExtension { m, args, callIn
  *
  * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF attack time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds StrudelHpAttackSequenceEditor
+ * @param-tool seconds SprudelHpAttackSequenceEditor
  * @alias hpa
  * @category effects
  * @tags hpattack, hpa, high pass filter, envelope, attack
@@ -2390,7 +2390,7 @@ fun PatternMapperFn.hpattack(seconds: PatternLike? = null): PatternMapperFn =
  *
  * @param seconds Attack time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF attack time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds StrudelHpAttackSequenceEditor
+ * @param-tool seconds SprudelHpAttackSequenceEditor
  * @alias hpattack
  * @category effects
  * @tags hpa, hpattack, high pass filter, envelope, attack
@@ -2453,7 +2453,7 @@ internal val PatternMapperFn._hpd by dslPatternMapperExtension { m, args, callIn
  *
  * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF decay time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds StrudelHpDecaySequenceEditor
+ * @param-tool seconds SprudelHpDecaySequenceEditor
  * @alias hpd
  * @category effects
  * @tags hpdecay, hpd, high pass filter, envelope, decay
@@ -2489,7 +2489,7 @@ fun PatternMapperFn.hpdecay(seconds: PatternLike? = null): PatternMapperFn =
  *
  * @param seconds Decay time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF decay time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds StrudelHpDecaySequenceEditor
+ * @param-tool seconds SprudelHpDecaySequenceEditor
  * @alias hpdecay
  * @category effects
  * @tags hpd, hpdecay, high pass filter, envelope, decay
@@ -2553,7 +2553,7 @@ internal val PatternMapperFn._hps by dslPatternMapperExtension { m, args, callIn
  *
  * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF sustain level, or [SprudelPattern] when called on a pattern.
- * @param-tool level StrudelHpSustainSequenceEditor
+ * @param-tool level SprudelHpSustainSequenceEditor
  * @alias hps
  * @category effects
  * @tags hpsustain, hps, high pass filter, envelope, sustain
@@ -2589,7 +2589,7 @@ fun PatternMapperFn.hpsustain(level: PatternLike? = null): PatternMapperFn =
  *
  * @param level Sustain level (0–1); omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF sustain level, or [SprudelPattern] when called on a pattern.
- * @param-tool level StrudelHpSustainSequenceEditor
+ * @param-tool level SprudelHpSustainSequenceEditor
  * @alias hpsustain
  * @category effects
  * @tags hps, hpsustain, high pass filter, envelope, sustain
@@ -2652,7 +2652,7 @@ internal val PatternMapperFn._hpr by dslPatternMapperExtension { m, args, callIn
  *
  * @param seconds Release time in seconds; omit to reinterpret the pattern's own values.
  * @return A [PatternMapperFn] that sets the HPF release time, or [SprudelPattern] when called on a pattern.
- * @param-tool seconds StrudelHpReleaseSequenceEditor
+ * @param-tool seconds SprudelHpReleaseSequenceEditor
  * @alias hpr
  * @category effects
  * @tags hprelease, hpr, high pass filter, envelope, release

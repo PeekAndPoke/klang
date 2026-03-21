@@ -274,9 +274,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
         menuItemsList {
             noui.item {
-                val isSelected = currentRoute.route == Nav.manualsStrudel
+                val isSelected = currentRoute.route == Nav.manualsSprudel
                 itemCss(isSelected)
-                onItemClick { router.navToUri(Nav.manualsStrudel()) }
+                onItemClick { router.navToUri(Nav.manualsSprudel()) }
                 icon.wind()
                 noui.content {
                     itemContentCss(isSelected)

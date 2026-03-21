@@ -76,7 +76,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     val defaultCode = """
         import * from "stdlib"
-        import * from "strudel"
+        import * from "sprudel"
 
         sound("bd hh sd oh")
     """.trimIndent()
@@ -85,7 +85,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     val builtIn = BuiltInSongs.songs.firstOrNull { it.id == songId }
 
-    val v = 1
+    val v = 2
 
     val cpsStream = StreamSource(builtIn?.cps ?: 0.5)
         .persistInLocalStorage("song-$v-$songId-cps", Double.serializer())
@@ -178,7 +178,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     private fun navToDoc(doc: KlangSymbol, event: dynamic) {
-        val uri = Nav.manualsStrudelSearch("function:${doc.name}")
+        val uri = Nav.manualsSprudelSearch("function:${doc.name}")
         val pointerEvent = event as? PointerEvent
         if (pointerEvent?.shiftKey == true) {
             router.navToUri(pointerEvent, uri)
@@ -258,7 +258,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                     withEditorErrorHandling(codeEditorRef) {
                         getPlayer().let { p ->
                             val pattern = SprudelPattern.compileRaw(code)
-                                ?: error("Failed to compile Strudel pattern from code")
+                                ?: error("Failed to compile Sprudel pattern from code")
 
                             playback = p.play(pattern)
 
@@ -300,7 +300,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             else -> launch {
                 withEditorErrorHandling(codeEditorRef) {
                     val pattern = SprudelPattern.compileRaw(code)
-                        ?: error("Failed to compile Strudel pattern from code")
+                        ?: error("Failed to compile Sprudel pattern from code")
                     s.updatePattern(pattern)
                 }
             }

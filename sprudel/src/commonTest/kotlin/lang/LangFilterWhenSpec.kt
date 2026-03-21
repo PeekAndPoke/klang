@@ -1,4 +1,4 @@
-// strudel/src/commonTest/kotlin/lang/LangFilterWhenSpec.kt
+// sprudel/src/commonTest/kotlin/lang/LangFilterWhenSpec.kt
 package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec

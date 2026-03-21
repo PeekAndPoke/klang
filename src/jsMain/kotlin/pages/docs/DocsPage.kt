@@ -43,7 +43,7 @@ class DocsPage(ctx: NoProps) : PureComponent(ctx) {
             ui.four.stackable.link.cards {
 
                 ui.horizontal.card {
-                    onClick { router.navToUri(Nav.manualsStrudel()) }
+                    onClick { router.navToUri(Nav.manualsSprudel()) }
 
                     noui.image {
                         ui.basic.segment {

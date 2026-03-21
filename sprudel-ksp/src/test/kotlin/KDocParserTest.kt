@@ -85,25 +85,25 @@ class KDocParserTest : StringSpec({
         val kdoc = """
             Creates a pattern.
 
-            @return A new StrudelPattern instance
+            @return A new SprudelPattern instance
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
 
-        result.returnDoc shouldBe "A new StrudelPattern instance"
+        result.returnDoc shouldBe "A new SprudelPattern instance"
     }
 
     "parse multi-line return" {
         val kdoc = """
             Creates a pattern.
 
-            @return A new StrudelPattern instance
+            @return A new SprudelPattern instance
                     that plays the sequence
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
 
-        result.returnDoc shouldBe "A new StrudelPattern instance that plays the sequence"
+        result.returnDoc shouldBe "A new SprudelPattern instance that plays the sequence"
     }
 
     "parse single KlangScript fenced block" {
@@ -360,39 +360,39 @@ class KDocParserTest : StringSpec({
             ADSR envelope.
 
             @param params The envelope parameters
-            @param-tool params StrudelAdsrEditor
+            @param-tool params SprudelAdsrEditor
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
 
-        result.paramTools shouldContainExactly mapOf("params" to listOf("StrudelAdsrEditor"))
+        result.paramTools shouldContainExactly mapOf("params" to listOf("SprudelAdsrEditor"))
     }
 
     "parse param-tool tag — multiple tools for one param" {
         val kdoc = """
             ADSR envelope.
 
-            @param-tool params StrudelAdsrEditor, OtherTool
+            @param-tool params SprudelAdsrEditor, OtherTool
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
 
-        result.paramTools shouldContainExactly mapOf("params" to listOf("StrudelAdsrEditor", "OtherTool"))
+        result.paramTools shouldContainExactly mapOf("params" to listOf("SprudelAdsrEditor", "OtherTool"))
     }
 
     "parse param-tool tag — multiple params" {
         val kdoc = """
             A function with tools on multiple params.
 
-            @param-tool params StrudelAdsrEditor
-            @param-tool rhythm StrudelPatternEditor
+            @param-tool params SprudelAdsrEditor
+            @param-tool rhythm SprudelPatternEditor
         """.trimIndent()
 
         val result = KDocParser.parse(kdoc)
 
         result.paramTools shouldContainExactly mapOf(
-            "params" to listOf("StrudelAdsrEditor"),
-            "rhythm" to listOf("StrudelPatternEditor"),
+            "params" to listOf("SprudelAdsrEditor"),
+            "rhythm" to listOf("SprudelPatternEditor"),
         )
     }
 

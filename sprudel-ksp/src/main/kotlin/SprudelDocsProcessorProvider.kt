@@ -6,14 +6,14 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 
 /**
- * Provider for the Strudel documentation generator KSP processor.
+ * Provider for the Sprudel documentation generator KSP processor.
  *
  * Registered via @AutoService for automatic discovery by KSP.
  */
 @Suppress("unused")
 @AutoService(SymbolProcessorProvider::class)
-class StrudelDocsProcessorProvider : SymbolProcessorProvider {
+class SprudelDocsProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
-        return StrudelDocsProcessor(environment)
+        return SprudelDocsProcessor(environment)
     }
 }

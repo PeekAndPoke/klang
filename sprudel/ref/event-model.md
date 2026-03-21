@@ -1,12 +1,12 @@
-# Strudel — Event Model
+# Sprudel — Event Model
 
 ## Event Structure
 
 ```kotlin
-data class StrudelPatternEvent(
+data class SprudelPatternEvent(
     val part: TimeSpan,   // visible portion (may be clipped)
     val whole: TimeSpan,  // complete original event — always non-nullable
-    val data: StrudelVoiceData
+    val data: SprudelVoiceData
 ) {
     val isOnset: Boolean = whole.begin == part.begin
 }
@@ -29,7 +29,7 @@ data class StrudelPatternEvent(
 
 ```kotlin
 // Create event
-StrudelPatternEvent(part = ts, whole = ts, data = data)
+SprudelPatternEvent(part = ts, whole = ts, data = data)
 
 // Clip — whole is preserved, part is clipped
 val clipped = event.part.clipTo(bounds)

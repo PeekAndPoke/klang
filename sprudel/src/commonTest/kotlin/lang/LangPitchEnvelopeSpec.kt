@@ -35,7 +35,7 @@ class LangPitchEnvelopeSpec : StringSpec({
         events.map { it.data.pAttack } shouldBe listOf(0.1, 0.2)
     }
 
-    "pattack() sets StrudelVoiceData.pAttack" {
+    "pattack() sets SprudelVoiceData.pAttack" {
         val p = note("a b").pattack("0.1 0.2")
         val events = p.queryArc(0.0, 1.0)
 
@@ -99,7 +99,7 @@ class LangPitchEnvelopeSpec : StringSpec({
         events.map { it.data.pDecay } shouldBe listOf(0.3, 0.4)
     }
 
-    "pdecay() sets StrudelVoiceData.pDecay" {
+    "pdecay() sets SprudelVoiceData.pDecay" {
         val p = note("a b").pdecay("0.3 0.4")
         val events = p.queryArc(0.0, 1.0)
 
@@ -148,7 +148,7 @@ class LangPitchEnvelopeSpec : StringSpec({
         events.map { it.data.pRelease } shouldBe listOf(0.5, 0.6)
     }
 
-    "prelease() sets StrudelVoiceData.pRelease" {
+    "prelease() sets SprudelVoiceData.pRelease" {
         val p = note("a b").prelease("0.5 0.6")
         val events = p.queryArc(0.0, 1.0)
 
@@ -197,7 +197,7 @@ class LangPitchEnvelopeSpec : StringSpec({
         events.map { it.data.pEnv } shouldBe listOf(12.0, 24.0)
     }
 
-    "penv() sets StrudelVoiceData.pEnv" {
+    "penv() sets SprudelVoiceData.pEnv" {
         val p = note("a b").penv("12 24")
         val events = p.queryArc(0.0, 1.0)
 
@@ -246,7 +246,7 @@ class LangPitchEnvelopeSpec : StringSpec({
         events.map { it.data.pCurve } shouldBe listOf(0.5, 1.5)
     }
 
-    "pcurve() sets StrudelVoiceData.pCurve" {
+    "pcurve() sets SprudelVoiceData.pCurve" {
         val p = note("a b").pcurve("0.5 1.5")
         val events = p.queryArc(0.0, 1.0)
 
@@ -295,7 +295,7 @@ class LangPitchEnvelopeSpec : StringSpec({
         events.map { it.data.pAnchor } shouldBe listOf(0.0, 1.0)
     }
 
-    "panchor() sets StrudelVoiceData.pAnchor" {
+    "panchor() sets SprudelVoiceData.pAnchor" {
         val p = note("a b").panchor("0.0 1.0")
         val events = p.queryArc(0.0, 1.0)
 

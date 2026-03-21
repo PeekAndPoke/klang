@@ -79,7 +79,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     }
 
     private fun navToDoc(doc: KlangSymbol, event: dynamic) {
-        val uri = Nav.manualsStrudelSearch("function:${doc.name}")
+        val uri = Nav.manualsSprudelSearch("function:${doc.name}")
         val pointerEvent = event as? org.w3c.dom.pointerevents.PointerEvent
         if (pointerEvent?.shiftKey == true) {
             router.navToUri(pointerEvent, uri)
