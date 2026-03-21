@@ -40,6 +40,7 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                     renderMusicAndAudioCard()
                     renderRuntimeCard()
                     renderTestingCard()
+                    renderAiCard()
                 }
             }
         }
@@ -215,6 +216,25 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         Keeping things working:
 
                         - **[Kotest](https://kotest.io)** — Kotlin testing framework
+                    """.trimIndent()
+                )
+            }
+        }
+    }
+
+    private fun FlowContent.renderAiCard() {
+        noui.card {
+            noui.content {
+                ui.header H2 { +"AI Assistance" }
+
+                ui.divider()
+
+                MarkdownDisplay(
+                    """
+                        A significant amount of Klang's code was written with the help of AI.
+                        **[Claude](https://claude.ai)** by **[Anthropic](https://anthropic.com)** helped achieve
+                        a lot of things in a very short time, making it possible for a small project to move fast
+                        and punch above its weight.
                     """.trimIndent()
                 )
             }
