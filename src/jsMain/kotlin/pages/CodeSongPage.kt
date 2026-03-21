@@ -38,8 +38,8 @@ import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
@@ -76,7 +76,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     val defaultCode = """
         import * from "stdlib"
-        import * from "strudel"
+        import * from "sprudel"
 
         sound("bd hh sd oh")
     """.trimIndent()
@@ -85,7 +85,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     val builtIn = BuiltInSongs.songs.firstOrNull { it.id == songId }
 
-    val v = 1
+    val v = 2
 
     val cpsStream = StreamSource(builtIn?.cps ?: 0.5)
         .persistInLocalStorage("song-$v-$songId-cps", Double.serializer())
@@ -178,7 +178,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     private fun navToDoc(doc: KlangSymbol, event: dynamic) {
-        val uri = Nav.manualsStrudelSearch("function:${doc.name}")
+        val uri = Nav.manualsSprudelSearch("function:${doc.name}")
         val pointerEvent = event as? PointerEvent
         if (pointerEvent?.shiftKey == true) {
             router.navToUri(pointerEvent, uri)
@@ -257,8 +257,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 if (!loading) {
                     withEditorErrorHandling(codeEditorRef) {
                         getPlayer().let { p ->
-                            val pattern = StrudelPattern.compileRaw(code)
-                                ?: error("Failed to compile Strudel pattern from code")
+                            val pattern = SprudelPattern.compileRaw(code)
+                                ?: error("Failed to compile Sprudel pattern from code")
 
                             playback = p.play(pattern)
 
@@ -299,8 +299,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
             else -> launch {
                 withEditorErrorHandling(codeEditorRef) {
-                    val pattern = StrudelPattern.compileRaw(code)
-                        ?: error("Failed to compile Strudel pattern from code")
+                    val pattern = SprudelPattern.compileRaw(code)
+                        ?: error("Failed to compile Sprudel pattern from code")
                     s.updatePattern(pattern)
                 }
             }
@@ -538,7 +538,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                     code = newCode
                                     codeEditorRef { it.setErrors(emptyList()) }
                                 },
-                                availableLibraries = listOf(stdlibLib, strudelLib),
+                                availableLibraries = listOf(stdlibLib, sprudelLib),
                                 hoverPopup = hoverPopup,
                                 hoverContent = hoverContent,
                                 popups = popups,
@@ -551,7 +551,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                         EditorMode.BLOCKS -> {
                             KlangBlocksEditorComp(
-                                availableLibraries = listOf(stdlibLib, strudelLib),
+                                availableLibraries = listOf(stdlibLib, sprudelLib),
                                 initialCode = code,
                                 onCodeChanged = { newCode -> code = newCode },
                                 onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },

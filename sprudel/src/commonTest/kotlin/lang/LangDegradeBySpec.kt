@@ -1,0 +1,142 @@
+package io.peekandpoke.klang.sprudel.lang
+
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.withClue
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.ints.shouldBeInRange
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
+import io.peekandpoke.klang.sprudel.SprudelPattern
+
+class LangDegradeBySpec : StringSpec({
+
+    "degradeBy() works as pattern extension" {
+        val p = note("a").degradeBy(0.0) // 0.0 probability means it stays
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 1
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+    }
+
+    "degradeBy() works as string extension" {
+        val p = "a".degradeBy(0.0).note()
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 1
+        events[0].data.note shouldBeEqualIgnoringCase "A"
+    }
+
+    "degradeBy(1.0) removes all events" {
+        val p = note("a b c d").degradeBy(1.0)
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 0
+    }
+
+    "degrade works as shorthand for degradeBy(0.5)" {
+        val p = note("a").seed(1).degrade()
+        // We just check if it compiles and runs; statistical behavior is tested in DegradePatternSpec
+        p.queryArc(0.0, 1.0)
+    }
+
+    "degradeBy() works in compiled code" {
+        val p = SprudelPattern.compile("""note("a").degradeBy(0.0)""")
+        val events = p?.queryArc(0.0, 1.0) ?: emptyList()
+        events.size shouldBe 1
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+    }
+
+    "degradeBy() statistical check" {
+        val p = note("a").degradeBy(0.5).seed(42)
+        var count = 0
+        val total = 200
+        for (i in 0 until total) {
+            if (p.queryArc(i.toDouble(), i + 1.0).isNotEmpty()) {
+                count++
+            }
+        }
+        // Roughly 50% of 200 is 100.
+        count shouldBeInRange 70..130
+    }
+
+    "degrade() works with continuous pattern (sine)" {
+        // sine goes from 0.5 to 1.0 to 0.5 to 0.0
+        // At t=0.75 probability is 0.0, so event should stay
+        val p = note("a b c d").degrade(sine).seed(1)
+        val events = p.queryArc(0.0, 1.0)
+
+        // We can't guarantee exact results with random, but at least we check it runs
+        events.size shouldBeInRange 0..4
+    }
+
+    "degradeBy() with 1.0 pattern removes all" {
+        val p = note("a b c d").degradeBy(steady(1.0))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 0
+    }
+
+    "degradeBy() with 0.0 pattern keeps all" {
+        val p = note("a b c d").degradeBy(steady(0.0))
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "degradeBy() as control pattern" {
+        val p = note("[a b c d]").degradeBy("[0.1 1.0 0.2 0.9]").seed(42)
+        val events = (0..<100).flatMap {
+            p.queryArc(it.toDouble(), it + 1.0)
+        }
+
+        val buckets = events.groupBy { it.data.note }
+
+        println(buckets.keys)
+
+        assertSoftly {
+            withClue("note 'a'") {
+                (buckets["a"]?.size ?: 0) shouldBeInRange 80..100
+            }
+            withClue("note 'b'") {
+                (buckets["b"]?.size ?: 0) shouldBe 0
+            }
+            withClue("note 'c'") {
+                (buckets["c"]?.size ?: 0) shouldBeInRange 65..95
+            }
+            withClue("note 'd'") {
+                (buckets["d"]?.size ?: 0) shouldBeInRange 0..25
+            }
+        }
+    }
+
+    "degradeBy() as top-level PatternMapperFn keeps all events at 0 probability" {
+        val events = note("a b c d").apply(degradeBy(0.0)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "PatternMapperFn.degradeBy() chains degradeBy onto a mapper" {
+        val mapper: PatternMapperFn = { it }
+        val events = note("a b c d").apply(mapper.degradeBy(0.0)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "degrade() as top-level PatternMapperFn keeps all events at 0 probability" {
+        val events = note("a b c d").apply(degrade(0.0)).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+    }
+
+    "degrade() with no args uses 0.5 probability" {
+        val mapper = degrade()
+        // With prob=0 and 0.5, results differ — mapper must be callable
+        val events0 = note("a b c d").apply(degrade(0.0)).queryArc(0.0, 1.0)
+        val events50 = note("a b c d").apply(mapper).seed(1).queryArc(0.0, 1.0)
+        events0.size shouldBe 4
+        events50.size shouldBeInRange 0..4
+    }
+
+    "undegrade() as top-level PatternMapperFn" {
+        val events = note("a b c d").apply(undegrade()).seed(99).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+
+    "PatternMapperFn.undegrade() chains onto a mapper" {
+        val mapper: PatternMapperFn = { it }
+        val events = note("a b c d").apply(mapper.undegrade()).seed(99).queryArc(0.0, 1.0)
+        events.size shouldBeInRange 0..4
+    }
+})

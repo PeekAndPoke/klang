@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.strings.levenshtein
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import kotlin.reflect.KClass
@@ -253,13 +254,36 @@ class Environment(
         val library = libraries[name] ?: if (parent != null) {
             return parent.loadLibrary(name)
         } else {
-            throw KlangScriptImportError(libraryName = name, message = "Library not found")
+            val available = getAllLibraryNames().sorted()
+            val suggestions = available
+                .map { it to name.lowercase().levenshtein(it.lowercase()) }
+                .filter { it.second <= 3 }
+                .sortedBy { it.second }
+                .take(3)
+                .map { "\"${it.first}\"" }
+
+            val msg = buildString {
+                append("Library not found.")
+                if (suggestions.isNotEmpty()) {
+                    append(" Did you mean ${suggestions.joinToString(" or ")}?")
+                }
+                append(" Available libraries: ${available.joinToString(", ") { "\"$it\"" }}.")
+            }
+
+            throw KlangScriptImportError(libraryName = name, message = msg)
         }
 
         register(library.native)
 
         // Return source code (or empty string if library has no source)
         return library.sourceCode
+    }
+
+    /** Collect all registered library names across the environment chain. */
+    private fun getAllLibraryNames(): Set<String> {
+        val names = libraries.keys.toMutableSet()
+        parent?.let { names.addAll(it.getAllLibraryNames()) }
+        return names
     }
 
     /**

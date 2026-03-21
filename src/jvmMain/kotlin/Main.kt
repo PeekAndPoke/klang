@@ -8,9 +8,9 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.graal.GraalSprudelCompiler
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import kotlinx.coroutines.delay
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
@@ -26,23 +26,18 @@ suspend fun main() {
 }
 
 private suspend fun helloStrudel() {
-    // Run the minimal audio demo using StrudelSynth
+    // Run the minimal audio demo
     // Song collections:
     // https://github.com/eefano/strudel-songs-collection
 
-    val strudel = GraalStrudelCompiler(
-//        Path.of("./build/strudel-bundle.mjs").toFile()
-    )
+    val graal = GraalSprudelCompiler()
 
-    strudel.use { strudel ->
-//        val code = TestTextPatterns.smallTownBoy
-//        val pattern = strudel.compile(code).await()
-
+    graal.use { graalComp ->
         val engine = klangScript {
-            registerLibrary(strudelLib)
+            registerLibrary(sprudelLib)
         }
 
-        val compiled = strudel.compile(
+        val compiled = graalComp.compile(
             """
                 note("c").late("0.5")
             """.trimIndent()
@@ -54,62 +49,7 @@ private suspend fun helloStrudel() {
             }
         }
 
-//        exitProcess(1)
-
-//        val result = engine.execute(
-//            """
-//            import * from "stdlib"
-//            import * from "strudel"
-//
-//            note("a b").filter(x => x + 1)
-//            note("a b").filter(x => x.data.note == "a")
-//            note("a b").filter((x) => {
-//                let note = x.data.note
-//                return note == "a"
-//            })
-//        """.trimIndent()
-//        )
-//
-//        println(result)
-//
-//        val code = """
-//                sound("a")
-//                  .loop()
-//                  .begin(0.5)
-//                  .end(0.5)
-//                  .speed(-1)
-//                  .loopAt(2)
-//                  .cut(1)
-//                  .slice(4, 1)
-//        """.trimIndent()
-
-//        val pattern = strudel.compile(code).await()
-
-//        val pattern = StrudelPattern.compile(code)!!
-
-//        val pattern = sound("bd").fast(2).pan(sine.range(-1.0, 1.0).slow(8))
-
-//        val pattern = sound("bd").loop()
-
-//
-//        println("=======================================================================")
-//        println(
-//            pattern1.makeStatic(0.0, 8.0).toJson()
-//        )
-//        println("=======================================================================")
-
-//        val pattern1 = TestKotlinPatterns.tetris // .pan(-1.0)
-
-        val pattern1 = StrudelPattern.compile(TestTextPatterns.aTruthWorthLyingFor)!!
-//        val pattern1 = s("hh!4").apply(gain("1.0 0.75 0.5 0.25"))
-//        val pattern1 = note("c d e f").swingBy("[0.5 0.0]", 2)
-//        val pattern1 = note("a b c d").pan(cosine.range(0.0, 1.0))
-
-//        val pattern1 = StrudelPattern.compile(
-//            """
-//            sound("bd hh sd oh").fast(2)
-//        """.trimIndent()
-//        )!!
+        val pattern1 = SprudelPattern.compile(TestTextPatterns.aTruthWorthLyingFor)!!
 
         val pattern2 = TestKotlinPatterns.strangerThings
 
@@ -130,14 +70,6 @@ private suspend fun helloStrudel() {
                 cyclesPerSecond = 0.54,
             )
         )
-
-//        delay(10_000)
-//        val playback2 = player.play(pattern2)
-//        playback2.start(
-//            KlangPlayback.Options(
-//                cyclesPerSecond = 0.6,
-//            )
-//        )
 
         delay(600_000)
         playback1.stop()

@@ -4,6 +4,7 @@
       <w>Adsr</w>
       <w>Majorable</w>
       <w>Perfectable</w>
+      <w>Sprudel</w>
       <w>Zawtooth</w>
       <w>adsr</w>
       <w>lerp</w>
@@ -11,6 +12,8 @@
       <w>perfectable</w>
       <w>playhead</w>
       <w>roomsize</w>
+      <w>sprudel</w>
+      <w>sprudel's</w>
       <w>voicings</w>
       <w>zawtooth</w>
     </words>

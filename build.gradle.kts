@@ -75,7 +75,7 @@ kotlin {
                 api(Deps.Ktor.Client.cio)
 
                 api(project(":klang"))
-                api(project(":strudel"))
+                api(project(":sprudel"))
                 api(project(":klangblocks"))
             }
         }

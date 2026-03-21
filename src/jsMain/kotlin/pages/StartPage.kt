@@ -26,7 +26,7 @@ import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.playOnce
 import io.peekandpoke.klang.comp.*
-import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.*
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight

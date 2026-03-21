@@ -1,0 +1,97 @@
+package io.peekandpoke.klang.sprudel.lang.addons
+
+import io.kotest.assertions.assertSoftly
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.lang.apply
+import io.peekandpoke.klang.sprudel.lang.mul
+import io.peekandpoke.klang.sprudel.lang.seq
+
+class LangOneMinusValueSpec : StringSpec({
+
+    "oneMinusValue dsl interface" {
+
+        val pat = "0 1.1 -2.3"
+
+        dslInterfaceTests(
+            "pattern.oneMinusValue" to
+                    seq(pat).oneMinusValue(),
+            "string.oneMinusValue" to
+                    pat.oneMinusValue(),
+            "oneMinusValue()" to
+                    seq(pat).apply(oneMinusValue),
+            "script pattern.oneMinusValue" to
+                    SprudelPattern.compile("""seq("$pat").oneMinusValue()"""),
+            "script string.oneMinusValue" to
+                    SprudelPattern.compile(""""$pat".oneMinusValue()"""),
+            "script oneMinusValue()" to
+                    SprudelPattern.compile("""seq("$pat").apply(oneMinusValue)"""),
+        ) { _, events ->
+            events.shouldHaveSize(3)
+            events[0].data.value?.asDouble shouldBe 1.0
+            events[1].data.value?.asDouble shouldBe -0.1
+            events[2].data.value?.asDouble shouldBe 3.3
+        }
+    }
+
+    "oneMinusValue()" {
+        // 1.0 - 0.2 = 0.8
+        // 1.0 - 1.0 = 0.0
+        // 1.0 - 0.0 = 1.0
+        // 1.0 - (-0.5) = 1.5
+        val p = seq(0.2, 1.0, 0.0, -0.5).oneMinusValue()
+        val events = p.queryArc(0.0, 2.0)
+
+        events.size shouldBe 8
+
+        events[0].data.value?.asDouble shouldBe (0.8 plusOrMinus EPSILON)
+        events[1].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
+        events[2].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+        events[3].data.value?.asDouble shouldBe (1.5 plusOrMinus EPSILON)
+
+        events[4].data.value?.asDouble shouldBe (0.8 plusOrMinus EPSILON)
+        events[5].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
+        events[6].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+        events[7].data.value?.asDouble shouldBe (1.5 plusOrMinus EPSILON)
+    }
+
+    "apply(mul().oneMinusValue())" {
+        val p = seq("0.2 0.8").apply(mul("2").oneMinusValue())
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asDouble shouldBe (0.6 plusOrMinus EPSILON)   // 1-(0.2*2)=0.6
+            events[1].data.value?.asDouble shouldBe (-0.6 plusOrMinus EPSILON)  // 1-(0.8*2)=-0.6
+        }
+    }
+
+    "script apply(mul().oneMinusValue())" {
+        val p = SprudelPattern.compile("""seq("0.2 0.8").apply(mul("2").oneMinusValue())""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events.shouldHaveSize(2)
+            events[0].data.value?.asDouble shouldBe (0.6 plusOrMinus EPSILON)   // 1-(0.2*2)=0.6
+            events[1].data.value?.asDouble shouldBe (-0.6 plusOrMinus EPSILON)  // 1-(0.8*2)=-0.6
+        }
+    }
+
+    "oneMinusValue() as string extension" {
+        val p = "0.2 0.8".oneMinusValue()
+        val events = p.queryArc(0.0, 2.0)
+
+        events.size shouldBe 4
+
+        events[0].data.value?.asDouble shouldBe (0.8 plusOrMinus EPSILON)
+        events[1].data.value?.asDouble shouldBe (0.2 plusOrMinus EPSILON)
+
+        events[2].data.value?.asDouble shouldBe (0.8 plusOrMinus EPSILON)
+        events[3].data.value?.asDouble shouldBe (0.2 plusOrMinus EPSILON)
+    }
+})

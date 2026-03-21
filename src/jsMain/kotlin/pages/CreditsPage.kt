@@ -197,7 +197,8 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                     """
                         Bridging worlds:
 
-                        - **[GraalVM](https://www.graalvm.org)** — polyglot runtime used in early development to feed the audio engine with strudel events produced by the original JavaScript implementation
+                        - **[GraalVM](https://www.graalvm.org)** — polyglot runtime used in early development 
+                          to feed the audio engine with strudel events produced by the original JavaScript implementation
                     """.trimIndent()
                 )
             }

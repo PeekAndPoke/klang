@@ -1,0 +1,201 @@
+package io.peekandpoke.klang.sprudel.lang
+
+import io.kotest.assertions.assertSoftly
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldBeEqualIgnoringCase
+import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.SprudelPattern
+
+class LangSeqSpec : StringSpec({
+
+    "seq() creates num voice values" {
+        // seq("a b") -> sequence of a then b
+        val p = seq("0 1.1")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 2
+        events[0].data.value?.asRational shouldBe 0.toRational()
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+
+        events[1].data.value?.asRational shouldBe 1.1.toRational()
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "seq() with single argument creates a sequence from mini-notation" {
+        // seq("a b") -> sequence of a then b
+        val p = seq("a b")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBe "a"
+        events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+
+        events[1].data.value?.asString shouldBe "b"
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+        events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "seq() with multiple arguments sequences them" {
+        // seq("a", "b") -> sequence of a then b
+        val p = seq("a", "b")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBe "a"
+        events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+
+        events[1].data.value?.asString shouldBe "b"
+        events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
+    }
+
+    "seq() with multiple nested arguments sequences them" {
+        // seq("a", "b") -> sequence of a then b
+        val p = seq("bd", listOf("sd", "oh"), "hh").s()
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 4
+        events[0].data.sound shouldBe "bd"
+        events[0].whole.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+        events[0].whole.end.toDouble() shouldBe (1.0 / 3.0 plusOrMinus EPSILON)
+
+        events[1].data.sound shouldBe "sd"
+        events[1].whole.begin.toDouble() shouldBe (1.0 / 3.0 plusOrMinus EPSILON)
+        events[1].whole.end.toDouble() shouldBe (1.0 / 2.0 plusOrMinus EPSILON)
+
+        events[2].data.sound shouldBe "oh"
+        events[2].whole.begin.toDouble() shouldBe (1.0 / 2.0 plusOrMinus EPSILON)
+        events[2].whole.end.toDouble() shouldBe (2.0 / 3.0 plusOrMinus EPSILON)
+
+        events[3].data.sound shouldBe "hh"
+        events[3].whole.begin.toDouble() shouldBe (2.0 / 3.0 plusOrMinus EPSILON)
+        events[3].whole.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
+
+    "seq() works as method on SprudelPattern" {
+        // note("a").seq("b") -> sequence of a then b
+        val p = note("a").seq("b")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        // Note: note("a") sets note="a". "b" via seq default modifier sets value="b" (and note="b").
+        // But note("a") puts it in 'note' field.
+        // Let's check what they produce.
+
+        events.size shouldBe 2
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b" // "b" string arg goes to value by defaultModifier in seq
+    }
+
+    "seq() works as extension on String" {
+        // "a".seq("b")
+        val p = "a".seq("b")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 2
+        // "a" parsed via seq default modifier -> value="a"
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
+    }
+
+    "seq() works in compiled code" {
+        val p = SprudelPattern.compile("""seq("a", "b")""")
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
+    }
+
+    "seq() works as method in compiled code" {
+        // note("a").seq("b")
+        val p = SprudelPattern.compile("""note("a").seq("b")""")
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
+    }
+
+    "seq() works as string extension in compiled code" {
+        // "a".seq("b")
+        val p = SprudelPattern.compile(""""a".seq("b")""")
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
+
+        events.size shouldBe 2
+        events[0].data.value?.asString shouldBeEqualIgnoringCase "a"
+        events[1].data.value?.asString shouldBeEqualIgnoringCase "b"
+    }
+
+    "seq(\"0 1 2 3\") produces same pattern over 12 cycles" {
+        val p = seq("0 1 2 3")
+
+        println("\n=== seq(\"0 1 2 3\") consistency test ===")
+        val cycle0Events = p.queryArc(0.0, 1.0)
+        val cycle0Values = cycle0Events.map { it.data.value?.asInt }
+        println("Cycle 0: $cycle0Values")
+
+        for (cycle in 1..11) {
+            val events = p.queryArc(cycle.toDouble(), (cycle + 1).toDouble())
+            val values = events.map { it.data.value?.asInt }
+            println("Cycle $cycle: $values")
+
+            // Should be identical to cycle 0
+            values shouldBe cycle0Values
+        }
+    }
+
+    "seq(0, 1) produces same pattern over 12 cycles" {
+        val p = seq(0, 1)
+
+        assertSoftly {
+            for (cycle in 1..11) {
+                val cycleDbl = cycle.toDouble()
+                val events = p.queryArc(cycleDbl, cycleDbl + 1)
+                val values = events.map { it.data.value?.asInt }
+                println("Cycle $cycle: $values")
+
+                events.shouldHaveSize(2)
+
+                events[0].data.value?.asInt shouldBe 0
+                events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+
+                events[1].data.value?.asInt shouldBe 1
+                events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                events[1].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
+            }
+        }
+    }
+    "seq(0, \"1 2\") produces same pattern over 12 cycles" {
+        val p = seq(0, "1 2")
+
+        assertSoftly {
+            for (cycle in 1..11) {
+                val cycleDbl = cycle.toDouble()
+                val events = p.queryArc(cycleDbl, cycleDbl + 1)
+                val values = events.map { it.data.value?.asInt }
+                println("Cycle $cycle: $values")
+
+                events.shouldHaveSize(3)
+
+                events[0].data.value?.asInt shouldBe 0
+                events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
+                events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+
+                events[1].data.value?.asInt shouldBe 1
+                events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
+                events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+
+                events[2].data.value?.asInt shouldBe 2
+                events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
+                events[2].part.end.toDouble() shouldBe ((cycleDbl + 1.00) plusOrMinus EPSILON)
+            }
+        }
+    }
+})

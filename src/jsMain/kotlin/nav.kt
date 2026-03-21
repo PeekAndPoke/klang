@@ -8,7 +8,7 @@ import io.peekandpoke.klang.layouts.MenuLayout
 import io.peekandpoke.klang.pages.*
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
-import io.peekandpoke.klang.pages.docs.StrudelDocsPage
+import io.peekandpoke.klang.pages.docs.SprudelDocsPage
 
 object Nav {
     val start = Static("")
@@ -23,8 +23,8 @@ object Nav {
 
     const val manualsBase = "/manuals"
     val manuals = Static(manualsBase)
-    val manualsStrudel = Static("$manualsBase/strudel")
-    fun manualsStrudelSearch(search: String) = manualsStrudel().withQueryParams(StrudelDocsPage.PARAM_SEARCH to search)
+    val manualsSprudel = Static("$manualsBase/sprudel")
+    fun manualsSprudelSearch(search: String) = manualsSprudel().withQueryParams(SprudelDocsPage.PARAM_SEARCH to search)
     val manualsKlangScript = Static("$manualsBase/klang-script")
 
     val credits = Static("/credits")
@@ -51,7 +51,7 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.samplesLibrary) { SamplesLibraryPage() }
 
         mount(Nav.manuals) { DocsPage() }
-        mount(Nav.manualsStrudel) { StrudelDocsPage() }
+        mount(Nav.manualsSprudel) { SprudelDocsPage() }
         mount(Nav.manualsKlangScript) { KlangScriptDocsPage() }
 
         mount(Nav.credits) { CreditsPage() }

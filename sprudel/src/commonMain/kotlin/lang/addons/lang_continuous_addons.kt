@@ -1,0 +1,208 @@
+@file:Suppress("ObjectPropertyName")
+
+package io.peekandpoke.klang.sprudel.lang.addons
+
+import de.peekandpoke.ultra.common.datetime.Kronos
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.SprudelDsl
+import io.peekandpoke.klang.sprudel.lang.dslObject
+import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
+import kotlin.math.PI
+import kotlin.math.sin
+
+/**
+ * Accessing this property forces the initialization of this file's class,
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
+ */
+var sprudelLangContinuousAddonsInit = false
+
+// -- cps() ------------------------------------------------------------------------------------------------------------
+
+internal val _cps by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() } }
+
+/**
+ * Returns the cycles per second at which playback is currently running as a continuous pattern.
+ *
+ * ```KlangScript
+ * sound("sd").delay(0.25).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)  // Dalay time based in CPS
+ * ```
+ *
+ * @category continuous
+ * @tags cps, tempo, playback speed, continuous, addon
+ */
+@SprudelDsl
+val cps: SprudelPattern get() = _cps
+
+// -- bpm() ------------------------------------------------------------------------------------------------------------
+
+internal val _bpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() * 240.0 } }
+
+/**
+ * Returns the current beats per minute as a continuous pattern (assuming 4/4 time, 4 beats per cycle).
+ *
+ * ```KlangScript
+ * sound("sd").delay(0.15).delaytime(pure(60).div(bpm)).delayfeedback(0.33)  // Dalay time based in BPM
+ * ```
+ *
+ * @category continuous
+ * @tags bpm, tempo, beats per minute, continuous, addon
+ */
+@SprudelDsl
+val bpm: SprudelPattern get() = _bpm
+
+// -- Time of Day Functions --------------------------------------------------------------------------------------------
+
+/**
+ * Helper function to get the current time of day as a fraction (0.0 to 1.0)
+ * 0.0 = midnight, 0.5 = noon, 1.0 = next midnight
+ */
+private fun getTimeOfDayFraction(kronos: Kronos): Double {
+    val localTime = kronos.localDateTimeNow()
+    val hour = localTime.hour.toDouble()
+    val minute = localTime.minute.toDouble()
+    val second = localTime.second.toDouble()
+    return (hour + minute / 60.0 + second / 3600.0) / 24.0
+}
+
+internal val _timeOfDay by dslObject {
+    ContinuousPattern { _, _, ctx ->
+        getTimeOfDayFraction(ctx.getKronos())
+    }
+}
+
+/**
+ * Returns the current time of day as a linear value: `0.0` (midnight) → `0.5` (noon) → `1.0` (midnight).
+ *
+ * ```KlangScript
+ * gain(timeOfDay)                   // gain rises through the day
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").lpf(timeOfDay.range(200, 4000))  // filter opens as the day progresses
+ * ```
+ *
+ * @category continuous
+ * @tags timeOfDay, time, clock, continuous, addon
+ */
+@SprudelDsl
+val timeOfDay: SprudelPattern get() = _timeOfDay
+
+internal val _sinOfDay by dslObject {
+    ContinuousPattern { _, _, ctx ->
+        val t = getTimeOfDayFraction(ctx.getKronos())
+        sin(t * PI)
+    }
+}
+
+/**
+ * Returns the current time of day as a sine wave: `0.0` (midnight) → `1.0` (noon) → `0.0` (midnight).
+ *
+ * ```KlangScript
+ * gain(sinOfDay)                    // gain peaks at noon
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").vibrato(sinOfDay.range(0, 8))  // vibrato rises and falls with the sun
+ * ```
+ *
+ * @category continuous
+ * @tags sinOfDay, time, sine, clock, continuous, addon
+ */
+@SprudelDsl
+val sinOfDay: SprudelPattern get() = _sinOfDay
+
+internal val _sinOfDay2 by dslObject {
+    ContinuousPattern { _, _, ctx ->
+        val t = getTimeOfDayFraction(ctx.getKronos())
+        sin(t * PI) * 2.0 - 1.0
+    }
+}
+
+/**
+ * Returns the current time of day as a bipolar sine wave: `-1.0` (midnight) → `1.0` (noon) → `-1.0` (midnight).
+ *
+ * ```KlangScript
+ * note("c4").transpose(sinOfDay2.range(-12, 12))  // transpose oscillates through the day
+ * ```
+ *
+ * ```KlangScript
+ * gain(sinOfDay2.range(0, 1))       // bipolar to unipolar conversion
+ * ```
+ *
+ * @category continuous
+ * @tags sinOfDay2, time, sine, bipolar, clock, continuous, addon
+ */
+@SprudelDsl
+val sinOfDay2: SprudelPattern get() = _sinOfDay2
+
+internal val _timeOfNight by dslObject {
+    ContinuousPattern { _, _, ctx ->
+        1.0 - getTimeOfDayFraction(ctx.getKronos())
+    }
+}
+
+/**
+ * Returns the current time of night (inverse of [timeOfDay]): `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
+ *
+ * ```KlangScript
+ * gain(timeOfNight)                 // gain is highest at midnight
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").lpf(timeOfNight.range(200, 4000))  // filter opens at night
+ * ```
+ *
+ * @category continuous
+ * @tags timeOfNight, time, clock, night, continuous, addon
+ */
+@SprudelDsl
+val timeOfNight: SprudelPattern get() = _timeOfNight
+
+internal val _sinOfNight by dslObject {
+    ContinuousPattern { _, _, ctx ->
+        val t = getTimeOfDayFraction(ctx.getKronos())
+        1.0 - sin(t * PI)
+    }
+}
+
+/**
+ * Returns the current time of night as a sine wave: `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
+ *
+ * ```KlangScript
+ * gain(sinOfNight)                  // gain peaks at midnight
+ * ```
+ *
+ * ```KlangScript
+ * note("c4").vibrato(sinOfNight.range(0, 8))  // vibrato is strongest at night
+ * ```
+ *
+ * @category continuous
+ * @tags sinOfNight, time, sine, night, clock, continuous, addon
+ */
+@SprudelDsl
+val sinOfNight: SprudelPattern get() = _sinOfNight
+
+internal val _sinOfNight2 by dslObject {
+    ContinuousPattern { _, _, ctx ->
+        val t = getTimeOfDayFraction(ctx.getKronos())
+        1.0 - sin(t * PI) * 2.0
+    }
+}
+
+/**
+ * Returns the current time of night as a bipolar sine wave:
+ * `1.0` (midnight) → `-1.0` (noon) → `1.0` (midnight).
+ *
+ * ```KlangScript
+ * note("c4").transpose(sinOfNight2.range(-12, 12))  // transpose inverts through the day
+ * ```
+ *
+ * ```KlangScript
+ * gain(sinOfNight2.range(0, 1))     // bipolar night signal to unipolar gain
+ * ```
+ *
+ * @category continuous
+ * @tags sinOfNight2, time, sine, bipolar, night, clock, continuous, addon
+ */
+@SprudelDsl
+val sinOfNight2: SprudelPattern get() = _sinOfNight2

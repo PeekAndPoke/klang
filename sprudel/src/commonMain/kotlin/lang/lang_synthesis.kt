@@ -1,0 +1,530 @@
+@file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+
+package io.peekandpoke.klang.sprudel.lang
+
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel._liftNumericField
+import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+
+/**
+ * Accessing this property forces the initialization of this file's class,
+ * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
+ */
+var sprudelLangSynthesisInit = false
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// FM Synthesis
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+To listen to the FM synthesis implementation, you can write KlangScript patterns using the new DSL functions (`fmh`, `fmenv`, `fmatt`, etc.).
+
+Here are a few recipes to try out different FM characters. For the cleanest results, start with a sine wave carrier (`s("sine")`), as complex waves like sawtooths can get muddy quickly when modulated.
+
+### 1. The Classic FM Bell
+This is the "Hello World" of FM synthesis. Non-integer ratios create inharmonic partials that sound metallic.
+
+```javascript
+// A ratio of ~1.4 creates distinct bell tones
+// High modulation depth + long decay = ringing sound
+note("c3 e3 g3 b3")
+  .s("sine")
+  .fmh(1.4)          // Inharmonic ratio
+  .fmenv(1000)       // Heavy modulation depth (Hz)
+  .fmatt(0.01)       // Instant attack
+  .fmdec(2.0)        // Long decay
+  .fmsus(0.0)        // No sustain (percussive)
+```
+
+### 2. Aggressive "Growl" Bass
+Using integer ratios creates harmonic, rich spectra useful for bass.
+
+```javascript
+note("c2 c2 [c2*2] c2")
+  .s("triangle")
+  .fmh(1)            // 1:1 ratio adds square-like harmonics
+  .fmenv(500)        // Moderate depth adds "grit"
+  .lpf(2000)         // Tame the harsh highs
+```
+
+### 3. Evolving Textures
+You can use continuous patterns (LFOs) to modulate the FM parameters over time.
+
+```javascript
+note("c3")
+  .s("sine")
+  .dur(4)
+  .fmh(sine.range(0.5, 4.0))   // Sweep the ratio slowly
+  .fmenv(saw.range(0, 800))    // Sweep the depth
+```
+
+### 4. Sequencing Timbre
+You can sequence the FM parameters just like notes to create a melody of timbres.
+
+```javascript
+// Changing the ratio per step changes the "material" of the sound
+note("c3*4")
+  .s("sine")
+  .fmh("<1 2 3.5 0.5>")
+  .fmenv(600)
+```
+
+**DSL Reference:**
+*   **`fmh(ratio)`**: Harmonicity ratio (Carrier / Modulator).
+    *   `1, 2, 3` = Harmonic (cleaner).
+    *   `1.4, 2.7` = Inharmonic (metallic/bells).
+*   **`fmenv(depth)`**: Modulation amount in Hz. Higher = brighter/noisier.
+*   **`fmatt(sec)`**, **`fmdec(sec)`**, **`fmsus(0..1)`**: Shaping the "brightness" envelope independent of the volume envelope.
+ */
+
+// -- fmh() ------------------------------------------------------------------------------------------------------------
+
+private val fmhMutation = voiceModifier { copy(fmh = it?.asDoubleOrNull()) }
+
+fun applyFmh(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, fmhMutation)
+}
+
+internal val SprudelPattern._fmh by dslPatternExtension { p, args, _ -> applyFmh(p, args) }
+internal val String._fmh by dslStringExtension { p, args, callInfo -> p._fmh(args, callInfo) }
+internal val _fmh by dslPatternMapper { args, callInfo -> { p -> p._fmh(args, callInfo) } }
+internal val PatternMapperFn._fmh by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmh(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the FM synthesis harmonicity ratio (carrier-to-modulator frequency ratio).
+ *
+ * The harmonicity ratio determines the spectral relationship between the carrier and modulator.
+ * Integer ratios (1, 2, 3) produce harmonic spectra (clean, pitched sounds); non-integer
+ * ratios (1.4, 2.7) produce inharmonic spectra (metallic, bell-like tones).
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmh(2).fmenv(100)    // 2:1 ratio — FM brass/organ character
+ * ```
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmh(1.4).fmenv(500)  // non-integer ratio — FM bell tones
+ * ```
+ *
+ * @category synthesis
+ * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
+ */
+@SprudelDsl
+fun SprudelPattern.fmh(ratio: PatternLike? = null): SprudelPattern =
+    this._fmh(listOfNotNull(ratio).asSprudelDslArgs())
+
+/** Sets the FM harmonicity ratio on a string pattern. */
+@SprudelDsl
+fun String.fmh(ratio: PatternLike? = null): SprudelPattern =
+    this._fmh(listOfNotNull(ratio).asSprudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the FM harmonicity ratio on the source pattern.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmh(2))  // via mapper
+ * ```
+ *
+ * @category synthesis
+ * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
+ */
+@SprudelDsl
+fun fmh(ratio: PatternLike? = null): PatternMapperFn =
+    _fmh(listOfNotNull(ratio).asSprudelDslArgs())
+
+/** Chains a fmh onto this [PatternMapperFn]; sets the FM harmonicity ratio on the result. */
+@SprudelDsl
+fun PatternMapperFn.fmh(ratio: PatternLike? = null): PatternMapperFn =
+    this._fmh(listOfNotNull(ratio).asSprudelDslArgs())
+
+// -- fmattack() / fmatt() ---------------------------------------------------------------------------------------------
+
+private val fmattackMutation = voiceModifier { copy(fmAttack = it?.asDoubleOrNull()) }
+
+fun applyFmattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, fmattackMutation)
+}
+
+internal val SprudelPattern._fmattack by dslPatternExtension { p, args, _ -> applyFmattack(p, args) }
+internal val String._fmattack by dslStringExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
+internal val _fmattack by dslPatternMapper { args, callInfo -> { p -> p._fmattack(args, callInfo) } }
+internal val PatternMapperFn._fmattack by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmattack(args, callInfo))
+}
+
+internal val SprudelPattern._fmatt by dslPatternExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
+internal val String._fmatt by dslStringExtension { p, args, callInfo -> p._fmattack(args, callInfo) }
+internal val _fmatt by dslPatternMapper { args, callInfo -> { p -> p._fmattack(args, callInfo) } }
+internal val PatternMapperFn._fmatt by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmatt(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the attack time for the FM modulation envelope in seconds.
+ *
+ * Controls how quickly the FM modulation depth rises from 0 to its peak when a note starts.
+ * Short values create percussive, bright attacks; longer values create gradual timbre sweeps.
+ * Use with [fmenv], [fmdecay], [fmsustain].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmenv(500).fmattack(0.01)   // instant FM attack — plucky
+ * ```
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmenv(300).fmattack(0.5)    // slow FM attack — timbre sweep
+ * ```
+ *
+ * @alias fmatt
+ * @category synthesis
+ * @tags fmattack, fmatt, FM, attack, envelope, synthesis
+ */
+@SprudelDsl
+fun SprudelPattern.fmattack(seconds: PatternLike? = null): SprudelPattern =
+    this._fmattack(listOfNotNull(seconds).asSprudelDslArgs())
+
+/** Sets the FM modulation envelope attack time on a string pattern. */
+@SprudelDsl
+fun String.fmattack(seconds: PatternLike? = null): SprudelPattern =
+    this._fmattack(listOfNotNull(seconds).asSprudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the FM modulation envelope attack time on the source pattern.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmattack(0.01))  // via mapper
+ * ```
+ *
+ * @alias fmatt
+ * @category synthesis
+ * @tags fmattack, fmatt, FM, attack, envelope, synthesis
+ */
+@SprudelDsl
+fun fmattack(seconds: PatternLike? = null): PatternMapperFn =
+    _fmattack(listOfNotNull(seconds).asSprudelDslArgs())
+
+/** Chains a fmattack onto this [PatternMapperFn]; sets the FM envelope attack time on the result. */
+@SprudelDsl
+fun PatternMapperFn.fmattack(seconds: PatternLike? = null): PatternMapperFn =
+    this._fmattack(listOfNotNull(seconds).asSprudelDslArgs())
+
+/**
+ * Alias for [fmattack]. Sets the FM modulation envelope attack time.
+ *
+ * @alias fmattack
+ * @category synthesis
+ * @tags fmatt, fmattack, FM, attack, envelope, synthesis
+ */
+@SprudelDsl
+fun SprudelPattern.fmatt(seconds: PatternLike? = null): SprudelPattern =
+    this._fmatt(listOfNotNull(seconds).asSprudelDslArgs())
+
+/** Alias for [fmattack] on a string pattern. */
+@SprudelDsl
+fun String.fmatt(seconds: PatternLike? = null): SprudelPattern =
+    this._fmatt(listOfNotNull(seconds).asSprudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [fmattack].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmatt(0.01))  // via mapper
+ * ```
+ *
+ * @alias fmattack
+ * @category synthesis
+ * @tags fmatt, fmattack, FM, attack, envelope, synthesis
+ */
+@SprudelDsl
+fun fmatt(seconds: PatternLike? = null): PatternMapperFn =
+    _fmatt(listOfNotNull(seconds).asSprudelDslArgs())
+
+/** Chains a fmatt onto this [PatternMapperFn]; alias for [PatternMapperFn.fmattack]. */
+@SprudelDsl
+fun PatternMapperFn.fmatt(seconds: PatternLike? = null): PatternMapperFn =
+    this._fmatt(listOfNotNull(seconds).asSprudelDslArgs())
+
+// -- fmdecay() / fmdec() ----------------------------------------------------------------------------------------------
+
+private val fmdecayMutation = voiceModifier { copy(fmDecay = it?.asDoubleOrNull()) }
+
+fun applyFmdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, fmdecayMutation)
+}
+
+internal val SprudelPattern._fmdecay by dslPatternExtension { p, args, _ -> applyFmdecay(p, args) }
+internal val String._fmdecay by dslStringExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
+internal val _fmdecay by dslPatternMapper { args, callInfo -> { p -> p._fmdecay(args, callInfo) } }
+internal val PatternMapperFn._fmdecay by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmdecay(args, callInfo))
+}
+
+internal val SprudelPattern._fmdec by dslPatternExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
+internal val String._fmdec by dslStringExtension { p, args, callInfo -> p._fmdecay(args, callInfo) }
+internal val _fmdec by dslPatternMapper { args, callInfo -> { p -> p._fmdecay(args, callInfo) } }
+internal val PatternMapperFn._fmdec by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmdec(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the decay time for the FM modulation envelope in seconds.
+ *
+ * Controls how quickly the FM modulation depth falls from its peak to the sustain level
+ * after the attack phase. Shorter decay produces a brighter, more percussive sound.
+ * Use with [fmattack], [fmsustain], [fmenv].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmenv(500).fmattack(0.01).fmdecay(0.1)  // plucky FM
+ * ```
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmenv(300).fmdecay("<0.1 1.0>")          // short vs long decay
+ * ```
+ *
+ * @alias fmdec
+ * @category synthesis
+ * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
+ */
+@SprudelDsl
+fun SprudelPattern.fmdecay(seconds: PatternLike? = null): SprudelPattern =
+    this._fmdecay(listOfNotNull(seconds).asSprudelDslArgs())
+
+/** Sets the FM modulation envelope decay time on a string pattern. */
+@SprudelDsl
+fun String.fmdecay(seconds: PatternLike? = null): SprudelPattern =
+    this._fmdecay(listOfNotNull(seconds).asSprudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the FM modulation envelope decay time on the source pattern.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmdecay(0.1))  // via mapper
+ * ```
+ *
+ * @alias fmdec
+ * @category synthesis
+ * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
+ */
+@SprudelDsl
+fun fmdecay(seconds: PatternLike? = null): PatternMapperFn =
+    _fmdecay(listOfNotNull(seconds).asSprudelDslArgs())
+
+/** Chains a fmdecay onto this [PatternMapperFn]; sets the FM envelope decay time on the result. */
+@SprudelDsl
+fun PatternMapperFn.fmdecay(seconds: PatternLike? = null): PatternMapperFn =
+    this._fmdecay(listOfNotNull(seconds).asSprudelDslArgs())
+
+/**
+ * Alias for [fmdecay]. Sets the FM modulation envelope decay time.
+ *
+ * @alias fmdecay
+ * @category synthesis
+ * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
+ */
+@SprudelDsl
+fun SprudelPattern.fmdec(seconds: PatternLike? = null): SprudelPattern =
+    this._fmdec(listOfNotNull(seconds).asSprudelDslArgs())
+
+/** Alias for [fmdecay] on a string pattern. */
+@SprudelDsl
+fun String.fmdec(seconds: PatternLike? = null): SprudelPattern =
+    this._fmdec(listOfNotNull(seconds).asSprudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [fmdecay].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmdec(0.1))  // via mapper
+ * ```
+ *
+ * @alias fmdecay
+ * @category synthesis
+ * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
+ */
+@SprudelDsl
+fun fmdec(seconds: PatternLike? = null): PatternMapperFn =
+    _fmdec(listOfNotNull(seconds).asSprudelDslArgs())
+
+/** Chains a fmdec onto this [PatternMapperFn]; alias for [PatternMapperFn.fmdecay]. */
+@SprudelDsl
+fun PatternMapperFn.fmdec(seconds: PatternLike? = null): PatternMapperFn =
+    this._fmdec(listOfNotNull(seconds).asSprudelDslArgs())
+
+// -- fmsustain() / fmsus() --------------------------------------------------------------------------------------------
+
+private val fmsustainMutation = voiceModifier { copy(fmSustain = it?.asDoubleOrNull()) }
+
+fun applyFmsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, fmsustainMutation)
+}
+
+internal val SprudelPattern._fmsustain by dslPatternExtension { p, args, _ -> applyFmsustain(p, args) }
+internal val String._fmsustain by dslStringExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
+internal val _fmsustain by dslPatternMapper { args, callInfo -> { p -> p._fmsustain(args, callInfo) } }
+internal val PatternMapperFn._fmsustain by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmsustain(args, callInfo))
+}
+
+internal val SprudelPattern._fmsus by dslPatternExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
+internal val String._fmsus by dslStringExtension { p, args, callInfo -> p._fmsustain(args, callInfo) }
+internal val _fmsus by dslPatternMapper { args, callInfo -> { p -> p._fmsustain(args, callInfo) } }
+internal val PatternMapperFn._fmsus by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_fmsus(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the sustain level for the FM modulation envelope (0–1).
+ *
+ * Determines the FM modulation depth that is held after the attack and decay phases while
+ * the note is sustained. `0` produces no sustained modulation (percussive); `1` holds
+ * the peak modulation. Use with [fmattack], [fmdecay], [fmenv].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmenv(400).fmsustain(0.0)  // percussive FM — no sustain
+ * ```
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmenv(400).fmsustain(0.7)  // sustained FM — held brightness
+ * ```
+ *
+ * @alias fmsus
+ * @category synthesis
+ * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
+ */
+@SprudelDsl
+fun SprudelPattern.fmsustain(level: PatternLike? = null): SprudelPattern =
+    this._fmsustain(listOfNotNull(level).asSprudelDslArgs())
+
+/** Sets the FM modulation envelope sustain level on a string pattern. */
+@SprudelDsl
+fun String.fmsustain(level: PatternLike? = null): SprudelPattern =
+    this._fmsustain(listOfNotNull(level).asSprudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that sets the FM modulation envelope sustain level on the source pattern.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmsustain(0.0))  // via mapper
+ * ```
+ *
+ * @alias fmsus
+ * @category synthesis
+ * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
+ */
+@SprudelDsl
+fun fmsustain(level: PatternLike? = null): PatternMapperFn =
+    _fmsustain(listOfNotNull(level).asSprudelDslArgs())
+
+/** Chains a fmsustain onto this [PatternMapperFn]; sets the FM envelope sustain level on the result. */
+@SprudelDsl
+fun PatternMapperFn.fmsustain(level: PatternLike? = null): PatternMapperFn =
+    this._fmsustain(listOfNotNull(level).asSprudelDslArgs())
+
+/**
+ * Alias for [fmsustain]. Sets the FM modulation envelope sustain level.
+ *
+ * @alias fmsustain
+ * @category synthesis
+ * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
+ */
+@SprudelDsl
+fun SprudelPattern.fmsus(level: PatternLike? = null): SprudelPattern =
+    this._fmsus(listOfNotNull(level).asSprudelDslArgs())
+
+/** Alias for [fmsustain] on a string pattern. */
+@SprudelDsl
+fun String.fmsus(level: PatternLike? = null): SprudelPattern =
+    this._fmsus(listOfNotNull(level).asSprudelDslArgs())
+
+/**
+ * Returns a [PatternMapperFn] that is an alias for [fmsustain].
+ *
+ * ```KlangScript
+ * note("c3").s("sine").apply(fmsus(0.0))  // via mapper
+ * ```
+ *
+ * @alias fmsustain
+ * @category synthesis
+ * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
+ */
+@SprudelDsl
+fun fmsus(level: PatternLike? = null): PatternMapperFn =
+    _fmsus(listOfNotNull(level).asSprudelDslArgs())
+
+/** Chains a fmsus onto this [PatternMapperFn]; alias for [PatternMapperFn.fmsustain]. */
+@SprudelDsl
+fun PatternMapperFn.fmsus(level: PatternLike? = null): PatternMapperFn =
+    this._fmsus(listOfNotNull(level).asSprudelDslArgs())
+
+// -- fmenv() / fmmod() ------------------------------------------------------------------------------------------------
+
+private val fmenvMutation = voiceModifier { copy(fmEnv = it?.asDoubleOrNull()) }
+
+fun applyFmenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftNumericField(args, fmenvMutation)
+}
+
+internal val _fmenv by dslPatternFunction { args, _ -> args.toPattern(fmenvMutation) }
+internal val SprudelPattern._fmenv by dslPatternExtension { p, args, _ -> applyFmenv(p, args) }
+internal val String._fmenv by dslStringExtension { p, args, callInfo -> p._fmenv(args, callInfo) }
+
+internal val _fmmod by dslPatternFunction { args, callInfo -> _fmenv(args, callInfo) }
+internal val SprudelPattern._fmmod by dslPatternExtension { p, args, callInfo -> p._fmenv(args, callInfo) }
+internal val String._fmmod by dslStringExtension { p, args, callInfo -> p._fmmod(args, callInfo) }
+
+/**
+ * Sets the FM modulation depth (the peak modulation amount in Hz).
+ *
+ * This is the primary intensity control for FM synthesis. Low values (10–100 Hz) add subtle
+ * harmonic richness; high values (500+ Hz) create complex, metallic, or noise-like timbres.
+ * Can be driven by a continuous pattern for dynamic timbre evolution.
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmh(2).fmenv(50)               // light FM — subtle richness
+ * ```
+ *
+ * ```KlangScript
+ * note("c3").s("sine").fmh(1.4).fmenv(500)             // heavy FM — complex timbre
+ * ```
+ *
+ * @alias fmmod
+ * @category synthesis
+ * @tags fmenv, fmmod, FM, modulation, depth, amount, synthesis
+ */
+@SprudelDsl
+fun fmenv(depth: PatternLike): SprudelPattern = _fmenv(listOf(depth).asSprudelDslArgs())
+
+/** Sets the FM modulation depth on this pattern. */
+@SprudelDsl
+fun SprudelPattern.fmenv(depth: PatternLike): SprudelPattern = this._fmenv(listOf(depth).asSprudelDslArgs())
+
+/** Sets the FM modulation depth on a string pattern. */
+@SprudelDsl
+fun String.fmenv(depth: PatternLike): SprudelPattern = this._fmenv(listOf(depth).asSprudelDslArgs())
+
+/**
+ * Alias for [fmenv]. Sets the FM modulation depth.
+ *
+ * @alias fmenv
+ * @category synthesis
+ * @tags fmmod, fmenv, FM, modulation, depth, amount, synthesis
+ */
+@SprudelDsl
+fun fmmod(depth: PatternLike): SprudelPattern = _fmmod(listOf(depth).asSprudelDslArgs())
+
+/** Alias for [fmenv] on this pattern. */
+@SprudelDsl
+fun SprudelPattern.fmmod(depth: PatternLike): SprudelPattern = this._fmmod(listOf(depth).asSprudelDslArgs())
+
+/** Alias for [fmenv] on a string pattern. */
+@SprudelDsl
+fun String.fmmod(depth: PatternLike): SprudelPattern = this._fmmod(listOf(depth).asSprudelDslArgs())

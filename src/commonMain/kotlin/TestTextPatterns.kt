@@ -21,7 +21,7 @@ object TestTextPatterns {
 
     val smallTownBoy = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 stack(
     // melody
@@ -46,7 +46,7 @@ stack(
 
     val tetris = """
 import * from "stdlib"                                              ////////                   ////////
-import * from "strudel"                                              ////////                   ////////
+import * from "sprudel"                                              ////////                   ////////
                                                                       ////////                   ////////
 stack(                                                                 ////////                   ////////
   note(`<
@@ -106,7 +106,7 @@ stack(                                                                 //////// 
 
     val strangerThingsNetflix = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 let wait = 16
 let keep = 32 * 6
@@ -168,7 +168,7 @@ stack(
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
     val aTruthWorthLyingFor = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 let stay = 48
 let tp = "[0 -1 -3 -5 -6  -2  1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ...
@@ -179,15 +179,15 @@ stack( // Gitarre! -------------------------------------------------------------
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").clip(0.85).hpf(500).lpf(5000).pan(0.45).notchf(800).transpose(tp).warmth(0.5)
+    .orbit(1).fast(4).scale("C3:chromatic").clip(0.85).hpf(500).lpf(5000).pan(0.45).notchf(1000).transpose(tp).warmth(0.5)
     .s("supersaw").unison(6).detune(0.02).gain(0.25).distort(saw.range(0.5, 0.8).slow(stay)).postgain(0.85) // .solo()
-    .adsr("0.001:0.3:0.7:0.05").filterWhen(t => t % stay > 16)
+    .adsr("0.005:0.3:0.7:0.1").filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").clip(0.8).hpf(800).lpf(5000).pan(0.4).notchf(1200).transpose(tp).warmth(0.3)
+    .orbit(2).fast(4).scale("C4:chromatic").clip(0.8).hpf(800).lpf(5000).pan(0.4).notchf(1000).transpose(tp).warmth(0.3)
     .s("supersaw").unison(6).detune(0.02).gain(0.25).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.75) // .solo()
-    .adsr("0.001:0.3:0.7:0.05").filterWhen(t => t % stay > 32)
+    .adsr("0.004:0.3:0.7:0.05").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
@@ -195,7 +195,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
   ).orbit(3).fast(1).scale("C2:chromatic").pan(0.55).hpf(120).lpf(1800).warmth(0.5)
     .s("supersaw").unison(6).detune(0.08).gain("0.6 0.525 0.5 0.525")
-    .adsr("0.001:0.1:0.5:0.01").clip(1.01).distort(2).postgain(0.17)
+    .adsr("0.005:0.3:0.3:0.01 ").clip(1.01).distort(2).postgain(0.17)
     .superimpose(x => x.orbit(4).pan("0.6").bandf("800 975 [1175|1200|1225|1300]*32".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.14))
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------

@@ -46,7 +46,7 @@ object BuiltInSongs {
 
 
              import * from  "stdlib"
-              import * from "strudel"
+              import * from "sprudel"
                let wind       = 0.025
                 let water      = 0.035
                  let waves      = 0.105
@@ -121,7 +121,7 @@ object BuiltInSongs {
             icon = "gamepad",
             code = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 stack(
   cat(n(`<[ 0  1 2 4] [7 8 9 11] [14 15 16 18] [21 22 23 25] [28 25 23 22] [21 18 16 15] [14 11 9 8] [7 4 2  1]
@@ -142,7 +142,7 @@ stack(
             cps = 0.55,
             code = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 stack(
   // Guitar 1
@@ -196,7 +196,7 @@ stack(
             cps = 0.65,
             code = """
 import * from "stdlib"
-import * from "strudel"
+import * from "sprudel"
 
 stack(
   // Melody
