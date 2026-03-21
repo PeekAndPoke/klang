@@ -30,8 +30,8 @@ include(
     ":tones",
 
     // Sequencers
-    ":strudel",
-    ":strudel-ksp",
+    ":sprudel",
+    ":sprudel-ksp",
 
     // Interactive/Notebook support
     ":klang-notebook",

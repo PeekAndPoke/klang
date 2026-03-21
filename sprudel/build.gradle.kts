@@ -106,11 +106,11 @@ tasks {
 }
 
 dependencies {
-    kspCommonMainMetadata(project(":strudel-ksp"))
+    kspCommonMainMetadata(project(":sprudel-ksp"))
 
-    add("kspJvm", project(":strudel-ksp"))
-    add("kspJs", project(":strudel-ksp"))
+    add("kspJvm", project(":sprudel-ksp"))
+    add("kspJs", project(":sprudel-ksp"))
 
-    add("kspJvmTest", project(":strudel-ksp"))
-    add("kspJsTest", project(":strudel-ksp"))
+    add("kspJvmTest", project(":sprudel-ksp"))
+    add("kspJsTest", project(":sprudel-ksp"))
 }

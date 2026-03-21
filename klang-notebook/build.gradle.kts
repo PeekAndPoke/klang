@@ -26,7 +26,7 @@ kotlin {
                 // Core Klang modules
                 api(project(":klang"))
                 api(project(":klangscript"))
-                api(project(":strudel"))
+                api(project(":sprudel"))
                 api(project(":audio_bridge"))
                 api(project(":tones"))
 
