@@ -43,8 +43,8 @@ class LangUnisonSpec : StringSpec({
                     StrudelPattern.compile("""seq("$pat").apply(uni("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.voices shouldBe 2
-            events[1].data.voices shouldBe 4
+            events[0].data.oscParams?.get("voices") shouldBe 2
+            events[1].data.oscParams?.get("voices") shouldBe 4
         }
     }
 
@@ -55,8 +55,8 @@ class LangUnisonSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.voices shouldBe 0.0
-            events[1].data.voices shouldBe 1.0
+            events[0].data.oscParams?.get("voices") shouldBe 0.0
+            events[1].data.oscParams?.get("voices") shouldBe 1.0
         }
     }
 
@@ -67,8 +67,8 @@ class LangUnisonSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.voices shouldBe 0.0
-            events[1].data.voices shouldBe 1.0
+            events[0].data.oscParams?.get("voices") shouldBe 0.0
+            events[1].data.oscParams?.get("voices") shouldBe 1.0
         }
     }
 
@@ -79,8 +79,8 @@ class LangUnisonSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.voices shouldBe 0.0
-            events[1].data.voices shouldBe 1.0
+            events[0].data.oscParams?.get("voices") shouldBe 0.0
+            events[1].data.oscParams?.get("voices") shouldBe 1.0
         }
     }
 
@@ -89,7 +89,7 @@ class LangUnisonSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.voices } shouldBe listOf(4.0, 8.0)
+        events.map { it.data.oscParams?.get("voices") } shouldBe listOf(4.0, 8.0)
     }
 
     "uni() alias sets VoiceData.voices" {
@@ -97,7 +97,7 @@ class LangUnisonSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.voices } shouldBe listOf(4.0, 8.0)
+        events.map { it.data.oscParams?.get("voices") } shouldBe listOf(4.0, 8.0)
     }
 
     "unison() works as pattern extension" {
@@ -105,7 +105,7 @@ class LangUnisonSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.voices shouldBe 4.0
+        events[0].data.oscParams?.get("voices") shouldBe 4.0
     }
 
     "uni() works as pattern extension" {
@@ -113,7 +113,7 @@ class LangUnisonSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.voices shouldBe 4.0
+        events[0].data.oscParams?.get("voices") shouldBe 4.0
     }
 
     "unison() works as string extension" {
@@ -121,7 +121,7 @@ class LangUnisonSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.voices shouldBe 4.0
+        events[0].data.oscParams?.get("voices") shouldBe 4.0
     }
 
     "uni() works as string extension" {
@@ -129,14 +129,14 @@ class LangUnisonSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.voices shouldBe 4.0
+        events[0].data.oscParams?.get("voices") shouldBe 4.0
     }
 
     "unison() works in compiled code" {
         val p = StrudelPattern.compile("""note("c").unison("4")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.voices shouldBe 4.0
+        events[0].data.oscParams?.get("voices") shouldBe 4.0
     }
 
     "unison() with continuous pattern sets voices correctly" {
@@ -146,12 +146,12 @@ class LangUnisonSpec : StringSpec({
 
         events.size shouldBe 4
         // t=0.0: sine(0) = 0.5
-        events[0].data.voices shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].data.oscParams?.get("voices") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.25: sine(0.25) = 1.0
-        events[1].data.voices shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].data.oscParams?.get("voices") shouldBe (1.0 plusOrMinus EPSILON)
         // t=0.5: sine(0.5) = 0.5
-        events[2].data.voices shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].data.oscParams?.get("voices") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.75: sine(0.75) = 0.0
-        events[3].data.voices shouldBe (0.0 plusOrMinus EPSILON)
+        events[3].data.oscParams?.get("voices") shouldBe (0.0 plusOrMinus EPSILON)
     }
 })

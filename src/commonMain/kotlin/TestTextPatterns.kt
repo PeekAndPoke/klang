@@ -105,7 +105,6 @@ stack(                                                                 //////// 
         """
 
     val strangerThingsNetflix = """
-
 import * from "stdlib"
 import * from "strudel"
 
@@ -121,7 +120,7 @@ stack(
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(2.0).hpf(1000)
-    .sound("pulse").warmth(0.95).crush(3).gain(0.25).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
+    .sound("pulse").warmth(0.95).crush(3).gain(0.225).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
@@ -136,7 +135,7 @@ stack(
     .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.275)
     .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
-    .lpf(6 * 440).hpf(180).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128)).notchf(notch)
+    .lpf(6 * 440).hpf(180).notchf(notch).notchq(0.75).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
     .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).filterWhen(x => x < (wait * 4 + keep))
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")

@@ -39,6 +39,34 @@ sealed class SignalGenDsl {
     data class Impulse(val gain: Double = 1.0) : SignalGenDsl()
 
     @Serializable
+    @SerialName("pulze")
+    data class Pulze(val duty: Double = 0.5, val gain: Double = 1.0) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("brown-noise")
+    data class BrownNoise(val gain: Double = 1.0) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("pink-noise")
+    data class PinkNoise(val gain: Double = 1.0) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("dust")
+    data class Dust(val density: Double = 0.2, val gain: Double = 1.0) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("crackle")
+    data class Crackle(val density: Double = 0.2, val gain: Double = 1.0) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("supersaw")
+    data class Supersaw(
+        val voices: Int = 5,
+        val freqSpread: Double = 0.2,
+        val gain: Double = 0.6,
+    ) : SignalGenDsl()
+
+    @Serializable
     @SerialName("silence")
     data object Silence : SignalGenDsl()
 

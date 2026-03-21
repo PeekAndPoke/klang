@@ -27,19 +27,8 @@ data class VoiceData(
     /** Sound index */
     val soundIndex: Int?,
 
-    // Oscillator parameters
-    /** Density */
-    val density: Double?,
-    /** Panorama spread */
-    val panSpread: Double?,
-    /** Frequency spread */
-    val freqSpread: Double?,
-    /** Number of voices */
-    val voices: Double?,
-
-    // Oscillator warmth (custom addon)
-    /** Controls oscillator warmth (low-pass filtering amount). 0.0 = bright, 1.0 = muffled */
-    val warmth: Double?,
+    // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
+    val oscParams: Map<String, Double>?,
 
     // Filters
     val filters: FilterDefs = FilterDefs.empty,
@@ -154,11 +143,7 @@ data class VoiceData(
             bank = null,
             sound = null,
             soundIndex = null,
-            density = null,
-            panSpread = null,
-            freqSpread = null,
-            voices = null,
-            warmth = null,
+            oscParams = null,
             filters = FilterDefs.empty,
             adsr = AdsrEnvelope.empty,
             accelerate = null,

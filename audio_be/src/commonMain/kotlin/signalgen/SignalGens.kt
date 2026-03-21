@@ -1,7 +1,9 @@
 package io.peekandpoke.klang.audio_be.signalgen
 
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.signalgen.SignalGens.dust
 import io.peekandpoke.klang.audio_be.signalgen.SignalGens.sawtooth
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -189,6 +191,173 @@ object SignalGens {
         }
     }
 
+    /** Pulse wave with variable duty cycle. [duty] 0.0..1.0 controls the ratio of high to low. */
+    fun pulze(duty: Double = 0.5, gain: Double = 1.0): SignalGen {
+        var phase = 0.0 // Normalized 0..1
+        val d = duty.coerceIn(0.0, 1.0)
+
+        return SignalGen { buffer, freqHz, ctx ->
+            val inc = freqHz / ctx.sampleRateD
+            val phaseMod = ctx.phaseMod
+            val end = ctx.offset + ctx.length
+
+            if (phaseMod == null) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = (gain * if (phase < d) 1.0 else -1.0).toFloat()
+                    phase += inc
+                    phase = wrapPhase(phase, 1.0)
+                }
+            } else {
+                for (i in ctx.offset until end) {
+                    buffer[i] = (gain * if (phase < d) 1.0 else -1.0).toFloat()
+                    phase += inc * phaseMod[i]
+                    phase = wrapPhase(phase, 1.0)
+                }
+            }
+        }
+    }
+
+    /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
+    fun brownNoise(rng: Random, gain: Double = 1.0): SignalGen {
+        var out = 0.0
+
+        return SignalGen { buffer, _, ctx ->
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val white = rng.nextDouble() * 2.0 - 1.0
+                out = (out + 0.02 * white) / 1.02
+                buffer[i] = (gain * out).toFloat()
+            }
+        }
+    }
+
+    /** Pink noise (1/f spectrum via Paul Kellet's IIR cascades). */
+    fun pinkNoise(rng: Random, gain: Double = 1.0): SignalGen {
+        var b0 = 0.0
+        var b1 = 0.0
+        var b2 = 0.0
+        var b3 = 0.0
+        var b4 = 0.0
+        var b5 = 0.0
+        var b6 = 0.0
+
+        return SignalGen { buffer, _, ctx ->
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val white = rng.nextDouble() * 2.0 - 1.0
+                b0 = 0.99886 * b0 + white * 0.0555179
+                b1 = 0.99332 * b1 + white * 0.0750759
+                b2 = 0.96900 * b2 + white * 0.1538520
+                b3 = 0.86650 * b3 + white * 0.3104856
+                b4 = 0.55000 * b4 + white * 0.5329522
+                b5 = -0.7616 * b5 - white * 0.0168980
+                val pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362
+                b6 = white * 0.115926
+                buffer[i] = (gain * pink * 0.11).toFloat()
+            }
+        }
+    }
+
+    /** Dust: sparse random impulses. [density] 0.0..1.0 controls impulse rate. [maxRateHz] caps the rate. */
+    fun dust(rng: Random, density: Double = 0.2, maxRateHz: Double = 200.0, gain: Double = 1.0): SignalGen {
+        return SignalGen { buffer, _, ctx ->
+            val d = density.coerceIn(0.0, 1.0)
+            val rateHz = d * maxRateHz
+            val p = (rateHz / ctx.sampleRateD).coerceIn(0.0, 1.0)
+            val end = ctx.offset + ctx.length
+
+            for (i in ctx.offset until end) {
+                buffer[i] = if (rng.nextDouble() < p) (gain * rng.nextDouble()).toFloat() else 0.0f
+            }
+        }
+    }
+
+    /** Crackle: sparse random impulses with higher max rate than [dust]. */
+    fun crackle(rng: Random, density: Double = 0.2, maxRateHz: Double = 800.0, gain: Double = 1.0): SignalGen {
+        return dust(rng, density, maxRateHz, gain)
+    }
+
+    /**
+     * Supersaw: multiple detuned sawtooth oscillators summed together (mono).
+     *
+     * Ported from legacy [Oscillators.supersawFn]. Key difference: receives freqHz at render time
+     * rather than fixed at construction, uses normalized 0..1 phase with PolyBLEP.
+     */
+    fun supersaw(voices: Int = 5, freqSpread: Double = 0.2, gain: Double = 0.6, rng: Random = Random): SignalGen {
+        val v = voices.coerceIn(1, 32)
+        val phases = DoubleArray(v) { rng.nextDouble() }
+        val voiceGain = gain / v.toDouble()
+
+        return SignalGen { buffer, freqHz, ctx ->
+            val sr = ctx.sampleRateD
+            val phaseMod = ctx.phaseMod
+            val end = ctx.offset + ctx.length
+
+            if (phaseMod == null) {
+                // Non-modulated: compute detune increments once per block
+                val detunes = DoubleArray(v) { n ->
+                    val det = getUnisonDetune(v, freqSpread, n)
+                    applySemitoneDetuneToFrequency(freqHz, det) / sr
+                }
+
+                // Voice 0: write (overwrite buffer)
+                run {
+                    var p = phases[0]
+                    val dt = detunes[0]
+                    if (dt <= BLEP_MIN_DT) {
+                        for (i in ctx.offset until end) {
+                            buffer[i] = ((2.0 * p - 1.0) * voiceGain).toFloat()
+                            p += dt; p = wrapPhase(p, 1.0)
+                        }
+                    } else {
+                        for (i in ctx.offset until end) {
+                            buffer[i] = ((2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
+                            p += dt; p = wrapPhase(p, 1.0)
+                        }
+                    }
+                    phases[0] = p
+                }
+
+                // Voices 1..v: accumulate
+                for (n in 1 until v) {
+                    var p = phases[n]
+                    val dt = detunes[n]
+                    if (dt <= BLEP_MIN_DT) {
+                        for (i in ctx.offset until end) {
+                            buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain).toFloat()
+                            p += dt; p = wrapPhase(p, 1.0)
+                        }
+                    } else {
+                        for (i in ctx.offset until end) {
+                            buffer[i] = (buffer[i] + (2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
+                            p += dt; p = wrapPhase(p, 1.0)
+                        }
+                    }
+                    phases[n] = p
+                }
+            } else {
+                // Modulated path: per-sample
+                for (i in ctx.offset until end) {
+                    val mod = phaseMod[i]
+                    var sum = 0.0
+                    for (n in 0 until v) {
+                        var p = phases[n]
+                        val det = getUnisonDetune(v, freqSpread, n)
+                        val dt = applySemitoneDetuneToFrequency(freqHz, det) / sr * mod
+                        sum += if (dt <= BLEP_MIN_DT) {
+                            2.0 * p - 1.0
+                        } else {
+                            2.0 * p - 1.0 - polyBlep(p, dt)
+                        }
+                        p += dt; p = wrapPhase(p, 1.0)
+                        phases[n] = p
+                    }
+                    buffer[i] = (sum * voiceGain).toFloat()
+                }
+            }
+        }
+    }
+
     /** Silence: fills buffer with zeros. */
     fun silence(): SignalGen = SignalGen { buffer, _, ctx ->
         buffer.fill(0.0f, ctx.offset, ctx.offset + ctx.length)
@@ -209,6 +378,21 @@ object SignalGens {
         while (p < 0.0) p += period
         return p
     }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Unison / supersaw helpers
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    internal fun getUnisonDetune(unison: Int, detune: Double, voiceIndex: Int): Double {
+        if (unison < 2) return 0.0
+        val a = -detune * 0.5
+        val b = detune * 0.5
+        val n = voiceIndex.toDouble() / (unison - 1).toDouble()
+        return n * (b - a) + a
+    }
+
+    private fun applySemitoneDetuneToFrequency(frequency: Double, detuneSemitones: Double): Double =
+        frequency * 2.0.pow(detuneSemitones / 12.0)
 
     /**
      * First-order PolyBLEP residual for anti-aliased discontinuities.

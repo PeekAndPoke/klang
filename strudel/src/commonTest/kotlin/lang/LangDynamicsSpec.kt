@@ -214,8 +214,8 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.voices shouldBe 5.0
-        events[0].data.freqSpread shouldBe 0.3
+        events[0].data.oscParams?.get("voices") shouldBe 5.0
+        events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
     }
 
     "script apply(unison()) works in compiled code" {
@@ -223,7 +223,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.voices shouldBe 5.0
+        events[0].data.oscParams?.get("voices") shouldBe 5.0
     }
 
     // ---- detune() ---------------------------------------------------------------------------------------
@@ -246,7 +246,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.freqSpread shouldBe 0.3
+        events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
     }
 
     // ---- spread() ---------------------------------------------------------------------------------------
@@ -269,9 +269,9 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.voices shouldBe 5.0
-        events[0].data.freqSpread shouldBe 0.3
-        events[0].data.panSpread shouldBe 0.8
+        events[0].data.oscParams?.get("voices") shouldBe 5.0
+        events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
+        events[0].data.oscParams?.get("panSpread") shouldBe 0.8
     }
 
     "script apply(spread()) works in compiled code" {
@@ -279,7 +279,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.panSpread shouldBe 0.8
+        events[0].data.oscParams?.get("panSpread") shouldBe 0.8
     }
 
     // ---- density() / d() --------------------------------------------------------------------------------
@@ -315,7 +315,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.density shouldBe 40.0
+        events[0].data.oscParams?.get("density") shouldBe 40.0
     }
 
     // ---- attack() ---------------------------------------------------------------------------------------

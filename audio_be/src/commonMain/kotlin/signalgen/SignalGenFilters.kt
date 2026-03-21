@@ -259,6 +259,35 @@ data class FormantBand(
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Warmth (one-pole low-pass based on alpha factor)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Wraps a [SignalGen] with a one-pole low-pass filter controlled by warmth factor.
+ * Same alpha-based logic as [OscFn.withWarmth]: `smoothed = raw + alpha * (lastSample - raw)`.
+ *
+ * @param warmthFactor Amount of filtering (0.0 = none/bypass, up to 0.99 = very muffled).
+ */
+fun SignalGen.withWarmth(warmthFactor: Double): SignalGen {
+    if (warmthFactor <= 0.0) return this
+
+    var lastSample = 0.0
+    val alpha = warmthFactor.coerceIn(0.0, 0.99)
+
+    return SignalGen { buffer, freqHz, ctx ->
+        this.generate(buffer, freqHz, ctx)
+
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
+            val raw = buffer[i].toDouble()
+            val smoothed = raw + alpha * (lastSample - raw)
+            buffer[i] = smoothed.toFloat()
+            lastSample = flushDenormal(smoothed)
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Internal: Filter envelope computation (control rate)
 // ═══════════════════════════════════════════════════════════════════════════════
 

@@ -13,7 +13,10 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.Nav
 import kotlinx.css.Padding
 import kotlinx.css.padding
+import kotlinx.css.properties.Transform
+import kotlinx.css.properties.deg
 import kotlinx.css.rem
+import kotlinx.css.transform
 import kotlinx.html.Tag
 
 @Suppress("FunctionName")
@@ -37,27 +40,35 @@ class DocsPage(ctx: NoProps) : PureComponent(ctx) {
                 ui.header { +"Motör Docs" }
             }
 
-            ui.two.stackable.link.cards {
+            ui.four.stackable.link.cards {
 
-                noui.card {
-                    onClick { router.navToUri(Nav.docsStrudel()) }
+                ui.horizontal.card {
+                    onClick { router.navToUri(Nav.manualsStrudel()) }
 
-                    noui.content {
-                        ui.header { +"Strudel" }
+                    noui.image {
+                        ui.basic.segment {
+                            icon.big.wind {
+                                css {
+                                    transform += Transform("rotate", arrayOf((-90).deg))
+                                }
+                            }
+                        }
                     }
-                    noui.content {
-                        icon.large.wind()
+                    noui.middle.aligned.content {
+                        ui.large.header { +"Strudel" }
                     }
                 }
 
-                noui.card {
-                    onClick { router.navToUri(Nav.docsKlangScript()) }
+                ui.horizontal.card {
+                    onClick { router.navToUri(Nav.manualsKlangScript()) }
 
-                    noui.content {
-                        ui.header { +"KlangScript" }
+                    noui.image {
+                        ui.basic.segment {
+                            icon.big.code()
+                        }
                     }
-                    noui.content {
-                        icon.large.code()
+                    noui.middle.aligned.content {
+                        ui.large.header { +"KlangScript" }
                     }
                 }
             }

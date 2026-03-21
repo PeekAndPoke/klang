@@ -608,7 +608,7 @@ fun PatternMapperFn.comp(params: PatternLike? = null): PatternMapperFn =
 
 // -- unison() / uni() -------------------------------------------------------------------------------------------------
 
-private val unisonMutation = voiceModifier { copy(voices = it?.asDoubleOrNull()) }
+private val unisonMutation = voiceModifier { withOscParam("voices", it?.asDoubleOrNull()) }
 
 private fun applyUnison(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftOrReinterpretStringField(args, unisonMutation)
@@ -756,7 +756,7 @@ fun PatternMapperFn.uni(voices: PatternLike? = null): PatternMapperFn =
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
-private val detuneMutation = voiceModifier { copy(freqSpread = it?.asDoubleOrNull()) }
+private val detuneMutation = voiceModifier { withOscParam("freqSpread", it?.asDoubleOrNull()) }
 
 private fun applyDetune(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftOrReinterpretStringField(args, detuneMutation)
@@ -835,7 +835,7 @@ fun PatternMapperFn.detune(amount: PatternLike? = null): PatternMapperFn =
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
-private val spreadMutation = voiceModifier { copy(panSpread = it?.asDoubleOrNull()) }
+private val spreadMutation = voiceModifier { withOscParam("panSpread", it?.asDoubleOrNull()) }
 
 private fun applySpread(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftOrReinterpretStringField(args, spreadMutation)
@@ -915,7 +915,7 @@ fun PatternMapperFn.spread(amount: PatternLike? = null): PatternMapperFn =
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 
-private val densityMutation = voiceModifier { copy(density = it?.asDoubleOrNull()) }
+private val densityMutation = voiceModifier { withOscParam("density", it?.asDoubleOrNull()) }
 
 private fun applyDensity(source: StrudelPattern, args: List<StrudelDslArg<Any?>>): StrudelPattern {
     return source._liftOrReinterpretStringField(args, densityMutation)

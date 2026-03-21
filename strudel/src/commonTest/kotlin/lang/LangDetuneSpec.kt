@@ -30,8 +30,8 @@ class LangDetuneSpec : StringSpec({
                     StrudelPattern.compile("""seq("$pat").apply(detune("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.freqSpread shouldBe 0.0
-            events[1].data.freqSpread shouldBe 0.25
+            events[0].data.oscParams?.get("freqSpread") shouldBe 0.0
+            events[1].data.oscParams?.get("freqSpread") shouldBe 0.25
         }
     }
 
@@ -42,8 +42,8 @@ class LangDetuneSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.freqSpread shouldBe 0.0
-            events[1].data.freqSpread shouldBe 1.0
+            events[0].data.oscParams?.get("freqSpread") shouldBe 0.0
+            events[1].data.oscParams?.get("freqSpread") shouldBe 1.0
         }
     }
 
@@ -54,8 +54,8 @@ class LangDetuneSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.freqSpread shouldBe 0.0
-            events[1].data.freqSpread shouldBe 1.0
+            events[0].data.oscParams?.get("freqSpread") shouldBe 0.0
+            events[1].data.oscParams?.get("freqSpread") shouldBe 1.0
         }
     }
 
@@ -66,8 +66,8 @@ class LangDetuneSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.freqSpread shouldBe 0.0
-            events[1].data.freqSpread shouldBe 1.0
+            events[0].data.oscParams?.get("freqSpread") shouldBe 0.0
+            events[1].data.oscParams?.get("freqSpread") shouldBe 1.0
         }
     }
 
@@ -76,7 +76,7 @@ class LangDetuneSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.freqSpread } shouldBe listOf(0.1, 0.2)
+        events.map { it.data.oscParams?.get("freqSpread") } shouldBe listOf(0.1, 0.2)
     }
 
     "detune() works as pattern extension" {
@@ -84,7 +84,7 @@ class LangDetuneSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.freqSpread shouldBe 0.1
+        events[0].data.oscParams?.get("freqSpread") shouldBe 0.1
     }
 
     "detune() works as string extension" {
@@ -92,14 +92,14 @@ class LangDetuneSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.freqSpread shouldBe 0.1
+        events[0].data.oscParams?.get("freqSpread") shouldBe 0.1
     }
 
     "detune() works in compiled code" {
         val p = StrudelPattern.compile("""note("c").detune("0.1")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.freqSpread shouldBe 0.1
+        events[0].data.oscParams?.get("freqSpread") shouldBe 0.1
     }
 
     "detune() with continuous pattern sets freqSpread correctly" {
@@ -109,12 +109,12 @@ class LangDetuneSpec : StringSpec({
 
         events.size shouldBe 4
         // t=0.0: sine(0) = 0.5
-        events[0].data.freqSpread shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].data.oscParams?.get("freqSpread") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.25: sine(0.25) = 1.0
-        events[1].data.freqSpread shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].data.oscParams?.get("freqSpread") shouldBe (1.0 plusOrMinus EPSILON)
         // t=0.5: sine(0.5) = 0.5
-        events[2].data.freqSpread shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].data.oscParams?.get("freqSpread") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.75: sine(0.75) = 0.0
-        events[3].data.freqSpread shouldBe (0.0 plusOrMinus EPSILON)
+        events[3].data.oscParams?.get("freqSpread") shouldBe (0.0 plusOrMinus EPSILON)
     }
 })

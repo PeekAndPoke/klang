@@ -8,8 +8,11 @@ import kotlin.random.Random
  *
  * Each call creates **fresh instances** with independent mutable state.
  * Calling it twice produces two independent oscillators (different phase, filter state, etc.).
+ *
+ * [oscParams] provides runtime overrides from [VoiceData.oscParams]. Only leaf oscillator nodes
+ * read overrides; composition nodes do NOT pass oscParams through — the tree structure IS the recipe.
  */
-fun SignalGenDsl.toSignalGen(): SignalGen = when (this) {
+fun SignalGenDsl.toSignalGen(oscParams: Map<String, Double>? = null): SignalGen = when (this) {
     // Primitives
     is SignalGenDsl.Sine -> SignalGens.sine(gain)
     is SignalGenDsl.Sawtooth -> SignalGens.sawtooth(gain)
@@ -18,9 +21,31 @@ fun SignalGenDsl.toSignalGen(): SignalGen = when (this) {
     is SignalGenDsl.WhiteNoise -> SignalGens.whiteNoise(Random, gain)
     is SignalGenDsl.Zawtooth -> SignalGens.zawtooth(gain)
     is SignalGenDsl.Impulse -> SignalGens.impulse(gain)
+    is SignalGenDsl.Pulze -> SignalGens.pulze(duty, gain)
+    is SignalGenDsl.BrownNoise -> SignalGens.brownNoise(Random, gain)
+    is SignalGenDsl.PinkNoise -> SignalGens.pinkNoise(Random, gain)
+
+    is SignalGenDsl.Dust -> SignalGens.dust(
+        Random,
+        density = oscParams?.get("density") ?: density,
+        gain = gain,
+    )
+
+    is SignalGenDsl.Crackle -> SignalGens.crackle(
+        Random,
+        density = oscParams?.get("density") ?: density,
+        gain = gain,
+    )
+
+    is SignalGenDsl.Supersaw -> SignalGens.supersaw(
+        voices = oscParams?.get("voices")?.toInt() ?: voices,
+        freqSpread = oscParams?.get("freqSpread") ?: freqSpread,
+        gain = gain,
+    )
+
     is SignalGenDsl.Silence -> SignalGens.silence()
 
-    // Arithmetic
+    // Arithmetic — compositions do NOT pass oscParams through
     is SignalGenDsl.Plus -> left.toSignalGen() + right.toSignalGen()
     is SignalGenDsl.Times -> left.toSignalGen() * right.toSignalGen()
     is SignalGenDsl.Mul -> inner.toSignalGen().mul(factor)

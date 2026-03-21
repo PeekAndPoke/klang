@@ -178,7 +178,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     private fun navToDoc(doc: KlangSymbol, event: dynamic) {
-        val uri = Nav.docsStrudelSearch("function:${doc.name}")
+        val uri = Nav.manualsStrudelSearch("function:${doc.name}")
         val pointerEvent = event as? PointerEvent
         if (pointerEvent?.shiftKey == true) {
             router.navToUri(pointerEvent, uri)

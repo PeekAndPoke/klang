@@ -127,7 +127,7 @@ class SignalGenRegistryTest : StringSpec({
             legacyOscillators = oscillators(44100) { rng(Random(42)) },
         )
 
-        val data = VoiceData.empty.copy(sound = "supersaw", freqHz = 440.0, voices = 5.0)
+        val data = VoiceData.empty.copy(sound = "supersaw", freqHz = 440.0, oscParams = mapOf("voices" to 5.0))
         val signal = registry.createSignalGen("supersaw", data, 440.0)
 
         signal shouldNotBe null

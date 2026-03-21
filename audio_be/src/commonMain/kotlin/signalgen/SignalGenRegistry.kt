@@ -44,25 +44,31 @@ class SignalGenRegistry(
      * Returns null if the name is unknown in both.
      */
     fun createSignalGen(name: String?, data: VoiceData, freqHz: Double): SignalGen? {
-        // DSL path — toSignalGen() creates fresh instances with independent mutable state
         val key = (name ?: DEFAULT_SOUND).lowercase()
-        val dsl = defs[key]
-        if (dsl != null) return dsl.toSignalGen()
+        val oscParams = data.oscParams
 
-        // Legacy OscFn path
+        // DSL path — toSignalGen() creates fresh instances with independent mutable state
+        val dsl = defs[key]
+        if (dsl != null) {
+            val raw = dsl.toSignalGen(oscParams)
+            val warmth = oscParams?.get("warmth") ?: 0.0
+            return if (warmth > 0.0) raw.withWarmth(warmth) else raw
+        }
+
+        // Legacy OscFn path — extract params from oscParams map
         val oscillators = legacyOscillators ?: return null
         if (!oscillators.isOsc(name)) return null
 
         val rawOsc = oscillators.get(
             name = data.sound,
             freqHz = freqHz,
-            density = data.density,
-            voices = data.voices,
-            freqSpread = data.freqSpread,
-            panSpread = data.panSpread,
+            density = oscParams?.get("density"),
+            voices = oscParams?.get("voices"),
+            freqSpread = oscParams?.get("freqSpread"),
+            panSpread = oscParams?.get("panSpread"),
         )
 
-        val warmth = data.warmth ?: 0.0
+        val warmth = oscParams?.get("warmth") ?: 0.0
         val osc = if (warmth > 0.0) rawOsc.withWarmth(warmth) else rawOsc
 
         return osc.toSignalGen()

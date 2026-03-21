@@ -37,19 +37,8 @@ data class StrudelVoiceData(
     /** Sound index */
     val soundIndex: Int?,
 
-    // Oscillator parameters
-    /** Density */
-    val density: Double?,
-    /** Panorama spread */
-    val panSpread: Double?,
-    /** Frequency spread */
-    val freqSpread: Double?,
-    /** Number of voices */
-    val voices: Double?,
-
-    // Oscillator warmth (custom addon)
-    /** Controls oscillator warmth (low-pass filtering amount). 0.0 = bright, 1.0 = muffled */
-    val warmth: Double?,
+    // Oscillator parameters (generic map: "density", "voices", "freqSpread", "panSpread", "warmth")
+    val oscParams: Map<String, Double>?,
 
     // ADSR (flattened)
     val attack: Double?,
@@ -251,11 +240,7 @@ data class StrudelVoiceData(
             bank = null,
             sound = null,
             soundIndex = null,
-            density = null,
-            panSpread = null,
-            freqSpread = null,
-            voices = null,
-            warmth = null,
+            oscParams = null,
             attack = null,
             decay = null,
             sustain = null,
@@ -358,11 +343,7 @@ data class StrudelVoiceData(
             bank = other.bank ?: bank,
             sound = other.sound ?: sound,
             soundIndex = other.soundIndex ?: soundIndex,
-            density = other.density ?: density,
-            panSpread = other.panSpread ?: panSpread,
-            freqSpread = other.freqSpread ?: freqSpread,
-            voices = other.voices ?: voices,
-            warmth = other.warmth ?: warmth,
+            oscParams = mergeOscParams(oscParams, other.oscParams),
             attack = other.attack ?: attack,
             decay = other.decay ?: decay,
             sustain = other.sustain ?: sustain,
@@ -590,11 +571,7 @@ data class StrudelVoiceData(
             bank = bank,
             sound = sound,
             soundIndex = soundIndex,
-            density = density,
-            panSpread = panSpread,
-            freqSpread = freqSpread,
-            voices = voices,
-            warmth = warmth,
+            oscParams = oscParams,
             filters = FilterDefs(filters),
             adsr = AdsrEnvelope(
                 attack = attack,
@@ -979,4 +956,20 @@ data class StrudelVoiceData(
             else -> null
         }
     }
+}
+
+/** Merges two oscParams maps: other's values override this's values. */
+private fun mergeOscParams(
+    base: Map<String, Double>?,
+    other: Map<String, Double>?,
+): Map<String, Double>? = when {
+    base == null -> other
+    other == null -> base
+    else -> base + other
+}
+
+/** Returns a copy with the given oscParam set. If value is null, returns this unchanged. */
+fun StrudelVoiceData.withOscParam(key: String, value: Double?): StrudelVoiceData {
+    if (value == null) return this
+    return copy(oscParams = (oscParams.orEmpty()) + (key to value))
 }

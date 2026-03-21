@@ -30,13 +30,35 @@ fun SignalGenRegistry.registerDefaults() {
     register("zawtooth", zawtooth)
     register("zaw", zawtooth)
 
-    register("impulse", SignalGenDsl.Impulse())
+    val pulze = SignalGenDsl.Pulze()
+    register("pulze", pulze)
 
-    register("silence", SignalGenDsl.Silence)
+    val impulse = SignalGenDsl.Impulse()
+    register("impulse", impulse)
+
+    val silence = SignalGenDsl.Silence
+    register("silence", silence)
+
+    // ─── Noises ──────────────────────────────────────────────────────────────
 
     val whiteNoise = SignalGenDsl.WhiteNoise()
     register("whitenoise", whiteNoise)
     register("white", whiteNoise)
+
+    val brownNoise = SignalGenDsl.BrownNoise()
+    register("brownnoise", brownNoise)
+    register("brown", brownNoise)
+
+    val pinkNoise = SignalGenDsl.PinkNoise()
+    register("pinknoise", pinkNoise)
+    register("pink", pinkNoise)
+
+    register("dust", SignalGenDsl.Dust())
+    register("crackle", SignalGenDsl.Crackle())
+
+    val supersaw = SignalGenDsl.Supersaw()
+    register("supersaw", supersaw)
+    register("z_supersaw", supersaw)
 
     // ─── SignalGen compositions ──────────────────────────────────────────────
 

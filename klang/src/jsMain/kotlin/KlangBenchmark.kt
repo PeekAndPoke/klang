@@ -284,7 +284,7 @@ class KlangBenchmark(
             playbackStartTime = 0.0,
             data = VoiceData.empty.copy(
                 sound = "supersaw",
-                voices = 8.0,
+                oscParams = mapOf("voices" to 8.0),
                 freqHz = 220.0 + (id * 2),
                 // Add a filter to make it realistic load
                 filters = FilterDefs(

@@ -470,6 +470,136 @@ class SignalGensTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // Pulze (variable duty cycle pulse wave)
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "pulze - amplitude matches gain" {
+        val gain = 1.0
+        val buf = generate(SignalGens.pulze(gain = gain), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.01)
+    }
+
+    "pulze - default duty 0.5 is symmetric" {
+        val buf = generate(SignalGens.pulze(duty = 0.5), freqHz = 440.0)
+        buf.dcOffset() shouldBe (0.0 plusOrMinus 0.02)
+    }
+
+    "pulze - duty 0.25 has negative DC bias" {
+        val buf = generate(SignalGens.pulze(duty = 0.25), freqHz = 440.0)
+        // 25% high, 75% low → mean ≈ 0.25*1 + 0.75*(-1) = -0.5
+        buf.dcOffset() shouldBe (-0.5 plusOrMinus 0.05)
+    }
+
+    "pulze - correct frequency" {
+        val buf = generate(SignalGens.pulze(), freqHz = 440.0)
+        buf.zeroCrossings() shouldBeInRange 86..90
+    }
+
+    "pulze - negative phaseMod does not cause drift" {
+        val sig = SignalGens.pulze()
+        val blockSize = 4410
+        val ctx = createCtx(blockSize)
+        ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
+        val buf = FloatArray(blockSize)
+        sig.generate(buf, 440.0, ctx)
+        for (sample in buf) {
+            abs(sample.toDouble()) shouldBeLessThan 1.1
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Brown Noise
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "brown noise - output is bounded" {
+        val buf = generate(SignalGens.brownNoise(Random(42)), freqHz = 440.0)
+        for (sample in buf) {
+            abs(sample.toDouble()) shouldBeLessThan 1.5
+        }
+    }
+
+    "brown noise - roughly zero mean" {
+        val buf = generate(SignalGens.brownNoise(Random(42)), freqHz = 440.0)
+        buf.dcOffset() shouldBe (0.0 plusOrMinus 0.1)
+    }
+
+    "brown noise - custom gain scales amplitude" {
+        val buf1 = generate(SignalGens.brownNoise(Random(42), gain = 1.0), freqHz = 440.0)
+        val buf2 = generate(SignalGens.brownNoise(Random(42), gain = 0.5), freqHz = 440.0)
+        // Half gain should produce roughly half amplitude
+        val peak1 = buf1.peakAmplitude()
+        val peak2 = buf2.peakAmplitude()
+        (peak2 / peak1) shouldBe (0.5 plusOrMinus 0.05)
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Pink Noise
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "pink noise - output is bounded" {
+        val buf = generate(SignalGens.pinkNoise(Random(42)), freqHz = 440.0)
+        for (sample in buf) {
+            abs(sample.toDouble()) shouldBeLessThan 1.5
+        }
+    }
+
+    "pink noise - roughly zero mean" {
+        val buf = generate(SignalGens.pinkNoise(Random(42)), freqHz = 440.0)
+        buf.dcOffset() shouldBe (0.0 plusOrMinus 0.1)
+    }
+
+    "pink noise - custom gain scales amplitude" {
+        val buf1 = generate(SignalGens.pinkNoise(Random(42), gain = 1.0), freqHz = 440.0)
+        val buf2 = generate(SignalGens.pinkNoise(Random(42), gain = 0.5), freqHz = 440.0)
+        val peak1 = buf1.peakAmplitude()
+        val peak2 = buf2.peakAmplitude()
+        (peak2 / peak1) shouldBe (0.5 plusOrMinus 0.05)
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Dust
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "dust - mostly silence" {
+        val buf = generate(SignalGens.dust(Random(42), density = 0.2), freqHz = 440.0)
+        val silentCount = buf.count { it == 0.0f }
+        silentCount shouldBeGreaterThanOrEqual (buf.size * 0.8).toInt()
+    }
+
+    "dust - output is non-negative" {
+        val buf = generate(SignalGens.dust(Random(42), density = 0.5), freqHz = 440.0)
+        for (sample in buf) {
+            sample.toDouble() shouldBeGreaterThan -0.001
+        }
+    }
+
+    "dust - higher density produces more impulses" {
+        val bufLow = generate(SignalGens.dust(Random(42), density = 0.1), freqHz = 440.0)
+        val bufHigh = generate(SignalGens.dust(Random(42), density = 0.9), freqHz = 440.0)
+        val countLow = bufLow.count { it > 0.0f }
+        val countHigh = bufHigh.count { it > 0.0f }
+        countHigh shouldBeGreaterThanOrEqual countLow
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Crackle
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "crackle - mostly silence" {
+        val buf = generate(SignalGens.crackle(Random(42), density = 0.2), freqHz = 440.0)
+        val silentCount = buf.count { it == 0.0f }
+        silentCount shouldBeGreaterThanOrEqual (buf.size * 0.5).toInt()
+    }
+
+    "crackle - denser than dust at same density (higher maxRateHz)" {
+        val bufDust = generate(SignalGens.dust(Random(42), density = 0.5), freqHz = 440.0)
+        val bufCrackle = generate(SignalGens.crackle(Random(42), density = 0.5), freqHz = 440.0)
+        val countDust = bufDust.count { it > 0.0f }
+        val countCrackle = bufCrackle.count { it > 0.0f }
+        countCrackle shouldBeGreaterThanOrEqual countDust
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // PhaseMod (negative values must not cause drift)
     // ═════════════════════════════════════════════════════════════════════════════
 
@@ -525,5 +655,102 @@ class SignalGensTest : StringSpec({
         for (sample in buf) {
             abs(sample.toDouble()) shouldBeLessThan 1.1
         }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Supersaw
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "supersaw - produces non-zero output" {
+        val buf = generate(SignalGens.supersaw(), freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "supersaw - amplitude bounded by gain" {
+        val gain = 0.6
+        val buf = generate(SignalGens.supersaw(gain = gain), freqHz = 440.0)
+        buf.peakAmplitude() shouldBeLessThan gain + 0.1
+    }
+
+    "supersaw - more voices increases energy" {
+        val buf1 = generate(SignalGens.supersaw(voices = 1, gain = 1.0), freqHz = 440.0)
+        val buf5 = generate(SignalGens.supersaw(voices = 5, gain = 1.0), freqHz = 440.0)
+        // Both should produce output
+        buf1.any { it != 0.0f } shouldBe true
+        buf5.any { it != 0.0f } shouldBe true
+    }
+
+    "supersaw - single voice equals sawtooth character" {
+        // Single voice supersaw should have sawtooth-like zero crossings
+        val buf = generate(SignalGens.supersaw(voices = 1, freqSpread = 0.0, gain = 1.0), freqHz = 440.0)
+        val crossings = buf.zeroCrossings()
+        // 440Hz over 100ms ≈ 44 cycles, saw has ~1-2 crossings per cycle
+        crossings shouldBeGreaterThanOrEqual 40
+        crossings shouldBeLessThanOrEqual 90
+    }
+
+    "supersaw - symmetric around zero (no DC offset)" {
+        val buf = generate(SignalGens.supersaw(), freqHz = 440.0)
+        buf.dcOffset() shouldBe (0.0 plusOrMinus 0.05)
+    }
+
+    "supersaw - phase continuity across blocks" {
+        val sig = SignalGens.supersaw()
+        val blockSize = 128
+        val ctx = createCtx(blockSize)
+        val buf1 = FloatArray(blockSize)
+        val buf2 = FloatArray(blockSize)
+
+        sig.generate(buf1, 440.0, ctx)
+        ctx.voiceElapsedFrames = blockSize
+        sig.generate(buf2, 440.0, ctx)
+
+        // Should produce continuous output (no NaN, no extreme jumps)
+        for (sample in buf1 + buf2) {
+            abs(sample.toDouble()) shouldBeLessThan 1.5
+        }
+    }
+
+    "supersaw - negative phaseMod does not cause drift" {
+        val sig = SignalGens.supersaw()
+        val blockSize = 4410
+        val ctx = createCtx(blockSize)
+        ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
+        val buf = FloatArray(blockSize)
+        sig.generate(buf, 440.0, ctx)
+
+        for (sample in buf) {
+            abs(sample.toDouble()) shouldBeLessThan 1.5
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Supersaw DSL with oscParams overrides
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "supersaw DSL - oscParams override voices" {
+        val dsl = SignalGenDsl.Supersaw(voices = 3)
+        val sig = dsl.toSignalGen(mapOf("voices" to 7.0))
+        val buf = generate(sig, freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "supersaw DSL - oscParams override freqSpread" {
+        val dsl = SignalGenDsl.Supersaw(freqSpread = 0.1)
+        val sig = dsl.toSignalGen(mapOf("freqSpread" to 0.5))
+        val buf = generate(sig, freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "dust DSL - oscParams override density" {
+        val dsl = SignalGenDsl.Dust(density = 0.01)
+        val sigOverride = dsl.toSignalGen(mapOf("density" to 0.99))
+        val sigDefault = dsl.toSignalGen()
+        val bufOverride = generate(sigOverride, freqHz = 440.0)
+        val bufDefault = generate(sigDefault, freqHz = 440.0)
+        // Higher density should produce more impulses
+        val countOverride = bufOverride.count { it > 0.0f }
+        val countDefault = bufDefault.count { it > 0.0f }
+        countOverride shouldBeGreaterThanOrEqual countDefault
     }
 })

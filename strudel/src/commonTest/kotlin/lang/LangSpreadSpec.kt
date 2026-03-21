@@ -30,8 +30,8 @@ class LangSpreadSpec : StringSpec({
                     StrudelPattern.compile("""seq("$pat").apply(spread("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.panSpread shouldBe 0.0
-            events[1].data.panSpread shouldBe 0.25
+            events[0].data.oscParams?.get("panSpread") shouldBe 0.0
+            events[1].data.oscParams?.get("panSpread") shouldBe 0.25
         }
     }
 
@@ -42,8 +42,8 @@ class LangSpreadSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.panSpread shouldBe 0.0
-            events[1].data.panSpread shouldBe 1.0
+            events[0].data.oscParams?.get("panSpread") shouldBe 0.0
+            events[1].data.oscParams?.get("panSpread") shouldBe 1.0
         }
     }
 
@@ -54,8 +54,8 @@ class LangSpreadSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.panSpread shouldBe 0.0
-            events[1].data.panSpread shouldBe 1.0
+            events[0].data.oscParams?.get("panSpread") shouldBe 0.0
+            events[1].data.oscParams?.get("panSpread") shouldBe 1.0
         }
     }
 
@@ -66,8 +66,8 @@ class LangSpreadSpec : StringSpec({
 
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.panSpread shouldBe 0.0
-            events[1].data.panSpread shouldBe 1.0
+            events[0].data.oscParams?.get("panSpread") shouldBe 0.0
+            events[1].data.oscParams?.get("panSpread") shouldBe 1.0
         }
     }
 
@@ -76,7 +76,7 @@ class LangSpreadSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.map { it.data.panSpread } shouldBe listOf(0.5, 1.0)
+        events.map { it.data.oscParams?.get("panSpread") } shouldBe listOf(0.5, 1.0)
     }
 
     "spread() works as pattern extension" {
@@ -84,7 +84,7 @@ class LangSpreadSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.panSpread shouldBe 0.5
+        events[0].data.oscParams?.get("panSpread") shouldBe 0.5
     }
 
     "spread() works as string extension" {
@@ -92,14 +92,14 @@ class LangSpreadSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.panSpread shouldBe 0.5
+        events[0].data.oscParams?.get("panSpread") shouldBe 0.5
     }
 
     "spread() works in compiled code" {
         val p = StrudelPattern.compile("""note("c").spread("0.5")""")
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
         events.size shouldBe 1
-        events[0].data.panSpread shouldBe 0.5
+        events[0].data.oscParams?.get("panSpread") shouldBe 0.5
     }
 
     "spread() with continuous pattern sets panSpread correctly" {
@@ -109,12 +109,12 @@ class LangSpreadSpec : StringSpec({
 
         events.size shouldBe 4
         // t=0.0: sine(0) = 0.5
-        events[0].data.panSpread shouldBe (0.5 plusOrMinus EPSILON)
+        events[0].data.oscParams?.get("panSpread") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.25: sine(0.25) = 1.0
-        events[1].data.panSpread shouldBe (1.0 plusOrMinus EPSILON)
+        events[1].data.oscParams?.get("panSpread") shouldBe (1.0 plusOrMinus EPSILON)
         // t=0.5: sine(0.5) = 0.5
-        events[2].data.panSpread shouldBe (0.5 plusOrMinus EPSILON)
+        events[2].data.oscParams?.get("panSpread") shouldBe (0.5 plusOrMinus EPSILON)
         // t=0.75: sine(0.75) = 0.0
-        events[3].data.panSpread shouldBe (0.0 plusOrMinus EPSILON)
+        events[3].data.oscParams?.get("panSpread") shouldBe (0.0 plusOrMinus EPSILON)
     }
 })

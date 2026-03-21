@@ -21,11 +21,13 @@ object Nav {
 
     val samplesLibrary = Static("/samples/library")
 
-    val docsBase = "/docs"
-    val docs = Static(docsBase)
-    val docsStrudel = Static("$docsBase/strudel")
-    fun docsStrudelSearch(search: String) = docsStrudel().withQueryParams(StrudelDocsPage.PARAM_SEARCH to search)
-    val docsKlangScript = Static("$docsBase/klang-script")
+    const val manualsBase = "/manuals"
+    val manuals = Static(manualsBase)
+    val manualsStrudel = Static("$manualsBase/strudel")
+    fun manualsStrudelSearch(search: String) = manualsStrudel().withQueryParams(StrudelDocsPage.PARAM_SEARCH to search)
+    val manualsKlangScript = Static("$manualsBase/klang-script")
+
+    val credits = Static("/credits")
 
     val tour = Static("/tour")
 }
@@ -48,9 +50,11 @@ fun RootRouterBuilder.mountNav() {
 
         mount(Nav.samplesLibrary) { SamplesLibraryPage() }
 
-        mount(Nav.docs) { DocsPage() }
-        mount(Nav.docsStrudel) { StrudelDocsPage() }
-        mount(Nav.docsKlangScript) { KlangScriptDocsPage() }
+        mount(Nav.manuals) { DocsPage() }
+        mount(Nav.manualsStrudel) { StrudelDocsPage() }
+        mount(Nav.manualsKlangScript) { KlangScriptDocsPage() }
+
+        mount(Nav.credits) { CreditsPage() }
     }
 
     layout({ FullscreenLayout { it() } }) {
