@@ -234,7 +234,7 @@ class CreditsPage(ctx: NoProps) : PureComponent(ctx) {
                         A significant amount of Klang's code was written with the help of AI.
                         **[Claude](https://claude.ai)** by **[Anthropic](https://anthropic.com)** helped achieve
                         a lot of things in a very short time, making it possible for a small project to move fast
-                        and punch above its weight.
+                        and punch above its weight. Working with Claude has been an overall delightful experience.
                     """.trimIndent()
                 )
             }
