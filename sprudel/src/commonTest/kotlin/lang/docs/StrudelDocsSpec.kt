@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang.docs
+package io.peekandpoke.klang.sprudel.lang.docs
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
@@ -9,7 +9,7 @@ import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
-import io.peekandpoke.klang.strudel.lang.initStrudelLang
+import io.peekandpoke.klang.sprudel.lang.initStrudelLang
 import io.kotest.matchers.string.shouldContain as stringShouldContain
 
 class StrudelDocsSpec : StringSpec({

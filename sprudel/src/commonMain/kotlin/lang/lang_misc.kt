@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 /**
  * Accessing this property forces the initialization of this file's class,

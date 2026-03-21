@@ -21,4 +21,4 @@ package io.peekandpoke.klang.notebook
 
 // Re-export main APIs for convenience
 typealias KlangScript = io.peekandpoke.klang.script.KlangScriptEngine
-typealias StrudelPattern = io.peekandpoke.klang.strudel.StrudelPattern
+typealias StrudelPattern = io.peekandpoke.klang.sprudel.StrudelPattern

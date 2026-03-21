@@ -1,13 +1,13 @@
-package io.peekandpoke.klang.strudel.lang.addons
+package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.fast
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.s
-import io.peekandpoke.klang.strudel.lang.sound
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.s
+import io.peekandpoke.klang.sprudel.lang.sound
 
 class LangMorseSpec : StringSpec({
 

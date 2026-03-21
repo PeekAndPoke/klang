@@ -1,16 +1,16 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
-import io.peekandpoke.klang.strudel._bind
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.pattern.*
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.StrudelVoiceValue
+import io.peekandpoke.klang.sprudel._bind
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.sprudel.pattern.*
 import kotlin.math.floor
 
 /**

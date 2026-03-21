@@ -1,5 +1,5 @@
 // strudel/src/commonTest/kotlin/lang/LangFilterWhenSpec.kt
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty

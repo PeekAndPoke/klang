@@ -1,7 +1,7 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
 
 /**
  * Debug test for loopAt() to understand the expected behavior

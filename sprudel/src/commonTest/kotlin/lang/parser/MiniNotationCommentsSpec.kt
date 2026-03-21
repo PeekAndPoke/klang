@@ -1,10 +1,10 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.note
 
 /**
  * Tests for comment handling in Mini-Notation

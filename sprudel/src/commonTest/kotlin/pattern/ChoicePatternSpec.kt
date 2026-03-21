@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.pattern
+package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
@@ -6,9 +6,9 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.lang.seed
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.sprudel.lang.seed
 
 class ChoicePatternSpec : StringSpec() {
 

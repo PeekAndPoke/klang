@@ -15,7 +15,7 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_engine.playOnce
 import io.peekandpoke.klang.audio_fe.samples.Samples
-import io.peekandpoke.klang.strudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.*
 import kotlinx.css.*
 import kotlinx.html.*
 import org.w3c.dom.HTMLInputElement

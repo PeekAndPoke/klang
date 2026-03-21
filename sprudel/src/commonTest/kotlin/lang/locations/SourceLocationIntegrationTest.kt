@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang.locations
+package io.peekandpoke.klang.sprudel.lang.locations
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -7,8 +7,8 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.lang.strudelLib
 
 /**
  * Integration tests for source location tracking through the complete pipeline:

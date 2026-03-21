@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.ksp
+package io.peekandpoke.klang.sprudel.ksp
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainExactly

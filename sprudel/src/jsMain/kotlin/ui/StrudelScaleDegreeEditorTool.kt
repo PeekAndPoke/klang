@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.ui
+package io.peekandpoke.klang.sprudel.ui
 
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp

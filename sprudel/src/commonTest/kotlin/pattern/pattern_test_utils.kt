@@ -1,8 +1,8 @@
-package io.peekandpoke.klang.strudel.pattern
+package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
 
 // Helper to verify pattern output
 fun verifyPattern(

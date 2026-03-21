@@ -1,11 +1,11 @@
 @file:Suppress("ObjectPropertyName")
 
-package io.peekandpoke.klang.strudel.lang.addons
+package io.peekandpoke.klang.sprudel.lang.addons
 
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpret
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
 
 /**
  * ADDONS: function that are NOT available in the original strudel impl

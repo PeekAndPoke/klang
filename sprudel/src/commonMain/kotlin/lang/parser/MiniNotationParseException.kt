@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationAware

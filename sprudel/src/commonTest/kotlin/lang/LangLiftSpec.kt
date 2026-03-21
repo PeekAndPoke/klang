@@ -1,12 +1,12 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.EPSILON
-import io.peekandpoke.klang.strudel._lift
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel._lift
 
 class LangLiftSpec : StringSpec({
 

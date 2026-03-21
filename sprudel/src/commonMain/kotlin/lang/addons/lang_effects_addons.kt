@@ -1,11 +1,11 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName")
 
-package io.peekandpoke.klang.strudel.lang.addons
+package io.peekandpoke.klang.sprudel.lang.addons
 
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel._applyControlFromParams
-import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel._applyControlFromParams
+import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
 
 /**
  * ADDONS: Effect functions that are NOT available in the original strudel impl

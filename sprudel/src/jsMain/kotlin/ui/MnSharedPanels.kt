@@ -1,11 +1,11 @@
-package io.peekandpoke.klang.strudel.ui
+package io.peekandpoke.klang.sprudel.ui
 
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.html.onInput
 import de.peekandpoke.ultra.html.onKeyUp
-import io.peekandpoke.klang.strudel.lang.parser.MnNode
-import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
+import io.peekandpoke.klang.sprudel.lang.parser.MnNode
+import io.peekandpoke.klang.sprudel.lang.parser.MnRenderer
 import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
 import kotlinx.css.*
 import kotlinx.html.*

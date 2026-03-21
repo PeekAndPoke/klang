@@ -1,11 +1,11 @@
-package io.peekandpoke.klang.strudel.lang.addons
+package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangBpmSpec : StringSpec({
 

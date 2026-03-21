@@ -1,14 +1,14 @@
-package io.peekandpoke.klang.strudel.lang.editor
+package io.peekandpoke.klang.sprudel.lang.editor
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.strudel.lang.parser.MnNode
-import io.peekandpoke.klang.strudel.lang.parser.MnPattern
-import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
+import io.peekandpoke.klang.sprudel.lang.parser.MnNode
+import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
+import io.peekandpoke.klang.sprudel.lang.parser.MnRenderer
+import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotationMnPattern
 
 /**
  * Tests for MnNode tree-editing operations: removeById, replaceById,

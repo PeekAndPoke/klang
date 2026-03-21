@@ -1,6 +1,6 @@
 @file:Suppress("FunctionName")
 
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.sprudel
 
 import de.peekandpoke.ultra.common.datetime.Kronos
 import de.peekandpoke.ultra.common.datetime.MpInstant
@@ -10,10 +10,10 @@ import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.pattern.*
-import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.pattern.*
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import kotlin.jvm.JvmName
 import kotlin.random.Random
 

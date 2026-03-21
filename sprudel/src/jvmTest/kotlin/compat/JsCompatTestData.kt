@@ -1,6 +1,6 @@
 @file:Suppress("detekt.all")
 
-package io.peekandpoke.klang.strudel.compat
+package io.peekandpoke.klang.sprudel.compat
 
 object JsCompatTestData {
 

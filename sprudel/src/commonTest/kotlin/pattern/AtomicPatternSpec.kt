@@ -1,13 +1,13 @@
-package io.peekandpoke.klang.strudel.pattern
+package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.strudel.EPSILON
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.lang.note
 
 class AtomicPatternSpec : StringSpec({
 

@@ -1,15 +1,15 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.strudel.*
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.BindPattern
-import io.peekandpoke.klang.strudel.pattern.ControlPattern
-import io.peekandpoke.klang.strudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
-import io.peekandpoke.klang.strudel.pattern.StackPattern
+import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.pattern.BindPattern
+import io.peekandpoke.klang.sprudel.pattern.ControlPattern
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.klang.sprudel.pattern.StackPattern
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.tones.chord.Chord
 import io.peekandpoke.klang.tones.distance.Distance

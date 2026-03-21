@@ -1,10 +1,10 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
 
 class LangUndegradeByWithSpec : StringSpec({
 

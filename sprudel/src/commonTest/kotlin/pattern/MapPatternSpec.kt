@@ -1,13 +1,13 @@
-package io.peekandpoke.klang.strudel.pattern
+package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.seq
-import io.peekandpoke.klang.strudel.lang.silence
-import io.peekandpoke.klang.strudel.map
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.seq
+import io.peekandpoke.klang.sprudel.lang.silence
+import io.peekandpoke.klang.sprudel.map
 
 /**
  * Tests for MapPattern - Generic pattern for event list transformations.

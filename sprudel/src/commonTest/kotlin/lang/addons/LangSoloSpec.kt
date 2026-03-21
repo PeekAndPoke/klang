@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang.addons
+package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
@@ -7,13 +7,13 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.dslInterfaceTests
-import io.peekandpoke.klang.strudel.lang.apply
-import io.peekandpoke.klang.strudel.lang.fast
-import io.peekandpoke.klang.strudel.lang.gain
-import io.peekandpoke.klang.strudel.lang.s
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.lang.apply
+import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.gain
+import io.peekandpoke.klang.sprudel.lang.s
 
 class LangSoloSpec : StringSpec({
 

@@ -1,8 +1,8 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.StrudelPattern.Companion.compile
+import io.peekandpoke.klang.sprudel.StrudelPattern.Companion.compile
 
 class LangSynthesisSpec : FunSpec({
 

@@ -1,11 +1,11 @@
-package io.peekandpoke.klang.strudel.lang.addons.pattern
+package io.peekandpoke.klang.sprudel.lang.addons.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.sampleAt
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.sampleAt
 
 /**
  * Merges voice data from a control pattern into the source pattern's events (Outer Join semantics).

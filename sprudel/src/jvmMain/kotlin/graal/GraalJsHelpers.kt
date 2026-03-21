@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.graal
+package io.peekandpoke.klang.sprudel.graal
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred

@@ -1,11 +1,11 @@
-package io.peekandpoke.klang.strudel.ui
+package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.ui.KlangUiToolRegistry
 
 /**
  * Registers all Strudel UI tools with the given [registry].
  *
- * Call this once at application startup, after [io.peekandpoke.klang.strudel.lang.initStrudelLang].
+ * Call this once at application startup, after [io.peekandpoke.klang.sprudel.lang.initStrudelLang].
  */
 fun registerStrudelUiTools(registry: KlangUiToolRegistry = KlangUiToolRegistry) {
     registry.register("StrudelAdsrEditor", StrudelAdsrEditorTool)

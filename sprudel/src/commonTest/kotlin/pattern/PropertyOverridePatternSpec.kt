@@ -1,13 +1,13 @@
-package io.peekandpoke.klang.strudel.pattern
+package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.lang.seq
-import io.peekandpoke.klang.strudel.withSteps
-import io.peekandpoke.klang.strudel.withWeight
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.seq
+import io.peekandpoke.klang.sprudel.withSteps
+import io.peekandpoke.klang.sprudel.withWeight
 
 /**
  * Tests for PropertyOverridePattern - Generic pattern for property overrides.

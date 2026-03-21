@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
@@ -7,7 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
 import io.peekandpoke.klang.tones.Tones
 
 class LangNoteSpec : StringSpec({

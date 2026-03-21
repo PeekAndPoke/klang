@@ -1,10 +1,10 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg
-import io.peekandpoke.klang.strudel.lang.silence
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg
+import io.peekandpoke.klang.sprudel.lang.silence
 
 // ── Backward-compatible public API ────────────────────────────────────────────
 

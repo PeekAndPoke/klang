@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec

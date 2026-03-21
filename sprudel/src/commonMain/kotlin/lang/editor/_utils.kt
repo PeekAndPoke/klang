@@ -1,6 +1,6 @@
-package io.peekandpoke.klang.strudel.lang.editor
+package io.peekandpoke.klang.sprudel.lang.editor
 
-import io.peekandpoke.klang.strudel.lang.parser.MnNode
+import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 
 // ── Source range ─────────────────────────────────────────────────────────────
 

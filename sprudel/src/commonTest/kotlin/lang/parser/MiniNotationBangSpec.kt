@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
@@ -6,9 +6,9 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.strudel.EPSILON
-import io.peekandpoke.klang.strudel.lang.note
-import io.peekandpoke.klang.strudel.pattern.SequencePattern
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 
 class MiniNotationBangSpec : StringSpec() {
 

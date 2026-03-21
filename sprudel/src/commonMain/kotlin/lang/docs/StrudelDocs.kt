@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang.docs
+package io.peekandpoke.klang.sprudel.lang.docs
 
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangSymbol

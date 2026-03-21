@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
@@ -6,9 +6,9 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.strudel.EPSILON
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.lang.note
 
 class MiniNotationParserSpec : StringSpec() {
 
@@ -389,7 +389,7 @@ class MiniNotationParserSpec : StringSpec() {
             )
 
             val pattern = parseMiniNotation("bd", baseLocation) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )
@@ -399,7 +399,7 @@ class MiniNotationParserSpec : StringSpec() {
                 val events = pattern.queryArc(0.0, 1.0)
                 events.size shouldBe 1
 
-                val atomPattern = pattern as? io.peekandpoke.klang.strudel.pattern.AtomicPattern
+                val atomPattern = pattern as? io.peekandpoke.klang.sprudel.pattern.AtomicPattern
                 atomPattern shouldNotBe null
                 atomPattern?.sourceLocations shouldNotBe null
                 atomPattern?.sourceLocations?.outermost?.source shouldBe "test.klang"
@@ -418,7 +418,7 @@ class MiniNotationParserSpec : StringSpec() {
             )
 
             val pattern = parseMiniNotation("bd hh", baseLocation) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )
@@ -445,7 +445,7 @@ class MiniNotationParserSpec : StringSpec() {
             )
 
             val pattern = parseMiniNotation("[bd hh]", baseLocation) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )
@@ -472,7 +472,7 @@ class MiniNotationParserSpec : StringSpec() {
             )
 
             val pattern = parseMiniNotation("<bd hh>", baseLocation) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )
@@ -500,7 +500,7 @@ class MiniNotationParserSpec : StringSpec() {
             )
 
             val pattern = parseMiniNotation("bd(3,8)", baseLocation) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )
@@ -524,7 +524,7 @@ class MiniNotationParserSpec : StringSpec() {
             )
 
             val pattern = parseMiniNotation("bd@3", baseLocation) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )
@@ -547,7 +547,7 @@ class MiniNotationParserSpec : StringSpec() {
             )
 
             val pattern = parseMiniNotation("bd*2", baseLocation) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )
@@ -573,7 +573,7 @@ class MiniNotationParserSpec : StringSpec() {
             // Mini-notation doesn't actually support multi-line strings,
             // but we can test that the base location is preserved
             val pattern = parseMiniNotation("bd hh", baseLocation) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )
@@ -589,7 +589,7 @@ class MiniNotationParserSpec : StringSpec() {
 
         "Null baseLocation creates atoms without source locations" {
             val pattern = parseMiniNotation("bd hh", null) { text, sourceLocations ->
-                io.peekandpoke.klang.strudel.pattern.AtomicPattern(
+                io.peekandpoke.klang.sprudel.pattern.AtomicPattern(
                     data = StrudelVoiceData.empty.copy(note = text),
                     sourceLocations = sourceLocations,
                 )

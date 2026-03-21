@@ -2,8 +2,8 @@
 
 package io.peekandpoke.klang
 
-import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.lang.addons.flipSign
+import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.addons.flipSign
 
 @Suppress("unused")
 object TestKotlinPatterns {

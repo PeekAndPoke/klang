@@ -3,8 +3,8 @@ package io.peekandpoke.klang
 import de.peekandpoke.kraft.kraftApp
 import de.peekandpoke.kraft.semanticui.semanticUI
 import de.peekandpoke.kraft.vdom.preact.PreactVDomEngine
-import io.peekandpoke.klang.strudel.lang.initStrudelLang
-import io.peekandpoke.klang.strudel.ui.registerStrudelUiTools
+import io.peekandpoke.klang.sprudel.lang.initStrudelLang
+import io.peekandpoke.klang.sprudel.ui.registerStrudelUiTools
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.utils.FullscreenController
 

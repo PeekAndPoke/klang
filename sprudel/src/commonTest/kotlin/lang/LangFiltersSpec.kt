@@ -1,12 +1,12 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.addons.notchf
-import io.peekandpoke.klang.strudel.lang.addons.notchq
-import io.peekandpoke.klang.strudel.lang.addons.nresonance
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.lang.addons.notchf
+import io.peekandpoke.klang.sprudel.lang.addons.notchq
+import io.peekandpoke.klang.sprudel.lang.addons.nresonance
 
 class LangFiltersSpec : StringSpec({
 

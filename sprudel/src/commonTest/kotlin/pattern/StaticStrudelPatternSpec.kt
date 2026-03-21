@@ -1,12 +1,12 @@
-package io.peekandpoke.klang.strudel.pattern
+package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.*
-import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.lang.note
 
 class StaticStrudelPatternSpec : StringSpec({
 

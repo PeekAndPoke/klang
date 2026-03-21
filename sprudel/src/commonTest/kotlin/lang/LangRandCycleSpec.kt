@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
@@ -134,7 +134,7 @@ class LangRandCycleSpec : StringSpec({
     }
 
     "randCycle works in compiled code" {
-        val p = io.peekandpoke.klang.strudel.StrudelPattern.compile(
+        val p = io.peekandpoke.klang.sprudel.StrudelPattern.compile(
             """note("a").degradeByWith(randCycle, 0.5).seed(42)"""
         )
 

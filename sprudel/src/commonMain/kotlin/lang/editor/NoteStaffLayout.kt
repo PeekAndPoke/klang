@@ -1,9 +1,9 @@
-package io.peekandpoke.klang.strudel.lang.editor
+package io.peekandpoke.klang.sprudel.lang.editor
 
-import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.buildInsertTargets
-import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.buildLayoutItems
-import io.peekandpoke.klang.strudel.lang.parser.MnNode
-import io.peekandpoke.klang.strudel.lang.parser.MnPattern
+import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.buildInsertTargets
+import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.buildLayoutItems
+import io.peekandpoke.klang.sprudel.lang.parser.MnNode
+import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
 
 /**
  * Platform-independent layout model for the note staff editor.

@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 /**
  * Serialises an [MnPattern] back to a canonical mini-notation string.

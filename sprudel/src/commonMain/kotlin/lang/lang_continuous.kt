@@ -1,18 +1,18 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel._mapRangeContext
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern
-import io.peekandpoke.klang.strudel.pattern.ContextModifierPattern.Companion.withContext
-import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
-import io.peekandpoke.klang.strudel.pattern.EmptyPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel._mapRangeContext
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern
+import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern.Companion.withContext
+import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
+import io.peekandpoke.klang.sprudel.pattern.EmptyPattern
 import kotlin.math.PI
 import kotlin.math.sin
 

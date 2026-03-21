@@ -1,11 +1,11 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.common.SourceLocation
-import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.note
 
 class MiniNotationErrorReportingSpec : StringSpec() {
 

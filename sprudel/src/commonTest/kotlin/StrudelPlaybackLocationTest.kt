@@ -1,12 +1,12 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.sprudel
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.common.SourceLocation
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 
 /**
  * Tests for source location tracking through the StrudelPlayback event callback
@@ -69,7 +69,7 @@ class StrudelPlaybackLocationTest : StringSpec({
             AtomicPattern(StrudelVoiceData.empty.copy(note = text), sourceLocations)
         }
 
-        val stacked = io.peekandpoke.klang.strudel.lang.stack(pattern1, pattern2)
+        val stacked = io.peekandpoke.klang.sprudel.lang.stack(pattern1, pattern2)
 
         val events = stacked.queryArc(0.0, 1.0)
 

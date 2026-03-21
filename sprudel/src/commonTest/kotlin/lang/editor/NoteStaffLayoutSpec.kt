@@ -1,16 +1,16 @@
-package io.peekandpoke.klang.strudel.lang.editor
+package io.peekandpoke.klang.sprudel.lang.editor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.BracketType
-import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.InsertTarget
-import io.peekandpoke.klang.strudel.lang.editor.NoteStaffLayout.LayoutItem
-import io.peekandpoke.klang.strudel.lang.parser.MnNode
-import io.peekandpoke.klang.strudel.lang.parser.MnPattern
-import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
+import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.BracketType
+import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.InsertTarget
+import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.LayoutItem
+import io.peekandpoke.klang.sprudel.lang.parser.MnNode
+import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
+import io.peekandpoke.klang.sprudel.lang.parser.MnRenderer
+import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotationMnPattern
 
 /**
  * Tests for [NoteStaffLayout] — the platform-independent layout engine.

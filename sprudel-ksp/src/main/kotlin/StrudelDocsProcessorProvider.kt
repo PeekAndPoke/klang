@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.ksp
+package io.peekandpoke.klang.sprudel.ksp
 
 import com.google.auto.service.AutoService
 import com.google.devtools.ksp.processing.SymbolProcessor

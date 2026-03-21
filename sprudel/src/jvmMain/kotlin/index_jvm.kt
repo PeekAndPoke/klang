@@ -1,1 +1,1 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.sprudel

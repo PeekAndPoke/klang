@@ -1,22 +1,22 @@
 @file:Suppress("ObjectPropertyName")
 
-package io.peekandpoke.klang.strudel.lang.addons
+package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPattern.QueryContext
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.StrudelVoiceData
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
-import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArg
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.lang.addons.pattern.MergePattern
-import io.peekandpoke.klang.strudel.lang.addons.pattern.SoloPattern
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
-import io.peekandpoke.klang.strudel.pattern.PropertyOverridePattern
-import io.peekandpoke.klang.strudel.pattern.SequencePattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.StrudelVoiceData
+import io.peekandpoke.klang.sprudel.StrudelVoiceValue
+import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArg
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.addons.pattern.MergePattern
+import io.peekandpoke.klang.sprudel.lang.addons.pattern.SoloPattern
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
+import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 
 /**
  * ADDONS: Structural functions that are NOT available in the original strudel impl

@@ -1,12 +1,12 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.strudel.StrudelPattern.Companion.compile
-import io.peekandpoke.klang.strudel.StrudelVoiceValue
+import io.peekandpoke.klang.sprudel.StrudelPattern.Companion.compile
+import io.peekandpoke.klang.sprudel.StrudelVoiceValue
 
 class LangChunkSpec : FunSpec({
 

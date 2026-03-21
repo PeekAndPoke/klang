@@ -1,15 +1,15 @@
-package io.peekandpoke.klang.strudel.compat
+package io.peekandpoke.klang.sprudel.compat
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
-import io.peekandpoke.klang.strudel.TimeSpan
-import io.peekandpoke.klang.strudel.formatAsTable
-import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.TimeSpan
+import io.peekandpoke.klang.sprudel.formatAsTable
+import io.peekandpoke.klang.sprudel.graal.GraalStrudelCompiler
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.fail
 import kotlin.math.abs

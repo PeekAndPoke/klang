@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.compat
+package io.peekandpoke.klang.sprudel.compat
 
 object JsCompatTestSongs {
 

@@ -1,10 +1,10 @@
-package io.peekandpoke.klang.strudel.ui
+package io.peekandpoke.klang.sprudel.ui
 
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.streams.Stream
-import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
-import io.peekandpoke.klang.strudel.lang.editor.sourceRange
-import io.peekandpoke.klang.strudel.lang.parser.MnPattern
+import io.peekandpoke.klang.sprudel.lang.editor.MnNodeOps
+import io.peekandpoke.klang.sprudel.lang.editor.sourceRange
+import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
 import kotlinx.css.height
 import kotlinx.css.px
 import kotlinx.html.FlowContent

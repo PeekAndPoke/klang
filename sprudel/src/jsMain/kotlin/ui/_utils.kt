@@ -1,6 +1,6 @@
-package io.peekandpoke.klang.strudel.ui
+package io.peekandpoke.klang.sprudel.ui
 
-import io.peekandpoke.klang.strudel.lang.parser.MnNode
+import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 import io.peekandpoke.klang.tones.note.Note
 import kotlin.math.pow
 import kotlin.math.roundToLong

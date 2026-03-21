@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
@@ -7,9 +7,9 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.audio_bridge.FilterDef
-import io.peekandpoke.klang.strudel.EPSILON
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.dslInterfaceTests
 
 class LangLpenvSpec : StringSpec({
 
@@ -109,7 +109,7 @@ class LangLpenvSpec : StringSpec({
     }
 
     "lpenv() creates FilterEnvelope in FilterDef" {
-        val data = io.peekandpoke.klang.strudel.StrudelVoiceData.empty.copy(
+        val data = io.peekandpoke.klang.sprudel.StrudelVoiceData.empty.copy(
             cutoff = 1000.0,
             lpenv = 0.7
         )

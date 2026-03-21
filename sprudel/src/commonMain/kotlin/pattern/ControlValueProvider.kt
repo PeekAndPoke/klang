@@ -1,9 +1,9 @@
-package io.peekandpoke.klang.strudel.pattern
+package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.strudel.*
-import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
 
 /**
  * Provides control values either as static constants or from control patterns.

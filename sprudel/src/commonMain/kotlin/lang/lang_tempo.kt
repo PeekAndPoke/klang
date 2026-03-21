@@ -1,15 +1,15 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
 
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.strudel.*
-import io.peekandpoke.klang.strudel.StrudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
-import io.peekandpoke.klang.strudel.lang.addons.lateInCycle
-import io.peekandpoke.klang.strudel.lang.addons.stretchBy
-import io.peekandpoke.klang.strudel.pattern.*
+import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.StrudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg.Companion.asStrudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.addons.lateInCycle
+import io.peekandpoke.klang.sprudel.lang.addons.stretchBy
+import io.peekandpoke.klang.sprudel.pattern.*
 
 /**
  * Accessing this property forces the initialization of this file's class,

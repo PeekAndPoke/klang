@@ -1,8 +1,8 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.note
 
 class MiniNotationIntervalSpec : StringSpec({
 

@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.ui
+package io.peekandpoke.klang.sprudel.ui
 
 import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.Ctx
@@ -10,11 +10,11 @@ import de.peekandpoke.ultra.streams.ops.filterIsInstance
 import de.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.common.SourceLocation
-import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps
-import io.peekandpoke.klang.strudel.lang.parser.MnNode
-import io.peekandpoke.klang.strudel.lang.parser.MnPattern
-import io.peekandpoke.klang.strudel.lang.parser.MnRenderer
-import io.peekandpoke.klang.strudel.lang.parser.parseMiniNotationMnPattern
+import io.peekandpoke.klang.sprudel.lang.editor.MnNodeOps
+import io.peekandpoke.klang.sprudel.lang.parser.MnNode
+import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
+import io.peekandpoke.klang.sprudel.lang.parser.MnRenderer
+import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotationMnPattern
 import io.peekandpoke.klang.ui.KlangKeyBindings
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate

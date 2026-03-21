@@ -1,13 +1,13 @@
-package io.peekandpoke.klang.strudel.lang.locations
+package io.peekandpoke.klang.sprudel.lang.locations
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.common.SourceLocation
-import io.peekandpoke.klang.strudel.lang.StrudelDslArg
-import io.peekandpoke.klang.strudel.lang.toListOfPatterns
-import io.peekandpoke.klang.strudel.lang.voiceValueModifier
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.lang.StrudelDslArg
+import io.peekandpoke.klang.sprudel.lang.toListOfPatterns
+import io.peekandpoke.klang.sprudel.lang.voiceValueModifier
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 
 /**
  * Tests for source location tracking from RuntimeValue → Pattern conversion

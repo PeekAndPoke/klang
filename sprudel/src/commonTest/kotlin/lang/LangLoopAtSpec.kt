@@ -1,9 +1,9 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.strudel.EPSILON
+import io.peekandpoke.klang.sprudel.EPSILON
 
 class LangLoopAtSpec : StringSpec({
 

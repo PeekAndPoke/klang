@@ -1,12 +1,12 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.*
-import io.peekandpoke.klang.strudel.pattern.ChoicePattern.Companion.choice
-import io.peekandpoke.klang.strudel.pattern.EuclideanPattern
-import io.peekandpoke.klang.strudel.pattern.PropertyOverridePattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.pattern.ChoicePattern.Companion.choice
+import io.peekandpoke.klang.sprudel.pattern.EuclideanPattern
+import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
 
 /**
  * Phase 2: converts an [MnPattern] intermediate AST into a [StrudelPattern].

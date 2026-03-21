@@ -1,7 +1,7 @@
-package io.peekandpoke.klang.strudel.lang.parser
+package io.peekandpoke.klang.sprudel.lang.parser
 
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 
 /**
  * Intermediate AST node for mini-notation patterns.

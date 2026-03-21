@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.sprudel
 
 import kotlinx.coroutines.Deferred
 

@@ -1,10 +1,10 @@
-package io.peekandpoke.klang.strudel.lang
+package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.strudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
 import io.peekandpoke.klang.tones.note.Note
 
 class LangVoicingSpec : StringSpec({

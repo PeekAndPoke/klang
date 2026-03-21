@@ -1,8 +1,8 @@
-package io.peekandpoke.klang.strudel.lang.editor
+package io.peekandpoke.klang.sprudel.lang.editor
 
-import io.peekandpoke.klang.strudel.lang.editor.MnNodeOps.groupInsertAt
-import io.peekandpoke.klang.strudel.lang.parser.MnNode
-import io.peekandpoke.klang.strudel.lang.parser.MnPattern
+import io.peekandpoke.klang.sprudel.lang.editor.MnNodeOps.groupInsertAt
+import io.peekandpoke.klang.sprudel.lang.parser.MnNode
+import io.peekandpoke.klang.sprudel.lang.parser.MnPattern
 
 /**
  * Shared tree-walking operations on [MnPattern] / [MnNode].

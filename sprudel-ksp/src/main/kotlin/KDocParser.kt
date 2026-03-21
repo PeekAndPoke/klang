@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel.ksp
+package io.peekandpoke.klang.sprudel.ksp
 
 /**
  * Parsed KDoc information from a function.

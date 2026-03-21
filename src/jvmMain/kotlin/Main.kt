@@ -8,9 +8,9 @@ import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.graal.GraalStrudelCompiler
-import io.peekandpoke.klang.strudel.lang.strudelLib
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.graal.GraalStrudelCompiler
+import io.peekandpoke.klang.sprudel.lang.strudelLib
 import kotlinx.coroutines.delay
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or

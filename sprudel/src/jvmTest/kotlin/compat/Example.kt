@@ -1,6 +1,6 @@
-package io.peekandpoke.klang.strudel.compat
+package io.peekandpoke.klang.sprudel.compat
 
-import io.peekandpoke.klang.strudel.StrudelPatternEvent
+import io.peekandpoke.klang.sprudel.StrudelPatternEvent
 
 data class Example(
     val name: String,

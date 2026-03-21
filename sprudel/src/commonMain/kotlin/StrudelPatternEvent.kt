@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.sprudel
 
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.audio_bridge.VoiceData

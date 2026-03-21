@@ -1,7 +1,7 @@
-package io.peekandpoke.klang.strudel.lang.addons.pattern
+package io.peekandpoke.klang.sprudel.lang.addons.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.strudel.*
+import io.peekandpoke.klang.sprudel.*
 
 /**
  * Pattern that applies solo to each event and fills silent gaps so the backend

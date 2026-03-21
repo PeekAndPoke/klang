@@ -1,12 +1,12 @@
 @file:Suppress("ObjectPropertyName")
 
-package io.peekandpoke.klang.strudel.lang.addons
+package io.peekandpoke.klang.sprudel.lang.addons
 
 import de.peekandpoke.ultra.common.datetime.Kronos
-import io.peekandpoke.klang.strudel.StrudelPattern
-import io.peekandpoke.klang.strudel.lang.StrudelDsl
-import io.peekandpoke.klang.strudel.lang.dslObject
-import io.peekandpoke.klang.strudel.pattern.ContinuousPattern
+import io.peekandpoke.klang.sprudel.StrudelPattern
+import io.peekandpoke.klang.sprudel.lang.StrudelDsl
+import io.peekandpoke.klang.sprudel.lang.dslObject
+import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import kotlin.math.PI
 import kotlin.math.sin
 

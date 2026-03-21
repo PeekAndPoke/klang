@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.strudel
+package io.peekandpoke.klang.sprudel
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.withClue
