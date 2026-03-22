@@ -66,7 +66,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
     companion object {
         private const val FRAME_SIZE = 2048
-        private const val CROSSFADE_SAMPLES = 64
+        private const val CROSSFADE_SAMPLES = 128
         private val idleBuffer = Float32Array(FRAME_SIZE)
     }
 
@@ -370,12 +370,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         }
 
         // Stroke shadow behind for contrast
-        ctx.strokeStyle = Color.black.withAlpha(0.4).toString()
-        ctx.lineWidth = strokeWidth + 4.5
+        ctx.strokeStyle = "#10101040"
+        ctx.lineWidth = strokeWidth + 6.0
         ctx.stroke()
 
         // Gold highlight
-        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.2).toString()
+        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.33).toString()
         ctx.lineWidth = strokeWidth + 3.0
         ctx.stroke()
 

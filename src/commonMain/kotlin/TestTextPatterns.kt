@@ -125,8 +125,8 @@ stack(
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(1).s("supersaw").unison(8).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.2).slow(256))
-    .gain(0.3).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
+    .orbit(1).s("supersaw").unison(4).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.15).slow(256))
+    .gain(0.225).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
     .pan(0.29).superimpose(pan(0.61))
     .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3)
     .filterWhen(x => x >= wait * 3 && x < (wait * 4 + keep))

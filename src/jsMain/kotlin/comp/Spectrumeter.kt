@@ -15,7 +15,6 @@ import kotlinx.css.*
 import kotlinx.html.Tag
 import kotlinx.html.canvas
 import kotlinx.html.div
-import org.khronos.webgl.get
 import org.khronos.webgl.set
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
@@ -29,30 +28,11 @@ fun Tag.Spectrumeter(
         KlangTheme.warning,
         KlangTheme.critical,
     ),
-//    colors: List<Color> = listOf(Color.white),
     gap: Double = 1.0,
     boxGap: Double = 2.0,
     numBoxesInStack: Int = 30,
     numBuckets: Int = 16,
-    /**
-     * FFT bin range to visualize. The FFT provides 1024 frequency bins (0-1023).
-     *
-     * At 48kHz sample rate with 2048 FFT size:
-     * - Bin 0:    0 Hz        (DC component - always high, usually skipped)
-     * - Bin 1:    23 Hz       (sub-bass)
-     * - Bin 10:   234 Hz      (low bass)
-     * - Bin 21:   491 Hz      (bass)
-     * - Bin 100:  2,340 Hz    (midrange)
-     * - Bin 512:  11,988 Hz   (treble)
-     * - Bin 1023: 23,977 Hz   (high treble)
-     *
-     * Musical ranges:
-     * - Sub-bass: Bins 1-4 (20-100 Hz)
-     * - Bass: Bins 5-10 (100-250 Hz)
-     * - Midrange: Bins 11-170 (250-4000 Hz)
-     * - Treble: Bins 171-853 (4000-20000 Hz)
-     */
-    binRange: IntRange = 4..1023,  // Skip bin 0 (DC component) by default
+    binning: SpectrumBinning = SpectrumBinning(numBuckets = numBuckets),
     player: () -> KlangPlayer?,
 ) = comp(
     Spectrumeter.Props(
@@ -62,7 +42,7 @@ fun Tag.Spectrumeter(
         boxGap = boxGap,
         numBoxesInStack = numBoxesInStack,
         numBuckets = numBuckets,
-        binRange = binRange,
+        binning = binning,
     )
 ) {
     Spectrumeter(it)
@@ -77,7 +57,7 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val boxGap: Double,
         val numBoxesInStack: Int,
         val numBuckets: Int,
-        val binRange: IntRange,
+        val binning: SpectrumBinning,
     )
 
     private var visualizerAnimFrame: Int? = null
@@ -89,6 +69,8 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
             buffer[i] = -100.0f
         }
     }
+
+    private val bucketValues = DoubleArray(props.numBuckets)
 
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
@@ -145,71 +127,40 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         val width = canvasElement.width.toDouble()
         val height = canvasElement.height.toDouble()
 
-        // Clear canvas
+        // Clear canvas with fade trail effect
         ctx.save()
-        // 'destination-out' makes new drawing "erase" existing content based on alpha
         ctx.globalCompositeOperation = "destination-out"
-
-        // The alpha (0.1) controls the fade speed.
-        // 0.1 = slow trails (long fade)
-        // 0.5 = fast fade
-        ctx.fillStyle = "rgba(0, 0, 0, 0.2)"
+        ctx.fillStyle = "rgba(0, 0, 0, 0.25)"
         ctx.fillRect(0.0, 0.0, width, height)
+        ctx.restore()
 
-        ctx.restore() // Restore to "source-over" to draw the new bars normally
+        // Process FFT data through perceptually balanced binning
+        props.binning.process(fftBuffer = visualizerBuffer, out = bucketValues)
 
-        val bufferLength = visualizerBuffer.length
-
-        // Apply bin range (e.g., skip DC component at bin 0)
-        val startBinRange = props.binRange.first.coerceIn(0, bufferLength - 1)
-        val endBinRange = props.binRange.last.coerceIn(startBinRange, bufferLength - 1)
-        val effectiveBinCount = endBinRange - startBinRange + 1
-
-        val numBuckets = props.numBuckets.coerceIn(1, effectiveBinCount)
+        val numBuckets = props.numBuckets
         val colors = props.colors
         val numColors = colors.size.coerceAtLeast(1)
 
-        // Group frequency bins into buckets for old-school spectrum analyzer look
         val barWidth = width / numBuckets
-        val binsPerBucket = effectiveBinCount / numBuckets
 
-        // Calculate box height dynamically based on canvas height and desired number of boxes
         val maxBoxes = props.numBoxesInStack
         val boxHeight = (height - (maxBoxes * props.boxGap)) / maxBoxes
         val boxWithGap = boxHeight + props.boxGap
 
         for (bucketIdx in 0 until numBuckets) {
-            val startBin = startBinRange + (bucketIdx * binsPerBucket)
-            val endBin =
-                if (bucketIdx == numBuckets - 1) endBinRange + 1 else startBinRange + ((bucketIdx + 1) * binsPerBucket)
+            val normalized = bucketValues[bucketIdx]
 
-            // Find the maximum dB value in this bucket (shows peaks better than average)
-            var maxDb = -100.0
-            for (i in startBin until endBin) {
-                val dbValue = visualizerBuffer[i].toDouble()
-                if (dbValue > maxDb) maxDb = dbValue
-            }
-
-            // Normalize dB values to a 0.0 - 1.0 range for drawing.
-            // Typical range is around -100dB (silence) to -30dB or 0dB (loud).
-            // We map -100dB to 0.0 height and 0dB to 1.0 height.
-            val normalized = ((maxDb + 100) / 90.0).coerceIn(0.0, 1.0)
-
-            // Calculate how many boxes to light up for this bar
             val numBoxesToDraw = (normalized * maxBoxes).toInt()
 
             val x = bucketIdx * barWidth
             val effectiveWidth = if (barWidth > props.gap) barWidth - props.gap else barWidth
-            val boxAlpha = 0.25 + (normalized * 0.75)
+            val boxAlpha = 0.5 + (normalized * 0.5)
 
             val colorsWithAlpha = colors.map { it.withAlpha(boxAlpha) }
 
-            // Draw stacked boxes from bottom to top
             for (boxIdx in 0 until numBoxesToDraw) {
-                // Position from bottom (y increases downward in canvas)
                 val boxY = height - ((boxIdx + 1) * boxWithGap)
 
-                // Color gradient: bottom boxes (0%) use first color, top boxes (100%) use last color
                 val colorProgress = boxIdx.toDouble() / maxBoxes.coerceAtLeast(1)
                 val colorIdx = (colorProgress * (numColors - 1)).toInt().coerceIn(0, numColors - 1)
                 val boxColor = colorsWithAlpha[colorIdx]

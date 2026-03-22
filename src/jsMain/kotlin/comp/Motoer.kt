@@ -72,10 +72,10 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
                     height = spectHeight.px
                     width = 100.pct
 
-                    opacity = 0.66
+                    opacity = 0.7
                 }
 
-                Spectrumeter { Player.get() }
+                Spectrumeter(numBoxesInStack = 35) { Player.get() }
             }
 
             div {
