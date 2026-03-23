@@ -1,23 +1,18 @@
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.filters.effects.*
 import io.peekandpoke.klang.audio_be.signalgen.SignalContext
 import io.peekandpoke.klang.audio_be.signalgen.SignalGen
 import io.peekandpoke.klang.audio_be.voices.Voice.*
 
 /**
- * Concrete voice implementation containing the complete audio processing pipeline.
+ * Concrete voice implementation.
  *
- * Rendering order:
- * 1. Pitch Modulation (Vibrato + Accelerate + Pitch Envelope)
- * 2. FM Synthesis (if active, modulates pitch)
- * 3. Signal Generation (via [SignalGen] — oscillator or sample playback)
- * 4. Pre-Filters (Bit Crush, Sample Rate Reduction)
- * 5. Main Subtractive Filter (with envelope modulation)
- * 6. Envelope (ADSR VCA - amplitude control)
- * 7. Post-Filters (Distortion, Phaser, Tremolo)
- * 8. Mixing to Orbit (panning, sends to delay/reverb)
+ * Rendering pipeline: **Pitch → Excite → Filter → Route**
+ *
+ * - **Pitch** stages (vibrato, accelerate, pitch envelope, FM) are still inline (Phase 3 of refactor)
+ * - **Excite** stage delegates to [SignalGen]
+ * - **Filter** stages are a composable [BlockRenderer] pipeline
+ * - **Route** mixes to orbit (panning, sends)
  */
 class VoiceImpl(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -29,7 +24,7 @@ class VoiceImpl(
     override val orbitId: Int,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Synthesis & Pitch
+    // Synthesis & Pitch (TODO: extract to PitchRenderers in Phase 3)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     override val fm: Fm?,
     override val accelerate: Accelerate,
@@ -37,52 +32,41 @@ class VoiceImpl(
     override val pitchEnvelope: PitchEnvelope?,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Dynamics
+    // Dynamics & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     override val gain: Double,
     override val pan: Double,
     override val postGain: Double,
-    override val envelope: Envelope,
     override val compressor: Compressor?,
     override val ducking: Ducking?,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Filters & Modulation
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    override val filter: AudioFilter,
-    override val filterModulators: List<FilterModulator>,
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Time-Based Effects
+    // Time-Based Effects & Orbit Configuration
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     override val delay: Delay,
     override val reverb: Reverb,
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Raw Effect Data
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     override val phaser: Phaser,
-    override val tremolo: Tremolo,
-    override val distort: Distort,
-    override val crush: Crush,
-    override val coarse: Coarse,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Signal Generation
+    // Cut group
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    /** Cut group ID — voices in the same cut group choke each other (typically for samples) */
     override val cut: Int? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Signal Generation
+    // Excite (Signal Generation)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    /** SignalGen tree for waveform generation (oscillator or sample playback) */
     private val signal: SignalGen,
-    /** Per-voice rendering context for the SignalGen tree */
     private val signalCtx: SignalContext,
-    /** Base frequency in Hz (used for FM calculation; ignored by sample-based SignalGens) */
     private val freqHz: Double,
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Filter pipeline (composable BlockRenderer chain)
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    private val filterPipeline: List<BlockRenderer>,
 ) : Voice {
+
+    // BlockContext created once, mutated per block
+    private var blockCtx: BlockContext? = null
 
     // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
     private var _gainMultiplier: Double = 1.0
@@ -92,30 +76,6 @@ class VoiceImpl(
     override fun setGainMultiplier(multiplier: Double) {
         _gainMultiplier = multiplier
     }
-
-    // Initialize effect filters
-    private val fxCrush = if (crush.amount > 0.0) BitCrushFilter(crush.amount) else null
-    private val fxCoarse = if (coarse.amount > 1.0) SampleRateReducerFilter(coarse.amount) else null
-    private val fxDistortion = if (distort.amount > 0.0) {
-        DistortionFilter(distort.amount, distort.shape)
-    } else {
-        null
-    }
-
-    // Lazily initialized filters that need sampleRate
-    private var lazyTremolo: TremoloFilter? = null
-    private var lazyPhaser: PhaserFilter? = null
-
-    // Pre-filters: Destructive effects applied before main filter
-    override val preFilters: List<AudioFilter> = listOfNotNull(
-        fxCrush,
-        fxCoarse
-    )
-
-    // Post-filters: Color/modulation effects applied after envelope
-    override val postFilters: List<AudioFilter> = listOfNotNull(
-        fxDistortion
-    )
 
     override fun render(ctx: RenderContext): Boolean {
         val blockEnd = ctx.blockStart + ctx.blockFrames
@@ -128,12 +88,7 @@ class VoiceImpl(
         val offset = (vStart - ctx.blockStart).toInt()
         val length = (vEnd - vStart).toInt()
 
-        // Apply filter modulation (control rate - once per block)
-        for (mod in filterModulators) {
-            val envValue = calculateFilterEnvelope(mod.envelope, ctx)
-            val newCutoff = mod.baseCutoff * (1.0 + mod.depth * envValue)
-            mod.filter.setCutoff(newCutoff)
-        }
+        // ── Pitch (TODO: extract to BlockRenderer pipeline in Phase 3) ──────────
 
         // 1. Calculate base pitch modulation (Vibrato, Pitch Env, Slide)
         var modBuffer = fillPitchModulation(ctx, offset, length)
@@ -147,7 +102,6 @@ class VoiceImpl(
                 modBuffer = buf
             }
 
-            // Calculate Modulator Parameters
             val modFreq = freqHz * fmInstance.ratio
             val modInc = (io.peekandpoke.klang.audio_be.TWO_PI * modFreq) / ctx.sampleRate
             var modPhase = fmInstance.modPhase
@@ -164,7 +118,8 @@ class VoiceImpl(
             fmInstance.modPhase = modPhase % io.peekandpoke.klang.audio_be.TWO_PI
         }
 
-        // 3. Generate signal
+        // ── Excite ──────────────────────────────────────────────────────────────
+
         signalCtx.offset = offset
         signalCtx.length = length
         signalCtx.voiceElapsedFrames = (ctx.blockStart - startFrame).toInt()
@@ -172,97 +127,38 @@ class VoiceImpl(
 
         signal.generate(ctx.voiceBuffer, freqHz, signalCtx)
 
-        // 4. Pre-Filters (Destructive: Crush, Coarse)
-        for (fx in preFilters) {
-            fx.process(ctx.voiceBuffer, offset, length)
-        }
+        // ── Filter pipeline ─────────────────────────────────────────────────────
 
-        // 5. Main Filter (Subtractive)
-        filter.process(ctx.voiceBuffer, offset, length)
+        if (filterPipeline.isNotEmpty()) {
+            val bCtx = blockCtx ?: BlockContext(
+                audioBuffer = ctx.voiceBuffer,
+                freqModBuffer = ctx.freqModBuffer,
+                scratchBuffers = ctx.scratchBuffers,
+                sampleRate = ctx.sampleRate,
+                startFrame = startFrame,
+                endFrame = endFrame,
+                gateEndFrame = gateEndFrame,
+                freqHz = freqHz,
+                signal = signal,
+                signalCtx = signalCtx,
+                orbits = ctx.orbits,
+            ).also { blockCtx = it }
 
-        // 6. VCA / Envelope (Dynamics)
-        applyEnvelope(ctx, offset, length)
+            // Update per-block mutable state
+            bCtx.audioBuffer = ctx.voiceBuffer
+            bCtx.offset = offset
+            bCtx.length = length
+            bCtx.blockStart = ctx.blockStart
 
-        // 7. Post-Filters (Color & Modulation)
-        for (fx in postFilters) {
-            fx.process(ctx.voiceBuffer, offset, length)
-        }
-
-        // Tremolo (with lazy initialization)
-        if (tremolo.depth > 0.0) {
-            if (lazyTremolo == null) {
-                lazyTremolo = TremoloFilter(tremolo.rate, tremolo.depth, ctx.sampleRate)
+            for (renderer in filterPipeline) {
+                renderer.render(bCtx)
             }
-            lazyTremolo?.process(ctx.voiceBuffer, offset, length)
         }
 
-        // Phaser (with lazy initialization)
-        if (phaser.depth > 0.0) {
-            if (lazyPhaser == null) {
-                lazyPhaser = PhaserFilter(
-                    rate = phaser.rate,
-                    depth = phaser.depth,
-                    center = if (phaser.center > 0) phaser.center else 1000.0,
-                    sweep = if (phaser.sweep > 0) phaser.sweep else 1000.0,
-                    sampleRate = ctx.sampleRate
-                )
-            }
-            lazyPhaser?.process(ctx.voiceBuffer, offset, length)
-        }
+        // ── Route ───────────────────────────────────────────────────────────────
 
-        // 8. Mix to orbit (panning, sends, and summing)
         mixToOrbit(ctx, offset, length)
 
         return true
-    }
-
-    /**
-     * Apply ADSR envelope to the voice buffer.
-     * This is the VCA (Voltage Controlled Amplifier) stage.
-     */
-    private fun applyEnvelope(ctx: RenderContext, offset: Int, length: Int) {
-        val env = envelope
-        val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
-        val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
-        val relRateDen = if (env.releaseFrames > 0) env.releaseFrames else 1.0
-
-        var absPos = (ctx.blockStart + offset) - startFrame
-        val gateEndPos = gateEndFrame - startFrame
-        var currentEnv = env.level
-
-        for (i in 0 until length) {
-            val idx = offset + i
-
-            if (absPos >= gateEndPos) {
-                // Release phase
-                if (!env.releaseStarted) {
-                    env.releaseStartLevel = currentEnv
-                    env.releaseStarted = true
-                }
-                val relPos = absPos - gateEndPos
-                val relRate = env.releaseStartLevel / relRateDen
-                currentEnv = env.releaseStartLevel - (relPos * relRate)
-            } else {
-                // Attack/Decay/Sustain phases
-                env.releaseStarted = false
-                currentEnv = when {
-                    absPos < env.attackFrames -> absPos * attRate
-                    absPos < env.attackFrames + env.decayFrames -> {
-                        val decPos = absPos - env.attackFrames
-                        1.0 - (decPos * decRate)
-                    }
-
-                    else -> env.sustainLevel
-                }
-            }
-
-            if (currentEnv < 0.0) currentEnv = 0.0
-
-            ctx.voiceBuffer[idx] = (ctx.voiceBuffer[idx] * currentEnv).toFloat()
-            absPos++
-        }
-
-        // Update envelope state
-        env.level = currentEnv
     }
 }

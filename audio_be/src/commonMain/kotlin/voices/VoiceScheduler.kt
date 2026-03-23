@@ -7,8 +7,12 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.FormantFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
+import io.peekandpoke.klang.audio_be.filters.effects.*
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.signalgen.*
+import io.peekandpoke.klang.audio_be.voices.filter.AudioFilterRenderer
+import io.peekandpoke.klang.audio_be.voices.filter.EnvelopeRenderer
+import io.peekandpoke.klang.audio_be.voices.filter.FilterModRenderer
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
@@ -962,6 +966,21 @@ class VoiceScheduler(
             scratchBuffers = scratchBuffers,
         )
 
+        // Build filter pipeline: only include active stages
+        val filterPipeline = buildFilterPipeline(
+            modulators = modulators,
+            startFrame = startFrame,
+            gateEndFrame = gateEndFrame,
+            crush = crush,
+            coarse = coarse,
+            bakedFilters = bakedFilters,
+            envelope = envelope,
+            distort = distort,
+            tremolo = tremolo,
+            phaser = phaser,
+            sampleRate = sampleRate,
+        )
+
         return VoiceImpl(
             orbitId = orbit,
             startFrame = startFrame,
@@ -973,23 +992,77 @@ class VoiceScheduler(
             accelerate = accelerate,
             vibrato = vibrato,
             pitchEnvelope = pitchEnvelope,
-            filter = bakedFilters,
-            envelope = envelope,
-            filterModulators = modulators,
             delay = delay,
             reverb = reverb,
             phaser = phaser,
-            tremolo = tremolo,
             ducking = ducking,
             compressor = compressor,
-            distort = distort,
-            crush = crush,
-            coarse = coarse,
             signal = signal,
             signalCtx = signalCtx,
             fm = fm,
             freqHz = freqHz,
             cut = cut,
+            filterPipeline = filterPipeline,
         )
+    }
+
+    private fun buildFilterPipeline(
+        modulators: List<Voice.FilterModulator>,
+        startFrame: Long,
+        gateEndFrame: Long,
+        crush: Voice.Crush,
+        coarse: Voice.Coarse,
+        bakedFilters: AudioFilter,
+        envelope: Voice.Envelope,
+        distort: Voice.Distort,
+        tremolo: Voice.Tremolo,
+        phaser: Voice.Phaser,
+        sampleRate: Int,
+    ): List<BlockRenderer> {
+        return buildList {
+            // Filter modulation (control rate — updates cutoffs before filter runs)
+            if (modulators.isNotEmpty()) {
+                add(FilterModRenderer(modulators, startFrame, gateEndFrame))
+            }
+
+            // Pre-filters (destructive: crush, coarse)
+            val preFilters = buildList<AudioFilter> {
+                if (crush.amount > 0.0) add(BitCrushFilter(crush.amount))
+                if (coarse.amount > 1.0) add(SampleRateReducerFilter(coarse.amount))
+            }
+            AudioFilterRenderer.ofNullable(preFilters)?.let { add(it) }
+
+            // Main filter (subtractive)
+            add(AudioFilterRenderer.of(bakedFilters))
+
+            // Amplitude envelope (ADSR VCA)
+            add(EnvelopeRenderer(envelope, startFrame, gateEndFrame))
+
+            // Post-filters (distortion)
+            val postFilters = buildList<AudioFilter> {
+                if (distort.amount > 0.0) add(DistortionFilter(distort.amount, distort.shape))
+            }
+            AudioFilterRenderer.ofNullable(postFilters)?.let { add(it) }
+
+            // Tremolo
+            if (tremolo.depth > 0.0) {
+                add(AudioFilterRenderer.of(TremoloFilter(tremolo.rate, tremolo.depth, sampleRate)))
+            }
+
+            // Phaser
+            if (phaser.depth > 0.0) {
+                add(
+                    AudioFilterRenderer.of(
+                        PhaserFilter(
+                            rate = phaser.rate,
+                            depth = phaser.depth,
+                            center = if (phaser.center > 0) phaser.center else 1000.0,
+                            sweep = if (phaser.sweep > 0) phaser.sweep else 1000.0,
+                            sampleRate = sampleRate,
+                        )
+                    )
+                )
+            }
+        }
     }
 }

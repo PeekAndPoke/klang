@@ -21,8 +21,8 @@ class BlockContext(
     // Shared buffers
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /** Main audio signal buffer (Excite writes, Filter reads/writes) */
-    val audioBuffer: FloatArray,
+    /** Main audio signal buffer (Excite writes, Filter reads/writes). Updated per block. */
+    var audioBuffer: FloatArray,
     /** Pitch modulation multipliers (Pitch writes, Excite reads via SignalContext.phaseMod) */
     val freqModBuffer: DoubleArray,
     /** Shared scratch buffer pool for SignalGen composition operators */
