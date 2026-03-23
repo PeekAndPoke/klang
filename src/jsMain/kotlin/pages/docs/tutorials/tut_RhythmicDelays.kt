@@ -36,19 +36,19 @@ val rhythmicDelaysTutorial = Tutorial(
             heading = "Delay as a Rhythm Generator",
             text = "Here is the real trick: use a very sparse pattern with high feedback. The delay creates the rhythm for you. One hit per cycle becomes a complex repeating figure. Change the delaytime to reshape the entire groove without touching the pattern.",
             code = """stack(
-  sound("rim ~ ~ ~").delay(1).delaytime(0.166).delayfeedback(0.7).gain(0.5),
-  sound("bd ~ bd ~")
+  sound("rim ~ ~ ~").delay(1).delaytime(0.166).delayfeedback(0.7).gain(0.5).orbit(0),
+  sound("bd ~ bd ~").orbit(1)
 )""",
         ),
         TutorialSection(
             heading = "Putting It All Together",
-            text = "Here is a full track built around delay as a creative force. The melody uses dotted delay for cascading echoes. The percussion uses short delay to generate rhythmic fills. The bass stays dry for clarity. Each layer uses delay differently — that is creative delay design.",
+            text = "Here is a full track built around delay as a creative force. The melody uses dotted delay for cascading echoes. The percussion uses short delay to generate rhythmic fills. The bass stays dry for clarity. Each layer with different delay settings uses its own orbit.",
             code = """stack(
-  n("0 ~ 4 ~ 7 ~ 4 ~").scale("C3:minor").sound("saw").lpf(800).adsr("0.01:0.1:0.5:0.2").delay(1).delaytime(0.33).delayfeedback(0.4).gain(0.25),
-  sound("rim ~ ~ ~").delay(1).delaytime(0.166).delayfeedback(0.6).pan(0.5).gain(0.4),
-  n("0 ~ 0 ~").scale("C2:minor").sound("square").lpf(300).adsr("0.01:0.2:0.8:0.1").gain(0.4),
-  sound("bd ~ bd sd"),
-  sound("hh hh hh hh").gain(0.4)
+  n("0 ~ 4 ~ 7 ~ 4 ~").scale("C3:minor").sound("saw").lpf(800).adsr("0.01:0.1:0.5:0.2").delay(1).delaytime(0.33).delayfeedback(0.4).gain(0.25).orbit(0),
+  sound("rim ~ ~ ~").delay(1).delaytime(0.166).delayfeedback(0.6).pan(0.5).gain(0.4).orbit(1),
+  n("0 ~ 0 ~").scale("C2:minor").sound("square").lpf(300).adsr("0.01:0.2:0.8:0.1").gain(0.4).orbit(2),
+  sound("bd ~ bd sd").orbit(3),
+  sound("hh hh hh hh").gain(0.4).orbit(3)
 )""",
         ),
     ),

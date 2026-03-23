@@ -49,6 +49,14 @@ fun Tag.PlayableCodeExample(
 
 class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props>(ctx) {
 
+    companion object {
+        private val instances = mutableSetOf<PlayableCodeExample>()
+
+        private fun stopAllExcept(current: PlayableCodeExample) {
+            instances.forEach { if (it !== current) it.stopPlayback() }
+        }
+    }
+
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     data class Props(
@@ -101,9 +109,11 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     init {
         lifecycle {
             onMount {
+                instances.add(this@PlayableCodeExample)
                 editorRef { editor -> editor.editorView?.let { highlightBuffer.attachTo(it) } }
             }
             onUnmount {
+                instances.remove(this@PlayableCodeExample)
                 stopPlayback()
                 highlightBuffer.detach()
             }
@@ -117,6 +127,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     }
 
     private fun play() {
+        stopAllExcept(this)
         highlightBuffer.cancelAll()
 
         launch {
@@ -305,6 +316,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                     editorRef { it.setErrors(emptyList()) }
                 },
                 availableLibraries = listOf(stdlibLib, sprudelLib),
+                autoImportedLibraries = listOf(stdlibLib, sprudelLib),
                 hoverPopup = hoverPopup,
                 hoverContent = hoverContent,
                 popups = popups,

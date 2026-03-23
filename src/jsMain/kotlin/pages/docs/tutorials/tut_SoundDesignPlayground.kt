@@ -41,11 +41,11 @@ val soundDesignPlaygroundTutorial = Tutorial(
             heading = "Putting It All Together",
             text = "Here is a full track using everything you learned. The lead melody has vibrato for expression. The pad uses phaser and tremolo for evolving texture. The bass gets subtle distortion for warmth. The drums are crushed for lo-fi grit. Each layer has its own sonic character — that is sound design.",
             code = """stack(
-  n("0 2 4 7 6 4 2 0").scale("C4:minor").sound("saw").vibrato(4).lpf(1000).adsr("0.01:0.1:0.6:0.2").gain(0.3),
-  n("<0 3 5 3>").scale("C3:minor").sound("supersaw").lpf(500).phaser(2).tremolo(3).adsr("0.3:0.3:0.7:0.5").room(0.2).rsize(4.0).gain(0.2),
-  n("0 ~ 0 ~").scale("C2:minor").sound("saw").distort(0.3).lpf(400).adsr("0.01:0.2:0.8:0.1").gain(0.4),
-  sound("bd sd bd sd").crush(8).gain(0.7),
-  sound("hh hh oh hh").crush(6).gain(0.4)
+  n("0 2 4 7 6 4 2 0").scale("C4:minor").sound("saw").vibrato(4).lpf(1000).adsr("0.01:0.1:0.6:0.2").gain(0.3).orbit(0),
+  n("<0 3 5 3>").scale("C3:minor").sound("supersaw").lpf(500).phaser(2).tremolo(3).adsr("0.3:0.3:0.7:0.5").room(0.2).rsize(4.0).gain(0.2).orbit(1),
+  n("0 ~ 0 ~").scale("C2:minor").sound("saw").distort(0.3).lpf(400).adsr("0.01:0.2:0.8:0.1").gain(0.4).orbit(2),
+  sound("bd sd bd sd").crush(8).gain(0.7).orbit(3),
+  sound("hh hh oh hh").crush(6).gain(0.4).orbit(3)
 )""",
         ),
     ),

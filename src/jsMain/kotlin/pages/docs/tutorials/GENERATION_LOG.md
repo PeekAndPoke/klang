@@ -15,3 +15,7 @@
 | polyrhythmic-kitchen    | Polyrhythmic Kitchen      | Pro          | Standard | polyrhythm, subdivision, groove, advanced-rhythm |
 | left-right-center       | Left, Right, Center       | Intermediate | Quick    | panning, stereo, spatial                         |
 | rhythmic-delays         | Rhythmic Delays           | Intermediate | DeepDive | delay, rhythm, creative-effects, echo            |
+| waveform-explorer       | Waveform Explorer         | Beginner     | Standard | waveforms, synthesis, sound-palette              |
+| mini-notation-mastery   | Mini-Notation Mastery     | Pro          | Quick    | mini-notation, patterns, syntax                  |
+| your-first-track        | Your First Complete Track | Beginner     | DeepDive | capstone, full-track, beginner-project           |
+| lo-fi-beats             | Lo-Fi Beats to Code To    | Advanced     | Standard | lo-fi, genre, chill, beat-making                 |

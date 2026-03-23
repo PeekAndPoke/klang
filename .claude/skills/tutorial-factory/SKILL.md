@@ -51,6 +51,9 @@ From the Six Hats output, select the tutorial idea that:
 2. Has the strongest "wow moment" potential (Blue Hat input)
 3. Is technically feasible with current functions (Black Hat validation)
 4. Has genuine creative appeal (Red Hat + Green Hat input)
+5. **SERIES THINKING**: For complex topics (mini-notation, chords, effects, arrangement), prefer creating a tutorial
+   that fills a missing difficulty level in an existing topic series. E.g., if there's already a Pro mini-notation
+   tutorial, consider a Beginner or Intermediate one on the same topic. Don't cram everything into one tutorial.
 
 ## Step 4: Implement the Tutorial
 
@@ -109,6 +112,16 @@ val <camelCaseSlug> Tutorial = Tutorial(
 11. Available samples for .sound(): "bd", "hh", "sd", "cp", "oh", "ch", "rim"
 12. Gain values typically 0.0 to 1.0
 13. Available scales: "major", "minor", "dorian", "mixolydian", "pentatonic", "blues", "chromatic"
+14. **CHORDS**: `chord()` alone does NOT produce sound. Correct usage:
+    `chord("<Am C F G>").voicing().sound("supersaw")`. The chord() takes chord name strings, voicing() turns them into
+    notes.
+15. **ORBITS**: Effects like delay and reverb are PER-ORBIT. When stacking patterns with different delay/reverb
+    settings, EACH layer needs its own `.orbit(N)`. Layers sharing the same effects (or no effects) can share an orbit.
+    Dry drums should be on a different orbit than wet synths.
+16. Do NOT use the old pattern `n().scale().chord("minor")` — that syntax is wrong. Use `chord("<ChordName>").voicing()`
+    instead.
+17. **PAN RANGE**: `pan(0.0)` = hard LEFT, `pan(0.5)` = CENTER, `pan(1.0)` = hard RIGHT. The range is 0.0 to 1.0, NOT -1
+    to +1.
 
 ### Difficulty Guidelines
 

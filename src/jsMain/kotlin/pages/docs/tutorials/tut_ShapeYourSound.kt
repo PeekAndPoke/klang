@@ -34,12 +34,12 @@ val shapeYourSoundTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Putting It All Together",
-            text = "Here is a full track using everything you learned. The melody is filtered and shaped with adsr, sitting in a reverb space. The bass gets its own envelope. The drums stay dry. Notice how effects give each layer its own character.",
+            text = "Here is a full track using everything you learned. The melody is filtered and shaped with adsr, sitting in a reverb space. The bass gets its own envelope. The drums stay dry on a separate orbit so the reverb does not bleed into them.",
             code = """stack(
-  n("0 2 4 7 6 4 2 0").scale("C3:minor").sound("saw").lpf(600).adsr("0.3:0.2:0.6:0.5").room(0.2).rsize(4.0).gain(0.3),
-  n("0 ~ 0 ~").scale("C2:minor").sound("square").lpf(400).adsr("0.01:0.3:0.8:0.1").gain(0.4),
-  sound("bd sd bd sd"),
-  sound("hh hh oh hh").gain(0.5)
+  n("0 2 4 7 6 4 2 0").scale("C3:minor").sound("saw").lpf(600).adsr("0.3:0.2:0.6:0.5").room(0.2).rsize(4.0).gain(0.3).orbit(0),
+  n("0 ~ 0 ~").scale("C2:minor").sound("square").lpf(400).adsr("0.01:0.3:0.8:0.1").gain(0.4).orbit(1),
+  sound("bd sd bd sd").orbit(2),
+  sound("hh hh oh hh").gain(0.5).orbit(2)
 )""",
         ),
     ),

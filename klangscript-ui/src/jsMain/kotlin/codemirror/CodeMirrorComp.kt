@@ -28,6 +28,7 @@ fun Tag.KlangScriptEditorComp(
     code: String,
     onCodeChanged: OnChange<String>,
     availableLibraries: List<KlangScriptLibrary> = emptyList(),
+    autoImportedLibraries: List<KlangScriptLibrary> = emptyList(),
     hoverPopup: HoverPopupCtrl? = null,
     hoverContent: (FlowContent.(KlangSymbol) -> Unit)? = null,
     popups: PopupsManager? = null,
@@ -38,6 +39,7 @@ fun Tag.KlangScriptEditorComp(
         code = code,
         onCodeChanged = onCodeChanged,
         availableLibraries = availableLibraries,
+        autoImportedLibraries = autoImportedLibraries,
         hoverPopup = hoverPopup,
         hoverContent = hoverContent,
         popups = popups,
@@ -56,6 +58,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
         val code: String,
         val onCodeChanged: OnChange<String>,
         val availableLibraries: List<KlangScriptLibrary> = emptyList(),
+        val autoImportedLibraries: List<KlangScriptLibrary> = emptyList(),
         val hoverPopup: HoverPopupCtrl? = null,
         val hoverContent: (FlowContent.(KlangSymbol) -> Unit)? = null,
         val popups: PopupsManager? = null,
@@ -76,6 +79,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
     /** Import-aware documentation context — owns hover docs + completion data. */
     private val docContext = EditorDocContext(
         availableLibraries = props.availableLibraries,
+        autoImportedLibraries = props.autoImportedLibraries,
     ).also { it.processCodeImmediate(props.code) }
 
     init {

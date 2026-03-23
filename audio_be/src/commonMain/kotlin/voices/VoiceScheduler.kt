@@ -746,7 +746,7 @@ class VoiceScheduler(
         // Decision
         val freqHz = data.freqHz
         val sound = data.sound
-        val isOsci = data.isOscillator() && freqHz != null
+        val isOsci = data.isOscillator() && (freqHz != null || !options.exciterRegistry.needsFreq(sound))
         val isSample = data.isSampleSound() && sound != null
 
         return when {
@@ -758,7 +758,7 @@ class VoiceScheduler(
 
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
 
-                val signal = options.exciterRegistry.createExciter(sound, data, freqHz)
+                val signal = options.exciterRegistry.createExciter(sound, data, freqHz ?: 0.0)
                     ?: return null
 
                 buildVoice(
@@ -786,7 +786,7 @@ class VoiceScheduler(
                     coarse = coarse,
                     fm = fm,
                     signal = signal,
-                    freqHz = freqHz,
+                    freqHz = freqHz ?: 0.0,
                 )
             }
 

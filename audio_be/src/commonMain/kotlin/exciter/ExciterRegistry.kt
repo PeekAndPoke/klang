@@ -28,6 +28,11 @@ class ExciterRegistry {
         return defs.containsKey(key)
     }
 
+    fun needsFreq(name: String?): Boolean {
+        val key = (name ?: DEFAULT_SOUND).lowercase()
+        return defs[key]?.needsFreq ?: true
+    }
+
     fun names(): Set<String> = defs.keys.toSet()
 
     /**

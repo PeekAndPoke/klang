@@ -14,4 +14,8 @@ val allTutorials: List<Tutorial> = listOf(
     polyrhythmicKitchenTutorial,
     leftRightCenterTutorial,
     rhythmicDelaysTutorial,
+    waveformExplorerTutorial,
+    miniNotationMasteryTutorial,
+    yourFirstTrackTutorial,
+    loFiBeatsTutorial,
 )

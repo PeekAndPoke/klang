@@ -13,10 +13,7 @@ import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
-import kotlinx.html.FlowContent
-import kotlinx.html.Tag
-import kotlinx.html.div
-import kotlinx.html.p
+import kotlinx.html.*
 
 @Suppress("FunctionName")
 fun Tag.TutorialPage() = comp {
@@ -81,20 +78,19 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
             ui.segment {
                 css { position = Position.relative }
 
+                ui.large.header { +tutorial.title }
+
                 if (completedState) {
                     span {
                         css {
                             position = Position.absolute
-                            top = 8.px
-                            right = 8.px
+                            top = 12.px
+                            right = 12.px
                             color = Color(laf.good)
-                            fontSize = 1.4.rem
                         }
                         icon.large.check_circle()
                     }
                 }
-
-                ui.large.header { +tutorial.title }
                 difficultyLabel(laf, tutorial.difficulty)
                 scopeLabel(laf, tutorial.scope)
                 tutorial.tags.forEach { tag ->

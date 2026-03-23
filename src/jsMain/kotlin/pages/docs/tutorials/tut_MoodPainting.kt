@@ -31,9 +31,9 @@ val moodPaintingTutorial = Tutorial(
     n("0 2 4 7 5 4 2 0").scale("C3:dorian").sound("saw").lpf(700).gain(0.3),
     n("0 2 4 7 5 4 2 0").scale("C3:blues").sound("saw").lpf(500).gain(0.3),
     n("0 2 4 7 5 4 2 0").scale("C3:pentatonic").sound("saw").lpf(800).gain(0.3)
-  ).adsr("0.05:0.2:0.6:0.3").room(0.15).rsize(3.0),
-  sound("bd hh sd hh"),
-  sound("hh hh oh hh").gain(0.4)
+  ).adsr("0.05:0.2:0.6:0.3").room(0.15).rsize(3.0).orbit(0),
+  sound("bd hh sd hh").orbit(1),
+  sound("hh hh oh hh").gain(0.4).orbit(1)
 )""",
         ),
     ),
