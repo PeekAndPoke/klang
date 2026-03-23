@@ -53,6 +53,7 @@ fun SignalGenRegistry.registerDefaults() {
     val superSquare = SignalGenDsl.SuperSquare()
     register("supersquare", superSquare)
     register("supersqr", superSquare)
+    register("superpulse", superSquare)
 
     val superTri = SignalGenDsl.SuperTri()
     register("supertri", superTri)

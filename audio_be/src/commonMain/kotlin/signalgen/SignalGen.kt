@@ -7,12 +7,13 @@ import kotlin.math.pow
  *
  * A SignalGen is a composable unit that writes audio samples into a buffer.
  * Each instance is per-voice and owns its own mutable state (phase, filter memory, etc.).
- *
- * @param buffer where to write output samples
- * @param freqHz base frequency in Hz (used by oscillators; effects may ignore it)
- * @param ctx per-voice rendering context (timing, block params, scratch buffers)
  */
 fun interface SignalGen {
+    /**
+     * @param buffer where to write output samples
+     * @param freqHz base frequency in Hz (used by oscillators; effects may ignore it)
+     * @param ctx per-voice rendering context (timing, block params, scratch buffers)
+     */
     fun generate(buffer: FloatArray, freqHz: Double, ctx: SignalContext)
 }
 
