@@ -29,4 +29,13 @@ val allTutorials: List<Tutorial> = listOf(
     technoInFourLinesTutorial,
     arrangingATrackTutorial,
     pickAndChooseTutorial,
+    filterPlaygroundTutorial,
+    speedUpSlowDownTutorial,
+    noiseAsInstrumentTutorial,
+    cinematicSoundscapesTutorial,
+    generativeMachineTutorial,
+    volumeAndDynamicsTutorial,
+    drumKitBuilderTutorial,
+    bassDesignTutorial,
+    oneLineWondersTutorial,
 )

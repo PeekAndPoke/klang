@@ -35,7 +35,7 @@ fun Tag.Oscilloscope(
     centerLineColor: Color? = Color.white.withAlpha(0.07),
     centerLineWidth: Double = 1.0,
     pixelSkip: Int = 3,
-    expandedFrameCount: Int = 5,
+    expandedFrameCount: Int = 4,
 ) = comp(
     Oscilloscope.Props(
         player = player,

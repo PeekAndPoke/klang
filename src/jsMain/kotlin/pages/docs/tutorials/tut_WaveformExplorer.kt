@@ -41,7 +41,7 @@ val waveformExplorerTutorial = Tutorial(
             heading = "Putting It All Together",
             text = "Here is a track that uses each waveform for what it does best: sine for the sub bass, saw for the lead melody, square for a retro arpeggio, and supersaw for the big chord pad. Each waveform has a role — choosing the right one is sound design.",
             code = """stack(
-  n("<0 3 -2 <3 [3 3 2 1]>>").scale("A1:minor").sound("sine").gain(0.7),
+  n("<0 3 -2 <3 [3 3 2 1]>>").scale("A1:minor").sound("sine").gain(0.7).hpf(50),
   n("0 2 4 7 6 4 2 0").scale("A4:minor")
     .sound("saw").lpf(1000).gain(0.2).warmth(0.3),
   n("0 4 7 4").scale("A4:minor")

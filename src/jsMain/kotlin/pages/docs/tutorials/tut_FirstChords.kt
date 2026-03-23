@@ -50,7 +50,7 @@ val firstChordsTutorial = Tutorial(
     .adsr("0.2:0.3:0.7:0.5"),
   sound("bd ~ bd ~").orbit(1),
   sound("~ sd ~ sd").orbit(1),
-  sound("hh hh hh hh").gain(0.5).orbit(1)
+  sound("hh hh hh hh").fast(2).gain(0.5).orbit(1)
 ) // A generous splash of reverb for warmth
   .room(0.2).rsize(5.0)
   .gain(0.2).orbit(0)
