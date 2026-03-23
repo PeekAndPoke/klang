@@ -334,9 +334,10 @@ object Exciters {
     }
 
     /** Impulse: outputs [gain] once per cycle (at phase wrap), 0.0 otherwise. */
-    fun impulse(gain: Double = 1.0): Exciter {
+    fun impulse(gain: Double = 1.0, analog: Double = 0.0): Exciter {
         var phase = 0.0
         var lastPhase = Double.POSITIVE_INFINITY
+        val drift = AnalogDrift(analog)
 
         return Exciter { buffer, freqHz, ctx ->
             val phaseInc = TWO_PI * freqHz / ctx.sampleRateD
@@ -344,19 +345,39 @@ object Exciters {
             val end = ctx.offset + ctx.length
             val gainF = gain.toFloat()
 
-            if (phaseMod == null) {
-                for (i in ctx.offset until end) {
-                    buffer[i] = if (phase < lastPhase) gainF else 0.0f
-                    lastPhase = phase
-                    phase += phaseInc
-                    phase = wrapPhase(phase, TWO_PI)
+            if (drift.active) {
+                // Analog drift path: humanized timing irregularity
+                if (phaseMod == null) {
+                    for (i in ctx.offset until end) {
+                        buffer[i] = if (phase < lastPhase) gainF else 0.0f
+                        lastPhase = phase
+                        phase += phaseInc * drift.nextMultiplier()
+                        phase = wrapPhase(phase, TWO_PI)
+                    }
+                } else {
+                    for (i in ctx.offset until end) {
+                        buffer[i] = if (phase < lastPhase) gainF else 0.0f
+                        lastPhase = phase
+                        phase += phaseInc * phaseMod[i] * drift.nextMultiplier()
+                        phase = wrapPhase(phase, TWO_PI)
+                    }
                 }
             } else {
-                for (i in ctx.offset until end) {
-                    buffer[i] = if (phase < lastPhase) gainF else 0.0f
-                    lastPhase = phase
-                    phase += phaseInc * phaseMod[i]
-                    phase = wrapPhase(phase, TWO_PI)
+                // Clean digital path (unchanged)
+                if (phaseMod == null) {
+                    for (i in ctx.offset until end) {
+                        buffer[i] = if (phase < lastPhase) gainF else 0.0f
+                        lastPhase = phase
+                        phase += phaseInc
+                        phase = wrapPhase(phase, TWO_PI)
+                    }
+                } else {
+                    for (i in ctx.offset until end) {
+                        buffer[i] = if (phase < lastPhase) gainF else 0.0f
+                        lastPhase = phase
+                        phase += phaseInc * phaseMod[i]
+                        phase = wrapPhase(phase, TWO_PI)
+                    }
                 }
             }
         }

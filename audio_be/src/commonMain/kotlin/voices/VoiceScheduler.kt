@@ -888,6 +888,7 @@ class VoiceScheduler(
                     loopEnd = loopEnd,
                     isLooping = isLooping,
                     stopFrame = endSample,
+                    analog = data.oscParams?.get("analog") ?: 0.0,
                 )
 
                 buildVoice(

@@ -27,7 +27,7 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
         is ExciterDsl.Pulze -> Exciters.pulze(duty, gain, analog)
 
         is ExciterDsl.WhiteNoise -> Exciters.whiteNoise(Random, gain)
-        is ExciterDsl.Impulse -> Exciters.impulse(gain)
+        is ExciterDsl.Impulse -> Exciters.impulse(gain, analog)
         is ExciterDsl.BrownNoise -> Exciters.brownNoise(Random, gain)
         is ExciterDsl.PinkNoise -> Exciters.pinkNoise(Random, gain)
 
