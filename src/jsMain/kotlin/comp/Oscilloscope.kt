@@ -371,12 +371,12 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
         // Stroke shadow behind for contrast
         ctx.strokeStyle = "#10101040"
-        ctx.lineWidth = strokeWidth + 6.0
+        ctx.lineWidth = strokeWidth + 5.0
         ctx.stroke()
 
         // Gold highlight
-        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.33).toString()
-        ctx.lineWidth = strokeWidth + 3.0
+        ctx.strokeStyle = KlangTheme.gold.withAlpha(0.25).toString()
+        ctx.lineWidth = strokeWidth + 3
         ctx.stroke()
 
         // Stroke foreground waveform

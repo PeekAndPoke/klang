@@ -94,21 +94,43 @@ for (renderer in pipeline) {
 mixToOrbit(ctx, offset, length)
 ```
 
+## Completed
+
+### Strip Pipeline — DONE
+
+All per-voice processing is composable `BlockRenderer` stages:
+
+```
+Pitch (vibrato, accelerate, pitchEnv, FM) → Excite (oscillator/sample) → Filter (mod, pre, main, envelope, post, tremolo, phaser) → Route (mixToOrbit)
+```
+
+### Rename & Package Reorg — DONE
+
+- `SignalGen` → `Exciter` across all modules (32+ files)
+- Package: `audio_be.signalgen` → `audio_be.exciter`
+- Strip files organized under `voices/strip/`, `voices/strip/pitch/`, `voices/strip/excite/`, `voices/strip/filter/`
+
 ## Remaining Work
 
-### Phase 6: Rename Exciter → Exciter (deferred, separate PR)
+### Cleanup (minor)
 
-Mechanical rename across all modules. No logic changes.
+- Remove `gateEndFrame` from Voice interface (no longer read externally)
+- Update `Voice.render()` KDoc (still describes old 6-stage inline pipeline)
+- Consider extracting `mixToOrbit()` into a `SendRenderer` BlockRenderer
 
-### Future: Package reorganization
+### Bus Pipeline (NOT STARTED)
 
-When renaming, also reorganize into clean packages:
+The **Strip** (per-voice) pipeline is complete. The **Bus** (per-orbit) pipeline is the next major refactor:
 
-- `voices/strip/` — VoiceImpl (→ Strip), BlockRenderer, BlockContext
-- `voices/strip/pitch/` — pitch renderers
-- `voices/strip/excite/` — ExciteRenderer
-- `voices/strip/filter/` — filter renderers
-- `orbits/` — orbit/bus pipeline (already exists)
+```
+[Strip: Pitch → Excite → Filter] → Send → [Bus: Delay → Reverb → Phaser → Compressor → Ducking] → [Master: Limiter]
+```
+
+Current state: Orbit processing in `Orbit.kt` / `KlangAudioRenderer.kt` is monolithic.
+Goal: Same `BlockRenderer` pattern — composable bus effect chain.
+
+Note: Voice interface currently carries orbit config (delay.time, reverb.roomSize, phaser.*, compressor.*,
+ducking.*) that should move to Bus-level configuration when the Bus pipeline is refactored.
 
 ## Code Review Fixes Applied
 
