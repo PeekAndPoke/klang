@@ -80,6 +80,27 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
 
         is ExciterDsl.Silence -> Exciters.silence()
 
+        // Physical models
+        is ExciterDsl.Pluck -> Exciters.karplusStrong(
+            decay = oscParams?.get("decay") ?: decay,
+            brightness = oscParams?.get("brightness") ?: brightness,
+            pickPosition = oscParams?.get("pickPosition") ?: pickPosition,
+            stiffness = oscParams?.get("stiffness") ?: stiffness,
+            gain = gain,
+            analog = analog,
+        )
+
+        is ExciterDsl.SuperPluck -> Exciters.superKarplusStrong(
+            voices = oscParams?.get("voices")?.toInt() ?: voices,
+            freqSpread = oscParams?.get("freqSpread") ?: freqSpread,
+            decay = oscParams?.get("decay") ?: decay,
+            brightness = oscParams?.get("brightness") ?: brightness,
+            pickPosition = oscParams?.get("pickPosition") ?: pickPosition,
+            stiffness = oscParams?.get("stiffness") ?: stiffness,
+            gain = gain,
+            analog = analog,
+        )
+
         // Arithmetic — compositions do NOT pass oscParams through
         is ExciterDsl.Plus -> left.toExciter() + right.toExciter()
         is ExciterDsl.Times -> left.toExciter() * right.toExciter()

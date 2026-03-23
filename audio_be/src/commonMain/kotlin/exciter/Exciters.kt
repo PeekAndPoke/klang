@@ -1018,6 +1018,243 @@ object Exciters {
         }
     }
 
+    /**
+     * Karplus-Strong plucked string synthesis.
+     *
+     * A short noise burst excites a delay line with filtered feedback, producing
+     * realistic plucked string sounds. Extended KS adds pick position modeling
+     * and allpass stiffness filtering.
+     *
+     * @param decay Feedback amount (0.9–0.999). Higher = longer ring.
+     * @param brightness Lowpass cutoff in feedback (0.0 = dark, 1.0 = bright).
+     * @param pickPosition Where the pluck occurs (0.0–1.0). Affects harmonic content.
+     * @param stiffness Higher harmonics decay faster (0.0 = nylon, 1.0 = piano wire). Bypassed when 0.
+     * @param gain Output gain.
+     * @param analog Perlin noise pitch drift amount.
+     */
+    fun karplusStrong(
+        decay: Double = 0.996,
+        brightness: Double = 0.5,
+        pickPosition: Double = 0.5,
+        stiffness: Double = 0.0,
+        gain: Double = 0.7,
+        analog: Double = 0.0,
+    ): Exciter {
+        // Max delay line: supports down to ~20 Hz at 48kHz (2400 samples)
+        val maxDelay = 2500
+        val delayLine = FloatArray(maxDelay)
+        var writePos = 0
+        var excited = false
+        val drift = AnalogDrift(analog)
+
+        // One-pole lowpass state for brightness filtering
+        var lpState = 0.0
+
+        // Allpass state for stiffness
+        var apPrevIn = 0.0
+        var apPrevOut = 0.0
+        val hasStiffness = stiffness > 0.0
+        // Allpass coefficient: 0.0 = no effect, approaching 1.0 = maximum stiffness
+        val apCoeff = stiffness.coerceIn(0.0, 0.99) * 0.5
+
+        // Brightness → lowpass alpha: 0.0 = fully filtered (dark), 1.0 = no filtering (bright)
+        // Classic KS uses (y[n] + y[n-1]) / 2, which is alpha = 0.5.
+        // We map brightness to alpha: low brightness = heavy filtering, high = light filtering.
+        val lpAlpha = brightness.coerceIn(0.01, 1.0)
+
+        val rng = kotlin.random.Random
+
+        return Exciter { buffer, freqHz, ctx ->
+            val sr = ctx.sampleRateD
+            val phaseMod = ctx.phaseMod
+            val end = ctx.offset + ctx.length
+
+            // Delay length in fractional samples (determines pitch)
+            val baseDelay = (sr / freqHz).coerceIn(2.0, (maxDelay - 1).toDouble())
+
+            // Excite on first call: fill delay line with noise
+            if (!excited) {
+                excited = true
+                val delayLen = baseDelay.toInt()
+
+                // Pick position affects which part of the buffer gets excited
+                // pickPosition 0.0 = narrow burst at start (bridge-like, thin)
+                // pickPosition 0.5 = full buffer (middle, rich harmonics)
+                // pickPosition 1.0 = narrow burst at end (neck-like, warm)
+                val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pickPosition.coerceIn(0.0, 1.0))).toInt())
+                val burstStart = ((delayLen - burstLen) * pickPosition.coerceIn(0.0, 1.0)).toInt()
+
+                for (j in 0 until delayLen) {
+                    delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
+                        (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                    } else {
+                        0.0f
+                    }
+                }
+                writePos = delayLen % maxDelay
+            }
+
+            for (i in ctx.offset until end) {
+                // Calculate effective delay (with pitch modulation and analog drift)
+                var dl = baseDelay
+                if (phaseMod != null) dl /= phaseMod[i]
+                if (drift.active) dl /= drift.nextMultiplier()
+                dl = dl.coerceIn(2.0, (maxDelay - 1).toDouble())
+
+                // Read with linear interpolation
+                val readPosF = writePos - dl
+                val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
+                val readIdx = readPosWrapped.toInt() % maxDelay
+                val frac = readPosWrapped - readPosWrapped.toInt()
+                val nextIdx = (readIdx + 1) % maxDelay
+                val sample = delayLine[readIdx] + (delayLine[nextIdx] - delayLine[readIdx]) * frac.toFloat()
+
+                // One-pole lowpass (brightness)
+                lpState = lpState + lpAlpha * (sample.toDouble() - lpState)
+                var filtered = lpState
+
+                // Allpass stiffness filter (bypassed when stiffness = 0)
+                if (hasStiffness) {
+                    val apOut = apCoeff * (filtered - apPrevOut) + apPrevIn
+                    apPrevIn = filtered
+                    apPrevOut = apOut
+                    filtered = apOut
+                }
+
+                // Write back with decay
+                delayLine[writePos] = (filtered * decay).toFloat()
+
+                // Output
+                buffer[i] = (sample * gain).toFloat()
+
+                // Advance write position
+                writePos = (writePos + 1) % maxDelay
+            }
+        }
+    }
+
+    /**
+     * Super Karplus-Strong: multiple detuned plucked strings summed together.
+     *
+     * Like a 12-string guitar or a chorus of harps — each string has independent
+     * noise excitation and analog drift, creating rich evolving shimmer that
+     * naturally narrows as harmonics decay.
+     *
+     * @param voices Number of strings (1–16).
+     * @param freqSpread Detune spread in semitones.
+     * @param decay Feedback amount (0.9–0.999).
+     * @param brightness Lowpass cutoff in feedback (0.0–1.0).
+     * @param pickPosition Pluck position (0.0–1.0).
+     * @param stiffness Allpass stiffness (0.0–1.0).
+     * @param gain Output gain.
+     * @param analog Perlin noise pitch drift amount.
+     */
+    fun superKarplusStrong(
+        voices: Int = 5,
+        freqSpread: Double = 0.2,
+        decay: Double = 0.996,
+        brightness: Double = 0.5,
+        pickPosition: Double = 0.5,
+        stiffness: Double = 0.0,
+        gain: Double = 0.7,
+        analog: Double = 0.0,
+    ): Exciter {
+        val v = voices.coerceIn(1, 16)
+        val voiceGain = gain / v.toDouble()
+        val maxDelay = 2500
+
+        // Per-voice state
+        data class StringState(
+            val delayLine: FloatArray = FloatArray(maxDelay),
+            var writePos: Int = 0,
+            var excited: Boolean = false,
+            var lpState: Double = 0.0,
+            var apPrevIn: Double = 0.0,
+            var apPrevOut: Double = 0.0,
+            val drift: AnalogDrift = AnalogDrift(analog),
+        )
+
+        val strings = Array(v) { StringState() }
+        val hasStiffness = stiffness > 0.0
+        val apCoeff = stiffness.coerceIn(0.0, 0.99) * 0.5
+        val lpAlpha = brightness.coerceIn(0.01, 1.0)
+        val rng = kotlin.random.Random
+
+        return Exciter { buffer, freqHz, ctx ->
+            val sr = ctx.sampleRateD
+            val phaseMod = ctx.phaseMod
+            val end = ctx.offset + ctx.length
+
+            for (n in 0 until v) {
+                val s = strings[n]
+                val detuneSemitones = getUnisonDetune(v, freqSpread, n)
+                val detunedFreq = applySemitoneDetuneToFrequency(freqHz, detuneSemitones)
+                val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1).toDouble())
+
+                // Excite each string independently
+                if (!s.excited) {
+                    s.excited = true
+                    val delayLen = baseDelay.toInt()
+                    val pp = pickPosition.coerceIn(0.0, 1.0)
+                    val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
+                    val burstStart = ((delayLen - burstLen) * pp).toInt()
+
+                    for (j in 0 until delayLen) {
+                        s.delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
+                            (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                        } else {
+                            0.0f
+                        }
+                    }
+                    s.writePos = delayLen % maxDelay
+                }
+
+                val isFirst = n == 0
+
+                for (i in ctx.offset until end) {
+                    // Effective delay with detune, phaseMod, and per-voice drift
+                    var dl = baseDelay
+                    if (phaseMod != null) dl /= phaseMod[i]
+                    if (s.drift.active) dl /= s.drift.nextMultiplier()
+                    dl = dl.coerceIn(2.0, (maxDelay - 1).toDouble())
+
+                    // Read with linear interpolation
+                    val readPosF = s.writePos - dl
+                    val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
+                    val readIdx = readPosWrapped.toInt() % maxDelay
+                    val frac = readPosWrapped - readPosWrapped.toInt()
+                    val nextIdx = (readIdx + 1) % maxDelay
+                    val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac.toFloat()
+
+                    // One-pole lowpass (brightness)
+                    s.lpState = s.lpState + lpAlpha * (sample.toDouble() - s.lpState)
+                    var filtered = s.lpState
+
+                    // Allpass stiffness
+                    if (hasStiffness) {
+                        val apOut = apCoeff * (filtered - s.apPrevOut) + s.apPrevIn
+                        s.apPrevIn = filtered
+                        s.apPrevOut = apOut
+                        filtered = apOut
+                    }
+
+                    // Write back with decay
+                    s.delayLine[s.writePos] = (filtered * decay).toFloat()
+
+                    // Sum to output
+                    val out = (sample * voiceGain).toFloat()
+                    if (isFirst) {
+                        buffer[i] = out
+                    } else {
+                        buffer[i] = buffer[i] + out
+                    }
+
+                    s.writePos = (s.writePos + 1) % maxDelay
+                }
+            }
+        }
+    }
+
     /** Silence: fills buffer with zeros. */
     fun silence(): Exciter = Exciter { buffer, _, ctx ->
         buffer.fill(0.0f, ctx.offset, ctx.offset + ctx.length)

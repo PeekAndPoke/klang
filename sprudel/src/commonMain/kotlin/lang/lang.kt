@@ -47,6 +47,7 @@ fun initSprudelDsl() {
     sprudelLangEffectsAddonsInit = true
     sprudelLangFiltersAddonsInit = true
     sprudelLangOscAddonsInit = true
+    sprudelLangSndAddonsInit = true
     sprudelLangStructuralAddonsInit = true
     sprudelLangTempoAddonsInit = true
 

@@ -1,67 +1,118 @@
-# New Oscillator / Exciter Implementations
-
-Possible new oscillators and signal generators for the Klang audio engine, sorted by relevance
-(bang-for-buck: unique sound character, implementation simplicity, CPU cost).
+# Oscillator / Exciter Implementations
 
 ## Already Implemented
 
-| Oscillator  | Aliases    | Type            | Anti-aliasing |
-|-------------|------------|-----------------|---------------|
-| sine        | sin        | Basic waveform  | N/A           |
-| sawtooth    | saw        | Basic waveform  | PolyBLEP      |
-| ramp        |            | Reverse saw     | PolyBLEP      |
-| square      | sqr, pulse | Basic waveform  | PolyBLEP      |
-| triangle    | tri        | Basic waveform  | N/A           |
-| zawtooth    | zaw        | Naive saw       | None          |
-| pulze       |            | Variable duty   | None          |
-| impulse     |            | Click per cycle | N/A           |
-| whitenoise  | white      | Noise           | N/A           |
-| brownnoise  | brown      | Noise           | N/A           |
-| pinknoise   | pink       | Noise           | N/A           |
-| dust        |            | Sparse impulses | N/A           |
-| crackle     |            | Sparse impulses | N/A           |
-| supersaw    |            | Unison detuned  | PolyBLEP      |
-| supersine   |            | Unison detuned  | N/A           |
-| supersquare | supersqr   | Unison detuned  | PolyBLEP      |
-| supertri    |            | Unison detuned  | N/A           |
-| superramp   |            | Unison detuned  | PolyBLEP      |
-| silence     |            | Utility         | N/A           |
+### Basic Waveforms
 
-All oscillators support the `analog` parameter (Perlin noise drift) via `oscParams`.
+| Exciter  | Aliases    | Anti-aliasing | snd* DSL | UI Tool |
+|----------|------------|---------------|----------|---------|
+| sine     | sin        | N/A           | TODO     | TODO    |
+| sawtooth | saw        | PolyBLEP      | TODO     | TODO    |
+| ramp     |            | PolyBLEP      | TODO     | TODO    |
+| square   | sqr, pulse | PolyBLEP      | TODO     | TODO    |
+| triangle | tri        | N/A           | TODO     | TODO    |
+| zawtooth | zaw        | None          | TODO     | TODO    |
+| pulze    |            | None          | TODO     | TODO    |
+| impulse  |            | N/A           | TODO     | TODO    |
 
-Compositions: `sgpad`, `sgbell`, `sgbuzz`.
+### Unison (Super) Variants
+
+| Exciter     | Aliases  | Anti-aliasing | snd* DSL | UI Tool |
+|-------------|----------|---------------|----------|---------|
+| supersaw    |          | PolyBLEP      | TODO     | TODO    |
+| supersine   |          | N/A           | TODO     | TODO    |
+| supersquare | supersqr | PolyBLEP      | TODO     | TODO    |
+| supertri    |          | N/A           | TODO     | TODO    |
+| superramp   |          | PolyBLEP      | TODO     | TODO    |
+
+### Noise Generators
+
+| Exciter    | Aliases | snd* DSL | UI Tool |
+|------------|---------|----------|---------|
+| whitenoise | white   | TODO     | N/A     |
+| brownnoise | brown   | TODO     | N/A     |
+| pinknoise  | pink    | TODO     | N/A     |
+| dust       |         | TODO     | N/A     |
+| crackle    |         | TODO     | N/A     |
+
+### Physical Models
+
+| Exciter    | Aliases    | snd* DSL          | UI Tool |
+|------------|------------|-------------------|---------|
+| pluck      | ks, string | **sndPluck**      | TODO    |
+| superpluck |            | **sndSuperPluck** | TODO    |
+
+### Compositions
+
+| Exciter | Type                                    |
+|---------|-----------------------------------------|
+| sgpad   | Detuned saws + lowpass                  |
+| sgbell  | FM bell (sine carrier + sine modulator) |
+| sgbuzz  | Filtered square                         |
+
+### Cross-Cutting Features
+
+- All oscillators support `analog` parameter (Perlin noise drift) via oscParams
+- All oscillators support `warmth` parameter (one-pole lowpass) via oscParams
+- Samples and impulse also support `analog`
 
 ---
 
-## Candidates for Implementation
+## snd* DSL Functions — Status
 
-### 1. Karplus-Strong — Plucked String / Drum Synthesis
+The `snd*` family of DSL functions auto-set the sound AND parse colon-separated params.
+Type `snd` in the editor → code completion shows all available sound sources. Uses camelCase.
 
-**Priority: Highest** | Complexity: Simple (~30 lines) | CPU: Very low | Data: None
+| Function                        | Status   | Params (colon-separated)                                  |
+|---------------------------------|----------|-----------------------------------------------------------|
+| `sndPluck("d:b:p:s")`           | **DONE** | decay:brightness:pickPosition:stiffness                   |
+| `sndSuperPluck("v:s:d:b:p:st")` | **DONE** | voices:freqSpread:decay:brightness:pickPosition:stiffness |
+| `sndSine()`                     | TODO     | — (no params, just sets sound)                            |
+| `sndSaw()`                      | TODO     | —                                                         |
+| `sndSquare()`                   | TODO     | —                                                         |
+| `sndTriangle()`                 | TODO     | —                                                         |
+| `sndRamp()`                     | TODO     | —                                                         |
+| `sndSuperSaw("v:s")`            | TODO     | voices:freqSpread                                         |
+| `sndSuperSine("v:s")`           | TODO     | voices:freqSpread                                         |
+| `sndSuperSquare("v:s")`         | TODO     | voices:freqSpread                                         |
+| `sndSuperTri("v:s")`            | TODO     | voices:freqSpread                                         |
+| `sndSuperRamp("v:s")`           | TODO     | voices:freqSpread                                         |
+| `sndPulze("d")`                 | TODO     | duty                                                      |
+| `sndNoise()`                    | TODO     | — (white noise)                                           |
+| `sndBrown()`                    | TODO     | —                                                         |
+| `sndPink()`                     | TODO     | —                                                         |
+| `sndDust("d")`                  | TODO     | density                                                   |
+| `sndCrackle("d")`               | TODO     | density                                                   |
 
-Short noise burst fed into a delay line with averaging lowpass feedback. Produces realistic
-plucked string sounds. Drum variant uses random sign-flip in the feedback loop.
-
-- **Original paper:** Karplus & Strong, "Digital Synthesis of Plucked-String and Drum Timbres" (1983), Computer Music
-  Journal
-- **Extended KS:** Jaffe & Smith — adds fractional delay (allpass interpolation for accurate tuning), string stiffness,
-  decay stretching, pick position modeling
-- **Why highest priority:** Completely unique character unlike anything we have. Dead simple. Very cheap.
-
-Possible names: `pluck`, `string`, `ks`
-
-Parameters: `decay` (feedback), `brightness` (lowpass cutoff), `pickPosition`, `stiffness`
-
-References:
-
-- https://users.soe.ucsc.edu/~karplus/papers/digitar.pdf
-- http://users.spa.aalto.fi/vpv/publications/cmj98.pdf
+Implementation file: `sprudel/.../lang/addons/lang_snd_addons.kt`
 
 ---
 
-### 2. Phase Distortion — Casio CZ-style Warped Sine
+## UI Tools — Status
 
-**Priority: High** | Complexity: Simple | CPU: Very low | Data: None (or tiny sine table)
+Each `snd*` function with parameters needs a corresponding `SprudelXxxSequenceEditor` Kraft UI
+component for visual editing of the colon-separated params.
+
+All UI tools should include **presets** (dropdown/selector) similar to `compressor()`, so users
+can quickly pick a starting point and tweak from there.
+
+| UI Tool                           | For               | Params                                                         | Presets                                                               | Status |
+|-----------------------------------|-------------------|----------------------------------------------------------------|-----------------------------------------------------------------------|--------|
+| `SprudelPluckSequenceEditor`      | `sndPluck()`      | decay, brightness, pickPosition, stiffness                     | guitar, pizzicato, harp, sitar, banjo, koto, steelString, nylonString | TODO   |
+| `SprudelSuperPluckSequenceEditor` | `sndSuperPluck()` | voices, freqSpread, decay, brightness, pickPosition, stiffness | 12string, choirHarp, shimmerPad, thickGuitar, ukuleleChorus           | TODO   |
+| `SprudelSuperSawSequenceEditor`   | `sndSuperSaw()`   | voices, freqSpread                                             | thin (3v), classic (5v), fat (7v), wide, tight                        | TODO   |
+| `SprudelPulzeSequenceEditor`      | `sndPulze()`      | duty                                                           | square (0.5), thin (0.1), clarinet (0.25), wide (0.75)                | TODO   |
+| `SprudelDustSequenceEditor`       | `sndDust()`       | density                                                        | sparse, medium, dense                                                 | TODO   |
+
+Simple sound selectors (no params) don't need UI tools — they're just sound name shortcuts.
+
+---
+
+## Candidates for New Exciters
+
+### 1. Phase Distortion — Casio CZ-style Warped Sine
+
+**Priority: High** | Complexity: Simple | CPU: Very low | Data: None
 
 Instead of reading a sine table linearly, the phase accumulator is warped by a transfer function.
 Different transfer functions produce saw, square, pulse, and unique **resonant waveforms** that
@@ -73,157 +124,125 @@ simulate filter resonance sweeps — a distinctive sound no other synthesis meth
 
 Possible names: `pd`, `cz`, `phasedist`
 
-Parameters: `shape` (saw/square/pulse/resonant1/resonant2/resonant3), `dcw` (morph 0..1)
+Params: `shape` (saw/square/pulse/resonant1/resonant2/resonant3), `dcw` (morph 0..1)
+
+snd* DSL: `sndPhaseDistort("shape:dcw")` or `sndCZ("shape:dcw")`
 
 References:
-
 - https://electricdruid.net/phase-distortion-synthesis/
 - https://en.wikipedia.org/wiki/Phase_distortion_synthesis
 
 ---
 
-### 3. Waveshaping — Chebyshev Polynomial Harmonics
+### 2. Waveshaping — Chebyshev Polynomial Harmonics
 
 **Priority: High** | Complexity: Simple | CPU: Very low | Data: None
 
-Sine wave passed through a nonlinear transfer function. Chebyshev polynomials are especially
-elegant: the nth Chebyshev polynomial applied to cos(x) produces exactly cos(n*x) — the nth
-harmonic. By mixing Chebyshev polynomials, you get precise additive-synthesis-like control over
-the harmonic spectrum, but computed as a simple polynomial evaluation per sample.
-
-- Can create everything from mellow sine-like tones to bright, harmonically rich timbres.
-- No aliasing issues when input stays in [-1, 1].
+Sine wave passed through a nonlinear transfer function. Chebyshev polynomials: the nth polynomial
+applied to cos(x) produces exactly cos(n*x) — the nth harmonic.
 
 Possible names: `cheby`, `waveshape`
 
-Parameters: `harmonics` (which Chebyshev orders to mix), `drive` (input amplitude)
+Params: `harmonics` (which Chebyshev orders to mix), `drive` (input amplitude)
+
+snd* DSL: `sndCheby("h:d")`
 
 References:
 
-- Arfib, "Digital Synthesis of Complex Spectra by Means of Multiplication of Non-linear Distorted Sine Waves" (1978)
-- Le Brun, "A Derivation of the Spectrum of FM with a Complex Modulating Wave" (1979)
+- Arfib (1978), Le Brun (1979)
 
 ---
 
-### 4. Hard Sync Oscillator
+### 3. Hard Sync Oscillator
 
 **Priority: Medium-High** | Complexity: Medium | CPU: Low | Data: None
 
-A slave oscillator resets its phase every time a master oscillator completes a cycle.
-Sweeping the slave frequency produces the classic aggressive "sync sweep" lead sound
-(heard in countless synth patches). The main challenge is anti-aliasing the discontinuity
-at the sync reset point.
-
-- Best approach: **PolyBLEP correction** at sync points (we already have PolyBLEP infrastructure).
-- Master can be hidden (just a phase counter), slave is any waveform (saw, square, etc.)
+Slave oscillator resets phase on master cycle. Classic aggressive sync sweep sound.
+Best approach: PolyBLEP correction at sync points (infrastructure already exists).
 
 Possible names: `sync`, `hardsync`
 
-Parameters: `syncRatio` (slave/master frequency ratio), `slaveShape` (saw/square/tri)
+Params: `syncRatio` (slave/master frequency ratio), `slaveShape` (saw/square/tri)
+
+snd* DSL: `sndSync("ratio:shape")`
 
 References:
 
-- Brandt, "Hard Sync Without Aliasing" (2001, ICMC): http://www.cs.cmu.edu/~eli/papers/icmc01-hardsync.pdf
-- DAFx 2022, "Antialiasing for Sine Hard Sync": https://dafx.de/paper-archive/2022/papers/DAFx20in22_paper_3.pdf
+- Brandt, "Hard Sync Without Aliasing" (2001): http://www.cs.cmu.edu/~eli/papers/icmc01-hardsync.pdf
+- DAFx 2022: https://dafx.de/paper-archive/2022/papers/DAFx20in22_paper_3.pdf
 
 ---
 
-### 5. Formant / Vocal Oscillator
+### 4. Formant / Vocal Oscillator
 
 **Priority: Medium** | Complexity: Medium | CPU: Low | Data: Tiny vowel table
 
-Parallel resonator bank: a glottal pulse (impulse train or filtered noise) drives 3-5 biquad
-filters tuned to vowel formant frequencies. Can morph between vowels (a, e, i, o, u).
-
-- Reuses existing `AudioFilter` biquad infrastructure.
-- Vowel formant data is just a small lookup table (~5 vowels x 3-5 frequency/bandwidth pairs).
+Parallel resonator bank: glottal pulse drives 3-5 biquad filters tuned to vowel formant
+frequencies. Can morph between vowels (a, e, i, o, u).
 
 Possible names: `vocal`, `formant`, `vowel`
 
-Parameters: `vowel` (a/e/i/o/u or continuous 0..1 morph), `pitch` (glottal rate)
+Params: `vowel` (a/e/i/o/u or continuous 0..1 morph)
+
+snd* DSL: `sndVocal("vowel")`
 
 References:
-
 - Smith, Formant Synthesis Models: https://ccrma.stanford.edu/~jos/pasp/Formant_Synthesis_Models.html
 
 ---
 
-### 6. Waveguide Reed / Clarinet
+### 5. Waveguide Reed / Clarinet
 
 **Priority: Medium** | Complexity: Medium | CPU: Low-Medium | Data: None
 
-Digital waveguide model: delay line simulating the bore of a wind instrument, coupled with a
-nonlinear reed function (cubic polynomial or tanh). Produces distinctive clarinet, sax, and
-oboe-like tones that are impossible to achieve with basic waveforms.
-
-- Builds on the same delay line concept as Karplus-Strong.
-- The reed nonlinearity is what gives it the characteristic "buzzy" wind instrument quality.
+Delay line + nonlinear reed function. Builds on same delay line concept as Karplus-Strong.
 
 Possible names: `reed`, `clarinet`, `wind`
 
-Parameters: `pressure` (blowing pressure), `stiffness` (reed stiffness), `bore` (tube length)
+Params: `pressure` (blowing pressure), `stiffness` (reed stiffness)
+
+snd* DSL: `sndReed("pressure:stiffness")`
 
 References:
-
 - Smith, "Physical Modeling Using Digital Waveguides" (1992): https://ccrma.stanford.edu/~jos/pmudw/pmudw.pdf
-- Smith, Waveguide Reed
-  Implementation: https://ccrma.stanford.edu/~jos/pasp/Digital_Waveguide_Single_Reed_Implementation.html
 - Full free textbook: https://www.dsprelated.com/freebooks/pasp/
 
 ---
 
-### 7. Additive Oscillator — Sum of Harmonics
+### 6. Additive Oscillator — Sum of Harmonics
 
 **Priority: Low-Medium** | Complexity: Simple | CPU: Moderate (N sine calls) | Data: None
 
-Sum of N sine oscillators at harmonic intervals with individual amplitudes. Already partially
-achievable via the Exciter composition DSL (`Sine() + Sine().detune(12.0)` etc.), but a
-dedicated implementation could be more efficient and offer preset spectra (organ, bell, etc.).
+Already partially achievable via composition DSL. Dedicated implementation would be more efficient
+and offer preset spectra (organ, bell, etc.).
 
 Possible names: `additive`, `organ`
 
-Parameters: `harmonics` (list of amplitude weights), `preset` (organ/bell/choir/etc.)
+Params: `preset` (organ/bell/choir/etc.), or `harmonics` (list of amplitude weights)
 
 ---
 
-### 8. Wavetable Oscillator
+### 7. Wavetable Oscillator
 
 **Priority: Low** | Complexity: High | CPU: Low per sample | Data: Requires wavetable files
 
-Reads through stored single-cycle waveforms and morphs between them (Serum-style). Extremely
-versatile but requires a wavetable format, loading infrastructure, and anti-aliasing via
-mip-mapping or oversampling.
-
-- Large undertaking compared to the other candidates.
-- Could be very powerful if combined with sample loading infrastructure that already exists.
+Reads stored single-cycle waveforms, morphs between them (Serum-style). Large undertaking.
 
 Possible names: `wavetable`, `wt`
 
-Parameters: `table` (wavetable name), `position` (morph position 0..1)
+Params: `table` (wavetable name), `position` (morph position 0..1)
 
 ---
 
 ## Exciter DSL — Remaining Future Work
 
-Carried forward from the completed Exciter DSL/Registry implementation (archived:
-`20260320-signal-gen-dsl-registry-impl.md`).
-
-### Not Yet Implemented
-
-| Feature                   | Description                                                                                         |
-|---------------------------|-----------------------------------------------------------------------------------------------------|
-| Frontend waveform preview | `ExciterDsl.renderPreview()` in `audio_bridge` — lightweight pure-math renderer for display         |
-| Feedback combinators      | `feedback()`, `feedbackTuned()`, `phaseFeedback()` — needed for Karplus-Strong and waveguide models |
-| Time-windowed combinators | `during()`, `duringProgress()`, `chain()`, `ring()`                                                 |
-| ControlRate combinator    | Block-rate computation for modulators (cheaper than per-sample)                                     |
-| KlangScript `registerOsc` | Per-playback oscillator registration from KlangScript                                               |
-
-### Related: Modulated Delay Line Effects
-
-See `docs/agent-tasks/modulated-delay-line-effects.md` for flanger, chorus, and vibrato implementations
-using the existing `DelayLine` with fractional delay and LFO modulation.
-
----
+| Feature                   | Description                                                                     |
+|---------------------------|---------------------------------------------------------------------------------|
+| Frontend waveform preview | `ExciterDsl.renderPreview()` in `audio_bridge` — pure-math renderer for display |
+| Feedback combinators      | `feedback()`, `feedbackTuned()`, `phaseFeedback()`                              |
+| Time-windowed combinators | `during()`, `duringProgress()`, `chain()`, `ring()`                             |
+| ControlRate combinator    | Block-rate computation for modulators                                           |
+| KlangScript `registerOsc` | Per-playback oscillator registration from KlangScript                           |
 
 ## Key References
 

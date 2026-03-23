@@ -107,6 +107,32 @@ sealed class ExciterDsl {
     data object Silence : ExciterDsl()
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // Physical Models
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    @Serializable
+    @SerialName("pluck")
+    data class Pluck(
+        val decay: Double = 0.996,
+        val brightness: Double = 0.5,
+        val pickPosition: Double = 0.5,
+        val stiffness: Double = 0.0,
+        val gain: Double = 0.7,
+    ) : ExciterDsl()
+
+    @Serializable
+    @SerialName("superpluck")
+    data class SuperPluck(
+        val voices: Int = 5,
+        val freqSpread: Double = 0.2,
+        val decay: Double = 0.996,
+        val brightness: Double = 0.5,
+        val pickPosition: Double = 0.5,
+        val stiffness: Double = 0.0,
+        val gain: Double = 0.7,
+    ) : ExciterDsl()
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // Arithmetic Composition
     // ═════════════════════════════════════════════════════════════════════════════
 

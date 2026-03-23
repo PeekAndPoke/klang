@@ -15,3 +15,5 @@
   never recording
 - [Sprudel rename](project_sprudel_rename.md) — Renaming strudel implementation to Sprudel; rationale and positioning
 - [Current state March 2026](project_current_state.md) — What exists today, strategic identity, audience priorities
+- [Tutorial factory strategy](project_tutorial_factory.md) — Evolutionary generative approach: breadth-first creation,
+  morning review as selection, explore then exploit
