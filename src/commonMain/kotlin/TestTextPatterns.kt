@@ -105,6 +105,7 @@ stack(                                                                 //////// 
         """
 
     val strangerThingsNetflix = """
+
 import * from "stdlib"
 import * from "sprudel"
 
@@ -119,7 +120,7 @@ stack(
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
-    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(2.0).hpf(1000)
+    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(2.0).hpf(1000).analog(5)
     .sound("pulse").warmth(0.95).crush(3).gain(0.225).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
   , // Melody -----------------------------------------------------------------------------------------------------------------
@@ -128,7 +129,7 @@ stack(
     .orbit(1).s("supersaw").unison(4).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.15).slow(256))
     .gain(0.225).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
     .pan(0.29).superimpose(pan(0.61))
-    .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3)
+    .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3).analog(1)
     .filterWhen(x => x >= wait * 3 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.75).struct("x!8")
@@ -136,7 +137,8 @@ stack(
     .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
     .lpf(6 * 440).hpf(180).notchf(notch).notchq(0.75).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
-    .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).filterWhen(x => x < (wait * 4 + keep))
+    .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).analog(1) // . solo()
+    .filterWhen(x => x < (wait * 4 + keep))
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
     .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1)
@@ -170,7 +172,7 @@ import * from "stdlib"
 import * from "sprudel"
 
 let stay = 48
-let tp = "[0 -1 -2 -3 -5  -3  -1  1]/8".slow(stay) // <---- transposition ... wait for it ... or change it ...
+let tp = "[0 -1 -2 -3 -5  -2  -1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ...
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").orbit(7).fast(2).transpose(tp)
@@ -205,11 +207,11 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).orbit(5).adsr("0.01:0.8:0.7:0.5 0.015:0.1:0.3:0.5".slow(16)).gain(0.8).hpf(60).filterWhen(t => t % stay >= 4) // .solo()
-  , // Drums 1 -----------------------------------------------------------------------------------------------
+  ).orbit(5).adsr("0.01:0.8:0.7:0.5 0.015:0.1:0.3:0.5".slow(16)).gain(0.8).hpf(80).filterWhen(t => t % stay >= 4) // .solo()
+  , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>")
     .orbit(6).adsr("0.01:0.2:0.8:0.5").gain("1.0".add(rand.range(-0.1, 0.0).segment(8))) // .solo()
-).room(0.02).rsize(3.0).compressor("-10:2:10:0.02:0.25") /*
+).room(0.02).rsize(3.0).compressor("-10:2:10:0.02:0.25").analog(1) /*
 
  
  

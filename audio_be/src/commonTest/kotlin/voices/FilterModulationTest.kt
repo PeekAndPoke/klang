@@ -3,11 +3,13 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.exciter.ExciteContext
+import io.peekandpoke.klang.audio_be.exciter.Exciter
+import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
-import io.peekandpoke.klang.audio_be.signalgen.SignalContext
-import io.peekandpoke.klang.audio_be.signalgen.SignalGen
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -17,7 +19,7 @@ class FilterModulationTest : StringSpec({
     val sampleRate = 44100
     val blockFrames = 100
 
-    val noopSignal = SignalGen { buffer, _, ctx ->
+    val noopSignal = Exciter { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) buffer[i] = 0.0f
     }
@@ -26,10 +28,10 @@ class FilterModulationTest : StringSpec({
         startFrame: Long = 0,
         gateEndFrame: Long = 1000,
         endFrame: Long = 1000,
-    ): SignalContext {
+    ): ExciteContext {
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
         val releaseFrames = (endFrame - gateEndFrame).toInt()
-        return SignalContext(
+        return ExciteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
@@ -85,7 +87,7 @@ class FilterModulationTest : StringSpec({
 
     "filter without modulator is not modified" {
         val spyFilter = SpyFilter()
-        val voice = SynthVoice(
+        val voice = createSynthVoice(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -94,24 +96,19 @@ class FilterModulationTest : StringSpec({
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
             filter = spyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
-            filterModulators = emptyList(), // No modulators
+            filterModulators = emptyList(),
             delay = Voice.Delay(0.0, 0.0, 0.0),
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             signal = noopSignal,
-            signalCtx = createSignalCtx(),
-            fm = null,
-            freqHz = 440.0
+            freqHz = 440.0,
         )
 
         val ctx = createCtx()
@@ -138,7 +135,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SynthVoice(
+        val voice = createSynthVoice(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -147,7 +144,6 @@ class FilterModulationTest : StringSpec({
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
             filter = spyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
             filterModulators = listOf(modulator),
@@ -155,16 +151,12 @@ class FilterModulationTest : StringSpec({
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             signal = noopSignal,
-            signalCtx = createSignalCtx(),
-            fm = null,
-            freqHz = 440.0
+            freqHz = 440.0,
         )
 
         // Render at the attack peak (frame 100)
@@ -194,7 +186,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SynthVoice(
+        val voice = createSynthVoice(
             orbitId = 0,
             startFrame = 0,
             endFrame = 2000,
@@ -203,7 +195,6 @@ class FilterModulationTest : StringSpec({
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
             filter = spyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
             filterModulators = listOf(modulator),
@@ -211,16 +202,12 @@ class FilterModulationTest : StringSpec({
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             signal = noopSignal,
-            signalCtx = createSignalCtx(),
-            fm = null,
-            freqHz = 440.0
+            freqHz = 440.0,
         )
 
         // Render at start (frame 0)
@@ -250,7 +237,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SynthVoice(
+        val voice = createSynthVoice(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -259,7 +246,6 @@ class FilterModulationTest : StringSpec({
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
             filter = spyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
             filterModulators = listOf(modulator),
@@ -267,16 +253,12 @@ class FilterModulationTest : StringSpec({
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             signal = noopSignal,
-            signalCtx = createSignalCtx(),
-            fm = null,
-            freqHz = 440.0
+            freqHz = 440.0,
         )
 
         // Render at sustain phase (frame 300 = after attack 100 + decay 100)
@@ -319,7 +301,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff2
         )
 
-        val voice = SynthVoice(
+        val voice = createSynthVoice(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -328,24 +310,19 @@ class FilterModulationTest : StringSpec({
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
-            filter = spyFilter1, // Combined filter not important for this test
+            filter = spyFilter1,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
             filterModulators = listOf(modulator1, modulator2),
             delay = Voice.Delay(0.0, 0.0, 0.0),
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             signal = noopSignal,
-            signalCtx = createSignalCtx(),
-            fm = null,
-            freqHz = 440.0
+            freqHz = 440.0,
         )
 
         // Render at attack peak (frame 100)
@@ -361,7 +338,7 @@ class FilterModulationTest : StringSpec({
         spyFilter2.currentCutoff shouldBe (3000.0 plusOrMinus 0.1)
     }
 
-    "modulation works in SampleVoice too" {
+    "modulation works with sample signal too" {
         val spyFilter = SpyFilter()
         val baseCutoff = 500.0
         val depth = 1.0
@@ -378,7 +355,9 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SampleVoice(
+        val sample = createSample()
+        val voice = createSampleVoice(
+            sample = sample,
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -387,7 +366,6 @@ class FilterModulationTest : StringSpec({
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
             filter = spyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
             filterModulators = listOf(modulator),
@@ -395,17 +373,11 @@ class FilterModulationTest : StringSpec({
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
-            fm = null,
-            samplePlayback = SampleVoice.SamplePlayback.default,
-            sample = createSample(),
-            rate = 1.0,
-            playhead = 0.0
+            freqHz = 440.0,
         )
 
         // Render at attack peak
@@ -427,7 +399,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = 1000.0
         )
 
-        val voice = SynthVoice(
+        val voice = createSynthVoice(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -436,7 +408,6 @@ class FilterModulationTest : StringSpec({
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
             filter = spyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
             filterModulators = listOf(modulator),
@@ -444,16 +415,12 @@ class FilterModulationTest : StringSpec({
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             signal = noopSignal,
-            signalCtx = createSignalCtx(),
-            fm = null,
-            freqHz = 440.0
+            freqHz = 440.0,
         )
 
         val ctx = createCtx(blockStart = 0)
@@ -486,7 +453,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Voice starts at frame 100
-        val voice = SynthVoice(
+        val voice = createSynthVoice(
             orbitId = 0,
             startFrame = 100,
             endFrame = 1000,
@@ -495,7 +462,6 @@ class FilterModulationTest : StringSpec({
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
             filter = spyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
             filterModulators = listOf(modulator),
@@ -503,16 +469,12 @@ class FilterModulationTest : StringSpec({
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             signal = noopSignal,
-            signalCtx = createSignalCtx(),
-            fm = null,
-            freqHz = 440.0
+            freqHz = 440.0,
         )
 
         // Render at frame 50 (block starts before voice starts)
@@ -543,16 +505,15 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SynthVoice(
+        val voice = createSynthVoice(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
-            gateEndFrame = 300, // Gate ends at 300
+            gateEndFrame = 300,
             gain = 1.0,
             pan = 0.5,
             accelerate = Voice.Accelerate(0.0),
             vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
             filter = spyFilter,
             envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
             filterModulators = listOf(modulator),
@@ -560,16 +521,12 @@ class FilterModulationTest : StringSpec({
             reverb = Voice.Reverb(0.0, 0.0),
             phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
             tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
             postGain = 1.0,
-            compressor = null,
             distort = Voice.Distort(0.0),
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             signal = noopSignal,
-            signalCtx = createSignalCtx(),
-            fm = null,
-            freqHz = 440.0
+            freqHz = 440.0,
         )
 
         // Render at start of release (frame 300)

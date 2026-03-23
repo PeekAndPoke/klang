@@ -340,12 +340,18 @@ internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(arg
  * The format `"name:index"` also sets the sample index, e.g. `"bd:2"` selects sample 2
  * from the `bd` bank.
  *
+ * When [name] is omitted, reinterprets the current event values as sound names.
+ *
  * ```KlangScript
  * sound("bd sd hh")  // basic drum pattern
  * ```
  *
  * ```KlangScript
  * sound("bd bd bd bd ").n("0 1 2 3")  // changes the sound variants
+ * ```
+ *
+ * ```KlangScript
+ * seq("bd hh sd hh").sound()  // interprets the sequence values as sounds
  * ```
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
@@ -355,25 +361,20 @@ internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(arg
  * @tags sound, sample, instrument, s, pattern-creator
  */
 @SprudelDsl
-fun SprudelPattern.sound(name: PatternLike): SprudelPattern = this._sound(listOf(name).asSprudelDslArgs())
+fun SprudelPattern.sound(name: PatternLike? = null): SprudelPattern =
+    this._sound(listOfNotNull(name).asSprudelDslArgs())
 
 /**
- * Reinterprets sequence values as sounds.
+ * Modifies or reinterprets the sounds of a string pattern.
  *
- * ```KlangScript
- * seq("bd hh sd hh").sound()  // interprets the sequence values as sounds
- * ```
+ * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
+ * @return A new pattern with the specified sounds applied.
+ * @category tonal
+ * @tags sound, sample, instrument, s, pattern-creator
  */
 @SprudelDsl
-fun SprudelPattern.sound(): SprudelPattern = this._sound(emptyList())
-
-/** Modifies the sounds of a string pattern. */
-@SprudelDsl
-fun String.sound(name: PatternLike): SprudelPattern = this._sound(listOf(name).asSprudelDslArgs())
-
-/** Reinterprets sequence values as sounds. */
-@SprudelDsl
-fun String.sound(): SprudelPattern = this._sound(emptyList())
+fun String.sound(name: PatternLike? = null): SprudelPattern =
+    this._sound(listOfNotNull(name).asSprudelDslArgs())
 
 /**
  * Creates a pattern of sounds.
@@ -390,12 +391,14 @@ fun sound(name: PatternLike): SprudelPattern = _sound(listOf(name).asSprudelDslA
  * The format `"name:index"` also sets the sample index, e.g. `"bd:2"` selects sample 2
  * from the `bd` bank.
  *
+ * When [name] is omitted, reinterprets the current event values as sound names.
+ *
  * ```KlangScript
- * sound("bd sd hh")  // basic drum pattern
+ * s("bd sd hh")  // basic drum pattern
  * ```
  *
  * ```KlangScript
- * sound("bd bd bd bd ").n("0 1 2 3")  // changes the sound variants
+ * seq("bd hh sd hh").s()  // interprets the sequence values as sounds
  * ```
  *
  * @param name The sound/sample name pattern in mini-notation, e.g. `"bd sd hh"`.
@@ -405,19 +408,13 @@ fun sound(name: PatternLike): SprudelPattern = _sound(listOf(name).asSprudelDslA
  * @tags sound, sample, instrument, s, pattern-creator
  */
 @SprudelDsl
-fun SprudelPattern.s(name: PatternLike): SprudelPattern = this._s(listOf(name).asSprudelDslArgs())
-
-/** Alias for [sound]. Reinterprets sequence values as sounds. */
-@SprudelDsl
-fun SprudelPattern.s(): SprudelPattern = this._s(emptyList())
+fun SprudelPattern.s(name: PatternLike? = null): SprudelPattern =
+    this._s(listOfNotNull(name).asSprudelDslArgs())
 
 /** Alias for [sound] on a string pattern. */
 @SprudelDsl
-fun String.s(name: PatternLike): SprudelPattern = this._s(listOf(name).asSprudelDslArgs())
-
-/** Alias for [sound] on a string pattern. */
-@SprudelDsl
-fun String.s(): SprudelPattern = this._s(emptyList())
+fun String.s(name: PatternLike? = null): SprudelPattern =
+    this._s(listOfNotNull(name).asSprudelDslArgs())
 
 /**
  * Alias for [sound]. Creates a sound pattern.

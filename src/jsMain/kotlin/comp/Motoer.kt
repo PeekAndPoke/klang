@@ -59,7 +59,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
             div {
                 key = "spectrum-visualizer"
 
-                val spectHeight = 150
+                val spectHeight = 132
                 css {
                     zIndex = 1
                     position = Position.absolute
@@ -83,7 +83,7 @@ class Motoer(ctx: NoProps) : PureComponent(ctx) {
 
                 css {
                     zIndex = 100
-                    marginBottom = 16.px
+                    marginBottom = 8.px
                     opacity = 0.95
                 }
 

@@ -3,11 +3,12 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.exciter.SampleExciter
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
-import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 
 /**
- * Tests specific to SampleVoice implementation.
+ * Tests specific to sample playback via SampleExciter.
  * Verifies sample playback, looping, and interpolation.
  */
 class SampleVoiceSpecificTest : StringSpec({
@@ -15,9 +16,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice plays back sample data correctly" {
         val sample = TestSamples.constant(size = 200, value = 0.5f) // Constant 0.5, longer than block
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 100)
@@ -30,9 +39,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with rate > 1 plays faster" {
         val sample = TestSamples.ramp(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 2.0 // Double speed
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 2.0, // Double speed
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 50)
@@ -46,9 +63,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with rate < 1 plays slower" {
         val sample = TestSamples.ramp(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 0.5 // Half speed
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 0.5, // Half speed
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 100)
@@ -62,10 +87,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice performs linear interpolation" {
         val sample = TestSamples.ramp(size = 10) // 0.0, 0.111, 0.222, ..., 1.0
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.5, // Non-integer playback rate
-            playhead = 0.0
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.5, // Non-integer playback rate
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 5)
@@ -81,10 +113,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice without looping stops at end" {
         val sample = TestSamples.ramp(size = 50)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
-            samplePlayback = SampleVoice.SamplePlayback.default // No looping
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 100)
@@ -100,16 +139,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with explicit looping wraps correctly" {
         val sample = TestSamples.ramp(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
-            samplePlayback = SampleVoice.SamplePlayback(
-                cut = null,
-                explicitLooping = true,
-                explicitLoopStart = 0.0,
-                explicitLoopEnd = 50.0, // Loop first half
-                stopFrame = Double.MAX_VALUE
-            )
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = 0.0,
+                loopEnd = 50.0, // Loop first half
+                isLooping = true,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 100)
@@ -127,16 +167,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with stopFrame ends early" {
         val sample = TestSamples.ramp(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
-            samplePlayback = SampleVoice.SamplePlayback(
-                cut = null,
-                explicitLooping = false,
-                explicitLoopStart = -1.0,
-                explicitLoopEnd = -1.0,
-                stopFrame = 50.0 // Stop at frame 50
-            )
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = 50.0, // Stop at frame 50
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 100)
@@ -153,10 +194,17 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.constant(size = 100, value = 1.0f)
 
         // Create voice with initial playhead
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
-            playhead = 10.0 // Start at sample 10
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 10.0, // Start at sample 10
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 10)
@@ -169,10 +217,18 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with vibrato modulates playback rate" {
         val sample = TestSamples.sine(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02)
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02),
         )
 
         val ctx = createContext()
@@ -185,14 +241,22 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with FM modulates playback rate" {
         val sample = TestSamples.sine(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
             fm = Voice.Fm(
                 ratio = 2.0,
                 depth = 50.0,
                 envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)
-            )
+            ),
         )
 
         val ctx = createContext()
@@ -204,8 +268,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice getBaseFrequency returns sample base pitch" {
         val sample = TestSamples.sine(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         // Base frequency is used for FM calculation
@@ -218,14 +291,23 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with envelope modulates sample output" {
         val sample = TestSamples.constant(size = 200, value = 1.0f) // Longer sample
 
-        val voice = createSampleVoice(
-            sample = sample,
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
                 releaseFrames = 0.0
-            )
+            ),
         )
 
         val ctx = createContext(blockFrames = 100)
@@ -240,10 +322,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice handles sample end boundary" {
         val sample = TestSamples.ramp(size = 50)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
-            playhead = 45.0 // Near end
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 45.0, // Near end
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 10)
@@ -259,10 +348,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with negative playhead is handled" {
         val sample = TestSamples.ramp(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
-            playhead = -10.0 // Negative playhead
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = -10.0, // Negative playhead
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         val ctx = createContext(blockFrames = 20)
@@ -279,10 +375,17 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice preserves playhead across renders" {
         val sample = TestSamples.ramp(size = 200)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
-            playhead = 0.0
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
         )
 
         // First render: frames 0-100
@@ -302,20 +405,21 @@ class SampleVoiceSpecificTest : StringSpec({
     "SampleVoice with all modulations renders correctly" {
         val sample = TestSamples.sine(size = 100)
 
-        val voice = createSampleVoice(
-            sample = sample,
-            rate = 1.0,
+        val voice = createVoice(
+            signal = SampleExciter(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = 0.0,
+                loopEnd = 50.0,
+                isLooping = true,
+                stopFrame = Double.MAX_VALUE,
+            ),
+            freqHz = 440.0,
             vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02),
             accelerate = Voice.Accelerate(amount = 1.0),
             fm = Voice.Fm(ratio = 2.0, depth = 50.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
             envelope = Voice.Envelope(100.0, 0.0, 1.0, 0.0),
-            samplePlayback = SampleVoice.SamplePlayback(
-                cut = null,
-                explicitLooping = true,
-                explicitLoopStart = 0.0,
-                explicitLoopEnd = 50.0,
-                stopFrame = Double.MAX_VALUE
-            )
         )
 
         val ctx = createContext()

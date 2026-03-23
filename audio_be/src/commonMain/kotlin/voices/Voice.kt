@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 
-sealed interface Voice {
+interface Voice {
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Render Context
@@ -26,7 +26,7 @@ sealed interface Voice {
         val voiceBuffer: FloatArray,
         /** Shared buffer for frequency/pitch modulation calculations */
         val freqModBuffer: DoubleArray,
-        /** Shared scratch buffer pool for SignalGen composition operators */
+        /** Shared scratch buffer pool for Exciter composition operators */
         val scratchBuffers: ScratchBuffers,
     ) {
         /** Current block start frame (updated per block) */
@@ -322,24 +322,11 @@ sealed interface Voice {
     /** Orbit/bus ID for routing to effects and mixing */
     val orbitId: Int
 
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Synthesis & Pitch
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /** FM synthesis parameters (modulates oscillator frequency) */
-    val fm: Fm?
-
-    /** Pitch acceleration/glide over the voice's lifetime */
-    val accelerate: Accelerate
-
-    /** Vibrato LFO (periodic pitch modulation) */
-    val vibrato: Vibrato
-
-    /** Pitch envelope (transient pitch modulation) */
-    val pitchEnvelope: PitchEnvelope?
+    /** Cut group ID — voices in the same cut group choke each other (typically for samples) */
+    val cut: Int? get() = null
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Dynamics (Gain & Envelope)
+    // Dynamics
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
 
     /** Pre-envelope gain (includes velocity) */
@@ -351,9 +338,6 @@ sealed interface Voice {
     /** Post-envelope gain multiplier */
     val postGain: Double
 
-    /** ADSR amplitude envelope */
-    val envelope: Envelope
-
     /** Compressor/limiter settings for dynamic control */
     val compressor: Compressor?
 
@@ -361,35 +345,7 @@ sealed interface Voice {
     val ducking: Ducking?
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Filters & Modulation
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /** Main tonal filter (LowPass, HighPass, BandPass, Notch, Formant) */
-    val filter: AudioFilter
-
-    /** Filter envelope modulators (control cutoff over time) */
-    val filterModulators: List<FilterModulator>
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Effect Pipeline (Ordered Processing Stages)
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Pre-filters: Destructive/lo-fi effects applied BEFORE the main filter.
-     * Order: BitCrush → SampleRateReducer (Coarse)
-     * Applied early so the main filter can smooth out artifacts.
-     */
-    val preFilters: List<AudioFilter>
-
-    /**
-     * Post-filters: Color/modulation effects applied AFTER the envelope.
-     * Order: Distortion → Phaser → Tremolo
-     * Applied late to react to dynamics and shape the final tone.
-     */
-    val postFilters: List<AudioFilter>
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Time-Based Effects (Applied at Orbit Level)
+    // Time-Based Effects & Orbit Configuration
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
 
     /** Delay/echo parameters */
@@ -398,24 +354,8 @@ sealed interface Voice {
     /** Reverb parameters */
     val reverb: Reverb
 
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Raw Effect Data (For Compatibility & Parameter Access)
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /** Phaser effect parameters (used to configure per-voice phaser filter) */
+    /** Phaser effect parameters (used to configure orbit-level phaser) */
     val phaser: Phaser
-
-    /** Tremolo effect parameters (used to configure per-voice tremolo filter) */
-    val tremolo: Tremolo
-
-    /** Distortion effect parameters (used to create distortion filter) */
-    val distort: Distort
-
-    /** Bit crush effect parameters (used to create bit crush filter) */
-    val crush: Crush
-
-    /** Sample rate reduction parameters (used to create coarse filter) */
-    val coarse: Coarse
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Dynamic Gain Control

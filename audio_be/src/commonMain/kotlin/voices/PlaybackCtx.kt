@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
+import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
 
 /**
  * Per-playback context. Created when a playback is first seen, destroyed on cleanup.
@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
 class PlaybackCtx(
     val playbackId: String,
     /** Per-playback registry, forked from global. User can register custom oscillators. */
-    val signalGenRegistry: SignalGenRegistry,
+    val exciterRegistry: ExciterRegistry,
     /** Backend-local epoch (seconds since backend start) when this playback first appeared */
     var epoch: Double = 0.0,
 )
