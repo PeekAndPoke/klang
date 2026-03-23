@@ -120,7 +120,7 @@ stack(
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
-    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(2.0).hpf(1000)
+    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(2.0).hpf(1000).analog(5)
     .sound("pulse").warmth(0.95).crush(3).gain(0.225).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
   , // Melody -----------------------------------------------------------------------------------------------------------------
@@ -172,7 +172,7 @@ import * from "stdlib"
 import * from "sprudel"
 
 let stay = 48
-let tp = "[0 -1 -2 -3 -5  -3  -1  1]/8".slow(stay) // <---- transposition ... wait for it ... or change it ...
+let tp = "[0 -1 -2 -3 -5  -2  -1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ...
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("0").scale("c4:chromatic").orbit(7).fast(2).transpose(tp)
