@@ -6,7 +6,9 @@ import io.peekandpoke.klang.audio_be.signalgen.SampleSignalGen
 import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
 import io.peekandpoke.klang.audio_be.signalgen.SignalContext
 import io.peekandpoke.klang.audio_be.signalgen.SignalGen
+import io.peekandpoke.klang.audio_be.voices.excite.ExciteRenderer
 import io.peekandpoke.klang.audio_be.voices.filter.buildFilterPipeline
+import io.peekandpoke.klang.audio_be.voices.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -89,7 +91,32 @@ object VoiceTestHelpers {
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
         val releaseFrames = (endFrame - gateEndFrame).toInt()
 
-        val filterPipeline = buildFilterPipeline(
+        val signalCtx = SignalContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = voiceDurationFrames,
+            gateEndFrame = voiceDurationFrames,
+            releaseFrames = releaseFrames,
+            voiceEndFrame = voiceDurationFrames + releaseFrames,
+            scratchBuffers = ScratchBuffers(blockFrames),
+        )
+
+        // Build strip pipeline: Pitch → Excite → Filter
+        val pipeline = buildPitchPipeline(
+            vibrato = vibrato,
+            accelerate = accelerate,
+            pitchEnvelope = pitchEnvelope,
+            fm = fm,
+            freqHz = freqHz,
+            sampleRate = sampleRate,
+            startFrame = startFrame,
+            endFrame = endFrame,
+            gateEndFrame = gateEndFrame,
+        ) + ExciteRenderer(
+            signal = signal,
+            signalCtx = signalCtx,
+            freqHz = freqHz,
+            startFrame = startFrame,
+        ) + buildFilterPipeline(
             modulators = filterModulators,
             startFrame = startFrame,
             gateEndFrame = gateEndFrame,
@@ -103,15 +130,25 @@ object VoiceTestHelpers {
             sampleRate = sampleRate,
         )
 
+        val blockCtx = BlockContext(
+            audioBuffer = FloatArray(blockFrames), // placeholder, updated per block
+            freqModBuffer = DoubleArray(blockFrames),
+            scratchBuffers = ScratchBuffers(blockFrames),
+            sampleRate = sampleRate,
+            startFrame = startFrame,
+            endFrame = endFrame,
+            gateEndFrame = gateEndFrame,
+            freqHz = freqHz,
+            signal = signal,
+            signalCtx = signalCtx,
+            orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
+        )
+
         return VoiceImpl(
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,
             orbitId = orbitId,
-            fm = fm,
-            accelerate = accelerate,
-            vibrato = vibrato,
-            pitchEnvelope = pitchEnvelope,
             gain = gain,
             pan = pan,
             postGain = postGain,
@@ -120,18 +157,9 @@ object VoiceTestHelpers {
             delay = delay,
             reverb = reverb,
             phaser = phaser,
-            signal = signal,
-            signalCtx = SignalContext(
-                sampleRate = sampleRate,
-                voiceDurationFrames = voiceDurationFrames,
-                gateEndFrame = voiceDurationFrames,
-                releaseFrames = releaseFrames,
-                voiceEndFrame = voiceDurationFrames + releaseFrames,
-                scratchBuffers = ScratchBuffers(blockFrames),
-            ),
-            freqHz = freqHz,
             cut = cut,
-            filterPipeline = filterPipeline,
+            pipeline = pipeline,
+            blockCtx = blockCtx,
         )
     }
 

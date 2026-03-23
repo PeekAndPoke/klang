@@ -2,6 +2,8 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.signalgen.SignalGen
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
@@ -65,8 +67,9 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext()
         voice.render(ctx)
 
-        // Signal should receive pitch modulation
-        receivedPhaseMod shouldBe ctx.freqModBuffer
+        // Signal should receive pitch modulation (non-null DoubleArray)
+        receivedPhaseMod.shouldNotBeNull()
+        receivedPhaseMod!!.size shouldBeGreaterThanOrEqual ctx.blockFrames
     }
 
     "SynthVoice without pitch modulation passes null to signal" {

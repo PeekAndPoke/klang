@@ -326,22 +326,6 @@ interface Voice {
     val cut: Int? get() = null
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Synthesis & Pitch
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /** FM synthesis parameters (modulates oscillator frequency) */
-    val fm: Fm?
-
-    /** Pitch acceleration/glide over the voice's lifetime */
-    val accelerate: Accelerate
-
-    /** Vibrato LFO (periodic pitch modulation) */
-    val vibrato: Vibrato
-
-    /** Pitch envelope (transient pitch modulation) */
-    val pitchEnvelope: PitchEnvelope?
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Dynamics
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
 

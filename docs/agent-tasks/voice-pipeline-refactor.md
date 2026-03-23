@@ -19,9 +19,9 @@ All three share a common `BlockRenderer` interface so stages can be freely compo
 |----------------------------------------|------------------------------|-----------------------------------------|
 | Phase 1: BlockRenderer + BlockContext  | **DONE**                     | Common interface and shared context     |
 | Phase 2: Extract Filter stage          | **DONE**                     | 3 renderers + shared pipeline builder   |
-| Phase 3: Extract Pitch stage           | TODO                         | Vibrato, accelerate, pitch envelope, FM |
-| Phase 4: Wrap Excite as BlockRenderer  | TODO                         | Adapter for SignalGen                   |
-| Phase 5: Clean up VoiceImpl + Voice.kt | TODO                         | VoiceImpl becomes ~30 lines             |
+| Phase 3: Extract Pitch stage           | **DONE**                     | 4 renderers + shared pipeline builder   |
+| Phase 4: Wrap Excite as BlockRenderer  | **DONE**                     | ExciteRenderer adapter for SignalGen    |
+| Phase 5: Clean up VoiceImpl + Voice.kt | **DONE**                     | VoiceImpl is ~85 lines, single pipeline |
 | Phase 6: Rename SignalGen → Exciter    | TODO (deferred, separate PR) | Mechanical rename                       |
 
 ## What's Been Implemented
@@ -31,6 +31,29 @@ All three share a common `BlockRenderer` interface so stages can be freely compo
 ```
 voices/BlockRenderer.kt    — fun interface BlockRenderer { fun render(ctx: BlockContext) }
 voices/BlockContext.kt     — shared context: buffers, timing, signal gen, routing
+```
+
+### Shared Utilities
+
+```
+voices/EnvelopeCalc.kt  — calculateControlRateEnvelope() + envelopeLevelAtPosition()
+                          shared by FmRenderer and FilterModRenderer
+```
+
+### Pitch Pipeline (Phase 3)
+
+```
+voices/pitch/PitchPipelineBuilder.kt   — buildPitchPipeline() top-level function
+voices/pitch/VibratoRenderer.kt        — LFO pitch modulation
+voices/pitch/AccelerateRenderer.kt     — pitch glide over voice lifetime
+voices/pitch/PitchEnvelopeRenderer.kt  — attack/decay pitch transient
+voices/pitch/FmRenderer.kt             — FM synthesis with envelope-controlled depth
+```
+
+### Excite (Phase 4)
+
+```
+voices/excite/ExciteRenderer.kt  — wraps SignalGen as BlockRenderer
 ```
 
 ### Filter Pipeline (Phase 2)
@@ -55,16 +78,16 @@ Pipeline order built by `buildFilterPipeline()`:
 ### Current VoiceImpl.render() flow
 
 ```kotlin
-// Pitch (still inline — Phase 3 will extract)
-var modBuffer = fillPitchModulation(ctx, offset, length)
-// ... FM synthesis inline ...
+// Update per-block state
+blockCtx.audioBuffer = ctx.voiceBuffer
+blockCtx.offset = offset
+blockCtx.length = length
+blockCtx.blockStart = ctx.blockStart
+blockCtx.freqModBufferWritten = false
 
-// Excite
-signal.generate(ctx.voiceBuffer, freqHz, signalCtx)
-
-// Filter (composable BlockRenderer pipeline)
-for (renderer in filterPipeline) {
-    renderer.render(bCtx)
+// Pitch → Excite → Filter (single composable pipeline)
+for (renderer in pipeline) {
+  renderer.render(blockCtx)
 }
 
 // Route
@@ -73,54 +96,38 @@ mixToOrbit(ctx, offset, length)
 
 ## Remaining Work
 
-### Phase 3: Extract Pitch stage
-
-Each sub-step becomes a `BlockRenderer` that writes to `ctx.freqModBuffer`:
-- `VibratoRenderer` — LFO pitch modulation
-- `AccelerateRenderer` — pitch glide over voice lifetime
-- `PitchEnvelopeRenderer` — attack/decay/release on pitch
-- `FmRenderer` — FM synthesis (multiplies into the freqMod buffer)
-
-#### Files to modify:
-- `VoiceImpl.kt` — remove pitch mod/FM logic, replace with `List<BlockRenderer>`
-- `VoiceScheduler.kt` — build pitch renderer list in `buildVoice()`
-- `Voice.kt` — remove fm/accelerate/vibrato/pitchEnvelope properties
-- `common.kt` — `fillPitchModulation` logic moves into pitch renderers
-
-### Phase 4: Wrap Excite as BlockRenderer
-
-Wrap `SignalGen` in an `ExciteRenderer` adapter:
-
-```kotlin
-class ExciteRenderer(val signal: SignalGen) : BlockRenderer {
-    override fun render(ctx: BlockContext) {
-        ctx.signalCtx.phaseMod = if (ctx.hasFreqMod) ctx.freqModBuffer else null
-        signal.generate(ctx.audioBuffer, ctx.freqHz, ctx.signalCtx)
-    }
-}
-```
-
-### Phase 5: Clean up VoiceImpl + Voice.kt
-
-VoiceImpl.render() becomes:
-```kotlin
-for (renderer in pipeline) { renderer.render(blockCtx) }
-mixToOrbit(ctx, blockCtx.offset, blockCtx.length)
-```
-
-Voice.kt interface shrinks to: lifecycle, dynamics, routing, render.
-
 ### Phase 6: Rename SignalGen → Exciter (deferred, separate PR)
 
 Mechanical rename across all modules. No logic changes.
 
+### Future: Package reorganization
+
+When renaming, also reorganize into clean packages:
+
+- `voices/strip/` — VoiceImpl (→ Strip), BlockRenderer, BlockContext
+- `voices/strip/pitch/` — pitch renderers
+- `voices/strip/excite/` — ExciteRenderer
+- `voices/strip/filter/` — filter renderers
+- `orbits/` — orbit/bus pipeline (already exists)
+
 ## Code Review Fixes Applied
 
+### Review 1 (after Phase 2)
 1. Removed unused `hasFreqMod` field from BlockContext
 2. Extracted `buildFilterPipeline()` to shared utility — eliminates duplication between VoiceScheduler and
    VoiceTestHelpers
 3. Fixed FilterModRenderer release phase bug — now calculates actual envelope level at gate end instead of assuming
    sustainLevel
+
+### Review 2 (after Phase 4+5)
+
+4. Fixed division-by-zero in AccelerateRenderer when `endFrame == startFrame` — guarded in `buildPitchPipeline()`
+5. Extracted shared envelope calculation to `EnvelopeCalc.kt` (`calculateControlRateEnvelope` +
+   `envelopeLevelAtPosition`)
+   — eliminates 40+ lines of duplication between FmRenderer and FilterModRenderer
+6. Renamed `hasFreqMod` → `freqModBufferWritten` — clearer intent (per-block accumulator flag, not config property)
+7. Documented sequential rendering assumption on BlockContext
+8. Removed `blockContextFactory` lambda — BlockContext is now pre-built by VoiceScheduler at voice construction time
 
 ## Verification
 

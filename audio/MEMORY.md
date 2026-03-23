@@ -51,7 +51,9 @@ Key files:
 - `voices/filter/AudioFilterRenderer.kt` — wraps AudioFilter as BlockRenderer
 - `voices/filter/EnvelopeRenderer.kt` — ADSR VCA
 
-Status: Filter stage fully extracted. Pitch stage still inline in VoiceImpl (Phase 3 pending).
+Status: **All stages extracted.** VoiceImpl runs a single `List<BlockRenderer>` pipeline:
+Pitch renderers → ExciteRenderer → Filter renderers → mixToOrbit.
+Shared envelope calculation in `EnvelopeCalc.kt`. Phase 6 (rename SignalGen → Exciter) deferred.
 See `docs/agent-tasks/voice-pipeline-refactor.md` for full plan.
 
 ## Lessons Learned

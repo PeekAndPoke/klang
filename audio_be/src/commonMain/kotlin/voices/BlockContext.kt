@@ -15,6 +15,9 @@ import io.peekandpoke.klang.audio_be.signalgen.SignalGen
  * - **Pitch** stages write to [freqModBuffer] (frequency multipliers)
  * - **Excite** stages write to [audioBuffer] (raw waveform)
  * - **Filter** stages read/write [audioBuffer] (sculpt the waveform)
+ *
+ * **Threading assumption:** Voices render sequentially within a block.
+ * The shared buffers ([audioBuffer], [freqModBuffer]) are not thread-safe.
  */
 class BlockContext(
     // ═══════════════════════════════════════════════════════════════════════════
@@ -75,4 +78,6 @@ class BlockContext(
     /** Pre-computed sample rate as Double */
     val sampleRateD: Double = sampleRate.toDouble()
 
+    /** Whether any Pitch renderer has written to [freqModBuffer] this block. Reset per block. */
+    var freqModBufferWritten: Boolean = false
 }

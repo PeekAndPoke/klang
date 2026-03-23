@@ -9,7 +9,9 @@ import io.peekandpoke.klang.audio_be.filters.FormantFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.signalgen.*
+import io.peekandpoke.klang.audio_be.voices.excite.ExciteRenderer
 import io.peekandpoke.klang.audio_be.voices.filter.buildFilterPipeline
+import io.peekandpoke.klang.audio_be.voices.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
@@ -963,8 +965,23 @@ class VoiceScheduler(
             scratchBuffers = scratchBuffers,
         )
 
-        // Build filter pipeline: only include active stages
-        val filterPipeline = buildFilterPipeline(
+        // Build strip pipeline: Pitch → Excite → Filter
+        val pipeline = buildPitchPipeline(
+            vibrato = vibrato,
+            accelerate = accelerate,
+            pitchEnvelope = pitchEnvelope,
+            fm = fm,
+            freqHz = freqHz,
+            sampleRate = sampleRate,
+            startFrame = startFrame,
+            endFrame = endFrame,
+            gateEndFrame = gateEndFrame,
+        ) + ExciteRenderer(
+            signal = signal,
+            signalCtx = signalCtx,
+            freqHz = freqHz,
+            startFrame = startFrame,
+        ) + buildFilterPipeline(
             modulators = modulators,
             startFrame = startFrame,
             gateEndFrame = gateEndFrame,
@@ -978,6 +995,20 @@ class VoiceScheduler(
             sampleRate = sampleRate,
         )
 
+        val blockCtx = BlockContext(
+            audioBuffer = voiceBuffer,
+            freqModBuffer = freqModBuffer,
+            scratchBuffers = scratchBuffers,
+            sampleRate = sampleRate,
+            startFrame = startFrame,
+            endFrame = endFrame,
+            gateEndFrame = gateEndFrame,
+            freqHz = freqHz,
+            signal = signal,
+            signalCtx = signalCtx,
+            orbits = options.orbits,
+        )
+
         return VoiceImpl(
             orbitId = orbit,
             startFrame = startFrame,
@@ -986,20 +1017,14 @@ class VoiceScheduler(
             gain = gain,
             pan = data.pan ?: 0.5,
             postGain = postGain,
-            accelerate = accelerate,
-            vibrato = vibrato,
-            pitchEnvelope = pitchEnvelope,
             delay = delay,
             reverb = reverb,
             phaser = phaser,
             ducking = ducking,
             compressor = compressor,
-            signal = signal,
-            signalCtx = signalCtx,
-            fm = fm,
-            freqHz = freqHz,
             cut = cut,
-            filterPipeline = filterPipeline,
+            pipeline = pipeline,
+            blockCtx = blockCtx,
         )
     }
 
