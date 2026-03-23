@@ -105,6 +105,7 @@ stack(                                                                 //////// 
         """
 
     val strangerThingsNetflix = """
+
 import * from "stdlib"
 import * from "sprudel"
 
@@ -128,7 +129,7 @@ stack(
     .orbit(1).s("supersaw").unison(4).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.15).slow(256))
     .gain(0.225).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
     .pan(0.29).superimpose(pan(0.61))
-    .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3)
+    .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3).analog(1)
     .filterWhen(x => x >= wait * 3 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.75).struct("x!8")
@@ -136,7 +137,7 @@ stack(
     .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
     .lpf(6 * 440).hpf(180).notchf(notch).notchq(0.75).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
-    .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).analog(0.2) // . solo()
+    .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).analog(1) // . solo()
     .filterWhen(x => x < (wait * 4 + keep))
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
