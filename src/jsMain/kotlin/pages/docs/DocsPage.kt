@@ -71,6 +71,19 @@ class DocsPage(ctx: NoProps) : PureComponent(ctx) {
                         ui.large.header { +"KlangScript" }
                     }
                 }
+
+                ui.horizontal.card {
+                    onClick { router.navToUri(Nav.tutorials()) }
+
+                    noui.image {
+                        ui.basic.segment {
+                            icon.big.graduation_cap()
+                        }
+                    }
+                    noui.middle.aligned.content {
+                        ui.large.header { +"Tutorials" }
+                    }
+                }
             }
         }
     }

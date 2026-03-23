@@ -37,6 +37,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         data object Main : State
         data object Songs : State
         data object Samples : State
+        data object Tutorials : State
         data object Docs : State
         data object Credits : State
     }
@@ -44,6 +45,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     private fun inferState(): State = when {
         currentRoute.route in listOf(Nav.editSongCode, Nav.newSongCode) -> State.Songs
         currentRoute.route in listOf(Nav.samplesLibrary) -> State.Samples
+        currentRoute.route.pattern.startsWith(Nav.tutorialsBase) -> State.Tutorials
         currentRoute.route.pattern.startsWith(Nav.manualsBase) -> State.Docs
         currentRoute.route == Nav.credits -> State.Credits
         else -> State.Main
@@ -73,6 +75,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                     State.Credits -> renderDefaultMenu()
                     State.Songs -> renderSongsMenu()
                     State.Samples -> renderSamplesMenu()
+                    State.Tutorials -> renderTutorialsMenu()
                     State.Docs -> renderDocsMenu()
                 }
             }
@@ -186,6 +189,20 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             }
 
             noui.item {
+                val isSelected = state == State.Tutorials
+                itemCss(isSelected)
+                onItemClick {
+                    state = State.Tutorials
+                    router.navToUri(Nav.tutorials())
+                }
+                icon.graduation_cap()
+                noui.content {
+                    itemContentCss(isSelected)
+                    +"Tutorials"
+                }
+            }
+
+            noui.item {
                 val isSelected = state == State.Docs
                 itemCss(isSelected)
                 onItemClick {
@@ -292,6 +309,64 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
                 noui.content {
                     itemContentCss(isSelected)
                     +"KlangScript"
+                }
+            }
+
+        }
+    }
+
+    private fun DIV.renderTutorialsMenu() {
+        renderCategory("Tutorials")
+
+        menuItemsList {
+            noui.item {
+                val isSelected = currentRoute.route == Nav.tutorials
+                itemCss(isSelected)
+                onItemClick { router.navToUri(Nav.tutorials()) }
+                icon.list()
+                noui.content {
+                    itemContentCss(isSelected)
+                    +"All Tutorials"
+                }
+            }
+
+            noui.item {
+                itemCss(false)
+                onItemClick { router.navToUri(Nav.tutorialsWithDifficulty("Beginner")) }
+                icon.seedling()
+                noui.content {
+                    itemContentCss(false)
+                    +"Beginner"
+                }
+            }
+
+            noui.item {
+                itemCss(false)
+                onItemClick { router.navToUri(Nav.tutorialsWithDifficulty("Intermediate")) }
+                icon.signal()
+                noui.content {
+                    itemContentCss(false)
+                    +"Intermediate"
+                }
+            }
+
+            noui.item {
+                itemCss(false)
+                onItemClick { router.navToUri(Nav.tutorialsWithDifficulty("Advanced")) }
+                icon.fire()
+                noui.content {
+                    itemContentCss(false)
+                    +"Advanced"
+                }
+            }
+
+            noui.item {
+                itemCss(false)
+                onItemClick { router.navToUri(Nav.tutorialsWithDifficulty("Pro")) }
+                icon.star()
+                noui.content {
+                    itemContentCss(false)
+                    +"Pro"
                 }
             }
         }

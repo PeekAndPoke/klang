@@ -4,6 +4,7 @@ import de.peekandpoke.kraft.components.Component
 import de.peekandpoke.kraft.components.ComponentRef
 import de.peekandpoke.kraft.components.Ctx
 import de.peekandpoke.kraft.components.comp
+import de.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import de.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.utils.documentCtrl
@@ -21,12 +22,16 @@ import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.HoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolRegistry
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
+import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.FlowContent
@@ -190,6 +195,34 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
         playingCode = null
     }
 
+    private fun openTool(toolName: String, ctx: KlangUiToolContext, argFrom: Int) {
+        val tool = KlangUiToolRegistry.get(toolName) ?: return
+
+        val baseLoc = offsetToSourceLocation(currentCode, argFrom)
+        var attrs = ctx.attrs.plus(KlangUiToolContext.BaseSourceLocation, baseLoc)
+
+        playback?.let { pb ->
+            attrs = attrs.plus(KlangUiToolContext.PlaybackVoiceEvents, pb.signals)
+        }
+
+        modals.show { handle ->
+            CodeToolModal(handle) {
+                tool.apply {
+                    render(
+                        ctx.copy(
+                            attrs = attrs,
+                            onCommit = {
+                                ctx.onCommit(it)
+                                if (isPlaying) play()
+                            },
+                            onCancel = { handle.close(); ctx.onCancel() }
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     //  RENDER  /////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
@@ -276,7 +309,23 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                 hoverContent = hoverContent,
                 popups = popups,
                 onNavigate = ::navToDoc,
+                onOpenTool = { toolName, ctx, argFrom, _ ->
+                    openTool(toolName = toolName, ctx = ctx, argFrom = argFrom)
+                },
             ).track(editorRef)
         }
     }
+}
+
+private fun offsetToSourceLocation(source: String, offset: Int): SourceLocation {
+    var line = 1
+    var col = 1
+    for (i in 0 until offset.coerceAtMost(source.length)) {
+        if (source[i] == '\n') {
+            line++; col = 1
+        } else {
+            col++
+        }
+    }
+    return SourceLocation(source = null, startLine = line, startColumn = col, endLine = line, endColumn = col)
 }
