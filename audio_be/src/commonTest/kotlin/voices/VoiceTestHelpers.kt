@@ -1,15 +1,12 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.filters.effects.*
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.signalgen.SampleSignalGen
 import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
 import io.peekandpoke.klang.audio_be.signalgen.SignalContext
 import io.peekandpoke.klang.audio_be.signalgen.SignalGen
-import io.peekandpoke.klang.audio_be.voices.filter.AudioFilterRenderer
-import io.peekandpoke.klang.audio_be.voices.filter.EnvelopeRenderer
-import io.peekandpoke.klang.audio_be.voices.filter.FilterModRenderer
+import io.peekandpoke.klang.audio_be.voices.filter.buildFilterPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -92,38 +89,19 @@ object VoiceTestHelpers {
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
         val releaseFrames = (endFrame - gateEndFrame).toInt()
 
-        // Build filter pipeline (same logic as VoiceScheduler.buildFilterPipeline)
-        val filterPipeline = buildList<BlockRenderer> {
-            if (filterModulators.isNotEmpty()) {
-                add(FilterModRenderer(filterModulators, startFrame, gateEndFrame))
-            }
-            val preFilters = buildList<AudioFilter> {
-                if (crush.amount > 0.0) add(BitCrushFilter(crush.amount))
-                if (coarse.amount > 1.0) add(SampleRateReducerFilter(coarse.amount))
-            }
-            AudioFilterRenderer.ofNullable(preFilters)?.let { add(it) }
-            add(AudioFilterRenderer.of(filter))
-            add(EnvelopeRenderer(envelope, startFrame, gateEndFrame))
-            val postFilters = buildList<AudioFilter> {
-                if (distort.amount > 0.0) add(DistortionFilter(distort.amount, distort.shape))
-            }
-            AudioFilterRenderer.ofNullable(postFilters)?.let { add(it) }
-            if (tremolo.depth > 0.0) {
-                add(AudioFilterRenderer.of(TremoloFilter(tremolo.rate, tremolo.depth, sampleRate)))
-            }
-            if (phaser.depth > 0.0) {
-                add(
-                    AudioFilterRenderer.of(
-                        PhaserFilter(
-                            rate = phaser.rate, depth = phaser.depth,
-                            center = if (phaser.center > 0) phaser.center else 1000.0,
-                            sweep = if (phaser.sweep > 0) phaser.sweep else 1000.0,
-                            sampleRate = sampleRate,
-                        )
-                    )
-                )
-            }
-        }
+        val filterPipeline = buildFilterPipeline(
+            modulators = filterModulators,
+            startFrame = startFrame,
+            gateEndFrame = gateEndFrame,
+            crush = crush,
+            coarse = coarse,
+            mainFilter = filter,
+            envelope = envelope,
+            distort = distort,
+            tremolo = tremolo,
+            phaser = phaser,
+            sampleRate = sampleRate,
+        )
 
         return VoiceImpl(
             startFrame = startFrame,

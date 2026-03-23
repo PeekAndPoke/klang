@@ -11,8 +11,9 @@
 
 - **Block-based processing**: fixed-size blocks (128–256 frames). No per-sample allocation in hot paths.
 - **Ring-buffer IPC**: `KlangCommLink` uses two `KlangRingBuffer`s — no locking between threads.
-- **Sealed `Voice` interface**: `Voice` defines contract; `AbstractVoice` implements ~80% of DSP;
-  `SynthVoice`/`SampleVoice` only implement `generateSignal()`.
+- **Voice pipeline**: `Voice` interface + `VoiceImpl` runs a **Pitch → Excite → Filter** pipeline.
+  Filter stage is a composable `List<BlockRenderer>` built by `buildFilterPipeline()`.
+  Pitch stage is still inline (pending extraction). Excite delegates to `SignalGen`.
 - **Orbits = effect buses**: up to 16 mixing channels, each with independent delay/reverb/phaser/compressor/ducking.
 - **Master limiter**: −1 dB threshold, 20:1 ratio, 1 ms attack, 100 ms release — always last in chain.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
@@ -25,10 +26,9 @@ SignalGenEffects, SignalGenPitchMod, SignalGenFm. Phase 0+1 complete (additive, 
 
 ### Known Issues to Revisit
 
-- **Filter envelope release jumps from sustainLevel**: `computeFilterEnvelope()` always ramps
-  release from `sustainLevel`, not from the actual envelope position at gate end. If gate ends
-  during attack/decay, there's a discontinuity. Same bug exists in source `calculateFilterEnvelope()`.
-  Fix: capture actual level at release onset (like the amplitude ADSR does).
+- ~~**Filter envelope release jumps from sustainLevel**~~ **FIXED (2026-03-23)**:
+  `FilterModRenderer` now calculates the actual envelope level at gate end using
+  `levelAtPosition()`, matching the amplitude ADSR's capture behavior.
 - **`pitchEnvelope()` per-sample `pow()`**: `2.0.pow(amount * envLevel / 12.0)` called per sample.
   Expensive (~50-100ns per call). Could optimize sustain phase (constant value, compute once).
   `accelerate()` was already optimized to multiplicative stepping.
@@ -37,6 +37,22 @@ SignalGenEffects, SignalGenPitchMod, SignalGenFm. Phase 0+1 complete (additive, 
   Low risk (exceptions in audio hot paths are rare and fatal), but not structurally safe.
 - **Stringly-typed distortion shape**: `distort(amount, shape = "soft")` uses String for shape
   selection. Typos silently fall through to default. Consider enum in the future.
+
+## BlockRenderer Pipeline Architecture (2026-03-23)
+
+Voice rendering refactored into **Pitch → Excite → Filter** pipeline using composable `BlockRenderer` stages.
+
+Key files:
+
+- `voices/BlockRenderer.kt` — `fun interface BlockRenderer { fun render(ctx: BlockContext) }`
+- `voices/BlockContext.kt` — shared context (buffers, timing, signal gen)
+- `voices/filter/FilterPipelineBuilder.kt` — `buildFilterPipeline()` builds the filter chain
+- `voices/filter/FilterModRenderer.kt` — filter cutoff envelope modulation (control rate)
+- `voices/filter/AudioFilterRenderer.kt` — wraps AudioFilter as BlockRenderer
+- `voices/filter/EnvelopeRenderer.kt` — ADSR VCA
+
+Status: Filter stage fully extracted. Pitch stage still inline in VoiceImpl (Phase 3 pending).
+See `docs/agent-tasks/voice-pipeline-refactor.md` for full plan.
 
 ## Lessons Learned
 

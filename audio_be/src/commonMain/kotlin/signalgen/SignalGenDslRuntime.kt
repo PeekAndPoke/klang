@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.signalgen
 
 import io.peekandpoke.klang.audio_bridge.SignalGenDsl
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlin.random.Random
 
 /**

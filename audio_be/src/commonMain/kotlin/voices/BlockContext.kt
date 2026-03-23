@@ -75,6 +75,4 @@ class BlockContext(
     /** Pre-computed sample rate as Double */
     val sampleRateD: Double = sampleRate.toDouble()
 
-    /** Whether any Pitch renderer has written to [freqModBuffer] this block */
-    var hasFreqMod: Boolean = false
 }
