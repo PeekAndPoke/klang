@@ -973,3 +973,19 @@ fun SprudelVoiceData.withOscParam(key: String, value: Double?): SprudelVoiceData
     if (value == null) return this
     return copy(oscParams = (oscParams.orEmpty()) + (key to value))
 }
+
+/** Merges multiple oscParams in a single copy. Null values are ignored. */
+fun SprudelVoiceData.withOscParams(vararg params: Pair<String, Double?>): SprudelVoiceData {
+    val nonNull = params.filter { it.second != null }
+    if (nonNull.isEmpty()) return this
+    val merged = oscParams.orEmpty().toMutableMap()
+    for ((k, v) in nonNull) merged[k] = v!!
+    return copy(oscParams = merged)
+}
+
+/** Merges all oscParams from another voice data in a single copy. */
+fun SprudelVoiceData.mergeOscParamsFrom(other: SprudelVoiceData): SprudelVoiceData {
+    val otherParams = other.oscParams
+    if (otherParams.isNullOrEmpty()) return this
+    return copy(oscParams = (oscParams.orEmpty()) + otherParams)
+}

@@ -76,6 +76,20 @@ fun registerSprudelUiTools(registry: KlangUiToolRegistry = KlangUiToolRegistry) 
     registry.register("SprudelCompressorEditor", SprudelCompressorEditorTool)
     registry.register("SprudelCompressorSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelCompressorEditorTool))
 
+    // ── Pluck tools ─────────────────────────────────────────────────────────
+    registry.register("SprudelPluckEditor", SprudelPluckEditorTool)
+    registry.register("SprudelPluckSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelPluckEditorTool))
+    registry.register("SprudelSuperPluckEditor", SprudelSuperPluckEditorTool)
+    registry.register("SprudelSuperPluckSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelSuperPluckEditorTool))
+
+    // ── Sound source tools ──────────────────────────────────────────────────
+    registry.register("SprudelSuperSawEditor", SprudelSuperSawEditorTool)
+    registry.register("SprudelSuperSawSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelSuperSawEditorTool))
+    registry.register("SprudelPulzeEditor", SprudelPulzeEditorTool)
+    registry.register("SprudelPulzeSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelPulzeEditorTool))
+    registry.register("SprudelDustEditor", SprudelDustEditorTool)
+    registry.register("SprudelDustSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelDustEditorTool))
+
     // ── LP filter tools ──────────────────────────────────────────────────────
     registry.register("SprudelLpCutoffEditor", SprudelLpCutoffEditorTool)
     registry.register("SprudelLpCutoffSequenceEditor", SprudelMiniNotationEditorTool(atomTool = SprudelLpCutoffEditorTool))

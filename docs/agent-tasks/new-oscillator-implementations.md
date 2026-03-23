@@ -4,36 +4,36 @@
 
 ### Basic Waveforms
 
-| Exciter  | Aliases    | Anti-aliasing | snd* DSL | UI Tool |
-|----------|------------|---------------|----------|---------|
-| sine     | sin        | N/A           | TODO     | TODO    |
-| sawtooth | saw        | PolyBLEP      | TODO     | TODO    |
-| ramp     |            | PolyBLEP      | TODO     | TODO    |
-| square   | sqr, pulse | PolyBLEP      | TODO     | TODO    |
-| triangle | tri        | N/A           | TODO     | TODO    |
-| zawtooth | zaw        | None          | TODO     | TODO    |
-| pulze    |            | None          | TODO     | TODO    |
-| impulse  |            | N/A           | TODO     | TODO    |
+| Exciter  | Aliases    | Anti-aliasing | snd* DSL        | UI Tool |
+|----------|------------|---------------|-----------------|---------|
+| sine     | sin        | N/A           | **sndSine**     | N/A     |
+| sawtooth | saw        | PolyBLEP      | **sndSaw**      | N/A     |
+| ramp     |            | PolyBLEP      | **sndRamp**     | N/A     |
+| square   | sqr, pulse | PolyBLEP      | **sndSquare**   | N/A     |
+| triangle | tri        | N/A           | **sndTriangle** | N/A     |
+| zawtooth | zaw        | None          | (via sound/s)   | N/A     |
+| pulze    |            | None          | **sndPulze**    | DONE    |
+| impulse  |            | N/A           | (via sound/s)   | N/A     |
 
 ### Unison (Super) Variants
 
-| Exciter     | Aliases  | Anti-aliasing | snd* DSL | UI Tool |
-|-------------|----------|---------------|----------|---------|
-| supersaw    |          | PolyBLEP      | TODO     | TODO    |
-| supersine   |          | N/A           | TODO     | TODO    |
-| supersquare | supersqr | PolyBLEP      | TODO     | TODO    |
-| supertri    |          | N/A           | TODO     | TODO    |
-| superramp   |          | PolyBLEP      | TODO     | TODO    |
+| Exciter     | Aliases  | Anti-aliasing | snd* DSL           | UI Tool  |
+|-------------|----------|---------------|--------------------|----------|
+| supersaw    |          | PolyBLEP      | **sndSuperSaw**    | DONE     |
+| supersine   |          | N/A           | **sndSuperSine**   | (shared) |
+| supersquare | supersqr | PolyBLEP      | **sndSuperSquare** | (shared) |
+| supertri    |          | N/A           | **sndSuperTri**    | (shared) |
+| superramp   |          | PolyBLEP      | **sndSuperRamp**   | (shared) |
 
 ### Noise Generators
 
-| Exciter    | Aliases | snd* DSL | UI Tool |
-|------------|---------|----------|---------|
-| whitenoise | white   | TODO     | N/A     |
-| brownnoise | brown   | TODO     | N/A     |
-| pinknoise  | pink    | TODO     | N/A     |
-| dust       |         | TODO     | N/A     |
-| crackle    |         | TODO     | N/A     |
+| Exciter    | Aliases | snd* DSL       | UI Tool  |
+|------------|---------|----------------|----------|
+| whitenoise | white   | **sndNoise**   | N/A      |
+| brownnoise | brown   | **sndBrown**   | N/A      |
+| pinknoise  | pink    | **sndPink**    | N/A      |
+| dust       |         | **sndDust**    | DONE     |
+| crackle    |         | **sndCrackle** | (shared) |
 
 ### Physical Models
 
@@ -67,22 +67,22 @@ Type `snd` in the editor → code completion shows all available sound sources. 
 |---------------------------------|----------|-----------------------------------------------------------|
 | `sndPluck("d:b:p:s")`           | **DONE** | decay:brightness:pickPosition:stiffness                   |
 | `sndSuperPluck("v:s:d:b:p:st")` | **DONE** | voices:freqSpread:decay:brightness:pickPosition:stiffness |
-| `sndSine()`                     | TODO     | — (no params, just sets sound)                            |
-| `sndSaw()`                      | TODO     | —                                                         |
-| `sndSquare()`                   | TODO     | —                                                         |
-| `sndTriangle()`                 | TODO     | —                                                         |
-| `sndRamp()`                     | TODO     | —                                                         |
-| `sndSuperSaw("v:s")`            | TODO     | voices:freqSpread                                         |
-| `sndSuperSine("v:s")`           | TODO     | voices:freqSpread                                         |
-| `sndSuperSquare("v:s")`         | TODO     | voices:freqSpread                                         |
-| `sndSuperTri("v:s")`            | TODO     | voices:freqSpread                                         |
-| `sndSuperRamp("v:s")`           | TODO     | voices:freqSpread                                         |
-| `sndPulze("d")`                 | TODO     | duty                                                      |
-| `sndNoise()`                    | TODO     | — (white noise)                                           |
-| `sndBrown()`                    | TODO     | —                                                         |
-| `sndPink()`                     | TODO     | —                                                         |
-| `sndDust("d")`                  | TODO     | density                                                   |
-| `sndCrackle("d")`               | TODO     | density                                                   |
+| `sndSine()`                     | **DONE** | — (no params, just sets sound)                            |
+| `sndSaw()`                      | **DONE** | —                                                         |
+| `sndSquare()`                   | **DONE** | —                                                         |
+| `sndTriangle()`                 | **DONE** | —                                                         |
+| `sndRamp()`                     | **DONE** | —                                                         |
+| `sndSuperSaw("v:s")`            | **DONE** | voices:freqSpread                                         |
+| `sndSuperSine("v:s")`           | **DONE** | voices:freqSpread                                         |
+| `sndSuperSquare("v:s")`         | **DONE** | voices:freqSpread                                         |
+| `sndSuperTri("v:s")`            | **DONE** | voices:freqSpread                                         |
+| `sndSuperRamp("v:s")`           | **DONE** | voices:freqSpread                                         |
+| `sndPulze("d")`                 | **DONE** | duty                                                      |
+| `sndNoise()`                    | **DONE** | — (white noise)                                           |
+| `sndBrown()`                    | **DONE** | —                                                         |
+| `sndPink()`                     | **DONE** | —                                                         |
+| `sndDust("d")`                  | **DONE** | density                                                   |
+| `sndCrackle("d")`               | **DONE** | density                                                   |
 
 Implementation file: `sprudel/.../lang/addons/lang_snd_addons.kt`
 
@@ -96,13 +96,13 @@ component for visual editing of the colon-separated params.
 All UI tools should include **presets** (dropdown/selector) similar to `compressor()`, so users
 can quickly pick a starting point and tweak from there.
 
-| UI Tool                           | For               | Params                                                         | Presets                                                               | Status |
-|-----------------------------------|-------------------|----------------------------------------------------------------|-----------------------------------------------------------------------|--------|
-| `SprudelPluckSequenceEditor`      | `sndPluck()`      | decay, brightness, pickPosition, stiffness                     | guitar, pizzicato, harp, sitar, banjo, koto, steelString, nylonString | TODO   |
-| `SprudelSuperPluckSequenceEditor` | `sndSuperPluck()` | voices, freqSpread, decay, brightness, pickPosition, stiffness | 12string, choirHarp, shimmerPad, thickGuitar, ukuleleChorus           | TODO   |
-| `SprudelSuperSawSequenceEditor`   | `sndSuperSaw()`   | voices, freqSpread                                             | thin (3v), classic (5v), fat (7v), wide, tight                        | TODO   |
-| `SprudelPulzeSequenceEditor`      | `sndPulze()`      | duty                                                           | square (0.5), thin (0.1), clarinet (0.25), wide (0.75)                | TODO   |
-| `SprudelDustSequenceEditor`       | `sndDust()`       | density                                                        | sparse, medium, dense                                                 | TODO   |
+| UI Tool                           | For               | Params                                                         | Presets                                                                                                                      | Status   |
+|-----------------------------------|-------------------|----------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|----------|
+| `SprudelPluckSequenceEditor`      | `sndPluck()`      | decay, brightness, pickPosition, stiffness                     | Guitar, Pizzicato, Harp, Sitar, Banjo, Koto, Steel String, Nylon String                                                      | **DONE** |
+| `SprudelSuperPluckSequenceEditor` | `sndSuperPluck()` | voices, freqSpread, decay, brightness, pickPosition, stiffness | 12-String Guitar, Choir Harp, Shimmer Pad, Thick Guitar, Ukulele Chorus, Ethereal Strings, Metallic Cluster, Tight Pizzicato | **DONE** |
+| `SprudelSuperSawSequenceEditor`   | `sndSuperSaw()`   | voices, freqSpread                                             | Thin (3v), Classic (5v), Fat (7v), Wide, Tight, Massive (9v)                                                                 | **DONE** |
+| `SprudelPulzeSequenceEditor`      | `sndPulze()`      | duty                                                           | Square, Thin, Clarinet, Wide, Nasal, Hollow                                                                                  | **DONE** |
+| `SprudelDustSequenceEditor`       | `sndDust()`       | density                                                        | Sparse, Light, Medium, Dense, Heavy                                                                                          | **DONE** |
 
 Simple sound selectors (no params) don't need UI tools — they're just sound name shortcuts.
 
