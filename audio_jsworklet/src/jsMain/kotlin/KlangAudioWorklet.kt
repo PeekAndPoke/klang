@@ -2,7 +2,6 @@ import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
 import io.peekandpoke.klang.audio_be.signalgen.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
@@ -36,7 +35,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             sampleRate = sampleRate
         )
 
-        val signalGenRegistry = SignalGenRegistry(legacyOscillators = oscillators(sampleRate = sampleRate)).apply {
+        val signalGenRegistry = SignalGenRegistry().apply {
             registerDefaults()
         }
 

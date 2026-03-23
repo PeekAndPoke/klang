@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.signalgen.SampleSignalGen
 import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
 import io.peekandpoke.klang.audio_be.signalgen.SignalContext
 import io.peekandpoke.klang.audio_be.signalgen.SignalGen
@@ -39,10 +40,10 @@ object VoiceTestHelpers {
     }
 
     /**
-     * Create a minimal SynthVoice with sensible defaults.
+     * Create a minimal voice with sensible defaults.
      * Only specify the parameters you want to test.
      */
-    fun createSynthVoice(
+    fun createVoice(
         startFrame: Long = 0,
         endFrame: Long = 1000,
         gateEndFrame: Long = 1000,
@@ -80,11 +81,14 @@ object VoiceTestHelpers {
         distort: Voice.Distort = Voice.Distort(0.0),
         crush: Voice.Crush = Voice.Crush(0.0),
         coarse: Voice.Coarse = Voice.Coarse(0.0),
-    ): SynthVoice {
+
+        // Cut group
+        cut: Int? = null,
+    ): VoiceImpl {
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
         val releaseFrames = (endFrame - gateEndFrame).toInt()
 
-        return SynthVoice(
+        return VoiceImpl(
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,
@@ -118,83 +122,105 @@ object VoiceTestHelpers {
                 scratchBuffers = ScratchBuffers(blockFrames),
             ),
             freqHz = freqHz,
+            cut = cut,
         )
     }
 
-    /**
-     * Create a minimal SampleVoice with sensible defaults.
-     */
+    /** Backward-compatible alias */
+    fun createSynthVoice(
+        startFrame: Long = 0,
+        endFrame: Long = 1000,
+        gateEndFrame: Long = 1000,
+        orbitId: Int = 0,
+        sampleRate: Int = 44100,
+        blockFrames: Int = 100,
+        freqHz: Double = 440.0,
+        signal: SignalGen = TestSignalGens.constant,
+        fm: Voice.Fm? = null,
+        accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
+        vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
+        pitchEnvelope: Voice.PitchEnvelope? = null,
+        gain: Double = 1.0,
+        pan: Double = 0.5,
+        postGain: Double = 1.0,
+        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, 1.0),
+        compressor: Voice.Compressor? = null,
+        ducking: Voice.Ducking? = null,
+        filter: AudioFilter = NoOpFilter,
+        filterModulators: List<Voice.FilterModulator> = emptyList(),
+        delay: Voice.Delay = Voice.Delay(0.0, 0.0, 0.0),
+        reverb: Voice.Reverb = Voice.Reverb(0.0, 0.0),
+        phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
+        tremolo: Voice.Tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
+        distort: Voice.Distort = Voice.Distort(0.0),
+        crush: Voice.Crush = Voice.Crush(0.0),
+        coarse: Voice.Coarse = Voice.Coarse(0.0),
+    ) = createVoice(
+        startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
+        orbitId = orbitId, sampleRate = sampleRate, blockFrames = blockFrames,
+        freqHz = freqHz, signal = signal, fm = fm, accelerate = accelerate,
+        vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
+        postGain = postGain, envelope = envelope, compressor = compressor,
+        ducking = ducking, filter = filter, filterModulators = filterModulators,
+        delay = delay, reverb = reverb, phaser = phaser, tremolo = tremolo,
+        distort = distort, crush = crush, coarse = coarse,
+    )
+
+    /** Create a voice with SampleSignalGen for sample playback tests. */
     fun createSampleVoice(
         sample: MonoSamplePcm,
         startFrame: Long = 0,
         endFrame: Long = 1000,
         gateEndFrame: Long = 1000,
         orbitId: Int = 0,
-
-        // Sample-specific
-        samplePlayback: SampleVoice.SamplePlayback = SampleVoice.SamplePlayback.default,
+        sampleRate: Int = 44100,
+        blockFrames: Int = 100,
+        freqHz: Double = 440.0,
         rate: Double = 1.0,
         playhead: Double = 0.0,
-
-        // Synthesis & Pitch
+        loopStart: Double = -1.0,
+        loopEnd: Double = -1.0,
+        isLooping: Boolean = false,
+        stopFrame: Double = Double.MAX_VALUE,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
         pitchEnvelope: Voice.PitchEnvelope? = null,
-
-        // Dynamics
         gain: Double = 1.0,
         pan: Double = 0.5,
         postGain: Double = 1.0,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, 1.0), // Always on
+        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, 1.0),
         compressor: Voice.Compressor? = null,
         ducking: Voice.Ducking? = null,
-
-        // Filters & Modulation
         filter: AudioFilter = NoOpFilter,
         filterModulators: List<Voice.FilterModulator> = emptyList(),
-
-        // Time-Based Effects
         delay: Voice.Delay = Voice.Delay(0.0, 0.0, 0.0),
         reverb: Voice.Reverb = Voice.Reverb(0.0, 0.0),
-
-        // Raw Effect Data
         phaser: Voice.Phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
         tremolo: Voice.Tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
         distort: Voice.Distort = Voice.Distort(0.0),
         crush: Voice.Crush = Voice.Crush(0.0),
         coarse: Voice.Coarse = Voice.Coarse(0.0),
-    ): SampleVoice {
-        return SampleVoice(
-            startFrame = startFrame,
-            endFrame = endFrame,
-            gateEndFrame = gateEndFrame,
-            orbitId = orbitId,
-            fm = fm,
-            accelerate = accelerate,
-            vibrato = vibrato,
-            pitchEnvelope = pitchEnvelope,
-            gain = gain,
-            pan = pan,
-            postGain = postGain,
-            envelope = envelope,
-            compressor = compressor,
-            ducking = ducking,
-            filter = filter,
-            filterModulators = filterModulators,
-            delay = delay,
-            reverb = reverb,
-            phaser = phaser,
-            tremolo = tremolo,
-            distort = distort,
-            crush = crush,
-            coarse = coarse,
-            samplePlayback = samplePlayback,
-            sample = sample,
+    ) = createVoice(
+        startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
+        orbitId = orbitId, sampleRate = sampleRate, blockFrames = blockFrames,
+        freqHz = freqHz,
+        signal = SampleSignalGen(
+            pcm = sample.pcm,
             rate = rate,
-            playhead = playhead
-        )
-    }
+            playhead = playhead,
+            loopStart = loopStart,
+            loopEnd = loopEnd,
+            isLooping = isLooping,
+            stopFrame = stopFrame,
+        ),
+        fm = fm, accelerate = accelerate,
+        vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
+        postGain = postGain, envelope = envelope, compressor = compressor,
+        ducking = ducking, filter = filter, filterModulators = filterModulators,
+        delay = delay, reverb = reverb, phaser = phaser, tremolo = tremolo,
+        distort = distort, crush = crush, coarse = coarse,
+    )
 
     /**
      * No-op filter that does nothing.
@@ -250,9 +276,6 @@ object VoiceTestHelpers {
  * Create predictable audio data for testing.
  */
 object TestSamples {
-    /**
-     * Create a silent sample (all zeros).
-     */
     fun silence(size: Int, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
@@ -261,9 +284,6 @@ object TestSamples {
         )
     }
 
-    /**
-     * Create an impulse sample (1.0 at index 0, rest zeros).
-     */
     fun impulse(size: Int, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
@@ -272,9 +292,6 @@ object TestSamples {
         )
     }
 
-    /**
-     * Create a ramp sample (linear increase from 0.0 to 1.0).
-     */
     fun ramp(size: Int, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
@@ -283,9 +300,6 @@ object TestSamples {
         )
     }
 
-    /**
-     * Create a sine wave sample (one complete cycle).
-     */
     fun sine(size: Int, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
@@ -296,41 +310,12 @@ object TestSamples {
         )
     }
 
-    /**
-     * Create a constant sample (all values equal).
-     */
     fun constant(size: Int, value: Float = 0.5f, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = FloatArray(size) { value },
             meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
         )
-    }
-}
-
-/**
- * Test oscillators for predictable signal generation (legacy OscFn interface).
- */
-object TestOscillators {
-    val constant = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
-        for (i in 0 until length) {
-            buffer[offset + i] = 1.0f
-        }
-        phase
-    }
-
-    val ramp = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
-        for (i in 0 until length) {
-            buffer[offset + i] = (i.toFloat() / length)
-        }
-        phase
-    }
-
-    val silence = io.peekandpoke.klang.audio_be.osci.OscFn { buffer, offset, length, phase, _, _ ->
-        for (i in 0 until length) {
-            buffer[offset + i] = 0.0f
-        }
-        phase
     }
 }
 

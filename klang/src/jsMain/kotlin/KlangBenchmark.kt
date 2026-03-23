@@ -4,7 +4,6 @@ import de.peekandpoke.ultra.streams.Stream
 import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
 import io.peekandpoke.klang.audio_be.signalgen.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
@@ -153,7 +152,7 @@ class KlangBenchmark(
         // 1. Setup Headless Environment
         val commLink = KlangCommLink()
         val orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate)
-        val signalGenRegistry = SignalGenRegistry(legacyOscillators = oscillators(sampleRate = sampleRate)).apply {
+        val signalGenRegistry = SignalGenRegistry().apply {
             registerDefaults()
         }
 

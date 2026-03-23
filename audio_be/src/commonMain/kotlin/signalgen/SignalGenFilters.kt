@@ -264,7 +264,7 @@ data class FormantBand(
 
 /**
  * Wraps a [SignalGen] with a one-pole low-pass filter controlled by warmth factor.
- * Same alpha-based logic as [OscFn.withWarmth]: `smoothed = raw + alpha * (lastSample - raw)`.
+ * One-pole LPF: `smoothed = raw + alpha * (lastSample - raw)`.
  *
  * @param warmthFactor Amount of filtering (0.0 = none/bypass, up to 0.99 = very muffled).
  */

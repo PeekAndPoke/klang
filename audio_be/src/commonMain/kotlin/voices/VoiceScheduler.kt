@@ -8,9 +8,7 @@ import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.FormantFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
-import io.peekandpoke.klang.audio_be.signalgen.SignalContext
-import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
+import io.peekandpoke.klang.audio_be.signalgen.*
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
@@ -753,42 +751,25 @@ class VoiceScheduler(
                 val resolvedAdsr = data.adsr
                     .resolve(AdsrEnvelope.defaultSynth)
 
-                // Calc envelope
-                val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
-
-                // Update endFrame based on actual release
-                val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toLong()
-
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-                val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
-                val voiceEndFrame = voiceDurationFrames + releaseFrames
 
                 val signal = options.signalGenRegistry.createSignalGen(sound, data, freqHz)
                     ?: return null
 
-                val signalCtx = SignalContext(
-                    sampleRate = sampleRate,
-                    voiceDurationFrames = voiceDurationFrames,
-                    gateEndFrame = voiceDurationFrames,
-                    releaseFrames = releaseFrames,
-                    voiceEndFrame = voiceEndFrame,
-                    scratchBuffers = scratchBuffers,
-                )
-
-                SynthVoice(
-                    orbitId = orbit,
+                buildVoice(
+                    data = data,
+                    resolvedAdsr = resolvedAdsr,
                     startFrame = startFrame,
-                    endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
+                    voiceDurationFrames = voiceDurationFrames,
+                    orbit = orbit,
                     gain = gain,
-                    pan = data.pan ?: 0.5,
                     postGain = postGain,
                     accelerate = accelerate,
                     vibrato = vibrato,
                     pitchEnvelope = pitchEnvelope,
-                    filter = bakedFilters,
-                    envelope = envelope,
-                    filterModulators = modulators,
+                    bakedFilters = bakedFilters,
+                    modulators = modulators,
                     delay = delay,
                     reverb = reverb,
                     phaser = phaser,
@@ -798,9 +779,8 @@ class VoiceScheduler(
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
-                    signal = signal,
-                    signalCtx = signalCtx,
                     fm = fm,
+                    signal = signal,
                     freqHz = freqHz,
                 )
             }
@@ -814,15 +794,12 @@ class VoiceScheduler(
                 val entry = getCompleteSample(sampleRequest) ?: return null
                 val sample = entry.sample
 
+                if (sample.pcm.size <= 1) return null
+
                 // Resolve ADSR: Pattern > Sample Defaults > Synth Defaults
                 val resolvedAdsr = data.adsr
                     .mergeWith(sample.meta.adsr)
                     .resolve(AdsrEnvelope.defaultSynth)
-
-                val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
-
-                // Update endFrame based on actual release
-                val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toLong()
 
                 val baseSamplePitchHz = entry.pitchHz
                 val targetPitchHz = data.freqHz ?: baseSamplePitchHz
@@ -848,22 +825,35 @@ class VoiceScheduler(
                 // If begin/end are NOT set, we fall back to meta-looping.
                 val useMetaLoop = !explicitLoop && data.begin == null && data.end == null
 
-                val samplePlayback = SampleVoice.SamplePlayback(
-                    cut = data.cut,
-                    explicitLooping = explicitLoop,
-                    explicitLoopStart = startSample,
-                    explicitLoopEnd = endSample,
-                    stopFrame = endSample
-                )
+                // Resolve loop points
+                val sampleMetaLoop = sample.meta.loop
 
-                // Handle Cut / Choke Groups logic before creating the new voice fully
-                // (Actually we do it here, effectively "choking" previous voices)
-                if (samplePlayback.cut != null) {
+                val loopStart: Double
+                val loopEnd: Double
+                val isLooping: Boolean
+
+                if (explicitLoop) {
+                    loopStart = startSample
+                    loopEnd = endSample
+                    isLooping = loopStart >= 0.0 && loopEnd > loopStart
+                } else if (useMetaLoop && sampleMetaLoop != null) {
+                    loopStart = sampleMetaLoop.start.toDouble()
+                    loopEnd = sampleMetaLoop.end.toDouble()
+                    isLooping = loopStart >= 0.0 && loopEnd > loopStart
+                } else {
+                    loopStart = -1.0
+                    loopEnd = -1.0
+                    isLooping = false
+                }
+
+                val cut = data.cut
+
+                // Handle Cut / Choke Groups logic before creating the new voice
+                if (cut != null) {
                     val iterator = active.iterator()
                     while (iterator.hasNext()) {
-                        val activeVoiceWrapper = iterator.next()
-                        val voice = activeVoiceWrapper.voice
-                        if (voice is SampleVoice && voice.samplePlayback.cut == samplePlayback.cut) {
+                        val activeVoice = iterator.next()
+                        if (activeVoice.voice.cut == cut) {
                             // Kill the active voice in the same cut group
                             // TODO: Use a fade out / release phase instead of hard cut?
                             iterator.remove()
@@ -875,8 +865,6 @@ class VoiceScheduler(
                 // If begin is set, use it.
                 // Else, if we use meta loop, start at loop start (for pads).
                 // Else start at anchor.
-                val sampleMetaLoop = sample.meta.loop
-
                 val playhead0 = if (data.begin != null) {
                     startSample
                 } else if (useMetaLoop && sampleMetaLoop != null) {
@@ -885,22 +873,32 @@ class VoiceScheduler(
                     sample.meta.anchor * sample.sampleRate
                 }
 
-                if (sample.pcm.size <= 1) return null
+                val voiceDurationFrames = (gateEndFrame - nowFrame).toInt()
 
-                SampleVoice(
-                    orbitId = orbit,
+                val signal = SampleSignalGen(
+                    pcm = sample.pcm,
+                    rate = rate,
+                    playhead = playhead0,
+                    loopStart = loopStart,
+                    loopEnd = loopEnd,
+                    isLooping = isLooping,
+                    stopFrame = endSample,
+                )
+
+                buildVoice(
+                    data = data,
+                    resolvedAdsr = resolvedAdsr,
                     startFrame = nowFrame, // Start immediately since we ignore lateFrames
-                    endFrame = endFrame,
                     gateEndFrame = gateEndFrame,
+                    voiceDurationFrames = voiceDurationFrames,
+                    orbit = orbit,
                     gain = gain,
-                    pan = data.pan ?: 0.5,
                     postGain = postGain,
-                    filter = bakedFilters,
                     accelerate = accelerate,
                     vibrato = vibrato,
                     pitchEnvelope = pitchEnvelope,
-                    envelope = envelope,
-                    filterModulators = modulators,
+                    bakedFilters = bakedFilters,
+                    modulators = modulators,
                     delay = delay,
                     reverb = reverb,
                     phaser = phaser,
@@ -910,15 +908,88 @@ class VoiceScheduler(
                     distort = distort,
                     crush = crush,
                     coarse = coarse,
-                    fm = null, // Samples don't support FM in this path currently
-                    samplePlayback = samplePlayback,
-                    sample = sample,
-                    rate = rate,
-                    playhead = playhead0,
+                    fm = fm,
+                    signal = signal,
+                    freqHz = baseSamplePitchHz,
+                    cut = cut,
                 )
             }
 
             else -> null
         }
+    }
+
+    private fun buildVoice(
+        data: VoiceData,
+        resolvedAdsr: AdsrEnvelope.Resolved,
+        startFrame: Long,
+        gateEndFrame: Long,
+        voiceDurationFrames: Int,
+        orbit: Int,
+        gain: Double,
+        postGain: Double,
+        accelerate: Voice.Accelerate,
+        vibrato: Voice.Vibrato,
+        pitchEnvelope: Voice.PitchEnvelope?,
+        bakedFilters: AudioFilter,
+        modulators: List<Voice.FilterModulator>,
+        delay: Voice.Delay,
+        reverb: Voice.Reverb,
+        phaser: Voice.Phaser,
+        tremolo: Voice.Tremolo,
+        ducking: Voice.Ducking?,
+        compressor: Voice.Compressor?,
+        distort: Voice.Distort,
+        crush: Voice.Crush,
+        coarse: Voice.Coarse,
+        fm: Voice.Fm?,
+        signal: SignalGen,
+        freqHz: Double,
+        cut: Int? = null,
+    ): VoiceImpl {
+        val sampleRate = options.sampleRate
+        val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
+        val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toLong()
+        val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
+        val voiceEndFrame = voiceDurationFrames + releaseFrames
+
+        val signalCtx = SignalContext(
+            sampleRate = sampleRate,
+            voiceDurationFrames = voiceDurationFrames,
+            gateEndFrame = voiceDurationFrames,
+            releaseFrames = releaseFrames,
+            voiceEndFrame = voiceEndFrame,
+            scratchBuffers = scratchBuffers,
+        )
+
+        return VoiceImpl(
+            orbitId = orbit,
+            startFrame = startFrame,
+            endFrame = endFrame,
+            gateEndFrame = gateEndFrame,
+            gain = gain,
+            pan = data.pan ?: 0.5,
+            postGain = postGain,
+            accelerate = accelerate,
+            vibrato = vibrato,
+            pitchEnvelope = pitchEnvelope,
+            filter = bakedFilters,
+            envelope = envelope,
+            filterModulators = modulators,
+            delay = delay,
+            reverb = reverb,
+            phaser = phaser,
+            tremolo = tremolo,
+            ducking = ducking,
+            compressor = compressor,
+            distort = distort,
+            crush = crush,
+            coarse = coarse,
+            signal = signal,
+            signalCtx = signalCtx,
+            fm = fm,
+            freqHz = freqHz,
+            cut = cut,
+        )
     }
 }

@@ -26,6 +26,9 @@ fun SignalGenRegistry.registerDefaults() {
     register("triangle", triangle)
     register("tri", triangle)
 
+    val ramp = SignalGenDsl.Ramp()
+    register("ramp", ramp)
+
     val zawtooth = SignalGenDsl.Zawtooth()
     register("zawtooth", zawtooth)
     register("zaw", zawtooth)
@@ -38,6 +41,24 @@ fun SignalGenRegistry.registerDefaults() {
 
     val silence = SignalGenDsl.Silence
     register("silence", silence)
+
+    // ─── SuperOsc ────────────────────────────────────────────────────────────
+
+    val superSaw = SignalGenDsl.SuperSaw()
+    register("supersaw", superSaw)
+
+    val superSine = SignalGenDsl.SuperSine()
+    register("supersine", superSine)
+
+    val superSquare = SignalGenDsl.SuperSquare()
+    register("supersquare", superSquare)
+    register("supersqr", superSquare)
+
+    val superTri = SignalGenDsl.SuperTri()
+    register("supertri", superTri)
+
+    val superRamp = SignalGenDsl.SuperRamp()
+    register("superramp", superRamp)
 
     // ─── Noises ──────────────────────────────────────────────────────────────
 
@@ -55,10 +76,6 @@ fun SignalGenRegistry.registerDefaults() {
 
     register("dust", SignalGenDsl.Dust())
     register("crackle", SignalGenDsl.Crackle())
-
-    val supersaw = SignalGenDsl.Supersaw()
-    register("supersaw", supersaw)
-    register("z_supersaw", supersaw)
 
     // ─── SignalGen compositions ──────────────────────────────────────────────
 

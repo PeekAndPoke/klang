@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
 import io.peekandpoke.klang.audio_be.signalgen.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
@@ -34,7 +33,7 @@ class JvmAudioBackend(
         sampleRate = sampleRate
     )
 
-    val signalGenRegistry = SignalGenRegistry(legacyOscillators = oscillators(sampleRate)).apply {
+    val signalGenRegistry = SignalGenRegistry().apply {
         registerDefaults()
     }
 

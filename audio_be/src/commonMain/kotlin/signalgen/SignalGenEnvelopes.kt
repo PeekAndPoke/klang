@@ -10,9 +10,9 @@ package io.peekandpoke.klang.audio_be.signalgen
  * - Release: ramp from current level to 0.0 over [releaseSec]
  *
  * Voice timing (gate end, release duration) is read from [SignalContext].
- * The envelope does NOT control voice lifecycle — that's handled by frame counting in AbstractVoice.
+ * The envelope does NOT control voice lifecycle — that's handled by frame counting in VoiceImpl.
  *
- * Ported from: AbstractVoice.applyEnvelope() in voices/AbstractVoice.kt
+ * Ported from: VoiceImpl.applyEnvelope() in voices/VoiceImpl.kt
  */
 fun SignalGen.adsr(
     attackSec: Double,

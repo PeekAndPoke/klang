@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.signalgen.SampleSignalGen
 import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
 import io.peekandpoke.klang.audio_be.signalgen.SignalContext
 import io.peekandpoke.klang.audio_be.signalgen.SignalGen
@@ -85,7 +86,7 @@ class FilterModulationTest : StringSpec({
 
     "filter without modulator is not modified" {
         val spyFilter = SpyFilter()
-        val voice = SynthVoice(
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -138,7 +139,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SynthVoice(
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -194,7 +195,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SynthVoice(
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 0,
             endFrame = 2000,
@@ -250,7 +251,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SynthVoice(
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -319,7 +320,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff2
         )
 
-        val voice = SynthVoice(
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -361,7 +362,7 @@ class FilterModulationTest : StringSpec({
         spyFilter2.currentCutoff shouldBe (3000.0 plusOrMinus 0.1)
     }
 
-    "modulation works in SampleVoice too" {
+    "modulation works with sample signal too" {
         val spyFilter = SpyFilter()
         val baseCutoff = 500.0
         val depth = 1.0
@@ -378,7 +379,8 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SampleVoice(
+        val sample = createSample()
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -402,10 +404,24 @@ class FilterModulationTest : StringSpec({
             crush = Voice.Crush(0.0),
             coarse = Voice.Coarse(0.0),
             fm = null,
-            samplePlayback = SampleVoice.SamplePlayback.default,
-            sample = createSample(),
-            rate = 1.0,
-            playhead = 0.0
+            signal = SampleSignalGen(
+                pcm = sample.pcm,
+                rate = 1.0,
+                playhead = 0.0,
+                loopStart = -1.0,
+                loopEnd = -1.0,
+                isLooping = false,
+                stopFrame = Double.MAX_VALUE
+            ),
+            signalCtx = SignalContext(
+                sampleRate = 44100,
+                voiceDurationFrames = 1000,
+                gateEndFrame = 1000,
+                releaseFrames = 0,
+                voiceEndFrame = 1000,
+                scratchBuffers = ScratchBuffers(100)
+            ),
+            freqHz = 440.0
         )
 
         // Render at attack peak
@@ -427,7 +443,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = 1000.0
         )
 
-        val voice = SynthVoice(
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,
@@ -486,7 +502,7 @@ class FilterModulationTest : StringSpec({
         )
 
         // Voice starts at frame 100
-        val voice = SynthVoice(
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 100,
             endFrame = 1000,
@@ -543,7 +559,7 @@ class FilterModulationTest : StringSpec({
             baseCutoff = baseCutoff
         )
 
-        val voice = SynthVoice(
+        val voice = VoiceImpl(
             orbitId = 0,
             startFrame = 0,
             endFrame = 1000,

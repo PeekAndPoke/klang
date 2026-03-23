@@ -5,7 +5,7 @@ import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 
-sealed interface Voice {
+interface Voice {
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Render Context
@@ -321,6 +321,9 @@ sealed interface Voice {
 
     /** Orbit/bus ID for routing to effects and mixing */
     val orbitId: Int
+
+    /** Cut group ID — voices in the same cut group choke each other (typically for samples) */
+    val cut: Int? get() = null
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Synthesis & Pitch

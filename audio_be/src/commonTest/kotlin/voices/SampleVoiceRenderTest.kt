@@ -3,81 +3,22 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
-import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
-import io.peekandpoke.klang.audio_bridge.SampleMetadata
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
+import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
 
 class SampleVoiceRenderTest : StringSpec({
 
-    val sampleRate = 44100
-    val blockFrames = 100
-
-    // Helper to create a dummy context
-    fun createCtx(): Voice.RenderContext {
-        return Voice.RenderContext(
-            orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
-            sampleRate = sampleRate,
-            blockFrames = blockFrames,
-            voiceBuffer = FloatArray(blockFrames),
-            freqModBuffer = DoubleArray(blockFrames),
-            scratchBuffers = ScratchBuffers(blockFrames),
-        )
-    }
-
     // Helper to create a dummy sample (ramp from 0.0 to 1.0)
-    fun createSample(size: Int): MonoSamplePcm {
+    fun createSample(size: Int): io.peekandpoke.klang.audio_bridge.MonoSamplePcm {
         val pcm = FloatArray(size) { it.toFloat() / (size - 1) }
-        return MonoSamplePcm(
-            sampleRate = sampleRate,
+        return io.peekandpoke.klang.audio_bridge.MonoSamplePcm(
+            sampleRate = 44100,
             pcm = pcm,
-            meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
-        )
-    }
-
-    // Helper to create a dummy filter that does nothing
-    val dummyFilter = object : AudioFilter {
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {}
-    }
-
-    // Helper to create a basic SampleVoice
-    fun createVoice(
-        sample: MonoSamplePcm,
-        playback: SampleVoice.SamplePlayback = SampleVoice.SamplePlayback.default,
-        startFrame: Long = 0,
-        playhead: Double = 0.0,
-        rate: Double = 1.0,
-    ): SampleVoice {
-        return SampleVoice(
-            orbitId = 0,
-            startFrame = startFrame,
-            endFrame = startFrame + 1000,
-            gateEndFrame = startFrame + 1000,
-            gain = 1.0,
-            pan = 0.0,
-            accelerate = Voice.Accelerate(0.0),
-            vibrato = Voice.Vibrato(0.0, 0.0),
-            pitchEnvelope = null,
-            filter = dummyFilter,
-            envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, 1.0), // Always on
-            filterModulators = emptyList(),
-            delay = Voice.Delay(0.0, 0.0, 0.0),
-            reverb = Voice.Reverb(0.0, 0.0),
-            phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
-            tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
-            ducking = null,
-            postGain = 1.0,
-            compressor = null,
-            distort = Voice.Distort(0.0),
-            crush = Voice.Crush(0.0),
-            coarse = Voice.Coarse(0.0),
-            fm = null,
-            samplePlayback = playback,
-            sample = sample,
-            rate = rate,
-            playhead = playhead
+            meta = io.peekandpoke.klang.audio_bridge.SampleMetadata(
+                loop = null,
+                adsr = io.peekandpoke.klang.audio_bridge.AdsrEnvelope.empty,
+                anchor = 0.0,
+            )
         )
     }
 
@@ -87,8 +28,8 @@ class SampleVoiceRenderTest : StringSpec({
 //    "render basic playback" {
 //        val sampleSize = 10
 //        val sample = createSample(sampleSize) // 0.0, 0.11, 0.22, ... 1.0
-//        val voice = createVoice(sample)
-//        val ctx = createCtx()
+//        val voice = createSampleVoice(sample = sample)
+//        val ctx = createContext()
 //
 //        // Render first block
 //        voice.render(ctx)
@@ -107,8 +48,8 @@ class SampleVoiceRenderTest : StringSpec({
         val sampleSize = 10
         val sample = createSample(sampleSize)
         val rate = 2.0
-        val voice = createVoice(sample, rate = rate)
-        val ctx = createCtx()
+        val voice = createSampleVoice(sample = sample, rate = rate)
+        val ctx = createContext()
 
         voice.render(ctx)
 
@@ -124,15 +65,14 @@ class SampleVoiceRenderTest : StringSpec({
     "render loop (explicit)" {
         val sampleSize = 10
         val sample = createSample(sampleSize)
-        val playback = SampleVoice.SamplePlayback(
-            cut = null,
-            explicitLooping = true,
-            explicitLoopStart = 0.0,
-            explicitLoopEnd = 5.0, // Loop first half (0..4)
-            stopFrame = Double.MAX_VALUE
+        val voice = createSampleVoice(
+            sample = sample,
+            isLooping = true,
+            loopStart = 0.0,
+            loopEnd = 5.0, // Loop first half (0..4)
+            stopFrame = Double.MAX_VALUE,
         )
-        val voice = createVoice(sample, playback = playback)
-        val ctx = createCtx()
+        val ctx = createContext()
 
         voice.render(ctx)
 
@@ -148,15 +88,11 @@ class SampleVoiceRenderTest : StringSpec({
 //    "render stopFrame (end)" {
 //        val sampleSize = 10
 //        val sample = createSample(sampleSize)
-//        val playback = SampleVoice.SamplePlayback(
-//            cut = null,
-//            explicitLooping = false,
-//            explicitLoopStart = -1.0,
-//            explicitLoopEnd = -1.0,
+//        val voice = createSampleVoice(
+//            sample = sample,
 //            stopFrame = 5.0 // Stop at index 5 (halfway)
 //        )
-//        val voice = createVoice(sample, playback = playback)
-//        val ctx = createCtx()
+//        val ctx = createContext()
 //
 //        voice.render(ctx)
 //

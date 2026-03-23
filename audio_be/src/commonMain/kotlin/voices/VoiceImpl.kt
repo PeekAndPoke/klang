@@ -2,16 +2,24 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.effects.*
+import io.peekandpoke.klang.audio_be.signalgen.SignalContext
+import io.peekandpoke.klang.audio_be.signalgen.SignalGen
 import io.peekandpoke.klang.audio_be.voices.Voice.*
 
 /**
- * Abstract base class for all voice implementations.
- * Contains the complete audio processing pipeline shared by SynthVoice and SampleVoice.
+ * Concrete voice implementation containing the complete audio processing pipeline.
  *
- * Subclasses only need to implement generateSignal() which fills the buffer with
- * the raw audio (oscillator output or sample playback).
+ * Rendering order:
+ * 1. Pitch Modulation (Vibrato + Accelerate + Pitch Envelope)
+ * 2. FM Synthesis (if active, modulates pitch)
+ * 3. Signal Generation (via [SignalGen] — oscillator or sample playback)
+ * 4. Pre-Filters (Bit Crush, Sample Rate Reduction)
+ * 5. Main Subtractive Filter (with envelope modulation)
+ * 6. Envelope (ADSR VCA - amplitude control)
+ * 7. Post-Filters (Distortion, Phaser, Tremolo)
+ * 8. Mixing to Orbit (panning, sends to delay/reverb)
  */
-abstract class AbstractVoice(
+class VoiceImpl(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Lifecycle & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -58,6 +66,22 @@ abstract class AbstractVoice(
     override val distort: Distort,
     override val crush: Crush,
     override val coarse: Coarse,
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Signal Generation
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    /** Cut group ID — voices in the same cut group choke each other (typically for samples) */
+    override val cut: Int? = null,
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Signal Generation
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    /** SignalGen tree for waveform generation (oscillator or sample playback) */
+    private val signal: SignalGen,
+    /** Per-voice rendering context for the SignalGen tree */
+    private val signalCtx: SignalContext,
+    /** Base frequency in Hz (used for FM calculation; ignored by sample-based SignalGens) */
+    private val freqHz: Double,
 ) : Voice {
 
     // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
@@ -93,22 +117,6 @@ abstract class AbstractVoice(
         fxDistortion
     )
 
-    /**
-     * Generates the raw audio signal into ctx.voiceBuffer.
-     * This is the only method subclasses need to implement.
-     *
-     * @param ctx Render context with buffers and configuration
-     * @param offset Start position in buffer
-     * @param length Number of frames to generate
-     * @param pitchMod Pitch modulation buffer (null if no modulation active)
-     */
-    protected abstract fun generateSignal(
-        ctx: RenderContext,
-        offset: Int,
-        length: Int,
-        pitchMod: DoubleArray?,
-    )
-
     override fun render(ctx: RenderContext): Boolean {
         val blockEnd = ctx.blockStart + ctx.blockFrames
         // Lifecycle check
@@ -140,7 +148,7 @@ abstract class AbstractVoice(
             }
 
             // Calculate Modulator Parameters
-            val modFreq = getBaseFrequency() * fmInstance.ratio
+            val modFreq = freqHz * fmInstance.ratio
             val modInc = (io.peekandpoke.klang.audio_be.TWO_PI * modFreq) / ctx.sampleRate
             var modPhase = fmInstance.modPhase
 
@@ -150,14 +158,19 @@ abstract class AbstractVoice(
             for (i in 0 until length) {
                 val modSignal = kotlin.math.sin(modPhase) * effectiveDepth
                 modPhase += modInc
-                val fmMult = 1.0 + (modSignal / getBaseFrequency())
+                val fmMult = 1.0 + (modSignal / freqHz)
                 buf[offset + i] *= fmMult
             }
-            fmInstance.modPhase = modPhase
+            fmInstance.modPhase = modPhase % io.peekandpoke.klang.audio_be.TWO_PI
         }
 
-        // 3. Generate signal (delegate to subclass)
-        generateSignal(ctx, offset, length, modBuffer)
+        // 3. Generate signal
+        signalCtx.offset = offset
+        signalCtx.length = length
+        signalCtx.voiceElapsedFrames = (ctx.blockStart - startFrame).toInt()
+        signalCtx.phaseMod = modBuffer
+
+        signal.generate(ctx.voiceBuffer, freqHz, signalCtx)
 
         // 4. Pre-Filters (Destructive: Crush, Coarse)
         for (fx in preFilters) {
@@ -204,16 +217,10 @@ abstract class AbstractVoice(
     }
 
     /**
-     * Get the base frequency for FM calculation.
-     * SynthVoice returns oscillator frequency, SampleVoice returns sample pitch.
-     */
-    protected abstract fun getBaseFrequency(): Double
-
-    /**
      * Apply ADSR envelope to the voice buffer.
      * This is the VCA (Voltage Controlled Amplifier) stage.
      */
-    protected fun applyEnvelope(ctx: RenderContext, offset: Int, length: Int) {
+    private fun applyEnvelope(ctx: RenderContext, offset: Int, length: Int) {
         val env = envelope
         val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
         val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
@@ -244,6 +251,7 @@ abstract class AbstractVoice(
                         val decPos = absPos - env.attackFrames
                         1.0 - (decPos * decRate)
                     }
+
                     else -> env.sustainLevel
                 }
             }

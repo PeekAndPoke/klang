@@ -3,10 +3,8 @@ package io.peekandpoke.klang.audio_be.signalgen
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.audio_be.osci.oscillators
 import io.peekandpoke.klang.audio_bridge.SignalGenDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
-import kotlin.random.Random
 
 class SignalGenRegistryTest : StringSpec({
 
@@ -78,23 +76,28 @@ class SignalGenRegistryTest : StringSpec({
         registry.contains("triangle") shouldBe true
         registry.contains("tri") shouldBe true
 
+        // Noise
+        registry.contains("whitenoise") shouldBe true
+        registry.contains("white") shouldBe true
+        registry.contains("brownnoise") shouldBe true
+        registry.contains("brown") shouldBe true
+        registry.contains("pinknoise") shouldBe true
+        registry.contains("pink") shouldBe true
+        registry.contains("dust") shouldBe true
+        registry.contains("crackle") shouldBe true
+
+        // Other
+        registry.contains("supersaw") shouldBe true
+        registry.contains("zawtooth") shouldBe true
+        registry.contains("zaw") shouldBe true
+        registry.contains("pulze") shouldBe true
+        registry.contains("impulse") shouldBe true
+        registry.contains("silence") shouldBe true
+
         // Compositions
         registry.contains("sgpad") shouldBe true
         registry.contains("sgbell") shouldBe true
         registry.contains("sgbuzz") shouldBe true
-    }
-
-    "contains checks legacy fallback" {
-        val registry = SignalGenRegistry(
-            legacyOscillators = oscillators(44100) { rng(Random(42)) },
-        )
-
-        // Legacy oscillator names should be found
-        registry.contains("supersaw") shouldBe true
-        registry.contains("dust") shouldBe true
-
-        // Unknown names should not
-        registry.contains("xyznotreal") shouldBe false
     }
 
     "createSignalGen returns DSL-based signal for registered name" {
@@ -107,31 +110,6 @@ class SignalGenRegistryTest : StringSpec({
         signal shouldNotBe null
 
         // Generate a block and verify non-zero output
-        val blockFrames = 128
-        val ctx = SignalContext(
-            sampleRate = 44100,
-            voiceDurationFrames = 44100,
-            gateEndFrame = 44100,
-            releaseFrames = 4410,
-            voiceEndFrame = 48510,
-            scratchBuffers = ScratchBuffers(blockFrames),
-        ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
-
-        val buffer = FloatArray(blockFrames)
-        signal!!.generate(buffer, 440.0, ctx)
-        buffer.any { it != 0.0f } shouldBe true
-    }
-
-    "createSignalGen falls back to legacy oscillators" {
-        val registry = SignalGenRegistry(
-            legacyOscillators = oscillators(44100) { rng(Random(42)) },
-        )
-
-        val data = VoiceData.empty.copy(sound = "supersaw", freqHz = 440.0, oscParams = mapOf("voices" to 5.0))
-        val signal = registry.createSignalGen("supersaw", data, 440.0)
-
-        signal shouldNotBe null
-
         val blockFrames = 128
         val ctx = SignalContext(
             sampleRate = 44100,
@@ -166,20 +144,6 @@ class SignalGenRegistryTest : StringSpec({
         sig2 shouldNotBe null
         // Must be different instances (independent mutable state per voice)
         (sig1 !== sig2) shouldBe true
-    }
-
-    "fork inherits legacy fallback" {
-        val parent = SignalGenRegistry(
-            legacyOscillators = oscillators(44100) { rng(Random(42)) },
-        )
-        parent.register("custom", SignalGenDsl.Sine())
-
-        val child = parent.fork()
-
-        // Child should have DSL entry
-        child.contains("custom") shouldBe true
-        // Child should also have legacy fallback
-        child.contains("supersaw") shouldBe true
     }
 
     "registerDefaults compositions produce non-zero output" {

@@ -59,8 +59,44 @@ sealed class SignalGenDsl {
     data class Crackle(val density: Double = 0.2, val gain: Double = 1.0) : SignalGenDsl()
 
     @Serializable
+    @SerialName("ramp")
+    data class Ramp(val gain: Double = 0.6) : SignalGenDsl()
+
+    @Serializable
     @SerialName("supersaw")
-    data class Supersaw(
+    data class SuperSaw(
+        val voices: Int = 5,
+        val freqSpread: Double = 0.2,
+        val gain: Double = 0.6,
+    ) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("supersine")
+    data class SuperSine(
+        val voices: Int = 5,
+        val freqSpread: Double = 0.2,
+        val gain: Double = 1.0,
+    ) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("supersquare")
+    data class SuperSquare(
+        val voices: Int = 5,
+        val freqSpread: Double = 0.2,
+        val gain: Double = 0.5,
+    ) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("supertri")
+    data class SuperTri(
+        val voices: Int = 5,
+        val freqSpread: Double = 0.2,
+        val gain: Double = 0.7,
+    ) : SignalGenDsl()
+
+    @Serializable
+    @SerialName("superramp")
+    data class SuperRamp(
         val voices: Int = 5,
         val freqSpread: Double = 0.2,
         val gain: Double = 0.6,

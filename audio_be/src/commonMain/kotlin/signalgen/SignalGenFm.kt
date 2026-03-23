@@ -5,7 +5,7 @@ package io.peekandpoke.klang.audio_be.signalgen
  *
  * The modulator SignalGen's output modulates the carrier's frequency via phaseMod.
  *
- * Ported from: FM section in AbstractVoice.render() (lines ~133-157)
+ * Ported from: FM section in VoiceImpl.render() (lines ~133-157)
  *
  * @param modulator SignalGen that produces the modulation signal
  * @param ratio frequency ratio between modulator and carrier (e.g. 1.0, 2.0, 3.14)

@@ -8,8 +8,6 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.osci.Oscillators
 import io.peekandpoke.klang.audio_bridge.SignalGenDsl
 import kotlin.math.abs
 import kotlin.random.Random
@@ -366,13 +364,13 @@ class SignalGensTest : StringSpec({
     "zawtooth - amplitude matches gain" {
         val gain = 1.0
         val buf = generate(SignalGens.zawtooth(gain), freqHz = 440.0)
-        buf.peakAmplitude().toDouble() shouldBe (gain plusOrMinus 0.02)
+        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.02)
     }
 
     "zawtooth - custom gain scales amplitude" {
         val gain = 0.4
         val buf = generate(SignalGens.zawtooth(gain), freqHz = 440.0)
-        buf.peakAmplitude().toDouble() shouldBe (gain plusOrMinus 0.02)
+        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.02)
     }
 
     "zawtooth - correct frequency (zero crossings)" {
@@ -385,7 +383,7 @@ class SignalGensTest : StringSpec({
 
     "zawtooth - symmetric around zero" {
         val buf = generate(SignalGens.zawtooth(), freqHz = 440.0)
-        buf.dcOffset().toDouble() shouldBe (0.0 plusOrMinus 0.02)
+        buf.dcOffset() shouldBe (0.0 plusOrMinus 0.02)
     }
 
     "zawtooth - phase continuity across blocks" {
@@ -664,19 +662,19 @@ class SignalGensTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "supersaw - produces non-zero output" {
-        val buf = generate(SignalGens.supersaw(), freqHz = 440.0)
+        val buf = generate(SignalGens.superSaw(), freqHz = 440.0)
         buf.any { it != 0.0f } shouldBe true
     }
 
     "supersaw - amplitude bounded by gain" {
         val gain = 0.6
-        val buf = generate(SignalGens.supersaw(gain = gain), freqHz = 440.0)
+        val buf = generate(SignalGens.superSaw(gain = gain), freqHz = 440.0)
         buf.peakAmplitude() shouldBeLessThan gain + 0.1
     }
 
     "supersaw - more voices increases energy" {
-        val buf1 = generate(SignalGens.supersaw(voices = 1, gain = 1.0), freqHz = 440.0)
-        val buf5 = generate(SignalGens.supersaw(voices = 5, gain = 1.0), freqHz = 440.0)
+        val buf1 = generate(SignalGens.superSaw(voices = 1, gain = 1.0), freqHz = 440.0)
+        val buf5 = generate(SignalGens.superSaw(voices = 5, gain = 1.0), freqHz = 440.0)
         // Both should produce output
         buf1.any { it != 0.0f } shouldBe true
         buf5.any { it != 0.0f } shouldBe true
@@ -684,7 +682,7 @@ class SignalGensTest : StringSpec({
 
     "supersaw - single voice equals sawtooth character" {
         // Single voice supersaw should have sawtooth-like zero crossings
-        val buf = generate(SignalGens.supersaw(voices = 1, freqSpread = 0.0, gain = 1.0), freqHz = 440.0)
+        val buf = generate(SignalGens.superSaw(voices = 1, freqSpread = 0.0, gain = 1.0), freqHz = 440.0)
         val crossings = buf.zeroCrossings()
         // 440Hz over 100ms ≈ 44 cycles, saw has ~1-2 crossings per cycle
         crossings shouldBeGreaterThanOrEqual 40
@@ -692,12 +690,12 @@ class SignalGensTest : StringSpec({
     }
 
     "supersaw - symmetric around zero (no DC offset)" {
-        val buf = generate(SignalGens.supersaw(), freqHz = 440.0)
+        val buf = generate(SignalGens.superSaw(), freqHz = 440.0)
         buf.dcOffset() shouldBe (0.0 plusOrMinus 0.05)
     }
 
     "supersaw - phase continuity across blocks" {
-        val sig = SignalGens.supersaw()
+        val sig = SignalGens.superSaw()
         val blockSize = 128
         val ctx = createCtx(blockSize)
         val buf1 = FloatArray(blockSize)
@@ -714,7 +712,7 @@ class SignalGensTest : StringSpec({
     }
 
     "supersaw - negative phaseMod does not cause drift" {
-        val sig = SignalGens.supersaw()
+        val sig = SignalGens.superSaw()
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
@@ -731,14 +729,14 @@ class SignalGensTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "supersaw DSL - oscParams override voices" {
-        val dsl = SignalGenDsl.Supersaw(voices = 3)
+        val dsl = SignalGenDsl.SuperSaw(voices = 3)
         val sig = dsl.toSignalGen(mapOf("voices" to 7.0))
         val buf = generate(sig, freqHz = 440.0)
         buf.any { it != 0.0f } shouldBe true
     }
 
     "supersaw DSL - oscParams override freqSpread" {
-        val dsl = SignalGenDsl.Supersaw(freqSpread = 0.1)
+        val dsl = SignalGenDsl.SuperSaw(freqSpread = 0.1)
         val sig = dsl.toSignalGen(mapOf("freqSpread" to 0.5))
         val buf = generate(sig, freqHz = 440.0)
         buf.any { it != 0.0f } shouldBe true
@@ -756,51 +754,4 @@ class SignalGensTest : StringSpec({
         countOverride shouldBeGreaterThanOrEqual countDefault
     }
 
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Supersaw: new SignalGen vs legacy OscFn — sample-exact comparison
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "supersaw - new SignalGen matches legacy OscFn sample-for-sample" {
-        val seed = 42
-        val voices = 7
-        val freqSpread = 0.3
-        val gain = 0.6
-        val freqHz = 440.0
-        val blockFrames = 4410
-
-        // ── New SignalGen path ──
-        val newSig = SignalGens.supersaw(
-            voices = voices,
-            freqSpread = freqSpread,
-            gain = gain,
-            rng = Random(seed),
-        )
-        val newBuf = FloatArray(blockFrames)
-        val newCtx = createCtx(blockFrames)
-        newSig.generate(newBuf, freqHz, newCtx)
-
-        // ── Legacy OscFn path ──
-        val legacyOsc = Oscillators.supersawFn(
-            sampleRate = sampleRate,
-            baseFreqHz = freqHz,
-            voices = voices,
-            freqSpread = freqSpread,
-            panSpread = 0.0,
-            rng = Random(seed),
-            gain = gain,
-        )
-        val legacyBuf = FloatArray(blockFrames)
-        legacyOsc.process(legacyBuf, 0, blockFrames, 0.0, TWO_PI * freqHz / sampleRate, null)
-
-        // ── Compare sample-by-sample ──
-        var maxDiff = 0.0
-        for (i in 0 until blockFrames) {
-            val diff = abs(newBuf[i] - legacyBuf[i]).toDouble()
-            if (diff > maxDiff) maxDiff = diff
-        }
-
-        // Should be bit-identical (same algorithm, same seed, same params)
-        println("supersaw comparison: maxDiff = $maxDiff")
-        maxDiff shouldBeLessThan 0.001
-    }
 })

@@ -8,7 +8,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 
 /**
- * Tests for AbstractVoice pipeline ordering.
+ * Tests for VoiceImpl pipeline ordering.
  * Verifies that the 8-stage pipeline executes in the correct order:
  *
  * 1. Filter Modulation (control rate)
@@ -21,7 +21,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
  * 8. Post-Filters (Distortion, Tremolo, Phaser)
  * 9. Mix to Orbit
  */
-class AbstractVoicePipelineTest : StringSpec({
+class VoiceImplPipelineTest : StringSpec({
 
     "pipeline executes filters in correct order: pre -> main -> post" {
         // Create spy filters to track execution order
@@ -243,7 +243,7 @@ class AbstractVoicePipelineTest : StringSpec({
 
         // Buffer should have some signal (not all zeros)
         // Note: We can't directly verify envelope was applied after filter,
-        // but the pipeline order in AbstractVoice guarantees this
+        // but the pipeline order in VoiceImpl guarantees this
     }
 
     "voice renders correct number of samples" {
