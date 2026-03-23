@@ -1,14 +1,16 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.exciter.ExciteContext
+import io.peekandpoke.klang.audio_be.exciter.Exciter
+import io.peekandpoke.klang.audio_be.exciter.SampleExciter
+import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.SampleSignalGen
-import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
-import io.peekandpoke.klang.audio_be.signalgen.SignalContext
-import io.peekandpoke.klang.audio_be.signalgen.SignalGen
-import io.peekandpoke.klang.audio_be.voices.excite.ExciteRenderer
-import io.peekandpoke.klang.audio_be.voices.filter.buildFilterPipeline
-import io.peekandpoke.klang.audio_be.voices.pitch.buildPitchPipeline
+import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
+import io.peekandpoke.klang.audio_be.voices.strip.VoiceImpl
+import io.peekandpoke.klang.audio_be.voices.strip.excite.ExciteRenderer
+import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
+import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -56,7 +58,7 @@ object VoiceTestHelpers {
 
         // Synthesis & Pitch
         freqHz: Double = 440.0,
-        signal: SignalGen = TestSignalGens.constant,
+        signal: Exciter = TestExciters.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
@@ -91,7 +93,7 @@ object VoiceTestHelpers {
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
         val releaseFrames = (endFrame - gateEndFrame).toInt()
 
-        val signalCtx = SignalContext(
+        val signalCtx = ExciteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
@@ -172,7 +174,7 @@ object VoiceTestHelpers {
         sampleRate: Int = 44100,
         blockFrames: Int = 100,
         freqHz: Double = 440.0,
-        signal: SignalGen = TestSignalGens.constant,
+        signal: Exciter = TestExciters.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
@@ -203,7 +205,7 @@ object VoiceTestHelpers {
         distort = distort, crush = crush, coarse = coarse,
     )
 
-    /** Create a voice with SampleSignalGen for sample playback tests. */
+    /** Create a voice with SampleExciter for sample playback tests. */
     fun createSampleVoice(
         sample: MonoSamplePcm,
         startFrame: Long = 0,
@@ -242,7 +244,7 @@ object VoiceTestHelpers {
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
         orbitId = orbitId, sampleRate = sampleRate, blockFrames = blockFrames,
         freqHz = freqHz,
-        signal = SampleSignalGen(
+        signal = SampleExciter(
             pcm = sample.pcm,
             rate = rate,
             playhead = playhead,
@@ -357,24 +359,24 @@ object TestSamples {
 }
 
 /**
- * Test signal generators (SignalGen interface).
+ * Test signal generators (Exciter interface).
  */
-object TestSignalGens {
-    val constant = SignalGen { buffer, _, ctx ->
+object TestExciters {
+    val constant = Exciter { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             buffer[i] = 1.0f
         }
     }
 
-    val ramp = SignalGen { buffer, _, ctx ->
+    val ramp = Exciter { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             buffer[i] = (i - ctx.offset).toFloat() / ctx.length
         }
     }
 
-    val silence = SignalGen { buffer, _, ctx ->
+    val silence = Exciter { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             buffer[i] = 0.0f

@@ -3,12 +3,12 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.signalgen.SampleSignalGen
+import io.peekandpoke.klang.audio_be.exciter.SampleExciter
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 
 /**
- * Tests specific to sample playback via SampleSignalGen.
+ * Tests specific to sample playback via SampleExciter.
  * Verifies sample playback, looping, and interpolation.
  */
 class SampleVoiceSpecificTest : StringSpec({
@@ -17,7 +17,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.constant(size = 200, value = 0.5f) // Constant 0.5, longer than block
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -40,7 +40,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 2.0, // Double speed
                 playhead = 0.0,
@@ -64,7 +64,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 0.5, // Half speed
                 playhead = 0.0,
@@ -88,7 +88,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 10) // 0.0, 0.111, 0.222, ..., 1.0
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.5, // Non-integer playback rate
                 playhead = 0.0,
@@ -114,7 +114,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 50)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -140,7 +140,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -168,7 +168,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -195,7 +195,7 @@ class SampleVoiceSpecificTest : StringSpec({
 
         // Create voice with initial playhead
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 10.0, // Start at sample 10
@@ -218,7 +218,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.sine(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -242,7 +242,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.sine(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -269,7 +269,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.sine(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -292,7 +292,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.constant(size = 200, value = 1.0f) // Longer sample
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -323,7 +323,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 50)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 45.0, // Near end
@@ -349,7 +349,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = -10.0, // Negative playhead
@@ -376,7 +376,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.ramp(size = 200)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,
@@ -406,7 +406,7 @@ class SampleVoiceSpecificTest : StringSpec({
         val sample = TestSamples.sine(size = 100)
 
         val voice = createVoice(
-            signal = SampleSignalGen(
+            signal = SampleExciter(
                 pcm = sample.pcm,
                 rate = 1.0,
                 playhead = 0.0,

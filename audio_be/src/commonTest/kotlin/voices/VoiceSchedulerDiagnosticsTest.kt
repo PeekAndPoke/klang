@@ -5,9 +5,9 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeAtLeast
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
+import io.peekandpoke.klang.audio_be.exciter.registerDefaults
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
-import io.peekandpoke.klang.audio_be.signalgen.registerDefaults
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -28,7 +28,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
             commLink = commLink.backend,
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            signalGenRegistry = SignalGenRegistry().apply { registerDefaults() },
+            exciterRegistry = ExciterRegistry().apply { registerDefaults() },
             orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate),
             performanceTimeMs = timeMs
         )

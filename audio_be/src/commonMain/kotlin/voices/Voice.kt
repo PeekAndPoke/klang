@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 
 interface Voice {
@@ -26,7 +26,7 @@ interface Voice {
         val voiceBuffer: FloatArray,
         /** Shared buffer for frequency/pitch modulation calculations */
         val freqModBuffer: DoubleArray,
-        /** Shared scratch buffer pool for SignalGen composition operators */
+        /** Shared scratch buffer pool for Exciter composition operators */
         val scratchBuffers: ScratchBuffers,
     ) {
         /** Current block start frame (updated per block) */

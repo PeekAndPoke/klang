@@ -3,11 +3,11 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.exciter.ExciteContext
+import io.peekandpoke.klang.audio_be.exciter.Exciter
+import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.ScratchBuffers
-import io.peekandpoke.klang.audio_be.signalgen.SignalContext
-import io.peekandpoke.klang.audio_be.signalgen.SignalGen
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
@@ -19,7 +19,7 @@ class FilterModulationTest : StringSpec({
     val sampleRate = 44100
     val blockFrames = 100
 
-    val noopSignal = SignalGen { buffer, _, ctx ->
+    val noopSignal = Exciter { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) buffer[i] = 0.0f
     }
@@ -28,10 +28,10 @@ class FilterModulationTest : StringSpec({
         startFrame: Long = 0,
         gateEndFrame: Long = 1000,
         endFrame: Long = 1000,
-    ): SignalContext {
+    ): ExciteContext {
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
         val releaseFrames = (endFrame - gateEndFrame).toInt()
-        return SignalContext(
+        return ExciteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,

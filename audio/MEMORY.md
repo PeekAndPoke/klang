@@ -13,16 +13,16 @@
 - **Ring-buffer IPC**: `KlangCommLink` uses two `KlangRingBuffer`s — no locking between threads.
 - **Voice pipeline**: `Voice` interface + `VoiceImpl` runs a **Pitch → Excite → Filter** pipeline.
   Filter stage is a composable `List<BlockRenderer>` built by `buildFilterPipeline()`.
-  Pitch stage is still inline (pending extraction). Excite delegates to `SignalGen`.
+  Pitch stage is still inline (pending extraction). Excite delegates to `Exciter`.
 - **Orbits = effect buses**: up to 16 mixing channels, each with independent delay/reverb/phaser/compressor/ducking.
 - **Master limiter**: −1 dB threshold, 20:1 ratio, 1 ms attack, 100 ms release — always last in chain.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
 
-## SignalGen Composable Architecture (2026-03-19)
+## Exciter Composable Architecture (2026-03-19)
 
-New package `audio_be/.../signalgen/` — composable per-voice effect combinators.
-Files: SignalGen, SignalContext, ScratchBuffers, SignalGenEnvelopes, SignalGenFilters,
-SignalGenEffects, SignalGenPitchMod, SignalGenFm. Phase 0+1 complete (additive, nothing wired in yet).
+New package `audio_be/.../exciter/` — composable per-voice effect combinators.
+Files: Exciter, ExciteContext, ScratchBuffers, ExciterEnvelopes, ExciterFilters,
+ExciterEffects, ExciterPitchMod, ExciterFm. Phase 0+1 complete (additive, nothing wired in yet).
 
 ### Known Issues to Revisit
 
@@ -44,16 +44,16 @@ Voice rendering refactored into **Pitch → Excite → Filter** pipeline using c
 
 Key files:
 
-- `voices/BlockRenderer.kt` — `fun interface BlockRenderer { fun render(ctx: BlockContext) }`
-- `voices/BlockContext.kt` — shared context (buffers, timing, signal gen)
-- `voices/filter/FilterPipelineBuilder.kt` — `buildFilterPipeline()` builds the filter chain
-- `voices/filter/FilterModRenderer.kt` — filter cutoff envelope modulation (control rate)
-- `voices/filter/AudioFilterRenderer.kt` — wraps AudioFilter as BlockRenderer
-- `voices/filter/EnvelopeRenderer.kt` — ADSR VCA
+- `voices/strip/BlockRenderer.kt` — `fun interface BlockRenderer { fun render(ctx: BlockContext) }`
+- `voices/strip/BlockContext.kt` — shared context (buffers, timing, exciter)
+- `voices/strip/EnvelopeCalc.kt` — shared control-rate envelope calculation
+- `voices/strip/pitch/` — VibratoRenderer, AccelerateRenderer, PitchEnvelopeRenderer, FmRenderer
+- `voices/strip/excite/ExciteRenderer.kt` — wraps Exciter as BlockRenderer
+- `voices/strip/filter/` — FilterModRenderer, AudioFilterRenderer, EnvelopeRenderer, FilterPipelineBuilder
 
 Status: **All stages extracted.** VoiceImpl runs a single `List<BlockRenderer>` pipeline:
 Pitch renderers → ExciteRenderer → Filter renderers → mixToOrbit.
-Shared envelope calculation in `EnvelopeCalc.kt`. Phase 6 (rename SignalGen → Exciter) deferred.
+Shared envelope calculation in `EnvelopeCalc.kt`. Rename SignalGen → Exciter completed.
 See `docs/agent-tasks/voice-pipeline-refactor.md` for full plan.
 
 ## Lessons Learned

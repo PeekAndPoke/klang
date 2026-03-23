@@ -1,4 +1,4 @@
-# Composable Signal Generators (`SignalGen`)
+# Composable Signal Generators (`Exciter`)
 
 ## Problem
 
@@ -15,7 +15,7 @@ abstraction is already leaking.
 
 ## Design Goal
 
-A single abstraction (`SignalGen`) that unifies:
+A single abstraction (`Exciter`) that unifies:
 
 | Synthesis Method                      | How `freqHz` is used                      | State                   |
 |---------------------------------------|-------------------------------------------|-------------------------|
@@ -34,12 +34,12 @@ All of these produce "a block of samples given a frequency" — that's the abstr
 
 ```kotlin
 /**
- * Context passed to every SignalGen on each render block.
+ * Context passed to every Exciter on each render block.
  * Provides timing, voice lifecycle, and shared resources.
  * Extensible: future fields (beat position, other voices, etc.) are additive, not signature-breaking.
  */
 /**
- * Context for SignalGen rendering. Created ONCE per voice, mutated per block.
+ * Context for Exciter rendering. Created ONCE per voice, mutated per block.
  * No reinstantiation in the hot path.
  *
  * RULE: No Long anywhere in audio hot paths. Long is boxed in Kotlin/JS = severe perf degradation.
@@ -92,7 +92,7 @@ class SignalContext(
  * - freqHz: base frequency (varies per node — detune modifies it)
  * - ctx: everything else (timing, block params, modulation, resources)
  */
-fun interface SignalGen {
+fun interface Exciter {
     fun generate(
         buffer: DoubleArray,
         freqHz: Double,
@@ -173,7 +173,7 @@ This pattern applies to:
 
 ### Time-Windowed Combinators
 
-With voice timing in ctx and easing, SignalGens can be scoped to time windows with shaped transitions:
+With voice timing in ctx and easing, Exciters can be scoped to time windows with shaped transitions:
 
 ```kotlin
 #### Clock-Time Windows (absolute millis)
@@ -181,14 +181,14 @@ With voice timing in ctx and easing, SignalGens can be scoped to time windows wi
 For effects that depend on real time — transient clicks, specific attack shapes, fixed-length fades:
 
 ```kotlin
-fun SignalGen.during(
+fun Exciter.during(
     startMs: Double,
     endMs: Double,
     fadeInMs: Double = 2.0,       // 2ms default — prevents clicks
     fadeOutMs: Double = 2.0,
     fadeInEasing: EasingFn = Easings.linear,
     fadeOutEasing: EasingFn = Easings.linear,
-): SignalGen
+): Exciter
 ```
 
 Examples:
@@ -206,14 +206,14 @@ saw.during(0.0, 100.0, fadeInMs = 100.0, fadeInEasing = Easings.easeIn)
 For effects that scale with note duration — "first half," "last 20%," timbral evolution:
 
 ```kotlin
-fun SignalGen.duringProgress(
+fun Exciter.duringProgress(
     start: Double,                    // 0.0 = voice start, 1.0 = gate end
     end: Double,                      // can exceed 1.0 to include release
     fadeIn: Double = 0.01,            // 1% of voice duration default
     fadeOut: Double = 0.01,
     fadeInEasing: EasingFn = Easings.linear,
     fadeOutEasing: EasingFn = Easings.linear,
-): SignalGen
+): Exciter
 ```
 
 Examples:
@@ -230,33 +230,33 @@ sine.fm(mod, 3.0).duringProgress(0.0, 0.05) + sine.duringProgress(0.05, 1.0)
 
 ```kotlin
 /** Crossfade from this to other — clock time */
-fun SignalGen.thenCrossfade(
-    other: SignalGen,
+fun Exciter.thenCrossfade(
+    other: Exciter,
     atMs: Double,
     durationMs: Double,
     easing: EasingFn = Easings.equalPower,
-): SignalGen
+): Exciter
 
 /** Sequence multiple signals with automatic crossfades — clock time.
- *  - Each Pair maps a SignalGen to its END time in ms (first segment starts at 0).
+ *  - Each Pair maps a Exciter to its END time in ms (first segment starts at 0).
  *  - All segments' generate() is called every block (state advances continuously).
  *  - Crossfade uses equalPower easing (fade-out: cos, fade-in: sin) for constant loudness.
  *  - After the last segment ends: silence (the last signal stops, it does not sustain).
  *  - To sustain the last signal indefinitely, use Double.POSITIVE_INFINITY as end time.
  */
 fun chain(
-    vararg segments: Pair<SignalGen, Double>,  // signal to end-time-ms
+    vararg segments: Pair<Exciter, Double>,  // signal to end-time-ms
     crossfadeMs: Double = 2.0,
-): SignalGen
+): Exciter
 
 /** Like chain() but loops: after the last segment, wraps back to the first.
- *  Each Pair maps a SignalGen to its DURATION in ms (not end time).
+ *  Each Pair maps a Exciter to its DURATION in ms (not end time).
  *  Total cycle length = sum of all durations.
  */
 fun ring(
-    vararg segments: Pair<SignalGen, Double>,  // signal to duration-ms
+    vararg segments: Pair<Exciter, Double>,  // signal to duration-ms
     crossfadeMs: Double = 2.0,
-): SignalGen
+): Exciter
 ```
 
 **Crossfade note:** `thenCrossfade`, `chain`, and `ring` use equal-power crossfade internally: fade-out uses
@@ -298,11 +298,11 @@ Computes at block boundaries, interpolates per-sample. Block-size independent.
 /** Run source at control rate: compute at block start/end, interpolate per-sample.
  *  NOTE: only correct for time-based signals (LFOs, envelopes). Not for stateful
  *  generators whose behavior depends on sample count (noise, feedback loops). */
-fun SignalGen.controlRate(): SignalGen {
+fun Exciter.controlRate(): Exciter {
     var lastValue = Double.NaN  // NaN = first block not yet computed
     val sampleBuf = DoubleArray(1) // scratch for single-sample evaluation — NOT the output buffer
 
-    return SignalGen { buffer, freqHz, ctx ->
+    return Exciter { buffer, freqHz, ctx ->
         // Save and adjust ctx for single-sample evaluation
         val savedOffset = ctx.offset
         val savedLength = ctx.length
@@ -363,13 +363,13 @@ composition patterns using `during()` + easing + existing primitives.
 
 ### Phase-Based Oscillators
 
-Each factory returns a `SignalGen` with captured `var phase`:
+Each factory returns a `Exciter` with captured `var phase`:
 
 ```kotlin
-object SignalGens {
-    fun sine(gain: Double = 1.0): SignalGen {
+object Exciters {
+    fun sine(gain: Double = 1.0): Exciter {
         var phase = 0.0
-        return SignalGen { buffer, freqHz, ctx ->
+        return Exciter { buffer, freqHz, ctx ->
             val phaseInc = TWO_PI * freqHz / ctx.sampleRate
             val end = ctx.offset + ctx.length
             if (ctx.phaseMod == null) {
@@ -388,29 +388,29 @@ object SignalGens {
         }
     }
 
-    fun sawtooth(gain: Double = 0.6): SignalGen { /* PolyBLEP, captured phase */
+    fun sawtooth(gain: Double = 0.6): Exciter { /* PolyBLEP, captured phase */
     }
-    fun square(gain: Double = 0.5): SignalGen { /* ... */
+    fun square(gain: Double = 0.5): Exciter { /* ... */
     }
-    fun triangle(gain: Double = 0.7): SignalGen { /* ... */
+    fun triangle(gain: Double = 0.7): Exciter { /* ... */
     }
-    fun zawtooth(gain: Double = 1.0): SignalGen { /* ... */
+    fun zawtooth(gain: Double = 1.0): Exciter { /* ... */
     }
-    fun pulze(duty: Double = 0.5, gain: Double = 1.0): SignalGen { /* ... */
+    fun pulze(duty: Double = 0.5, gain: Double = 1.0): Exciter { /* ... */
     }
-    fun impulse(): SignalGen { /* ... */
+    fun impulse(): Exciter { /* ... */
     }
 
     // Noise (ignores freqHz)
-    fun whiteNoise(rng: Random, gain: Double = 1.0): SignalGen { /* ... */
+    fun whiteNoise(rng: Random, gain: Double = 1.0): Exciter { /* ... */
     }
-    fun brownNoise(rng: Random, gain: Double = 1.0): SignalGen { /* ... */
+    fun brownNoise(rng: Random, gain: Double = 1.0): Exciter { /* ... */
     }
-    fun pinkNoise(rng: Random, gain: Double = 1.0): SignalGen { /* ... */
+    fun pinkNoise(rng: Random, gain: Double = 1.0): Exciter { /* ... */
     }
 
     // Already internally stateful — fits naturally
-    fun supersaw(voices: Int, freqSpread: Double, rng: Random, gain: Double = 0.6): SignalGen { /* ... */
+    fun supersaw(voices: Int, freqSpread: Double, rng: Random, gain: Double = 0.6): Exciter { /* ... */
     }
 }
 ```
@@ -421,17 +421,17 @@ Karplus-Strong is the key test of the architecture. It uses `freqHz` completely 
 
 ```kotlin
 fun karplus(
-    exciter: SignalGen,           // What fills the delay line (noise, impulse, custom)
+    exciter: Exciter,           // What fills the delay line (noise, impulse, custom)
     damping: Double = 0.5,       // Low-pass filter strength (0=bright, 1=dark)
     feedback: Double = 0.998,    // How long the string rings
-): SignalGen {
+): Exciter {
     // State
     var delayLine: DoubleArray? = null
     var writePos = 0
     var excited = false
     var lastOut = 0.0
 
-    return SignalGen { buffer, freqHz, ctx ->
+    return Exciter { buffer, freqHz, ctx ->
         val delayLength = (ctx.sampleRate.toDouble() / freqHz).toInt().coerceAtLeast(2)
 
         // Initialize or resize delay line
@@ -481,7 +481,7 @@ fun karplus(
 }
 ```
 
-**Key insight**: The **exciter is itself a `SignalGen`**. This means you can excite with:
+**Key insight**: The **exciter is itself a `Exciter`**. This means you can excite with:
 
 - `whiteNoise(rng)` — classic plucked string
 - `impulse()` — sharp attack
@@ -538,8 +538,8 @@ returned. Max simultaneous buffers = composition tree depth. `(a + b).mul(0.5) +
 
 ```kotlin
 // Binary — scratch comes from ctx now, no need to capture separately
-fun SignalGen.plus(other: SignalGen): SignalGen {
-    return SignalGen { buffer, freqHz, ctx ->
+fun Exciter.plus(other: Exciter): Exciter {
+    return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
         ctx.scratchBuffers.use { tmp ->
             other.generate(tmp, freqHz, ctx)
@@ -548,25 +548,25 @@ fun SignalGen.plus(other: SignalGen): SignalGen {
     }
 }
 
-fun SignalGen.times(other: SignalGen): SignalGen  // Ring mod (same pattern)
+fun Exciter.times(other: Exciter): Exciter  // Ring mod (same pattern)
 
 // Unary (no scratch needed)
-fun SignalGen.mul(factor: Double): SignalGen {
-    return SignalGen { buffer, freqHz, ctx ->
+fun Exciter.mul(factor: Double): Exciter {
+    return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
         for (i in ctx.offset until ctx.offset + ctx.length) buffer[i] *= factor
     }
 }
-fun SignalGen.div(divisor: Double): SignalGen = mul(1.0 / divisor)
+fun Exciter.div(divisor: Double): Exciter = mul(1.0 / divisor)
 ```
 
 Note: since `scratchBuffers` is now in `SignalContext`, binary operators no longer need the `scratch` parameter —
-they get it from `ctx`. This means the `SignalGenScope` DSL is no longer needed just for operator syntax!
+they get it from `ctx`. This means the `ExciterScope` DSL is no longer needed just for operator syntax!
 Kotlin operator overloading works directly:
 
 ```kotlin
-operator fun SignalGen.plus(other: SignalGen): SignalGen = this.plus(other)
-operator fun SignalGen.times(other: SignalGen): SignalGen = this.times(other)
+operator fun Exciter.plus(other: Exciter): Exciter = this.plus(other)
+operator fun Exciter.times(other: Exciter): Exciter = this.times(other)
 
 // Usage — no scope needed:
 val pad = (sine + square).div(2)
@@ -576,22 +576,22 @@ val rich = sine + sine.detune(7)
 ### Frequency Operators
 
 ```kotlin
-fun SignalGen.detune(semitones: Double): SignalGen {
+fun Exciter.detune(semitones: Double): Exciter {
     val ratio = 2.0.pow(semitones / 12.0)
-    return SignalGen { buffer, freqHz, ctx ->
+    return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz * ratio, ctx)
     }
 }
 
-fun SignalGen.octaveUp(): SignalGen = detune(12.0)
-fun SignalGen.octaveDown(): SignalGen = detune(-12.0)
+fun Exciter.octaveUp(): Exciter = detune(12.0)
+fun Exciter.octaveDown(): Exciter = detune(-12.0)
 ```
 
 ### Post-Processing
 
 ```kotlin
-fun SignalGen.withWarmth(factor: Double): SignalGen  // One-pole LPF (existing pattern)
-fun SignalGen.withGain(gain: Double): SignalGen = mul(gain)
+fun Exciter.withWarmth(factor: Double): Exciter  // One-pole LPF (existing pattern)
+fun Exciter.withGain(gain: Double): Exciter = mul(gain)
 ```
 
 ### Usage Examples
@@ -626,11 +626,11 @@ The signal recirculates through a delay line. The `transform` closure (per-sampl
 shapes the feedback path — typically a lowpass filter for Karplus-Strong.
 
 ```kotlin
-fun SignalGen.feedback(
+fun Exciter.feedback(
     delaySamples: Double,                        // fractional for pitch accuracy
     gain: Double = 0.998,
     transform: ((Double) -> Double) = { it },    // per-sample, stateful via closure
-): SignalGen
+): Exciter
 ```
 
 **Key design decisions:**
@@ -647,11 +647,11 @@ fun SignalGen.feedback(
 **Convenience variant** for pitched feedback (Karplus-Strong):
 
 ```kotlin
-fun SignalGen.feedbackTuned(
+fun Exciter.feedbackTuned(
     gain: Double = 0.998,
     maxDelaySamples: Int = 2400,                 // ~20Hz at 48kHz
     transform: ((Double) -> Double) = { it },
-): SignalGen
+): Exciter
 ```
 
 Derives delay from `freqHz` at generate-time: `delaySamples = sampleRate / freqHz`. The user doesn't
@@ -683,13 +683,13 @@ signal.feedback(delaySamples = 24000.0, gain = 0.5) { sample ->
 **Topology:** output modulates the oscillator's own frequency per-sample via `phaseMod`.
 
 Each sample's output determines the next sample's phase increment. This creates a sample-by-sample
-data dependency — the inner SignalGen is called with `length=1` per sample (128 calls per block).
+data dependency — the inner Exciter is called with `length=1` per sample (128 calls per block).
 
 ```kotlin
-fun SignalGen.phaseFeedback(
+fun Exciter.phaseFeedback(
     delaySamples: Int = 1,
     depth: Double = 1.0,
-): SignalGen
+): Exciter
 ```
 
 **Key design decisions:**
@@ -747,11 +747,11 @@ sine.phaseFeedback(1, depth = 0.3)
 ### OscFn Bridge
 
 ```kotlin
-fun OscFn.toSignalGen(): SignalGen {
+fun OscFn.toExciter(): Exciter {
     var phase = 0.0
-    return SignalGen { buffer, freqHz, ctx ->
+    return Exciter { buffer, freqHz, ctx ->
         val phaseInc = TWO_PI * freqHz / ctx.sampleRate
-        phase = this@toSignalGen.process(buffer, ctx.offset, ctx.length, phase, phaseInc, ctx.phaseMod)
+        phase = this@toExciter.process(buffer, ctx.offset, ctx.length, phase, phaseInc, ctx.phaseMod)
     }
 }
 ```
@@ -768,7 +768,7 @@ This allows incremental migration. Existing `OscFn` implementations work immedia
 class SynthVoice(
     // REMOVE: osc: OscFn, phaseInc: Double, phase: Double
     // ADD:
-    private val signal: SignalGen,
+    private val signal: Exciter,
     private val freqHz: Double,
     // ... rest unchanged ...
 ) : AbstractVoice(...) {
@@ -820,21 +820,21 @@ val phaseInc = TWO_PI * freqHz / sampleRate.toDouble()
 SynthVoice(osc = osc, freqHz = freqHz, phaseInc = phaseInc)
 
 // After (phase 1 — bridge):
-val signal = data.createOscillator(oscillators, freqHz).toSignalGen()
+val signal = data.createOscillator(oscillators, freqHz).toExciter()
 SynthVoice(signal = signal, freqHz = freqHz)
 
 // After (phase 2 — native):
-val signal = data.createSignalGen(oscillators, ctx.scratchBuffers)
+val signal = data.createExciter(oscillators, ctx.scratchBuffers)
 SynthVoice(signal = signal, freqHz = freqHz)
 ```
 
 ---
 
-## Parameterized SignalGen Registry (2026-03-20)
+## Parameterized Exciter Registry (2026-03-20)
 
 ### Problem
 
-Hard-coded SignalGen oscillators (sgpad, sgbell, sgbuzz) proved the architecture works end-to-end.
+Hard-coded Exciter oscillators (sgpad, sgbell, sgbuzz) proved the architecture works end-to-end.
 But every new oscillator requires a code change. We need:
 
 1. **A registry** so oscillators are looked up by name, not hard-coded in `when` blocks
@@ -845,12 +845,12 @@ But every new oscillator requires a code change. We need:
 ### Architecture
 
 ```
-Global SignalGenRegistry (sine, saw, sgpad, sgbell, ...)
+Global ExciterRegistry (sine, saw, sgpad, sgbell, ...)
   └─ Per-playback fork() (inherits defaults, adds KlangScript-registered oscillators)
-       └─ Per-voice: factory(resolvedParams) → fresh SignalGen instance
+       └─ Per-voice: factory(resolvedParams) → fresh Exciter instance
 ```
 
-Each voice gets a **fresh SignalGen instance** (factory pattern). Mutable state (phase, filter
+Each voice gets a **fresh Exciter instance** (factory pattern). Mutable state (phase, filter
 memory) is isolated per-voice. The composition recipe lives in the registry; only param values
 vary per voice.
 
@@ -890,27 +890,27 @@ class OscParamSchema private constructor(
 }
 ```
 
-#### SignalGenRegistry
+#### ExciterRegistry
 
 Two-tier lookup. Global tier populated at startup; per-playback tier created via `fork()`.
 
 ```kotlin
-typealias SignalGenFactory = (params: DoubleArray) -> SignalGen
+typealias ExciterFactory = (params: DoubleArray) -> Exciter
 
-class SignalGenDef(
+class ExciterDef(
     val name: String,
     val schema: OscParamSchema,
-    val factory: SignalGenFactory,
+    val factory: ExciterFactory,
 )
 
-class SignalGenRegistry {
-    fun register(def: SignalGenDef)
-    fun get(name: String): SignalGenDef?
+class ExciterRegistry {
+    fun register(def: ExciterDef)
+    fun get(name: String): ExciterDef?
     fun contains(name: String): Boolean
     fun names(): Set<String>
 
     /** Shallow-copy all defs into a new child registry. */
-    fun fork(): SignalGenRegistry
+    fun fork(): ExciterRegistry
 }
 ```
 
@@ -943,31 +943,31 @@ per-sample. The resolved `DoubleArray` is set once at voice creation and remains
 
 - Frequency modulation → `ctx.phaseMod`
 - Amplitude modulation → `times()` operator (ring mod)
-- Filter cutoff modulation → make `cutoffHz` accept a `SignalGen` (future, compositional approach)
+- Filter cutoff modulation → make `cutoffHz` accept a `Exciter` (future, compositional approach)
 
-**No modulation bus needed.** The existing compositional approach (phaseMod, times, filter-as-SignalGen)
+**No modulation bus needed.** The existing compositional approach (phaseMod, times, filter-as-Exciter)
 covers the important cases without index-mapping complexity.
 
 ### Default Oscillator Registration
 
-Migrates hard-coded `SignalGenOscillators` to parameterized registry entries:
+Migrates hard-coded `ExciterOscillators` to parameterized registry entries:
 
 ```kotlin
-fun SignalGenRegistry.registerDefaults() {
-    register(SignalGenDef(
+fun ExciterRegistry.registerDefaults() {
+    register(ExciterDef(
         name = "sgpad",
         schema = OscParamSchema.build {
             param("detune", default = 0.1, min = 0.0, max = 24.0)
             param("cutoff", default = 3000.0, min = 20.0, max = 20000.0)
         },
         factory = { params ->
-            val osc1 = SignalGens.sawtooth()
-            val osc2 = SignalGens.sawtooth().detune(params[0])
+            val osc1 = Exciters.sawtooth()
+            val osc2 = Exciters.sawtooth().detune(params[0])
             (osc1 + osc2).div(2.0).onePoleLowpass(params[1])
         }
     ))
 
-    register(SignalGenDef(
+    register(ExciterDef(
         name = "sgbell",
         schema = OscParamSchema.build {
             param("ratio", default = 1.4, min = 0.1, max = 20.0)
@@ -975,8 +975,8 @@ fun SignalGenRegistry.registerDefaults() {
             param("decay", default = 0.5, min = 0.01, max = 10.0)
         },
         factory = { params ->
-            SignalGens.sine().fm(
-                modulator = SignalGens.sine(),
+            Exciters.sine().fm(
+                modulator = Exciters.sine(),
                 ratio = params[0],
                 depth = params[1],
                 envAttackSec = 0.001,
@@ -986,13 +986,13 @@ fun SignalGenRegistry.registerDefaults() {
         }
     ))
 
-    register(SignalGenDef(
+    register(ExciterDef(
         name = "sgbuzz",
         schema = OscParamSchema.build {
             param("cutoff", default = 2000.0, min = 20.0, max = 20000.0)
         },
         factory = { params ->
-            SignalGens.square().lowpass(params[0])
+            Exciters.square().lowpass(params[0])
         }
     ))
 }
@@ -1000,16 +1000,16 @@ fun SignalGenRegistry.registerDefaults() {
 
 ### Pipeline Interaction: Stack, Don't Bypass
 
-SignalGen compositions go through the full AbstractVoice pipeline (pre-filters, main filter,
+Exciter compositions go through the full AbstractVoice pipeline (pre-filters, main filter,
 ADSR envelope, post-filters, panning/mixing). They **stack**, they don't bypass.
 
 **Rationale:**
 
 - `sound("sgpad").lpf(2000)` must work the same as `sound("sine").lpf(2000)`
 - Pipeline handles routing (pan, orbit sends, delay/reverb, ducking, gain multiplier)
-- Pattern ADSR controls dynamics; SignalGen internal ADSR (if any) is timbral identity only
+- Pattern ADSR controls dynamics; Exciter internal ADSR (if any) is timbral identity only
 
-**Convention:** SignalGen factories registered via KlangScript should generally NOT include
+**Convention:** Exciter factories registered via KlangScript should generally NOT include
 `.adsr()` unless the envelope shape is part of the timbre identity (e.g., a bell that must
 decay regardless of pattern settings).
 
@@ -1050,11 +1050,11 @@ registerOsc("myPad", { detune: 0.1, cutoff: 3000.0 }) { params ->
 }
 ```
 
-Registers on the per-playback `SignalGenRegistry` (forked from global). The interpreter:
+Registers on the per-playback `ExciterRegistry` (forked from global). The interpreter:
 
 1. Builds `OscParamSchema` from the defaults map
-2. Creates a `SignalGenFactory` that evaluates the body with resolved params
-3. Registers a `SignalGenDef` on the playback's registry
+2. Creates a `ExciterFactory` that evaluates the body with resolved params
+3. Registers a `ExciterDef` on the playback's registry
 
 ### VoiceScheduler Integration
 
@@ -1089,20 +1089,20 @@ val osc = if (sgDef != null) {
 
 **Performance:**
 
-- Complex SignalGen trees (~10-15 nested lambdas) are fine; V8 inlines many of them
+- Complex Exciter trees (~10-15 nested lambdas) are fine; V8 inlines many of them
 - Triangle `asin(sin(phase))` costs two transcendentals per sample — replace with phase-based math
 - Consider `typealias SignalBuffer = DoubleArray` now for future Float32 migration
-- Practical voice limit: 8-12 complex SignalGen voices on JS, 16-24 simple ones
+- Practical voice limit: 8-12 complex Exciter voices on JS, 16-24 simple ones
 
 ### Migration Path
 
 **Phase 1 — Registry infrastructure (no behavior change):**
 
 1. Create `OscParamSchema.kt`
-2. Create `SignalGenRegistry.kt` (`SignalGenDef`, `SignalGenFactory`, `SignalGenRegistry`)
-3. Create `SignalGenDefaults.kt` (migrates hard-coded oscillators with param schemas)
+2. Create `ExciterRegistry.kt` (`ExciterDef`, `ExciterFactory`, `ExciterRegistry`)
+3. Create `ExciterDefaults.kt` (migrates hard-coded oscillators with param schemas)
 4. Add `params` to `SignalContext` (backward compatible, defaults to empty array)
-5. Update `SignalGenBridge.toOscFn()` to accept `params`
+5. Update `ExciterBridge.toOscFn()` to accept `params`
 
 **Phase 2 — Wire registry into voice pipeline:**
 
@@ -1110,7 +1110,7 @@ val osc = if (sgDef != null) {
 7. Add `signalGenRegistry` to `VoiceScheduler.Options`
 8. Update `VoiceScheduler.isOscillator()` and `makeVoice()` to use registry
 9. Initialize global registry with `registerDefaults()` at backend startup
-10. Delete `SignalGenOscillators.kt`
+10. Delete `ExciterOscillators.kt`
 
 **Phase 3 — Strudel + KlangScript integration:**
 
@@ -1121,23 +1121,23 @@ val osc = if (sgDef != null) {
 
 **Optional — OscFn wrapping:**
 Existing `Oscillators` (OscFn-based) continue unchanged. The fallback path in `makeVoice()`
-checks SignalGenRegistry first, then Oscillators. OscFn oscillators can be wrapped and
-registered incrementally via `OscFn.toSignalGen()`.
+checks ExciterRegistry first, then Oscillators. OscFn oscillators can be wrapped and
+registered incrementally via `OscFn.toExciter()`.
 
 ### Files Summary
 
-| File                                | Action     | Changes                                                        |
-|-------------------------------------|------------|----------------------------------------------------------------|
-| `signalgen/OscParamSchema.kt`       | **CREATE** | ParamDef, Builder, resolve(), defaults()                       |
-| `signalgen/SignalGenRegistry.kt`    | **CREATE** | SignalGenDef, SignalGenFactory, SignalGenRegistry              |
-| `signalgen/SignalGenDefaults.kt`    | **CREATE** | registerDefaults() with parameterized sgpad/sgbell/sgbuzz      |
-| `signalgen/SignalContext.kt`        | **MODIFY** | Add `val params: DoubleArray`                                  |
-| `signalgen/SignalGenBridge.kt`      | **MODIFY** | Add `params` parameter to `toOscFn()`                          |
-| `audio_bridge/VoiceData.kt`         | **MODIFY** | Add `val osciParams: Map<String, Double>?`                     |
-| `voices/VoiceScheduler.kt`          | **MODIFY** | Add registry to Options, use in isOscillator() and makeVoice() |
-| `signalgen/SignalGenOscillators.kt` | **DELETE** | Replaced by SignalGenDefaults.kt                               |
-| Strudel pattern layer               | **MODIFY** | Add .osciParam() control                                       |
-| KlangScript stdlib                  | **MODIFY** | Add registerOsc built-in                                       |
+| File                            | Action     | Changes                                                        |
+|---------------------------------|------------|----------------------------------------------------------------|
+| `exciter/OscParamSchema.kt`     | **CREATE** | ParamDef, Builder, resolve(), defaults()                       |
+| `exciter/ExciterRegistry.kt`    | **CREATE** | ExciterDef, ExciterFactory, ExciterRegistry                    |
+| `exciter/ExciterDefaults.kt`    | **CREATE** | registerDefaults() with parameterized sgpad/sgbell/sgbuzz      |
+| `exciter/SignalContext.kt`      | **MODIFY** | Add `val params: DoubleArray`                                  |
+| `exciter/ExciterBridge.kt`      | **MODIFY** | Add `params` parameter to `toOscFn()`                          |
+| `audio_bridge/VoiceData.kt`     | **MODIFY** | Add `val osciParams: Map<String, Double>?`                     |
+| `voices/VoiceScheduler.kt`      | **MODIFY** | Add registry to Options, use in isOscillator() and makeVoice() |
+| `exciter/ExciterOscillators.kt` | **DELETE** | Replaced by ExciterDefaults.kt                                 |
+| Strudel pattern layer           | **MODIFY** | Add .osciParam() control                                       |
+| KlangScript stdlib              | **MODIFY** | Add registerOsc built-in                                       |
 
 ---
 
@@ -1156,32 +1156,32 @@ registered incrementally via `OscFn.toSignalGen()`.
 
 | File                                    | Change                                                        |
 |-----------------------------------------|---------------------------------------------------------------|
-| `audio_be/.../osci/SignalGen.kt`        | **NEW** — interface, `ScratchBuffers`, composition extensions |
-| `audio_be/.../osci/SignalGens.kt`       | **NEW** — all primitive factories                             |
-| `audio_be/.../osci/Oscillators.kt`      | Add `OscFn.toSignalGen()` bridge                              |
+| `audio_be/.../osci/Exciter.kt`          | **NEW** — interface, `ScratchBuffers`, composition extensions |
+| `audio_be/.../osci/Exciters.kt`         | **NEW** — all primitive factories                             |
+| `audio_be/.../osci/Oscillators.kt`      | Add `OscFn.toExciter()` bridge                                |
 | `audio_be/.../voices/Voice.kt`          | Add `scratchBuffers` to `RenderContext`                       |
-| `audio_be/.../voices/SynthVoice.kt`     | Replace `osc`/`phase`/`phaseInc` with `signal: SignalGen`     |
-| `audio_be/.../voices/VoiceScheduler.kt` | Wire `SignalGen` via bridge, remove `phaseInc` calc           |
+| `audio_be/.../voices/SynthVoice.kt`     | Replace `osc`/`phase`/`phaseInc` with `signal: Exciter`       |
+| `audio_be/.../voices/VoiceScheduler.kt` | Wire `Exciter` via bridge, remove `phaseInc` calc             |
 | Test helpers + tests                    | Update for new `SynthVoice` signature                         |
 
 ## Migration Steps
 
-1. Add `SignalGen`, `ScratchBuffers`, primitives, operators (no existing code touched)
-2. Add `OscFn.toSignalGen()` bridge
-3. Update `SynthVoice` → `SignalGen`
+1. Add `Exciter`, `ScratchBuffers`, primitives, operators (no existing code touched)
+2. Add `OscFn.toExciter()` bridge
+3. Update `SynthVoice` → `Exciter`
 4. Update `VoiceScheduler` (use bridge initially)
 5. Update `RenderContext` + all creation sites
 6. Update tests
-7. (Later) Port `Oscillators` registry to native `SignalGen`, deprecate `OscFn`
+7. (Later) Port `Oscillators` registry to native `Exciter`, deprecate `OscFn`
 
 ## Resolved Decisions
 
-- **SignalGen is always per-voice**: Every voice gets a fresh `SignalGen` instance. Oscillators have internal state (
+- **Exciter is always per-voice**: Every voice gets a fresh `Exciter` instance. Oscillators have internal state (
   phase, delay lines, filter memory), so sharing would cause cross-voice interference. Factory functions create fresh
   instances.
 - **Language comes later**: A dedicated "osci-lang" will be designed to express custom oscillators. It will compile down
-  to instantiated `SignalGen` object trees. Build the runtime layer first, work up to the language from there.
-- **Bottom-up approach**: Implement `SignalGen` + primitives + composition operators first. Validate with tests. Then
+  to instantiated `Exciter` object trees. Build the runtime layer first, work up to the language from there.
+- **Bottom-up approach**: Implement `Exciter` + primitives + composition operators first. Validate with tests. Then
   integrate into the voice pipeline. Language/syntax is a separate future task.
 
 ---
@@ -1232,7 +1232,7 @@ cases, but:
 
 The architecture IS fundamentally extensible:
 
-- New primitives just implement `SignalGen`
+- New primitives just implement `Exciter`
 - New operators are extension functions
 - Structural composition (exciter→resonator) already demonstrated by Karplus
 
@@ -1342,7 +1342,7 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 | **Anti-aliasing (square/pulze)** | Add PolyBLEP to square and pulze oscillators (currently naive discontinuities).         | L      | H        | Saw already has PolyBLEP. Same technique.                             |
 | **Soft Clipper / Saturation**    | Smooth limiting (tanh). Prevents harsh digital clipping in composition chains.          | L      | M        | Different from distortion — this is safety/warmth, not effect.        |
 
-### Generators (new SignalGen primitives)
+### Generators (new Exciter primitives)
 
 | Block                    | Description                                                                                                                                                  | Effort | Impact | Notes                                                                               |
 |--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|--------|-------------------------------------------------------------------------------------|
@@ -1350,16 +1350,16 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 | ~~**TransientClick**~~   | ~~Shaped noise burst on note-on (1-20ms).~~ **Subsumed by `during()` + easing:** `noise.during(0.0, 15.0, fadeOutMs = 5.0, fadeOutEasing = Easings.easeOut)` | —      | —      | No longer a separate primitive. Composition pattern using existing building blocks. |
 | **ImpulseColor**         | 8-tap FIR with material-derived coefficients (wood, metal, skin, glass).                                                                                     | L      | H      | Cheap body/cabinet character. Replaces expensive MicroConvolver for per-voice use.  |
 
-### Filters as SignalGen Combinators
+### Filters as Exciter Combinators
 
-| Block                          | Description                                                | Effort | Impact   | Notes                                                                               |
-|--------------------------------|------------------------------------------------------------|--------|----------|-------------------------------------------------------------------------------------|
-| **CombFilter**                 | Tuned delay + feedback. Pitched resonance from noise.      | L      | H        | Tier 0 infrastructure. Percussion, body, flute-like tones.                          |
-| **Allpass Filter**             | Phase-shifting without amplitude change.                   | L      | M        | Exists inlined in reverb — extract as standalone. Phaser, diffusion, custom reverb. |
-| **Bandpass (resonant)**        | SVF bandpass at SignalGen level (not just voice pipeline). | M      | H        | Needed for formant sweeps, wah, filter FM inside compositions.                      |
-| **DC Blocker (as combinator)** | Insertable in composition chains, not just pipeline.       | L      | Critical | Mandatory after waveshaper, before feedback. Graph-enforced ordering.               |
+| Block                          | Description                                              | Effort | Impact   | Notes                                                                               |
+|--------------------------------|----------------------------------------------------------|--------|----------|-------------------------------------------------------------------------------------|
+| **CombFilter**                 | Tuned delay + feedback. Pitched resonance from noise.    | L      | H        | Tier 0 infrastructure. Percussion, body, flute-like tones.                          |
+| **Allpass Filter**             | Phase-shifting without amplitude change.                 | L      | M        | Exists inlined in reverb — extract as standalone. Phaser, diffusion, custom reverb. |
+| **Bandpass (resonant)**        | SVF bandpass at Exciter level (not just voice pipeline). | M      | H        | Needed for formant sweeps, wah, filter FM inside compositions.                      |
+| **DC Blocker (as combinator)** | Insertable in composition chains, not just pipeline.     | L      | Critical | Mandatory after waveshaper, before feedback. Graph-enforced ordering.               |
 
-### Modulators as SignalGen
+### Modulators as Exciter
 
 | Block                        | Description                                                                                                                              | Effort | Impact | Notes                                                                                  |
 |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|--------|--------|----------------------------------------------------------------------------------------|
@@ -1376,8 +1376,8 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 |-----------------------|-----------------------------------------------------------------------------------------|--------|--------|-------------------------------------------------------------------------------|
 | ~~**Feedback**~~      | ✅ **DESIGNED** — `feedback()`, `feedbackTuned()`, `phaseFeedback()`. See section above. | M      | H      | Gates all recursive topologies: KS, comb, FM feedback, waveguide.             |
 | **FeedInject**        | Continuous signal injection into active delay line.                                     | M      | H      | Bowed strings, drones, blown tubes. Commuted synthesis approach.              |
-| **Crossfade / Morph** | Smooth interpolation between two SignalGens.                                            | L      | M      | Timbral animation, vector synthesis, wavetable morphing.                      |
-| **Oversample**        | Run wrapped SignalGen at Nx rate, decimate with anti-alias LPF.                         | M      | H      | Essential for waveshaper/distortion. 2x-8x. Per-node, not global.             |
+| **Crossfade / Morph** | Smooth interpolation between two Exciters.                                              | L      | M      | Timbral animation, vector synthesis, wavetable morphing.                      |
+| **Oversample**        | Run wrapped Exciter at Nx rate, decimate with anti-alias LPF.                           | M      | H      | Essential for waveshaper/distortion. 2x-8x. Per-node, not global.             |
 | **ControlRate**       | Compute once per block, broadcast to buffer. For modulators.                            | L      | M      | LFOs, envelopes, drift don't need audio-rate. Saves significant CPU.          |
 | **Waveguide**         | Bidirectional coupled delay lines with reflection filters.                              | H      | M      | Tubes, strings, membranes. Needs mandatory loss filter (energy conservation). |
 
@@ -1407,7 +1407,7 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 
 9. CombFilter (with mandatory loss filter)
 10. Allpass (extract from reverb)
-11. Bandpass at SignalGen level
+11. Bandpass at Exciter level
 12. SampleAndHold
 13. AttackPhaseModulator
 14. Waveshaper (polynomial/tanh/fold)
@@ -1438,7 +1438,7 @@ guitar." Curate ruthlessly — ship only what sounds intentionally good.
 - **Scratch buffer safety**: `ScratchBuffers.acquire()`/`release()` are private. All access through scoped
   `use { buf -> ... }` which guarantees release even on exceptions. Prevents resource leaks in composition chains.
 - **Oversampling**: Nonlinear operations (waveshaping, distortion, wavefolding, soft clipping) generate aliasing
-  artifacts at high drive values. Solution: `signal.oversample(factor)` combinator that runs the wrapped SignalGen at
+  artifacts at high drive values. Solution: `signal.oversample(factor)` combinator that runs the wrapped Exciter at
   2x/4x/8x sample rate internally, then decimates with an anti-alias lowpass filter. Cost: Nx compute for that node +
   upsample/downsample filters. Per-node, not global — only the nonlinear stage needs it. SuperCollider and Faust both
   support per-UGen oversampling.
@@ -1455,7 +1455,7 @@ With the full 20-block toolkit:
 |--------------------------|------------------------------------------------|-------------|
 | Subtractive              | Oscillators + filters + ADSR                   | **Have it** |
 | FM                       | Sine + FM in voice pipeline                    | **Have it** |
-| Karplus-Strong / plucked | KS + exciter-as-SignalGen                      | **Have it** |
+| Karplus-Strong / plucked | KS + exciter-as-Exciter                        | **Have it** |
 | Additive                 | sine + plus + mul (composition)                | **Have it** |
 | Wavetable                | Wavetable oscillator + LFO morphing            | Phase 3     |
 | Physical modeling        | Feedback + CombFilter + FeedInject + Waveguide | Phase 2-3   |
@@ -1611,14 +1611,14 @@ Estimated capability: ~70% of commonly-used SuperCollider synthesis power, ~60% 
 
 **Missing core synth features:**
 
-1. **Portamento / Glide**: one-pole lowpass on freqHz. `freq += (target - freq) * coeff`. SignalGen wrapper that
+1. **Portamento / Glide**: one-pole lowpass on freqHz. `freq += (target - freq) * coeff`. Exciter wrapper that
    smooths incoming freqHz.
-2. **Hard sync**: oscillator A resets B's phase each cycle. Requires inter-SignalGen communication (phase reset
+2. **Hard sync**: oscillator A resets B's phase each cycle. Requires inter-Exciter communication (phase reset
    callback). Current interface doesn't support this.
 3. **Phase reset on note-on**: many synths reset phase to 0 on each note for consistent timbre. Need a reset mechanism.
-4. **Unison generalized**: `unison(count, detuneCents, stereoSpread)` combinator for any SignalGen, not just supersaw.
+4. **Unison generalized**: `unison(count, detuneCents, stereoSpread)` combinator for any Exciter, not just supersaw.
 5. **Sub-oscillator**: trivially `sine.detune(-12)` but should be documented as a pattern.
-6. **Sample playback as SignalGen**: one-shot or looped sample player. Turns any recording into an oscillator.
+6. **Sample playback as Exciter**: one-shot or looped sample player. Turns any recording into an oscillator.
 7. **Chebyshev polynomial waveshaping**: T2(x) adds exact 2nd harmonic, T3(x) adds 3rd, etc. Cheap, musically
    precise.
 8. **Additional noise colors**: blue noise (HF emphasis, dithering), velvet noise (sparse impulses, efficient reverb),

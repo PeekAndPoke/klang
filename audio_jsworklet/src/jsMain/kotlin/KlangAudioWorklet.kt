@@ -1,9 +1,9 @@
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
+import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
+import io.peekandpoke.klang.audio_be.exciter.registerDefaults
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.SignalGenRegistry
-import io.peekandpoke.klang.audio_be.signalgen.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.AudioWorkletProcessor
 import io.peekandpoke.klang.audio_bridge.KlangTime
@@ -35,7 +35,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             sampleRate = sampleRate
         )
 
-        val signalGenRegistry = SignalGenRegistry().apply {
+        val exciterRegistry = ExciterRegistry().apply {
             registerDefaults()
         }
 
@@ -44,7 +44,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
                 commLink = commLink.backend,
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
-                signalGenRegistry = signalGenRegistry,
+                exciterRegistry = exciterRegistry,
                 orbits = orbits,
                 // Used for performance measurement only
                 performanceTimeMs = { Date.now() },

@@ -8,7 +8,7 @@ The Filter stage and Excite stage have been extracted into composable `BlockRend
 Goal: Make VoiceImpl a dumb pipeline runner that chains three composable stages:
 
 - **Pitch** — frequency modulation (vibrato, glide, pitch envelope, FM)
-- **Excite** — sound generation (oscillator, sample, noise, physical model) — already done as `SignalGen`
+- **Excite** — sound generation (oscillator, sample, noise, physical model) — already done as `Exciter`
 - **Filter** — signal sculpting (pre-filters, main filter, amplitude envelope, post-filters, tremolo, phaser)
 
 All three share a common `BlockRenderer` interface so stages can be freely composed and reordered.
@@ -20,9 +20,9 @@ All three share a common `BlockRenderer` interface so stages can be freely compo
 | Phase 1: BlockRenderer + BlockContext  | **DONE**                     | Common interface and shared context     |
 | Phase 2: Extract Filter stage          | **DONE**                     | 3 renderers + shared pipeline builder   |
 | Phase 3: Extract Pitch stage           | **DONE**                     | 4 renderers + shared pipeline builder   |
-| Phase 4: Wrap Excite as BlockRenderer  | **DONE**                     | ExciteRenderer adapter for SignalGen    |
+| Phase 4: Wrap Excite as BlockRenderer  | **DONE**                     | ExciteRenderer adapter for Exciter      |
 | Phase 5: Clean up VoiceImpl + Voice.kt | **DONE**                     | VoiceImpl is ~85 lines, single pipeline |
-| Phase 6: Rename SignalGen → Exciter    | TODO (deferred, separate PR) | Mechanical rename                       |
+| Phase 6: Rename Exciter → Exciter      | TODO (deferred, separate PR) | Mechanical rename                       |
 
 ## What's Been Implemented
 
@@ -53,7 +53,7 @@ voices/pitch/FmRenderer.kt             — FM synthesis with envelope-controlled
 ### Excite (Phase 4)
 
 ```
-voices/excite/ExciteRenderer.kt  — wraps SignalGen as BlockRenderer
+voices/excite/ExciteRenderer.kt  — wraps Exciter as BlockRenderer
 ```
 
 ### Filter Pipeline (Phase 2)
@@ -96,7 +96,7 @@ mixToOrbit(ctx, offset, length)
 
 ## Remaining Work
 
-### Phase 6: Rename SignalGen → Exciter (deferred, separate PR)
+### Phase 6: Rename Exciter → Exciter (deferred, separate PR)
 
 Mechanical rename across all modules. No logic changes.
 
@@ -133,7 +133,7 @@ When renaming, also reorganize into clean packages:
 
 After each phase:
 ```bash
-./gradlew :audio_be:jvmTest           # all voice/filter/signalgen tests must pass
+./gradlew :audio_be:jvmTest           # all voice/filter/exciter tests must pass
 ./gradlew :audio_be:compileKotlinJs    # JS compilation check
 ```
 

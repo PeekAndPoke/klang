@@ -3,15 +3,17 @@ package io.peekandpoke.klang.audio_be.voices
 import de.peekandpoke.ultra.common.maths.Ease
 import io.peekandpoke.klang.audio_be.ONE_OVER_TWELVE
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.exciter.*
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.FormantFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.orbits.Orbits
-import io.peekandpoke.klang.audio_be.signalgen.*
-import io.peekandpoke.klang.audio_be.voices.excite.ExciteRenderer
-import io.peekandpoke.klang.audio_be.voices.filter.buildFilterPipeline
-import io.peekandpoke.klang.audio_be.voices.pitch.buildPitchPipeline
+import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
+import io.peekandpoke.klang.audio_be.voices.strip.VoiceImpl
+import io.peekandpoke.klang.audio_be.voices.strip.excite.ExciteRenderer
+import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
+import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
@@ -24,7 +26,7 @@ class VoiceScheduler(
         val commLink: KlangCommLink.BackendEndpoint,
         val sampleRate: Int,
         val blockFrames: Int,
-        val signalGenRegistry: SignalGenRegistry,
+        val exciterRegistry: ExciterRegistry,
         val orbits: Orbits,
         /** Supplier for current backend time in milliseconds (from KlangTime) */
         val performanceTimeMs: () -> Double = { 0.0 },
@@ -147,7 +149,7 @@ class VoiceScheduler(
     private val voiceBuffer = FloatArray(options.blockFrames)
     private val freqModBuffer = DoubleArray(options.blockFrames)
 
-    // Scratch buffers for SignalGen composition operators (plus, times, etc.)
+    // Scratch buffers for Exciter composition operators (plus, times, etc.)
     private val scratchBuffers = ScratchBuffers(options.blockFrames)
 
     // Context reused per block
@@ -165,7 +167,7 @@ class VoiceScheduler(
     private var minHeadroom = 1.0
     private var avgHeadroom = 1.0
 
-    fun VoiceData.isOscillator(): Boolean = options.signalGenRegistry.contains(sound)
+    fun VoiceData.isOscillator(): Boolean = options.exciterRegistry.contains(sound)
 
     fun VoiceData.isSampleSound() = !isOscillator()
 
@@ -460,7 +462,7 @@ class VoiceScheduler(
             // Create per-playback context with forked registry
             playbackContexts[pid] = PlaybackCtx(
                 playbackId = pid,
-                signalGenRegistry = options.signalGenRegistry.fork(),
+                exciterRegistry = options.exciterRegistry.fork(),
                 epoch = voice.playbackStartTime + latency,
             )
         }
@@ -756,7 +758,7 @@ class VoiceScheduler(
 
                 val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
 
-                val signal = options.signalGenRegistry.createSignalGen(sound, data, freqHz)
+                val signal = options.exciterRegistry.createExciter(sound, data, freqHz)
                     ?: return null
 
                 buildVoice(
@@ -878,7 +880,7 @@ class VoiceScheduler(
 
                 val voiceDurationFrames = (gateEndFrame - nowFrame).toInt()
 
-                val signal = SampleSignalGen(
+                val signal = SampleExciter(
                     pcm = sample.pcm,
                     rate = rate,
                     playhead = playhead0,
@@ -946,7 +948,7 @@ class VoiceScheduler(
         crush: Voice.Crush,
         coarse: Voice.Coarse,
         fm: Voice.Fm?,
-        signal: SignalGen,
+        signal: Exciter,
         freqHz: Double,
         cut: Int? = null,
     ): VoiceImpl {
@@ -956,7 +958,7 @@ class VoiceScheduler(
         val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
         val voiceEndFrame = voiceDurationFrames + releaseFrames
 
-        val signalCtx = SignalContext(
+        val signalCtx = ExciteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,

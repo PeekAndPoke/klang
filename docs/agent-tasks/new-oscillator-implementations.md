@@ -1,4 +1,4 @@
-# New Oscillator / SignalGen Implementations
+# New Oscillator / Exciter Implementations
 
 Possible new oscillators and signal generators for the Klang audio engine, sorted by relevance
 (bang-for-buck: unique sound character, implementation simplicity, CPU cost).
@@ -177,7 +177,7 @@ References:
 **Priority: Low-Medium** | Complexity: Simple | CPU: Moderate (N sine calls) | Data: None
 
 Sum of N sine oscillators at harmonic intervals with individual amplitudes. Already partially
-achievable via the SignalGen composition DSL (`Sine() + Sine().detune(12.0)` etc.), but a
+achievable via the Exciter composition DSL (`Sine() + Sine().detune(12.0)` etc.), but a
 dedicated implementation could be more efficient and offer preset spectra (organ, bell, etc.).
 
 Possible names: `additive`, `organ`
@@ -203,16 +203,16 @@ Parameters: `table` (wavetable name), `position` (morph position 0..1)
 
 ---
 
-## SignalGen DSL — Remaining Future Work
+## Exciter DSL — Remaining Future Work
 
-Carried forward from the completed SignalGen DSL/Registry implementation (archived:
+Carried forward from the completed Exciter DSL/Registry implementation (archived:
 `20260320-signal-gen-dsl-registry-impl.md`).
 
 ### Not Yet Implemented
 
 | Feature                   | Description                                                                                         |
 |---------------------------|-----------------------------------------------------------------------------------------------------|
-| Frontend waveform preview | `SignalGenDsl.renderPreview()` in `audio_bridge` — lightweight pure-math renderer for display       |
+| Frontend waveform preview | `ExciterDsl.renderPreview()` in `audio_bridge` — lightweight pure-math renderer for display         |
 | Feedback combinators      | `feedback()`, `feedbackTuned()`, `phaseFeedback()` — needed for Karplus-Strong and waveguide models |
 | Time-windowed combinators | `during()`, `duringProgress()`, `chain()`, `ring()`                                                 |
 | ControlRate combinator    | Block-rate computation for modulators (cheaper than per-sample)                                     |
