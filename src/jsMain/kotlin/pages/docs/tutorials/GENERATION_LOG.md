@@ -19,3 +19,14 @@
 | mini-notation-mastery   | Mini-Notation Mastery     | Pro          | Quick    | mini-notation, patterns, syntax                  |
 | your-first-track        | Your First Complete Track | Beginner     | DeepDive | capstone, full-track, beginner-project           |
 | lo-fi-beats             | Lo-Fi Beats to Code To    | Advanced     | Standard | lo-fi, genre, chill, beat-making                 |
+| spaces-and-rests        | Spaces and Rests          | Beginner     | Quick    | mini-notation, rests, rhythm-basics              |
+| group-and-alternate     | Group and Alternate       | Intermediate | Standard | mini-notation, grouping, alternation             |
+| nested-patterns         | Nested Patterns           | Advanced     | Standard | mini-notation, nesting, advanced-patterns        |
+| live-performance        | Music That Plays Itself   | Pro          | DeepDive | performance, live-set, evolution, generative     |
+| transpose-it            | Transpose It              | Intermediate | Quick    | transpose, pitch, octaves                        |
+| first-chords            | Your First Chords         | Beginner     | Standard | chords, voicing, harmony-basics                  |
+| chords-and-melody       | Chords Meet Melody        | Intermediate | Standard | chords, melody, layering, harmony                |
+| every-trick             | The every() Trick         | Advanced     | Quick    | every, variation, conditional                    |
+| techno-in-four-lines    | Techno in Four Lines      | Pro          | Quick    | techno, genre, minimal, acid                     |
+| arranging-a-track       | Arranging a Full Track    | Advanced     | DeepDive | arrange, song-structure, sections, production    |
+| pick-and-choose         | Pick and Choose           | Pro          | Standard | pick, fastcat, generative, selection             |

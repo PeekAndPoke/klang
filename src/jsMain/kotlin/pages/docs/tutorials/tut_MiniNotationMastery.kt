@@ -24,7 +24,9 @@ val miniNotationMasteryTutorial = Tutorial(
             code = """stack(
   sound("<bd [bd bd]> hh <sd [sd sd]> [hh oh]"),
   sound("[hh hh] [hh hh hh] [hh hh] hh").gain(0.4),
-  n("<[0 2 4 7] [7 4 2 0] [0 4 7 11] [11 7 4 0]>").scale("C3:minor").sound("saw").lpf(800).adsr("0.01:0.1:0.5:0.2").gain(0.3)
+  n("<[0 2 4 7] [7 4 2 0] [0 4 7 11] [11 7 4 0]>")
+    .scale("C3:minor").sound("saw").lpf(800)
+    .adsr("0.01:0.1:0.5:0.2").gain(0.3)
 )""",
         ),
     ),

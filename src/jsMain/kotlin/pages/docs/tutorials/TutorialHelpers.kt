@@ -23,7 +23,7 @@ fun scopeColor(laf: KlangLookAndFeel, scope: TutorialScope): String = when (scop
 }
 
 fun Tag.difficultyLabel(laf: KlangLookAndFeel, difficulty: TutorialDifficulty) {
-    ui.mini.icon.label {
+    ui.mini.label {
         css {
             backgroundColor = Color("${difficultyColor(laf, difficulty)} !important")
             color = Color("#222 !important")
@@ -39,7 +39,7 @@ fun Tag.difficultyLabel(laf: KlangLookAndFeel, difficulty: TutorialDifficulty) {
 }
 
 fun Tag.scopeLabel(laf: KlangLookAndFeel, scope: TutorialScope) {
-    ui.mini.icon.label {
+    ui.mini.label {
         css {
             backgroundColor = Color("${scopeColor(laf, scope)} !important")
             color = Color("#222 !important")

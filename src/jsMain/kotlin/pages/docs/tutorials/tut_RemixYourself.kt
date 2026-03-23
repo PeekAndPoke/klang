@@ -23,7 +23,8 @@ val remixYourselfTutorial = Tutorial(
             text = "Here is a groove where the drums shuffle every cycle but the melody stays steady. The contrast between predictable and surprising is what makes generative music addictive. Try moving shuffle() to the melody instead.",
             code = """stack(
   sound("bd hh sd hh").shuffle(),
-  n("0 2 4 7").scale("C4:minor").sound("saw").lpf(800).gain(0.3)
+  n("0 2 4 7").scale("C4:minor")
+    .sound("saw").lpf(800).gain(0.3)
 )""",
         ),
     ),

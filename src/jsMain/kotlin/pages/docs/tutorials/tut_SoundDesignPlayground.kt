@@ -20,12 +20,19 @@ val soundDesignPlaygroundTutorial = Tutorial(
         TutorialSection(
             heading = "Lo-Fi Crunch",
             text = "Combine crush() with a filter to tame the harshness. Low crush values create that classic chiptune sound. The lpf() after crush smooths out the digital edges while keeping the grit.",
-            code = """n("0 2 4 7").scale("C3:minor").sound("square").crush(4).lpf(1200).gain(0.4)""",
+            code = """n("0 2 4 7").scale("C3:minor")
+  .sound("square")
+  // Try: crush for raw grit, then lpf to smooth the edges — rustic plating
+  .crush(4).lpf(1200).gain(0.4)""",
         ),
         TutorialSection(
             heading = "Tremolo — Pulsing Volume",
             text = "Tremolo rapidly modulates volume, creating a pulsing, rhythmic effect. Higher values mean faster pulsing. It turns a static pad into something that breathes. Try values between 1 and 20.",
-            code = """n("<0 3 5 7>").scale("C3:minor").sound("supersaw").lpf(600).tremolo(4).adsr("0.2:0.3:0.7:0.5").gain(0.3)""",
+            code = """n("<0 3 5 7>").scale("C3:minor")
+  .sound("supersaw").lpf(600)
+  // Feel: tremolo makes the sound breathe, like a soufflé rising and falling
+  .tremolo(4)
+  .adsr("0.2:0.3:0.7:0.5").gain(0.3)""",
         ),
         TutorialSection(
             heading = "Vibrato — Pitch Wobble",
@@ -35,17 +42,35 @@ val soundDesignPlaygroundTutorial = Tutorial(
         TutorialSection(
             heading = "Phaser — Sweeping Texture",
             text = "A phaser creates a sweeping, whooshing sound by splitting the signal and shifting its phase. It adds movement and width to pads and leads without changing the notes. Combined with reverb, it creates lush, evolving textures.",
-            code = """n("<0 3 5 7>").scale("C3:minor").sound("supersaw").lpf(800).phaser(3).room(0.2).rsize(5.0).adsr("0.3:0.3:0.7:0.5").gain(0.3)""",
+            code = """n("<0 3 5 7>").scale("C3:minor")
+  .sound("supersaw").lpf(800)
+  // Garnish: a touch of phaser for that lush, sweeping movement
+  .phaser(3)
+  .room(0.2).rsize(5.0)
+  .adsr("0.3:0.3:0.7:0.5").gain(0.3)""",
         ),
         TutorialSection(
             heading = "Putting It All Together",
             text = "Here is a full track using everything you learned. The lead melody has vibrato for expression. The pad uses phaser and tremolo for evolving texture. The bass gets subtle distortion for warmth. The drums are crushed for lo-fi grit. Each layer has its own sonic character — that is sound design.",
             code = """stack(
-  n("0 2 4 7 6 4 2 0").scale("C4:minor").sound("saw").vibrato(4).lpf(1000).adsr("0.01:0.1:0.6:0.2").gain(0.3).orbit(0),
-  n("<0 3 5 3>").scale("C3:minor").sound("supersaw").lpf(500).phaser(2).tremolo(3).adsr("0.3:0.3:0.7:0.5").room(0.2).rsize(4.0).gain(0.2).orbit(1),
-  n("0 ~ 0 ~").scale("C2:minor").sound("saw").distort(0.3).lpf(400).adsr("0.01:0.2:0.8:0.1").gain(0.4).orbit(2),
-  sound("bd sd bd sd").crush(8).gain(0.7).orbit(3),
-  sound("hh hh oh hh").crush(6).gain(0.4).orbit(3)
+  n("0 2 4 7 6 4 2 0").scale("C4:minor")
+    .sound("saw").vibrato(4).lpf(1000)
+    .adsr("0.01:0.1:0.6:0.2")
+    .gain(0.3).orbit(0),
+  n("<0 3 5 3>").scale("C3:minor")
+    .sound("supersaw").lpf(500)
+    .phaser(2).tremolo(3)
+    .adsr("0.3:0.3:0.7:0.5")
+    .room(0.2).rsize(4.0)
+    .gain(0.2).orbit(1),
+  n("0 ~ 0 ~").scale("C2:minor")
+    .sound("saw").distort(0.3).lpf(400)
+    .adsr("0.01:0.2:0.8:0.1")
+    .gain(0.4).orbit(2),
+  sound("bd sd bd sd").crush(8)
+    .gain(0.7).orbit(3),
+  sound("hh hh oh hh").crush(6)
+    .gain(0.4).orbit(3)
 )""",
         ),
     ),

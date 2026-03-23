@@ -21,18 +21,24 @@ val yourFirstMelodyTutorial = Tutorial(
         TutorialSection(
             heading = "Play by Numbers with scale()",
             text = "Remembering note names is hard. With scale(), you can use simple numbers instead — 0 is the root, 1 is the next note in the scale, 2 is the one after that. Every number is guaranteed to sound good together. Try changing \"major\" to \"minor\" or \"pentatonic\".",
-            code = """n("0 2 4 6 7 6 4 2").scale("C4:major").sound("saw").gain(0.4)""",
+            code = """n("0 2 4 6 7 6 4 2")
+  // Look: scale is your spice rack — numbers go in, musical notes come out
+  .scale("C4:major").sound("saw").gain(0.4)""",
         ),
         TutorialSection(
             heading = "Shape Your Sound",
             text = "Raw waveforms can sound harsh. The lpf() function is a low-pass filter — it softens the sound by cutting high frequencies. Lower numbers sound warmer and darker. Try values between 200 and 2000.",
-            code = """n("0 2 4 6 7 6 4 2").scale("C4:major").sound("saw").lpf(800).gain(0.4)""",
+            code = """n("0 2 4 6 7 6 4 2").scale("C4:major")
+  .sound("saw")
+  // Feel: lpf softens the sound like straining broth — the harshness stays behind
+  .lpf(800).gain(0.4)""",
         ),
         TutorialSection(
             heading = "Add It to Your Beat",
             text = "Remember stack() from the first tutorial? You already know how to layer sounds. Here is a melody stacked on top of a drum beat — you just made a song.",
             code = """stack(
-  n("0 2 4 6 7 6 4 2").scale("C4:major").sound("saw").lpf(800).gain(0.3),
+  n("0 2 4 6 7 6 4 2").scale("C4:major")
+    .sound("saw").lpf(800).gain(0.3),
   sound("bd sd bd sd"),
   sound("hh hh oh hh").gain(0.6)
 )""",

@@ -28,16 +28,22 @@ val polyrhythmicKitchenTutorial = Tutorial(
         TutorialSection(
             heading = "Spread Values Across Events",
             text = "The spread() function distributes a range of values across events in your pattern. Here it fans gain values from soft to loud across four hi-hats, creating a dynamic accent pattern that cycles. Each hit gets a different volume, making the rhythm feel human.",
-            code = """sound("hh hh hh hh").gain(spread(0.3, 0.5, 0.7, 1.0))""",
+            code = """sound("hh hh hh hh")
+  // Watch: spread portions out the values — each hit gets its own serving
+  .gain(spread(0.3, 0.5, 0.7, 1.0))""",
         ),
         TutorialSection(
             heading = "Putting It All Together",
             text = "Here is a full polyrhythmic groove. The kick plays three against the hi-hat's four. The snare accents shift with spread. A melody floats above in pentatonic, untouched by the rhythmic chaos below. The layers phase against each other, creating a groove that evolves on its own — this is generative rhythm.",
             code = """stack(
   sound("[bd bd bd]").gain(0.8),
-  sound("[hh hh hh hh]").gain(spread(0.3, 0.5, 0.7, 1.0)),
+  sound("[hh hh hh hh]")
+    .gain(spread(0.3, 0.5, 0.7, 1.0)),
   sound("~ sd ~ [sd sd]").gain(0.7),
-  n("0 4 7 ~").scale("C3:pentatonic").sound("saw").lpf(600).adsr("0.01:0.1:0.5:0.2").gain(0.3).jux(slow(2))
+  n("0 4 7 ~").scale("C3:pentatonic")
+    .sound("saw").lpf(600)
+    .adsr("0.01:0.1:0.5:0.2").gain(0.3)
+    .jux(slow(2))
 )""",
         ),
     ),

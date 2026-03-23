@@ -39,7 +39,9 @@ val yourFirstTrackTutorial = Tutorial(
   sound("~ sd ~ sd"),
   sound("hh hh hh hh").gain(0.5),
   n("0 ~ 0 3").scale("C2:minor").sound("sine").lpf(300).gain(0.5),
-  n("0 2 4 7").scale("C4:minor").sound("saw").lpf(800).adsr("0.01:0.1:0.5:0.2").gain(0.3)
+  n("0 2 4 7").scale("C4:minor")
+    .sound("saw").lpf(800)
+    .adsr("0.01:0.1:0.5:0.2").gain(0.3)
 )""",
         ),
         TutorialSection(
@@ -50,8 +52,12 @@ val yourFirstTrackTutorial = Tutorial(
   sound("~ sd ~ sd"),
   sound("hh hh hh hh").gain(0.5),
   n("0 ~ 0 3").scale("C2:minor").sound("sine").lpf(300).gain(0.5),
-  n("0 2 4 7").scale("C4:minor").sound("saw").lpf(800).adsr("0.01:0.1:0.5:0.2").gain(0.3),
-  n("<0 3 5 3>").scale("C3:minor").sound("supersaw").lpf(400).adsr("0.3:0.3:0.7:0.5").gain(0.15)
+  n("0 2 4 7").scale("C4:minor")
+    .sound("saw").lpf(800)
+    .adsr("0.01:0.1:0.5:0.2").gain(0.3),
+  n("<0 3 5 3>").scale("C3:minor")
+    .sound("supersaw").lpf(400)
+    .adsr("0.3:0.3:0.7:0.5").gain(0.15)
 )""",
         ),
         TutorialSection(
@@ -61,9 +67,21 @@ val yourFirstTrackTutorial = Tutorial(
   sound("bd ~ bd ~").orbit(0),
   sound("~ sd ~ sd").orbit(0),
   sound("hh hh hh hh").gain(0.5).orbit(0),
-  n("0 ~ 0 3").scale("C2:minor").sound("sine").lpf(300).gain(0.5).orbit(1),
-  n("0 2 4 7").scale("C4:minor").sound("saw").lpf(800).adsr("0.01:0.1:0.5:0.2").delay(1).delaytime(0.33).delayfeedback(0.2).gain(0.3).orbit(2),
-  n("<0 3 5 3>").scale("C3:minor").sound("supersaw").lpf(400).adsr("0.3:0.3:0.7:0.5").room(0.2).rsize(5.0).gain(0.15).orbit(3)
+  n("0 ~ 0 3").scale("C2:minor")
+    .sound("sine").lpf(300)
+    .gain(0.5).orbit(1),
+  n("0 2 4 7").scale("C4:minor")
+    .sound("saw").lpf(800)
+    .adsr("0.01:0.1:0.5:0.2")
+    // Watch: a splash of delay gives the melody its sizzle
+    .delay(1).delaytime(0.33).delayfeedback(0.2)
+    .gain(0.3).orbit(2),
+  n("<0 3 5 3>").scale("C3:minor")
+    .sound("supersaw").lpf(400)
+    .adsr("0.3:0.3:0.7:0.5")
+    // Chef's kiss: a drizzle of reverb warms this pad right up
+    .room(0.2).rsize(5.0)
+    .gain(0.15).orbit(3)
 )""",
         ),
         TutorialSection(
@@ -73,9 +91,19 @@ val yourFirstTrackTutorial = Tutorial(
   sound("bd ~ bd ~").orbit(0),
   sound("~ sd ~ [sd sd]").orbit(0),
   sound("hh hh oh hh").gain(0.5).orbit(0),
-  n("0 ~ 0 3").scale("C2:minor").sound("sine").lpf(300).gain(0.5).orbit(1),
-  n("0 2 4 7 6 4 2 0").scale("C4:minor").sound("saw").lpf(800).adsr("0.01:0.1:0.5:0.2").delay(1).delaytime(0.33).delayfeedback(0.2).gain(0.25).orbit(2),
-  n("<0 3 5 3>").scale("C3:minor").sound("supersaw").lpf(400).adsr("0.3:0.3:0.7:0.5").room(0.2).rsize(5.0).gain(0.15).orbit(3)
+  n("0 ~ 0 3").scale("C2:minor")
+    .sound("sine").lpf(300)
+    .gain(0.5).orbit(1),
+  n("0 2 4 7 6 4 2 0").scale("C4:minor")
+    .sound("saw").lpf(800)
+    .adsr("0.01:0.1:0.5:0.2")
+    .delay(1).delaytime(0.33).delayfeedback(0.2)
+    .gain(0.25).orbit(2),
+  n("<0 3 5 3>").scale("C3:minor")
+    .sound("supersaw").lpf(400)
+    .adsr("0.3:0.3:0.7:0.5")
+    .room(0.2).rsize(5.0)
+    .gain(0.15).orbit(3)
 )""",
         ),
     ),

@@ -19,7 +19,9 @@ val leftRightCenterTutorial = Tutorial(
             code = """stack(
   sound("bd sd bd sd").pan(0.5),
   sound("hh hh oh hh").pan(0.8).gain(0.5),
-  n("0 2 4 7").scale("C4:minor").sound("saw").lpf(800).pan(0.2).gain(0.3)
+  n("0 2 4 7").scale("C4:minor")
+    .sound("saw").lpf(800)
+    .pan(0.2).gain(0.3)
 )""",
         ),
         TutorialSection(
@@ -28,8 +30,15 @@ val leftRightCenterTutorial = Tutorial(
             code = """stack(
   sound("bd sd bd sd").pan(0.5),
   sound("hh hh oh hh").pan(0.8).gain(0.5),
-  n("0 2 4 7 6 4 2 0").scale("C3:minor").sound("saw").lpf(600).adsr("0.05:0.2:0.6:0.3").pan(0.2).gain(0.3),
-  chord("<Am C F Am>").voicing().sound("supersaw").lpf(400).adsr("0.2:0.3:0.7:0.5").pan(0.65).gain(0.15)
+  n("0 2 4 7 6 4 2 0").scale("C3:major")
+    .sound("saw").lpf(600)
+    .adsr("0.05:0.2:0.6:0.3")
+    // Feel: pan(0.2) seats the melody to the left, like the first chair in the orchestra
+    .pan(0.2).gain(0.3),
+  chord("<Am C F Am>").voicing()
+    .sound("supersaw").lpf(400)
+    .adsr("0.2:0.3:0.7:0.5")
+    .pan(0.65).gain(0.15)
 )""",
         ),
     ),

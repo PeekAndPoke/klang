@@ -122,6 +122,16 @@ val <camelCaseSlug> Tutorial = Tutorial(
     instead.
 17. **PAN RANGE**: `pan(0.0)` = hard LEFT, `pan(0.5)` = CENTER, `pan(1.0)` = hard RIGHT. The range is 0.0 to 1.0, NOT -1
     to +1.
+18. **LINE LENGTH**: Break long chains (~70+ chars). Indent continuation lines by 2 spaces. Break after logical groups
+    (pattern+scale, sound+filter, before effects, before orbit).
+19. **COMMENTS — playful gourmet chef tone**: Add a comment before the key teaching concept in each code block. Do NOT
+    be dry ("NOTICE: superimpose adds a copy"). Be playful, like a chef appreciating ingredients:
+    `// Watch: this is where the magic happens`, `// Chef's kiss: a pinch of reverb`,
+    `// Now stir in some stereo width`, `// Feel: this will give a great texture`
+20. **ALWAYS lpf() harsh waveforms**: `sound("saw")`, `sound("supersaw")`, `sound("square")` must have `.lpf()` to
+    sound nice. Exception: when deliberately demonstrating the raw unfiltered sound.
+21. **No big words in titles**: Avoid "masterclass", "ultimate", "definitive", "comprehensive". Keep titles simple and
+    concrete — describe what you'll do, not how impressive it is.
 
 ### Difficulty Guidelines
 

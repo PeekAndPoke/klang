@@ -28,16 +28,25 @@ val patternsInMotionTutorial = Tutorial(
         TutorialSection(
             heading = "Go Wide with jux()",
             text = "The jux() function is pure stereo magic. It takes your pattern, applies a transformation to a copy, and plays the original in one ear and the transformed version in the other. Put on headphones and hit play — you will hear the melody moving between left and right.",
-            code = """n("0 2 4 6 7 6 4 2").scale("C4:minor").sound("saw").lpf(800).gain(0.3).jux(slow(2))""",
+            code = """n("0 2 4 6 7 6 4 2").scale("C4:minor")
+  .sound("saw").lpf(800).gain(0.3)
+  // Try: jux splits the dish — original on the left, slow-roasted copy on the right
+  .jux(slow(2))""",
         ),
         TutorialSection(
             heading = "Putting It All Together",
             text = "Here is a full track where every layer has its own motion. The melody shifts in stereo with jux(). The hi-hats speed up every 4th cycle. The bass alternates between fast and slow. Nothing is static — this is live coding.",
             code = """stack(
-  n("0 2 4 7 6 4 2 0").scale("C3:minor").sound("saw").lpf(600).adsr("0.2:0.2:0.5:0.3").gain(0.3).jux(slow(2)),
+  n("0 2 4 7 6 4 2 0").scale("C3:minor")
+    .sound("saw").lpf(600)
+    .adsr("0.2:0.2:0.5:0.3").gain(0.3)
+    .jux(slow(2)),
   sound("bd sd bd sd"),
-  sound("hh hh hh hh").every(4, fast(2)).gain(0.5),
-  n("0 ~ 0 ~").scale("C2:minor").sound("square").lpf(400).gain(0.4).every(3, slow(2))
+  sound("hh hh hh hh")
+    .every(4, fast(2)).gain(0.5),
+  n("0 ~ 0 ~").scale("C2:minor")
+    .sound("square").lpf(400).gain(0.4)
+    .every(3, slow(2))
 )""",
         ),
     ),

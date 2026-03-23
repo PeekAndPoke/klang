@@ -23,11 +23,16 @@ val buildASongTutorial = Tutorial(
         TutorialSection(
             heading = "Slow It Down with slowcat()",
             text = "While cat() squeezes everything into one cycle, slowcat() gives each pattern a full cycle of its own. This is how you build sections — each pattern plays for a whole measure before the next one starts. Listen to how the mood shifts every cycle.",
-            code = """slowcat(
-  n("0 2 4 7").scale("C3:minor").sound("saw").lpf(800).gain(0.3),
-  n("0 3 5 7").scale("C3:minor").sound("saw").lpf(600).gain(0.3),
-  n("0 2 4 7").scale("C3:minor").sound("saw").lpf(800).gain(0.3),
-  n("5 4 2 0").scale("C3:minor").sound("saw").lpf(1000).gain(0.3)
+            code = """// Look: slowcat lets each pattern savor a full cycle, like courses in a tasting menu
+slowcat(
+  n("0 2 4 7").scale("C3:minor")
+    .sound("saw").lpf(800).gain(0.3),
+  n("0 3 5 7").scale("C3:minor")
+    .sound("saw").lpf(600).gain(0.3),
+  n("0 2 4 7").scale("C3:minor")
+    .sound("saw").lpf(800).gain(0.3),
+  n("5 4 2 0").scale("C3:minor")
+    .sound("saw").lpf(1000).gain(0.3)
 )""",
         ),
         TutorialSection(
@@ -45,10 +50,13 @@ val buildASongTutorial = Tutorial(
             text = "Here is a mini song with four sections: an intro with just melody, a verse that adds drums, a breakdown with silence, and a drop where everything comes back louder. Each section gets one full cycle. This is arrangement — you are composing a piece with a beginning, middle, and end.",
             code = """stack(
   slowcat(
-    n("0 2 4 7").scale("C3:minor").sound("saw").lpf(600).gain(0.3),
-    n("0 2 4 7").scale("C3:minor").sound("saw").lpf(800).gain(0.3),
+    n("0 2 4 7").scale("C3:minor")
+      .sound("saw").lpf(600).gain(0.3),
+    n("0 2 4 7").scale("C3:minor")
+      .sound("saw").lpf(800).gain(0.3),
     silence,
-    n("0 2 4 7").scale("C3:minor").sound("supersaw").lpf(1000).gain(0.25)
+    n("0 2 4 7").scale("C3:minor")
+      .sound("supersaw").lpf(1000).gain(0.25)
   ),
   slowcat(
     silence,
