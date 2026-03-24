@@ -57,7 +57,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
         val firstSample = symbol.variants
             .firstOrNull { it.samples.isNotEmpty() }
             ?.samples?.firstOrNull()
-            ?.takeIf { it.isNotBlank() }
+            ?.takeIf { it.code.isNotBlank() }
 
         (ui.segment + laf.styles.docsPopup()) {
             css {
@@ -125,7 +125,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                     if (firstSample != null) {
                         sectionLabel("Example")
                         noui.content {
-                            codeBlock(firstSample, copyToClipboard = true)
+                            codeBlock(firstSample.code, copyToClipboard = true)
                         }
                     }
                 }

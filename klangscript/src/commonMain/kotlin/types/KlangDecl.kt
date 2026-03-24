@@ -9,7 +9,7 @@ sealed interface KlangDecl {
     val returnDoc: String
 
     /** Example code snippets. */
-    val samples: List<String>
+    val samples: List<KlangCodeSample>
 
     /** Rendered signature string (e.g., `note(pattern: String): Pattern`). */
     val signature: String
@@ -33,7 +33,7 @@ data class KlangCallable(
     val returnType: KlangType? = null,
     override val description: String = "",
     override val returnDoc: String = "",
-    override val samples: List<String> = emptyList(),
+    override val samples: List<KlangCodeSample> = emptyList(),
 ) : KlangDecl {
     override val signature: String
         get() = buildString {
@@ -67,7 +67,7 @@ data class KlangProperty(
     val mutability: KlangMutability = KlangMutability.READ_ONLY,
     override val description: String = "",
     override val returnDoc: String = "",
-    override val samples: List<String> = emptyList(),
+    override val samples: List<KlangCodeSample> = emptyList(),
 ) : KlangDecl {
     override val signature: String
         get() = buildString {

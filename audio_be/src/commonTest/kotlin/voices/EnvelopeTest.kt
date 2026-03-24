@@ -7,7 +7,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 
 /**
- * Tests for ADSR envelope implementation in VoiceImpl.
+ * Tests for ADSR envelope implementation in Voice.
  * Verifies all phases (Attack, Decay, Sustain, Release) work correctly.
  */
 class EnvelopeTest : StringSpec({

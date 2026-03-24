@@ -78,11 +78,11 @@ internal val PatternMapperFn._euclid by dslPatternMapperExtension { m, args, cal
  * @param steps  Total number of steps in the rhythm.
  * @return A pattern with the Euclidean rhythm applied as structure.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclid(3, 8)  // classic 3-over-8 Euclidean rhythm
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").euclid(5, 16)  // 5 beats distributed across 16 steps
  * ```
  *
@@ -100,7 +100,7 @@ fun euclid(pulses: Int, steps: Int, pattern: PatternLike): SprudelPattern =
  * @param steps  Total number of steps in the rhythm.
  * @return A pattern with the Euclidean rhythm applied as structure.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclid(3, 8)  // classic 3-over-8 Euclidean rhythm
  * ```
  *
@@ -118,7 +118,7 @@ fun SprudelPattern.euclid(pulses: Int, steps: Int): SprudelPattern =
  * @param steps  Total number of steps in the rhythm.
  * @return A pattern with the Euclidean rhythm applied as structure.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "hh".euclid(3, 8).s()  // classic 3-over-8 Euclidean rhythm
  * ```
  *
@@ -136,7 +136,7 @@ fun String.euclid(pulses: Int, steps: Int): SprudelPattern =
  * @param steps  Total number of steps in the rhythm.
  * @return A [PatternMapperFn] that restructures the source as a Euclidean rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(euclid(3, 8))  // via mapper
  * ```
  *
@@ -220,11 +220,11 @@ internal val PatternMapperFn._euclidrot by dslPatternMapperExtension { m, args, 
  * @param rotation Number of steps to rotate the pattern by.
  * @return A rotated Euclidean rhythm pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclidRot(3, 8, 2)  // 3-over-8 rhythm, shifted by 2 steps
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").euclidRot(5, 16, 1)  // 5-over-16 shifted by 1 step
  * ```
  *
@@ -244,7 +244,7 @@ fun euclidRot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): Spr
  * @param rotation Number of steps to rotate the pattern by.
  * @return A rotated Euclidean rhythm pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclidRot(3, 8, 2)  // 3-over-8 rhythm, shifted by 2 steps
  * ```
  *
@@ -264,7 +264,7 @@ fun SprudelPattern.euclidRot(pulses: Int, steps: Int, rotation: Int): SprudelPat
  * @param rotation Number of steps to rotate the pattern by.
  * @return A rotated Euclidean rhythm pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "hh".euclidRot(3, 8, 2).s()  // 3-over-8 rhythm, shifted by 2 steps
  * ```
  *
@@ -284,7 +284,7 @@ fun String.euclidRot(pulses: Int, steps: Int, rotation: Int): SprudelPattern =
  * @param rotation Number of steps to rotate the pattern by.
  * @return A [PatternMapperFn] that restructures the source as a rotated Euclidean rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(euclidRot(3, 8, 2))  // via mapper
  * ```
  *
@@ -309,11 +309,11 @@ fun PatternMapperFn.euclidRot(pulses: Int, steps: Int, rotation: Int): PatternMa
  * @param rotation Number of steps to rotate the pattern by.
  * @return A rotated Euclidean rhythm pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclidrot(3, 8, 2)  // lowercase alias
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").euclidrot(5, 16, 3)  // 5-over-16, rotated by 3
  * ```
  *
@@ -333,7 +333,7 @@ fun euclidrot(pulses: Int, steps: Int, rotation: Int, pattern: PatternLike): Spr
  * @param rotation Number of steps to rotate the pattern by.
  * @return A rotated Euclidean rhythm pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclidrot(3, 8, 2).s()  // lowercase alias
  * ```
  *
@@ -353,7 +353,7 @@ fun SprudelPattern.euclidrot(pulses: Int, steps: Int, rotation: Int): SprudelPat
  * @param rotation Number of steps to rotate the pattern by.
  * @return A rotated Euclidean rhythm pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "hh".euclidrot(3, 8, 2).s()  // lowercase alias
  * ```
  *
@@ -373,7 +373,7 @@ fun String.euclidrot(pulses: Int, steps: Int, rotation: Int): SprudelPattern =
  * @param rotation Number of steps to rotate the pattern by.
  * @return A [PatternMapperFn] that restructures the source as a rotated Euclidean rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(euclidrot(3, 8, 2))  // via mapper
  * ```
  *
@@ -461,11 +461,11 @@ internal val PatternMapperFn._bjork by dslPatternMapperExtension { m, args, call
  * @param rotation Number of steps to rotate (default 0).
  * @return A pattern with the Euclidean rhythm applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").bjork(3, 8, 0)  // equivalent to euclid(3, 8)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").bjork(5, 16, 2)  // 5-over-16 with rotation 2
  * ```
  * @category structural
@@ -488,7 +488,7 @@ fun String.bjork(pulses: Int, steps: Int, rotation: Int = 0): SprudelPattern =
  * @param rotation Number of steps to rotate (default 0).
  * @return A [PatternMapperFn] that restructures the source as a bjork Euclidean rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(bjork(3, 8, 0))  // via mapper
  * ```
  *
@@ -561,11 +561,11 @@ internal val PatternMapperFn._euclidLegato by dslPatternMapperExtension { m, arg
  * @param steps  Total number of steps in the rhythm.
  * @return A legato Euclidean rhythm pattern (no rests between onsets).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclidLegato(3, 8)  // 3-over-8 legato (held notes)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c").euclidLegato(5, 8)  // 5 legato notes across 8 steps
  * ```
  *
@@ -588,7 +588,7 @@ fun String.euclidLegato(pulses: Int, steps: Int): SprudelPattern =
  * @param steps  Total number of steps in the rhythm.
  * @return A [PatternMapperFn] that restructures the source as a legato Euclidean rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(euclidLegato(3, 8))  // via mapper
  * ```
  *
@@ -681,11 +681,11 @@ internal val PatternMapperFn._euclidLegatoRot by dslPatternMapperExtension { m, 
  * @param rotation Number of steps to rotate the pattern by.
  * @return A legato Euclidean rhythm with rotation applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclidLegatoRot(3, 8, 2)  // legato 3-over-8, rotated by 2
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c").euclidLegatoRot(5, 8, 1)  // legato 5-over-8, rotated by 1
  * ```
  *
@@ -709,7 +709,7 @@ fun String.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int): SprudelPatte
  * @param rotation Number of steps to rotate the pattern by.
  * @return A [PatternMapperFn] that restructures the source as a rotated legato Euclidean rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(euclidLegatoRot(3, 8, 2))  // via mapper
  * ```
  *
@@ -817,11 +817,11 @@ internal val PatternMapperFn._eish by dslPatternMapperExtension { m, args, callI
  * @param groove Morph factor from 0 (strict Euclidean) to 1 (completely even spacing).
  * @return A pattern with the morphed Euclidean rhythm applied as structure.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").euclidish(3, 8, 0.5)  // halfway between strict and even
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").euclidish(5, 16, 0.0)  // same as euclid(5, 16)
  * ```
  *
@@ -846,7 +846,7 @@ fun String.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0): Sprude
  * @param groove Morph factor from 0 (strict Euclidean) to 1 (completely even spacing).
  * @return A [PatternMapperFn] that restructures the source as a morphed Euclidean rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(euclidish(3, 8, 0.5))  // via mapper
  * ```
  *
@@ -871,11 +871,11 @@ fun PatternMapperFn.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0
  * @param groove Morph factor from 0 (strict) to 1 (even).
  * @return A pattern with the morphed Euclidean rhythm applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").eish(3, 8, 0.5)  // halfway between strict and even
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").eish(5, 16, 1.0)  // completely even spacing
  * ```
  *
@@ -900,7 +900,7 @@ fun String.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0): SprudelPatt
  * @param groove Morph factor from 0 (strict) to 1 (even).
  * @return A [PatternMapperFn] that restructures the source as a morphed Euclidean rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(eish(3, 8, 0.5))  // via mapper
  * ```
  *

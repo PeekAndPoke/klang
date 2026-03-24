@@ -1,14 +1,9 @@
 package io.peekandpoke.klang.audio_be.filters
 
+import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.tan
-
-private const val DENORMAL_THRESHOLD = 1e-15
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun flushDenormal(v: Double): Double = if (abs(v) < DENORMAL_THRESHOLD) 0.0 else v
 
 object LowPassHighPassFilters {
 

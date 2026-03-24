@@ -49,11 +49,11 @@ internal val PatternMapperFn._seed by dslPatternMapperExtension { m, args, callI
  * @param n Seed value — any integer-compatible pattern or literal.
  * @return A pattern whose random operations are pinned to the given seed.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").degradeBy(0.3).seed(42)     // reproducible random removal
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").sometimes(x => x.rev()).seed(7)   // fixed random decisions
  * ```
  *
@@ -76,7 +76,7 @@ fun String.seed(n: PatternLike): SprudelPattern = this._seed(listOf(n).asSprudel
  * @param n Seed value — any integer-compatible pattern or literal.
  * @return A [PatternMapperFn] that sets the random seed on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").apply(degradeBy(0.3).seed(42))   // chain seed onto a mapper
  * ```
  *
@@ -134,11 +134,11 @@ fun PatternMapperFn.withSeed(n: PatternLike): PatternMapperFn = this._withSeed(l
  * re-map the output, `segment(n)` to discretise it into `n` steps per cycle, or pass it
  * directly to parameters that accept patterns.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").pan(rand)  // random panning for each hit
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").gain(rand.range(0.5, 1.0))  // random gain in 0.5–1.0
  * ```
  *
@@ -163,11 +163,11 @@ val rand: SprudelPattern get() = _rand
  * Equivalent to `rand.range(-1, 1)`. Useful for LFO-style modulation that oscillates
  * around zero (e.g., pitch detune, stereo panning centred at 0).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").pan(rand2)   // bipolar random panning around centre
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").sound("supersaw").detune(rand2.range(-10, 10))   // slight random detune
  * ```
  *
@@ -189,7 +189,7 @@ val rand2: SprudelPattern get() = _rand2
  * different values. Useful for cycle-level random decisions (e.g. `someCyclesBy`).
  * Equivalent to `rand.segment(1)`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*8").degradeByWith(randCycle, 0.5)   // entire cycle either plays or drops
  * ```
  *
@@ -250,11 +250,11 @@ internal val _brandBy by dslPatternFunction { args, /* callInfo */ _ ->
  * At each point in time, `brandBy(p)` produces 1 with probability `p` and 0 otherwise.
  * Useful for random gate or switch patterns.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*10").pan(brandBy(0.2))        // 20% chance of value 1, else 0
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").gain(brandBy(0.5))  // random full/zero gain on each event
  * ```
  *
@@ -269,7 +269,7 @@ fun brandBy(prob: PatternLike): SprudelPattern = _brandBy(listOf(prob).asSprudel
  *
  * Shorthand for `brandBy(0.5)`. Use it wherever you need a random on/off gate signal.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").gain(brand)               // each hi-hat randomly at full or zero gain
  * ```
  *
@@ -341,11 +341,11 @@ internal val _irand by dslPatternFunction { args, /* callInfo */ _ ->
  * Generates a new random integer at each distinct point in time. Useful for randomly
  * selecting scale degrees, sample numbers, or any indexed choice.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n(irand(8)).scale("C:minor").note()         // random scale degree 0–7 each event
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*8").n(irand(6))                       // random sample variant 0–5 per hit
  * ```
  *
@@ -378,11 +378,11 @@ internal val PatternMapperFn._degradeBy by dslPatternMapperExtension { m, args, 
  * @param prob Removal probability in [0, 1]; 0 = keep all, 1 = remove all.
  * @return A pattern with events randomly removed at the given probability.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").degradeBy(0.3)     // ~30% of hits are silenced randomly
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").degradeBy(0.5)      // roughly half the notes play each cycle
  * ```
  *
@@ -402,7 +402,7 @@ fun String.degradeBy(prob: PatternLike): SprudelPattern = this._degradeBy(listOf
  * @param prob Removal probability in [0, 1].
  * @return A [PatternMapperFn] that drops events randomly at the given probability.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(degradeBy(0.3))     // ~30% of hits silenced via mapper
  * ```
  *
@@ -431,7 +431,7 @@ internal val PatternMapperFn._degrade by dslPatternMapperExtension { m, args, ca
  * @param prob Removal probability; defaults to `0.5`.
  * @return A pattern with roughly half its events removed each cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").degrade()          // ~half the events play per cycle
  * ```
  *
@@ -449,7 +449,7 @@ fun String.degrade(prob: PatternLike = 0.5): SprudelPattern = this._degrade(list
 /**
  * Returns a [PatternMapperFn] that randomly removes events with 50% probability.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(degrade())   // ~half the events play via mapper
  * ```
  *
@@ -510,11 +510,11 @@ internal val PatternMapperFn._degradeByWith by dslPatternMapperExtension { m, ar
  * @param prob Threshold; event kept when `withPat > prob`.
  * @return A pattern with events removed where the custom source falls below the threshold.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*8").degradeByWith(rand.segment(1), 0.5)   // whole cycle either plays or drops
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*16").degradeByWith(sine.range(0, 1), 0.5) // sine-wave controlled removal
  * ```
  *
@@ -537,7 +537,7 @@ fun String.degradeByWith(withPat: PatternLike, prob: PatternLike): SprudelPatter
  * @param prob Threshold; event kept when `withPat > prob`.
  * @return A [PatternMapperFn] that filters events via the custom randomness source.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*8").apply(degradeByWith(rand.segment(1), 0.5))  // cycle-level drops via mapper
  * ```
  *
@@ -581,11 +581,11 @@ internal val PatternMapperFn._undegradeBy by dslPatternMapperExtension { m, args
  * @param prob Keep probability in [0, 1]; 0 = remove all, 1 = keep all.
  * @return A pattern keeping only the events that `degradeBy(1-x)` would remove.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").undegradeBy(0.2)                   // only ~20% of hits play
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*10").layer(
  *   x => x.degradeBy(0.2).pan(0),
  *   x => x.undegradeBy(0.8).pan(1)
@@ -608,7 +608,7 @@ fun String.undegradeBy(prob: PatternLike): SprudelPattern = this._undegradeBy(li
  * @param prob Keep probability in [0, 1].
  * @return A [PatternMapperFn] that is the complement of [degradeBy].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").apply(undegradeBy(0.2))    // ~20% of hits play via mapper
  * ```
  *
@@ -660,7 +660,7 @@ internal val PatternMapperFn._undegradeByWith by dslPatternMapperExtension { m, 
  * @param prob Threshold; event kept when `withPat >= (1 - prob)`.
  * @return A pattern that is the complement of `degradeByWith(withPat, prob)`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*8").undegradeByWith(randCycle, 0.5)   // cycle-level complement of degradeByWith
  * ```
  *
@@ -683,7 +683,7 @@ fun String.undegradeByWith(withPat: PatternLike, prob: PatternLike): SprudelPatt
  * @param prob Threshold; event kept when `withPat >= (1 - prob)`.
  * @return A [PatternMapperFn] that is the complement of [degradeByWith].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*8").apply(undegradeByWith(randCycle, 0.5))  // cycle-level complement via mapper
  * ```
  *
@@ -717,7 +717,7 @@ internal val PatternMapperFn._undegrade by dslPatternMapperExtension { m, args, 
  *
  * @return A pattern keeping roughly half its events each cycle (complement of [degrade]).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").undegrade()               // ~half the events play (complement of degrade)
  * ```
  *
@@ -734,7 +734,7 @@ fun String.undegrade(): SprudelPattern = this._undegrade(emptyList())
 /**
  * Returns a [PatternMapperFn] that keeps events with 50% probability (inverse of [degrade]).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").apply(undegrade())        // ~half the events play via mapper
  * ```
  *
@@ -794,11 +794,11 @@ internal val PatternMapperFn._sometimesBy by dslPatternMapperExtension { m, args
  * @param mapper The transformation to apply probabilistically.
  * @return A pattern with `mapper` applied to each event at the given probability.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").sometimesBy(0.4, x => x.speed(0.5))   // 40% of hits at half speed
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").sometimesBy(0.5, x => x.transpose(12)) // 50% of notes an octave higher
  * ```
  *
@@ -821,7 +821,7 @@ fun String.sometimesBy(prob: PatternLike, mapper: PatternMapperFn): SprudelPatte
  * @param mapper The transformation to apply probabilistically.
  * @return A [PatternMapperFn] that applies the mapper at the given probability.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").apply(sometimesBy(0.4, x => x.speed(0.5)))   // via mapper
  * ```
  *
@@ -858,11 +858,11 @@ internal val PatternMapperFn._sometimes by dslPatternMapperExtension { m, args, 
  * @param mapper The transformation to apply 50% of the time.
  * @return A pattern with `mapper` applied to roughly half the events.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").sometimes(x => x.speed(2))  // half the hits at double speed
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").sometimes(x => x.transpose(7))     // 50% of notes shifted a fifth up
  * ```
  *
@@ -907,7 +907,7 @@ internal val PatternMapperFn._often by dslPatternMapperExtension { m, args, call
  * @param mapper The transformation to apply 75% of the time.
  * @return A pattern with `mapper` applied to ~75% of events.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").often(x => x.gain(0.5))    // 75% of hi-hats at half gain
  * ```
  *
@@ -950,7 +950,7 @@ internal val PatternMapperFn._rarely by dslPatternMapperExtension { m, args, cal
  * @param mapper The transformation to apply 25% of the time.
  * @return A pattern with `mapper` applied to ~25% of events.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").rarely(x => x.transpose(12))   // only 1 in 4 notes shifted an octave
  * ```
  *
@@ -997,7 +997,7 @@ internal val PatternMapperFn._almostNever by dslPatternMapperExtension { m, args
  * @param mapper The transformation to apply 10% of the time.
  * @return A pattern with `mapper` applied to ~10% of events.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh sd oh").almostNever(x => x.speed(0.5))   // very rarely at half sample speed
  * ```
  *
@@ -1046,7 +1046,7 @@ internal val PatternMapperFn._almostAlways by dslPatternMapperExtension { m, arg
  * @param mapper The transformation to apply 90% of the time.
  * @return A pattern with `mapper` applied to ~90% of events.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").almostAlways(x => x.gain(0.2)).seed(3)   // 90% of hi-hats at 20% gain
  * ```
  *
@@ -1086,7 +1086,7 @@ internal val PatternMapperFn._never by dslPatternMapperExtension { m, args, call
  * @param mapper The transformation — ignored; pattern passes through unchanged.
  * @return The unmodified source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").never(x => x.rev())       // rev is never applied; pattern plays normally
  * ```
  *
@@ -1129,7 +1129,7 @@ internal val PatternMapperFn._always by dslPatternMapperExtension { m, args, cal
  * @param mapper The transformation to always apply.
  * @return A pattern with `mapper` unconditionally applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh hh sd hh hh").always(x => x.rev())    // rev is always applied
  * ```
  *
@@ -1179,11 +1179,11 @@ internal val PatternMapperFn._someCyclesBy by dslPatternMapperExtension { m, arg
  * @param mapper The transformation to apply to the whole cycle.
  * @return A pattern with `mapper` applied to ~`prob` fraction of cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").someCyclesBy(0.5, x => x.rev())  // entire cycle reversed ~50% of cycles
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").someCyclesBy(0.3, x => x.fast(2)) // ~30% of cycles play at double speed
  * ```
  *
@@ -1206,7 +1206,7 @@ fun String.someCyclesBy(prob: PatternLike, mapper: PatternMapperFn): SprudelPatt
  * @param mapper The transformation to apply to the whole cycle.
  * @return A [PatternMapperFn] that applies the mapper to ~`prob` fraction of cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(someCyclesBy(0.5, x => x.rev()))  // via mapper
  * ```
  *
@@ -1241,7 +1241,7 @@ internal val PatternMapperFn._someCycles by dslPatternMapperExtension { m, args,
  * @param mapper The transformation to apply to the whole cycle ~50% of the time.
  * @return A pattern with `mapper` applied to roughly half the cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").someCycles(x => x.rev())   // reverse the entire cycle ~50% of the time
  * ```
  *
@@ -1284,7 +1284,7 @@ internal val _randL by dslPatternFunction { args, /* callInfo */ _ ->
  * The list is resampled each cycle. Useful for passing multiple random values to
  * parameters that accept lists, such as `partials`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("saw").n(irand(12)).scale("F1:minor").partials(randL(8))   // 8 random partials
  * ```
  *
@@ -1337,11 +1337,11 @@ internal val _randrun by dslPatternFunction { args, /* callInfo */ _ ->
  * Every cycle, the range `0..(n-1)` is shuffled and played in that random order. Each value
  * appears exactly once per cycle. Useful for randomised but non-repeating sequences.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n(randrun(8)).scale("C:pentatonic").note()   // random permutation of 8 scale degrees
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").bite(4, randrun(4))         // random order of 4 slices each cycle
  * ```
  *
@@ -1374,11 +1374,11 @@ internal val PatternMapperFn._shuffle by dslPatternMapperExtension { m, args, ca
  * @param n Number of equal slices to divide the pattern into and reorder.
  * @return A pattern with its slices randomly permuted each cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").shuffle(4)                 // random permutation of 4 quarter-cycle slices
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").shuffle(4)                // randomly reorder the 4 drum hits each cycle
  * ```
  *
@@ -1398,7 +1398,7 @@ fun String.shuffle(n: PatternLike): SprudelPattern = this._shuffle(listOf(n).asS
  * @param n Number of equal slices to divide the pattern into and reorder.
  * @return A [PatternMapperFn] that randomly reorders `n` slices each cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").apply(shuffle(4))          // random permutation via mapper
  * ```
  *
@@ -1434,11 +1434,11 @@ internal val PatternMapperFn._scramble by dslPatternMapperExtension { m, args, c
  * @param n Number of equal slices to divide the pattern into and pick from.
  * @return A pattern with randomly selected (with replacement) slices each cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").scramble(4)         // random selection with repetition of 4 slices
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").scramble(4)        // random drum hit order, repeats allowed
  * ```
  *
@@ -1458,7 +1458,7 @@ fun String.scramble(n: PatternLike): SprudelPattern = this._scramble(listOf(n).a
  * @param n Number of equal slices to divide the pattern into and pick from.
  * @return A [PatternMapperFn] that randomly picks `n` slices (with repetition) each cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(scramble(4)) // random drum hit order via mapper
  * ```
  *
@@ -1498,11 +1498,11 @@ internal val String._chooseWith by dslStringExtension { p, args, callInfo -> p._
  * picks the first element, 1 picks the last, and values in between interpolate as an index.
  * Structure comes from the selector pattern (`chooseOut` mode).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 g2 d2 f1").s(chooseWith(sine.fast(2), "sawtooth", "triangle", "bd:6"))
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s(chooseWith(rand, "bd", "sd", "hh"))    // random instrument selection per event
  * ```
  *
@@ -1546,7 +1546,7 @@ internal val String._chooseInWith by dslStringExtension { p, args, callInfo -> p
  * The selector pattern (values 0–1) controls which value is chosen. The timing structure is
  * taken from the selected value pattern (`chooseIn` mode).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chooseInWith(sine, "c d", "e f g", "a b c d")   // selector picks pattern; its timing wins
  * ```
  *
@@ -1591,11 +1591,11 @@ internal val String._choose by dslStringExtension { p, args, callInfo -> p._choo
  * Uses `rand` as the selector, so the choice varies continuously in time. Structure comes
  * from the selector (`chooseOut` mode). For cycle-level choices use `chooseCycles`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 g2 d2 f1").s(choose("sine", "triangle", "bd:6"))   // random synth each note
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s(choose("bd", "sd", "hh")).fast(8)    // random drum sound every eighth-note
  * ```
  *
@@ -1612,7 +1612,7 @@ fun choose(vararg args: PatternLike): SprudelPattern = _choose(args.toList().asS
  * The receiver pattern controls the index into the list. Structure comes from the
  * selector pattern (`chooseOut` mode).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.choose("c", "e", "g", "b")     // sine wave selects among chord tones
  * ```
  *
@@ -1677,7 +1677,7 @@ internal val String._chooseIn by dslStringExtension { p, args, callInfo -> p._ch
  * Uses `rand` as the selector. The timing structure is inherited from the selected value
  * pattern (`chooseIn` mode), so the chosen pattern's own rhythm determines the events.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chooseIn("c d", "e f g", "a b c d")   // random pattern; its timing determines structure
  * ```
  *
@@ -1712,7 +1712,7 @@ internal val String._choose2 by dslStringExtension { p, args, callInfo -> p._cho
  * The receiver bipolar pattern is converted to 0–1 before indexing into the list, so
  * `rand2` and LFOs centred at zero can be used directly as selectors.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * rand2.choose2("c", "e", "g", "b")    // bipolar rand selects among chord tones
  * ```
  *
@@ -1753,11 +1753,11 @@ internal val String._chooseCycles by dslStringExtension { p, args, /* callInfo *
  * The entire cycle plays the same chosen pattern. Unlike `choose`, which can vary within a
  * cycle, `chooseCycles` makes a fresh random choice only at cycle boundaries.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chooseCycles("bd", "hh", "sd").s().fast(8)   // entire cycle uses one random drum sound
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd | hh | sd").fast(8)                    // mini-notation equivalent using |
  * ```
  *
@@ -1832,11 +1832,11 @@ internal val String._wchoose by dslStringExtension { p, args, callInfo -> p._wch
  * Each choice is a `[value, weight]` pair. Higher weights make that value more likely.
  * Uses `rand` as the selector so choices vary within a cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 g2 d2 f1").s(wchoose(listOf("sine", 10), listOf("triangle", 1)))
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s(wchoose(listOf("bd", 8), listOf("sd", 2), listOf("hh", 5))).fast(8)
  * ```
  *
@@ -1886,7 +1886,7 @@ internal val String._wchooseCycles by dslStringExtension { p, args, callInfo -> 
  * Like `chooseCycles` but each choice can have a different probability. The entire cycle
  * plays the same chosen value. Each choice is a `[value, weight]` pair.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * wchooseCycles(listOf("bd", 10), listOf("hh", 1)).s().fast(8)   // bd much more likely
  * ```
  *

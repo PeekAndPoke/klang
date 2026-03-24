@@ -48,7 +48,7 @@ class KlangScriptReplComp(ctx: Ctx<Props>) : Component<KlangScriptReplComp.Props
     private fun run() {
         val outputLines = mutableListOf<String>()
 
-        val stdlib = KlangStdLib.create(outputHandler = { args ->
+        val stdlib = KlangStdLib.create(outputHandler = { _, args ->
             outputLines.add(args.joinToString(" "))
         })
 

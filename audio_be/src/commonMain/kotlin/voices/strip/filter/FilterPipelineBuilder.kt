@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.filters.effects.*
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 
@@ -38,40 +37,38 @@ fun buildFilterPipeline(
     }
 
     // Pre-filters (destructive: crush, coarse)
-    val preFilters = buildList<AudioFilter> {
-        if (crush.amount > 0.0) add(BitCrushFilter(crush.amount))
-        if (coarse.amount > 1.0) add(SampleRateReducerFilter(coarse.amount))
+    if (crush.amount > 0.0) {
+        add(CrushRenderer(crush.amount))
     }
-    AudioFilterRenderer.ofNullable(preFilters)?.let { add(it) }
+    if (coarse.amount > 1.0) {
+        add(CoarseRenderer(coarse.amount))
+    }
 
-    // Main filter (subtractive)
+    // Main filter (subtractive: LP/HP/BP/Notch — uses AudioFilter.Tunable for modulation)
     add(AudioFilterRenderer.of(mainFilter))
 
     // Amplitude envelope (ADSR VCA)
     add(EnvelopeRenderer(envelope, startFrame, gateEndFrame))
 
     // Post-filters (distortion)
-    val postFilters = buildList<AudioFilter> {
-        if (distort.amount > 0.0) add(DistortionFilter(distort.amount, distort.shape))
+    if (distort.amount > 0.0) {
+        add(DistortionRenderer(distort.amount, distort.shape))
     }
-    AudioFilterRenderer.ofNullable(postFilters)?.let { add(it) }
 
     // Tremolo
     if (tremolo.depth > 0.0) {
-        add(AudioFilterRenderer.of(TremoloFilter(tremolo.rate, tremolo.depth, sampleRate)))
+        add(TremoloRenderer(tremolo.rate, tremolo.depth, sampleRate))
     }
 
     // Phaser
     if (phaser.depth > 0.0) {
         add(
-            AudioFilterRenderer.of(
-                PhaserFilter(
-                    rate = phaser.rate,
-                    depth = phaser.depth,
-                    center = if (phaser.center > 0) phaser.center else 1000.0,
-                    sweep = if (phaser.sweep > 0) phaser.sweep else 1000.0,
-                    sampleRate = sampleRate,
-                )
+            StripPhaserRenderer(
+                rate = phaser.rate,
+                depth = phaser.depth,
+                center = if (phaser.center > 0) phaser.center else 1000.0,
+                sweep = if (phaser.sweep > 0) phaser.sweep else 1000.0,
+                sampleRate = sampleRate,
             )
         )
     }

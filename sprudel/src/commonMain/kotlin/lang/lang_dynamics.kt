@@ -36,11 +36,11 @@ internal val PatternMapperFn._gain by dslPatternMapperExtension { m, args, callI
  *
  * Values below 1 reduce volume; above 1 amplify. Accepts control patterns for per-event modulation.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").gain(0.5)              // all hits at half volume
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").gain("<0.2 0.5 0.8 1.0>")    // different gain each cycle
  * ```
  *
@@ -57,7 +57,7 @@ fun SprudelPattern.gain(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the gain for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd*4".gain("0.2 0.5 0.8 1.0").s()    // different gain each beat
  * ```
  *
@@ -70,7 +70,7 @@ fun String.gain(amount: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh hh hh hh").apply(gain("1.0 0.75 0.5 0.25"))
  * ```
  *
@@ -83,7 +83,7 @@ fun gain(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the gain after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*4").apply(gain("1.0 0.5").gain(0.8))  // chain gain modifiers
  * ```
  *
@@ -118,15 +118,15 @@ internal val PatternMapperFn._pan by dslPatternMapperExtension { m, args, callIn
  *
  * Accepts control patterns or continuous patterns for animated panning effects.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").pan(0.25)                   // slightly left
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh sd cp").pan("0 0.33 0.66 1")  // left to right
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").pan(sine.range(0, 1))        // smooth left-right sweep
  * ```
  *
@@ -143,7 +143,7 @@ fun SprudelPattern.pan(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the stereo panning position.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd hh sd cp".pan("0 0.33 0.66 1").s()  // left to right
  * ```
  *
@@ -156,7 +156,7 @@ fun String.pan(amount: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the pan for each event in a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh sd cp").apply(pan("0 0.33 0.66 1"))  // left to right
  * ```
  */
@@ -167,7 +167,7 @@ fun pan(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the pan after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh sd cp").apply(pan("0 0.33 0.66 1").gain(0.8))  // pan + gain chained
  * ```
  *
@@ -212,15 +212,15 @@ internal val PatternMapperFn._vel by dslPatternMapperExtension { m, args, callIn
 /**
  * Sets the gain 'velocity'. It is multiplied with the gain of the events.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").gain(0.5).velocity("0.5 2.0")  // gain is multiplied by velocity
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c*4").velocity("<0.3 0.6 0.9 1.0>")  // crescendo pattern
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c*4").velocity(saw.range(0.25, 1.0).slow(4))  // crescendo pattern over 4 cycles
  * ```
  *
@@ -237,7 +237,7 @@ fun SprudelPattern.velocity(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the velocity (gain multiplier) for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c*4".velocity("<0.3 0.6 0.9 1.0>").note()  // crescendo pattern
  * ```
  *
@@ -250,7 +250,7 @@ fun String.velocity(amount: PatternLike? = null): SprudelPattern =
 /**
  * Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c*4").apply(velocity("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
  * ```
  *
@@ -263,7 +263,7 @@ fun velocity(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c*4").apply(velocity("<0.3 0.6 0.9>").gain(0.8))  // velocity + gain chained
  * ```
  *
@@ -276,11 +276,11 @@ fun PatternMapperFn.velocity(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [velocity]. Sets the gain 'velocity'. It is multiplied with the gain of the events.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").gain(0.5).vel("0.5 2.0")   // gain is multiplied by velocity
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c*4").vel(saw.range(0.25, 1.0).slow(4))   // crescendo pattern over 4 cycles
  * ```
  *
@@ -297,7 +297,7 @@ fun SprudelPattern.vel(amount: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [velocity]. Sets the velocity (gain multiplier) for each event in this pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c*4".vel("<0.3 0.6 0.9 1.0>").note()  // crescendo pattern
  * ```
  *
@@ -310,7 +310,7 @@ fun String.vel(amount: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [velocity]. Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c*4").apply(vel("<0.3 0.6 0.9 1.0>"))  // crescendo pattern
  * ```
  *
@@ -323,7 +323,7 @@ fun vel(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [velocity]. Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c*4").apply(vel("<0.3 0.6 0.9>").gain(0.8))  // velocity + gain chained
  * ```
  *
@@ -360,11 +360,11 @@ internal val PatternMapperFn._postgain by dslPatternMapperExtension { m, args, c
  *
  * Unlike `gain` which is applied before synthesis, `postgain` is a final output multiplier.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").postgain(1.5)                    // amplify after processing
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").postgain(rand.range(0.1, 1.0))   // random post-gain per hit
  * ```
  *
@@ -380,7 +380,7 @@ fun SprudelPattern.postgain(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the post-gain for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "hh*8".postgain(perlin.range(0.1, 1.0).slow(4)).s()   // perlin noised post-gain
  * ```
  *
@@ -393,7 +393,7 @@ fun String.postgain(amount: PatternLike? = null): SprudelPattern =
 /**
  * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "hh*8".apply(postgain(sine.range(0.1, 1.0).slow(2))).s()   // sine post-gain over two cycles
  * ```
  *
@@ -406,7 +406,7 @@ fun postgain(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the post-gain after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*4").apply(postgain(0.8).gain(0.5))  // postgain + gain chained
  * ```
  *
@@ -476,15 +476,15 @@ internal val PatternMapperFn._comp by dslPatternMapperExtension { m, args, callI
  * | Brickwall Limiter | `-2:40:0:0.001:0.05` | High ratio and instant attack to prevent any signal from clipping above -2dB.            |
  * | Heavy Squeeze     | `-30:8:2:0.005:0.1`  | Low threshold and high ratio for that "pumping" aggressive sound.                        |
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").compressor("-20:4:3:0.03:0.1")  // standard compression
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * // Shorthand: only threshold and ratio (defaults: knee=6.0, attack=0.003, release=0.1)
  * s("hh*8").compressor("-15:4")
  * ```
@@ -508,7 +508,7 @@ fun SprudelPattern.compressor(params: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets dynamic range compression parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
  * ```
  *
@@ -521,7 +521,7 @@ fun String.compressor(params: PatternLike? = null): SprudelPattern =
 /**
  * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").apply(compressor("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
  * ```
 
@@ -533,7 +533,7 @@ fun compressor(params: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets compressor parameters after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").apply(compressor("-20:4:3:0.03:0.1").gain(0.8))  // compress + gain chained
  * ```
  *
@@ -547,11 +547,11 @@ fun PatternMapperFn.compressor(params: PatternLike? = null): PatternMapperFn =
  * Alias for [compressor]. Sets dynamic range compression parameters as a colon-separated string
  * `"threshold:ratio:knee:attack:release"`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").comp("-20:4:3:0.01:0.3")                        // standard compression
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
  * ```
  *
@@ -569,7 +569,7 @@ fun SprudelPattern.comp(params: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>")   // alternate settings
  * ```
  *
@@ -582,7 +582,7 @@ fun String.comp(params: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").apply(comp("<-10:2:1:0.01:0.1 -30:8:5:0.005:0.5>"))   // alternate settings
  * ```
  *
@@ -596,7 +596,7 @@ fun comp(params: PatternLike? = null): PatternMapperFn =
  * Alias for [compressor]. Creates a chained [PatternMapperFn] that sets compressor parameters after the previous
  * mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").apply(comp("-20:4:3:0.03:0.1").gain(0.8))  // compress + gain chained
  * ```
  *
@@ -638,11 +638,11 @@ internal val PatternMapperFn._uni by dslPatternMapperExtension { m, args, callIn
  * Higher values produce a thicker, chorus-like sound. Use with `detune` and `spread`
  * to control the detuning and panning spread of the voices.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").unison(5)               // 5 stacked sawtooth oscillators
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").unison("<3 6 10 16>").detune(0.3)  // unison pattern
  * ```
  *
@@ -659,7 +659,7 @@ fun SprudelPattern.unison(voices: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the number of unison voices.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".s("supersaw").unison("<1 5 10 16>").detune(0.3).note()  // unison pattern
  * ```
  *
@@ -672,7 +672,7 @@ fun String.unison(voices: PatternLike? = null): SprudelPattern =
 /**
  * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
  * ```
  *
@@ -685,7 +685,7 @@ fun unison(voices: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").apply(unison(5).detune(0.3))  // unison + detune chained
  * ```
  *
@@ -698,11 +698,11 @@ fun PatternMapperFn.unison(voices: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [unison]. Sets the number of unison voices for oscillator stacking effects.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").uni(5)               // 5 stacked sawtooth oscillators
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").uni("<1 5 10 16>").detune(0.3)  // unison pattern
  * ```
  *
@@ -719,7 +719,7 @@ fun SprudelPattern.uni(voices: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [unison]. Parses this string as a pattern and sets the number of unison voices.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".s("supersaw").uni("<1 5 10 16>").detune(0.3).note()  // unison pattern
  * ```
  */
@@ -730,7 +730,7 @@ fun String.uni(voices: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".s("supersaw").apply(unison("<1 5 10 16>")).detune(0.3).note()  // unison pattern
  * ```
  *
@@ -744,7 +744,7 @@ fun uni(voices: PatternLike? = null): PatternMapperFn =
  * Alias for [unison]. Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous
  * mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").apply(uni(5).detune(0.3))  // unison + detune chained
  * ```
  *
@@ -778,11 +778,11 @@ internal val PatternMapperFn._detune by dslPatternMapperExtension { m, args, cal
  * Controls how much each unison voice is detuned from the base pitch. Use with `unison`
  * to set the number of voices. Higher values produce a wider, more detuned sound.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").unison(5).detune(0.5)   // 5 voices spread 0.5 half tones
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("supersaw").detune("<0.05 0.10 0.20 0.40>")  // escalating detune each beat
  * ```
  *
@@ -798,7 +798,7 @@ fun SprudelPattern.detune(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the oscillator frequency spread.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".detune("<0.05 0.10 0.20 0.40>").s("supersaw").note() // escalating detune each beat
  * ```
  *
@@ -811,7 +811,7 @@ fun String.detune(amount: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the oscillator frequency spread for a pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("supersaw").apply(detune("<0.05 0.10 0.20 0.40>"))  // escalating detune each beat
  * ```
  * @param amount The detuning in cents.
@@ -823,7 +823,7 @@ fun detune(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator frequency spread after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").apply(unison(5).detune(0.3))  // unison + detune chained
  * ```
  *
@@ -857,11 +857,11 @@ internal val PatternMapperFn._spread by dslPatternMapperExtension { m, args, cal
  * Controls how widely the unison voices are spread across the stereo field. Use with
  * `unison` to set the number of voices.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").unison(5).spread(0.8)   // wide stereo spread
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("supersaw").spread("<0.2 0.5 0.8 1.0>")         // gradually widen each beat
  * ```
  *
@@ -877,7 +877,7 @@ fun SprudelPattern.spread(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the stereo pan spread for unison voices.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".spread("<0.2 0.5 0.8 1.0>").s("supersaw").note()         // gradually widen each beat
  * ```
  *
@@ -890,7 +890,7 @@ fun String.spread(amount: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".apply(spread("<0.2 0.5 0.8 1.0>")).s("supersaw").note()         // gradually widen each beat
  * ```
  *
@@ -903,7 +903,7 @@ fun spread(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the stereo pan spread after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").apply(unison(5).spread(0.8))  // unison + spread chained
  * ```
  *
@@ -945,11 +945,11 @@ internal val PatternMapperFn._d by dslPatternMapperExtension { m, args, callInfo
  * For supersaw: controls how tightly packed the oscillators are.
  * For noise generators (e.g. `dust`): controls the number of events per second.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a").s("dust").density(40)   // 40 noise events per second
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").unison(7).density("<0 0.5 1 2>")  // tight supersaw
  * ```
  *
@@ -966,7 +966,7 @@ fun SprudelPattern.density(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the oscillator or noise density.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "a".density(40).s("dust").note()   // 40 noise events per second
  * ```
  *
@@ -979,7 +979,7 @@ fun String.density(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the oscillator or noise density.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "a".apply(density(40)).s("dust").note()   // 40 noise events per second
  * ```
  * @param amount The oscillator density.
@@ -991,7 +991,7 @@ fun density(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").apply(unison(7).density(0.5))  // unison + density chained
  * ```
  *
@@ -1004,11 +1004,11 @@ fun PatternMapperFn.density(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [density]. Sets the oscillator density for supersaw or noise density for dust/crackle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a").s("dust").d(40)   // 40 noise events per second
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").unison(7).d(0.5)   // tight supersaw
  * ```
  *
@@ -1023,7 +1023,7 @@ fun SprudelPattern.d(amount: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "a".d(40).s("dust").note()   // 40 noise events per second
  * ```
  *
@@ -1036,7 +1036,7 @@ fun String.d(amount: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [density]. Creates a [PatternMapperFn] that sets the oscillator or noise density.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a").apply(d(40)).s("dust")   // 40 noise events per second
  * ```
  *
@@ -1050,7 +1050,7 @@ fun d(amount: PatternLike? = null): PatternMapperFn =
  * Alias for [density]. Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the
  * previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("supersaw").apply(unison(7).d(0.5))  // unison + density chained
  * ```
  *
@@ -1086,11 +1086,11 @@ internal val PatternMapperFn._attack by dslPatternMapperExtension { m, args, cal
  * Controls how quickly the note rises from silence to full volume at the start.
  * Short values produce a sharp, percussive onset; longer values create a gradual fade-in.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("sine").attack(0.01)     // sharp attack
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").attack("<0.01 0.1 0.5 1.0>")   // varying attacks
  * ```
  *
@@ -1106,7 +1106,7 @@ fun SprudelPattern.attack(time: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the ADSR envelope attack time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".attack("<0.01 0.1 0.5 1.0>").note()  // varying attacks
  * ```
  *
@@ -1119,7 +1119,7 @@ fun String.attack(time: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope attack time for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(attack("<0.01 0.1 0.5 1.0>"))  // varying attacks
  * ```
  *
@@ -1131,7 +1131,7 @@ fun attack(time: PatternLike? = null): PatternMapperFn = _attack(listOfNotNull(t
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR attack time after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(attack(0.1).decay(0.2))  // attack + decay chained
  * ```
  *
@@ -1166,11 +1166,11 @@ internal val PatternMapperFn._decay by dslPatternMapperExtension { m, args, call
  *
  * Controls how quickly the volume falls from its peak to the sustain level after the attack phase.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").s("sawtooth").decay(0.2)       // short decay
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").decay("<0.05 0.2 0.5 1.0>")    // varying decays
  * ```
  *
@@ -1186,7 +1186,7 @@ fun SprudelPattern.decay(time: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the ADSR envelope decay time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".decay("<0.05 0.2 0.5 1.0>").note()   // varying decays
  * ```
  *
@@ -1199,7 +1199,7 @@ fun String.decay(time: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope decay time for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sawtooth").apply(decay("<0.05 0.2 0.5 1.0>"))  // varying decays
  * ```
  *
@@ -1211,7 +1211,7 @@ fun decay(time: PatternLike? = null): PatternMapperFn = _decay(listOfNotNull(tim
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR decay time after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(attack(0.01).decay(0.2))  // attack + decay chained
  * ```
  *
@@ -1247,11 +1247,11 @@ internal val PatternMapperFn._sustain by dslPatternMapperExtension { m, args, ca
  * The sustain level is held while the note is pressed, after the attack and decay phases.
  * `0` = silence after decay; `1` = hold at full peak level.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").s("sine").sustain(0.7)        // 70% sustain level
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").sustain("<0 0.3 0.7 1.0>")    // varying sustain
  * ```
  *
@@ -1267,7 +1267,7 @@ fun SprudelPattern.sustain(level: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the ADSR envelope sustain level.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".sustain("<0 0.3 0.7 1.0>").note()   // varying sustain
  * ```
  *
@@ -1280,7 +1280,7 @@ fun String.sustain(level: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope sustain level for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(sustain("<0 0.3 0.7 1.0>"))  // varying sustain
  * ```
  *
@@ -1292,7 +1292,7 @@ fun sustain(level: PatternLike? = null): PatternMapperFn = _sustain(listOfNotNul
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR sustain level after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(attack(0.01).sustain(0.7))  // attack + sustain chained
  * ```
  *
@@ -1328,11 +1328,11 @@ internal val PatternMapperFn._release by dslPatternMapperExtension { m, args, ca
  * Controls how long the note takes to fade to silence after a note-off event.
  * Short values produce an abrupt cut; longer values create a smooth fade-out.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("sine").release(0.5)     // half-second release
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").release("<0.1 0.3 0.8 2.0>")  // varying releases
  * ```
  *
@@ -1348,7 +1348,7 @@ fun SprudelPattern.release(time: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the ADSR envelope release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".release("<0.1 0.3 0.8 2.0>").note()  // varying releases
  * ```
  *
@@ -1361,7 +1361,7 @@ fun String.release(time: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope release time for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(release("<0.1 0.3 0.8 2.0>"))  // varying releases
  * ```
  *
@@ -1373,7 +1373,7 @@ fun release(time: PatternLike? = null): PatternMapperFn = _release(listOfNotNull
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR release time after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(attack(0.01).release(0.5))  // attack + release chained
  * ```
  *
@@ -1427,11 +1427,11 @@ internal val PatternMapperFn._adsr by dslPatternMapperExtension { m, args, callI
  * Each field is a number: attack/decay/release in seconds, sustain in 0–1 range.
  * Missing trailing fields keep their previous values.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("sine").adsr("0.01:0.2:0.7:0.5")          // standard ADSR
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>")     // alternate envelopes
  * ```
  *
@@ -1452,7 +1452,7 @@ fun SprudelPattern.adsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets all ADSR envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>").note()    // alternate envelopes
  * ```
  *
@@ -1465,7 +1465,7 @@ fun String.adsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets all ADSR envelope parameters for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(adsr("<0.01:0.1:0.5:0.2 0.5:0.5:0.8:1.0>"))  // alternate envelopes
  * ```
  *
@@ -1477,7 +1477,7 @@ fun adsr(params: PatternLike? = null): PatternMapperFn = _adsr(listOfNotNull(par
 /**
  * Creates a chained [PatternMapperFn] that sets all ADSR parameters after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").apply(gain(0.8).adsr("0.01:0.2:0.7:0.5"))  // gain + adsr chained
  * ```
  *
@@ -1525,11 +1525,11 @@ internal val PatternMapperFn._o by dslPatternMapperExtension { m, args, callInfo
  * Each orbit can have its own reverb, delay, and other effects applied independently.
  * Use different orbit numbers to send patterns to different effect buses.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").orbit(1)                           // send drums to orbit 1
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").orbit(2).room(0.8).roomsize(4)  // melodic line on orbit 2 with reverb
  * ```
  *
@@ -1546,7 +1546,7 @@ fun SprudelPattern.orbit(index: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and routes it to the given audio output orbit.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd sd".orbit(1).s()   // send drums to orbit 1
  * ```
  *
@@ -1559,7 +1559,7 @@ fun String.orbit(index: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that routes events to the given audio output orbit.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(orbit(1))   // send drums to orbit 1
  * ```
  *
@@ -1572,7 +1572,7 @@ fun orbit(index: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that routes events to the given orbit after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(gain(0.8).orbit(1))  // gain + orbit chained
  * ```
  *
@@ -1585,11 +1585,11 @@ fun PatternMapperFn.orbit(index: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [orbit]. Routes the pattern to an audio output orbit for independent effect processing.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").o(1)                       // send drums to orbit 1
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").o(2).room(0.8)          // melodic line on orbit 2 with reverb
  * ```
  *
@@ -1606,7 +1606,7 @@ fun SprudelPattern.o(index: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [orbit]. Parses this string as a pattern and routes it to the given orbit.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd sd".o(1).s()   // send drums to orbit 1
  * ```
  *
@@ -1619,7 +1619,7 @@ fun String.o(index: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [orbit]. Creates a [PatternMapperFn] that routes events to the given audio output orbit.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(o(1))   // send drums to orbit 1
  * ```
  *
@@ -1667,11 +1667,11 @@ internal val PatternMapperFn._duck by dslPatternMapperExtension { m, args, callI
  * The pattern's volume is reduced when audio is detected on the specified orbit.
  * Use with `duckdepth` to set the attenuation amount and `duckattack` for the recovery time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").orbit(1)                              // kick drum on orbit 1
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").duckorbit(1).duckdepth(0.8)   // duck when kick plays on orbit 1
  * ```
  *
@@ -1688,7 +1688,7 @@ fun SprudelPattern.duckorbit(orbitIndex: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the sidechain source orbit for ducking.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".duckorbit(1).duckdepth(0.8).note()   // duck when orbit 1 plays
  * ```
  *
@@ -1701,7 +1701,7 @@ fun String.duckorbit(orbitIndex: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(duckorbit(1)).duckdepth(0.8)   // duck when orbit 1 plays
  * ```
  *
@@ -1714,7 +1714,7 @@ fun duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).duckorbit(1))  // gain + duckorbit chained
  * ```
  *
@@ -1727,7 +1727,7 @@ fun PatternMapperFn.duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn 
 /**
  * Alias for [duckorbit]. Sets the target orbit to listen to for sidechain ducking.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * stack(
  *   s("bd*4").orbit(0),                               // kick drum on orbit 0
  *   note("c3 e3").orbit(1).duck(0).duckdepth(1.0),    // duck when kick plays on orbit 0
@@ -1747,7 +1747,7 @@ fun SprudelPattern.duck(orbitIndex: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [duckorbit]. Parses this string as a pattern and sets the sidechain source orbit.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".duck(0).duckdepth(0.8).note()   // duck when orbit 0 plays
  * ```
  *
@@ -1760,7 +1760,7 @@ fun String.duck(orbitIndex: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [duckorbit]. Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(duck(0)).duckdepth(0.8)   // duck when orbit 0 plays
  * ```
  *
@@ -1774,7 +1774,7 @@ fun duck(orbitIndex: PatternLike? = null): PatternMapperFn =
  * Alias for [duckorbit]. Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the
  * previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).duck(0))  // gain + duck chained
  * ```
  *
@@ -1816,11 +1816,11 @@ internal val PatternMapperFn._duckatt by dslPatternMapperExtension { m, args, ca
  * Controls how quickly the ducked pattern returns to its full volume after the sidechain
  * trigger stops. Shorter values snap back quickly; longer values create a pumping effect.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").duck(1).duckdepth(0.8).duckattack(0.2)   // 200 ms recovery
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").duckattack("<0.05 0.1 0.3 0.5>")          // varying recovery times
  * ```
  *
@@ -1837,7 +1837,7 @@ fun SprudelPattern.duckattack(time: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the duck release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".duckattack("<0.05 0.1 0.3 0.5>").note()   // varying recovery times
  * ```
  *
@@ -1850,7 +1850,7 @@ fun String.duckattack(time: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the duck release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(duckattack(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
  * ```
  *
@@ -1863,7 +1863,7 @@ fun duckattack(time: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(duck(1).duckattack(0.2))  // duck + duckattack chained
  * ```
  *
@@ -1876,11 +1876,11 @@ fun PatternMapperFn.duckattack(time: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [duckattack]. Sets the duck release (return-to-normal) time in seconds.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").duck(1).duckdepth(0.8).duckatt(0.2)   // 200 ms recovery
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").duckatt("<0.05 0.1 0.3 0.5>")          // varying recovery times
  * ```
  *
@@ -1897,7 +1897,7 @@ fun SprudelPattern.duckatt(time: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [duckattack]. Parses this string as a pattern and sets the duck release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".duckatt("<0.05 0.1 0.3 0.5>").note()   // varying recovery times
  * ```
  *
@@ -1910,7 +1910,7 @@ fun String.duckatt(time: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [duckattack]. Creates a [PatternMapperFn] that sets the duck release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(duckatt(0.2)).duck(1).duckdepth(0.8)   // 200 ms recovery
  * ```
  *
@@ -1924,7 +1924,7 @@ fun duckatt(time: PatternLike? = null): PatternMapperFn =
  * Alias for [duckattack]. Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous
  * mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(duck(1).duckatt(0.2))  // duck + duckatt chained
  * ```
  *
@@ -1958,11 +1958,11 @@ internal val PatternMapperFn._duckdepth by dslPatternMapperExtension { m, args, 
  * Controls how much the pattern is attenuated when the sidechain trigger fires.
  * Use with `duckorbit` to set the sidechain source and `duckattack` for recovery time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").duck(1).duckdepth(0.8)           // 80% attenuation on sidechain
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").duckdepth("<0.3 0.6 0.9 1.0>")   // escalating ducking depth
  * ```
  *
@@ -1978,7 +1978,7 @@ fun SprudelPattern.duckdepth(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the ducking depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".duckdepth("<0.3 0.6 0.9 1.0>").note()   // escalating ducking depth
  * ```
  *
@@ -1991,7 +1991,7 @@ fun String.duckdepth(amount: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the ducking depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(duckdepth("<0.3 0.6 0.9 1.0>"))   // escalating ducking depth
  * ```
  *
@@ -2004,7 +2004,7 @@ fun duckdepth(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Creates a chained [PatternMapperFn] that sets the ducking depth after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(duck(1).duckdepth(0.8))  // duck + duckdepth chained
  * ```
  *

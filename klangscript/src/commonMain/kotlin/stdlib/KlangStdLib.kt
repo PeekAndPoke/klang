@@ -1,17 +1,16 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
-import io.peekandpoke.klang.script.builder.registerType
 import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.generated.registerStdlibGenerated
 import io.peekandpoke.klang.script.klangScriptLibrary
-import io.peekandpoke.klang.script.runtime.*
 import io.peekandpoke.klang.script.stdlib.KlangStdLib.defaultOutputHandler
 
 /**
  * KlangScript Standard Library
  *
- * Provides commonly-used built-in functions for KlangScript programs.
+ * Most registrations are generated from @KlangScript annotations (see stdlib/ files).
+ * Console and print remain manual because they need the injected outputHandler.
  *
  * **Usage**:
  * ```kotlin
@@ -22,30 +21,19 @@ import io.peekandpoke.klang.script.stdlib.KlangStdLib.defaultOutputHandler
  */
 object KlangStdLib {
 
-    /** Default output handler — prints to stdout. */
-    val defaultOutputHandler: (List<String>) -> Unit = { args ->
-        println(args.joinToString(" "))
-    }
-
-    /** Object utility — singleton for holding Object static methods. */
-    object ObjectUtility {
-        override fun toString(): String = "[Object utility]"
-    }
-
-    /** Console object — singleton for holding console functions. */
-    object ConsoleObject {
-        override fun toString(): String = "[Console object]"
-    }
+    /** Default output handler -- routes to platform-specific console. */
+    val defaultOutputHandler: (ConsoleLevel, List<String>) -> Unit = ::platformConsoleOutput
 
     /**
      * Create the standard library.
      *
-     * @param outputHandler Handler for `print()` and `console.log()` output.
-     *   Defaults to [defaultOutputHandler] (stdout). Override to capture output in a REPL or tests.
+     * @param outputHandler Handler for print() and console output.
+     *   Receives the [ConsoleLevel] and the list of stringified arguments.
+     *   Defaults to [defaultOutputHandler] (platform console). Override to capture output in a REPL or tests.
      * @return A KlangScriptLibrary instance containing all standard functions
      */
     fun create(
-        outputHandler: (List<String>) -> Unit = defaultOutputHandler,
+        outputHandler: (ConsoleLevel, List<String>) -> Unit = defaultOutputHandler,
     ): KlangScriptLibrary {
         return klangScriptLibrary("stdlib") {
             source(
@@ -58,135 +46,33 @@ object KlangStdLib {
                 """.trimIndent()
             )
 
-            // Register console object with log method
-            registerObject("console", ConsoleObject) {
-                registerVarargMethod("log") { args: List<Any?> ->
-                    outputHandler(args.map { it?.toString() ?: "null" })
-                }
-            }
-
-            // Register Math object (generated from @KlangScript annotations)
+            // Register all annotation-generated symbols:
+            // Math, Object, String/Array/Number/Boolean extensions
             registerStdlibGenerated()
 
-            // Register Object utility methods
-            registerObject("Object", ObjectUtility) {}
-
-            registerExtensionMethod(ObjectUtility::class, "keys") { _, args, callLocation ->
-                val obj = args[0] as? ObjectValue
-                    ?: throw KlangScriptTypeError("Object.keys() expects an object argument", location = callLocation)
-                val keys = obj.properties.keys.map { StringValue(it) }
-                ArrayValue(keys.toMutableList())
-            }
-            registerExtensionMethod(ObjectUtility::class, "values") { _, args, callLocation ->
-                val obj = args[0] as? ObjectValue
-                    ?: throw KlangScriptTypeError("Object.values() expects an object argument", location = callLocation)
-                ArrayValue(obj.properties.values.toMutableList())
-            }
-            registerExtensionMethod(ObjectUtility::class, "entries") { _, args, callLocation ->
-                val obj = args[0] as? ObjectValue
-                    ?: throw KlangScriptTypeError("Object.entries() expects an object argument", location = callLocation)
-                val entries = obj.properties.map { (key, value) ->
-                    ArrayValue(mutableListOf(StringValue(key), value))
+            // Console object -- registered manually because output goes through the injected outputHandler.
+            // Methods match the JavaScript console API: log, warn, error, info, debug.
+            registerObject("console", KlangScriptConsole) {
+                registerVarargMethod("log") { args: List<Any?> ->
+                    outputHandler(ConsoleLevel.LOG, args.map { it?.toString() ?: "null" })
                 }
-                ArrayValue(entries.toMutableList())
+                registerVarargMethod("warn") { args: List<Any?> ->
+                    outputHandler(ConsoleLevel.WARN, args.map { it?.toString() ?: "null" })
+                }
+                registerVarargMethod("error") { args: List<Any?> ->
+                    outputHandler(ConsoleLevel.ERROR, args.map { it?.toString() ?: "null" })
+                }
+                registerVarargMethod("info") { args: List<Any?> ->
+                    outputHandler(ConsoleLevel.INFO, args.map { it?.toString() ?: "null" })
+                }
+                registerVarargMethod("debug") { args: List<Any?> ->
+                    outputHandler(ConsoleLevel.DEBUG, args.map { it?.toString() ?: "null" })
+                }
             }
 
-            // Register String extensions
-            registerType<StringValue> {
-                registerMethod("length") { value.length.toDouble() }
-                registerMethod("charAt") { index: Double ->
-                    val idx = index.toInt()
-                    if (idx in value.indices) StringValue(value[idx].toString()) else StringValue("")
-                }
-                registerMethod("substring") { start: Double, end: Double ->
-                    val s = start.toInt().coerceIn(0, value.length)
-                    val e = end.toInt().coerceIn(0, value.length)
-                    StringValue(value.substring(s, e))
-                }
-                registerMethod("indexOf") { searchStr: String ->
-                    value.indexOf(searchStr).toDouble()
-                }
-                registerMethod("split") { separator: String ->
-                    ArrayValue(value.split(separator).map { StringValue(it) }.toMutableList())
-                }
-                registerMethod("toUpperCase") { StringValue(value.uppercase()) }
-                registerMethod("toLowerCase") { StringValue(value.lowercase()) }
-                registerMethod("trim") { StringValue(value.trim()) }
-                registerMethod("startsWith") { prefix: String ->
-                    BooleanValue(value.startsWith(prefix))
-                }
-                registerMethod("endsWith") { suffix: String ->
-                    BooleanValue(value.endsWith(suffix))
-                }
-                registerMethod("replace") { search: String, replacement: String ->
-                    StringValue(value.replace(search, replacement))
-                }
-                registerMethod("slice") { start: Double, end: Double ->
-                    val s = start.toInt().coerceIn(0, value.length)
-                    val e = end.toInt().coerceIn(0, value.length)
-                    StringValue(value.substring(s, e))
-                }
-                registerMethod("concat") { other: String ->
-                    StringValue(value + other)
-                }
-                registerMethod("repeat") { count: Double ->
-                    StringValue(value.repeat(count.toInt().coerceAtLeast(0)))
-                }
-                registerMethod("toString") { StringValue(value) }
-            }
-
-            // Register Number extensions
-            registerType<NumberValue> {
-                registerMethod("toString") { StringValue(toDisplayString()) }
-            }
-
-            // Register Boolean extensions
-            registerType<BooleanValue> {
-                registerMethod("toString") { StringValue(toDisplayString()) }
-            }
-
-            // Register Array extensions (Kotlin-style API)
-            registerType<ArrayValue> {
-                // Properties
-                registerMethod("size") { elements.size.toDouble() }
-                // Access
-                registerMethod("first") { if (elements.isNotEmpty()) elements.first() else NullValue }
-                registerMethod("last") { if (elements.isNotEmpty()) elements.last() else NullValue }
-                // Mutating
-                registerMethod("add") { item: Any -> elements.add(wrapAsRuntimeValue(item)); elements.size.toDouble() }
-                registerMethod("removeAt") { index: Double ->
-                    val idx = index.toInt()
-                    if (idx in elements.indices) elements.removeAt(idx) else NullValue
-                }
-                registerMethod("removeLast") { if (elements.isNotEmpty()) elements.removeLast() else NullValue }
-                registerMethod("removeFirst") { if (elements.isNotEmpty()) elements.removeFirst() else NullValue }
-                // Non-mutating (return new arrays)
-                registerMethod("reversed") { ArrayValue(elements.reversed().toMutableList()) }
-                registerMethod("drop") { n: Double -> ArrayValue(elements.drop(n.toInt()).toMutableList()) }
-                registerMethod("take") { n: Double -> ArrayValue(elements.take(n.toInt()).toMutableList()) }
-                registerMethod("subList") { start: Double, end: Double ->
-                    val s = start.toInt().coerceIn(0, elements.size)
-                    val e = end.toInt().coerceIn(0, elements.size)
-                    ArrayValue(elements.subList(s, e).toMutableList())
-                }
-                registerMethod("joinToString") { separator: String ->
-                    StringValue(elements.joinToString(separator) { it.toDisplayString() })
-                }
-                registerMethod("indexOf") { item: Any ->
-                    val wrapped = wrapAsRuntimeValue(item)
-                    NumberValue(elements.indexOfFirst { it.value == wrapped.value }.toDouble())
-                }
-                registerMethod("contains") { item: Any ->
-                    val wrapped = wrapAsRuntimeValue(item)
-                    BooleanValue(elements.any { it.value == wrapped.value })
-                }
-                registerMethod("isEmpty") { BooleanValue(elements.isEmpty()) }
-                registerMethod("isNotEmpty") { BooleanValue(elements.isNotEmpty()) }
-            }
-
-            // Output functions — use the captured outputHandler
+            // print() -- uses the captured outputHandler at LOG level
             registerVarargFunction("print") { args: List<Any?> ->
-                outputHandler(args.map { it?.toString() ?: "null" })
+                outputHandler(ConsoleLevel.LOG, args.map { it?.toString() ?: "null" })
             }
         }
     }

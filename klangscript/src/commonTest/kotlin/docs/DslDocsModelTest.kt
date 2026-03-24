@@ -268,12 +268,15 @@ class DslDocsModelTest : StringSpec({
             params = emptyList(),
             description = "A function.",
             returnDoc = "A new pattern.",
-            samples = listOf("""seq("a b c").note()""", """seq("bd", "sd").s()"""),
+            samples = listOf(
+                KlangCodeSample("""seq("a b c").note()"""),
+                KlangCodeSample("""seq("bd", "sd").s()"""),
+            ),
         )
 
         callable.returnDoc shouldBe "A new pattern."
         callable.samples shouldHaveSize 2
-        callable.samples[0] shouldBe """seq("a b c").note()"""
-        callable.samples[1] shouldBe """seq("bd", "sd").s()"""
+        callable.samples[0].code shouldBe """seq("a b c").note()"""
+        callable.samples[1].code shouldBe """seq("bd", "sd").s()"""
     }
 })

@@ -5,7 +5,7 @@ package io.peekandpoke.klang.audio_be.exciter
  *
  * The modulator Exciter's output modulates the carrier's frequency via phaseMod.
  *
- * Ported from: FM section in VoiceImpl.render() (lines ~133-157)
+ * Ported from: FM section in Voice.render()
  *
  * @param modulator Exciter that produces the modulation signal
  * @param ratio frequency ratio between modulator and carrier (e.g. 1.0, 2.0, 3.14)

@@ -40,11 +40,11 @@ internal val PatternMapperFn._begin by dslPatternMapperExtension { m, args, call
  * @param pos Start position in [0, 1]; 0 = beginning, 1 = end.
  * @return A pattern with the sample start position set.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").begin(0.5)            // start halfway through the sample
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").begin("<0 0.25 0.5>") // cycle through three start positions
  * ```
  *
@@ -72,7 +72,7 @@ fun String.begin(): SprudelPattern = this._begin(emptyList())
  * @param pos Start position in [0, 1].
  * @return A [PatternMapperFn] that sets the begin field on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").apply(begin(0.5))     // via mapper
  * ```
  *
@@ -113,11 +113,11 @@ internal val PatternMapperFn._end by dslPatternMapperExtension { m, args, callIn
  * @param pos End position in [0, 1]; 1 = end of sample.
  * @return A pattern with the sample end position set.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").end(0.5)            // play only the first half of the sample
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").begin(0.25).end(0.75)  // play the middle 50% of the sample
  * ```
  *
@@ -145,7 +145,7 @@ fun String.end(): SprudelPattern = this._end(emptyList())
  * @param pos End position in [0, 1].
  * @return A [PatternMapperFn] that sets the end field on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").apply(end(0.5))     // via mapper
  * ```
  *
@@ -186,11 +186,11 @@ internal val PatternMapperFn._speed by dslPatternMapperExtension { m, args, call
  * @param rate Speed multiplier; 1 = normal, 2 = double, -1 = reverse.
  * @return A pattern with the playback speed set.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").speed(2)              // double speed, one octave up
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").speed("<1 -1>")           // alternate forward and reverse per cycle
  * ```
  *
@@ -218,7 +218,7 @@ fun String.speed(): SprudelPattern = this._speed(emptyList())
  * @param rate Speed multiplier; 1 = normal, 2 = double, -1 = reverse.
  * @return A [PatternMapperFn] that sets the speed field on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").apply(speed(2))       // double speed via mapper
  * ```
  *
@@ -263,11 +263,11 @@ internal val PatternMapperFn._unit by dslPatternMapperExtension { m, args, callI
  * @param value Time unit string — `"c"` for cycles, `"s"` for seconds.
  * @return A pattern with the time unit set.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").unit("c").slow(2)     // stretch sample to fill 2 cycles
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").speed(0.5).unit("c")  // half-speed in cycle units
  * ```
  *
@@ -287,7 +287,7 @@ fun String.unit(value: PatternLike): SprudelPattern = this._unit(listOf(value).a
  * @param value Time unit string — `"c"` for cycles, `"s"` for seconds.
  * @return A [PatternMapperFn] that sets the unit field on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").apply(unit("c")).slow(2)   // via mapper
  * ```
  *
@@ -327,11 +327,11 @@ internal val PatternMapperFn._loop by dslPatternMapperExtension { m, args, callI
  * @param flag Loop flag; truthy = enable looping. Defaults to `true`.
  * @return A pattern with sample looping enabled.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").loop(1)                    // loop the sample continuously
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").loop(1).loopBegin(0.25).loopEnd(0.75)  // loop only the middle section
  * ```
  *
@@ -351,7 +351,7 @@ fun String.loop(flag: PatternLike = true): SprudelPattern = this._loop(listOf(fl
  * @param flag Loop flag; truthy = enable looping. Defaults to `true`.
  * @return A [PatternMapperFn] that sets the loop flag on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").apply(loop(1))             // enable looping via mapper
  * ```
  *
@@ -395,11 +395,11 @@ internal val PatternMapperFn._loopb by dslPatternMapperExtension { m, args, call
  * @param pos Loop start position in [0, 1].
  * @return A pattern with the loop start position set.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").loop(1).loopBegin(0.25)              // loop starts at 25% into the sample
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").loop(1).loopBegin("<0 0.5>")         // alternate loop start position per cycle
  * ```
  *
@@ -428,7 +428,7 @@ fun String.loopBegin(): SprudelPattern = this._loopBegin(emptyList())
  * @param pos Loop start position in [0, 1].
  * @return A [PatternMapperFn] that sets the loopBegin field.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").loop(1).apply(loopBegin(0.25))   // via mapper
  * ```
  *
@@ -499,11 +499,11 @@ internal val PatternMapperFn._loope by dslPatternMapperExtension { m, args, call
  * @param pos Loop end position in [0, 1].
  * @return A pattern with the loop end position set.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").loop(1).loopEnd(0.75)              // loop ends at 75% into the sample
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").loop(1).loopEnd("<0.5 1>")         // alternate loop end position per cycle
  * ```
  *
@@ -532,7 +532,7 @@ fun String.loopEnd(): SprudelPattern = this._loopEnd(emptyList())
  * @param pos Loop end position in [0, 1].
  * @return A [PatternMapperFn] that sets the loopEnd field.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("pad").loop(1).apply(loopEnd(0.75))   // via mapper
  * ```
  *
@@ -615,11 +615,11 @@ internal val PatternMapperFn._loopAt by dslPatternMapperExtension { m, args, cal
  * @param cycles Number of cycles to fit the sample into.
  * @return A pattern with speed and unit adjusted to fill the given cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").loopAt(1)          // stretch/compress to exactly one cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").loopAt(2).slow(2)  // fill two cycles, then play at half speed
  * ```
  *
@@ -639,7 +639,7 @@ fun String.loopAt(cycles: PatternLike): SprudelPattern = this._loopAt(listOf(cyc
  * @param cycles Number of cycles to fit the sample into.
  * @return A [PatternMapperFn] that adjusts speed and unit for the given cycle count.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").apply(loopAt(1))   // fit to one cycle via mapper
  * ```
  *
@@ -689,11 +689,11 @@ internal val PatternMapperFn._loopatcps by dslPatternMapperExtension { m, args, 
  * playback [speed]. This makes the sample lock to the live-coding clock at a specific
  * tempo. Default `cps` is `0.5`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").loopAtCps(1, 0.5)    // fit to 1 cycle at 0.5 cps (default tempo)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").loopAtCps(2, 0.75)   // fit to 2 cycles at 0.75 cps
  * ```
  *
@@ -728,7 +728,7 @@ fun String.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
  * @param cps Cycles per second for speed calculation.
  * @return A [PatternMapperFn] that adjusts speed and unit for the given cycle count and cps.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").apply(loopAtCps(1, 0.5))   // fit to one cycle at default cps
  * ```
  *
@@ -803,11 +803,11 @@ internal val PatternMapperFn._cut by dslPatternMapperExtension { m, args, callIn
  * @param group Cut group number; 0 = no choke.
  * @return A pattern with the cut group assigned.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * stack(s("hh*4").cut(1), s("~ oh ~").cut(1))  // open hh choked by closed hh
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").cut("<0 1>")                        // alternate between no-cut and cut-group-1
  * ```
  *
@@ -835,7 +835,7 @@ fun String.cut(): SprudelPattern = this._cut(emptyList())
  * @param group Cut group number; 0 = no choke.
  * @return A [PatternMapperFn] that sets the cut field on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*4").apply(cut(1))         // assign to cut group 1 via mapper
  * ```
  *
@@ -884,11 +884,11 @@ internal val PatternMapperFn._slice by dslPatternMapperExtension { m, args, call
  * Implemented by setting [begin] and [end] appropriately. Combine with a pattern for
  * the index to sequence through different slices.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").slice(8, 0)                // play the first of 8 slices
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").slice(8, "0 1 2 3 4 5 6 7".i)  // sequence through all 8 slices
  * ```
  *
@@ -914,7 +914,7 @@ fun String.slice(n: PatternLike, index: PatternLike): SprudelPattern =
  * @param index Zero-based index of the slice to play.
  * @return A [PatternMapperFn] that sets begin and end to the given slice.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").apply(slice(8, 0))   // first of 8 slices via mapper
  * ```
  *
@@ -954,11 +954,11 @@ internal val PatternMapperFn._splice by dslPatternMapperExtension { m, args, cal
  * duration, so each slice plays at the same pitch and rate as the original sample.
  * Useful for beat-slicing without pitch artifacts.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").splice(8, 0)               // first of 8 slices at original pitch
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").splice(8, "0 2 4 6".i)    // every other slice, original tempo
  * ```
  *
@@ -984,7 +984,7 @@ fun String.splice(n: PatternLike, index: PatternLike): SprudelPattern =
  * @param index Zero-based index of the slice to play.
  * @return A [PatternMapperFn] that sets begin, end, and compensates speed for the slice.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("breaks").apply(splice(8, 0))  // first of 8 slices at original pitch via mapper
  * ```
  *

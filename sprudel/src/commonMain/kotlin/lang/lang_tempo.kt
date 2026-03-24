@@ -82,11 +82,11 @@ internal val PatternMapperFn._slow by dslPatternMapperExtension { m, args, callI
  *
  * @return A pattern slowed by `factor`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").slow(2)              // half tempo — pattern spans 2 cycles
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").slow("<1 2 4>")            // varying slow factor each cycle
  * ```
  *
@@ -103,7 +103,7 @@ fun String.slow(factor: PatternLike): SprudelPattern = this._slow(listOf(factor)
 /**
  * Returns a [PatternMapperFn] that slows down a pattern by the given factor.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(slow(2))       // mapper form
  * ```
  *
@@ -160,11 +160,11 @@ internal val PatternMapperFn._fast by dslPatternMapperExtension { m, args, callI
  * @param factor Speed-up factor. Values > 1 play faster; values < 1 play slower.
  * @return A pattern sped up by `factor`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").fast(2)           // 8 events per cycle instead of 4
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").fast("<1 2 4>")     // varying speed each cycle
  * ```
  *
@@ -181,7 +181,7 @@ fun String.fast(factor: PatternLike): SprudelPattern = this._fast(listOf(factor)
 /**
  * Returns a [PatternMapperFn] that speeds up a pattern by the given factor.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").apply(fast(2))      // mapper form
  * ```
  *
@@ -222,11 +222,11 @@ internal val PatternMapperFn._rev by dslPatternMapperExtension { m, args, callIn
  *
  * @return A pattern with events reversed per cycle (or per `n`-cycle group).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh sd hh hh cp").rev()              // reversed each cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("<[c d] [e f]>").rev(2)              // reverses across every 2-cycle span
  * ```
  *
@@ -243,7 +243,7 @@ fun String.rev(n: PatternLike = 1): SprudelPattern = this._rev(listOf(n).asSprud
 /**
  * Returns a [PatternMapperFn] that reverses the order of events across every `n`-cycle span.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh sd cp").apply(rev())             // mapper form
  * ```
  *
@@ -291,7 +291,7 @@ internal val PatternMapperFn._revv by dslPatternMapperExtension { m, args, callI
  *
  * @return A globally time-reversed version of the pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").revv()              // plays f e d c in absolute negative time direction
  * ```
  *
@@ -308,7 +308,7 @@ fun String.revv(): SprudelPattern = this._revv(emptyList())
 /**
  * Returns a [PatternMapperFn] that reverses the pattern in absolute time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").apply(revv())       // mapper form
  * ```
  *
@@ -352,11 +352,11 @@ internal val PatternMapperFn._palindrome by dslPatternMapperExtension { m, args,
  *
  * @return A two-cycle palindrome pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").palindrome()        // c d e f ... f e d c ... c d e f ...
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").palindrome()       // forward drum loop then reversed drum loop
  * ```
  *
@@ -373,7 +373,7 @@ fun String.palindrome(): SprudelPattern = this._palindrome(emptyList())
 /**
  * Returns a [PatternMapperFn] that plays the pattern forward then backward.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").apply(palindrome())  // mapper form
  * ```
  *
@@ -409,11 +409,11 @@ internal val PatternMapperFn._early by dslPatternMapperExtension { m, args, call
  *
  * @return A pattern shifted earlier by the given number of cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").early(0.25)         // shifts the pattern a quarter cycle earlier
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").stack(s("hh*4").early(0.125))   // hi-hat slightly ahead of the beat
  * ```
  *
@@ -430,7 +430,7 @@ fun String.early(amount: PatternLike): SprudelPattern = this._early(listOf(amoun
 /**
  * Returns a [PatternMapperFn] that nudges a pattern earlier by the given number of cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*4").apply(early(0.125))       // mapper form
  * ```
  *
@@ -466,11 +466,11 @@ internal val PatternMapperFn._late by dslPatternMapperExtension { m, args, callI
  *
  * @return A pattern shifted later by the given number of cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").late(0.25)          // shifts the pattern a quarter cycle later
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").stack(s("hh*4").late(0.125))    // hi-hat slightly behind the beat
  * ```
  *
@@ -487,7 +487,7 @@ fun String.late(amount: PatternLike): SprudelPattern = this._late(listOf(amount)
 /**
  * Returns a [PatternMapperFn] that nudges a pattern later by the given number of cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*4").apply(late(0.125))        // mapper form
  * ```
  *
@@ -559,11 +559,11 @@ internal val PatternMapperFn._compress by dslPatternMapperExtension { m, args, c
  *
  * @return A pattern compressed into `[start, end]` with silence elsewhere.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").compress(0, 0.5)        // all 4 events fit into first half of each cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").compress(0.25, 0.75)         // pattern compressed into middle 50% of each cycle
  * ```
  *
@@ -582,7 +582,7 @@ fun String.compress(start: PatternLike, end: PatternLike): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that compresses a pattern into `[start, end]` per cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").apply(compress(0, 0.5))  // mapper form
  * ```
  *
@@ -645,11 +645,11 @@ internal val PatternMapperFn._focus by dslPatternMapperExtension { m, args, call
  *
  * @return A pattern that zooms into `[start, end]`, stretching it to fill each cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").focus(0, 0.5)       // only the first half is shown, stretched to a full cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").focus(0.25, 0.75)  // middle 50% of the pattern, stretched to fill the cycle
  * ```
  *
@@ -668,7 +668,7 @@ fun String.focus(start: PatternLike, end: PatternLike): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that zooms in on `[start, end]` and stretches it to fill each cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").apply(focus(0, 0.5))  // mapper form
  * ```
  *
@@ -739,11 +739,11 @@ internal val PatternMapperFn._ply by dslPatternMapperExtension { m, args, callIn
  *
  * @return A pattern with each event repeated `n` times within its timespan.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d").ply(3)                  // c c c d d d — 6 events squeezed into 1 cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").ply("<1 2 4>")      // varying subdivision each cycle
  * ```
  *
@@ -760,7 +760,7 @@ fun String.ply(n: PatternLike): SprudelPattern = this._ply(listOf(n).asSprudelDs
 /**
  * Returns a [PatternMapperFn] that repeats each event `n` times within its timespan.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d").apply(ply(3))           // mapper form
  * ```
  *
@@ -853,11 +853,11 @@ internal val PatternMapperFn._plywith by dslPatternMapperExtension { m, args, ca
  *
  * @return A pattern with `n` progressively transformed copies of each event per slot.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c").plyWith(4) { it.add(7) }   // c, g, d5, a5 — each copy adds 7 semitones more
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").plyWith(3) { it.fast(2) }    // original, then 2x speed, then 4x speed in same slot
  * ```
  *
@@ -877,7 +877,7 @@ fun String.plyWith(factor: Int, transform: PatternMapperFn): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that repeats each event `n` times, applying `transform` cumulatively.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c").apply(plyWith(4) { it.add(7) })   // mapper form
  * ```
  *
@@ -996,11 +996,11 @@ internal val PatternMapperFn._plyforeach by dslPatternMapperExtension { m, args,
  *
  * @return A pattern with `n` index-specific copies of each event per slot.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c").plyForEach(4) { pat, i -> pat.add(i * 2) }   // c, d, e, f# — index * 2 semitones
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").plyForEach(3) { pat, i -> pat.gain(1.0 - i * 0.3) }  // fading copies
  * ```
  *
@@ -1085,11 +1085,11 @@ internal val PatternMapperFn._hurry by dslPatternMapperExtension { m, args, call
  *
  * @return A pattern sped up in both timing and sample playback rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").hurry(2)              // twice as fast and samples pitch up by an octave
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bass:1").speed(0.5).hurry(2)     // existing speed 0.5 × hurry 2 = speed 1.0
  * ```
  *
@@ -1148,11 +1148,11 @@ internal val PatternMapperFn._densityGap by dslPatternMapperExtension { m, args,
  *
  * @return A pattern compressed into the first `1/factor` of each cycle with silence after.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").fastGap(2)         // 4 events in first half, silence in second half
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f g").fastGap(4)        // all events squeezed into first quarter
  * ```
  *
@@ -1224,11 +1224,11 @@ internal val PatternMapperFn._inside by dslPatternMapperExtension { m, args, cal
  * allowing operations like `rev()` to work across a larger musical phrase while the result
  * still fits in one cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("0 1 2 3").inside(4) { it.rev() }       // reverse across 4-cycle span, then compress back
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").inside(2) { it.slow(2) }    // double-slow inside = no net change in tempo
  * ```
  *
@@ -1288,11 +1288,11 @@ internal val PatternMapperFn._outside by dslPatternMapperExtension { m, args, ca
  * is that `transform` sees only `1/factor` of the original pattern per cycle, allowing
  * operations like `rev()` to work on a globally coarser time scale.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("0 1 2 3").outside(4) { it.rev() }      // reverse on 1/4 speed, then speed back up
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").outside(2) { it.fast(2) }   // double-fast outside = no net change in tempo
  * ```
  *
@@ -1363,11 +1363,11 @@ internal val PatternMapperFn._swingBy by dslPatternMapperExtension { m, args, ca
  * @param swing Swing amount in the range -1 to 1.
  * @param n Number of subdivisions per cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").swingBy(1/3, 4)               // classic swing on hi-hats, 4 subdivisions
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").swingBy(-0.25, 2)       // reverse swing on notes, 2 subdivisions
  * ```
  *
@@ -1419,11 +1419,11 @@ internal val PatternMapperFn._swing by dslPatternMapperExtension { m, args, call
  *
  * @param n Number of subdivisions per cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").swing(4)                  // classic swing on hi-hats, 4 subdivisions
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f g a b c").swing(2)    // swing feel on a melody, 2 subdivisions
  * ```
  *
@@ -1487,11 +1487,11 @@ internal val PatternMapperFn._brak by dslPatternMapperExtension { m, args, callI
  * and delay it by a quarter cycle, creating an off-beat syncopation reminiscent of amen
  * break-style patterns.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").brak()             // alternating straight and syncopated cycles
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").brak()              // melodic pattern with every-other-cycle offset
  * ```
  *

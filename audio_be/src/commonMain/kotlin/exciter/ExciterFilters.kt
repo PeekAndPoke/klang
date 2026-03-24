@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.exciter
 
+import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.pow
@@ -193,7 +194,7 @@ fun Exciter.onePoleHighpass(cutoffHz: Double): Exciter {
  * Formant filter: parallel SVF bandpass filters summed together.
  * Each band has a center frequency, Q, and gain in dB.
  *
- * Ported from: FormantFilter.kt
+ * Formant filter — parallel bandpass filter bank for vowel synthesis.
  */
 fun Exciter.formant(bands: List<FormantBand>): Exciter {
     class BandState(val freq: Double, val q: Double, val linearGain: Double) {

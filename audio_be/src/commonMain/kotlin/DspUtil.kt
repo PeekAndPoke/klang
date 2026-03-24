@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_be.exciter
+package io.peekandpoke.klang.audio_be
 
 import kotlin.math.abs
 

@@ -50,11 +50,11 @@ internal val PatternMapperFn._vowel by dslPatternMapperExtension { m, args, call
  * - `tenor`
  * - `bass`
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").vowel("a")             // Soprano 'a' (default)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").apply(vowel("a e i"))  // mapper form — sequence vowels
  * ```
  *

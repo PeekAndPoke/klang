@@ -106,7 +106,7 @@ class SprudelDocsSpec : StringSpec({
             .variants.filterIsInstance<KlangProperty>().first()
 
         variant.samples shouldHaveAtLeastSize 2
-        variant.samples.any { it.contains("sine") } shouldBe true
+        variant.samples.any { it.code.contains("sine") } shouldBe true
     }
 
     // ─── KlangCallable integration tests ────────────────────────────────────

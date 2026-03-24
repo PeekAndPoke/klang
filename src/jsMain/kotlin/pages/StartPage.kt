@@ -59,7 +59,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun getPerformanceRating(voiceCount: Int): PerformanceRating {
         return when {
-            voiceCount >= 140 -> PerformanceRating(
+            voiceCount >= 250 -> PerformanceRating(
                 tier = "God-Tier",
                 message = "Your machine is a god among mortals!",
                 showWarning = false,
@@ -67,7 +67,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { rocket },
             )
 
-            voiceCount >= 120 -> PerformanceRating(
+            voiceCount >= 200 -> PerformanceRating(
                 tier = "Excellent",
                 message = "Your machine is a true work-horse!",
                 showWarning = false,
@@ -75,7 +75,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { dumbbell },
             )
 
-            voiceCount >= 100 -> PerformanceRating(
+            voiceCount >= 160 -> PerformanceRating(
                 tier = "Great",
                 message = "Your machine handles this like a champ!",
                 showWarning = false,
@@ -83,7 +83,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { thumbs_up },
             )
 
-            voiceCount >= 80 -> PerformanceRating(
+            voiceCount >= 120 -> PerformanceRating(
                 tier = "Good",
                 message = "Your machine is ready to make some music!",
                 showWarning = false,
@@ -91,7 +91,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { check_circle },
             )
 
-            voiceCount >= 60 -> PerformanceRating(
+            voiceCount >= 80 -> PerformanceRating(
                 tier = "Fair",
                 message = "Your machine is doing okay. Nothing fancy, but it'll work.",
                 showWarning = false,
@@ -99,7 +99,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { check },
             )
 
-            voiceCount >= 40 -> PerformanceRating(
+            voiceCount >= 60 -> PerformanceRating(
                 tier = "Limited",
                 message = "C'mon, it's 2026... maybe consider an upgrade?",
                 showWarning = true,
@@ -624,9 +624,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     value = { progress?.activeVoices?.toDouble() ?: 0.0 },
                     display = { "${it.toInt()}" },
                     title = "Active Voices",
-                    range = 0.0..200.0,
+                    range = 0.0..250.0,
                     icon = { music },
-                    colors = KlangTheme.rangedMixer(0.0, 200.0),
+                    colors = KlangTheme.rangedMixer(0.0, 250.0),
                     disabled = false,
                     size = 70.px
                 )

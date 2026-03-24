@@ -62,15 +62,15 @@ internal val PatternMapperFn._reverb by dslPatternMapperExtension { m, args, cal
  *
  * When [params] is omitted, the pattern's own values are reinterpreted as reverb parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").reverb("0.8:2")   // room=0.8, size=2
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").reverb("0.5:4:0.5:8000:6000")   // all five reverb params
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").reverb("<0.3:1 0.8:4>")   // alternating reverb per cycle
  * ```
  *
@@ -92,7 +92,7 @@ fun SprudelPattern.reverb(params: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets all reverb parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".reverb("0.5:2:0.3").note()   // reverb on string pattern
  * ```
  *
@@ -113,11 +113,11 @@ fun String.reverb(params: PatternLike? = null): SprudelPattern =
  * @param params The reverb parameters as a colon-separated string `"room:size:fade:lowpass:dim"`.
  * @return A [PatternMapperFn] that sets reverb parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(reverb("0.5:2"))   // reverb via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, reverb("0.9:8"))   // heavy reverb every 4th cycle
  * ```
  *
@@ -133,11 +133,11 @@ fun reverb(params: PatternLike? = null): PatternMapperFn = _reverb(listOfNotNull
  * @param params The reverb parameters as a colon-separated string `"room:size:fade:lowpass:dim"`.
  * @return A new [PatternMapperFn] chaining reverb after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).reverb("0.5:2"))   // gain then reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delay(0.5).reverb("0.9:4"))   // delay + reverb every 4th cycle
  * ```
  */
@@ -188,7 +188,7 @@ internal val PatternMapperFn._lpadsr by dslPatternMapperExtension { m, args, cal
  * - **sustain**: sustain level (0–1)
  * - **release**: time in seconds for the filter to close after note release
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").lpf(200).lpenv(4000).lpadsr("0.01:0.3:0.5:0.5")
  * ```
  *
@@ -205,7 +205,7 @@ fun SprudelPattern.lpadsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets all LPF envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".lpadsr("0.01:0.3:0.5:0.5").note()
  * ```
  *
@@ -221,7 +221,7 @@ fun String.lpadsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets all LPF envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(lpadsr("0.01:0.3:0.5:0.5"))
  * ```
  *
@@ -236,7 +236,7 @@ fun lpadsr(params: PatternLike? = null): PatternMapperFn = _lpadsr(listOfNotNull
 /**
  * Creates a chained [PatternMapperFn] that sets all LPF envelope parameters after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).lpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
@@ -287,7 +287,7 @@ internal val PatternMapperFn._hpadsr by dslPatternMapperExtension { m, args, cal
  * - **sustain**: sustain level (0–1)
  * - **release**: time in seconds for the filter to close after note release
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").hpf(200).hpenv(4000).hpadsr("0.01:0.3:0.5:0.5")
  * ```
  *
@@ -304,7 +304,7 @@ fun SprudelPattern.hpadsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets all HPF envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".hpadsr("0.01:0.3:0.5:0.5").note()
  * ```
  *
@@ -320,7 +320,7 @@ fun String.hpadsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets all HPF envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(hpadsr("0.01:0.3:0.5:0.5"))
  * ```
  *
@@ -335,7 +335,7 @@ fun hpadsr(params: PatternLike? = null): PatternMapperFn = _hpadsr(listOfNotNull
 /**
  * Creates a chained [PatternMapperFn] that sets all HPF envelope parameters after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).hpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
@@ -386,7 +386,7 @@ internal val PatternMapperFn._bpadsr by dslPatternMapperExtension { m, args, cal
  * - **sustain**: sustain level (0–1)
  * - **release**: time in seconds for the filter to close after note release
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").bpf(200).bpenv(4000).bpadsr("0.01:0.3:0.5:0.5")
  * ```
  *
@@ -403,7 +403,7 @@ fun SprudelPattern.bpadsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets all BPF envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".bpadsr("0.01:0.3:0.5:0.5").note()
  * ```
  *
@@ -419,7 +419,7 @@ fun String.bpadsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets all BPF envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(bpadsr("0.01:0.3:0.5:0.5"))
  * ```
  *
@@ -434,7 +434,7 @@ fun bpadsr(params: PatternLike? = null): PatternMapperFn = _bpadsr(listOfNotNull
 /**
  * Creates a chained [PatternMapperFn] that sets all BPF envelope parameters after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).bpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
@@ -488,15 +488,15 @@ internal val PatternMapperFn._tremolo by dslPatternMapperExtension { m, args, ca
  * - **skew**: waveform skew (0–1)
  * - **phase**: LFO start phase offset in cycles
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").tremolo("0.5:4")   // depth=0.5, rate=4
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremolo("0.8:8:square")   // choppy tremolo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremolo("<0.3:2 0.8:8>")   // alternating tremolo per cycle
  * ```
  *
@@ -518,7 +518,7 @@ fun SprudelPattern.tremolo(params: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets all tremolo parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".tremolo("0.5:4:sine").note()   // tremolo on string pattern
  * ```
  *
@@ -534,11 +534,11 @@ fun String.tremolo(params: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets all tremolo parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(tremolo("0.5:4"))   // tremolo via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolo("0.8:8:square"))   // choppy tremolo every 4th cycle
  * ```
  *
@@ -553,11 +553,11 @@ fun tremolo(params: PatternLike? = null): PatternMapperFn = _tremolo(listOfNotNu
 /**
  * Creates a chained [PatternMapperFn] that sets all tremolo parameters after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).tremolo("0.5:4"))   // gain then tremolo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delay(0.5).tremolo("0.8:8"))   // delay + tremolo every 4th cycle
  * ```
  */
@@ -608,7 +608,7 @@ internal val PatternMapperFn._nfadsr by dslPatternMapperExtension { m, args, cal
  * - **sustain**: sustain level (0–1)
  * - **release**: time in seconds for the filter to close after note release
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").nf(200).nfenv(4000).nfadsr("0.01:0.3:0.5:0.5")
  * ```
  *
@@ -625,7 +625,7 @@ fun SprudelPattern.nfadsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets all notch filter envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".nfadsr("0.01:0.3:0.5:0.5").note()
  * ```
  *
@@ -641,7 +641,7 @@ fun String.nfadsr(params: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets all notch filter envelope parameters.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(nfadsr("0.01:0.3:0.5:0.5"))
  * ```
  *
@@ -656,7 +656,7 @@ fun nfadsr(params: PatternLike? = null): PatternMapperFn = _nfadsr(listOfNotNull
 /**
  * Creates a chained [PatternMapperFn] that sets all notch filter envelope parameters after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).nfadsr("0.01:0.3:0.5:0.5"))
  * ```
  */

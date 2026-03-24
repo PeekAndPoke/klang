@@ -291,3 +291,30 @@ with separate in-place buffers for active and recovery phases.
 ### 12. SampleVoiceRenderTest stale commented-out tests (DONE)
 
 Removed two commented-out test blocks that had been superseded by `SampleVoiceSpecificTest`.
+
+---
+
+## Fixes Applied (2026-03-24) — Final Review Round
+
+### 13. Consolidated flushDenormal to single source (DONE)
+
+Moved `DspUtil.kt` from `exciter/` package to root `audio_be` package so all subpackages can import.
+Deleted 3 private copies from `LowPassHighPassFilters.kt`, `PhaserFilter.kt`, `DistortionFilter.kt`.
+All 4 files now import from `io.peekandpoke.klang.audio_be.flushDenormal`.
+
+### 14. Bus-level Phaser denormal flushing (DONE)
+
+Added `flushDenormal()` to `effects/Phaser.kt` allpass state (`z1[ch][s]`) and feedback
+(`lastOutputLeft`, `lastOutputRight`). This was the last IIR filter in the codebase without
+denormal protection.
+
+### 15. Snake_case files renamed to PascalCase (DONE)
+
+- `clipping_functions.kt` → `ClippingFunctions.kt`
+- `index_common.kt` → `IndexCommon.kt`
+
+### 16. Code style skill created (DONE)
+
+Extracted all codifiable rules from the QA review into `.claude/skills/code-style/SKILL.md`:
+16 rules covering formatting, no-duplication, Kotlin/JS performance, DSP conventions, naming,
+annotations, and comment style.

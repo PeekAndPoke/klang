@@ -150,11 +150,11 @@ stack(
   )
   .fast(4).scale("e2:chromatic").clip(0.975).hpf(60).lpf(2500).pan(0.5).adsr("0.02:0.3:0.5:0.05")
   .notchf("1440:2:60")
-  .s("[supersaw pulse]/16").unison(6).detune(0.025).gain(1.0).distort(3).postgain(0.125).warmth(0.3)
+  .s("[superpluck pulse]/16").unison(6).detune(0.025).gain(1.0).distort(3).postgain(0.125).warmth(0.3)
   .superimpose(
     x => x.bandf(360).bandq(1.0).adsr("0.01:0.2:0.1:0.05"),
     x => x.bandf(880).bandq(sine.range(0.5, 1*1.5).slow(50)).sound("pulse").adsr("0.01:0.3:0.5:0.05"),
- //   x => x.bandf(1080).bandq(sine.range(0.5, 2*1.25).slow(40)).sound("pulse").adsr("0.01:0.1:0.2:0.05"),
+    // x => x.bandf(1080).bandq(sine.range(0.5, 2*1.25).slow(40)).sound("pulse").adsr("0.01:0.1:0.2:0.05"),
   ).orbit(1) // .solo()
 
   , // Guitar 2

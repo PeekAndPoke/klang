@@ -28,7 +28,7 @@ class KlangScriptProcessor(
             "Double" to "Number",
             "Float" to "Number",
             "Int" to "Number",
-            "Long" to "Number",
+            // Long intentionally excluded — it boxes in Kotlin/JS. Use Int or Double instead.
             "String" to "String",
             "Boolean" to "Boolean",
             "NumberValue" to "Number",
@@ -40,6 +40,9 @@ class KlangScriptProcessor(
         )
 
         private const val CALL_INFO_TYPE = "CallInfo"
+
+        /** Maximum number of fixed parameters supported by registerMethod/registerFunction overloads. */
+        private const val MAX_FIXED_PARAMS = 5
     }
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
@@ -55,6 +58,21 @@ class KlangScriptProcessor(
 
         logger.info("KlangScriptProcessor: Found ${objectClasses.size} @Object, ${typeExtClasses.size} @TypeExtensions, ${topLevelFunctions.size} @Function")
 
+        // Validate orphaned @Method annotations (on classes without @Object or @TypeExtensions)
+        val validParents = (objectClasses + typeExtClasses).toSet()
+        val allMethods = resolver.getSymbolsWithAnnotation(ANN_METHOD)
+            .filterIsInstance<KSFunctionDeclaration>().toList()
+        for (method in allMethods) {
+            val parent = method.parentDeclaration
+            if (parent is KSClassDeclaration && parent !in validParents) {
+                logger.error(
+                    "@Method '${method.simpleName.asString()}' is inside '${parent.simpleName.asString()}' " +
+                            "which has neither @Object nor @TypeExtensions — it will be ignored",
+                    method
+                )
+            }
+        }
+
         if (objectClasses.isEmpty() && typeExtClasses.isEmpty() && topLevelFunctions.isEmpty()) {
             return emptyList()
         }
@@ -67,6 +85,9 @@ class KlangScriptProcessor(
             if (library == null) {
                 logger.error("@Object class '${cls.simpleName.asString()}' must have @Library annotation", cls)
                 continue
+            }
+            if (cls.classKind != ClassKind.OBJECT) {
+                logger.warn("@Object should be used on a Kotlin 'object', not a '${cls.classKind}': ${cls.simpleName.asString()}", cls)
             }
             val objectName = getAnnotationStringArg(cls, ANN_OBJECT, "name")
                 .let { if (it.isNullOrEmpty()) cls.simpleName.asString() else it }
@@ -249,6 +270,7 @@ class KlangScriptProcessor(
         appendLine()
         appendLine("package $packageName")
         appendLine()
+        appendLine("import io.peekandpoke.klang.common.SourceLocation")
         appendLine("import io.peekandpoke.klang.script.builder.*")
         appendLine("import io.peekandpoke.klang.script.runtime.*")
         appendLine("import io.peekandpoke.klang.script.types.*")
@@ -277,13 +299,21 @@ class KlangScriptProcessor(
 
         // Objects
         for (obj in entries.objects) {
+            val normalMethods = obj.methods.filter { !isRawArgsMethod(it.fn) }
+            val rawArgsMethods = obj.methods.filter { isRawArgsMethod(it.fn) }
+
             appendLine()
             appendLine("    // @Object(\"${obj.name}\") on ${obj.cls.simpleName.asString()}")
             appendLine("    registerObject(\"${obj.name}\", ${obj.cls.simpleName.asString()}) {")
-            for (method in obj.methods) {
+            for (method in normalMethods) {
                 appendLine("        ${generateMethodRegistration(method, obj.cls)}")
             }
             appendLine("    }")
+
+            // Raw-args extension methods are registered at the builder level, outside registerObject
+            for (method in rawArgsMethods) {
+                appendLine("    ${generateRawArgsExtensionMethod(method, obj.cls)}")
+            }
         }
 
         // Type extensions
@@ -293,7 +323,7 @@ class KlangScriptProcessor(
             appendLine("    // @TypeExtensions($typeName::class) on ${ext.cls.simpleName.asString()}")
             appendLine("    registerType<$typeName> {")
             for (method in ext.methods) {
-                appendLine("        ${generateMethodRegistration(method, ext.cls)}")
+                appendLine("        ${generateMethodRegistration(method, ext.cls, isTypeExtension = true)}")
             }
             appendLine("    }")
         }
@@ -312,41 +342,106 @@ class KlangScriptProcessor(
         generateDocsCode(libraryName, capitalizedName, entries)
     }
 
-    private fun generateMethodRegistration(method: MethodEntry, ownerCls: KSClassDeclaration): String {
+    /**
+     * Generates a registerMethod call for a single method.
+     *
+     * For @Object methods: `registerMethod("name") { OwnerName.fn(args) }`
+     * For @TypeExtensions methods: the first param is the receiver (`self`), passed as `this` from the lambda.
+     *   Remaining params are the KlangScript-visible params.
+     *   Generated: `registerMethod("name") { scriptArgs -> OwnerName.fn(this, scriptArgs) }`
+     * For raw-args methods (first param is List<RuntimeValue>):
+     *   Generated: `registerExtensionMethod(OwnerClass::class, "name") { _, args, loc -> Owner.fn(args, loc) }`
+     */
+    private fun generateMethodRegistration(
+        method: MethodEntry,
+        ownerCls: KSClassDeclaration,
+        isTypeExtension: Boolean = false,
+    ): String {
         val fn = method.fn
-        val params = getScriptParams(fn)
+        val allParams = getScriptParams(fn)
         val hasCallInfo = hasCallInfoParam(fn)
-        val isVararg = params.any { it.isVararg }
         val ownerName = ownerCls.simpleName.asString()
+
+        // For type extensions, first param is the receiver — strip it from script-visible params
+        val scriptParams = if (isTypeExtension && allParams.isNotEmpty()) allParams.drop(1) else allParams
+        val selfArg = if (isTypeExtension) "this, " else ""
+
+        val isVararg = scriptParams.any { it.isVararg }
 
         return when {
             isVararg && hasCallInfo -> {
-                val paramType = getVarargComponentType(params.first { it.isVararg })
-                "registerVarargMethodWithCallInfo<$paramType, Any>(\"${method.name}\") { args, callInfo -> $ownerName.${fn.simpleName.asString()}(args, callInfo) }"
+                val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
+                val returnType = resolveKotlinType(fn.returnType?.resolve())
+                "registerVarargMethodWithCallInfo<$paramType, $returnType>(\"${method.name}\") { args, callInfo -> $ownerName.${fn.simpleName.asString()}(${selfArg}*args.toTypedArray(), callInfo) }"
             }
 
             isVararg -> {
-                val paramType = getVarargComponentType(params.first { it.isVararg })
-                "registerVarargMethod<$paramType, Any>(\"${method.name}\") { args -> $ownerName.${fn.simpleName.asString()}(args) }"
+                val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
+                val returnType = resolveKotlinType(fn.returnType?.resolve())
+                "registerVarargMethod<$paramType, $returnType>(\"${method.name}\") { args -> $ownerName.${fn.simpleName.asString()}(${selfArg}*args.toTypedArray()) }"
             }
 
             else -> {
-                val paramNames = params.map { p ->
+                if (scriptParams.size > MAX_FIXED_PARAMS) {
+                    logger.error(
+                        "@Method '${method.name}' has ${scriptParams.size} parameters (max $MAX_FIXED_PARAMS for fixed-arity registration)",
+                        fn
+                    )
+                }
+                val paramNames = scriptParams.map { p ->
                     val name = p.name?.asString() ?: "p"
                     "$name: ${resolveKotlinType(p.type.resolve())}"
                 }
-                val callArgs = params.map { it.name?.asString() ?: "p" }
-                val callArgsStr = callArgs.joinToString(", ")
+                val callArgs = scriptParams.map { it.name?.asString() ?: "p" }
+                val callArgsStr = if (callArgs.isEmpty()) "" else callArgs.joinToString(", ")
+                val fullCallArgs = if (isTypeExtension) {
+                    if (callArgsStr.isEmpty()) "this" else "this, $callArgsStr"
+                } else {
+                    callArgsStr
+                }
 
-                when (params.size) {
-                    0 -> "registerMethod(\"${method.name}\") { $ownerName.${fn.simpleName.asString()}() }"
+                when (scriptParams.size) {
+                    0 -> "registerMethod(\"${method.name}\") { $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
                     else -> {
                         val paramDecl = paramNames.joinToString(", ")
-                        "registerMethod(\"${method.name}\") { $paramDecl -> $ownerName.${fn.simpleName.asString()}($callArgsStr) }"
+                        "registerMethod(\"${method.name}\") { $paramDecl -> $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Detects if a method uses the raw-args pattern: first param is List<RuntimeValue>.
+     * Optional second param is SourceLocation?.
+     */
+    private fun isRawArgsMethod(fn: KSFunctionDeclaration): Boolean {
+        val params = fn.parameters
+        if (params.isEmpty()) return false
+        val firstParam = params.first()
+        val firstType = firstParam.type.resolve()
+        val firstTypeName = firstType.declaration.simpleName.asString()
+        if (firstTypeName != "List") return false
+        // Check the type argument is RuntimeValue
+        val typeArgs = firstType.arguments
+        if (typeArgs.isEmpty()) return false
+        val elementType = typeArgs.first().type?.resolve()?.declaration?.simpleName?.asString()
+        return elementType == "RuntimeValue"
+    }
+
+    /**
+     * Generates a registerExtensionMethod call string for raw-args methods.
+     * Called at the builder level, outside registerObject/registerType blocks.
+     */
+    private fun generateRawArgsExtensionMethod(method: MethodEntry, ownerCls: KSClassDeclaration): String {
+        val fn = method.fn
+        val ownerName = ownerCls.simpleName.asString()
+        val params = fn.parameters
+        val hasLocation = params.size >= 2 &&
+                params[1].type.resolve().declaration.simpleName.asString() == "SourceLocation"
+        val callArgs = if (hasLocation) "args, loc" else "args, null"
+
+        return "registerExtensionMethod($ownerName::class, \"${method.name}\") { _, args, loc -> $ownerName.${fn.simpleName.asString()}($callArgs) }"
     }
 
     private fun generateFunctionRegistration(entry: FunctionEntry): String {
@@ -360,16 +455,22 @@ class KlangScriptProcessor(
             isVararg && hasCallInfo -> {
                 val paramType = getVarargComponentType(params.first { it.isVararg })
                 val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargFunctionWithCallInfo<$paramType, $returnType>(\"${entry.name}\") { args, callInfo -> $fnName(args, callInfo) }"
+                "registerVarargFunctionWithCallInfo<$paramType, $returnType>(\"${entry.name}\") { args, callInfo -> $fnName(*args.toTypedArray(), callInfo) }"
             }
 
             isVararg -> {
                 val paramType = getVarargComponentType(params.first { it.isVararg })
                 val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargFunction<$paramType, $returnType>(\"${entry.name}\") { args -> $fnName(args) }"
+                "registerVarargFunction<$paramType, $returnType>(\"${entry.name}\") { args -> $fnName(*args.toTypedArray()) }"
             }
 
             else -> {
+                if (params.size > MAX_FIXED_PARAMS) {
+                    logger.error(
+                        "@Function '${entry.name}' has ${params.size} parameters (max $MAX_FIXED_PARAMS for fixed-arity registration)",
+                        fn
+                    )
+                }
                 val paramDecls = params.map { p ->
                     val name = p.name?.asString() ?: "p"
                     "$name: ${resolveKotlinType(p.type.resolve())}"
@@ -386,7 +487,13 @@ class KlangScriptProcessor(
 
     // ===== Docs generation =====
 
-    private data class DocItem(val scriptName: String, val receiver: String?, val fn: KSFunctionDeclaration)
+    private data class DocItem(
+        val scriptName: String,
+        val receiver: String?,
+        val fn: KSFunctionDeclaration,
+        val isTypeExtension: Boolean = false,
+        val isRawArgs: Boolean = false,
+    )
 
     private fun StringBuilder.generateDocsCode(
         libraryName: String,
@@ -398,13 +505,13 @@ class KlangScriptProcessor(
 
         for (obj in entries.objects) {
             for (method in obj.methods) {
-                docItems.add(DocItem(method.name, obj.name, method.fn))
+                docItems.add(DocItem(method.name, obj.name, method.fn, isRawArgs = isRawArgsMethod(method.fn)))
             }
         }
         for (ext in entries.typeExtensions) {
             val displayName = typeDisplayName(ext.typeDecl.simpleName.asString())
             for (method in ext.methods) {
-                docItems.add(DocItem(method.name, displayName, method.fn))
+                docItems.add(DocItem(method.name, displayName, method.fn, isTypeExtension = true))
             }
         }
         for (fn in entries.functions) {
@@ -477,10 +584,17 @@ class KlangScriptProcessor(
 
     private fun generateCallableDoc(item: DocItem, kdoc: ParsedKDoc): String {
         val fn = item.fn
-        val params = getScriptParams(fn)
+        val allParams = getScriptParams(fn)
+        // Raw-args methods have internal params (List<RuntimeValue>, SourceLocation?) — exclude all from docs
+        // For type extensions, first param is the receiver — exclude from docs
+        val params = when {
+            item.isRawArgs -> emptyList()
+            item.isTypeExtension && allParams.isNotEmpty() -> allParams.drop(1)
+            else -> allParams
+        }
         val returnType = fn.returnType?.resolve()
-        val description = kdoc.description.escapeTripleQuote()
-        val returnDoc = kdoc.returnDoc.replace("\n", " ").escapeTripleQuote()
+        val description = kdoc.description.escapeForRawString()
+        val returnDoc = kdoc.returnDoc.replace("\n", " ").escapeForRawString()
 
         return buildString {
             appendLine("            KlangCallable(")
@@ -493,7 +607,7 @@ class KlangScriptProcessor(
                 for (param in params) {
                     val paramName = param.name?.asString() ?: continue
                     val paramType = param.type.resolve()
-                    val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ").escapeTripleQuote()
+                    val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ").escapeForRawString()
                     val paramUiTools = kdoc.paramTools[paramName] ?: emptyList()
                     val paramSubFields = kdoc.paramSubs[paramName]
 
@@ -522,7 +636,7 @@ class KlangScriptProcessor(
             if (kdoc.samples.isNotEmpty()) {
                 appendLine("                samples = listOf(")
                 kdoc.samples.forEach { sample ->
-                    appendLine("                    \"\"\"${sample.escapeTripleQuote()}\"\"\"")
+                    appendLine("                    KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})")
                 }
                 appendLine("                )")
             } else {
@@ -535,9 +649,22 @@ class KlangScriptProcessor(
     // ===== Type helpers =====
 
     /** Get function parameters excluding CallInfo (which is auto-injected). */
+    /** Get function parameters excluding CallInfo (which is auto-injected). Warns on Long usage. */
     private fun getScriptParams(fn: KSFunctionDeclaration): List<KSValueParameter> {
         val params = fn.parameters
         if (params.isEmpty()) return params
+
+        // Warn on Long parameters — Long boxes in Kotlin/JS, use Int or Double instead
+        for (param in params) {
+            val typeName = param.type.resolve().declaration.simpleName.asString()
+            if (typeName == "Long") {
+                logger.warn(
+                    "Parameter '${param.name?.asString()}' in '${fn.simpleName.asString()}' uses Long which boxes in Kotlin/JS. Use Int or Double instead.",
+                    fn
+                )
+            }
+        }
+
         val lastParam = params.last()
         val lastType = lastParam.type.resolve().declaration.simpleName.asString()
         return if (lastType == CALL_INFO_TYPE) params.dropLast(1) else params
@@ -589,7 +716,13 @@ class KlangScriptProcessor(
         return TYPE_DISPLAY_NAMES[kotlinName] ?: kotlinName
     }
 
-    private fun String.escapeTripleQuote(): String {
-        return this.replace("\"\"\"", "\\\"\\\"\\\"")
+    /** Escapes content for safe embedding in Kotlin raw strings ("""..."""). */
+    private fun String.escapeForRawString(): String {
+        // In raw strings, backslash escapes don't work. Use interpolation instead.
+        // 1. Escape $ to prevent unintended string interpolation
+        // 2. Escape """ to prevent premature raw string termination
+        return this
+            .replace("\$", "\${'$'}")
+            .replace("\"\"\"", "\${'\"'}\${'\"'}\${'\"'}")
     }
 }

@@ -1,45 +1,28 @@
-package io.peekandpoke.klang.audio_be.filters.effects
+package io.peekandpoke.klang.audio_be.voices.strip.filter
 
 import io.peekandpoke.klang.audio_be.ClippingFuncs
-import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import kotlin.math.abs
+import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
+import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import kotlin.math.pow
-
-private const val DENORMAL_THRESHOLD = 1e-15
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun flushDenormal(v: Double): Double = if (abs(v) < DENORMAL_THRESHOLD) 0.0 else v
 
 /**
  * Distortion effect with selectable waveshaper shapes.
  *
- * Features:
  * - Exponential drive curve for perceptually even control
  * - Per-shape output normalization to prevent volume jumps
  * - DC blocking filter for asymmetric shapes (diode, rectify)
- * - Drive parameter smoothing to prevent clicks
- *
- * @param amount Distortion amount (0.0 = clean, 1.0+ = heavily distorted).
- * @param shape Waveshaper type: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp.
  */
-class DistortionFilter(
+class DistortionRenderer(
     private val amount: Double,
     shape: String = "soft",
-) : AudioFilter {
+) : BlockRenderer {
 
-    /** Exponential drive curve: amount=0 -> 1x, amount=1 -> ~15.8x */
     private val drive: Double = 10.0.pow(amount * 1.2)
-
-    /** Resolved waveshaper function (avoids per-sample when dispatch) */
     private val waveshaper: (Double) -> Double
-
-    /** Output normalization factor (compensates for different peak levels per shape) */
     private val outputGain: Double
-
-    /** Whether this shape needs DC blocking (asymmetric types) */
     private val needsDcBlock: Boolean
 
-    // DC blocker state: y[n] = x[n] - x[n-1] + coeff * y[n-1]
     private val dcBlockCoeff = 0.995
     private var dcBlockX1 = 0.0
     private var dcBlockY1 = 0.0
@@ -51,30 +34,28 @@ class DistortionFilter(
         needsDcBlock = resolved.needsDcBlock
     }
 
-    override fun process(buffer: FloatArray, offset: Int, length: Int) {
-        if (amount <= 0.0) {
-            return
-        }
+    override fun render(ctx: BlockContext) {
+        if (amount <= 0.0) return
 
         val d = drive
         val g = outputGain
         val fn = waveshaper
         val dcBlock = needsDcBlock
+        val buf = ctx.audioBuffer
 
-        for (i in 0 until length) {
-            val idx = offset + i
-            val x = buffer[idx].toDouble() * d
+        for (i in 0 until ctx.length) {
+            val idx = ctx.offset + i
+            val x = buf[idx].toDouble() * d
             var y = fn(x) * g
 
             if (dcBlock) {
-                // One-pole highpass DC blocker (~5 Hz at 48kHz)
                 val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                 dcBlockX1 = y
                 dcBlockY1 = flushDenormal(dcOut)
                 y = dcOut
             }
 
-            buffer[idx] = y.toFloat()
+            buf[idx] = y.toFloat()
         }
     }
 
@@ -94,7 +75,7 @@ class DistortionFilter(
             "chebyshev" -> ResolvedShape(fn = ClippingFuncs::chebyshevT3)
             "rectify" -> ResolvedShape(fn = ClippingFuncs::rectify, needsDcBlock = true)
             "exp" -> ResolvedShape(fn = ClippingFuncs::expClip)
-            else -> ResolvedShape(fn = ClippingFuncs::fastTanh) // "soft" and fallback
+            else -> ResolvedShape(fn = ClippingFuncs::fastTanh)
         }
     }
 }

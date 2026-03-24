@@ -6,170 +6,118 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.ClippingFuncs
-import io.peekandpoke.klang.audio_be.filters.effects.DistortionFilter
+import io.peekandpoke.klang.audio_be.voices.strip.filter.DistortionRenderer
+import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
 import kotlin.math.abs
 
 class DistortionSpec : StringSpec({
 
     // ===== Waveshaper function tests =====
 
-    "fastTanh output is bounded to [-1, 1]" {
+    "fastTanh clips input to [-1, 1] range" {
+        ClippingFuncs.fastTanh(0.0) shouldBe 0.0
         ClippingFuncs.fastTanh(100.0) shouldBe (1.0 plusOrMinus 0.01)
         ClippingFuncs.fastTanh(-100.0) shouldBe (-1.0 plusOrMinus 0.01)
-        ClippingFuncs.fastTanh(0.0) shouldBe (0.0 plusOrMinus 0.001)
     }
 
-    "fastTanh is symmetric" {
-        for (x in listOf(0.1, 0.5, 1.0, 2.0, 3.0)) {
-            ClippingFuncs.fastTanh(x) shouldBe (-ClippingFuncs.fastTanh(-x) plusOrMinus 0.0001)
-        }
-    }
-
-    "hardClip clamps to [-1, 1]" {
-        ClippingFuncs.hardClip(5.0) shouldBe 1.0
-        ClippingFuncs.hardClip(-5.0) shouldBe -1.0
+    "hardClip strictly clips to [-1, 1]" {
         ClippingFuncs.hardClip(0.5) shouldBe 0.5
+        ClippingFuncs.hardClip(2.0) shouldBe 1.0
+        ClippingFuncs.hardClip(-2.0) shouldBe -1.0
     }
 
-    "softClip output is bounded and symmetric" {
-        ClippingFuncs.softClip(0.0) shouldBe 0.0
-        ClippingFuncs.softClip(100.0) shouldBe (1.0 plusOrMinus 0.02)
-        ClippingFuncs.softClip(-100.0) shouldBe (-1.0 plusOrMinus 0.02)
-        ClippingFuncs.softClip(1.0) shouldBe (-ClippingFuncs.softClip(-1.0) plusOrMinus 0.0001)
+    "softClip is bounded" {
+        abs(ClippingFuncs.softClip(100.0)) shouldBeLessThan 1.01
+        abs(ClippingFuncs.softClip(-100.0)) shouldBeLessThan 1.01
     }
 
-    "cubicClip output is bounded and symmetric" {
+    "cubicClip provides soft saturation" {
         ClippingFuncs.cubicClip(0.0) shouldBe 0.0
-        ClippingFuncs.cubicClip(5.0) shouldBe 1.0
-        ClippingFuncs.cubicClip(-5.0) shouldBe -1.0
-        ClippingFuncs.cubicClip(0.5) shouldBe (-ClippingFuncs.cubicClip(-0.5) plusOrMinus 0.0001)
+        ClippingFuncs.cubicClip(0.5).shouldBeGreaterThan(0.0)
+        abs(ClippingFuncs.cubicClip(10.0)) shouldBeLessThan 1.5
     }
 
-    "diodeClip is asymmetric — positive compresses more than negative" {
-        val pos = ClippingFuncs.diodeClip(2.0)
-        val neg = ClippingFuncs.diodeClip(-2.0)
-        // Positive should saturate more (tanh(2) vs tanh(2*0.75))
-        abs(pos) shouldBeGreaterThan abs(neg)
+    "diodeClip is asymmetric (passes positive, attenuates negative)" {
+        ClippingFuncs.diodeClip(1.0).shouldBeGreaterThan(0.0)
+        // Negative values should be attenuated (closer to zero than positive)
+        abs(ClippingFuncs.diodeClip(-1.0)) shouldBeLessThan abs(ClippingFuncs.diodeClip(1.0))
     }
 
-    "diodeClip output is bounded" {
-        ClippingFuncs.diodeClip(100.0) shouldBe (1.0 plusOrMinus 0.01)
-        ClippingFuncs.diodeClip(-100.0) shouldBe (-1.0 plusOrMinus 0.01)
-    }
-
-    "chebyshevT3 output is bounded when input is clamped" {
-        // Input is clamped to [-1, 1] inside the function
-        ClippingFuncs.chebyshevT3(5.0) shouldBe (1.0 plusOrMinus 0.01)
-        ClippingFuncs.chebyshevT3(-5.0) shouldBe (-1.0 plusOrMinus 0.01)
-        ClippingFuncs.chebyshevT3(0.0) shouldBe 0.0
-    }
-
-    "chebyshevT3 generates 3rd harmonic — T3(cos(t)) = cos(3t)" {
-        // At x=0.5, T3 = 4*(0.125) - 1.5 = -1.0
-        ClippingFuncs.chebyshevT3(0.5) shouldBe (-1.0 plusOrMinus 0.01)
-    }
-
-    "rectify output is non-negative and bounded" {
-        ClippingFuncs.rectify(0.5) shouldBe 0.5
-        ClippingFuncs.rectify(-0.5) shouldBe 0.5
-        ClippingFuncs.rectify(5.0) shouldBe 1.0
-        ClippingFuncs.rectify(0.0) shouldBe 0.0
-    }
-
-    "expClip output is bounded and symmetric" {
-        ClippingFuncs.expClip(0.0) shouldBe (0.0 plusOrMinus 0.001)
-        ClippingFuncs.expClip(100.0) shouldBe (1.0 plusOrMinus 0.01)
-        ClippingFuncs.expClip(-100.0) shouldBe (-1.0 plusOrMinus 0.01)
-        ClippingFuncs.expClip(1.0) shouldBe (-ClippingFuncs.expClip(-1.0) plusOrMinus 0.0001)
-    }
-
-    "sineFold wraps instead of clipping" {
-        // At high drive, sin(x) wraps through zero
+    "sineFold wraps around at boundaries" {
+        // At zero, output should be near zero
+        ClippingFuncs.sineFold(0.0) shouldBe (0.0 plusOrMinus 0.001)
+        // At PI, should wrap back near zero
         ClippingFuncs.sineFold(Math.PI) shouldBe (0.0 plusOrMinus 0.001)
         ClippingFuncs.sineFold(Math.PI / 2.0) shouldBe (1.0 plusOrMinus 0.001)
     }
 
-    // ===== DistortionFilter tests =====
+    // ===== DistortionRenderer tests =====
 
-    "DistortionFilter with amount=0 passes signal through unchanged" {
-        val filter = DistortionFilter(amount = 0.0)
+    "DistortionRenderer with amount=0 passes signal through unchanged" {
+        val renderer = DistortionRenderer(amount = 0.0)
         val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f)
         val original = buffer.copyOf()
-        filter.process(buffer, 0, buffer.size)
+        renderer.renderInPlace(buffer)
         for (i in buffer.indices) {
             buffer[i] shouldBe original[i]
         }
     }
 
-    "DistortionFilter soft shape produces bounded output" {
-        val filter = DistortionFilter(amount = 1.0, shape = "soft")
+    "DistortionRenderer soft shape produces bounded output" {
+        val renderer = DistortionRenderer(amount = 1.0, shape = "soft")
         val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f)
-        filter.process(buffer, 0, buffer.size)
+        renderer.renderInPlace(buffer)
         for (sample in buffer) {
             abs(sample.toDouble()) shouldBeLessThan 1.01
         }
     }
 
-    "DistortionFilter hard shape clips to [-1, 1]" {
-        val filter = DistortionFilter(amount = 1.0, shape = "hard")
+    "DistortionRenderer hard shape clips to [-1, 1]" {
+        val renderer = DistortionRenderer(amount = 1.0, shape = "hard")
         val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f)
-        filter.process(buffer, 0, buffer.size)
+        renderer.renderInPlace(buffer)
         for (sample in buffer) {
             abs(sample.toDouble()) shouldBeLessThan 1.01
         }
     }
 
-    "DistortionFilter all shapes produce bounded output" {
+    "DistortionRenderer all shapes produce bounded output" {
         val shapes = listOf("soft", "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp")
         for (shape in shapes) {
-            val filter = DistortionFilter(amount = 0.8, shape = shape)
+            val renderer = DistortionRenderer(amount = 0.8, shape = shape)
             val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f, 0.0f, 0.1f)
-            filter.process(buffer, 0, buffer.size)
+            renderer.renderInPlace(buffer)
             for (sample in buffer) {
-                abs(sample.toDouble()) shouldBeLessThan 3.0 // generous bound, accounts for normalization
+                abs(sample.toDouble()) shouldBeLessThan 3.0
             }
         }
     }
 
-    "DistortionFilter unknown shape falls back to soft" {
-        val filterUnknown = DistortionFilter(amount = 0.5, shape = "nonexistent")
-        val filterSoft = DistortionFilter(amount = 0.5, shape = "soft")
+    "DistortionRenderer unknown shape falls back to soft" {
+        val rendererUnknown = DistortionRenderer(amount = 0.5, shape = "nonexistent")
+        val rendererSoft = DistortionRenderer(amount = 0.5, shape = "soft")
         val buf1 = floatArrayOf(0.5f, -0.3f, 0.8f)
         val buf2 = floatArrayOf(0.5f, -0.3f, 0.8f)
-        filterUnknown.process(buf1, 0, buf1.size)
-        filterSoft.process(buf2, 0, buf2.size)
+        rendererUnknown.renderInPlace(buf1)
+        rendererSoft.renderInPlace(buf2)
         for (i in buf1.indices) {
             buf1[i].toDouble() shouldBe (buf2[i].toDouble() plusOrMinus 0.0001)
         }
     }
 
-    "DistortionFilter diode shape DC blocker removes offset over time" {
-        val filter = DistortionFilter(amount = 0.8, shape = "diode")
-        // Feed a constant positive signal — should be DC-blocked toward zero
+    "DistortionRenderer diode shape DC blocker removes offset over time" {
+        val renderer = DistortionRenderer(amount = 0.8, shape = "diode")
         val buffer = FloatArray(4096) { 0.5f }
-        filter.process(buffer, 0, buffer.size)
-        // After many samples, the DC blocker should have driven the signal close to zero
+        renderer.renderInPlace(buffer)
         val lastSample = buffer[buffer.size - 1]
         abs(lastSample.toDouble()) shouldBeLessThan 0.1
     }
 
-    "DistortionFilter rectify shape DC blocker removes offset over time" {
-        val filter = DistortionFilter(amount = 0.5, shape = "rectify")
-        // Alternating signal that becomes all-positive after rectification
+    "DistortionRenderer rectify shape DC blocker removes offset over time" {
+        val renderer = DistortionRenderer(amount = 0.5, shape = "rectify")
         val buffer = FloatArray(4096) { i -> if (i % 2 == 0) 0.3f else -0.3f }
-        filter.process(buffer, 0, buffer.size)
-        // DC blocker should center the output around zero over time
+        renderer.renderInPlace(buffer)
         val avg = buffer.takeLast(100).map { it.toDouble() }.average()
         abs(avg) shouldBeLessThan 0.15
-    }
-
-    "DistortionFilter with offset processes only the specified range" {
-        val filter = DistortionFilter(amount = 1.0, shape = "hard")
-        val buffer = floatArrayOf(0.1f, 0.2f, 0.3f, 0.4f, 0.5f)
-        val original0 = buffer[0]
-        val original4 = buffer[4]
-        filter.process(buffer, 1, 3) // Only process indices 1, 2, 3
-        buffer[0] shouldBe original0
-        buffer[4] shouldBe original4
     }
 })

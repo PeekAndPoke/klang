@@ -77,7 +77,7 @@ class BlockContext(
     /** Current block start frame (absolute) */
     var blockStart: Long = 0
 
-    /** Voice render context — set per block by VoiceImpl, read by SendRenderer for orbit routing */
+    /** Voice render context — set per block by Voice, read by SendRenderer for orbit routing */
     lateinit var renderContext: Voice.RenderContext
 
     /** Pre-computed sample rate as Double */

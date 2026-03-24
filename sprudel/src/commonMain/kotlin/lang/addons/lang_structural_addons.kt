@@ -175,11 +175,11 @@ internal val _morse by dslPatternFunction { args, /* callInfo */ _ ->
  * Dots are 1 unit; dashes are 3 units. Gaps are inserted automatically:
  * 1 unit between symbols within a character, 3 units between characters, 7 units between words.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3").morse("sos")         // structure notes with SOS rhythm
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").morse("hello world!")                   // structure a kick with "hi" Morse code
  * ```
  *
@@ -194,7 +194,7 @@ fun SprudelPattern.morse(text: PatternLike): SprudelPattern = this._morse(listOf
 /**
  * Parses this string as a pattern and structures it using a Morse code rhythm.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "hh".morse("hi").s()            // structure a sawtooth sound with "hi" Morse code
  * ```
  *
@@ -209,11 +209,11 @@ fun String.morse(text: PatternLike): SprudelPattern = this._morse(listOf(text).a
  * The resulting pattern contains events with value `1.0` for dots and dashes, separated by silences.
  * Use this to drive a `struct` or as a standalone rhythm, then layer notes or sounds on top.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * morse("sos").note("c4")               // SOS rhythm as notes on c4
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * morse("hello world").s("hh")          // encode a message as a kick drum pattern
  * ```
  *
@@ -245,19 +245,19 @@ internal val PatternMapperFn._merge by dslPatternMapperExtension { m, args, call
  * from the control's [SprudelVoiceData] override the corresponding fields in the source event.
  * Source fields that the control leaves `null` are kept unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh hh hh hh").merge(note("c3 d3 e3 f3"))   // high-hat gains note values from the note pattern
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh!8").merge(freq("100 200 300 400"))   // high-hat gains frequencies
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh!8").merge("x!8".freq(sine.range(100, 1000)))   // high-hat gains frequencies
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("<[c3 d3] [e3 f3]>").merge(seq("<0.2 0.4 0.6 0.8>").warmth())   // notes gain warmth per event
  * ```
  *
@@ -273,7 +273,7 @@ fun SprudelPattern.merge(ctrl: PatternLike): SprudelPattern =
 /**
  * Parses this string as a pattern and overlays voice properties from the control pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "1 2 3 4".merge("<0.2 0.4 0.6 0.8>".warmth()).scale("c3:major").n()   // value sequence gains warmth from control
  * ```
  *
@@ -286,7 +286,7 @@ fun String.merge(ctrl: PatternLike): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that overlays voice properties from the control pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2").apply(merge(seq("0.3 0.7").warmth())).scale("c3:major").n()   // apply warmth overlay as a mapper
  * ```
  *
@@ -388,11 +388,11 @@ internal val PatternMapperFn._timeLoop by dslPatternMapperExtension { m, args, c
  * segment `[0, duration]` of this pattern and tiles it. Events outside the window are never
  * played. Useful for creating ostinato figures or locking a long sequence to a shorter loop.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 f3 g3 a3 b3 c4").timeLoop(2)   // loop first 2 cycles of an 8-note run
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh oh").timeLoop(0.5)                 // stutter a 4-beat pattern into 2-beat loops
  * ```
  *
@@ -408,7 +408,7 @@ fun SprudelPattern.timeLoop(duration: PatternLike): SprudelPattern =
 /**
  * Parses this string as a pattern and loops it within a fixed window of `duration` cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 d3 e3 f3".timeLoop(0.5)   // loop the first half-cycle of a 4-note sequence
  * ```
  *
@@ -421,11 +421,11 @@ fun String.timeLoop(duration: PatternLike): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that loops its input within a fixed window of `duration` cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 f3 g3 a3 b3 c4").apply(timeLoop(2))   // loop the first 2 cycles of an 8-note run
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh oh").apply(timeLoop(0.5))                 // stutter a 4-beat pattern into 2-beat loops
  * ```
  *
@@ -441,7 +441,7 @@ fun timeLoop(duration: PatternLike): PatternMapperFn =
 /**
  * Chains a timeLoop operation onto this [PatternMapperFn], looping the result within `duration` cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.4").apply(mul(2).timeLoop(0.5))   // mul doubles, then loop within 0.5 cycles
  * ```
  *
@@ -482,11 +482,11 @@ internal val PatternMapperFn._repeat by dslPatternMapperExtension { m, args, cal
  * into fewer cycles, each repetition occupies its own full cycle. Useful for extending a short
  * pattern to fill multiple bars before it loops.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a b").repeat(2)              // plays "a b a b" spread over 2 cycles
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").repeat(4)         // loop a 4-beat bar four times before cycling
  * ```
  *
@@ -501,11 +501,11 @@ fun SprudelPattern.repeat(times: PatternLike): SprudelPattern = this._repeat(lis
 /**
  * Parses this string as a pattern and repeats it `times` times sequentially.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "a b".repeat(3).note()             // plays "a b a b a b" spread over 3 cycles
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd sd".repeat(2).s()              // double-length drum bar
  * ```
  *
@@ -517,11 +517,11 @@ fun String.repeat(times: PatternLike): SprudelPattern = this._repeat(listOf(time
 /**
  * Creates a [PatternMapperFn] that repeats the input pattern `times` times sequentially.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a b").apply(repeat(2))       // plays "a b a b" spread over 2 cycles
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(repeat(3))        // triple-length drum bar via mapper
  * ```
  *
@@ -536,7 +536,7 @@ fun repeat(times: PatternLike): PatternMapperFn = _repeat(listOf(times).asSprude
 /**
  * Chains a repeat operation onto this [PatternMapperFn], repeating the result `times` times.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a b").apply(fast(2).repeat(2))   // fast doubles density, repeat duplicates over 2 cycles
  * ```
  *
@@ -566,22 +566,22 @@ internal val PatternMapperFn._solo by dslPatternMapperExtension { m, args, callI
  * Pass a value between `0.0` (no solo) and `1.0` (full solo). Omit or pass `null` to use
  * the default amount of `0.97`. Accepts control patterns for per-cycle dynamic toggling.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * stack(
  *   s("bd*4").solo(),             // only the kick is heard (amount = 0.97)
  *   note("c3 e3")                 // muted because another pattern is soloed
  * )
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").solo(1)              // full solo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").solo(0.5)            // half solo amount
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").solo("<1 0>")         // toggle solo on/off every other cycle
  * ```
  *
@@ -597,11 +597,11 @@ fun SprudelPattern.solo(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and solos it, muting all non-soloed patterns.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd sd".solo().s()              // solo this string pattern; everything else is muted
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd sd".solo("<1 0>").s()       // toggle solo on/off every other cycle
  * ```
  *
@@ -614,15 +614,15 @@ fun String.solo(amount: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that solos the input pattern, muting all non-soloed patterns.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").apply(solo())         // solo the kick via a mapper (amount = 0.97)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").apply(solo("<1 0>"))  // toggle solo on/off every other cycle via a mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(timeLoop(2).solo())   // loop then solo
  * ```
  *
@@ -638,11 +638,11 @@ fun solo(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Chains a solo operation onto this [PatternMapperFn].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd*4").apply(timeLoop(2).solo())              // loop first 2 cycles, then solo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh*8").apply(timeLoop(1).solo("<1 0>"))       // loop then conditionally solo
  * ```
  *

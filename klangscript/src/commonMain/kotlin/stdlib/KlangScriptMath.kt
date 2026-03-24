@@ -17,7 +17,7 @@ internal object KlangScriptMath {
     /**
      * Returns the square root of a number.
      *
-     * ```KlangScript
+     * ```KlangScript(Executable)
      * Math.sqrt(16)  // 4.0
      * ```
      *
@@ -32,7 +32,7 @@ internal object KlangScriptMath {
     /**
      * Returns the absolute value of a number.
      *
-     * ```KlangScript
+     * ```KlangScript(Executable)
      * Math.abs(-5)  // 5.0
      * ```
      *
@@ -47,6 +47,10 @@ internal object KlangScriptMath {
     /**
      * Rounds a number down to the nearest integer.
      *
+     * ```KlangScript(Executable)
+     * Math.floor(3.7)  // 3.0
+     * ```
+     *
      * @param x The number to floor
      * @return The floored value
      * @category math
@@ -57,6 +61,10 @@ internal object KlangScriptMath {
 
     /**
      * Rounds a number up to the nearest integer.
+     *
+     * ```KlangScript(Executable)
+     * Math.ceil(3.2)  // 4.0
+     * ```
      *
      * @param x The number to ceil
      * @return The ceiling value
@@ -69,6 +77,10 @@ internal object KlangScriptMath {
     /**
      * Rounds a number to the nearest integer.
      *
+     * ```KlangScript(Executable)
+     * Math.round(3.5)  // 4.0
+     * ```
+     *
      * @param x The number to round
      * @return The rounded value
      * @category math
@@ -79,6 +91,10 @@ internal object KlangScriptMath {
 
     /**
      * Returns the sine of an angle in radians.
+     *
+     * ```KlangScript(Executable)
+     * Math.sin(0)  // 0.0
+     * ```
      *
      * @param x The angle in radians
      * @return The sine value
@@ -91,6 +107,10 @@ internal object KlangScriptMath {
     /**
      * Returns the cosine of an angle in radians.
      *
+     * ```KlangScript(Executable)
+     * Math.cos(0)  // 1.0
+     * ```
+     *
      * @param x The angle in radians
      * @return The cosine value
      * @category math
@@ -102,6 +122,10 @@ internal object KlangScriptMath {
     /**
      * Returns the tangent of an angle in radians.
      *
+     * ```KlangScript(Executable)
+     * Math.tan(0)  // 0.0
+     * ```
+     *
      * @param x The angle in radians
      * @return The tangent value
      * @category math
@@ -112,6 +136,10 @@ internal object KlangScriptMath {
 
     /**
      * Returns the smaller of two numbers.
+     *
+     * ```KlangScript(Executable)
+     * Math.min(3, 7)  // 3.0
+     * ```
      *
      * @param a First number
      * @param b Second number
@@ -125,6 +153,10 @@ internal object KlangScriptMath {
     /**
      * Returns the larger of two numbers.
      *
+     * ```KlangScript(Executable)
+     * Math.max(3, 7)  // 7.0
+     * ```
+     *
      * @param a First number
      * @param b Second number
      * @return The larger value
@@ -137,7 +169,7 @@ internal object KlangScriptMath {
     /**
      * Returns base raised to the power of exp.
      *
-     * ```KlangScript
+     * ```KlangScript(Executable)
      * Math.pow(2, 10)  // 1024.0
      * ```
      *

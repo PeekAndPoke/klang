@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.exciter
 
 import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.*
 
 
@@ -12,7 +13,7 @@ import kotlin.math.*
 /**
  * Distortion / waveshaping combinator.
  *
- * Ported from: DistortionFilter.kt
+ * Distortion with selectable waveshaper shapes.
  *
  * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp"
  * Includes DC blocker for asymmetric shapes (diode, rectify).
@@ -76,7 +77,7 @@ private fun resolveDistortionShape(shape: String): ResolvedShape = when (shape.l
 /**
  * Bit depth reduction combinator.
  *
- * Ported from: BitCrushFilter.kt
+ * BitCrush — reduces bit depth for a lo-fi digital sound.
  */
 fun Exciter.crush(amount: Double): Exciter {
     if (amount <= 0.0) return this
@@ -103,7 +104,7 @@ fun Exciter.crush(amount: Double): Exciter {
 /**
  * Sample-and-hold downsampling combinator.
  *
- * Ported from: SampleRateReducerFilter.kt
+ * Sample rate reducer (coarse) — holds a sample value for multiple frames.
  */
 fun Exciter.coarse(amount: Double): Exciter {
     if (amount <= 1.0) return this
@@ -136,7 +137,7 @@ fun Exciter.coarse(amount: Double): Exciter {
 /**
  * 4-stage all-pass cascade phaser with LFO.
  *
- * Ported from: PhaserFilter.kt
+ * Phaser — 4-stage allpass cascade with sine LFO modulation.
  */
 fun Exciter.phaser(
     rate: Double,
@@ -197,7 +198,7 @@ fun Exciter.phaser(
 /**
  * Amplitude modulation (tremolo) combinator with sine LFO.
  *
- * Ported from: TremoloFilter.kt
+ * Tremolo — rhythmic amplitude modulation via sine LFO.
  */
 fun Exciter.tremolo(
     rate: Double,

@@ -55,7 +55,7 @@ internal val PatternMapperFn._sndPluck by dslPatternMapperExtension { m, args, c
  * - **pickPosition**: pluck position, 0.0 (bridge) to 1.0 (neck)
  * - **stiffness**: harmonic stiffness, 0.0 (nylon) to 1.0 (piano wire)
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").sndPluck()                     // default plucked string
  * note("c3 e3 g3").sndPluck("0.999:0.8")          // bright, long sustain
  * note("c3 e3 g3").sndPluck("0.93:0.2")           // dark pizzicato
@@ -91,7 +91,7 @@ fun String.sndPluck(params: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the sound to plucked string.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(sndPluck("0.999:0.8"))
  * ```
  *
@@ -155,7 +155,7 @@ internal val PatternMapperFn._sndSuperPluck by dslPatternMapperExtension { m, ar
  * Like a 12-string guitar or chorus of harps — each string has independent noise excitation
  * and drift, creating rich evolving shimmer.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").sndSuperPluck()                         // default 5-string
  * note("c3 e3 g3").sndSuperPluck("7:0.3:0.998:0.8")       // 7-string, wide, bright, long
  * note("c3 e3 g3").sndSuperPluck("3:0.1:0.93:0.2")        // 3-string, tight, dark pizzicato

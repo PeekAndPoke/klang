@@ -201,12 +201,12 @@ class SprudelDocsProcessor(
         val receiverType = function.extensionReceiver?.resolve()
         val returnType = function.returnType?.resolve()
 
-        val description = kdoc.description
-        val returnDoc = kdoc.returnDoc.replace("\n", " ")
+        val description = kdoc.description.escapeForRawString()
+        val returnDoc = kdoc.returnDoc.replace("\n", " ").escapeForRawString()
 
         val samplesString = if (kdoc.samples.isNotEmpty()) {
             kdoc.samples.joinToString(",\n") { sample ->
-                "                \"\"\"$sample\"\"\""
+                "                KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})"
             }
         } else {
             ""
@@ -224,7 +224,7 @@ class SprudelDocsProcessor(
                 params.forEach { param ->
                     val paramName = param.name?.asString() ?: return@forEach
                     val paramType = param.type.resolve()
-                    val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ")
+                    val paramDesc = (kdoc.params[paramName] ?: "").replace("\n", " ").escapeForRawString()
                     val paramUiTools = kdoc.paramTools[paramName] ?: emptyList()
                     append("                    KlangParam(")
                     append("name = \"$paramName\", ")
@@ -236,7 +236,7 @@ class SprudelDocsProcessor(
                     }
                     val paramSubFields = kdoc.paramSubs[paramName]
                     if (paramSubFields != null && paramSubFields.isNotEmpty()) {
-                        append(", subFields = mapOf(${paramSubFields.entries.joinToString(", ") { "\"${it.key}\" to \"\"\"${it.value}\"\"\"" }})")
+                        append(", subFields = mapOf(${paramSubFields.entries.joinToString(", ") { "\"${it.key}\" to \"\"\"${it.value.escapeForRawString()}\"\"\"" }})")
                     }
                     appendLine("),")
                 }
@@ -287,11 +287,11 @@ class SprudelDocsProcessor(
         // DslFunction / DslPatternMethod are callable delegates — not plain objects
         val isDslCallable = propertyTypeSimpleName in setOf("DslFunction", "DslPatternMethod")
 
-        val description = kdoc.description
+        val description = kdoc.description.escapeForRawString()
 
         val samplesString = if (kdoc.samples.isNotEmpty()) {
             kdoc.samples.joinToString(",\n") { sample ->
-                "                \"\"\"$sample\"\"\""
+                "                KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})"
             }
         } else {
             ""
@@ -327,5 +327,12 @@ class SprudelDocsProcessor(
             }
             append("            )")
         }
+    }
+
+    /** Escapes content for safe embedding in Kotlin raw strings ("""..."""). */
+    private fun String.escapeForRawString(): String {
+        return this
+            .replace("\$", "\${'$'}")
+            .replace("\"\"\"", "\${'\"'}\${'\"'}\${'\"'}")
     }
 }

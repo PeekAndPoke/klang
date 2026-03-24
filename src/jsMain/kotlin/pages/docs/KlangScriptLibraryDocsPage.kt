@@ -13,6 +13,7 @@ import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.comp.InViewport
+import io.peekandpoke.klang.comp.KlangScriptReplComp
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.generated.generatedStdlibDocs
@@ -58,9 +59,20 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
 
     //  REGISTRY  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // Cached per library name to avoid re-registering on every render
+    private var cachedLibrary: String? = null
+    private var cachedRegistry: KlangDocsRegistry? = null
+
     private val registry: KlangDocsRegistry
-        get() = KlangDocsRegistry().apply {
-            libraryDocsProviders[props.library]?.invoke(this)
+        get() {
+            val lib = props.library
+            if (lib != cachedLibrary || cachedRegistry == null) {
+                cachedLibrary = lib
+                cachedRegistry = KlangDocsRegistry().apply {
+                    libraryDocsProviders[lib]?.invoke(this)
+                }
+            }
+            return cachedRegistry!!
         }
 
     //  DERIVED DATA  ///////////////////////////////////////////////////////////////////////////////////////////
@@ -303,9 +315,12 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
                     +"Examples"
                 }
                 decl.samples.forEach { sample ->
-                    key = sample
+                    key = sample.code
                     InViewport {
-                        PlayableCodeExample(code = sample)
+                        when (sample.type) {
+                            KlangCodeSampleType.PLAYABLE -> PlayableCodeExample(code = sample.code)
+                            KlangCodeSampleType.EXECUTABLE -> KlangScriptReplComp(initialCode = sample.code)
+                        }
                     }
                 }
             }

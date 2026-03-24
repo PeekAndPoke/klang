@@ -70,11 +70,11 @@ internal val PatternMapperFn._add by dslPatternMapperExtension { m, args, callIn
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [amount] to modulate the offset per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 2").add(5).scale("c3:major").n()  // n values become 5 and 7
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 2").add("<0 12>").scale("c3:major").n()  // add 0 or 12 alternately each cycle
  * ```
  *
@@ -92,7 +92,7 @@ fun SprudelPattern.add(amount: PatternLike): SprudelPattern = this._add(listOf(a
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 2".add(5).scale("c3:major").n()  // n values become 5 and 7
  * ```
  *
@@ -107,7 +107,7 @@ fun String.add(amount: PatternLike): SprudelPattern = this._add(listOf(amount).a
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the addition to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 2").apply(add(5)).scale("c3:major").n()  // n values become 5 and 7
  * ```
  *
@@ -119,7 +119,7 @@ fun add(amount: PatternLike): PatternMapperFn = _add(listOf(amount).asSprudelDsl
 /**
  * Chains a PatternMapperFn to this pattern, adding [amount] to every numeric value in the result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 20").apply(mul(2).add(3)).scale("c1:major").n()  // (10*2)+3=23, (20*2)+3=43
  * ```
  *
@@ -144,11 +144,11 @@ internal val PatternMapperFn._sub by dslPatternMapperExtension { m, args, callIn
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [amount] to modulate the offset per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 20").sub(5).scale("c3:major").n()  // n values become 5 and 15
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10").sub("<0 5>").scale("c3:major").n()  // subtract 0 or 5 alternately each cycle
  * ```
  *
@@ -166,7 +166,7 @@ fun SprudelPattern.sub(amount: PatternLike): SprudelPattern = this._sub(listOf(a
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "10 20".sub(5).scale("c3:major").n()  // n values become 5 and 15
  * ```
  *
@@ -181,7 +181,7 @@ fun String.sub(amount: PatternLike): SprudelPattern = this._sub(listOf(amount).a
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the subtraction to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 20").apply(sub(5)).scale("c3:major").n()  // n values become 5 and 15
  * ```
  *
@@ -193,7 +193,7 @@ fun sub(amount: PatternLike): PatternMapperFn = _sub(listOf(amount).asSprudelDsl
 /**
  * Chains a subtraction onto this [PatternMapperFn], subtracting [amount] from every numeric value in the result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 20").apply(mul(2).sub(3)).scale("c1:major").n()  // (10*2)-3=17, (20*2)-3=37
  * ```
  *
@@ -218,11 +218,11 @@ internal val PatternMapperFn._mul by dslPatternMapperExtension { m, args, callIn
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [factor] to modulate the scale per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2 3").mul(4).scale("c3:major").n()  // values become 8 and 12
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2").mul("<1 2>").scale("c3:major").n()  // double every other cycle
  * ```
  *
@@ -240,7 +240,7 @@ fun SprudelPattern.mul(factor: PatternLike): SprudelPattern = this._mul(listOf(f
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "2 3".mul(4).scale("c3:major").n()  // values become 8 and 12
  * ```
  *
@@ -255,7 +255,7 @@ fun String.mul(factor: PatternLike): SprudelPattern = this._mul(listOf(factor).a
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the multiplication to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2 3").apply(mul(4)).scale("c3:major").n()  // values become 8 and 12
  * ```
  *
@@ -267,7 +267,7 @@ fun mul(factor: PatternLike): PatternMapperFn = _mul(listOf(factor).asSprudelDsl
 /**
  * Chains a multiplication onto this [PatternMapperFn], multiplying every numeric value by [factor].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2").apply(add(1).mul(3)).scale("c2:major").n()  // (1+1)*3=6, (2+1)*3=9
  * ```
  *
@@ -292,11 +292,11 @@ internal val PatternMapperFn._div by dslPatternMapperExtension { m, args, callIn
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [divisor] to modulate the division per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 20").div(2).scale("c3:major").n()  // values become 5 and 10
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 20").div("<1 2>").scale("c3:major").n()  // halve every other cycle
  * ```
  *
@@ -314,7 +314,7 @@ fun SprudelPattern.div(divisor: PatternLike): SprudelPattern = this._div(listOf(
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "10 20".div(2).scale("c3:major").n()  // values become 5 and 10
  * ```
  *
@@ -329,7 +329,7 @@ fun String.div(divisor: PatternLike): SprudelPattern = this._div(listOf(divisor)
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the division to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 20").apply(div(2)).scale("c3:major").n()  // values become 5 and 10
  * ```
  *
@@ -341,7 +341,7 @@ fun div(divisor: PatternLike): PatternMapperFn = _div(listOf(divisor).asSprudelD
 /**
  * Chains a division onto this [PatternMapperFn], dividing every numeric value by [divisor].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 20").apply(mul(2).div(4)).scale("c2:major").n()  // (10*2)/4=5, (20*2)/4=10
  * ```
  *
@@ -367,11 +367,11 @@ internal val PatternMapperFn._mod by dslPatternMapperExtension { m, args, callIn
  * Division by zero is safe — events with a zero divisor are silenced. Supports control patterns:
  * pass a mini-notation string or another [SprudelPattern] as [divisor].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 11").mod(3).scale("c3:major").n()  // values become 1 and 2
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 1 2 3 4 5 6 7").mod(4).scale("c3:major").n()  // wraps at 4: 0 1 2 3 0 1 2 3
  * ```
  *
@@ -389,7 +389,7 @@ fun SprudelPattern.mod(divisor: PatternLike): SprudelPattern = this._mod(listOf(
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Division by zero is safe — events with a zero divisor are silenced.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "10 11".mod(3).scale("c3:major").n()  // values become 1 and 2
  * ```
  *
@@ -405,7 +405,7 @@ fun String.mod(divisor: PatternLike): SprudelPattern = this._mod(listOf(divisor)
  * remain unchanged. Division by zero is safe — events with a zero divisor are silenced.
  * Use with [SprudelPattern.apply] to apply the modulo to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 1 2 3 4 5 6 7").apply(mod(4)).scale("c3:major").n()  // wraps at 4: 0 1 2 3 0 1 2 3
  * ```
  *
@@ -417,7 +417,7 @@ fun mod(divisor: PatternLike): PatternMapperFn = _mod(listOf(divisor).asSprudelD
 /**
  * Chains a modulo operation onto this [PatternMapperFn], applying modulo [divisor] to every numeric value.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("10 11").apply(add(1).mod(4)).scale("c3:major").n()  // (10+1)%4=3, (11+1)%4=0
  * ```
  *
@@ -444,11 +444,11 @@ internal val PatternMapperFn._pow by dslPatternMapperExtension { m, args, callIn
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [exponent] to modulate the exponent per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2 3").pow(3).scale("c3:major").n()  // values become 8 (2³) and 27 (3³)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2").pow("<1 2 3>").scale("c3:major").n()  // 2, 4, 8 over three cycles
  * ```
  *
@@ -466,7 +466,7 @@ fun SprudelPattern.pow(exponent: PatternLike): SprudelPattern = this._pow(listOf
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "2 3".pow(3).scale("c3:major").n()  // values become 8 (2³) and 27 (3³)
  * ```
  *
@@ -481,7 +481,7 @@ fun String.pow(exponent: PatternLike): SprudelPattern = this._pow(listOf(exponen
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the exponentiation to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2 3").apply(pow(3)).scale("c3:major").n()  // values become 8 (2³) and 27 (3³)
  * ```
  *
@@ -493,7 +493,7 @@ fun pow(exponent: PatternLike): PatternMapperFn = _pow(listOf(exponent).asSprude
 /**
  * Chains an exponentiation onto this [PatternMapperFn], raising every numeric value to [exponent].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2 3").apply(add(1).pow(2)).scale("c2:major").n()  // (2+1)^2=9, (3+1)^2=16
  * ```
  *
@@ -519,11 +519,11 @@ internal val PatternMapperFn._band by dslPatternMapperExtension { m, args, callI
  * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
  * remain unchanged. Values are truncated to integers before the operation.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "12 15".band(10).scale("c3:major").n()  // 12&10=8, 15&10=10
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "127".band("<15 63>").scale("c3:major").n()  // mask low or high nibble alternately
  * ```
  *
@@ -541,7 +541,7 @@ fun SprudelPattern.band(mask: PatternLike): SprudelPattern = this._band(listOf(m
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "12 15".band(10).scale("c3:major").n()  // 12&10=8, 15&10=10
  * ```
  *
@@ -556,7 +556,7 @@ fun String.band(mask: PatternLike): SprudelPattern = this._band(listOf(mask).asS
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the mask to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("12 15").apply(band(10)).scale("c3:major").n()  // 12&10=8, 15&10=10
  * ```
  *
@@ -568,7 +568,7 @@ fun band(mask: PatternLike): PatternMapperFn = _band(listOf(mask).asSprudelDslAr
 /**
  * Chains a bitwise AND onto this [PatternMapperFn], applying [mask] to every integer value.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("12 15").apply(add(3).band(10)).scale("c2:major").n()  // (12+3)&10=10, (15+3)&10=2
  * ```
  *
@@ -594,11 +594,11 @@ internal val PatternMapperFn._bor by dslPatternMapperExtension { m, args, callIn
  * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
  * remain unchanged. Values are truncated to integers before the operation.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "8 4".bor(2).scale("c3:major").n()  // 8|2=10, 4|2=6
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0".bor("<1 2 4 8>").scale("c3:major").n()  // set individual bits each cycle
  * ```
  *
@@ -616,7 +616,7 @@ fun SprudelPattern.bor(mask: PatternLike): SprudelPattern = this._bor(listOf(mas
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "8 4".bor(2).scale("c3:major").n()  // 8|2=10, 4|2=6
  * ```
  *
@@ -631,7 +631,7 @@ fun String.bor(mask: PatternLike): SprudelPattern = this._bor(listOf(mask).asSpr
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the mask to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("8 4").apply(bor(2)).scale("c3:major").n()  // 8|2=10, 4|2=6
  * ```
  *
@@ -643,7 +643,7 @@ fun bor(mask: PatternLike): PatternMapperFn = _bor(listOf(mask).asSprudelDslArgs
 /**
  * Chains a bitwise OR onto this [PatternMapperFn], applying [mask] to every integer value.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("8 4").apply(add(1).bor(2)).scale("c2:major").n()  // (8+1)|2=11, (4+1)|2=7
  * ```
  *
@@ -670,11 +670,11 @@ internal val PatternMapperFn._bxor by dslPatternMapperExtension { m, args, callI
  * remain unchanged. Values are truncated to integers before the operation. XOR is useful for
  * toggling specific bits.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "12 10".bxor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "5".bxor("<3 5>").scale("c3:major").n()  // toggle bits each cycle
  * ```
  *
@@ -692,7 +692,7 @@ fun SprudelPattern.bxor(mask: PatternLike): SprudelPattern = this._bxor(listOf(m
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "12 10".bxor(6).scale("c3:major").n()  // 12^6=10, 10^6=12
  * ```
  *
@@ -707,7 +707,7 @@ fun String.bxor(mask: PatternLike): SprudelPattern = this._bxor(listOf(mask).asS
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the mask to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("12 10").apply(bxor(6)).scale("c3:major").n()  // 12^6=10, 10^6=12
  * ```
  *
@@ -719,7 +719,7 @@ fun bxor(mask: PatternLike): PatternMapperFn = _bxor(listOf(mask).asSprudelDslAr
 /**
  * Chains a bitwise XOR onto this [PatternMapperFn], applying [mask] to every integer value.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("12 10").apply(add(2).bxor(6)).scale("c2:major").n()  // (12+2)^6=8, (10+2)^6=10
  * ```
  *
@@ -752,11 +752,11 @@ internal val PatternMapperFn._blshift by dslPatternMapperExtension { m, args, ca
  * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
  * remain unchanged. Values are truncated to integers before the operation.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "1 2".blshift(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "1".blshift("<0 1 2 3>").scale("c3:major").n()  // 1, 2, 4, 8 over four cycles
  * ```
  *
@@ -774,7 +774,7 @@ fun SprudelPattern.blshift(bits: PatternLike): SprudelPattern = this._blshift(li
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "1 2".blshift(2).scale("c3:major").n()  // 1<<2=4, 2<<2=8
  * ```
  *
@@ -789,7 +789,7 @@ fun String.blshift(bits: PatternLike): SprudelPattern = this._blshift(listOf(bit
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the shift to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2").apply(blshift(2)).scale("c3:major").n()  // 1<<2=4, 2<<2=8
  * ```
  *
@@ -802,7 +802,7 @@ fun blshift(bits: PatternLike): PatternMapperFn = _blshift(listOf(bits).asSprude
 /**
  * Chains a bitwise left-shift onto this [PatternMapperFn], shifting every integer value left by [bits] bits.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2").apply(add(1).blshift(2)).scale("c2:major").n()  // (1+1)<<2=8, (2+1)<<2=12
  * ```
  *
@@ -835,11 +835,11 @@ internal val PatternMapperFn._brshift by dslPatternMapperExtension { m, args, ca
  * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
  * remain unchanged. Values are truncated to integers before the operation.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "8 12".brshift(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "16".brshift("<0 1 2 3>").scale("c3:major").n()  // 16, 8, 4, 2 over four cycles
  * ```
  *
@@ -857,7 +857,7 @@ fun SprudelPattern.brshift(bits: PatternLike): SprudelPattern = this._brshift(li
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "8 12".brshift(2).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
@@ -872,7 +872,7 @@ fun String.brshift(bits: PatternLike): SprudelPattern = this._brshift(listOf(bit
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the shift to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("8 12").apply(brshift(2)).scale("c3:major").n()  // 8>>2=2, 12>>2=3
  * ```
  *
@@ -884,7 +884,7 @@ fun brshift(bits: PatternLike): PatternMapperFn = _brshift(listOf(bits).asSprude
 /**
  * Chains a bitwise right-shift onto this [PatternMapperFn], shifting every integer value right by [bits] bits.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("8 16").apply(mul(2).brshift(3)).scale("c3:major").n()  // (8*2)>>3=2, (16*2)>>3=4
  * ```
  *
@@ -909,11 +909,11 @@ internal val PatternMapperFn._log2 by dslPatternMapperExtension { m, _, _ -> m.c
  * remain unchanged. Useful for converting exponential frequency ratios to linear semitone or
  * octave values.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "8 16".log2().scale("c3:major").n()  // log₂(8)=3, log₂(16)=4
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "1 2 4 8".log2().scale("c3:major").n()  // 0, 1, 2, 3
  * ```
  *
@@ -930,7 +930,7 @@ fun SprudelPattern.log2(): SprudelPattern = this._log2()
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "1 2 4 8".log2().scale("c3:major").n()  // 0, 1, 2, 3
  * ```
  */
@@ -943,7 +943,7 @@ fun String.log2(): SprudelPattern = this._log2()
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the transform to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2 4 8").apply(log2()).scale("c3:major").n()  // 0, 1, 2, 3
  * ```
  */
@@ -953,7 +953,7 @@ fun log2(): PatternMapperFn = _log2(emptyList())
 /**
  * Chains a log₂ operation onto this [PatternMapperFn], applying log base 2 to every numeric value.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2 4").apply(mul(4).log2()).scale("c3:major").n()  // log2(2*4)=log2(8)=3, log2(4*4)=log2(16)=4
  * ```
  */
@@ -979,11 +979,11 @@ internal val PatternMapperFn._lt by dslPatternMapperExtension { m, args, callInf
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [threshold] to modulate the threshold per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").lt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  *
@@ -1001,7 +1001,7 @@ fun SprudelPattern.lt(threshold: PatternLike): SprudelPattern = this._lt(listOf(
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "5 10".lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
  * ```
  *
@@ -1017,7 +1017,7 @@ fun String.lt(threshold: PatternLike): SprudelPattern = this._lt(listOf(threshol
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").apply(lt(8)).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
  * ```
  *
@@ -1030,7 +1030,7 @@ fun lt(threshold: PatternLike): PatternMapperFn = _lt(listOf(threshold).asSprude
  * Chains a less-than comparison onto this [PatternMapperFn], replacing each value with `1` if less
  * than [threshold] or `0` otherwise.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").apply(add(3).lt(9)).scale("c3:major").n()  // (5+3)<9=1, (10+3)<9=0
  * ```
  *
@@ -1058,11 +1058,11 @@ internal val PatternMapperFn._gt by dslPatternMapperExtension { m, args, callInf
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [threshold] to modulate the threshold per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").gt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  *
@@ -1080,7 +1080,7 @@ fun SprudelPattern.gt(threshold: PatternLike): SprudelPattern = this._gt(listOf(
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "5 10".gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
  * ```
  *
@@ -1096,7 +1096,7 @@ fun String.gt(threshold: PatternLike): SprudelPattern = this._gt(listOf(threshol
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").apply(gt(8)).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
  * ```
  *
@@ -1109,7 +1109,7 @@ fun gt(threshold: PatternLike): PatternMapperFn = _gt(listOf(threshold).asSprude
  * Chains a greater-than comparison onto this [PatternMapperFn], replacing each value with `1` if greater
  * than [threshold] or `0` otherwise.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").apply(add(3).gt(9)).scale("c3:major").n()  // (5+3)>9=0, (10+3)>9=1
  * ```
  *
@@ -1137,11 +1137,11 @@ internal val PatternMapperFn._lte by dslPatternMapperExtension { m, args, callIn
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [threshold] to modulate the threshold per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8 10").lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8 10").lte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  *
@@ -1160,7 +1160,7 @@ fun SprudelPattern.lte(threshold: PatternLike): SprudelPattern = this._lte(listO
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "5 8 10".lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
  * ```
  *
@@ -1176,7 +1176,7 @@ fun String.lte(threshold: PatternLike): SprudelPattern = this._lte(listOf(thresh
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8 10").apply(lte(8)).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
  * ```
  *
@@ -1189,7 +1189,7 @@ fun lte(threshold: PatternLike): PatternMapperFn = _lte(listOf(threshold).asSpru
  * Chains a less-than-or-equal comparison onto this [PatternMapperFn], replacing each value with `1` if
  * less than or equal to [threshold] or `0` otherwise.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").apply(add(3).lte(11)).scale("c3:major").n()  // (5+3)<=11=1, (10+3)<=11=0
  * ```
  *
@@ -1217,11 +1217,11 @@ internal val PatternMapperFn._gte by dslPatternMapperExtension { m, args, callIn
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [threshold] to modulate the threshold per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8 10").gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8 10").gte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
  * ```
  *
@@ -1240,7 +1240,7 @@ fun SprudelPattern.gte(threshold: PatternLike): SprudelPattern = this._gte(listO
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "5 8 10".gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
  * ```
  *
@@ -1256,7 +1256,7 @@ fun String.gte(threshold: PatternLike): SprudelPattern = this._gte(listOf(thresh
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8 10").apply(gte(8)).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
  * ```
  *
@@ -1269,7 +1269,7 @@ fun gte(threshold: PatternLike): PatternMapperFn = _gte(listOf(threshold).asSpru
  * Chains a greater-than-or-equal comparison onto this [PatternMapperFn], replacing each value with `1` if
  * greater than or equal to [threshold] or `0` otherwise.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 10").apply(add(3).gte(11)).scale("c3:major").n()  // (5+3)>=11=0, (10+3)>=11=1
  * ```
  *
@@ -1297,11 +1297,11 @@ internal val PatternMapperFn._eq by dslPatternMapperExtension { m, args, callInf
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [other] to vary the comparison target per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8").eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 1 2 3").eq("<0 1>").scale("c3:major").n()  // equality target alternates each cycle
  * ```
  *
@@ -1319,7 +1319,7 @@ fun SprudelPattern.eq(other: PatternLike): SprudelPattern = this._eq(listOf(othe
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "5 8".eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
  * ```
  *
@@ -1335,7 +1335,7 @@ fun String.eq(other: PatternLike): SprudelPattern = this._eq(listOf(other).asSpr
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8").apply(eq(8)).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
  * ```
  *
@@ -1348,7 +1348,7 @@ fun eq(other: PatternLike): PatternMapperFn = _eq(listOf(other).asSprudelDslArgs
  * Chains a strict-equality test onto this [PatternMapperFn], replacing each value with `1` if equal
  * to [other] or `0` otherwise.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8").apply(add(3).eq(11)).scale("c3:major").n()  // (5+3)=8==11=0, (8+3)=11==11=1
  * ```
  *
@@ -1375,11 +1375,11 @@ internal val PatternMapperFn._eqt by dslPatternMapperExtension { m, args, callIn
  * A value is falsy if it is zero; otherwise it is truthy. Only the raw event `value` is
  * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").eqt(0).scale("c3:major").n()  // 0~=0 → 1 (both falsy), 5~=0 → 0
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").eqt(3).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
  * ```
  *
@@ -1397,7 +1397,7 @@ fun SprudelPattern.eqt(other: PatternLike): SprudelPattern = this._eqt(listOf(ot
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. A value is falsy if it is zero; otherwise it is truthy.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 5".eqt(0).scale("c3:major").n()  // 0~=0 → 1 (both falsy), 5~=0 → 0
  * ```
  *
@@ -1413,7 +1413,7 @@ fun String.eqt(other: PatternLike): SprudelPattern = this._eqt(listOf(other).asS
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").apply(eqt(3)).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
  * ```
  *
@@ -1426,7 +1426,7 @@ fun eqt(other: PatternLike): PatternMapperFn = _eqt(listOf(other).asSprudelDslAr
  * Chains a truthiness-equality test onto this [PatternMapperFn], replacing each value with `1` if it shares
  * the same truthiness as [other] or `0` otherwise.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").apply(mul(3).eqt(0)).scale("c3:major").n()  // (0*3)=0~=0=1 (both falsy), (5*3)=15~=0=0
  * ```
  *
@@ -1454,11 +1454,11 @@ internal val PatternMapperFn._ne by dslPatternMapperExtension { m, args, callInf
  * remain unchanged. Supports control patterns: pass a mini-notation string or another
  * [SprudelPattern] as [other] to vary the comparison target per cycle or event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8").ne(8).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 1 2 3").ne("<0 1>").scale("c3:major").n()  // target alternates each cycle
  * ```
  *
@@ -1476,7 +1476,7 @@ fun SprudelPattern.ne(other: PatternLike): SprudelPattern = this._ne(listOf(othe
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "5 8".ne(8).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
  * ```
  *
@@ -1492,7 +1492,7 @@ fun String.ne(other: PatternLike): SprudelPattern = this._ne(listOf(other).asSpr
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8").apply(ne(8)).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
  * ```
  *
@@ -1505,7 +1505,7 @@ fun ne(other: PatternLike): PatternMapperFn = _ne(listOf(other).asSprudelDslArgs
  * Chains a strict-inequality test onto this [PatternMapperFn], replacing each value with `1` if not equal
  * to [other] or `0` otherwise.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5 8").apply(add(3).ne(11)).scale("c3:major").n()  // (5+3)=8!=11=1, (8+3)=11!=11=0
  * ```
  *
@@ -1532,11 +1532,11 @@ internal val PatternMapperFn._net by dslPatternMapperExtension { m, args, callIn
  * A value is falsy if it is zero; otherwise it is truthy. Only the raw event `value` is
  * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").net(0).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").net(3).scale("c3:major").n()  // 0~!=3 → 1, 5~!=3 → 0 (both truthy)
  * ```
  *
@@ -1554,7 +1554,7 @@ fun SprudelPattern.net(other: PatternLike): SprudelPattern = this._net(listOf(ot
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. A value is falsy if it is zero; otherwise it is truthy.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 5".net(0).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
  * ```
  *
@@ -1570,7 +1570,7 @@ fun String.net(other: PatternLike): SprudelPattern = this._net(listOf(other).asS
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").apply(net(0)).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
  * ```
  *
@@ -1583,7 +1583,7 @@ fun net(other: PatternLike): PatternMapperFn = _net(listOf(other).asSprudelDslAr
  * Chains a truthiness-inequality test onto this [PatternMapperFn], replacing each value with `1` if it has
  * different truthiness than [other] or `0` otherwise.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").apply(mul(3).net(0)).scale("c3:major").n()  // (0*3)=0~!=0=0 (both falsy), (5*3)=15~!=0=1
  * ```
  *
@@ -1610,11 +1610,11 @@ internal val PatternMapperFn._and by dslPatternMapperExtension { m, args, callIn
  * This mirrors JavaScript's `&&` short-circuit behaviour. Only the raw event `value` is
  * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").and(10).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("5").and("<0 10>").scale("c3:major").n()  // gate on/off each cycle
  * ```
  *
@@ -1632,7 +1632,7 @@ fun SprudelPattern.and(other: PatternLike): SprudelPattern = this._and(listOf(ot
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 5".and(10).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
  * ```
  *
@@ -1648,7 +1648,7 @@ fun String.and(other: PatternLike): SprudelPattern = this._and(listOf(other).asS
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the gate to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").apply(and(10)).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
  * ```
  *
@@ -1660,7 +1660,7 @@ fun and(other: PatternLike): PatternMapperFn = _and(listOf(other).asSprudelDslAr
 /**
  * Chains a logical AND onto this [PatternMapperFn]. Returns [other] when the value is truthy, or `0` when falsy.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 5").apply(sub(1).and(7)).scale("c3:major").n()  // (1-1)=0&&7=0, (5-1)=4&&7=7
  * ```
  *
@@ -1687,11 +1687,11 @@ internal val PatternMapperFn._or by dslPatternMapperExtension { m, args, callInf
  * This mirrors JavaScript's `||` short-circuit behaviour. Only the raw event `value` is
  * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").or(10).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").or("<1 2>").scale("c3:major").n()  // fallback alternates each cycle
  * ```
  *
@@ -1709,7 +1709,7 @@ fun SprudelPattern.or(other: PatternLike): SprudelPattern = this._or(listOf(othe
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 5".or(10).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
  * ```
  *
@@ -1725,7 +1725,7 @@ fun String.or(other: PatternLike): SprudelPattern = this._or(listOf(other).asSpr
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply the fallback to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").apply(or(10)).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
  * ```
  *
@@ -1737,7 +1737,7 @@ fun or(other: PatternLike): PatternMapperFn = _or(listOf(other).asSprudelDslArgs
 /**
  * Chains a logical OR onto this [PatternMapperFn]. Returns the source value when truthy, or [other] when falsy.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5").apply(mul(1).or(7)).scale("c3:major").n()  // (0*1)=0||7=7, (5*1)=5||7=5
  * ```
  *
@@ -1764,11 +1764,11 @@ internal val PatternMapperFn._round by dslPatternMapperExtension { m, _, _ -> m.
  * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "2.4 2.5 2.6".round().scale("c3:major").n()  // 2, 3, 3
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0.1 0.9".round().scale("c3:major").n()  // 0, 1
  * ```
  *
@@ -1785,7 +1785,7 @@ fun SprudelPattern.round(): SprudelPattern = this._round()
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "2.4 2.5 2.6".round().scale("c3:major").n()  // 2, 3, 3
  * ```
  */
@@ -1798,7 +1798,7 @@ fun String.round(): SprudelPattern = this._round()
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply rounding to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2.4 2.5 2.6").apply(round()).scale("c3:major").n()  // 2, 3, 3
  * ```
  */
@@ -1808,7 +1808,7 @@ fun round(): PatternMapperFn = _round(emptyList())
 /**
  * Chains a rounding operation onto this [PatternMapperFn], rounding every numeric value to the nearest integer.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2.1 3.7").apply(mul(2).round()).scale("c3:major").n()  // round(2.1*2)=round(4.2)=4, round(3.7*2)=round(7.4)=7
  * ```
  */
@@ -1833,11 +1833,11 @@ internal val PatternMapperFn._floor by dslPatternMapperExtension { m, _, _ -> m.
  * Non-numeric values are passed through unchanged. Only the raw event `value` is affected —
  * `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "2.1 2.9".floor().scale("c3:major").n()  // 2, 2
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "-2.1 -2.9".floor().scale("c3:major").n()  // -3, -3
  * ```
  *
@@ -1854,7 +1854,7 @@ fun SprudelPattern.floor(): SprudelPattern = this._floor()
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "2.1 2.9".floor().scale("c3:major").n()  // 2, 2
  * ```
  */
@@ -1867,7 +1867,7 @@ fun String.floor(): SprudelPattern = this._floor()
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply flooring to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2.1 2.9").apply(floor()).scale("c3:major").n()  // 2, 2
  * ```
  */
@@ -1877,7 +1877,7 @@ fun floor(): PatternMapperFn = _floor(emptyList())
 /**
  * Chains a floor operation onto this [PatternMapperFn], flooring every numeric value to an integer.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2.1 3.9").apply(mul(2).floor()).scale("c3:major").n()  // floor(2.1*2)=floor(4.2)=4, floor(3.9*2)=floor(7.8)=7
  * ```
  */
@@ -1902,11 +1902,11 @@ internal val PatternMapperFn._ceil by dslPatternMapperExtension { m, _, _ -> m.c
  * Non-numeric values are passed through unchanged. Only the raw event `value` is affected —
  * `note`, `soundIndex`, and all other voice properties remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "2.1 2.9".ceil().scale("c3:major").n()  // 3, 3
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "-2.9 -2.1".ceil().scale("c3:major").n()  // -2, -2
  * ```
  *
@@ -1923,7 +1923,7 @@ fun SprudelPattern.ceil(): SprudelPattern = this._ceil()
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "2.1 2.9".ceil().scale("c3:major").n()  // 3, 3
  * ```
  */
@@ -1936,7 +1936,7 @@ fun String.ceil(): SprudelPattern = this._ceil()
  * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
  * remain unchanged. Use with [SprudelPattern.apply] to apply ceiling to an existing pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2.1 2.9").apply(ceil()).scale("c3:major").n()  // 3, 3
  * ```
  */
@@ -1946,7 +1946,7 @@ fun ceil(): PatternMapperFn = _ceil(emptyList())
 /**
  * Chains a ceiling operation onto this [PatternMapperFn], ceiling every numeric value to an integer.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2.1 3.9").apply(mul(2).ceil()).scale("c3:major").n()  // ceil(2.1*2)=ceil(4.2)=5, ceil(3.9*2)=ceil(7.8)=8
  * ```
  */

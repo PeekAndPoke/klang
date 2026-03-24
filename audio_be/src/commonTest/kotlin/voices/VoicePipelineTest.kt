@@ -8,10 +8,10 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 
 /**
- * Tests for VoiceImpl pipeline ordering.
+ * Tests for Voice pipeline ordering.
  * Verifies that the Pitch → Excite → Filter pipeline executes correctly.
  */
-class VoiceImplPipelineTest : StringSpec({
+class VoicePipelineTest : StringSpec({
 
     "pipeline executes main filter" {
         val spyMainFilter = SpyFilter("mainFilter")

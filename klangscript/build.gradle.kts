@@ -92,8 +92,6 @@ tasks {
 }
 
 dependencies {
-    kspCommonMainMetadata(project(":klangscript-ksp"))
-
     add("kspJvm", project(":klangscript-ksp"))
     add("kspJs", project(":klangscript-ksp"))
 
