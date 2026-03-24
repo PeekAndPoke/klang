@@ -55,6 +55,9 @@ Status: **All stages extracted.** VoiceImpl runs a single `List<BlockRenderer>` 
 Pitch renderers → ExciteRenderer → Filter renderers → SendRenderer.
 Shared envelope calculation in `EnvelopeCalc.kt`. Rename SignalGen → Exciter completed.
 `gateEndFrame` removed from Voice interface (private in VoiceImpl). `mixToOrbit()` replaced by `SendRenderer`.
+Bus pipeline refactored: monolithic `Orbit.processEffects()` → composable `BusEffect` pipeline
+(`orbits/bus/`): `BusDelayEffect → BusReverbEffect → BusPhaserEffect → BusCompressorEffect`,
+with `BusDuckingEffect` applied in a separate cross-orbit pass.
 See `docs/agent-tasks/voice-pipeline-refactor.md` for full plan.
 
 ## Lessons Learned

@@ -105,26 +105,43 @@ class DuckingSpec : StringSpec({
         avgLevel shouldBe (1.0 plusOrMinus 0.01)
     }
 
-    "Ducking handles stereo by processing channels separately" {
+    "processStereo ducks both channels equally (linked stereo)" {
         val ducking = Ducking(sampleRate, 0.01, 0.8)
 
-        // Left channel
         val inputLeft = FloatArray(100) { 1.0f }
-        val sidechainLeft = FloatArray(100) { 0.8f }
-
-        // Right channel
         val inputRight = FloatArray(100) { 1.0f }
+        val sidechainLeft = FloatArray(100) { 0.8f }
         val sidechainRight = FloatArray(100) { 0.8f }
 
-        ducking.process(inputLeft, sidechainLeft, 100)
-        ducking.process(inputRight, sidechainRight, 100)
+        ducking.processStereo(inputLeft, inputRight, sidechainLeft, sidechainRight, 100)
 
-        // Both channels should be ducked
         val avgLeft = inputLeft.map { abs(it.toDouble()) }.average()
         val avgRight = inputRight.map { abs(it.toDouble()) }.average()
 
+        // Both channels should be ducked
         avgLeft shouldBeLessThan 0.5
         avgRight shouldBeLessThan 0.5
+
+        // Both channels should have identical gain reduction (linked stereo)
+        avgLeft shouldBe (avgRight plusOrMinus 0.001)
+    }
+
+    "processStereo preserves stereo image with asymmetric sidechain" {
+        val ducking = Ducking(sampleRate, 0.01, 0.8)
+
+        val inputLeft = FloatArray(100) { 1.0f }
+        val inputRight = FloatArray(100) { 1.0f }
+        // Sidechain is louder on left — but linked detection should apply equal ducking
+        val sidechainLeft = FloatArray(100) { 0.9f }
+        val sidechainRight = FloatArray(100) { 0.1f }
+
+        ducking.processStereo(inputLeft, inputRight, sidechainLeft, sidechainRight, 100)
+
+        val avgLeft = inputLeft.map { abs(it.toDouble()) }.average()
+        val avgRight = inputRight.map { abs(it.toDouble()) }.average()
+
+        // Both channels should have identical gain reduction despite asymmetric sidechain
+        avgLeft shouldBe (avgRight plusOrMinus 0.001)
     }
 
     "Attack time affects return speed" {

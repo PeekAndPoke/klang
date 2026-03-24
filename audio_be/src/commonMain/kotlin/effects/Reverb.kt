@@ -76,6 +76,9 @@ class Reverb(
     private val fixedGain = 0.015 // Standard Freeverb gain scaling to normalize sum of 8 combs
     private val allPassFeedback = 0.5
 
+    // Anti-denormal constant (~140dB below audible, prevents CPU spikes from denormal floats in IIR state)
+    private val antiDenormal = 1e-18
+
     /**
      * Returns true if the internal reverb buffers still contain audio above the given threshold.
      * Checks comb filter buffers (which hold the bulk of the reverb tail).
@@ -138,7 +141,7 @@ class Reverb(
                 var posL = combPosL[c]
 
                 val outSampleL = bufL[posL].toDouble()
-                combStoreL[c] = (outSampleL * invDamping) + (combStoreL[c] * damping)
+                combStoreL[c] = (outSampleL * invDamping) + (combStoreL[c] * damping) + antiDenormal
                 bufL[posL] = (inpL + (combStoreL[c] * feedback)).toFloat()
 
                 sumL += outSampleL
@@ -152,7 +155,7 @@ class Reverb(
                 var posR = combPosR[c]
 
                 val outSampleR = bufR[posR].toDouble()
-                combStoreR[c] = (outSampleR * invDamping) + (combStoreR[c] * damping)
+                combStoreR[c] = (outSampleR * invDamping) + (combStoreR[c] * damping) + antiDenormal
                 bufR[posR] = (inpR + (combStoreR[c] * feedback)).toFloat()
 
                 sumR += outSampleR

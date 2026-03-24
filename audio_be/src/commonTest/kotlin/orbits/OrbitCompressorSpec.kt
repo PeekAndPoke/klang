@@ -34,14 +34,14 @@ class OrbitCompressorSpec : StringSpec({
     "orbit has no compressor by default" {
         val orbit = createOrbit()
 
-        orbit.compressor shouldBe null
+        orbit.compressor.compressor shouldBe null
     }
 
     "compressor is created when first voice has compressor settings" {
         val orbit = createOrbit()
         orbit.updateFromVoice(voiceWithCompressor())
 
-        orbit.compressor shouldNotBe null
+        orbit.compressor.compressor shouldNotBe null
     }
 
     "compressor parameters are set correctly on first voice" {
@@ -56,7 +56,7 @@ class OrbitCompressorSpec : StringSpec({
             )
         )
 
-        val c = orbit.compressor!!
+        val c = orbit.compressor.compressor!!
         c.thresholdDb shouldBe -15.0
         c.ratio shouldBe 3.0
         c.kneeDb shouldBe 4.0
@@ -68,23 +68,23 @@ class OrbitCompressorSpec : StringSpec({
         val orbit = createOrbit()
         orbit.updateFromVoice(VoiceTestHelpers.createSynthVoice())
 
-        orbit.compressor shouldBe null
+        orbit.compressor.compressor shouldBe null
     }
 
     "compressor instance is reused on subsequent voices (not recreated)" {
         val orbit = createOrbit()
         orbit.updateFromVoice(voiceWithCompressor())
-        val firstInstance = orbit.compressor
+        val firstInstance = orbit.compressor.compressor
 
         orbit.updateFromVoice(voiceWithCompressor())
 
-        orbit.compressor shouldBe firstInstance  // same reference, not a new object
+        orbit.compressor.compressor shouldBe firstInstance  // same reference, not a new object
     }
 
     "compressor parameters are updated without recreating the instance" {
         val orbit = createOrbit()
         orbit.updateFromVoice(voiceWithCompressor(thresholdDb = -20.0, ratio = 4.0))
-        val firstInstance = orbit.compressor!!
+        val firstInstance = orbit.compressor.compressor!!
 
         orbit.updateFromVoice(
             voiceWithCompressor(
@@ -96,7 +96,7 @@ class OrbitCompressorSpec : StringSpec({
             )
         )
 
-        orbit.compressor shouldBe firstInstance   // same instance
+        orbit.compressor.compressor shouldBe firstInstance   // same instance
         firstInstance.thresholdDb shouldBe -10.0  // parameters updated
         firstInstance.ratio shouldBe 8.0
         firstInstance.kneeDb shouldBe 2.0
@@ -115,7 +115,7 @@ class OrbitCompressorSpec : StringSpec({
                 releaseSeconds = 0.1
             )
         )
-        val compressor = orbit.compressor!!
+        val compressor = orbit.compressor.compressor!!
 
         // Warm up the envelope follower with many blocks of loud signal (~-6 dB, well above threshold)
         repeat(50) {
@@ -144,7 +144,7 @@ class OrbitCompressorSpec : StringSpec({
         // Process immediately after — should be at roughly the same compression level
         val afterLeft = FloatArray(blockFrames) { 0.5f }
         val afterRight = FloatArray(blockFrames) { 0.5f }
-        orbit.compressor!!.process(afterLeft, afterRight, blockFrames)
+        orbit.compressor.compressor!!.process(afterLeft, afterRight, blockFrames)
         val afterLevel = afterLeft.map { abs(it) }.average()
 
         afterLevel shouldBe (steadyLevel plusOrMinus 0.02)

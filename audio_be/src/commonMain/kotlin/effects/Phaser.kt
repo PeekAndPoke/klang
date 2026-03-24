@@ -13,7 +13,10 @@ class Phaser(sampleRate: Int) {
     var depth: Double = 0.0      // 0.0 to 1.0
     var centerFreq: Double = 1000.0 // Hz
     var sweepRange: Double = 1000.0 // Hz (depth of frequency sweep)
-    var feedback: Double = 0.0   // 0.0 to <1.0
+    var feedback: Double = 0.0   // 0.0 to 0.95 (clamped to prevent self-oscillation)
+        set(value) {
+            field = value.coerceIn(0.0, 0.95)
+        }
 
     // State
     private var lfoPhase = 0.0

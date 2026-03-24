@@ -35,39 +35,22 @@ class Orbits(
      * Processes all orbits and mixes the results into the given buffer.
      *
      * Processing order:
-     * 1. Process all orbit effects (delay, reverb, phaser)
-     * 2. Apply ducking (requires all orbits processed first)
-     * 3. Mix all orbits to master output
+     * 1. Process all orbit bus pipelines (Delay → Reverb → Phaser → Compressor)
+     * 2. Apply ducking (cross-orbit sidechain — requires all orbits processed first)
+     * 3. Mix all active orbits to master output
+     * 4. Round-robin cleanup check for silent orbits
      */
     fun processAndMix(masterMix: StereoBuffer) {
-        // Step 1: Process effects on all orbits
+        // Step 1: Process bus pipeline on all orbits
         for (orbit in id2orbit.values) {
             orbit.processEffects()
         }
 
         // Step 2: Apply ducking (cross-orbit sidechain)
         for (orbit in id2orbit.values) {
-            val ducking = orbit.ducking
-            val duckOrbitId = orbit.duckOrbitId
-
-            if (ducking != null && duckOrbitId != null) {
-                // Get sidechain source orbit
-                val sidechainOrbit = id2orbit[duckOrbitId]
-
-                if (sidechainOrbit != null) {
-                    // Apply ducking using sidechain orbit's mix as trigger
-                    ducking.process(
-                        input = orbit.mixBuffer.left,
-                        sidechain = sidechainOrbit.mixBuffer.left,
-                        blockSize = blockFrames
-                    )
-                    ducking.process(
-                        input = orbit.mixBuffer.right,
-                        sidechain = sidechainOrbit.mixBuffer.right,
-                        blockSize = blockFrames
-                    )
-                }
-            }
+            val duckOrbitId = orbit.ducking.duckOrbitId ?: continue
+            val sidechainOrbit = id2orbit[duckOrbitId] ?: continue
+            orbit.processDucking(sidechainOrbit.mixBuffer)
         }
 
         // Step 3: Mix all orbits to output
@@ -93,14 +76,19 @@ class Orbits(
             }
         }
 
-        // Step 4: Cleanup stale orbits (round-robin approach)
-        // We pick one orbit per block to check for silence
-        val orbitKeys = id2orbit.keys.toList()
-        if (orbitKeys.isNotEmpty()) {
-            val keyIndex = cleanupIndex % orbitKeys.size
-            val orbitId = orbitKeys[keyIndex]
-            id2orbit[orbitId]?.tryDeactivate()
-
+        // Step 4: Cleanup stale orbits (round-robin, no allocation)
+        if (id2orbit.isNotEmpty()) {
+            val size = id2orbit.size
+            val keyIndex = cleanupIndex % size
+            // Iterate to the keyIndex-th entry without allocating a list
+            var idx = 0
+            for ((orbitId, orbit) in id2orbit) {
+                if (idx == keyIndex) {
+                    orbit.tryDeactivate()
+                    break
+                }
+                idx++
+            }
             cleanupIndex = (cleanupIndex + 1) % maxOrbits
         }
     }
@@ -116,7 +104,12 @@ class Orbits(
         val safeId = id % maxOrbits
 
         return id2orbit.getOrPut(safeId) {
-            Orbit(id = id, blockFrames = blockFrames, sampleRate = sampleRate, silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck)
+            Orbit(
+                id = safeId,
+                blockFrames = blockFrames,
+                sampleRate = sampleRate,
+                silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck
+            )
         }.also {
             it.updateFromVoice(voice)
         }

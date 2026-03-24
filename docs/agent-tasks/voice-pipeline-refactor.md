@@ -1,164 +1,129 @@
-# Refactor VoiceImpl into Pitch → Excite → Filter Pipeline
+# Signal Pipeline Refactoring
 
 ## Context
 
-VoiceImpl currently owns the logic for pitch modulation and FM synthesis inline in `render()`.
-The Filter stage and Excite stage have been extracted into composable `BlockRenderer` pipelines.
+The audio engine processes signals through two pipeline levels:
 
-Goal: Make VoiceImpl a dumb pipeline runner that chains three composable stages:
+- **Strip** (per-voice): Pitch → Excite → Filter → Send
+- **Bus** (per-orbit): Delay → Reverb → Phaser → Compressor → Ducking → Master Limiter
 
-- **Pitch** — frequency modulation (vibrato, glide, pitch envelope, FM)
-- **Excite** — sound generation (oscillator, sample, noise, physical model) — already done as `Exciter`
-- **Filter** — signal sculpting (pre-filters, main filter, amplitude envelope, post-filters, tremolo, phaser)
+Both pipelines use composable functional interfaces (`BlockRenderer` for strip, `BusEffect` for bus)
+with shared context objects (`BlockContext`, `BusContext`).
 
-All three share a common `BlockRenderer` interface so stages can be freely composed and reordered.
-
-## Progress
-
-| Phase                                  | Status                       | Description                             |
-|----------------------------------------|------------------------------|-----------------------------------------|
-| Phase 1: BlockRenderer + BlockContext  | **DONE**                     | Common interface and shared context     |
-| Phase 2: Extract Filter stage          | **DONE**                     | 3 renderers + shared pipeline builder   |
-| Phase 3: Extract Pitch stage           | **DONE**                     | 4 renderers + shared pipeline builder   |
-| Phase 4: Wrap Excite as BlockRenderer  | **DONE**                     | ExciteRenderer adapter for Exciter      |
-| Phase 5: Clean up VoiceImpl + Voice.kt | **DONE**                     | VoiceImpl is ~85 lines, single pipeline |
-| Phase 6: Rename Exciter → Exciter      | TODO (deferred, separate PR) | Mechanical rename                       |
-
-## What's Been Implemented
-
-### Common Interface
+## Full Signal Flow
 
 ```
-voices/BlockRenderer.kt    — fun interface BlockRenderer { fun render(ctx: BlockContext) }
-voices/BlockContext.kt     — shared context: buffers, timing, signal gen, routing
+[Strip: Pitch → Excite → Filter → Send] → [Bus: Delay → Reverb → Phaser → Compressor] → Ducking → [Master: Limiter]
 ```
 
-### Shared Utilities
+## Status: COMPLETE
+
+| Phase                                 | Status   | Description                                    |
+|---------------------------------------|----------|------------------------------------------------|
+| Phase 1: BlockRenderer + BlockContext | **DONE** | Common strip interface and shared context      |
+| Phase 2: Extract Filter stage         | **DONE** | 3 renderers + shared pipeline builder          |
+| Phase 3: Extract Pitch stage          | **DONE** | 4 renderers + shared pipeline builder          |
+| Phase 4: Wrap Excite as BlockRenderer | **DONE** | ExciteRenderer adapter for Exciter             |
+| Phase 5: Clean up VoiceImpl           | **DONE** | VoiceImpl ~80 lines, single pipeline runner    |
+| Phase 6: Rename SignalGen → Exciter   | **DONE** | Mechanical rename across 32+ files             |
+| Phase 7: Strip cleanup                | **DONE** | SendRenderer, remove gateEndFrame from Voice   |
+| Phase 8: Bus pipeline                 | **DONE** | BusEffect interface + 5 effect implementations |
+
+## Strip Pipeline (per-voice)
+
+### Interface
 
 ```
-voices/EnvelopeCalc.kt  — calculateControlRateEnvelope() + envelopeLevelAtPosition()
-                          shared by FmRenderer and FilterModRenderer
+voices/strip/BlockRenderer.kt  — fun interface BlockRenderer { fun render(ctx: BlockContext) }
+voices/strip/BlockContext.kt   — shared context: buffers, timing, exciter, renderContext
+voices/strip/EnvelopeCalc.kt   — shared control-rate envelope calculation
 ```
 
-### Pitch Pipeline (Phase 3)
+### Stages
 
 ```
-voices/pitch/PitchPipelineBuilder.kt   — buildPitchPipeline() top-level function
-voices/pitch/VibratoRenderer.kt        — LFO pitch modulation
-voices/pitch/AccelerateRenderer.kt     — pitch glide over voice lifetime
-voices/pitch/PitchEnvelopeRenderer.kt  — attack/decay pitch transient
-voices/pitch/FmRenderer.kt             — FM synthesis with envelope-controlled depth
+voices/strip/pitch/   — VibratoRenderer, AccelerateRenderer, PitchEnvelopeRenderer, FmRenderer
+                        PitchPipelineBuilder.kt
+voices/strip/excite/  — ExciteRenderer (wraps Exciter)
+voices/strip/filter/  — FilterModRenderer, AudioFilterRenderer, EnvelopeRenderer
+                        FilterPipelineBuilder.kt
+voices/strip/send/    — SendRenderer (pan, gain, orbit routing)
 ```
 
-### Excite (Phase 4)
-
-```
-voices/excite/ExciteRenderer.kt  — wraps Exciter as BlockRenderer
-```
-
-### Filter Pipeline (Phase 2)
-
-```
-voices/filter/FilterPipelineBuilder.kt  — buildFilterPipeline() top-level function
-voices/filter/FilterModRenderer.kt      — filter cutoff envelope modulation (control rate)
-voices/filter/AudioFilterRenderer.kt    — wraps AudioFilter list(s) as BlockRenderer
-voices/filter/EnvelopeRenderer.kt       — ADSR VCA (amplitude envelope)
-```
-
-Pipeline order built by `buildFilterPipeline()`:
-
-1. **FilterModRenderer** — updates filter cutoffs from envelopes (control rate, once per block)
-2. **AudioFilterRenderer** (pre-filters) — bit crush, sample rate reduction (only if active)
-3. **AudioFilterRenderer** (main filter) — LP/HP/BP/Notch (baked/combined)
-4. **EnvelopeRenderer** — ADSR VCA
-5. **AudioFilterRenderer** (post-filters) — distortion (only if active)
-6. **AudioFilterRenderer** (tremolo) — amplitude LFO (only if active)
-7. **AudioFilterRenderer** (phaser) — allpass sweep (only if active)
-
-### Current VoiceImpl.render() flow
+### VoiceImpl (~80 lines)
 
 ```kotlin
-// Update per-block state
-blockCtx.audioBuffer = ctx.voiceBuffer
-blockCtx.offset = offset
-blockCtx.length = length
-blockCtx.blockStart = ctx.blockStart
-blockCtx.freqModBufferWritten = false
-
-// Pitch → Excite → Filter (single composable pipeline)
 for (renderer in pipeline) {
-  renderer.render(blockCtx)
+    renderer.render(blockCtx)
 }
-
-// Route
-mixToOrbit(ctx, offset, length)
 ```
 
-## Completed
+SendRenderer is appended automatically in VoiceImpl's init block.
 
-### Strip Pipeline — DONE
+## Bus Pipeline (per-orbit)
 
-All per-voice processing is composable `BlockRenderer` stages:
+### Interface
 
 ```
-Pitch (vibrato, accelerate, pitchEnv, FM) → Excite (oscillator/sample) → Filter (mod, pre, main, envelope, post, tremolo, phaser) → Send (pan, gain, orbit routing)
+orbits/bus/BusEffect.kt  — fun interface BusEffect { fun process(ctx: BusContext) }
+orbits/bus/BusContext.kt  — shared context: mixBuffer, delaySendBuffer, reverbSendBuffer, sidechainBuffer
 ```
 
-### Rename & Package Reorg — DONE
+### Effects
 
-- `SignalGen` → `Exciter` across all modules (32+ files)
-- Package: `audio_be.signalgen` → `audio_be.exciter`
-- Strip files organized under `voices/strip/`, `voices/strip/pitch/`, `voices/strip/excite/`, `voices/strip/filter/`,
-  `voices/strip/send/`
+```
+orbits/bus/BusDelayEffect.kt      — send/return, short-circuits when < 10ms
+orbits/bus/BusReverbEffect.kt     — send/return, short-circuits when roomSize < 0.01
+orbits/bus/BusPhaserEffect.kt     — insert on mixBuffer, short-circuits when depth < 0.01
+orbits/bus/BusCompressorEffect.kt — insert, nullable compressor instance
+orbits/bus/BusDuckingEffect.kt    — sidechain, resolved by Orbits in separate cross-orbit pass
+```
 
-### Cleanup — DONE
+### Orbit
 
-- Removed `gateEndFrame` from Voice interface (now private in VoiceImpl)
-- Updated `Voice.render()` KDoc to reflect composable pipeline
-- Extracted `mixToOrbit()` into `SendRenderer` BlockRenderer (`voices/strip/send/SendRenderer.kt`)
-- Deleted `voices/common.kt` (was only mixToOrbit)
-- Added `renderContext` field to `BlockContext` for SendRenderer orbit routing
+Holds `List<BusEffect>` pipeline (Delay → Reverb → Phaser → Compressor) + `BusContext`.
+Ducking is separate because it needs cross-orbit access.
 
 ## Remaining Work
 
-### Bus Pipeline (NOT STARTED)
+### Bus-level configuration (NOT STARTED)
 
-The **Strip** (per-voice) pipeline is complete. The **Bus** (per-orbit) pipeline is the next major refactor:
-
-```
-[Strip: Pitch → Excite → Filter → Send] → [Bus: Delay → Reverb → Phaser → Compressor → Ducking] → [Master: Limiter]
-```
-
-Current state: Orbit processing in `Orbit.kt` / `KlangAudioRenderer.kt` is monolithic.
-Goal: Same `BlockRenderer` pattern — composable bus effect chain.
-
-Note: Voice interface currently carries orbit config (delay.time, reverb.roomSize, phaser.*, compressor.*,
-ducking.*) that should move to Bus-level configuration when the Bus pipeline is refactored.
+Voice interface currently carries orbit config (delay.time, reverb.roomSize, phaser.*, compressor.*,
+ducking.*) that should move to Bus-level configuration. This would decouple voice data from bus
+parameters and allow per-orbit effect settings independent of voice scheduling.
 
 ## Code Review Fixes Applied
 
 ### Review 1 (after Phase 2)
 1. Removed unused `hasFreqMod` field from BlockContext
-2. Extracted `buildFilterPipeline()` to shared utility — eliminates duplication between VoiceScheduler and
-   VoiceTestHelpers
-3. Fixed FilterModRenderer release phase bug — now calculates actual envelope level at gate end instead of assuming
-   sustainLevel
+2. Extracted `buildFilterPipeline()` to shared utility
+3. Fixed FilterModRenderer release phase bug
 
 ### Review 2 (after Phase 4+5)
 
-4. Fixed division-by-zero in AccelerateRenderer when `endFrame == startFrame` — guarded in `buildPitchPipeline()`
-5. Extracted shared envelope calculation to `EnvelopeCalc.kt` (`calculateControlRateEnvelope` +
-   `envelopeLevelAtPosition`)
-   — eliminates 40+ lines of duplication between FmRenderer and FilterModRenderer
-6. Renamed `hasFreqMod` → `freqModBufferWritten` — clearer intent (per-block accumulator flag, not config property)
+4. Fixed division-by-zero in AccelerateRenderer
+5. Extracted shared envelope calculation to `EnvelopeCalc.kt`
+6. Renamed `hasFreqMod` → `freqModBufferWritten`
 7. Documented sequential rendering assumption on BlockContext
-8. Removed `blockContextFactory` lambda — BlockContext is now pre-built by VoiceScheduler at voice construction time
+8. Removed `blockContextFactory` lambda
+
+### Review 3 (after Bus pipeline)
+
+9. Fixed Ducking L/R asymmetry — added `processStereo()` with linked stereo detection (max of L/R),
+   `BusDuckingEffect` now uses it. Both channels get identical gain reduction.
+10. Removed `require()` from Ducking hot path (was throwing exceptions on audio thread)
+11. Ducking instance reuse — mirrors compressor pattern, preserves envelope state across voice updates
+12. Ducking cleared when voice has no ducking config (prevents stale sidechain)
+13. Phaser feedback clamped to 0.0–0.95 to prevent self-oscillation
+14. Phaser params always updated (not just when depth > 0) to avoid stale state
+15. Orbit ID mismatch fixed — `getOrInit` now passes `safeId` to Orbit constructor
+16. Per-block allocation removed — `Orbits.processAndMix` cleanup no longer calls `keys.toList()`
+17. Reverb anti-denormal constant (1e-18) added to comb filter IIR state
 
 ## Verification
 
-After each phase:
 ```bash
-./gradlew :audio_be:jvmTest           # all voice/filter/exciter tests must pass
+./gradlew :audio_be:jvmTest           # all tests pass
 ./gradlew :audio_be:compileKotlinJs    # JS compilation check
 ```
 
