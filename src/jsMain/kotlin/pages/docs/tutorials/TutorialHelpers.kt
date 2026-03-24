@@ -1,12 +1,15 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
 import de.peekandpoke.ultra.html.css
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
+import de.peekandpoke.ultra.semanticui.semanticIcon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
 import kotlinx.css.Color
 import kotlinx.css.backgroundColor
 import kotlinx.css.color
+import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 
 fun difficultyColor(laf: KlangLookAndFeel, difficulty: TutorialDifficulty): String = when (difficulty) {
@@ -22,18 +25,38 @@ fun scopeColor(laf: KlangLookAndFeel, scope: TutorialScope): String = when (scop
     TutorialScope.DeepDive -> laf.warning
 }
 
+fun TutorialDifficulty.iconFn(): SemanticIconFn = when (this) {
+    TutorialDifficulty.Beginner -> semanticIcon { seedling }
+    TutorialDifficulty.Intermediate -> semanticIcon { signal }
+    TutorialDifficulty.Advanced -> semanticIcon { fire }
+    TutorialDifficulty.Pro -> semanticIcon { star }
+}
+
+fun TutorialDifficulty.renderIcon(tag: FlowContent) = tag.icon.(iconFn())().render()
+
+fun TutorialScope.iconFn(): SemanticIconFn = when (this) {
+    TutorialScope.Quick -> semanticIcon { rocket }
+    TutorialScope.Standard -> semanticIcon { hourglass }
+    TutorialScope.DeepDive -> semanticIcon { hourglass_half }
+}
+
+fun TutorialScope.renderIcon(tag: FlowContent) = tag.icon.(iconFn())().render()
+
+fun TutorialsListPage.CompletionFilter.iconFn(): SemanticIconFn = when (this) {
+    TutorialsListPage.CompletionFilter.All -> semanticIcon { circle }
+    TutorialsListPage.CompletionFilter.Completed -> semanticIcon { check_circle }
+    TutorialsListPage.CompletionFilter.Open -> semanticIcon { circle_outline }
+}
+
+fun TutorialsListPage.CompletionFilter.renderIcon(tag: FlowContent) = tag.icon.(iconFn())().render()
+
 fun Tag.difficultyLabel(laf: KlangLookAndFeel, difficulty: TutorialDifficulty) {
-    ui.mini.label {
+    ui.mini.icon.label {
         css {
             backgroundColor = Color("${difficultyColor(laf, difficulty)} !important")
             color = Color("#222 !important")
         }
-        when (difficulty) {
-            TutorialDifficulty.Beginner -> icon.seedling()
-            TutorialDifficulty.Intermediate -> icon.signal()
-            TutorialDifficulty.Advanced -> icon.fire()
-            TutorialDifficulty.Pro -> icon.star()
-        }
+        difficulty.renderIcon(this)
         +difficulty.label
     }
 }
@@ -44,11 +67,7 @@ fun Tag.scopeLabel(laf: KlangLookAndFeel, scope: TutorialScope) {
             backgroundColor = Color("${scopeColor(laf, scope)} !important")
             color = Color("#222 !important")
         }
-        when (scope) {
-            TutorialScope.Quick -> icon.bolt()
-            TutorialScope.Standard -> icon.clock()
-            TutorialScope.DeepDive -> icon.hourglass_half()
-        }
+        scope.renderIcon(this)
         +scope.label
     }
 }

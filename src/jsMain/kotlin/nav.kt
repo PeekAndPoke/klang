@@ -2,6 +2,7 @@ package io.peekandpoke.klang
 
 import de.peekandpoke.kraft.routing.RootRouterBuilder
 import de.peekandpoke.kraft.routing.Route1
+import de.peekandpoke.kraft.routing.Router
 import de.peekandpoke.kraft.routing.Static
 import io.peekandpoke.klang.layouts.FullscreenLayout
 import io.peekandpoke.klang.layouts.MenuLayout
@@ -31,7 +32,24 @@ object Nav {
 
     const val tutorialsBase = "$manualsBase/tutorials"
     val tutorials = Static(tutorialsBase)
-    fun tutorialsWithDifficulty(difficulty: String) = tutorials().withQueryParams("difficulty" to difficulty)
+    fun tutorialsWithUpdatedParams(router: Router, vararg params: Pair<String, String>) =
+        tutorials().withQueryParams(
+            router.current().takeIf { it.route == tutorials }?.matchedRoute?.queryParams ?: emptyMap()
+        ).plusQueryParams(params.toMap())
+
+//    fun tutorialsWithDifficulty(difficulty: TutorialDifficulty, router: Router) =
+//        tutorials()
+//            .withQueryParams(router.current().matchedRoute.queryParams)
+//            .withQueryParams(TutorialsListPage.PARAM_DIFFICULTY to difficulty.name)
+//
+//    fun tutorialsWithScope(scope: TutorialScope, router: Router) = tutorials()
+//            .withQueryParams(router.current().matchedRoute.queryParams)
+//            .withQueryParams(TutorialsListPage.PARAM_SCOPE to scope.name)
+//
+//    fun tutorialsWithCompletion(completion: TutorialsListPage.CompletionFilter, router: Router) = tutorials()
+//            .withQueryParams(router.current().matchedRoute.queryParams)
+//            .withQueryParams(TutorialsListPage.PARAM_COMPLETION to completion.name)
+
     val tutorial = Route1("$tutorialsBase/{slug}")
 
     val credits = Static("/credits")

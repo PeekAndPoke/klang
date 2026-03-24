@@ -192,7 +192,6 @@ stack(
             title = "Drunken Synthlor",
             cps = 0.65,
             code = """
-
 import * from "stdlib"
 import * from "sprudel"
 

@@ -30,22 +30,47 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val laf by subscribingTo(KlangTheme)
 
+    enum class CompletionFilter { All, Completed, Open }
+
     companion object {
         const val PARAM_DIFFICULTY = "difficulty"
+        const val PARAM_SCOPE = "scope"
+        const val PARAM_COMPLETION = "completion"
+
+        fun difficultyFromParam(param: String?): TutorialDifficulty? =
+            TutorialDifficulty.entries.find { it.name.equals(param, ignoreCase = true) }
+
+        fun scopeFromParam(param: String?): TutorialScope? =
+            TutorialScope.entries.find { it.name.equals(param, ignoreCase = true) }
+
+        fun completionFromParam(param: String?): CompletionFilter =
+            CompletionFilter.entries.find { it.name.equals(param, ignoreCase = true) } ?: CompletionFilter.All
     }
 
-    private enum class CompletionFilter { All, Completed, Open }
-
     private var searchText by value("")
+
     private var difficultyParam: String by urlParam(name = PARAM_DIFFICULTY, default = "")
     private var selectedDifficulty: TutorialDifficulty?
-        get() = TutorialDifficulty.entries.find { it.name.equals(difficultyParam, ignoreCase = true) }
+        get() = difficultyFromParam(difficultyParam)
         set(value) {
             difficultyParam = value?.name ?: ""
         }
-    private var selectedScope: TutorialScope? by value(null)
+
+    private var scopeParam: String by urlParam(name = PARAM_SCOPE, default = "")
+    private var selectedScope: TutorialScope?
+        get() = scopeFromParam(scopeParam)
+        set(value) {
+            scopeParam = value?.name ?: ""
+        }
+
+    private var completionParam: String by urlParam(name = PARAM_COMPLETION, default = "")
+    private var completionFilter: CompletionFilter
+        get() = completionFromParam(completionParam)
+        set(value) {
+            completionParam = if (value == CompletionFilter.All) "" else value.name
+        }
+
     private var selectedTag: String? by value(null)
-    private var completionFilter: CompletionFilter by value(CompletionFilter.All)
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -93,84 +118,68 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                 }
 
-                // Difficulty filter
-                div {
-                    css {
-                        display = Display.flex
-                        gap = 0.5.rem
-                        flexWrap = FlexWrap.wrap
-                        marginTop = 1.rem
-                        marginBottom = 0.5.rem
-                    }
+                ui.divider()
 
-                    ui.mini.givenNot(selectedDifficulty == null) { basic }
-                        .given(selectedDifficulty == null) { with(laf.styles.goldButton()) }.button {
-                        onClick { selectedDifficulty = null }
-                        +"All Levels"
-                    }
-
-                    TutorialDifficulty.entries.forEach { diff ->
-                        val isSelected = selectedDifficulty == diff
-                        ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
-                            onClick { selectedDifficulty = if (isSelected) null else diff }
-                            +diff.label
-                        }
-                    }
-                }
-
-                // Scope filter
-                div {
-                    css {
-                        display = Display.flex
-                        gap = 0.5.rem
-                        flexWrap = FlexWrap.wrap
-                        marginBottom = 0.5.rem
-                    }
-
-                    ui.mini.givenNot(selectedScope == null) { basic }.given(selectedScope == null) { with(laf.styles.goldButton()) }
-                        .button {
-                            onClick { selectedScope = null }
-                            +"All Scopes"
-                        }
-
-                    TutorialScope.entries.forEach { scope ->
-                        val isSelected = selectedScope == scope
-                        ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
-                            onClick { selectedScope = if (isSelected) null else scope }
-                            +scope.label
-                        }
-                    }
-                }
-
-                // Completion filter
-                div {
-                    css {
-                        display = Display.flex
-                        gap = 0.5.rem
-                        flexWrap = FlexWrap.wrap
-                        marginBottom = 0.5.rem
-                    }
-
-                    CompletionFilter.entries.forEach { filter ->
-                        val isSelected = completionFilter == filter
-                        ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
-                            onClick { completionFilter = filter }
-                            when (filter) {
-                                CompletionFilter.All -> +"All"
-                                CompletionFilter.Completed -> {
-                                    icon.check(); +"Completed"
+                ui.stackable.grid {
+                    ui.three.column.row {
+                        // Difficulty filter
+                        noui.column {
+                            ui.mini.givenNot(selectedDifficulty == null) { basic }
+                                .given(selectedDifficulty == null) { with(laf.styles.goldButton()) }.button {
+                                    onClick { selectedDifficulty = null }
+                                    +"All Levels"
                                 }
 
-                                CompletionFilter.Open -> {
-                                    icon.circle_outline(); +"Open"
+                            TutorialDifficulty.entries.forEach { diff ->
+                                val isSelected = selectedDifficulty == diff
+                                ui.mini.givenNot(isSelected) { basic }
+                                    .given(isSelected) { with(laf.styles.goldButton()) }.button {
+                                        onClick { selectedDifficulty = if (isSelected) null else diff }
+                                        diff.renderIcon(this)
+                                        +diff.label
+                                    }
+                            }
+                        }
+
+                        // Scope filter
+                        noui.column {
+                            ui.mini.givenNot(selectedScope == null) { basic }
+                                .given(selectedScope == null) { with(laf.styles.goldButton()) }
+                                .button {
+                                    onClick { selectedScope = null }
+                                    +"All Scopes"
+                                }
+
+                            TutorialScope.entries.forEach { scope ->
+                                val isSelected = selectedScope == scope
+                                ui.mini.givenNot(isSelected) { basic }
+                                    .given(isSelected) { with(laf.styles.goldButton()) }.button {
+                                        onClick { selectedScope = if (isSelected) null else scope }
+                                        scope.renderIcon(this)
+                                        +scope.label
+                                    }
+                            }
+                        }
+
+                        // Completion Filter
+                        noui.column {
+                            CompletionFilter.entries.forEach { filter ->
+                                val isSelected = completionFilter == filter
+                                ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
+                                    onClick { completionFilter = filter }
+                                    filter.renderIcon(this)
+                                    +filter.name
                                 }
                             }
                         }
                     }
                 }
 
+                ui.divider()
+
                 // Tag filter
                 val tags = allTags()
+
                 if (tags.isNotEmpty()) {
                     div {
                         css {

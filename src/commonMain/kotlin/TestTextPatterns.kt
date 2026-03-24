@@ -136,7 +136,7 @@ stack(
     .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.275)
     .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
-    .lpf(6 * 440).hpf(180).notchf(notch).notchq(0.75).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
+    .lpf(5 * 440).hpf(180).notchf(notch).notchq(0.75).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
     .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).analog(1) // . solo()
     .filterWhen(x => x < (wait * 4 + keep))
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
@@ -194,7 +194,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").pan(0.4).hpf(120).lpf(1800).warmth(0.5)
+  ).orbit(3).fast(1).scale("C2:chromatic").pan(0.4).hpf(120).lpf(1000).warmth(0.5)
     .s("supersaw").unison(6).detune(0.08).gain("0.6 0.525 0.5 0.525")
     .adsr("0.005:0.3:0.3:0.01 ").clip(1.01).distort(2).postgain(0.17)
     .superimpose(x => x.orbit(4).pan(0.6).bandf("800 975 [1175|1200|1225|1300]*32".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.14))
