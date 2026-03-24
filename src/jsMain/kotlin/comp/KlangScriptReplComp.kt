@@ -10,6 +10,7 @@ import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.script.KlangScriptEngine
+import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.runtime.NullValue
 import io.peekandpoke.klang.script.runtime.RuntimeValue
 import io.peekandpoke.klang.script.stdlib.KlangStdLib
@@ -25,13 +26,17 @@ import kotlinx.html.span
 @Suppress("FunctionName")
 fun Tag.KlangScriptReplComp(
     initialCode: String,
-) = comp(KlangScriptReplComp.Props(initialCode)) { KlangScriptReplComp(it) }
+    autoImportLibraries: List<KlangScriptLibrary> = listOf(stdlibLib),
+) = comp(KlangScriptReplComp.Props(initialCode, autoImportLibraries)) { KlangScriptReplComp(it) }
 
 class KlangScriptReplComp(ctx: Ctx<Props>) : Component<KlangScriptReplComp.Props>(ctx) {
 
     //  PROPS  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    data class Props(val initialCode: String)
+    data class Props(
+        val initialCode: String,
+        val autoImportLibraries: List<KlangScriptLibrary> = listOf(stdlibLib),
+    )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -54,7 +59,20 @@ class KlangScriptReplComp(ctx: Ctx<Props>) : Component<KlangScriptReplComp.Props
 
         val engine = KlangScriptEngine.builder()
         engine.registerLibrary(stdlib)
+
+        // Register additional auto-imported libraries (beyond stdlib which is always registered)
+        for (lib in props.autoImportLibraries) {
+            if (lib.name != "stdlib") {
+                engine.registerLibrary(lib)
+            }
+        }
+
         val built = engine.build()
+
+        // Pre-execute import statements for auto-imported libraries
+        for (lib in props.autoImportLibraries) {
+            built.execute("""import * from "${lib.name}"""")
+        }
 
         // Clear previous editor errors
         editorRef { it.setErrors(emptyList()) }
@@ -128,7 +146,8 @@ class KlangScriptReplComp(ctx: Ctx<Props>) : Component<KlangScriptReplComp.Props
                     code = newCode
                     editorRef { it.setErrors(emptyList()) }
                 },
-                availableLibraries = listOf(stdlibLib),
+                availableLibraries = props.autoImportLibraries,
+                autoImportedLibraries = props.autoImportLibraries,
             ).track(editorRef)
 
             // Output panel (only shown when there is output or a result)

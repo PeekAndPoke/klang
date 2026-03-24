@@ -15,10 +15,13 @@ import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.comp.InViewport
 import io.peekandpoke.klang.comp.KlangScriptReplComp
 import io.peekandpoke.klang.comp.PlayableCodeExample
+import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.generated.generatedStdlibDocs
+import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.*
 import io.peekandpoke.klang.sprudel.lang.docs.registerSprudelDocs
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
@@ -32,6 +35,15 @@ import kotlinx.html.*
 private val libraryDocsProviders: Map<String, (KlangDocsRegistry) -> Unit> = mapOf(
     "sprudel" to { registry -> registerSprudelDocs(registry) },
     "stdlib" to { registry -> registry.registerAll(generatedStdlibDocs) },
+)
+
+/**
+ * Maps library slug to the KlangScriptLibrary instances that should be auto-imported
+ * when running code samples for that library.
+ */
+private val libraryAutoImports: Map<String, List<KlangScriptLibrary>> = mapOf(
+    "sprudel" to listOf(stdlibLib, sprudelLib),
+    "stdlib" to listOf(stdlibLib),
 )
 
 @Suppress("FunctionName")
@@ -314,12 +326,16 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
                     }
                     +"Examples"
                 }
+                val autoImports = libraryAutoImports[props.library] ?: listOf(stdlibLib)
                 decl.samples.forEach { sample ->
                     key = sample.code
                     InViewport {
                         when (sample.type) {
                             KlangCodeSampleType.PLAYABLE -> PlayableCodeExample(code = sample.code)
-                            KlangCodeSampleType.EXECUTABLE -> KlangScriptReplComp(initialCode = sample.code)
+                            KlangCodeSampleType.EXECUTABLE -> KlangScriptReplComp(
+                                initialCode = sample.code,
+                                autoImportLibraries = autoImports,
+                            )
                         }
                     }
                 }
