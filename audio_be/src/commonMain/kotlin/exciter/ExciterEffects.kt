@@ -4,11 +4,6 @@ import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.TWO_PI
 import kotlin.math.*
 
-/** Threshold below which filter state is flushed to zero to avoid denormal slowdowns. */
-private const val DENORMAL_THRESHOLD = 1e-15
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun flushDenormal(v: Double): Double = if (abs(v) < DENORMAL_THRESHOLD) 0.0 else v
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Distortion

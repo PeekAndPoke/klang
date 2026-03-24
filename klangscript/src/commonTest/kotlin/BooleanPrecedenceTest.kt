@@ -36,7 +36,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = false
         val result = engine.execute("false || true && false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "AND has higher precedence than OR: true || false && false" {
@@ -46,7 +46,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("true || false && false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "AND has higher precedence than OR: false && true || true" {
@@ -56,7 +56,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("false && true || true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "AND has higher precedence than OR: true && false || false" {
@@ -66,7 +66,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = false
         val result = engine.execute("true && false || false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "multiple AND/OR: a || b && c || d" {
@@ -77,7 +77,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("false || false && true || true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     // ============================================================
@@ -91,7 +91,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("5 > 3 && 2 < 4")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "comparison has higher precedence than AND: 5 > 3 && 4 < 2" {
@@ -101,7 +101,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = false
         val result = engine.execute("5 > 3 && 4 < 2")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "comparison has higher precedence than OR: 5 > 10 || 2 < 4" {
@@ -111,7 +111,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("5 > 10 || 2 < 4")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "equality has higher precedence than AND: 5 == 5 && 3 == 3" {
@@ -121,7 +121,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("5 == 5 && 3 == 3")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "inequality has higher precedence than OR: 5 != 3 || 2 != 2" {
@@ -131,7 +131,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("5 != 3 || 2 != 2")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     // ============================================================
@@ -146,7 +146,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("1 + 2 > 2 && 5 - 1 < 5")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "complex precedence: 1 + 2 > 2 && 5 - 1 < 5 || false" {
@@ -158,7 +158,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("1 + 2 > 2 && 5 - 1 < 5 || false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "multiplication with comparison and AND: 3 * 2 == 6 && 10 / 2 == 5" {
@@ -169,7 +169,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("3 * 2 == 6 && 10 / 2 == 5")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     // ============================================================
@@ -183,7 +183,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("!false && true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "NOT has higher precedence than OR: !false || false" {
@@ -193,7 +193,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("!false || false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "NOT has higher precedence than AND: !true && false" {
@@ -203,7 +203,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = false
         val result = engine.execute("!true && false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "multiple NOTs with AND: !false && !false" {
@@ -213,7 +213,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("!false && !false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     // ============================================================
@@ -227,7 +227,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = false
         val result = engine.execute("(false || true) && false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "parentheses override precedence: false || (true && false)" {
@@ -237,7 +237,7 @@ class BooleanPrecedenceTest : StringSpec({
         // = false
         val result = engine.execute("false || (true && false)")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "parentheses with comparison: (5 > 3) && (2 < 4)" {
@@ -247,6 +247,6 @@ class BooleanPrecedenceTest : StringSpec({
         // = true
         val result = engine.execute("(5 > 3) && (2 < 4)")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 })

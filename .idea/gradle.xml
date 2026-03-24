@@ -31,6 +31,8 @@
             <option value="$PROJECT_DIR$/klangblocks" />
             <option value="$PROJECT_DIR$/klangjs" />
             <option value="$PROJECT_DIR$/klangscript" />
+            <option value="$PROJECT_DIR$/klangscript-annotations" />
+            <option value="$PROJECT_DIR$/klangscript-ksp" />
             <option value="$PROJECT_DIR$/klangscript-ui" />
             <option value="$PROJECT_DIR$/klangui" />
             <option value="$PROJECT_DIR$/sprudel" />

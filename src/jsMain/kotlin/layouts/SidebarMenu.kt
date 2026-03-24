@@ -246,8 +246,11 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         renderCategory("Motör Manuals")
 
         menuItemsList {
-            menuItem(currentRoute.route == Nav.manualsSprudel, "Sprudel", { wind }) {
-                router.navToUri(Nav.manualsSprudel())
+            menuItem(currentRoute.route == Nav.manualsLibrary, "Sprudel", { wind }) {
+                router.navToUri(Nav.manualsLibrary("sprudel"))
+            }
+            menuItem(currentRoute.route == Nav.manualsLibrary, "Stdlib", { cogs }) {
+                router.navToUri(Nav.manualsLibrary("stdlib"))
             }
             menuItem(currentRoute.route == Nav.manualsKlangScript, "KlangScript", { code }) {
                 router.navToUri(Nav.manualsKlangScript())

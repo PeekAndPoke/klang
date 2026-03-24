@@ -3,10 +3,10 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.builder.registerType
 import io.peekandpoke.klang.script.builder.registerVarargFunction
+import io.peekandpoke.klang.script.generated.registerStdlibGenerated
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.*
 import io.peekandpoke.klang.script.stdlib.KlangStdLib.defaultOutputHandler
-import kotlin.math.*
 
 /**
  * KlangScript Standard Library
@@ -25,27 +25,6 @@ object KlangStdLib {
     /** Default output handler — prints to stdout. */
     val defaultOutputHandler: (List<String>) -> Unit = { args ->
         println(args.joinToString(" "))
-    }
-
-    /** Math object — singleton for holding math operations (like JavaScript's Math). */
-    object MathObject {
-        override fun toString(): String = "[Math object]"
-
-        fun KlangScriptLibrary.Builder.register() {
-            registerObject("Math", MathObject) {
-                registerMethod(name = "sqrt") { x: Double -> sqrt(x) }
-                registerMethod(name = "abs") { x: Double -> abs(x) }
-                registerMethod(name = "floor") { x: Double -> floor(x) }
-                registerMethod(name = "ceil") { x: Double -> ceil(x) }
-                registerMethod(name = "round") { x: Double -> round(x) }
-                registerMethod(name = "sin") { x: Double -> sin(x) }
-                registerMethod(name = "cos") { x: Double -> cos(x) }
-                registerMethod(name = "tan") { x: Double -> tan(x) }
-                registerMethod(name = "min") { a: Double, b: Double -> min(a, b) }
-                registerMethod(name = "max") { a: Double, b: Double -> max(a, b) }
-                registerMethod(name = "pow") { base: Double, exp: Double -> base.pow(exp) }
-            }
-        }
     }
 
     /** Object utility — singleton for holding Object static methods. */
@@ -86,8 +65,8 @@ object KlangStdLib {
                 }
             }
 
-            // Register Math object
-            with(MathObject) { register() }
+            // Register Math object (generated from @KlangScript annotations)
+            registerStdlibGenerated()
 
             // Register Object utility methods
             registerObject("Object", ObjectUtility) {}

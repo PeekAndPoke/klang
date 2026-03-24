@@ -3,8 +3,14 @@ package io.peekandpoke.klang.audio_be.filters.effects
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.tan
+
+private const val DENORMAL_THRESHOLD = 1e-15
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun flushDenormal(v: Double): Double = if (abs(v) < DENORMAL_THRESHOLD) 0.0 else v
 
 /**
  * Phaser effect - creates a sweeping, swooshing sound.
@@ -68,11 +74,11 @@ class PhaserFilter(
                 // All-pass filter: y[n] = alpha * x[n] + z[n-1]
                 //                  z[n] = x[n] - alpha * y[n]
                 val output = alpha * signal + filterState[s]
-                filterState[s] = signal - alpha * output
+                filterState[s] = flushDenormal(signal - alpha * output)
                 signal = output
             }
 
-            lastOutput = signal
+            lastOutput = flushDenormal(signal)
 
             // 5. Mix wet and dry signals
             // Phaser effect comes from mixing the phase-shifted signal with original

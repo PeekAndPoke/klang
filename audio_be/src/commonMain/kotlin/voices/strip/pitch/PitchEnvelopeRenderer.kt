@@ -8,6 +8,8 @@ import kotlin.math.pow
 /**
  * Pitch envelope: attack/decay transient pitch modulation.
  * Creates pitch bends during the voice onset (e.g., drum tuning, synth swoops).
+ *
+ * All per-sample arithmetic uses Int to avoid Long boxing on Kotlin/JS.
  */
 class PitchEnvelopeRenderer(
     private val pitchEnvelope: Voice.PitchEnvelope,
@@ -18,30 +20,33 @@ class PitchEnvelopeRenderer(
         val buf = ctx.freqModBuffer
         val pEnv = pitchEnvelope
 
+        // Compute voice-relative position as Int (once per block)
+        val blockRelStart = ((ctx.blockStart + ctx.offset) - startFrame).toInt()
+
         if (ctx.freqModBufferWritten) {
             for (i in 0 until ctx.length) {
                 val idx = ctx.offset + i
-                buf[idx] *= calculatePitchMod(ctx.blockStart + idx, pEnv)
+                buf[idx] *= calculatePitchMod(blockRelStart + i, pEnv)
             }
         } else {
             for (i in 0 until ctx.length) {
                 val idx = ctx.offset + i
-                buf[idx] = calculatePitchMod(ctx.blockStart + idx, pEnv)
+                buf[idx] = calculatePitchMod(blockRelStart + i, pEnv)
             }
             ctx.freqModBufferWritten = true
         }
     }
 
-    private fun calculatePitchMod(absFrame: Long, pEnv: Voice.PitchEnvelope): Double {
-        val relPos = (absFrame - startFrame).toDouble()
+    private fun calculatePitchMod(relPos: Int, pEnv: Voice.PitchEnvelope): Double {
+        val relPosD = relPos.toDouble()
 
         var envLevel = pEnv.anchor
 
-        if (relPos < pEnv.attackFrames) {
-            val progress = relPos / pEnv.attackFrames
+        if (relPosD < pEnv.attackFrames) {
+            val progress = relPosD / pEnv.attackFrames
             envLevel = pEnv.anchor + (1.0 - pEnv.anchor) * progress
-        } else if (relPos < (pEnv.attackFrames + pEnv.decayFrames)) {
-            val decayProgress = (relPos - pEnv.attackFrames) / pEnv.decayFrames
+        } else if (relPosD < (pEnv.attackFrames + pEnv.decayFrames)) {
+            val decayProgress = (relPosD - pEnv.attackFrames) / pEnv.decayFrames
             envLevel = 1.0 - (1.0 - pEnv.anchor) * decayProgress
         }
 

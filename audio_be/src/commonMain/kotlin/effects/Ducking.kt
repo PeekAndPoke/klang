@@ -16,7 +16,9 @@ import kotlin.math.min
  * This preserves the stereo image during ducking.
  *
  * @param sampleRate Audio sample rate in Hz
- * @param attackSeconds Time to return to normal volume after trigger stops (in seconds)
+ * @param attackSeconds Recovery/release time — how fast the volume returns to normal after
+ *   the sidechain trigger stops (in seconds). Note: the duck-down is instantaneous;
+ *   this parameter only controls the return smoothing. Named "attack" for strudel compatibility.
  * @param depth Amount of ducking (0.0 = no effect, 1.0 = full silence)
  */
 class Ducking(

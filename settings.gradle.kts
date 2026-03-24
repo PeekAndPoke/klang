@@ -8,6 +8,8 @@ include(
     ":klang",
     // Scripting language, parser, interpreter, typesystem
     ":klangscript",
+    ":klangscript-annotations",
+    ":klangscript-ksp",
     // Visual block editor
     ":klangblocks",
     // Shared UI utilities (kraft + klangscript, JS-only)

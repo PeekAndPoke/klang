@@ -2,7 +2,13 @@ package io.peekandpoke.klang.audio_be.filters.effects
 
 import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import kotlin.math.abs
 import kotlin.math.pow
+
+private const val DENORMAL_THRESHOLD = 1e-15
+
+@Suppress("NOTHING_TO_INLINE")
+private inline fun flushDenormal(v: Double): Double = if (abs(v) < DENORMAL_THRESHOLD) 0.0 else v
 
 /**
  * Distortion effect with selectable waveshaper shapes.
@@ -64,7 +70,7 @@ class DistortionFilter(
                 // One-pole highpass DC blocker (~5 Hz at 48kHz)
                 val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                 dcBlockX1 = y
-                dcBlockY1 = dcOut
+                dcBlockY1 = flushDenormal(dcOut)
                 y = dcOut
             }
 

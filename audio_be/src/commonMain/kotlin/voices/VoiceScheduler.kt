@@ -636,7 +636,7 @@ class VoiceScheduler(
             amount = data.accelerate ?: 0.0
         )
 
-        // Vibrator
+        // Vibrato
         val vibratoDepth = (data.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
         val vibrato = Voice.Vibrato(
             depth = vibratoDepth,

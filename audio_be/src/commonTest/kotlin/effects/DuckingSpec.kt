@@ -144,28 +144,30 @@ class DuckingSpec : StringSpec({
         avgLeft shouldBe (avgRight plusOrMinus 0.001)
     }
 
-    "Attack time affects return speed" {
-        val input1 = FloatArray(500) { 1.0f }
-        val input2 = FloatArray(500) { 1.0f }
-
+    "Recovery time affects return speed" {
+        // Use separate buffers for active/silent phases, process in-place
         val duckingFast = Ducking(sampleRate, attackSeconds = 0.001, depth = 0.8)
         val duckingSlow = Ducking(sampleRate, attackSeconds = 0.1, depth = 0.8)
 
-        // Duck both with active sidechain for first 100 samples
+        // Phase 1: Duck both with active sidechain
+        val active1 = FloatArray(100) { 1.0f }
+        val active2 = FloatArray(100) { 1.0f }
         val sidechainActive = FloatArray(100) { 1.0f }
+        duckingFast.process(active1, sidechainActive, 100)
+        duckingSlow.process(active2, sidechainActive, 100)
+
+        // Phase 2: Release with silent sidechain
+        val recover1 = FloatArray(400) { 1.0f }
+        val recover2 = FloatArray(400) { 1.0f }
         val sidechainSilent = FloatArray(400) { 0.0f }
+        duckingFast.process(recover1, sidechainSilent, 400)
+        duckingSlow.process(recover2, sidechainSilent, 400)
 
-        duckingFast.process(input1.sliceArray(0 until 100), sidechainActive, 100)
-        duckingFast.process(input1.sliceArray(100 until 500), sidechainSilent, 400)
+        // Fast should recover more by sample 50-100 of the recovery phase
+        val fastLevel = recover1.sliceArray(50 until 100).map { abs(it.toDouble()) }.average()
+        val slowLevel = recover2.sliceArray(50 until 100).map { abs(it.toDouble()) }.average()
 
-        duckingSlow.process(input2.sliceArray(0 until 100), sidechainActive, 100)
-        duckingSlow.process(input2.sliceArray(100 until 500), sidechainSilent, 400)
-
-        // Fast should recover more by sample 200
-        val fastLevel = input1.sliceArray(150 until 200).map { abs(it.toDouble()) }.average()
-        val slowLevel = input2.sliceArray(150 until 200).map { abs(it.toDouble()) }.average()
-
-        fastLevel shouldBe (slowLevel plusOrMinus 0.1)
-        fastLevel shouldBeLessThan (slowLevel + 0.2) // Fast returns faster
+        // Fast recovery should be closer to 1.0 than slow recovery
+        (fastLevel > slowLevel) shouldBe true
     }
 })

@@ -9,7 +9,7 @@ import io.peekandpoke.klang.layouts.MenuLayout
 import io.peekandpoke.klang.pages.*
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
-import io.peekandpoke.klang.pages.docs.SprudelDocsPage
+import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 
@@ -26,9 +26,11 @@ object Nav {
 
     const val manualsBase = "/manuals"
     val manuals = Static(manualsBase)
-    val manualsSprudel = Static("$manualsBase/sprudel")
-    fun manualsSprudelSearch(search: String) = manualsSprudel().withQueryParams(SprudelDocsPage.PARAM_SEARCH to search)
     val manualsKlangScript = Static("$manualsBase/klang-script")
+
+    val manualsLibrary = Route1("$manualsBase/library/{library}")
+    fun manualsLibrarySearch(library: String, search: String) =
+        manualsLibrary(library).withQueryParams(KlangScriptLibraryDocsPage.PARAM_SEARCH to search)
 
     const val tutorialsBase = "$manualsBase/tutorials"
     val tutorials = Static(tutorialsBase)
@@ -36,19 +38,6 @@ object Nav {
         tutorials().withQueryParams(
             router.current().takeIf { it.route == tutorials }?.matchedRoute?.queryParams ?: emptyMap()
         ).plusQueryParams(params.toMap())
-
-//    fun tutorialsWithDifficulty(difficulty: TutorialDifficulty, router: Router) =
-//        tutorials()
-//            .withQueryParams(router.current().matchedRoute.queryParams)
-//            .withQueryParams(TutorialsListPage.PARAM_DIFFICULTY to difficulty.name)
-//
-//    fun tutorialsWithScope(scope: TutorialScope, router: Router) = tutorials()
-//            .withQueryParams(router.current().matchedRoute.queryParams)
-//            .withQueryParams(TutorialsListPage.PARAM_SCOPE to scope.name)
-//
-//    fun tutorialsWithCompletion(completion: TutorialsListPage.CompletionFilter, router: Router) = tutorials()
-//            .withQueryParams(router.current().matchedRoute.queryParams)
-//            .withQueryParams(TutorialsListPage.PARAM_COMPLETION to completion.name)
 
     val tutorial = Route1("$tutorialsBase/{slug}")
 
@@ -76,8 +65,8 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.samplesLibrary) { SamplesLibraryPage() }
 
         mount(Nav.manuals) { DocsPage() }
-        mount(Nav.manualsSprudel) { SprudelDocsPage() }
         mount(Nav.manualsKlangScript) { KlangScriptDocsPage() }
+        mount(Nav.manualsLibrary) { KlangScriptLibraryDocsPage(it["library"]) }
 
         mount(Nav.tutorials) { TutorialsListPage() }
         mount(Nav.tutorial) { TutorialPage() }

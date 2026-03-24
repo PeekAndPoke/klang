@@ -383,10 +383,14 @@ object Exciters {
         }
     }
 
-    /** Pulse wave with variable duty cycle. [duty] 0.0..1.0 controls the ratio of high to low. */
+    /**
+     * Pulse wave with variable duty cycle and PolyBLEP anti-aliasing.
+     * [duty] 0.0..1.0 controls the ratio of high to low.
+     * Applies PolyBLEP at both transitions (0 and duty) to reduce aliasing.
+     */
     fun pulze(duty: Double = 0.5, gain: Double = 1.0, analog: Double = 0.0): Exciter {
         var phase = 0.0 // Normalized 0..1
-        val d = duty.coerceIn(0.0, 1.0)
+        val d = duty.coerceIn(0.01, 0.99)
         val drift = AnalogDrift(analog)
 
         return Exciter { buffer, freqHz, ctx ->
@@ -395,32 +399,49 @@ object Exciters {
             val end = ctx.offset + ctx.length
 
             if (drift.active) {
-                // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (gain * if (phase < d) 1.0 else -1.0).toFloat()
-                        phase += inc * drift.nextMultiplier()
+                        val dt = inc * drift.nextMultiplier()
+                        var out = if (phase < d) 1.0 else -1.0
+                        out += polyBlep(phase, dt)                     // transition at 0
+                        out -= polyBlep((phase + (1.0 - d)) % 1.0, dt) // transition at duty
+                        buffer[i] = (gain * out).toFloat()
+                        phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (gain * if (phase < d) 1.0 else -1.0).toFloat()
-                        phase += inc * phaseMod[i] * drift.nextMultiplier()
+                        val dt = inc * phaseMod[i] * drift.nextMultiplier()
+                        var out = if (phase < d) 1.0 else -1.0
+                        if (dt > BLEP_MIN_DT) {
+                            out += polyBlep(phase, dt)
+                            out -= polyBlep((phase + (1.0 - d)) % 1.0, dt)
+                        }
+                        buffer[i] = (gain * out).toFloat()
+                        phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
                 }
             } else {
-                // Clean digital path (unchanged)
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (gain * if (phase < d) 1.0 else -1.0).toFloat()
+                        var out = if (phase < d) 1.0 else -1.0
+                        out += polyBlep(phase, inc)                     // transition at 0
+                        out -= polyBlep((phase + (1.0 - d)) % 1.0, inc) // transition at duty
+                        buffer[i] = (gain * out).toFloat()
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (gain * if (phase < d) 1.0 else -1.0).toFloat()
-                        phase += inc * phaseMod[i]
+                        val dt = inc * phaseMod[i]
+                        var out = if (phase < d) 1.0 else -1.0
+                        if (dt > BLEP_MIN_DT) {
+                            out += polyBlep(phase, dt)
+                            out -= polyBlep((phase + (1.0 - d)) % 1.0, dt)
+                        }
+                        buffer[i] = (gain * out).toFloat()
+                        phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
                 }
