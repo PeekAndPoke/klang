@@ -316,9 +316,6 @@ interface Voice {
     /** Frame when the voice stops (including release phase) */
     val endFrame: Long
 
-    /** Frame when the gate ends (release phase begins) */
-    val gateEndFrame: Long
-
     /** Orbit/bus ID for routing to effects and mixing */
     val orbitId: Int
 
@@ -384,13 +381,7 @@ interface Voice {
     /**
      * Renders the voice into the context's buffers.
      *
-     * Processing order:
-     * 1. Source Generation (Oscillator/Sample + FM + Pitch Modulation)
-     * 2. Pre-Filters (BitCrush, Coarse)
-     * 3. Main Filter (with envelope modulation)
-     * 4. VCA / Envelope (ADSR)
-     * 5. Post-Filters (Distortion, Phaser, Tremolo)
-     * 6. Mixer (Pan, Sends)
+     * Runs a composable BlockRenderer pipeline: Pitch → Excite → Filter → Send.
      *
      * @return true if the voice is still active, false if it has finished
      */

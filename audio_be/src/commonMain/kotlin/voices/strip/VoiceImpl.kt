@@ -2,13 +2,12 @@ package io.peekandpoke.klang.audio_be.voices.strip
 
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.Voice.*
-import io.peekandpoke.klang.audio_be.voices.mixToOrbit
+import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 
 /**
  * Concrete voice implementation.
  *
- * Runs a composable [BlockRenderer] pipeline: **Pitch → Excite → Filter**
- * then routes the result to the orbit mixer.
+ * Runs a composable [BlockRenderer] pipeline: **Pitch → Excite → Filter → Send**
  */
 class VoiceImpl(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -16,11 +15,11 @@ class VoiceImpl(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     override val startFrame: Long,
     override val endFrame: Long,
-    override val gateEndFrame: Long,
+    private val gateEndFrame: Long,
     override val orbitId: Int,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Dynamics & Routing (used by mixToOrbit and Orbit configuration)
+    // Dynamics & Routing (used by SendRenderer and Orbit configuration)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     override val gain: Double,
     override val pan: Double,
@@ -37,13 +36,16 @@ class VoiceImpl(
     override val cut: Int? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Strip pipeline: Pitch → Excite → Filter
+    // Strip pipeline: Pitch → Excite → Filter (Send is appended in init)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    private val pipeline: List<BlockRenderer>,
+    pipeline: List<BlockRenderer>,
 
     // Pre-built BlockContext (created by VoiceScheduler, mutated per block)
     private val blockCtx: BlockContext,
 ) : Voice {
+
+    // Full pipeline: Pitch → Excite → Filter → Send
+    private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
 
     // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
     private var _gainMultiplier: Double = 1.0
@@ -70,17 +72,14 @@ class VoiceImpl(
         blockCtx.offset = offset
         blockCtx.length = length
         blockCtx.blockStart = ctx.blockStart
+        blockCtx.renderContext = ctx
         blockCtx.freqModBufferWritten = false
 
-        // ── Pitch → Excite → Filter ─────────────────────────────────────────────
+        // ── Pitch → Excite → Filter → Send ────────────────────────────────────────
 
         for (renderer in pipeline) {
             renderer.render(blockCtx)
         }
-
-        // ── Route ───────────────────────────────────────────────────────────────
-
-        mixToOrbit(ctx, offset, length)
 
         return true
     }

@@ -52,8 +52,9 @@ Key files:
 - `voices/strip/filter/` — FilterModRenderer, AudioFilterRenderer, EnvelopeRenderer, FilterPipelineBuilder
 
 Status: **All stages extracted.** VoiceImpl runs a single `List<BlockRenderer>` pipeline:
-Pitch renderers → ExciteRenderer → Filter renderers → mixToOrbit.
+Pitch renderers → ExciteRenderer → Filter renderers → SendRenderer.
 Shared envelope calculation in `EnvelopeCalc.kt`. Rename SignalGen → Exciter completed.
+`gateEndFrame` removed from Voice interface (private in VoiceImpl). `mixToOrbit()` replaced by `SendRenderer`.
 See `docs/agent-tasks/voice-pipeline-refactor.md` for full plan.
 
 ## Lessons Learned
