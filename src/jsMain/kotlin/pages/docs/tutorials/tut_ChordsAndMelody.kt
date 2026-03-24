@@ -6,7 +6,7 @@ val chordsAndMelodyTutorial = Tutorial(
     description = "Layer a melody over a chord progression and learn how harmony and lead lines work together.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Standard,
-    tags = listOf("chords", "melody", "layering", "harmony"),
+    tags = listOf(TutorialTag.Chords, TutorialTag.Melody),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

@@ -6,7 +6,7 @@ val yourFirstTrackTutorial = Tutorial(
     description = "Combine everything you have learned into a full multi-layer track with drums, bass, melody, and effects.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.DeepDive,
-    tags = listOf("capstone", "full-track", "beginner-project"),
+    tags = listOf(TutorialTag.GettingStarted, TutorialTag.Arrangement),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

@@ -6,7 +6,7 @@ val groupAndAlternateTutorial = Tutorial(
     description = "Use square brackets to pack sounds into beats and angle brackets to cycle through variations.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Standard,
-    tags = listOf("mini-notation", "grouping", "alternation"),
+    tags = listOf(TutorialTag.Patterns),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

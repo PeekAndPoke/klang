@@ -83,6 +83,7 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                         // Icon size: 50% of button height
                         fontSize = props.size * 0.5
                         color = iconColor
+                        put("padding", "0px !important")
                         // Glow effect - stronger glow scaled to button size
                         if (!isDisabled) {
                             // Blur radius: 25% of button size for strong glow

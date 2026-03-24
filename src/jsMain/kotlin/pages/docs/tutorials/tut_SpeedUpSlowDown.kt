@@ -6,7 +6,7 @@ val speedUpSlowDownTutorial = Tutorial(
     description = "Use fast() and slow() to change the speed of any pattern without rewriting it.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
-    tags = listOf("speed", "fast", "slow", "tempo"),
+    tags = listOf(TutorialTag.Rhythm, TutorialTag.GettingStarted),
     sections = listOf(
         TutorialSection(
             heading = "Double Time with fast()",

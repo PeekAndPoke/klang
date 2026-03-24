@@ -6,7 +6,7 @@ val patternsInMotionTutorial = Tutorial(
     description = "Make your loops come alive with time transformations, conditional changes, and stereo tricks.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Standard,
-    tags = listOf("time", "transformation", "live-coding", "stereo"),
+    tags = listOf(TutorialTag.LiveCoding, TutorialTag.Mixing),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

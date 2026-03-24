@@ -6,7 +6,7 @@ val miniNotationMasteryTutorial = Tutorial(
     description = "Unlock the full power of mini-notation with nested grouping, alternation, and rest patterns.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.Quick,
-    tags = listOf("mini-notation", "patterns", "syntax"),
+    tags = listOf(TutorialTag.Patterns),
     sections = listOf(
         TutorialSection(
             heading = "Nest for Density",

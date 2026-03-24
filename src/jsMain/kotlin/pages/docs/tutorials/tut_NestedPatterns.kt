@@ -6,7 +6,7 @@ val nestedPatternsTutorial = Tutorial(
     description = "Combine square brackets and angle brackets to create complex, evolving rhythms from simple building blocks.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.Standard,
-    tags = listOf("mini-notation", "nesting", "advanced-patterns"),
+    tags = listOf(TutorialTag.Patterns),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

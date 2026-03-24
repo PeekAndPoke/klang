@@ -6,7 +6,7 @@ val waveformExplorerTutorial = Tutorial(
     description = "Discover the personality of each waveform — sine, saw, square, triangle, and supersaw — and learn when to use them.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Standard,
-    tags = listOf("waveforms", "synthesis", "sound-palette"),
+    tags = listOf(TutorialTag.Synthesis),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

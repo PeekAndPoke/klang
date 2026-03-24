@@ -7,6 +7,7 @@ import de.peekandpoke.kraft.routing.Router.Companion.router
 import de.peekandpoke.kraft.routing.urlParam
 import de.peekandpoke.kraft.semanticui.forms.UiInputField
 import de.peekandpoke.kraft.vdom.VDom
+import de.peekandpoke.ultra.common.toggle
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.onClick
 import de.peekandpoke.ultra.semanticui.icon
@@ -70,20 +71,24 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
             completionParam = if (value == CompletionFilter.All) "" else value.name
         }
 
-    private var selectedTag: String? by value(null)
+    private var selectedTags: Set<TutorialTag> by value(emptySet())
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private fun toggleTag(tag: TutorialTag) {
+        selectedTags = selectedTags.toggle(tag)
+    }
 
     private fun filteredTutorials(): List<Tutorial> {
         return allTutorials.filter { tutorial ->
             val matchesSearch = searchText.isBlank() ||
                     tutorial.title.contains(searchText, ignoreCase = true) ||
                     tutorial.description.contains(searchText, ignoreCase = true) ||
-                    tutorial.tags.any { it.contains(searchText, ignoreCase = true) }
+                    tutorial.tags.any { it.label.contains(searchText, ignoreCase = true) }
 
             val matchesDifficulty = selectedDifficulty == null || tutorial.difficulty == selectedDifficulty
             val matchesScope = selectedScope == null || tutorial.scope == selectedScope
-            val matchesTag = selectedTag == null || tutorial.tags.contains(selectedTag)
+            val matchesTags = selectedTags.isEmpty() || selectedTags.all { it in tutorial.tags }
 
             val matchesCompletion = when (completionFilter) {
                 CompletionFilter.All -> true
@@ -91,11 +96,9 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                 CompletionFilter.Open -> !TutorialStorage.isCompleted(tutorial.slug)
             }
 
-            matchesSearch && matchesDifficulty && matchesScope && matchesTag && matchesCompletion
+            matchesSearch && matchesDifficulty && matchesScope && matchesTags && matchesCompletion
         }
     }
-
-    private fun allTags(): List<String> = allTutorials.flatMap { it.tags }.distinct().sorted()
 
     override fun VDom.render() {
         ui.fluid.container {
@@ -127,6 +130,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                             ui.mini.givenNot(selectedDifficulty == null) { basic }
                                 .given(selectedDifficulty == null) { with(laf.styles.goldButton()) }.button {
                                     onClick { selectedDifficulty = null }
+                                    icon.circle()
                                     +"All Levels"
                                 }
 
@@ -147,6 +151,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                                 .given(selectedScope == null) { with(laf.styles.goldButton()) }
                                 .button {
                                     onClick { selectedScope = null }
+                                    icon.circle()
                                     +"All Scopes"
                                 }
 
@@ -177,29 +182,13 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
 
                 ui.divider()
 
-                // Tag filter
-                val tags = allTags()
-
-                if (tags.isNotEmpty()) {
-                    div {
-                        css {
-                            display = Display.flex
-                            gap = 0.5.rem
-                            flexWrap = FlexWrap.wrap
-                        }
-
-                        ui.mini.givenNot(selectedTag == null) { basic }.given(selectedTag == null) { with(laf.styles.goldButton()) }
-                            .button {
-                                onClick { selectedTag = null }
-                                +"All Topics"
-                            }
-
-                        tags.forEach { tag ->
-                            val isSelected = selectedTag == tag
-                            ui.mini.givenNot(isSelected) { basic }.given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                onClick { selectedTag = if (isSelected) null else tag }
-                                +tag
-                            }
+                // Tag filter — selected tags + add button
+                div {
+                    // Show unselected tags as basic buttons
+                    TutorialTag.entries.forEach { tag ->
+                        ui.mini.basic.given(tag in selectedTags) { with(laf.styles.goldButton()) }.button {
+                            onClick { toggleTag(tag) }
+                            +tag.label
                         }
                     }
                 }
@@ -271,7 +260,7 @@ class TutorialsListPage(ctx: NoProps) : PureComponent(ctx) {
                             noui.extra.content {
                                 css { borderColor = Color(laf.textTertiary) }
                                 tutorial.tags.forEach { tag ->
-                                    ui.mini.basic.label { +tag }
+                                    ui.mini.basic.label { +tag.label }
                                 }
                             }
                         }

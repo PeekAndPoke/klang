@@ -6,7 +6,7 @@ val yourFirstBeatTutorial = Tutorial(
     description = "Go from silence to a layered drum groove in under three minutes.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
-    tags = listOf("drums", "rhythm", "stack", "getting-started"),
+    tags = listOf(TutorialTag.Rhythm, TutorialTag.GettingStarted),
     sections = listOf(
         TutorialSection(
             heading = "Hear the Destination",

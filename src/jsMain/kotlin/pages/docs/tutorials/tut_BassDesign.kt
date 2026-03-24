@@ -6,7 +6,7 @@ val bassDesignTutorial = Tutorial(
     description = "Craft different bass sounds from scratch — sub, acid, pluck, and wobble — using waveforms, filters, and envelopes.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.Standard,
-    tags = listOf("bass", "design", "low-end", "synthesis"),
+    tags = listOf(TutorialTag.Synthesis, TutorialTag.Melody),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

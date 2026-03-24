@@ -6,7 +6,7 @@ val polyrhythmicKitchenTutorial = Tutorial(
     description = "Layer competing rhythms using subdivisions, spread, and pick to build grooves that phase and evolve.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.Standard,
-    tags = listOf("polyrhythm", "subdivision", "groove", "advanced-rhythm"),
+    tags = listOf(TutorialTag.Rhythm, TutorialTag.Patterns),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

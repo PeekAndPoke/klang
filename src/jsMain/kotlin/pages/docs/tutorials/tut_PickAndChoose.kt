@@ -6,7 +6,7 @@ val pickAndChooseTutorial = Tutorial(
     description = "Use pick() and fastcat() to select from pattern banks and build rapid-fire sequences that change on the fly.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.Standard,
-    tags = listOf("pick", "fastcat", "generative", "selection"),
+    tags = listOf(TutorialTag.Generative, TutorialTag.Patterns),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

@@ -6,7 +6,7 @@ val remixYourselfTutorial = Tutorial(
     description = "Use scramble, shuffle, and pick to make your patterns surprise you every cycle.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
-    tags = listOf("randomness", "remix", "generative"),
+    tags = listOf(TutorialTag.Generative, TutorialTag.Rhythm),
     sections = listOf(
         TutorialSection(
             heading = "Shuffle the Order",

@@ -6,7 +6,7 @@ val technoInFourLinesTutorial = Tutorial(
     description = "Build a driving techno groove with just four lines of code using fast kicks, filtered hats, and acid bass.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.Quick,
-    tags = listOf("techno", "genre", "minimal", "acid"),
+    tags = listOf(TutorialTag.Genre, TutorialTag.Rhythm),
     sections = listOf(
         TutorialSection(
             heading = "The Recipe",

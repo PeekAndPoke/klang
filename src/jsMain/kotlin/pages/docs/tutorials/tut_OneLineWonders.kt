@@ -6,7 +6,7 @@ val oneLineWondersTutorial = Tutorial(
     description = "See how much music you can pack into a single line using creative chaining and mini-notation tricks.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.Quick,
-    tags = listOf("one-liner", "creative", "density", "elegance"),
+    tags = listOf(TutorialTag.LiveCoding, TutorialTag.Patterns),
     sections = listOf(
         TutorialSection(
             heading = "The Art of Density",

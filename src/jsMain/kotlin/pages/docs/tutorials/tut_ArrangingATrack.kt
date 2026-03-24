@@ -6,7 +6,7 @@ val arrangingATrackTutorial = Tutorial(
     description = "Use arrange() to build a complete track with an intro, verse, chorus, breakdown, and drop.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.DeepDive,
-    tags = listOf("arrange", "song-structure", "sections", "production"),
+    tags = listOf(TutorialTag.Arrangement),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

@@ -6,7 +6,7 @@ val yourFirstMelodyTutorial = Tutorial(
     description = "Play your first melody with synthesizers and discover how scales make everything sound good.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Standard,
-    tags = listOf("melody", "synth", "scale", "notes"),
+    tags = listOf(TutorialTag.Melody, TutorialTag.Synthesis),
     sections = listOf(
         TutorialSection(
             heading = "From Beats to Notes",

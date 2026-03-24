@@ -94,7 +94,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                 difficultyLabel(laf, tutorial.difficulty)
                 scopeLabel(laf, tutorial.scope)
                 tutorial.tags.forEach { tag ->
-                    ui.mini.basic.label { +tag }
+                    ui.mini.basic.label { +tag.label }
                 }
                 p {
                     css { marginTop = 1.rem }

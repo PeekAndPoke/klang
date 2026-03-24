@@ -6,7 +6,7 @@ val moodPaintingTutorial = Tutorial(
     description = "Change the entire mood of your music by switching between scales like dorian, blues, and pentatonic.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.Quick,
-    tags = listOf("scales", "mood", "music-theory"),
+    tags = listOf(TutorialTag.Melody),
     sections = listOf(
         TutorialSection(
             heading = "One Pattern, Many Moods",

@@ -6,7 +6,7 @@ val loFiBeatsTutorial = Tutorial(
     description = "Create warm, crunchy lo-fi hip hop beats using bit-crushing, filtered drums, and mellow chords.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.Standard,
-    tags = listOf("lo-fi", "genre", "chill", "beat-making"),
+    tags = listOf(TutorialTag.Genre, TutorialTag.Rhythm),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

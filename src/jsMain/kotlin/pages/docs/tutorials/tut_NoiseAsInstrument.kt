@@ -6,7 +6,7 @@ val noiseAsInstrumentTutorial = Tutorial(
     description = "Shape brown and pink noise into percussion, textures, and melodic elements using filters and envelopes.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.DeepDive,
-    tags = listOf("noise", "brown", "pink", "texture", "experimental"),
+    tags = listOf(TutorialTag.Synthesis, TutorialTag.Effects),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

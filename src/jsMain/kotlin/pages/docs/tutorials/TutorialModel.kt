@@ -13,6 +13,21 @@ enum class TutorialScope(val label: String) {
     DeepDive("Deep Dive"),
 }
 
+enum class TutorialTag(val label: String) {
+    Rhythm("Rhythm"),
+    Melody("Melody"),
+    Chords("Chords"),
+    Synthesis("Synthesis"),
+    Effects("Effects"),
+    Patterns("Patterns"),
+    Mixing("Mixing"),
+    Arrangement("Arrangement"),
+    LiveCoding("Live Coding"),
+    Generative("Generative"),
+    Genre("Genre"),
+    GettingStarted("Getting Started"),
+}
+
 data class TutorialSection(
     val heading: String? = null,
     val text: String = "",
@@ -25,6 +40,6 @@ data class Tutorial(
     val description: String,
     val difficulty: TutorialDifficulty,
     val scope: TutorialScope,
-    val tags: List<String>,
+    val tags: List<TutorialTag>,
     val sections: List<TutorialSection>,
 )

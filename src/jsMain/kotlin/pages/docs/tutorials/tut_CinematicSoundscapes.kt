@@ -6,7 +6,7 @@ val cinematicSoundscapesTutorial = Tutorial(
     description = "Build sweeping, emotional film-score textures using wide pads, tension chords, and dramatic silence.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.Standard,
-    tags = listOf("cinematic", "genre", "soundtrack", "dramatic"),
+    tags = listOf(TutorialTag.Genre, TutorialTag.Mixing),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

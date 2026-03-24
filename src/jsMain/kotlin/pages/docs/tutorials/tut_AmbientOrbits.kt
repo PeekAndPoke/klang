@@ -6,7 +6,7 @@ val ambientOrbitsTutorial = Tutorial(
     description = "Build a layered ambient soundscape using orbits for spatial separation and frequency carving with filters.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.DeepDive,
-    tags = listOf("ambient", "orbits", "mixing", "frequency"),
+    tags = listOf(TutorialTag.Genre, TutorialTag.Mixing),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

@@ -6,7 +6,7 @@ val spacesAndRestsTutorial = Tutorial(
     description = "Learn how spaces divide time equally and the tilde creates silence to shape your rhythms.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Quick,
-    tags = listOf("mini-notation", "rests", "rhythm-basics"),
+    tags = listOf(TutorialTag.Patterns, TutorialTag.Rhythm),
     sections = listOf(
         TutorialSection(
             heading = "Spaces Divide Time",

@@ -6,7 +6,7 @@ val transposeItTutorial = Tutorial(
     description = "Shift melodies up or down by semitones with transpose() to create basslines, harmonies, and octave layers.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Quick,
-    tags = listOf("transpose", "pitch", "octaves"),
+    tags = listOf(TutorialTag.Melody),
     sections = listOf(
         TutorialSection(
             heading = "Shift by Semitones",

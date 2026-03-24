@@ -6,7 +6,7 @@ val generativeMachineTutorial = Tutorial(
     description = "Build an endlessly evolving piece that composes itself using scramble, every, superimpose, and arranged sections.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.DeepDive,
-    tags = listOf("generative", "algorithmic", "self-composing", "advanced-technique"),
+    tags = listOf(TutorialTag.Generative, TutorialTag.LiveCoding),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

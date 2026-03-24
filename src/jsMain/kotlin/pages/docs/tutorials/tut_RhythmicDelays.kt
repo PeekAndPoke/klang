@@ -6,7 +6,7 @@ val rhythmicDelaysTutorial = Tutorial(
     description = "Turn simple patterns into complex rhythmic textures using delay as a creative tool, not just an effect.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.DeepDive,
-    tags = listOf("delay", "rhythm", "creative-effects", "echo"),
+    tags = listOf(TutorialTag.Effects, TutorialTag.Rhythm),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

@@ -6,7 +6,7 @@ val shapeYourSoundTutorial = Tutorial(
     description = "Transform raw waveforms into rich, polished sounds using filters, envelopes, reverb, and delay.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Standard,
-    tags = listOf("effects", "filter", "reverb", "delay", "envelope"),
+    tags = listOf(TutorialTag.Effects, TutorialTag.Synthesis),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

@@ -180,6 +180,7 @@ class RoundGauge(ctx: Ctx<Props>) : Component<RoundGauge.Props>(ctx) {
                         put("transform", "translate(-50%, -50%)")
                         margin = Margin(0.px)
                         color = iconColor
+                        put("padding", "0px !important")
                         if (!isDisabled) {
                             put("text-shadow", "0 0 7px")
                         }

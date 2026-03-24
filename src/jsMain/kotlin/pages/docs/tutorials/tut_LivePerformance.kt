@@ -6,7 +6,7 @@ val livePerformanceTutorial = Tutorial(
     description = "Design a self-evolving live set using every(), superimpose(), jux(), and slowcat() to build music that performs itself.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.DeepDive,
-    tags = listOf("performance", "live-set", "evolution", "generative"),
+    tags = listOf(TutorialTag.LiveCoding, TutorialTag.Generative),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

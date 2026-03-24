@@ -33,6 +33,10 @@ textarea::selection,
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
+.ui.button {
+    transition: var(--klang-transition) !important;
+}
+
 .ui.positive.button {
     background-color: var(--klang-gold) !important;
     color: #000000 !important;

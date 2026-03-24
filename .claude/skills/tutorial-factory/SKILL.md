@@ -74,7 +74,9 @@ val <camelCaseSlug> Tutorial = Tutorial(
     description = "<One sentence describing what the learner will achieve>",
     difficulty = TutorialDifficulty.< level >,
     scope = TutorialScope.< scope >,
-    tags = listOf("<tag1>", "<tag2>"),
+    tags = listOf(TutorialTag.< Tag1 >, TutorialTag.< Tag2 >),
+    // Available tags: Rhythm, Melody, Chords, Synthesis, Effects, Patterns,
+    //   Mixing, Arrangement, LiveCoding, Generative, Genre, GettingStarted
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

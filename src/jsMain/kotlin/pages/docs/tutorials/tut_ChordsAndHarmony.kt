@@ -6,7 +6,7 @@ val chordsAndHarmonyTutorial = Tutorial(
     description = "Build rich chord progressions and layer harmonies using chord names, voicing, and stereo panning.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.Standard,
-    tags = listOf("chords", "harmony", "panning", "composition"),
+    tags = listOf(TutorialTag.Chords, TutorialTag.Mixing),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

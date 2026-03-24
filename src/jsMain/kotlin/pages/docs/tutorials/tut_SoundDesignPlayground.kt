@@ -6,7 +6,7 @@ val soundDesignPlaygroundTutorial = Tutorial(
     description = "Sculpt wild textures by chaining distortion, bit-crushing, tremolo, vibrato, and phaser effects.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.DeepDive,
-    tags = listOf("sound-design", "distortion", "modulation", "texture"),
+    tags = listOf(TutorialTag.Synthesis, TutorialTag.Effects),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

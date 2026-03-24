@@ -6,7 +6,7 @@ val buildASongTutorial = Tutorial(
     description = "Graduate from loops to songs by sequencing sections with cat, slowcat, and silence.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Standard,
-    tags = listOf("arrangement", "song-structure", "sequencing"),
+    tags = listOf(TutorialTag.Arrangement),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

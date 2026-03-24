@@ -6,7 +6,7 @@ val firstChordsTutorial = Tutorial(
     description = "Play beautiful chord progressions with just one line of code using chord names and voicing.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.Standard,
-    tags = listOf("chords", "voicing", "harmony-basics"),
+    tags = listOf(TutorialTag.Chords, TutorialTag.GettingStarted),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

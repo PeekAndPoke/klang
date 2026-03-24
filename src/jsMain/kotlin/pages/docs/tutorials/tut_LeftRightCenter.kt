@@ -6,7 +6,7 @@ val leftRightCenterTutorial = Tutorial(
     description = "Place sounds across the stereo field with pan() to give each layer its own space.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Quick,
-    tags = listOf("panning", "stereo", "spatial"),
+    tags = listOf(TutorialTag.Mixing),
     sections = listOf(
         TutorialSection(
             heading = "Pan Your Sound",

@@ -6,7 +6,7 @@ val drumKitBuilderTutorial = Tutorial(
     description = "Meet every drum sound in the kit and learn to combine them into different groove styles.",
     difficulty = TutorialDifficulty.Beginner,
     scope = TutorialScope.DeepDive,
-    tags = listOf("drums", "samples", "kit", "grooves"),
+    tags = listOf(TutorialTag.Rhythm, TutorialTag.GettingStarted),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",

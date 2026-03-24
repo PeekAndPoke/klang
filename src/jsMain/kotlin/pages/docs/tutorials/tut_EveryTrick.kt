@@ -6,7 +6,7 @@ val everyTrickTutorial = Tutorial(
     description = "Stack multiple every() rules on the same pattern to create grooves that surprise you on different cycles.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.Quick,
-    tags = listOf("every", "variation", "conditional"),
+    tags = listOf(TutorialTag.LiveCoding),
     sections = listOf(
         TutorialSection(
             heading = "Layer the Rules",

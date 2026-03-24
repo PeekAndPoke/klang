@@ -6,7 +6,7 @@ val volumeAndDynamicsTutorial = Tutorial(
     description = "Use gain() creatively to add accents, build energy, and make patterns feel alive.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.Quick,
-    tags = listOf("gain", "dynamics", "accents", "volume"),
+    tags = listOf(TutorialTag.Mixing, TutorialTag.Rhythm),
     sections = listOf(
         TutorialSection(
             heading = "More Than Just Loud and Quiet",

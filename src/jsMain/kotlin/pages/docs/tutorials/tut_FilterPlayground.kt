@@ -6,7 +6,7 @@ val filterPlaygroundTutorial = Tutorial(
     description = "Explore all three filter types — low-pass, high-pass, and band-pass — to sculpt any sound into exactly what you want.",
     difficulty = TutorialDifficulty.Intermediate,
     scope = TutorialScope.DeepDive,
-    tags = listOf("filters", "lpf", "hpf", "bandf", "sound-shaping"),
+    tags = listOf(TutorialTag.Effects, TutorialTag.Synthesis),
     sections = listOf(
         TutorialSection(
             heading = "Introduction",
