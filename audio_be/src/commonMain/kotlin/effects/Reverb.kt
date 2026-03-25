@@ -32,10 +32,14 @@ import io.peekandpoke.klang.audio_be.StereoBuffer
 class Reverb(
     val sampleRate: Int,
 ) {
-    // --- Tuning (Freeverb Standard) ---
+    // --- Tuning (Freeverb Standard, scaled to actual sample rate) ---
+    // Original tunings are for 44100 Hz. Scale proportionally for other rates.
+    private val srScale = sampleRate / 44100.0
     private val combTuning = intArrayOf(1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617)
+        .map { (it * srScale).toInt().coerceAtLeast(1) }.toIntArray()
     private val allPassTuning = intArrayOf(556, 441, 341, 225)
-    private val stereoSpread = 23
+        .map { (it * srScale).toInt().coerceAtLeast(1) }.toIntArray()
+    private val stereoSpread = (23 * srScale).toInt().coerceAtLeast(1)
 
     // --- State (Flattened for Performance) ---
     // We store buffers in arrays of arrays to avoid object overhead per filter
@@ -60,8 +64,8 @@ class Reverb(
 
     // --- Parameters ---
 
-    /** Master mix volume. */
-    val mix: Double = 1.0
+    /** Master mix volume (fixed at 1.0 — wet/dry is controlled by send amount). */
+    private val mix: Double = 1.0
 
     var roomSize: Double = 0.5
     var damp: Double = 0.5
@@ -75,6 +79,9 @@ class Reverb(
     // Constants
     private val fixedGain = 0.015 // Standard Freeverb gain scaling to normalize sum of 8 combs
     private val allPassFeedback = 0.5
+
+    // Anti-denormal constant (~140dB below audible, prevents CPU spikes from denormal floats in IIR state)
+    private val antiDenormal = 1e-18
 
     /**
      * Returns true if the internal reverb buffers still contain audio above the given threshold.
@@ -138,7 +145,7 @@ class Reverb(
                 var posL = combPosL[c]
 
                 val outSampleL = bufL[posL].toDouble()
-                combStoreL[c] = (outSampleL * invDamping) + (combStoreL[c] * damping)
+                combStoreL[c] = (outSampleL * invDamping) + (combStoreL[c] * damping) + antiDenormal
                 bufL[posL] = (inpL + (combStoreL[c] * feedback)).toFloat()
 
                 sumL += outSampleL
@@ -152,7 +159,7 @@ class Reverb(
                 var posR = combPosR[c]
 
                 val outSampleR = bufR[posR].toDouble()
-                combStoreR[c] = (outSampleR * invDamping) + (combStoreR[c] * damping)
+                combStoreR[c] = (outSampleR * invDamping) + (combStoreR[c] * damping) + antiDenormal
                 bufR[posR] = (inpR + (combStoreR[c] * feedback)).toFloat()
 
                 sumR += outSampleR

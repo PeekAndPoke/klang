@@ -65,15 +65,15 @@ internal val PatternMapperFn._notchf by dslPatternMapperExtension { m, args, cal
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A new pattern with notch filter applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").notchf(1000)           // notch out 1 kHz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").notchf("<500 2000>")      // alternating notch centre per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("500 1000 2000").notchf()        // reinterpret values as notch centre
  * ```
  *
@@ -91,7 +91,7 @@ fun SprudelPattern.notchf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A new pattern with notch filter applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".notchf(1000).note()          // notch filter on string pattern
  * ```
  *
@@ -108,11 +108,11 @@ fun String.notchf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A [PatternMapperFn] that applies a notch filter.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(notchf(1000))                   // apply notch via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, notchf(500).nresonance(10)) // resonant notch on first cycle
  * ```
  *
@@ -128,11 +128,11 @@ fun notchf(freq: PatternLike? = null): PatternMapperFn = _notchf(listOfNotNull(f
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A new [PatternMapperFn] chaining the notch filter after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(gain(0.8).notchf(1000))         // gain then notch filter
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, notchf(500).nresonance(10)) // notch chain
  * ```
  */
@@ -175,15 +175,15 @@ internal val PatternMapperFn._notchq by dslPatternMapperExtension { m, args, cal
  * @param q The Q factor. Higher values create a narrower notch. Omit to reinterpret pattern values.
  * @return A new pattern with notch resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nresonance(10)   // narrow deep notch at 1 kHz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").notchf(500).nresonance("<5 20>") // Q sweeps from wide to narrow per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 5 15").nresonance()               // reinterpret values as notch Q
  * ```
  *
@@ -202,7 +202,7 @@ fun SprudelPattern.nresonance(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with notch resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".notchf(1000).nresonance(10)  // notch Q on string pattern
  * ```
  *
@@ -220,11 +220,11 @@ fun String.nresonance(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A [PatternMapperFn] that applies notch resonance.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(notchf(1000).nresonance(10))   // notch + Q chain
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, nresonance(15))            // narrow notch on first cycle
  * ```
  *
@@ -241,11 +241,11 @@ fun nresonance(q: PatternLike? = null): PatternMapperFn = _nresonance(listOfNotN
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new [PatternMapperFn] chaining notch resonance after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(notchf(500).nresonance(10))    // notchf then resonance
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, notchf(1000).nresonance(15))  // narrow notch chain
  * ```
  */
@@ -259,11 +259,11 @@ fun PatternMapperFn.nresonance(q: PatternLike? = null): PatternMapperFn =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with notch resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(500).nres(10)   // alias for nresonance
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").nres("<5 20>")         // sweeping notch Q
  * ```
  *
@@ -282,7 +282,7 @@ fun SprudelPattern.notchq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A new pattern with notch resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".notchf(500).nres(10)         // alias for String.nresonance
  * ```
  */
@@ -296,11 +296,11 @@ fun String.notchq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A [PatternMapperFn] that applies notch resonance.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(notchf(1000).nres(10))  // alias for nresonance()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, nres(15))           // narrow notch on first cycle
  * ```
  *
@@ -317,11 +317,11 @@ fun notchq(q: PatternLike? = null): PatternMapperFn = _notchq(listOfNotNull(q).a
  * @param q The Q factor.
  * @return A new [PatternMapperFn] chaining notch resonance after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(notchf(500).nres(10))   // notchf then nres
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, notchf(1000).nres(15))  // chain
  * ```
  */
@@ -359,11 +359,11 @@ internal val PatternMapperFn._nfa by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the notch filter centre frequency sweeps from its baseline to the
  * peak at note onset. Use with [nfenv], [nfdecay], [nfsustain], [nfrelease].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfenv(3000).nfattack(0.1)   // notch sweeps open over 100 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").nfattack("<0.01 0.5>")                        // fast vs slow attack per cycle
  * ```
  *
@@ -395,11 +395,11 @@ fun PatternMapperFn.nfattack(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [nfattack]. Sets the notch filter envelope attack time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfa(0.1)   // alias for nfattack()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(notchf(1000).nfa(0.1))   // chained PatternMapperFn
  * ```
  *
@@ -458,11 +458,11 @@ internal val PatternMapperFn._nfd by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the notch filter centre frequency moves from peak to sustain level
  * after the attack. Use with [nfattack], [nfsustain], [nfrelease], [nfenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfenv(3000).nfdecay(0.2)   // notch decays over 200 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").nfdecay("<0.05 0.5>")                        // short vs long decay per cycle
  * ```
  *
@@ -494,11 +494,11 @@ fun PatternMapperFn.nfdecay(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [nfdecay]. Sets the notch filter envelope decay time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfd(0.2)   // alias for nfdecay()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(notchf(1000).nfd(0.2))   // chained PatternMapperFn
  * ```
  *
@@ -558,11 +558,11 @@ internal val PatternMapperFn._nfs by dslPatternMapperExtension { m, args, callIn
  * `1` holds the notch at the envelope peak; `0` returns to baseline. Use with
  * [nfattack]/[nfdecay]/[nfrelease].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfenv(3000).nfsustain(0.5)  // sustain at half depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").nfsustain("<0 1>")                         // closed vs fully open sustain
  * ```
  *
@@ -594,11 +594,11 @@ fun PatternMapperFn.nfsustain(level: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [nfsustain]. Sets the notch filter envelope sustain level.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfs(0.5)   // alias for nfsustain()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(notchf(1000).nfs(0.5))   // chained PatternMapperFn
  * ```
  *
@@ -657,11 +657,11 @@ internal val PatternMapperFn._nfr by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the notch filter centre frequency returns to baseline after the
  * note ends. Use with [nfattack], [nfdecay], [nfsustain], [nfenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfenv(3000).nfrelease(0.4)   // notch closes slowly after note
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").nfrelease("<0.05 1.0>")                        // short vs long release per cycle
  * ```
  *
@@ -693,11 +693,11 @@ fun PatternMapperFn.nfrelease(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [nfrelease]. Sets the notch filter envelope release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfr(0.4)   // alias for nfrelease()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(notchf(1000).nfr(0.4))   // chained PatternMapperFn
  * ```
  *
@@ -777,11 +777,11 @@ internal val PatternMapperFn._nfe by dslPatternMapperExtension { m, args, callIn
  * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(1000).nfenv(3.0)              // notch sweeps up to 4000 Hz at peak
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").notchf(500).nfenv("<1.0 5.0>")           // subtle vs dramatic sweep per cycle
  * ```
  *
@@ -813,11 +813,11 @@ fun PatternMapperFn.nfenv(depth: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [nfenv]. Sets the notch filter envelope depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").notchf(500).nfe(3.0)   // alias for nfenv()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(notchf(500).nfe(3.0))   // chained PatternMapperFn
  * ```
  *

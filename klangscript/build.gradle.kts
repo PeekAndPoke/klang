@@ -43,6 +43,7 @@ kotlin {
         commonMain {
             dependencies {
                 api(project(":common"))
+                api(project(":klangscript-annotations"))
                 implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
@@ -88,4 +89,12 @@ kotlin {
 
 tasks {
     configureJvmTests()
+}
+
+dependencies {
+    add("kspJvm", project(":klangscript-ksp"))
+    add("kspJs", project(":klangscript-ksp"))
+
+    add("kspJvmTest", project(":klangscript-ksp"))
+    add("kspJsTest", project(":klangscript-ksp"))
 }

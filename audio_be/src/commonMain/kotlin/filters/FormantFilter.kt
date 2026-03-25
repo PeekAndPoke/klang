@@ -8,6 +8,8 @@ import kotlin.math.pow
  *
  * Implements multiple parallel bandpass filters tuned to vowel formant frequencies.
  * Each band has a center frequency, gain (in dB), and Q factor.
+ *
+ * Band buffers are pre-allocated to avoid GC pressure in the audio thread.
  */
 class FormantFilter(
     bands: List<FilterDef.Formant.Band>,
@@ -17,7 +19,6 @@ class FormantFilter(
     private data class BandFilter(val filter: LowPassHighPassFilters.SvfBPF, val gain: Double)
 
     private val filters = bands.map { band ->
-        // Convert dB to linear gain: 10^(db/20)
         val gain = 10.0.pow(band.db / 20.0)
         BandFilter(
             filter = LowPassHighPassFilters.SvfBPF(band.freq, band.q, sampleRate),
@@ -25,13 +26,15 @@ class FormantFilter(
         )
     }
 
-    // Scratch buffer to avoid allocation in process loop
+    // Pre-allocated scratch buffers (resized once if block size changes)
     private var scratchBuffer: FloatArray = FloatArray(0)
+    private var bandBuffer: FloatArray = FloatArray(0)
 
     override fun process(buffer: FloatArray, offset: Int, length: Int) {
-        // Resize scratch buffer if needed
+        // Resize scratch buffers if needed (only on first call or block size change)
         if (scratchBuffer.size < length) {
             scratchBuffer = FloatArray(length)
+            bandBuffer = FloatArray(length)
         }
 
         // 1. Copy input to scratch buffer (because we will overwrite 'buffer')
@@ -42,9 +45,7 @@ class FormantFilter(
 
         // 3. Process each band in parallel
         for (band in filters) {
-            // We need a clean copy of input for each parallel filter
-            // Create temporary buffer for this band
-            val bandBuffer = FloatArray(length)
+            // Copy input for this band (reuse pre-allocated buffer)
             scratchBuffer.copyInto(bandBuffer, 0, 0, length)
 
             // Process through bandpass filter

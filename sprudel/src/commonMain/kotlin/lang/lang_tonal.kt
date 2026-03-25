@@ -107,11 +107,11 @@ internal val PatternMapperFn._scale by dslPatternMapperExtension { m, args, call
  * @param-tool name SprudelScaleEditor
  * @return A pattern with the scale context applied to each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n("0 1 2 3").scale("c4:major")          // C4, D4, E4, F4
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n("0 2 4").scale("<c4:major a3:minor>")  // alternates scale per cycle
  * ```
  *
@@ -130,7 +130,7 @@ fun String.scale(name: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the scale context for resolving note indices.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n("0 1 2").apply(scale("c4:major"))     // mapper form: C4, D4, E4
  * ```
  *
@@ -185,11 +185,11 @@ internal val String._note by dslStringExtension { p, args, callInfo -> p._note(a
  * Note values can be scientific notation (`"c4"`, `"d#3"`, `"bb2"`), MIDI note numbers, or
  * numeric indices resolved via the active [scale] context.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4 g4")          // arpeggiate a C major chord
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("<c3 e3 g3> b2")     // alternating chord tones with a bass note
  * ```
  *
@@ -253,11 +253,11 @@ internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, c
  *
  * When param [index] is null, the sequence values will be reinterpreted as sound index.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n("0 2 4").scale("c4:major").note()   // indices 0, 2, 4 → C4, E4, G4
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").n("0 1 2")                    // selects different hh samples by index
  * ```
  *
@@ -342,15 +342,15 @@ internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(arg
  *
  * When [name] is omitted, reinterprets the current event values as sound names.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sound("bd sd hh")  // basic drum pattern
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sound("bd bd bd bd ").n("0 1 2 3")  // changes the sound variants
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("bd hh sd hh").sound()  // interprets the sequence values as sounds
  * ```
  *
@@ -393,11 +393,11 @@ fun sound(name: PatternLike): SprudelPattern = _sound(listOf(name).asSprudelDslA
  *
  * When [name] is omitted, reinterprets the current event values as sound names.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh")  // basic drum pattern
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("bd hh sd hh").s()  // interprets the sequence values as sounds
  * ```
  *
@@ -449,11 +449,11 @@ internal val PatternMapperFn._bank by dslPatternMapperExtension { m, args, callI
  * Useful when you want to switch sample collections without changing sound identifiers.
  * When called with no argument, reinterprets the current event value as a bank name.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").bank("RolandTR808")     // load all sounds from the TR-808 bank
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").bank("<TR808 TR909>")      // alternate sample banks each cycle
  * ```
  *
@@ -473,7 +473,7 @@ fun String.bank(name: PatternLike? = null): SprudelPattern =
  * Returns a [PatternMapperFn] that sets the sample bank for each event.
  * When called with no argument, reinterprets the current event value as a bank name.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(bank("RolandTR808"))   // mapper form
  * ```
  *
@@ -519,11 +519,11 @@ internal val PatternMapperFn._clip by dslPatternMapperExtension { m, args, callI
  * notes (true legato), while values below `1.0` create staccato-like gaps between notes.
  * When called with no argument, reinterprets the current event value as a legato amount.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").legato(1.5)   // notes overlap slightly (legato)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").legato(0.5)   // notes are shorter (staccato)
  * ```
  *
@@ -544,7 +544,7 @@ fun String.legato(amount: PatternLike? = null): SprudelPattern =
  * Returns a [PatternMapperFn] that sets the legato factor for each event.
  * When called with no argument, reinterprets the current event value as a legato amount.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(legato(1.5))   // mapper form
  * ```
  *
@@ -573,7 +573,7 @@ fun String.clip(amount: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [legato]. Returns a [PatternMapperFn] that sets the legato factor for each event.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(clip(0.5))   // mapper form
  * ```
  *
@@ -620,11 +620,11 @@ internal val PatternMapperFn._vib by dslPatternMapperExtension { m, args, callIn
  * vibrato; lower values create a slower, wider wobble. Use [vibratoMod] to set the depth.
  * When called with no argument, reinterprets the current event value as a vibrato rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4 g4").vibrato(5)      // 5 Hz vibrato (moderate speed)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").vibrato("<2 8>")       // alternating slow/fast vibrato per cycle
  * ```
  *
@@ -645,7 +645,7 @@ fun String.vibrato(hz: PatternLike? = null): SprudelPattern =
  * Returns a [PatternMapperFn] that sets the vibrato frequency in Hz.
  * When called with no argument, reinterprets the current event value as a vibrato rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(vibrato(5))   // mapper form
  * ```
  *
@@ -674,7 +674,7 @@ fun String.vib(hz: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [vibrato]. Returns a [PatternMapperFn] that sets the vibrato frequency in Hz.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(vib(5))   // mapper form
  * ```
  *
@@ -721,11 +721,11 @@ internal val PatternMapperFn._vibmod by dslPatternMapperExtension { m, args, cal
  * create wider, more pronounced pitch wobble. Use [vibrato] to set the speed.
  * When called with no argument, reinterprets the current event value as a vibrato depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").vibratoMod(0.5)       // half-semitone vibrato depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").vibratoMod("<0.2 1>")    // alternating subtle/wide vibrato depth
  * ```
  *
@@ -746,7 +746,7 @@ fun String.vibratoMod(depth: PatternLike? = null): SprudelPattern =
  * Returns a [PatternMapperFn] that sets the vibrato depth in semitones.
  * When called with no argument, reinterprets the current event value as a vibrato depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(vibratoMod(0.5))   // mapper form
  * ```
  *
@@ -775,7 +775,7 @@ fun String.vibmod(depth: PatternLike? = null): SprudelPattern =
 /**
  * Alias for [vibratoMod]. Returns a [PatternMapperFn] that sets the vibrato depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(vibmod(0.5))   // mapper form
  * ```
  *
@@ -821,11 +821,11 @@ internal val PatternMapperFn._patt by dslPatternMapperExtension { m, args, callI
  * Use with [penv], [pdecay], [prelease], [pcurve], and [panchor].
  * When called with no argument, reinterprets the current event value as an attack time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").pattack(0.1).penv(12)   // pitch rises over 100 ms by 12 semitones
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").pattack("<0.01 0.5>")       // fast vs slow pitch attack per cycle
  * ```
  *
@@ -845,7 +845,7 @@ fun String.pattack(seconds: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope attack time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(pattack(0.1))   // mapper form
  * ```
  *
@@ -910,11 +910,11 @@ internal val PatternMapperFn._pdec by dslPatternMapperExtension { m, args, callI
  * Use with [pattack], [penv], [prelease], [pcurve], and [panchor].
  * When called with no argument, reinterprets the current event value as a decay time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").pdecay(0.2).penv(12)   // pitch decays over 200 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").pdecay("<0.05 0.5>")       // short vs long decay per cycle
  * ```
  *
@@ -934,7 +934,7 @@ fun String.pdecay(seconds: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope decay time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(pdecay(0.2))   // mapper form
  * ```
  *
@@ -998,11 +998,11 @@ internal val PatternMapperFn._prel by dslPatternMapperExtension { m, args, callI
  * after the note ends. Use with [pattack], [pdecay], [penv], [pcurve], and [panchor].
  * When called with no argument, reinterprets the current event value as a release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").prelease(0.3).penv(12)  // pitch releases over 300 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").prelease("<0.1 1.0>")       // short vs long release per cycle
  * ```
  *
@@ -1022,7 +1022,7 @@ fun String.prelease(seconds: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(prelease(0.3))   // mapper form
  * ```
  *
@@ -1087,11 +1087,11 @@ internal val PatternMapperFn._pamt by dslPatternMapperExtension { m, args, callI
  * Use with [pattack], [pdecay], [prelease], [pcurve], and [panchor].
  * When called with no argument, reinterprets the current event value as an envelope depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").penv(12).pattack(0.1)   // 1-octave pitch rise over 100 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").penv(-7).pdecay(0.2)    // pitch falls a perfect fifth then decays
  * ```
  *
@@ -1111,7 +1111,7 @@ fun String.penv(semitones: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope depth in semitones.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(penv(12))   // mapper form
  * ```
  *
@@ -1175,11 +1175,11 @@ internal val PatternMapperFn._pcrv by dslPatternMapperExtension { m, args, callI
  * curve; positive values create logarithmic curves; negative values create exponential ones.
  * When called with no argument, reinterprets the current event value as a curve shape.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").pcurve(2).penv(12).pattack(0.2)   // logarithmic pitch rise
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").pcurve(-2).penv(12).pattack(0.2)  // exponential pitch rise
  * ```
  *
@@ -1199,7 +1199,7 @@ fun String.pcurve(curve: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope curve shape.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(pcurve(2))   // mapper form
  * ```
  *
@@ -1263,11 +1263,11 @@ internal val PatternMapperFn._panc by dslPatternMapperExtension { m, args, callI
  * envelope reaches its peak (or trough). `0` anchors at the start; `1` at the end.
  * When called with no argument, reinterprets the current event value as an anchor point.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").panchor(0).penv(12)   // pitch peaks at note start
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").panchor(1).penv(12)   // pitch peaks at note end
  * ```
  *
@@ -1287,7 +1287,7 @@ fun String.panchor(anchor: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope anchor point.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(panchor(0))   // mapper form
  * ```
  *
@@ -1347,11 +1347,11 @@ internal val PatternMapperFn._accelerate by dslPatternMapperExtension { m, args,
  * or sweep effects. When called with no argument, reinterprets the current event value as
  * an acceleration amount.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("cr").accelerate(2)              // crash pitches up during playback
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").accelerate("<0 -2 2>")     // alternate: no ramp, down, up per cycle
  * ```
  *
@@ -1371,7 +1371,7 @@ fun String.accelerate(amount: PatternLike? = null): SprudelPattern =
  * Returns a [PatternMapperFn] that sets the playback acceleration (pitch ramp).
  * When called with no argument, reinterprets the current event value as an acceleration amount.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("hh").apply(accelerate(2))   // mapper form
  * ```
  *
@@ -1510,11 +1510,11 @@ internal val PatternMapperFn._transpose by dslPatternMapperExtension { m, args, 
  * Shifts all note pitches by the given amount. Numeric arguments are treated as semitones;
  * string arguments can be interval names (e.g. `"P5"` for a perfect fifth).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4 g4").transpose(7)       // transpose up a perfect fifth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").transpose("<0 12>")   // alternate: no transpose vs octave up per cycle
  * ```
  *
@@ -1565,11 +1565,11 @@ internal val PatternMapperFn._freq by dslPatternMapperExtension { m, args, callI
  * microtonal work where standard note names are insufficient. When called with no argument,
  * reinterprets the current event value as a frequency in Hz.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * freq("440 550 660")          // A4, roughly C#5, roughly E5 by raw Hz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").freq(432)      // force all events to 432 Hz
  * ```
  *
@@ -1697,11 +1697,11 @@ internal val PatternMapperFn._scaleTranspose by dslPatternMapperExtension { m, a
  * the current scale context. Falls back to chromatic (semitone) transposition when no scale
  * is active.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n("0 2 4").scale("c4:major").note().scaleTranspose(1)  // shift up 1 scale degree
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4 g4").scale("c4:major").scaleTranspose(-2)  // shift down 2 scale degrees
  * ```
  *
@@ -1767,11 +1767,11 @@ internal val String._chord by dslStringExtension { p, args, callInfo -> p._chord
  * The chord root is also set as the event's note. Use [voicing] to expand into voiced
  * notes, or [rootNotes] to extract just the bass note.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chord("<C Am F G>").voicing()         // voiced I-vi-IV-V
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chord("<Cmaj7 Am7>").voicing()        // jazzy chord alternation per cycle
  * ```
  *
@@ -1858,11 +1858,11 @@ internal val PatternMapperFn._rootNotes by dslPatternMapperExtension { m, args, 
  * Given a pattern with chord names set via [chord], `rootNotes` produces events carrying
  * only the chord root note. An optional integer argument forces the root to a specific octave.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chord("C:major Am:minor F:major").rootNotes()   // root notes: C, A, F
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chord("Cmaj7 Am7 Fmaj7").rootNotes(3)           // roots forced to octave 3
  * ```
  *
@@ -2035,11 +2035,11 @@ internal val PatternMapperFn._voicing by dslPatternMapperExtension { m, args, ca
  * form the chord, applying smooth voice leading to minimise large jumps between chords.
  * An optional pair of note-string arguments sets the register range (default `"C3"` to `"C5"`).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chord("C:major Am:minor F:major G:major").voicing()         // voiced I-vi-IV-V
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * chord("Cmaj7 Am7 Fmaj7").voicing("C3", "C5")  // voiced within C3–C5 range
  * ```
  *

@@ -11,8 +11,14 @@ import kotlin.math.min
  * Reduces the volume of a signal based on the level of a sidechain (trigger) signal.
  * Commonly used for kick-bass ducking or pumping effects.
  *
+ * Uses linked stereo detection: the sidechain level is derived from max(abs(L), abs(R))
+ * and a single shared envelope applies the same gain reduction to both channels.
+ * This preserves the stereo image during ducking.
+ *
  * @param sampleRate Audio sample rate in Hz
- * @param attackSeconds Time to return to normal volume after trigger stops (in seconds)
+ * @param attackSeconds Recovery/release time — how fast the volume returns to normal after
+ *   the sidechain trigger stops (in seconds). Note: the duck-down is instantaneous;
+ *   this parameter only controls the return smoothing. Named "attack" for strudel compatibility.
  * @param depth Amount of ducking (0.0 = no effect, 1.0 = full silence)
  */
 class Ducking(
@@ -40,41 +46,62 @@ class Ducking(
         }
 
     /**
-     * Processes audio with sidechain ducking.
+     * Processes stereo audio with sidechain ducking (linked stereo detection).
+     *
+     * Detects sidechain level from max(abs(L), abs(R)) and applies the same gain
+     * to both channels, preserving the stereo image.
+     */
+    fun processStereo(
+        inputL: FloatArray,
+        inputR: FloatArray,
+        sidechainL: FloatArray,
+        sidechainR: FloatArray,
+        blockSize: Int,
+    ) {
+        for (i in 0 until blockSize) {
+            // Linked stereo detection: use peak of both channels
+            val sidechainLevel = max(abs(sidechainL[i].toDouble()), abs(sidechainR[i].toDouble()))
+
+            val targetGain = if (sidechainLevel > 0.01) {
+                1.0 - (depth * min(1.0, sidechainLevel * 2.0))
+            } else {
+                1.0
+            }
+
+            currentGain = if (targetGain < currentGain) {
+                targetGain
+            } else {
+                currentGain + attackCoeff * (targetGain - currentGain)
+            }
+
+            inputL[i] = (inputL[i] * currentGain).toFloat()
+            inputR[i] = (inputR[i] * currentGain).toFloat()
+        }
+    }
+
+    /**
+     * Processes mono audio with sidechain ducking.
      *
      * @param input The audio buffer to be ducked
      * @param sidechain The trigger signal (e.g., kick drum on another orbit)
      * @param blockSize Number of samples to process
      */
     fun process(input: FloatArray, sidechain: FloatArray, blockSize: Int) {
-        require(input.size >= blockSize) { "Input buffer too small" }
-        require(sidechain.size >= blockSize) { "Sidechain buffer too small" }
-
         for (i in 0 until blockSize) {
-            // Calculate sidechain signal level (RMS-like envelope following)
             val sidechainLevel = abs(sidechain[i].toDouble())
 
-            // Calculate target gain based on sidechain level
-            // When sidechain is loud, gain goes down (ducking)
             val targetGain = if (sidechainLevel > 0.01) {
-                // Sidechain is active - reduce gain
                 1.0 - (depth * min(1.0, sidechainLevel * 2.0))
             } else {
-                // No sidechain signal - full volume
                 1.0
             }
 
-            // Smooth gain changes with envelope follower
-            // Fast attack when ducking, slower release when returning
             currentGain = if (targetGain < currentGain) {
-                // Fast attack (immediate ducking)
                 targetGain
             } else {
-                // Slower release (smooth return to normal)
                 currentGain + attackCoeff * (targetGain - currentGain)
             }
 
-            // Apply gain reduction
             input[i] = (input[i] * currentGain).toFloat()
         }
     }
@@ -84,9 +111,7 @@ class Ducking(
      * Higher values = faster response.
      */
     private fun calculateCoefficient(timeSeconds: Double): Double {
-        // Prevent division by zero and ensure minimum attack time
         val clampedTime = max(0.001, timeSeconds)
-        // Time constant for 63% response
         return 1.0 - exp(-1.0 / (clampedTime * sampleRate))
     }
 

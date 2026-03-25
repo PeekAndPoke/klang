@@ -7,7 +7,6 @@ import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.VoiceImpl
 import io.peekandpoke.klang.audio_be.voices.strip.excite.ExciteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
@@ -89,7 +88,7 @@ object VoiceTestHelpers {
 
         // Cut group
         cut: Int? = null,
-    ): VoiceImpl {
+    ): Voice {
         val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
         val releaseFrames = (endFrame - gateEndFrame).toInt()
 
@@ -146,7 +145,7 @@ object VoiceTestHelpers {
             orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
-        return VoiceImpl(
+        return Voice(
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,

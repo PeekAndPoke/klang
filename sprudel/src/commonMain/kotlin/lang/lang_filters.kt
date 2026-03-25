@@ -86,15 +86,15 @@ internal val PatternMapperFn._lp by dslPatternMapperExtension { m, args, callInf
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with LPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").lpf(500)             // dark, muffled sound
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").lpf("<200 2000>")    // alternating cutoff per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("200 500 1000").lpf()          // reinterpret values as cutoff
  * ```
  *
@@ -115,7 +115,7 @@ fun SprudelPattern.lpf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with LPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".lpf(500).note()           // LPF on string pattern
  * ```
  *
@@ -136,11 +136,11 @@ fun String.lpf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A [PatternMapperFn] that applies LPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(500))                     // apply LPF via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, lpf(200).resonance(20))   // resonant LPF on first cycle
  * ```
  *
@@ -157,11 +157,11 @@ fun lpf(freq: PatternLike? = null): PatternMapperFn = _lpf(listOfNotNull(freq).a
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(gain(0.8).lpf(500))           // gain then LPF
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, lpf(300).resonance(15))   // resonant LPF chain
  * ```
  */
@@ -177,11 +177,11 @@ fun PatternMapperFn.lpf(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with LPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").cutoff(800)            // alias for lpf
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").cutoff("<200 2000>")   // alternating cutoff per cycle
  * ```
  *
@@ -200,7 +200,7 @@ fun SprudelPattern.cutoff(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A new pattern with LPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".cutoff(500).note()        // alias for String.lpf
  * ```
  */
@@ -214,11 +214,11 @@ fun String.cutoff(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A [PatternMapperFn] that applies LPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(cutoff(500))      // alias for lpf()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, cutoff(200))  // LPF on first cycle
  * ```
  *
@@ -235,11 +235,11 @@ fun cutoff(freq: PatternLike? = null): PatternMapperFn = _cutoff(listOfNotNull(f
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(gain(0.8).cutoff(500))           // gain then cutoff
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, cutoff(300).resonance(10))  // chain cutoff + resonance
  * ```
  */
@@ -253,11 +253,11 @@ fun PatternMapperFn.cutoff(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with LPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").ctf(600)               // short alias for lpf
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").ctf("<100 5000>")      // sweeping cutoff
  * ```
  *
@@ -276,7 +276,7 @@ fun SprudelPattern.ctf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A new pattern with LPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".ctf(500).note()           // short alias
  * ```
  */
@@ -290,11 +290,11 @@ fun String.ctf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A [PatternMapperFn] that applies LPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(ctf(500))     // short alias for lpf()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, ctf(200)) // LPF on first cycle
  * ```
  *
@@ -311,11 +311,11 @@ fun ctf(freq: PatternLike? = null): PatternMapperFn = _ctf(listOfNotNull(freq).a
  * @param freq The cutoff frequency in Hz.
  * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(gain(0.8).ctf(500))              // gain then ctf
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, ctf(300).resonance(10))   // chain
  * ```
  */
@@ -329,11 +329,11 @@ fun PatternMapperFn.ctf(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with LPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lp(400)                // short alias for lpf
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lp("<200 3000>")       // sweeping cutoff
  * ```
  *
@@ -352,7 +352,7 @@ fun SprudelPattern.lp(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A new pattern with LPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".lp(500).note()            // alias for String.lpf
  * ```
  */
@@ -366,11 +366,11 @@ fun String.lp(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A [PatternMapperFn] that applies LPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lp(500))      // alias for lpf()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, lp(200))  // LPF on first cycle
  * ```
  *
@@ -387,11 +387,11 @@ fun lp(freq: PatternLike? = null): PatternMapperFn = _lp(listOfNotNull(freq).asS
  * @param freq The cutoff frequency in Hz.
  * @return A new [PatternMapperFn] chaining LPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(gain(0.8).lp(500))               // gain then lp filter
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, lp(300).resonance(10))    // chain
  * ```
  */
@@ -464,15 +464,15 @@ internal val PatternMapperFn._hcutoff by dslPatternMapperExtension { m, args, ca
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with HPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").hpf(300)              // removes bass, thin sound
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").hpf("<100 800>")   // alternating HPF cutoff per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("100 300 800").hpf()         // reinterpret values as HPF cutoff
  * ```
  *
@@ -491,7 +491,7 @@ fun SprudelPattern.hpf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with HPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".hpf(300).note()          // HPF on string pattern
  * ```
  *
@@ -509,11 +509,11 @@ fun String.hpf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A [PatternMapperFn] that applies HPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hpf(300))                     // apply HPF via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, hpf(200).hresonance(10))  // resonant HPF on first cycle
  * ```
  *
@@ -530,11 +530,11 @@ fun hpf(freq: PatternLike? = null): PatternMapperFn = _hpf(listOfNotNull(freq).a
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new [PatternMapperFn] chaining HPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(gain(0.8).hpf(300))           // gain then HPF
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hpf(200).hresonance(15))  // resonant HPF chain
  * ```
  */
@@ -548,11 +548,11 @@ fun PatternMapperFn.hpf(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with HPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hp(300)               // alias for hpf
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hp("<100 800>")       // alternating HPF cutoff
  * ```
  *
@@ -571,7 +571,7 @@ fun SprudelPattern.hp(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A new pattern with HPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".hp(300).note()           // alias for String.hpf
  * ```
  */
@@ -585,11 +585,11 @@ fun String.hp(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A [PatternMapperFn] that applies HPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hp(300))      // alias for hpf()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hp(200))  // HPF on first cycle
  * ```
  *
@@ -606,11 +606,11 @@ fun hp(freq: PatternLike? = null): PatternMapperFn = _hp(listOfNotNull(freq).asS
  * @param freq The cutoff frequency in Hz.
  * @return A new [PatternMapperFn] chaining HPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(gain(0.8).hp(300))               // gain then hp filter
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hp(200).hresonance(10))   // chain
  * ```
  */
@@ -624,11 +624,11 @@ fun PatternMapperFn.hp(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The cutoff frequency in Hz. Omit to reinterpret the pattern's values as cutoff.
  * @return A new pattern with HPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hcutoff(300)          // alias for hpf
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hcutoff("<100 800>")  // alternating HPF cutoff
  * ```
  *
@@ -647,7 +647,7 @@ fun SprudelPattern.hcutoff(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A new pattern with HPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".hcutoff(300).note()      // alias for String.hpf
  * ```
  */
@@ -661,11 +661,11 @@ fun String.hcutoff(freq: PatternLike? = null): SprudelPattern =
  * @param freq The cutoff frequency in Hz.
  * @return A [PatternMapperFn] that applies HPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hcutoff(300))      // alias for hpf()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hcutoff(200))  // HPF on first cycle
  * ```
  *
@@ -682,11 +682,11 @@ fun hcutoff(freq: PatternLike? = null): PatternMapperFn = _hcutoff(listOfNotNull
  * @param freq The cutoff frequency in Hz.
  * @return A new [PatternMapperFn] chaining HPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(gain(0.8).hcutoff(300))           // gain then hcutoff
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hcutoff(200).hresonance(10))  // chain
  * ```
  */
@@ -759,15 +759,15 @@ internal val PatternMapperFn._bp by dslPatternMapperExtension { m, args, callInf
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A new pattern with BPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").bandf(1000)               // emphasise mid-range around 1 kHz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf("<500 2000>")    // alternating centre per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("500 1000 2000").bandf()      // reinterpret values as BPF centre
  * ```
  *
@@ -786,7 +786,7 @@ fun SprudelPattern.bandf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A new pattern with BPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".bandf(1000).note()        // BPF on string pattern
  * ```
  *
@@ -804,11 +804,11 @@ fun String.bandf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A [PatternMapperFn] that applies BPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(bandf(1000))                    // apply BPF via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, bandf(800).bandq(5))        // narrow BPF on first cycle
  * ```
  *
@@ -825,11 +825,11 @@ fun bandf(freq: PatternLike? = null): PatternMapperFn = _bandf(listOfNotNull(fre
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A new [PatternMapperFn] chaining BPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(gain(0.8).bandf(1000))          // gain then BPF
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, bandf(800).bandq(8))        // narrow BPF chain
  * ```
  */
@@ -843,11 +843,11 @@ fun PatternMapperFn.bandf(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A new pattern with BPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bpf(1000)              // alias for bandf
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bpf("<500 2000>")      // alternating centre per cycle
  * ```
  *
@@ -866,7 +866,7 @@ fun SprudelPattern.bpf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The centre frequency in Hz.
  * @return A new pattern with BPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".bpf(1000).note()          // alias for String.bandf
  * ```
  */
@@ -880,11 +880,11 @@ fun String.bpf(freq: PatternLike? = null): SprudelPattern =
  * @param freq The centre frequency in Hz.
  * @return A [PatternMapperFn] that applies BPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(bpf(1000))    // alias for bandf()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, bpf(800)) // BPF on first cycle
  * ```
  *
@@ -901,11 +901,11 @@ fun bpf(freq: PatternLike? = null): PatternMapperFn = _bpf(listOfNotNull(freq).a
  * @param freq The centre frequency in Hz.
  * @return A new [PatternMapperFn] chaining BPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(gain(0.8).bpf(1000))              // gain then BPF
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, bpf(800).bandq(5))         // chain
  * ```
  */
@@ -919,11 +919,11 @@ fun PatternMapperFn.bpf(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The centre frequency in Hz. Omit to reinterpret the pattern's values as centre frequency.
  * @return A new pattern with BPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bp(1000)               // short alias for bandf
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bp("<500 2000>")       // alternating centre per cycle
  * ```
  *
@@ -942,7 +942,7 @@ fun SprudelPattern.bp(freq: PatternLike? = null): SprudelPattern =
  * @param freq The centre frequency in Hz.
  * @return A new pattern with BPF applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".bp(1000).note()           // alias for String.bandf
  * ```
  */
@@ -956,11 +956,11 @@ fun String.bp(freq: PatternLike? = null): SprudelPattern =
  * @param freq The centre frequency in Hz.
  * @return A [PatternMapperFn] that applies BPF.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(bp(1000))     // alias for bandf()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, bp(800))  // BPF on first cycle
  * ```
  *
@@ -977,11 +977,11 @@ fun bp(freq: PatternLike? = null): PatternMapperFn = _bp(listOfNotNull(freq).asS
  * @param freq The centre frequency in Hz.
  * @return A new [PatternMapperFn] chaining BPF after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(gain(0.8).bp(1000))               // gain then bp filter
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, bp(800).bandq(5))          // chain
  * ```
  */
@@ -1031,15 +1031,15 @@ internal val PatternMapperFn._lpq by dslPatternMapperExtension { m, args, callIn
  * @param q The Q factor. Higher values produce more resonance. Omit to reinterpret pattern values.
  * @return A new pattern with LPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").lpf(800).resonance(15)    // LPF with high resonance peak
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").lpf(500).resonance("<0 20>")    // resonance sweeps from flat to peaked
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5 10 20").resonance()            // reinterpret values as resonance Q
  * ```
  *
@@ -1058,7 +1058,7 @@ fun SprudelPattern.resonance(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with LPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4 e4".lpf(800).resonance(15)    // resonance on string pattern
  * ```
  *
@@ -1076,11 +1076,11 @@ fun String.resonance(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A [PatternMapperFn] that applies LPF resonance.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(800).resonance(15))        // LPF + resonance chain
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, resonance(20))             // high resonance on first cycle
  * ```
  *
@@ -1097,11 +1097,11 @@ fun resonance(q: PatternLike? = null): PatternMapperFn = _resonance(listOfNotNul
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new [PatternMapperFn] chaining resonance after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(500).resonance(15))        // LPF then resonance
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, lpf(300).resonance(20))    // resonant LPF chain
  * ```
  */
@@ -1115,11 +1115,11 @@ fun PatternMapperFn.resonance(q: PatternLike? = null): PatternMapperFn =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with LPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(500).res(10)       // alias for resonance
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").res("<0 20>")          // sweeping resonance
  * ```
  *
@@ -1138,7 +1138,7 @@ fun SprudelPattern.res(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A new pattern with LPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".lpf(500).res(10)             // alias for String.resonance
  * ```
  */
@@ -1152,11 +1152,11 @@ fun String.res(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A [PatternMapperFn] that applies LPF resonance.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(500).res(10))  // alias for resonance()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, res(20))       // high resonance on first cycle
  * ```
  *
@@ -1173,11 +1173,11 @@ fun res(q: PatternLike? = null): PatternMapperFn = _res(listOfNotNull(q).asSprud
  * @param q The Q factor.
  * @return A new [PatternMapperFn] chaining resonance after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(500).res(10))  // LPF then res
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, lpf(300).res(20))  // chain
  * ```
  */
@@ -1191,11 +1191,11 @@ fun PatternMapperFn.res(q: PatternLike? = null): PatternMapperFn =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with LPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(500).lpq(10)       // alias for resonance
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpq("<0 20>")          // sweeping Q
  * ```
  *
@@ -1214,7 +1214,7 @@ fun SprudelPattern.lpq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A new pattern with LPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".lpf(500).lpq(10)             // alias for String.resonance
  * ```
  */
@@ -1228,11 +1228,11 @@ fun String.lpq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A [PatternMapperFn] that applies LPF resonance.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(500).lpq(10))  // alias for resonance()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, lpq(20))       // high Q on first cycle
  * ```
  *
@@ -1249,11 +1249,11 @@ fun lpq(q: PatternLike? = null): PatternMapperFn = _lpq(listOfNotNull(q).asSprud
  * @param q The Q factor.
  * @return A new [PatternMapperFn] chaining resonance after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(500).lpq(10))  // LPF then lpq
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, lpf(300).lpq(20))  // chain
  * ```
  */
@@ -1303,15 +1303,15 @@ internal val PatternMapperFn._hpq by dslPatternMapperExtension { m, args, callIn
  * @param q The Q factor. Higher values produce more resonance. Omit to reinterpret pattern values.
  * @return A new pattern with HPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(300).hresonance(15)        // HPF with strong resonance peak
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").hpf(200).hresonance("<0 20>")     // resonance sweeps per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 5 15").hresonance()                // reinterpret values as HPF Q
  * ```
  *
@@ -1330,7 +1330,7 @@ fun SprudelPattern.hresonance(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with HPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".hpf(300).hresonance(15)      // resonance on string pattern
  * ```
  *
@@ -1348,11 +1348,11 @@ fun String.hresonance(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A [PatternMapperFn] that applies HPF resonance.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hpf(300).hresonance(15))       // HPF + resonance chain
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, hresonance(20))            // high HPF resonance on first cycle
  * ```
  *
@@ -1369,11 +1369,11 @@ fun hresonance(q: PatternLike? = null): PatternMapperFn = _hresonance(listOfNotN
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new [PatternMapperFn] chaining HPF resonance after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hpf(200).hresonance(15))       // HPF then resonance
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hpf(300).hresonance(20))   // resonant HPF chain
  * ```
  */
@@ -1387,11 +1387,11 @@ fun PatternMapperFn.hresonance(q: PatternLike? = null): PatternMapperFn =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with HPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(300).hres(10)      // alias for hresonance
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hres("<0 20>")         // sweeping HPF Q
  * ```
  *
@@ -1410,7 +1410,7 @@ fun SprudelPattern.hres(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A new pattern with HPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".hpf(300).hres(10)            // alias for String.hresonance
  * ```
  */
@@ -1424,11 +1424,11 @@ fun String.hres(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A [PatternMapperFn] that applies HPF resonance.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hpf(300).hres(10))  // alias for hresonance()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hres(20))       // high Q on first cycle
  * ```
  *
@@ -1445,11 +1445,11 @@ fun hres(q: PatternLike? = null): PatternMapperFn = _hres(listOfNotNull(q).asSpr
  * @param q The Q factor.
  * @return A new [PatternMapperFn] chaining HPF resonance after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hpf(300).hres(10))  // HPF then hres
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hpf(200).hres(20))  // chain
  * ```
  */
@@ -1463,11 +1463,11 @@ fun PatternMapperFn.hres(q: PatternLike? = null): PatternMapperFn =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with HPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(300).hpq(10)       // alias for hresonance
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpq("<0 20>")          // sweeping HPF Q
  * ```
  *
@@ -1486,7 +1486,7 @@ fun SprudelPattern.hpq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A new pattern with HPF resonance applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".hpf(300).hpq(10)             // alias for String.hresonance
  * ```
  */
@@ -1500,11 +1500,11 @@ fun String.hpq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A [PatternMapperFn] that applies HPF resonance.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hpf(300).hpq(10))  // alias for hresonance()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hpq(20))       // high Q on first cycle
  * ```
  *
@@ -1521,11 +1521,11 @@ fun hpq(q: PatternLike? = null): PatternMapperFn = _hpq(listOfNotNull(q).asSprud
  * @param q The Q factor.
  * @return A new [PatternMapperFn] chaining HPF resonance after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(hpf(300).hpq(10))  // HPF then hpq
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, hpf(200).hpq(20))  // chain
  * ```
  */
@@ -1561,15 +1561,15 @@ internal val PatternMapperFn._bandq by dslPatternMapperExtension { m, args, call
  * @param q The Q factor. Higher values create a narrower band. Omit to reinterpret pattern values.
  * @return A new pattern with BPF Q applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(1000).bandq(5)         // narrow band pass at 1 kHz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").bandf(800).bandq("<1 20>")      // Q sweeps from wide to narrow
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 5 10 20").bandq()                // reinterpret values as BPF Q
  * ```
  *
@@ -1588,7 +1588,7 @@ fun SprudelPattern.bandq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with BPF Q applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".bandf(800).bandq(5)          // BPF Q on string pattern
  * ```
  */
@@ -1602,11 +1602,11 @@ fun String.bandq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A [PatternMapperFn] that applies BPF Q.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(bandf(1000).bandq(5))          // BPF + Q chain
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, bandq(10))                 // narrow BPF on first cycle
  * ```
  *
@@ -1623,11 +1623,11 @@ fun bandq(q: PatternLike? = null): PatternMapperFn = _bandq(listOfNotNull(q).asS
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new [PatternMapperFn] chaining BPF Q after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(bandf(800).bandq(5))           // bandf then bandq
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, bandf(1000).bandq(8))      // narrow BPF chain
  * ```
  */
@@ -1648,11 +1648,11 @@ internal val PatternMapperFn._bpq by dslPatternMapperExtension { m, args, callIn
  * @param q The Q factor. Omit to reinterpret the pattern's values as Q.
  * @return A new pattern with BPF Q applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(800).bpq(5)      // alias for bandq
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bpq("<1 20>")          // sweeping BPF Q
  * ```
  *
@@ -1671,7 +1671,7 @@ fun SprudelPattern.bpq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A new pattern with BPF Q applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".bandf(800).bpq(5)            // alias for String.bandq
  * ```
  */
@@ -1685,11 +1685,11 @@ fun String.bpq(q: PatternLike? = null): SprudelPattern =
  * @param q The Q factor.
  * @return A [PatternMapperFn] that applies BPF Q.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(bandf(800).bpq(5))  // alias for bandq()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, bpq(10))        // narrow BPF on first cycle
  * ```
  *
@@ -1706,11 +1706,11 @@ fun bpq(q: PatternLike? = null): PatternMapperFn = _bpq(listOfNotNull(q).asSprud
  * @param q The Q factor.
  * @return A new [PatternMapperFn] chaining BPF Q after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(bandf(800).bpq(5))  // bandf then bpq
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, bandf(1000).bpq(8))  // chain
  * ```
  */
@@ -1746,11 +1746,11 @@ internal val PatternMapperFn._lpattack by dslPatternMapperExtension { m, args, c
  * @param seconds The attack time in seconds. Omit to reinterpret the pattern's values as attack time.
  * @return A new pattern with LPF attack applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").lpf(200).lpenv(5000).lpattack(0.1)   // filter opens over 100 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpattack("<0.01 0.5>")              // fast vs slow filter attack per cycle
  * ```
  *
@@ -1769,7 +1769,7 @@ fun SprudelPattern.lpattack(seconds: PatternLike? = null): SprudelPattern =
  * @param seconds The attack time in seconds.
  * @return A new pattern with LPF attack applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c4".lpattack(0.1)                 // LPF attack on string pattern
  * ```
  *
@@ -1787,11 +1787,11 @@ fun String.lpattack(seconds: PatternLike? = null): SprudelPattern =
  * @param seconds The attack time in seconds. Omit to reinterpret the pattern's values as attack time.
  * @return A [PatternMapperFn] that applies LPF attack.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(200).lpenv(4000).lpattack(0.1))  // LPF attack chain
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4*4").firstOf(4, lpattack(0.5))   // slow attack on first cycle
  * ```
  *
@@ -1808,11 +1808,11 @@ fun lpattack(seconds: PatternLike? = null): PatternMapperFn = _lpattack(listOfNo
  * @param seconds The attack time in seconds.
  * @return A new [PatternMapperFn] chaining LPF attack after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(200).lpattack(0.1))  // lpf then attack
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, lpf(300).lpattack(0.2))  // chain
  * ```
  */
@@ -1833,7 +1833,7 @@ internal val PatternMapperFn._lpa by dslPatternMapperExtension { m, args, callIn
  * @param seconds The attack time in seconds. Omit to reinterpret the pattern's values as attack time.
  * @return A new pattern with LPF attack applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").lpf(200).lpenv(5000).lpa(0.1)   // filter opens over 100 ms
  * ```
  *
@@ -1857,7 +1857,7 @@ fun String.lpa(seconds: PatternLike? = null): SprudelPattern =
  * @param seconds The attack time in seconds.
  * @return A [PatternMapperFn] that applies LPF attack.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(200).lpa(0.1))   // alias for lpattack()
  * ```
  *
@@ -1906,11 +1906,11 @@ internal val PatternMapperFn._lpd by dslPatternMapperExtension { m, args, callIn
  * @param seconds The decay time in seconds. Omit to reinterpret the pattern's values as decay time.
  * @return A new pattern with LPF decay applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").lpf(200).lpenv(5000).lpdecay(0.2)   // filter decays over 200 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpdecay("<0.05 0.5>")              // short vs long filter decay per cycle
  * ```
  *
@@ -1934,7 +1934,7 @@ fun String.lpdecay(seconds: PatternLike? = null): SprudelPattern =
  * @param seconds The decay time in seconds.
  * @return A [PatternMapperFn] that applies LPF decay.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(200).lpenv(4000).lpdecay(0.2))  // LPF decay chain
  * ```
  *
@@ -1956,7 +1956,7 @@ fun PatternMapperFn.lpdecay(seconds: PatternLike? = null): PatternMapperFn =
  * @param seconds The decay time in seconds.
  * @return A new pattern with LPF decay applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").lpf(200).lpenv(5000).lpd(0.2)   // alias for lpdecay
  * ```
  *
@@ -1980,7 +1980,7 @@ fun String.lpd(seconds: PatternLike? = null): SprudelPattern =
  * @param seconds The decay time in seconds.
  * @return A [PatternMapperFn] that applies LPF decay.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4 e4").apply(lpf(200).lpd(0.2))   // alias for lpdecay()
  * ```
  *
@@ -2026,11 +2026,11 @@ internal val PatternMapperFn._lps by dslPatternMapperExtension { m, args, callIn
  * Controls the filter cutoff level during the sustained portion of the note. `1` holds
  * the filter open; `0` closes it back to baseline. Use with the lpattack/lpdecay/lprelease.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(200).lpenv(4000).lpsustain(0.5)  // sustain at half depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpsustain("<0 1>")                     // closed vs fully open sustain
  * ```
  *
@@ -2062,11 +2062,11 @@ fun PatternMapperFn.lpsustain(level: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [lpsustain]. Sets the LPF envelope sustain level.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(200).lps(0.5)   // alias for lpsustain()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(lpf(200).lps(0.5))   // chained PatternMapperFn
  * ```
  *
@@ -2125,11 +2125,11 @@ internal val PatternMapperFn._lpr by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the low pass filter cutoff returns to baseline after the note ends.
  * Use with [lpattack], [lpdecay], [lpsustain], [lpenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").lpf(200).lpenv(5000).lprelease(0.4)   // filter closes slowly after note
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lprelease("<0.05 1.0>")              // short vs long filter release per cycle
  * ```
  *
@@ -2161,11 +2161,11 @@ fun PatternMapperFn.lprelease(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [lprelease]. Sets the LPF envelope release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(200).lpr(0.4)   // alias for lprelease()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(lpf(200).lpr(0.4))   // chained PatternMapperFn
  * ```
  *
@@ -2245,11 +2245,11 @@ internal val PatternMapperFn._lpe by dslPatternMapperExtension { m, args, callIn
  * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd").lpf(200).lpenv(3.0)                // sweeps up to 800 Hz at peak
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(300).lpenv("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
  * ```
  *
@@ -2281,11 +2281,11 @@ fun PatternMapperFn.lpenv(depth: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [lpenv]. Sets the LPF envelope depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(200).lpe(4000)   // alias for lpenv()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(lpf(200).lpe(4000))   // chained PatternMapperFn
  * ```
  *
@@ -2344,11 +2344,11 @@ internal val PatternMapperFn._hpa by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the high pass filter cutoff sweeps from its baseline to the peak
  * at note onset. Use with [hpenv], [hpdecay], [hpsustain], [hprelease].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").hpf(100).hpenv(2000).hpattack(0.1)   // filter opens over 100 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpattack("<0.01 0.5>")              // fast vs slow filter attack per cycle
  * ```
  *
@@ -2380,11 +2380,11 @@ fun PatternMapperFn.hpattack(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [hpattack]. Sets the HPF envelope attack time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(100).hpa(0.1)   // alias for hpattack()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(hpf(100).hpa(0.1))   // chained PatternMapperFn
  * ```
  *
@@ -2443,11 +2443,11 @@ internal val PatternMapperFn._hpd by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the filter cutoff moves from peak to sustain level after the attack.
  * Use with [hpattack], [hpsustain], [hprelease], [hpenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").hpf(100).hpenv(2000).hpdecay(0.2)   // filter decays over 200 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpdecay("<0.05 0.5>")              // short vs long filter decay per cycle
  * ```
  *
@@ -2479,11 +2479,11 @@ fun PatternMapperFn.hpdecay(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [hpdecay]. Sets the HPF envelope decay time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(100).hpd(0.2)   // alias for hpdecay()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(hpf(100).hpd(0.2))   // chained PatternMapperFn
  * ```
  *
@@ -2543,11 +2543,11 @@ internal val PatternMapperFn._hps by dslPatternMapperExtension { m, args, callIn
  * filter open at the envelope peak; `0` closes it back to baseline. Use with
  * [hpattack]/[hpdecay]/[hprelease].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(100).hpenv(3000).hpsustain(0.5)  // sustain at half depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpsustain("<0 1>")                     // closed vs fully open sustain
  * ```
  *
@@ -2579,11 +2579,11 @@ fun PatternMapperFn.hpsustain(level: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [hpsustain]. Sets the HPF envelope sustain level.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(100).hps(0.5)   // alias for hpsustain()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(hpf(100).hps(0.5))   // chained PatternMapperFn
  * ```
  *
@@ -2642,11 +2642,11 @@ internal val PatternMapperFn._hpr by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the high pass filter cutoff returns to baseline after the note ends.
  * Use with [hpattack], [hpdecay], [hpsustain], [hpenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").hpf(100).hpenv(2000).hprelease(0.4)   // filter closes slowly after note
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hprelease("<0.05 1.0>")              // short vs long filter release per cycle
  * ```
  *
@@ -2678,11 +2678,11 @@ fun PatternMapperFn.hprelease(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [hprelease]. Sets the HPF envelope release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(100).hpr(0.4)   // alias for hprelease()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(hpf(100).hpr(0.4))   // chained PatternMapperFn
  * ```
  *
@@ -2762,11 +2762,11 @@ internal val PatternMapperFn._hpe by dslPatternMapperExtension { m, args, callIn
  * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").hpf(100).hpenv(3.0)                // sweeps up to 400 Hz at peak
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(200).hpenv("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
  * ```
  *
@@ -2798,11 +2798,11 @@ fun PatternMapperFn.hpenv(depth: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [hpenv]. Sets the HPF envelope depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").hpf(200).hpe(3000)   // alias for hpenv()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(hpf(200).hpe(3000))   // chained PatternMapperFn
  * ```
  *
@@ -2861,11 +2861,11 @@ internal val PatternMapperFn._bpa by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the band pass filter centre frequency sweeps from its baseline to
  * the peak at note onset. Use with [bpenv], [bpdecay], [bpsustain], [bprelease].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").bandf(500).bpenv(2000).bpattack(0.1)   // filter opens over 100 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bpattack("<0.01 0.5>")               // fast vs slow filter attack per cycle
  * ```
  *
@@ -2897,11 +2897,11 @@ fun PatternMapperFn.bpattack(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [bpattack]. Sets the BPF envelope attack time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(500).bpa(0.1)   // alias for bpattack()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(bandf(500).bpa(0.1))   // chained PatternMapperFn
  * ```
  *
@@ -2960,11 +2960,11 @@ internal val PatternMapperFn._bpd by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the filter centre frequency moves from peak to sustain level after
  * the attack. Use with [bpattack], [bpsustain], [bprelease], [bpenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").bandf(500).bpenv(2000).bpdecay(0.2)   // filter decays over 200 ms
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bpdecay("<0.05 0.5>")               // short vs long filter decay per cycle
  * ```
  *
@@ -2996,11 +2996,11 @@ fun PatternMapperFn.bpdecay(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [bpdecay]. Sets the BPF envelope decay time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(500).bpd(0.2)   // alias for bpdecay()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(bandf(500).bpd(0.2))   // chained PatternMapperFn
  * ```
  *
@@ -3060,11 +3060,11 @@ internal val PatternMapperFn._bps by dslPatternMapperExtension { m, args, callIn
  * `1` holds the filter at the envelope peak; `0` returns to baseline. Use with
  * [bpattack]/[bpdecay]/[bprelease].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(500).bpenv(3000).bpsustain(0.5)  // sustain at half depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bpsustain("<0 1>")                      // closed vs fully open sustain
  * ```
  *
@@ -3096,11 +3096,11 @@ fun PatternMapperFn.bpsustain(level: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [bpsustain]. Sets the BPF envelope sustain level.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(500).bps(0.5)   // alias for bpsustain()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(bandf(500).bps(0.5))   // chained PatternMapperFn
  * ```
  *
@@ -3159,11 +3159,11 @@ internal val PatternMapperFn._bpr by dslPatternMapperExtension { m, args, callIn
  * Controls how quickly the band pass filter centre frequency returns to baseline after the
  * note ends. Use with [bpattack], [bpdecay], [bpsustain], [bpenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").bandf(500).bpenv(2000).bprelease(0.4)   // filter closes slowly after note
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bprelease("<0.05 1.0>")               // short vs long filter release per cycle
  * ```
  *
@@ -3195,11 +3195,11 @@ fun PatternMapperFn.bprelease(seconds: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [bprelease]. Sets the BPF envelope release time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(500).bpr(0.4)   // alias for bprelease()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(bandf(500).bpr(0.4))   // chained PatternMapperFn
  * ```
  *
@@ -3279,11 +3279,11 @@ internal val PatternMapperFn._bpe by dslPatternMapperExtension { m, args, callIn
  * | Sustain | 0.2 | 500 × (1 + 3 × 0.2) = **800 Hz** |
  * | Release end | 0.0 | 500 Hz |
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("sd").bandf(500).bpenv(3.0)                // sweeps up to 2000 Hz at peak
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(300).bpenv("<1.0 5.0>")     // subtle vs dramatic sweep per cycle
  * ```
  *
@@ -3315,11 +3315,11 @@ fun PatternMapperFn.bpenv(depth: PatternLike? = null): PatternMapperFn =
 /**
  * Alias for [bpenv]. Sets the BPF envelope depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").bandf(200).bpe(3000)   // alias for bpenv()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").apply(bandf(200).bpe(3000))   // chained PatternMapperFn
  * ```
  *

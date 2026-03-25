@@ -4,11 +4,12 @@ package io.peekandpoke.klang.audio_be.voices.strip
  * A single processing stage in the voice pipeline.
  *
  * The voice signal flows through a chain of BlockRenderers:
- * **Pitch → Excite → Filter**
+ * **Pitch → Excite → Filter → Send**
  *
  * - **Pitch** renderers write to [BlockContext.freqModBuffer] (frequency multipliers)
  * - **Excite** renderers write to [BlockContext.audioBuffer] (raw waveform)
  * - **Filter** renderers read/write [BlockContext.audioBuffer] (sculpt the waveform)
+ * - **Send** renderer reads [BlockContext.audioBuffer] and routes to orbit mixer
  *
  * All stages share the same interface so they can be freely composed and reordered.
  */

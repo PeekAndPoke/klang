@@ -33,6 +33,10 @@ textarea::selection,
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
+.ui.button {
+    transition: var(--klang-transition) !important;
+}
+
 .ui.positive.button {
     background-color: var(--klang-gold) !important;
     color: #000000 !important;
@@ -204,11 +208,15 @@ pre, code {
     background: transparent !important;
 }
 
-/* ── Basic labels (global) ────────────────────────────────────────────────── */
+/* ── labels (global) ────────────────────────────────────────────────── */
 .ui.basic.label {
     background: transparent !important;
     color: var(--klang-text-secondary) !important;
     border-color: var(--klang-text-tertiary) !important;
+}
+
+.ui.label > .icon {
+    padding-right: 0.5em !important;
 }
 
 /* ── Textarea ─────────────────────────────────────────────────────────────── */

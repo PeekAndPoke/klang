@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -13,7 +14,10 @@ class Phaser(sampleRate: Int) {
     var depth: Double = 0.0      // 0.0 to 1.0
     var centerFreq: Double = 1000.0 // Hz
     var sweepRange: Double = 1000.0 // Hz (depth of frequency sweep)
-    var feedback: Double = 0.0   // 0.0 to <1.0
+    var feedback: Double = 0.0   // 0.0 to 0.95 (clamped to prevent self-oscillation)
+        set(value) {
+            field = value.coerceIn(0.0, 0.95)
+        }
 
     // State
     private var lfoPhase = 0.0
@@ -54,10 +58,10 @@ class Phaser(sampleRate: Int) {
             for (s in 0 until stages) {
                 val x = inL
                 val output = alpha * x + z1[0][s]
-                z1[0][s] = x - alpha * output
+                z1[0][s] = flushDenormal(x - alpha * output)
                 inL = output
             }
-            lastOutputLeft = inL
+            lastOutputLeft = flushDenormal(inL)
             left[i] = (left[i] + inL * depth).toFloat()
 
             // Right
@@ -65,10 +69,10 @@ class Phaser(sampleRate: Int) {
             for (s in 0 until stages) {
                 val x = inR
                 val output = alpha * x + z1[1][s]
-                z1[1][s] = x - alpha * output
+                z1[1][s] = flushDenormal(x - alpha * output)
                 inR = output
             }
-            lastOutputRight = inR
+            lastOutputRight = flushDenormal(inR)
             right[i] = (right[i] + inR * depth).toFloat()
         }
     }

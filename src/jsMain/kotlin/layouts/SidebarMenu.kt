@@ -8,12 +8,17 @@ import de.peekandpoke.kraft.vdom.VDom
 import de.peekandpoke.ultra.html.css
 import de.peekandpoke.ultra.html.key
 import de.peekandpoke.ultra.html.onClick
+import de.peekandpoke.ultra.semanticui.SemanticIconFn
 import de.peekandpoke.ultra.semanticui.icon
 import de.peekandpoke.ultra.semanticui.noui
 import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.comp.Motoer
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialDifficulty
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialScope
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
+import io.peekandpoke.klang.pages.docs.tutorials.iconFn
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import kotlinx.css.*
 import kotlinx.html.DIV
@@ -37,6 +42,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         data object Main : State
         data object Songs : State
         data object Samples : State
+        data object Tutorials : State
         data object Docs : State
         data object Credits : State
     }
@@ -44,6 +50,7 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     private fun inferState(): State = when {
         currentRoute.route in listOf(Nav.editSongCode, Nav.newSongCode) -> State.Songs
         currentRoute.route in listOf(Nav.samplesLibrary) -> State.Samples
+        currentRoute.route.pattern.startsWith(Nav.tutorialsBase) -> State.Tutorials
         currentRoute.route.pattern.startsWith(Nav.manualsBase) -> State.Docs
         currentRoute.route == Nav.credits -> State.Credits
         else -> State.Main
@@ -51,7 +58,101 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     private var state: State by value(inferState())
 
-    //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+    //  MENU ITEM HELPER  /////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Renders a single menu item with consistent styling.
+     * Selected items get white background, black text, and red icon.
+     */
+    private fun DIV.menuItem(
+        isSelected: Boolean,
+        label: String,
+        iconFn: SemanticIconFn? = null,
+        onClick: (PointerEvent) -> Unit,
+    ) {
+        noui.item {
+            css {
+                border = Border.none
+                borderTopLeftRadius = 4.px
+                borderBottomLeftRadius = 4.px
+                borderTopRightRadius = 0.px
+                borderBottomRightRadius = 0.px
+                padding = Padding(10.px, 20.px)
+
+                if (isSelected) {
+                    backgroundColor = Color.white
+                    color = Color(laf.critical)
+                } else {
+                    backgroundColor = Color(laf.menuBackground)
+                    color = Color.white
+                    borderRadius = 0.px
+                }
+            }
+            this.onClick { evt ->
+                evt.stopPropagation()
+                onClick(evt)
+            }
+
+            if (iconFn != null) {
+                icon.iconFn().then {
+                    if (isSelected) {
+                        css { put("color", "${laf.critical} !important") }
+                    }
+                }
+            }
+
+            noui.content {
+                css {
+                    color = if (isSelected) Color.black else Color.white
+                }
+                +label
+            }
+        }
+    }
+
+    private fun DIV.menuGap() {
+        noui.item { css { padding = Padding(8.px) } }
+    }
+
+    private fun DIV.menuItemsList(block: DIV.() -> Unit) {
+        ui.vertical.relaxed.list {
+            key = "menu-list"
+            css {
+                paddingTop = 16.px
+                paddingLeft = 16.px
+                flexGrow = 1.0
+                overflowY = Overflow.auto
+                minHeight = 0.px
+            }
+            block()
+        }
+    }
+
+    private fun DIV.renderCategory(name: String) {
+        ui.big.basic.segment {
+            css { paddingBottom = 0.px }
+            ui.large.item {
+                onClick { evt ->
+                    evt.stopPropagation()
+                    state = State.Main
+                }
+                icon.angle_left()
+                +name
+            }
+        }
+    }
+
+    //  NAV HELPERS  ///////////////////////////////////////////////////////////////////////////////////////////
+
+    private fun navTutorials(vararg params: Pair<String, String>) {
+        router.navToUri(Nav.tutorialsWithUpdatedParams(router = router, *params))
+    }
+
+    private fun toggleTutorialFilter(paramKey: String, value: String, isActive: Boolean) {
+        navTutorials(paramKey to if (isActive) "" else value)
+    }
+
+    //  RENDER  ////////////////////////////////////////////////////////////////////////////////////////////////
 
     override fun VDom.render() {
         div {
@@ -67,186 +168,65 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
             div {
                 key = "menu-container-${state.hashCode()}"
-
                 when (state) {
-                    State.Main -> renderDefaultMenu()
-                    State.Credits -> renderDefaultMenu()
+                    State.Main, State.Credits -> renderDefaultMenu()
                     State.Songs -> renderSongsMenu()
                     State.Samples -> renderSamplesMenu()
+                    State.Tutorials -> renderTutorialsMenu()
                     State.Docs -> renderDocsMenu()
                 }
             }
 
             div {
                 key = "motoer-container"
-
                 Motoer()
-            }
-        }
-    }
-
-    private fun DIV.onItemClick(block: (evt: PointerEvent) -> Unit) {
-        onClick { evt ->
-            evt.stopPropagation()
-            block(evt)
-        }
-    }
-
-    private fun DIV.itemCss(isSelected: Boolean) {
-        css {
-            border = Border.none
-
-            borderTopLeftRadius = 4.px
-            borderBottomLeftRadius = 4.px
-            borderTopRightRadius = 0.px
-            borderBottomRightRadius = 0.px
-
-            padding = Padding(10.px, 20.px)
-
-            if (isSelected) {
-                backgroundColor = Color.white
-                color = Color.black
-            } else {
-                backgroundColor = Color(laf.menuBackground)
-                color = Color.white
-
-                borderRadius = 0.px
-            }
-        }
-    }
-
-    private fun DIV.menuItemsList(block: DIV.() -> Unit) {
-        ui.vertical.relaxed.list {
-            key = "menu-list"
-
-            // Allow the list to grow and scroll if needed
-            css {
-                paddingTop = 16.px
-                paddingLeft = 16.px
-                flexGrow = 1.0
-                overflowY = Overflow.auto
-                minHeight = 0.px
-            }
-
-            block()
-        }
-    }
-
-    private fun DIV.itemContentCss(isSelected: Boolean) {
-        css {
-            if (isSelected) {
-                color = Color.black
-            } else {
-                color = Color.white
-            }
-        }
-    }
-
-    private fun DIV.renderCategory(name: String) {
-        ui.big.basic.segment {
-            css {
-                paddingBottom = 0.px
-            }
-            ui.large.item {
-                onItemClick { state = State.Main }
-                icon.angle_left()
-                +name
             }
         }
     }
 
     private fun DIV.renderDefaultMenu() {
         menuItemsList {
-            val isSelected = state == State.Songs
-            noui.item {
-                itemCss(isSelected)
-                onItemClick {
-                    state = State.Songs
-                    router.navToUri(Nav.newSongCode())
-                }
-                icon.music()
-                noui.content {
-                    itemContentCss(isSelected)
-                    +"Songs"
-                }
+            menuItem(state == State.Songs, "Songs", { music }) {
+                state = State.Songs
+                router.navToUri(Nav.newSongCode())
             }
-
-            noui.item {
-                val isSelected = state == State.Samples
-                itemCss(isSelected)
-                onItemClick {
-                    state = State.Samples
-                    router.navToUri(Nav.samplesLibrary())
-                }
-                icon.wave_square()
-                noui.content {
-                    itemContentCss(isSelected)
-                    +"Samples Library"
-                }
+            menuItem(state == State.Samples, "Samples Library", { wave_square }) {
+                state = State.Samples
+                router.navToUri(Nav.samplesLibrary())
             }
-
-            noui.item {
-                val isSelected = state == State.Docs
-                itemCss(isSelected)
-                onItemClick {
-                    state = State.Docs
-                    router.navToUri(Nav.manuals())
-                }
-                icon.book()
-                noui.content {
-                    itemContentCss(isSelected)
-                    +"Motör Manuals"
-                }
+            menuItem(state == State.Tutorials, "Tutorials", { graduation_cap }) {
+                state = State.Tutorials
+                router.navToUri(Nav.tutorials())
             }
-
-            noui.item {
-                val isSelected = state == State.Credits
-                itemCss(isSelected)
-                onItemClick {
-                    state = State.Credits
-                    router.navToUri(Nav.credits())
-                }
-                icon.bullhorn()
-                noui.content {
-                    itemContentCss(isSelected)
-                    +"Credits"
-                }
+            menuItem(state == State.Docs, "Motör Manuals", { book }) {
+                state = State.Docs
+                router.navToUri(Nav.manuals())
+            }
+            menuItem(state == State.Credits, "Credits", { bullhorn }) {
+                state = State.Credits
+                router.navToUri(Nav.credits())
             }
         }
     }
 
     private fun DIV.renderSongsMenu() {
-        val iNewSong = currentRoute.route == Nav.newSongCode
+        val isNewSong = currentRoute.route == Nav.newSongCode
         val isEditSong = currentRoute.route == Nav.editSongCode
         val songId = currentRoute.matchedRoute["id"]
 
         renderCategory("Songs")
 
         menuItemsList {
-            noui.item {
-                itemCss(iNewSong)
-                onItemClick { router.navToUri(Nav.newSongCode()) }
-                icon.plus()
-                noui.content {
-                    itemContentCss(iNewSong)
-                    +"New Song"
-                }
+            menuItem(isNewSong, "New Song", { plus }) {
+                router.navToUri(Nav.newSongCode())
             }
 
             BuiltInSongs.songs.forEach { song ->
-                noui.item {
-                    val isSelected = isEditSong && song.id == songId
-                    itemCss(isSelected)
-                    onItemClick { router.navToUri(Nav.editSongCode(song.id)) }
-                    if (song.icon != null) {
-                        icon.with(song.icon).render()
-                    } else {
-                        icon.music()
-                    }
-                    noui.content {
-                        itemContentCss(isSelected)
-                        +song.title
-                    }
+                val isSelected = isEditSong && song.id == songId
+                menuItem(isSelected, song.title, {
+                    if (song.icon != null) with(song.icon) else music
+                }) {
+                    router.navToUri(Nav.editSongCode(song.id))
                 }
             }
         }
@@ -256,15 +236,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         renderCategory("Sound Samples Library")
 
         menuItemsList {
-            noui.item {
-                val isSelected = currentRoute.route == Nav.samplesLibrary
-                itemCss(isSelected)
-                onItemClick { router.navToUri(Nav.samplesLibrary()) }
-                icon.music()
-                noui.content {
-                    itemContentCss(isSelected)
-                    +"Explore"
-                }
+            menuItem(currentRoute.route == Nav.samplesLibrary, "Explore", { music }) {
+                router.navToUri(Nav.samplesLibrary())
             }
         }
     }
@@ -273,27 +246,73 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         renderCategory("Motör Manuals")
 
         menuItemsList {
-            noui.item {
-                val isSelected = currentRoute.route == Nav.manualsSprudel
-                itemCss(isSelected)
-                onItemClick { router.navToUri(Nav.manualsSprudel()) }
-                icon.wind()
-                noui.content {
-                    itemContentCss(isSelected)
-                    +"Sprudel"
+            menuItem(currentRoute.route == Nav.manualsLibrary && currentRoute.matchedRoute["library"] == "sprudel", "Sprudel", { wind }) {
+                router.navToUri(Nav.manualsLibrary("sprudel"))
+            }
+            menuItem(currentRoute.route == Nav.manualsLibrary && currentRoute.matchedRoute["library"] == "stdlib", "Stdlib", { cogs }) {
+                router.navToUri(Nav.manualsLibrary("stdlib"))
+            }
+            menuItem(currentRoute.route == Nav.manualsKlangScript, "KlangScript", { code }) {
+                router.navToUri(Nav.manualsKlangScript())
+            }
+        }
+    }
+
+    private fun DIV.renderTutorialsMenu() {
+        renderCategory("Tutorials")
+
+        val activeDifficulty = currentDifficultyFilter()
+        val activeScope = currentScopeFilter()
+        val activeCompletion = currentCompletionFilter()
+        val hasNoFilters = activeDifficulty == null && activeScope == null
+                && activeCompletion == TutorialsListPage.CompletionFilter.All
+
+        menuItemsList {
+            menuItem(currentRoute.route == Nav.tutorials && hasNoFilters, "All Tutorials", { list }) {
+                router.navToUri(Nav.tutorials())
+            }
+
+            menuGap()
+
+            for (diff in TutorialDifficulty.entries) {
+                val isSelected = activeDifficulty == diff
+                menuItem(isSelected, diff.label, diff.iconFn()) {
+                    toggleTutorialFilter(TutorialsListPage.PARAM_DIFFICULTY, diff.name, isSelected)
                 }
             }
 
-            noui.item {
-                val isSelected = currentRoute.route == Nav.manualsKlangScript
-                itemCss(isSelected)
-                onItemClick { router.navToUri(Nav.manualsKlangScript()) }
-                icon.code()
-                noui.content {
-                    itemContentCss(isSelected)
-                    +"KlangScript"
+            menuGap()
+
+            for (scope in TutorialScope.entries) {
+                val isSelected = activeScope == scope
+                menuItem(isSelected, scope.label, scope.iconFn()) {
+                    toggleTutorialFilter(TutorialsListPage.PARAM_SCOPE, scope.name, isSelected)
+                }
+            }
+
+            menuGap()
+
+            for (filter in listOf(TutorialsListPage.CompletionFilter.Completed, TutorialsListPage.CompletionFilter.Open)) {
+                val isSelected = activeCompletion == filter
+                menuItem(isSelected, filter.name, filter.iconFn()) {
+                    toggleTutorialFilter(TutorialsListPage.PARAM_COMPLETION, filter.name, isSelected)
                 }
             }
         }
+    }
+
+    private fun currentDifficultyFilter(): TutorialDifficulty? {
+        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_DIFFICULTY]
+        return TutorialsListPage.difficultyFromParam(param)
+    }
+
+    private fun currentScopeFilter(): TutorialScope? {
+        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_SCOPE]
+        return TutorialsListPage.scopeFromParam(param)
+    }
+
+    private fun currentCompletionFilter(): TutorialsListPage.CompletionFilter {
+        val param = currentRoute.matchedRoute.queryParams[TutorialsListPage.PARAM_COMPLETION]
+        return TutorialsListPage.completionFromParam(param)
     }
 }

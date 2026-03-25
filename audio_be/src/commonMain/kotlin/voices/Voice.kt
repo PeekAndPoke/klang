@@ -3,159 +3,166 @@ package io.peekandpoke.klang.audio_be.voices
 import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
+import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
+import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 
-interface Voice {
+/**
+ * A voice in the audio engine.
+ *
+ * Runs a composable [BlockRenderer] pipeline: **Pitch → Excite → Filter → Send**
+ */
+class Voice(
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Lifecycle & Routing
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    val startFrame: Long,
+    val endFrame: Long,
+    private val gateEndFrame: Long,
+    val orbitId: Int,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Render Context
+    // Dynamics & Routing (used by SendRenderer and Orbit configuration)
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    val gain: Double,
+    val pan: Double,
+    val postGain: Double,
+    val compressor: Compressor?,
+    val ducking: Ducking?,
+    val delay: Delay,
+    val reverb: Reverb,
+    val phaser: Phaser,
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Cut group
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    val cut: Int? = null,
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Strip pipeline: Pitch → Excite → Filter (Send is appended in init)
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    pipeline: List<BlockRenderer>,
+
+    // Pre-built BlockContext (created by VoiceFactory, mutated per block)
+    private val blockCtx: BlockContext,
+) {
+    // Full pipeline: Pitch → Excite → Filter → Send
+    private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
+
+    // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
+    private var _gainMultiplier: Double = 1.0
+
+    val gainMultiplier: Double get() = _gainMultiplier
+
+    fun setGainMultiplier(multiplier: Double) {
+        _gainMultiplier = multiplier
+    }
+
+    /**
+     * Renders the voice into the context's buffers.
+     *
+     * Runs the composable BlockRenderer pipeline: Pitch → Excite → Filter → Send.
+     *
+     * @return true if the voice is still active, false if it has finished
+     */
+    fun render(ctx: RenderContext): Boolean {
+        val blockEnd = ctx.blockStart + ctx.blockFrames
+        // Lifecycle check
+        if (ctx.blockStart >= endFrame) return false
+        if (blockEnd <= startFrame) return true
+
+        val vStart = maxOf(ctx.blockStart, startFrame)
+        val vEnd = minOf(blockEnd, endFrame)
+        val offset = (vStart - ctx.blockStart).toInt()
+        val length = (vEnd - vStart).toInt()
+
+        // Update per-block state
+        blockCtx.audioBuffer = ctx.voiceBuffer
+        blockCtx.offset = offset
+        blockCtx.length = length
+        blockCtx.blockStart = ctx.blockStart
+        blockCtx.renderContext = ctx
+        blockCtx.freqModBufferWritten = false
+
+        // ── Pitch → Excite → Filter → Send ────────────────────────────────────────
+
+        for (renderer in pipeline) {
+            renderer.render(blockCtx)
+        }
+
+        return true
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
+    // Nested types
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
 
     /**
      * Rendering context shared across all voices during a processing block.
-     * Contains shared buffers and configuration for efficient batch processing.
      */
     class RenderContext(
-        /** Orbit management for routing and effects */
         val orbits: Orbits,
-        /** Audio sample rate in Hz */
         val sampleRate: Int,
-        /** Number of frames to process per block */
         val blockFrames: Int,
-        /** Shared mono buffer for voice rendering */
         val voiceBuffer: FloatArray,
-        /** Shared buffer for frequency/pitch modulation calculations */
         val freqModBuffer: DoubleArray,
-        /** Shared scratch buffer pool for Exciter composition operators */
         val scratchBuffers: ScratchBuffers,
     ) {
-        /** Current block start frame (updated per block) */
         var blockStart: Long = 0
     }
 
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Synthesis & Pitch Modulation
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /**
-     * FM (Frequency Modulation) synthesis parameters.
-     * Modulates the oscillator frequency with another oscillator for complex timbres.
-     */
     class Fm(
-        /** Frequency ratio between modulator and carrier (e.g., 1.0, 2.0, 3.14) */
         val ratio: Double,
-        /** Modulation depth in Hz */
         val depth: Double,
-        /** Envelope controlling modulation depth over time */
         val envelope: Envelope,
-        /** Current modulator phase (state variable) */
         var modPhase: Double = 0.0,
     )
 
-    /**
-     * Pitch acceleration (glide/portamento).
-     * Gradually shifts pitch over the voice's lifetime.
-     */
-    class Accelerate(
-        /** Acceleration amount in semitones per voice duration */
-        val amount: Double,
-    )
+    class Accelerate(val amount: Double)
 
-    /**
-     * Vibrato LFO (Low Frequency Oscillator).
-     * Periodic pitch modulation for expressive wobble.
-     */
     class Vibrato(
-        /** LFO rate in Hz */
         val rate: Double,
-        /** Modulation depth (fraction of semitone) */
         val depth: Double,
-        /** Current LFO phase (state variable) */
         var phase: Double = 0.0,
     )
 
-    /**
-     * Pitch envelope for transient pitch effects.
-     * Creates pitch bends during attack/decay (e.g., drum tuning, synth swoops).
-     */
     class PitchEnvelope(
-        /** Attack time in frames */
         val attackFrames: Double,
-        /** Decay time in frames */
         val decayFrames: Double,
-        /** Release time in frames */
         val releaseFrames: Double,
-        /** Pitch shift amount in semitones */
         val amount: Double,
-        /** Envelope curve shape (exponential vs linear) */
         val curve: Double,
-        /** Anchor point: 0.0 = start at shifted pitch, 1.0 = start at base pitch */
         val anchor: Double,
     )
 
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Dynamics & Envelope
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /**
-     * ADSR (Attack, Decay, Sustain, Release) amplitude envelope.
-     * Controls volume shape over the voice's lifetime.
-     */
     class Envelope(
-        /** Attack time in frames */
         val attackFrames: Double,
-        /** Decay time in frames */
         val decayFrames: Double,
-        /** Sustain level (0.0 to 1.0) */
         val sustainLevel: Double,
-        /** Release time in frames */
         val releaseFrames: Double,
-        /** Current envelope level (state variable) */
         var level: Double = 0.0,
-        /** Level captured the moment we enter release */
         var releaseStartLevel: Double = 0.0,
-        /** Has the release phase been entered already? */
         var releaseStarted: Boolean = false,
     ) {
         companion object {
-            /** Create envelope from resolved ADSR settings */
             fun of(adsr: AdsrEnvelope.Resolved, sampleRate: Int) = Envelope(
                 attackFrames = adsr.attack * sampleRate,
                 decayFrames = adsr.decay * sampleRate,
                 sustainLevel = adsr.sustain,
-                releaseFrames = adsr.release * sampleRate
+                releaseFrames = adsr.release * sampleRate,
             )
         }
     }
 
-    /**
-     * Compressor/limiter for dynamic range control.
-     * Reduces volume of loud signals for consistent output levels.
-     */
     class Compressor(
-        /** Threshold in dB (signals above this are compressed) */
         val thresholdDb: Double,
-        /** Compression ratio (e.g., 4:1 means 4dB input → 1dB output above threshold) */
         val ratio: Double,
-        /** Knee width in dB (smoothness of compression curve) */
         val kneeDb: Double,
-        /** Attack time in seconds (how fast compression engages) */
         val attackSeconds: Double,
-        /** Release time in seconds (how fast compression releases) */
         val releaseSeconds: Double,
     ) {
         companion object {
-            /**
-             * Parses a compressor config string into a [Compressor], or returns null if the
-             * string is null or invalid.
-             *
-             * Delegates to [io.peekandpoke.klang.audio_be.effects.Compressor.parseSettings]
-             * for the actual parsing logic.
-             *
-             * Supported formats:
-             * - Full:  "threshold:ratio:knee:attack:release"  e.g. "-20:4:6:0.003:0.1"
-             * - Short: "threshold:ratio"                      e.g. "-15:3"  (uses defaults for the rest)
-             */
             fun fromStringConfig(config: String?): Compressor? {
                 val settings = config?.let {
                     io.peekandpoke.klang.audio_be.effects.Compressor.parseSettings(it)
@@ -171,228 +178,31 @@ interface Voice {
         }
     }
 
-    /**
-     * Sidechain ducking for automatic volume reduction.
-     * Lowers voice volume when another orbit is active (e.g., kick ducking bass).
-     */
     class Ducking(
-        /** Source orbit ID to monitor for ducking trigger */
         val orbitId: Int,
-        /** Duck attack time in seconds */
         val attackSeconds: Double,
-        /** Duck depth (0.0 = no ducking, 1.0 = full silence) */
         val depth: Double,
     )
 
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Filter Modulation
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Filter envelope modulator.
-     * Sweeps filter cutoff frequency over time for dynamic tonal shaping.
-     */
     class FilterModulator(
-        /** Target filter to modulate (must support setCutoff) */
         val filter: AudioFilter.Tunable,
-        /** Envelope controlling modulation amount over time */
         val envelope: Envelope,
-        /** Modulation depth (multiplier for cutoff frequency) */
         val depth: Double,
-        /** Base cutoff frequency in Hz */
         val baseCutoff: Double,
     )
 
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Effect Parameters
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Distortion/saturation effect parameters.
-     * Adds harmonic richness through soft clipping.
-     */
-    class Distort(
-        /** Distortion amount (0.0 = clean, 1.0+ = heavy saturation) */
-        val amount: Double,
-        /** Distortion shape/type: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp */
-        val shape: String = "soft",
-    )
-
-    /**
-     * Bit crushing effect parameters.
-     * Reduces bit depth for lo-fi digital artifacts.
-     */
-    class Crush(
-        /** Bit depth reduction amount (higher = more crushing) */
-        val amount: Double,
-    )
-
-    /**
-     * Sample rate reduction (coarse) effect parameters.
-     * Downsamples audio for retro digital sound.
-     */
-    class Coarse(
-        /** Downsample factor (higher = lower sample rate) */
-        val amount: Double,
-        /** Last sampled value (state variable) */
-        var lastCoarseValue: Double = 0.0,
-        /** Sample hold counter (state variable) */
-        var coarseCounter: Double = 0.0,
-    )
-
-    /**
-     * Phaser effect parameters.
-     * All-pass filter sweep for swooshing/jet plane sounds.
-     */
-    class Phaser(
-        /** LFO rate in Hz (sweep speed) */
-        val rate: Double,
-        /** Effect intensity (0.0 = off, 1.0 = full effect) */
-        val depth: Double,
-        /** Center frequency of sweep in Hz */
-        val center: Double,
-        /** Frequency range of sweep in Hz */
-        val sweep: Double,
-    )
-
-    /**
-     * Tremolo effect parameters.
-     * Rhythmic amplitude modulation for vintage vibrato.
-     */
+    class Distort(val amount: Double, val shape: String = "soft")
+    class Crush(val amount: Double)
+    class Coarse(val amount: Double, var lastCoarseValue: Double = 0.0, var coarseCounter: Double = 0.0)
+    class Phaser(val rate: Double, val depth: Double, val center: Double, val sweep: Double)
     class Tremolo(
-        /** LFO rate in Hz (modulation speed) */
-        val rate: Double,
-        /** Modulation depth (0.0 = off, 1.0 = full modulation) */
-        val depth: Double,
-        /** Waveform skew/symmetry */
-        val skew: Double,
-        /** Initial LFO phase offset */
-        val phase: Double,
-        /** Waveform shape (sine, tri, square, saw, ramp) */
-        val shape: String?,
-        /** Current LFO phase (state variable) */
-        var currentPhase: Double = 0.0,
+        val rate: Double, val depth: Double, val skew: Double, val phase: Double,
+        val shape: String?, var currentPhase: Double = 0.0,
     )
 
-    /**
-     * Delay/echo effect parameters.
-     * Time-based repetition effect (processed at orbit level).
-     */
-    class Delay(
-        /** Wet/dry mix (0.0 = dry, 1.0 = fully wet) */
-        val amount: Double,
-        /** Delay time in seconds */
-        val time: Double,
-        /** Feedback amount (0.0 = single repeat, higher = more repeats) */
-        val feedback: Double,
-    )
-
-    /**
-     * Reverb effect parameters.
-     * Simulates acoustic space reflections (processed at orbit level).
-     */
+    class Delay(val amount: Double, val time: Double, val feedback: Double)
     class Reverb(
-        /** Wet/dry mix (0.0 = dry, 1.0 = fully wet) */
-        val room: Double,
-        /** Room size (0.0 = small, 1.0 = cathedral) - normalized from 0-10 range */
-        val roomSize: Double,
-        /** Reverb decay time/feedback */
-        val roomFade: Double? = null,
-        /** Lowpass filter cutoff for damping high frequencies */
-        val roomLp: Double? = null,
-        /** Dimension/diffusion amount (currently unused) */
-        val roomDim: Double? = null,
-        /** Impulse response file name for convolution reverb */
-        val iResponse: String? = null,
+        val room: Double, val roomSize: Double, val roomFade: Double? = null,
+        val roomLp: Double? = null, val roomDim: Double? = null, val iResponse: String? = null,
     )
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Lifecycle & Routing
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /** Frame when the voice starts playing */
-    val startFrame: Long
-
-    /** Frame when the voice stops (including release phase) */
-    val endFrame: Long
-
-    /** Frame when the gate ends (release phase begins) */
-    val gateEndFrame: Long
-
-    /** Orbit/bus ID for routing to effects and mixing */
-    val orbitId: Int
-
-    /** Cut group ID — voices in the same cut group choke each other (typically for samples) */
-    val cut: Int? get() = null
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Dynamics
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /** Pre-envelope gain (includes velocity) */
-    val gain: Double
-
-    /** Stereo pan position (0.0 = left, 0.5 = center, 1.0 = right) */
-    val pan: Double
-
-    /** Post-envelope gain multiplier */
-    val postGain: Double
-
-    /** Compressor/limiter settings for dynamic control */
-    val compressor: Compressor?
-
-    /** Sidechain ducking configuration */
-    val ducking: Ducking?
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Time-Based Effects & Orbit Configuration
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /** Delay/echo parameters */
-    val delay: Delay
-
-    /** Reverb parameters */
-    val reverb: Reverb
-
-    /** Phaser effect parameters (used to configure orbit-level phaser) */
-    val phaser: Phaser
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Dynamic Gain Control
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Dynamic gain multiplier applied during rendering.
-     * This is multiplied with the voice's base gain during rendering.
-     * Can be used for solo/mute, fades, dynamic ducking, or any other real-time gain control.
-     * Default value is 1.0 (no change).
-     */
-    val gainMultiplier: Double get() = 1.0
-
-    /**
-     * Sets a dynamic gain multiplier that is applied during rendering.
-     * Default implementation is empty (no-op) for voices that don't support dynamic gain control.
-     *
-     * @param multiplier The gain multiplier (1.0 = normal, 0.0 = silent, etc.)
-     */
-    fun setGainMultiplier(multiplier: Double) {}
-
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Rendering
-    // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Renders the voice into the context's buffers.
-     *
-     * Processing order:
-     * 1. Source Generation (Oscillator/Sample + FM + Pitch Modulation)
-     * 2. Pre-Filters (BitCrush, Coarse)
-     * 3. Main Filter (with envelope modulation)
-     * 4. VCA / Envelope (ADSR)
-     * 5. Post-Filters (Distortion, Phaser, Tremolo)
-     * 6. Mixer (Pan, Sends)
-     *
-     * @return true if the voice is still active, false if it has finished
-     */
-    fun render(ctx: RenderContext): Boolean
 }

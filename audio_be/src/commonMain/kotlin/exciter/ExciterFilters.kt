@@ -1,13 +1,11 @@
 package io.peekandpoke.klang.audio_be.exciter
 
-import kotlin.math.*
+import io.peekandpoke.klang.audio_be.flushDenormal
+import kotlin.math.PI
+import kotlin.math.exp
+import kotlin.math.pow
+import kotlin.math.tan
 
-/** Threshold below which filter state is flushed to zero to avoid denormal slowdowns. */
-private const val DENORMAL_THRESHOLD = 1e-15
-
-/** Flushes a value to zero if it is below the denormal threshold. */
-@Suppress("NOTHING_TO_INLINE")
-private inline fun flushDenormal(v: Double): Double = if (abs(v) < DENORMAL_THRESHOLD) 0.0 else v
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SVF Mode enum — determines which output tap is used
@@ -196,7 +194,7 @@ fun Exciter.onePoleHighpass(cutoffHz: Double): Exciter {
  * Formant filter: parallel SVF bandpass filters summed together.
  * Each band has a center frequency, Q, and gain in dB.
  *
- * Ported from: FormantFilter.kt
+ * Formant filter — parallel bandpass filter bank for vowel synthesis.
  */
 fun Exciter.formant(bands: List<FormantBand>): Exciter {
     class BandState(val freq: Double, val q: Double, val linearGain: Double) {

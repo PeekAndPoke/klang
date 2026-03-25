@@ -43,11 +43,11 @@ internal val PatternMapperFn._analog by dslPatternMapperExtension { m, args, cal
  * A value of `0.0` gives a perfectly stable digital sound; `1.0` gives maximum drift.
  * Typical values are `0.05`–`0.3` for subtle warmth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("supersaw").analog(0.2)   // lush analog supersaw
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").s("sine").analog("<0 0.1 0.3>")   // cycle through drift amounts
  * ```
  *
@@ -63,7 +63,7 @@ fun SprudelPattern.analog(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the analog drift amount.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".analog(0.2).s("supersaw").note()
  * ```
  *
@@ -79,7 +79,7 @@ fun String.analog(amount: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the analog drift amount.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(analog(0.2))
  * ```
  *
@@ -95,7 +95,7 @@ fun analog(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Chains an analog-drift-set onto this [PatternMapperFn].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(gain(0.8).analog(0.2))
  * ```
  *
@@ -134,11 +134,11 @@ internal val PatternMapperFn._warmth by dslPatternMapperExtension { m, args, cal
  *
  * A value of `0.0` gives a bright, unfiltered sound; `1.0` gives a muffled, warm sound.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").warmth(0.8)          // warm, muffled sawtooth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").warmth("<0 0.5 1>")  // cycle through warmth values
  * ```
  *
@@ -154,7 +154,7 @@ fun SprudelPattern.warmth(amount: PatternLike? = null): SprudelPattern =
 /**
  * Parses this string as a pattern and sets the oscillator warmth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").s("square").warmth("<0 0.5 1>")  // cycle through warmth values
  * ```
  *
@@ -167,7 +167,7 @@ fun String.warmth(amount: PatternLike? = null): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that sets the oscillator warmth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").apply(warmth("<0 0.5 1>"))  // cycle through warmth values
  * ```
  *
@@ -180,7 +180,7 @@ fun warmth(amount: PatternLike? = null): PatternMapperFn =
 /**
  * Chains a warmth-set onto this [PatternMapperFn], applying oscillator warmth after the previous step.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.4").apply(mul(2).warmth())  // mul doubles values, warmth() reads them as warmth: 0.4, 0.8
  * ```
  *

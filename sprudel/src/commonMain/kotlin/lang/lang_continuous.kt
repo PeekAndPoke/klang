@@ -53,11 +53,11 @@ internal val PatternMapperFn._toBipolar by dslPatternMapperExtension { m, args, 
  *
  * @return A new pattern whose values are remapped to `-1..1`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.toBipolar().range2(40, 60).note()  // bipolar pitch vibrato in semitones
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * saw.toBipolar().range2(-1, 1).pan()  // panning sweep using a bipolar saw
  * ```
  * @category continuous
@@ -73,11 +73,11 @@ fun String.toBipolar(): SprudelPattern = this._toBipolar(emptyList())
 /**
  * Returns a [PatternMapperFn] that maps values from the unipolar range `0..1` to the bipolar range `-1..1`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.apply(toBipolar()).range2(-10, 10).note().segment(128)  // bipolar sine pitch vibrato
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * saw.apply(toBipolar().range2(-1, 1)).pan().segment(128)  // chain toBipolar then range2
  * ```
  *
@@ -91,7 +91,7 @@ fun toBipolar(): PatternMapperFn = _toBipolar(emptyList())
 /**
  * Chains a unipolar-to-bipolar mapping onto this [PatternMapperFn].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.apply(range(0, 1).toBipolar())  // chain range then bipolar conversion
  * ```
  *
@@ -130,11 +130,11 @@ internal val PatternMapperFn._fromBipolar by dslPatternMapperExtension { m, args
  *
  * @return A new pattern whose values are remapped to `0..1`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.fromBipolar().range(200, 2000).freq().segment(128)  // bipolar sine to frequency range
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * tri2.fromBipolar().range(0.2, 0.8).gain().segment(128)  // bipolar triangle to gain range
  * ```
  * @category continuous
@@ -150,11 +150,11 @@ fun String.fromBipolar(): SprudelPattern = this._fromBipolar(emptyList())
 /**
  * Returns a [PatternMapperFn] that maps values from the bipolar range `-1..1` to the unipolar range `0..1`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.apply(fromBipolar()).range(0, 100).freq().segment(128)  // bipolar to unipolar then frequency range
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.apply(fromBipolar().range(0.2, 0.8)).gain().segment(128)  // chain fromBipolar then range
  * ```
  *
@@ -168,7 +168,7 @@ fun fromBipolar(): PatternMapperFn = _fromBipolar(emptyList())
 /**
  * Chains a bipolar-to-unipolar mapping onto this [PatternMapperFn].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.apply(range2(0, 1).fromBipolar())  // chain range2 then fromBipolar
  * ```
  *
@@ -210,11 +210,11 @@ internal val PatternMapperFn._range by dslPatternMapperExtension { m, args, call
  * @param max The target maximum value (default `1.0`).
  * @return A new pattern with values linearly scaled to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.range(200, 2000).freq().segment(128)  // sine frequency sweep 200–2000 Hz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * perlin.range(0.2, 0.9).gain().segment(128)  // noise-modulated gain
  * ```
  * @category continuous
@@ -244,11 +244,11 @@ fun String.range(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
  * @param max The target maximum value (default `1.0`).
  * @return A [PatternMapperFn] that linearly scales values to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.apply(range(200, 2000)).freq().segment(128)  // sine frequency sweep 200–2000 Hz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.firstOf(4, range(0.2, 0.9)).gain().segment(128)  // alternate gain range every 4 cycles
  * ```
  * @category continuous
@@ -261,7 +261,7 @@ fun range(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
 /**
  * Chains a linear range-scaling onto this [PatternMapperFn], mapping values to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.apply(toBipolar().range(-1, 1))  // chain bipolar conversion then scale
  * ```
  *
@@ -315,11 +315,11 @@ internal val PatternMapperFn._rangex by dslPatternMapperExtension { m, args, cal
  * @param max The target maximum value (default `1.0`).
  * @return A new pattern with values exponentially scaled to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.rangex(100, 1000).freq().segment(128)  // frequency sweep with musical spacing
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * perlin.rangex(50, 1000).freq().segment(128)  // exponential filter cutoff sweep
  * ```
  * @category continuous
@@ -336,7 +336,7 @@ fun SprudelPattern.rangex(min: Number = 0.0, max: Number = 1.0): SprudelPattern 
  * @param max The target maximum value (default `1.0`).
  * @return A new pattern with values exponentially scaled to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 0.5 1".rangex(100, 1000).freq()  // manual values scaled exponentially to frequency range
  * ```
  */
@@ -353,11 +353,11 @@ fun String.rangex(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
  * @param max The target maximum value (default `1.0`).
  * @return A [PatternMapperFn] that exponentially scales values to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.apply(rangex(100, 1000)).freq().segment(128)  // exponential frequency sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.firstOf(4, rangex(50, 500)).freq().segment(128)  // alternate exponential range every 4 cycles
  * ```
  * @category continuous
@@ -370,7 +370,7 @@ fun rangex(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
 /**
  * Chains an exponential range-scaling onto this [PatternMapperFn], mapping values to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.apply(fromBipolar().rangex(100, 2000))  // chain fromBipolar then exponential frequency range
  * ```
  *
@@ -406,11 +406,11 @@ internal val PatternMapperFn._range2 by dslPatternMapperExtension { m, args, cal
  * @param max The target maximum value (default `1.0`).
  * @return A new pattern with bipolar values scaled to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.range2(200, 2000).freq().segment(128)  // bipolar sine mapped to frequency range
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * tri2.range2(-24, 24).note().segment(128)  // pitch vibrato in semitones
  * ```
  * @category continuous
@@ -427,7 +427,7 @@ fun SprudelPattern.range2(min: Number = 0.0, max: Number = 1.0): SprudelPattern 
  * @param max The target maximum value (default `1.0`).
  * @return A new pattern with bipolar values scaled to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 0.5 -0.5".range2(0, 100)  // manual bipolar values scaled to range
  * ```
  */
@@ -444,11 +444,11 @@ fun String.range2(min: Number = 0.0, max: Number = 1.0): SprudelPattern =
  * @param max The target maximum value (default `1.0`).
  * @return A [PatternMapperFn] that scales bipolar values to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.apply(range2(0, 100)).freq().segment(128)  // bipolar sine to frequency range
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.firstOf(4, range2(-24, 24)).note().segment(128)  // alternate pitch range every 4 cycles
  * ```
  * @category continuous
@@ -461,7 +461,7 @@ fun range2(min: Number = 0.0, max: Number = 1.0): PatternMapperFn =
 /**
  * Chains a bipolar range-scaling onto this [PatternMapperFn], converting bipolar values (`-1..1`) to `[min, max]`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.apply(toBipolar().range2(-10, 10))  // deliberately redundant, illustrates chaining
  * ```
  *
@@ -481,11 +481,11 @@ fun PatternMapperFn.range2(min: Number = 0.0, max: Number = 1.0): PatternMapperF
  * It is the identity element for [stack] and acts as a rest in sequencing functions like [cat].
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("c3", silence, "e3", "g3").note()  // rest on the second step
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * cat(s("bd sd"), silence)  // phrase followed by a silent cycle
  * ```
  * @alias rest, nothing
@@ -499,11 +499,11 @@ val silence by dslObject { EmptyPattern }
  * An empty pattern that produces no events. Alias for [silence].
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("c3", rest, "e3", "g3").note()  // rest on the second step
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * cat(s("bd sd"), rest)  // phrase followed by a silent cycle
  * ```
  * @alias silence, nothing
@@ -517,11 +517,11 @@ val rest by dslObject { EmptyPattern }
  * An empty pattern that produces no events. Alias for [silence].
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("c3", nothing, "e3", "g3").note()  // rest on the second step
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * cat(s("bd sd"), nothing)  // phrase followed by a silent cycle
  * ```
  * @alias silence, rest
@@ -553,11 +553,11 @@ internal val _signal by dslPatternFunction { args, /* callInfo */ _ ->
  * @param f A function `(t: Double) -> Double` where `t` is the current cycle time.
  * @return A continuous pattern driven by [f].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * signal { t -> kotlin.math.sin(t * 2 * kotlin.math.PI) }.range(200, 2000).freq().segment(128)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * signal { t -> t % 1.0 }.range(0.0, 127.0).freq().segment(128)
  * ```
  * @category continuous
@@ -584,11 +584,11 @@ internal val _steady by dslPatternFunction { args, /* callInfo */ _ ->
  * @param value The constant value the pattern should produce at every point in time.
  * @return A continuous pattern that always evaluates to [value].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * steady(440.0).freq().segment(128)  // constant 440 Hz carrier frequency
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * steady("c").note().segment(128)  // constant note "c" on every event
  * ```
  * @category continuous
@@ -609,11 +609,11 @@ private val timeBase: SprudelPattern by lazy { signal { t -> t } }
  * it to a target parameter range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * time.range(100.0, 255.0).freq().segment(128)  // linearly rising frequency per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * time.rangex(100.0, 2000.0).freq().segment(128)  // exponentially rising frequency over time
  * ```
  * @category continuous
@@ -634,11 +634,11 @@ private val sine2Base: SprudelPattern by lazy { sineBase.toBipolar() }
  * at the half cycle, reaches `0.0` at three-quarters, and returns to `0.5` at cycle end.
  * For a centred (`-1..1`) LFO use [sine2]. Use [range] to map to a target parameter range.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine.range(200, 2000).freq().segment(128)  // sinusoidal frequency sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a!8").adsr("0.2:1.0:1.0:0.2").gain(sine.slow(4))  // gain modulation
  * ```
  *
@@ -653,11 +653,11 @@ val sine by dslObject { sineBase }
  *
  * Identical to `sine.toBipolar()`. Use [range2] to scale to any target range.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.range2(200, 2000).freq().segment(128)  // bipolar sine frequency sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sine2.range2(40, 60).note().segment(128)  // pitch vibrato in semitones
  * ```
  *
@@ -680,11 +680,11 @@ private val cosine2Base: SprudelPattern by lazy { cosineBase.toBipolar() }
  * Use [range] to map to a target parameter range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * cosine.range(200, 2000).freq().segment(128)  // cosine frequency sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a!8").adsr("0.2:1.0:1.0:0.2").pan(cosine.slow(4))  // stereo panning with cosine
  * ```
  * @category continuous
@@ -699,11 +699,11 @@ val cosine by dslObject { cosineBase }
  * Identical to `cosine.toBipolar()`. Use [range2] to scale to any target range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * cosine2.range2(200, 2000).freq().segment(128)  // bipolar cosine frequency sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * cosine2.range2(-1, 1).pan().segment(128)  // stereo panning with bipolar cosine
  * ```
  * @category continuous
@@ -724,11 +724,11 @@ private val saw2Base: SprudelPattern by lazy { sawBase.toBipolar() }
  * Use [range] to map to a target parameter range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * saw.range(200, 2000).freq()  // linearly rising frequency sweep per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * saw.range(0.0, 0.8).gain()  // linearly increasing gain per cycle
  * ```
  * @category continuous
@@ -743,11 +743,11 @@ val saw by dslObject { sawBase }
  * Identical to `saw.toBipolar()`. Rising from `-1` to `1` each cycle. Use [range2] to scale.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * saw2.range2(200, 2000).freq().segment(128)  // bipolar saw frequency sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * saw2.range2(40, 60).note().segment(128)  // rising pitch slide per cycle
  * ```
  * @category continuous
@@ -768,11 +768,11 @@ private val isaw2Base: SprudelPattern by lazy { isawBase.toBipolar() }
  * Use [range] to map to a target parameter range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * isaw.range(200, 2000).freq().slow(8).segment(64)  // linearly falling frequency sweep per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * isaw.range(0.0, 0.8).gain()  // linearly decreasing gain per cycle
  * ```
  * @category continuous
@@ -787,11 +787,11 @@ val isaw by dslObject { isawBase }
  * Identical to `isaw.toBipolar()`. Falling from `1` to `-1` each cycle. Use [range2] to scale.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * isaw2.range2(200, 2000).freq().segment(128)  // descending frequency sweep per cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * isaw2.range2(40, 60).note().segment(128)  // descending pitch slide per cycle
  * ```
  * @category continuous
@@ -817,11 +817,11 @@ private val tri2Base: SprudelPattern by lazy { triBase.toBipolar() }
  * Use [range] to map to a target parameter range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * tri.range(200, 2000).freq().segment(128)  // triangular frequency oscillation
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * tri.range(0.2, 0.9).gain().segment(128)  // triangular amplitude tremolo
  * ```
  * @category continuous
@@ -836,11 +836,11 @@ val tri by dslObject { triBase }
  * Identical to `tri.toBipolar()`. Rises `-1→1` then falls `1→-1`. Use [range2] to scale.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * tri2.range2(200, 2000).freq()  // symmetric frequency oscillation
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * tri2.range2(40, 60).note()  // symmetric pitch vibrato in semitones
  * ```
  * @category continuous
@@ -866,11 +866,11 @@ private val itri2Base: SprudelPattern by lazy { itriBase.toBipolar() }
  * Use [range] to map to a target parameter range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * itri.range(200, 2000).freq().segment(128)  // inverted triangular frequency oscillation
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * itri.range(0.2, 0.9).gain().segment(128)  // inverted triangle gain tremolo
  * ```
  * @category continuous
@@ -885,11 +885,11 @@ val itri by dslObject { itriBase }
  * Identical to `itri.toBipolar()`. Falls `1→-1` then rises `-1→1`. Use [range2] to scale.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * itri2.range2(200, 2000).freq().segment(128)  // inverted symmetric frequency oscillation
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * itri2.range2(40, 60).note().segment(128)  // inverted pitch vibrato in semitones
  * ```
  * @category continuous
@@ -910,11 +910,11 @@ private val square2Base: SprudelPattern by lazy { squareBase.toBipolar() }
  * Use [range] to map those two discrete levels to any pair of target values.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * square.range(200, 800).freq().segment(128)  // frequency alternates between two values
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * square.range(0.0, 1.0).gain().segment(128)  // alternates between silence and full volume
  * ```
  * @category continuous
@@ -929,11 +929,11 @@ val square by dslObject { squareBase }
  * Identical to `square.toBipolar()`. Alternates `-1.0` / `1.0`. Use [range2] to scale.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * square2.range2(200, 800).freq().segment(128)  // frequency jumps via bipolar square
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * square2.range2(40, 60).note().segment(128)  // pitch alternates between two values
  * ```
  * @category continuous
@@ -962,11 +962,11 @@ private fun createPerlin(): SprudelPattern {
  * Use [range] to map to a target parameter range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * perlin.range(200, 2000).freq().segment(128)  // smooth random frequency drift
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * perlin.range(0.2, 0.9).gain().segment(128)  // smooth random gain modulation
  * ```
  * @category continuous
@@ -981,11 +981,11 @@ val perlin by dslObject { createPerlin() }
  * Identical to `perlin.toBipolar()`. Smoothly varying centred noise. Use [range2] to scale.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * perlin2.range2(200, 2000).freq().segment(128)  // bipolar smooth random frequency drift
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * perlin2.range2(40, 50).slow(4).note().segment(64).s("sine").hpf(90)  // random pitch drift in semitones
  * ```
  * @category continuous
@@ -1018,11 +1018,11 @@ private fun createBerlin2(): SprudelPattern {
  * Use [range] to map to a target parameter range.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * berlin.range(200, 2000).freq().segment(128)  // sawtooth-textured random frequency
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * berlin.range(0.2, 0.9).gain().segment(128)  // sawtooth-textured gain variation
  * ```
  * @category continuous
@@ -1037,11 +1037,11 @@ val berlin by dslObject { createBerlin() }
  * Identical to `berlin.toBipolar()`. Sawtooth-flavoured centred noise. Use [range2] to scale.
  *
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * berlin2.range2(200, 2000).slow(4).freq().segment(128)  // bipolar berlin noise frequency drift
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * berlin2.range2(40, 80).slow(4).note().segment(64).s("sine").hpf(90)  // random pitch drift in semitones
  * ```
  * @category continuous

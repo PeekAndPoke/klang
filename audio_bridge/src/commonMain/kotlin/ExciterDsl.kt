@@ -6,6 +6,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class ExciterDsl {
 
+    /** Whether this exciter requires a frequency to produce sound. Noise sources override to false. */
+    open val needsFreq: Boolean get() = true
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Oscillator Primitives
     // ═════════════════════════════════════════════════════════════════════════════
@@ -28,7 +31,9 @@ sealed class ExciterDsl {
 
     @Serializable
     @SerialName("white-noise")
-    data class WhiteNoise(val gain: Double = 1.0) : ExciterDsl()
+    data class WhiteNoise(val gain: Double = 1.0) : ExciterDsl() {
+        override val needsFreq: Boolean get() = false
+    }
 
     @Serializable
     @SerialName("zawtooth")
@@ -44,19 +49,27 @@ sealed class ExciterDsl {
 
     @Serializable
     @SerialName("brown-noise")
-    data class BrownNoise(val gain: Double = 1.0) : ExciterDsl()
+    data class BrownNoise(val gain: Double = 1.0) : ExciterDsl() {
+        override val needsFreq: Boolean get() = false
+    }
 
     @Serializable
     @SerialName("pink-noise")
-    data class PinkNoise(val gain: Double = 1.0) : ExciterDsl()
+    data class PinkNoise(val gain: Double = 1.0) : ExciterDsl() {
+        override val needsFreq: Boolean get() = false
+    }
 
     @Serializable
     @SerialName("dust")
-    data class Dust(val density: Double = 0.2, val gain: Double = 1.0) : ExciterDsl()
+    data class Dust(val density: Double = 0.2, val gain: Double = 1.0) : ExciterDsl() {
+        override val needsFreq: Boolean get() = false
+    }
 
     @Serializable
     @SerialName("crackle")
-    data class Crackle(val density: Double = 0.2, val gain: Double = 1.0) : ExciterDsl()
+    data class Crackle(val density: Double = 0.2, val gain: Double = 1.0) : ExciterDsl() {
+        override val needsFreq: Boolean get() = false
+    }
 
     @Serializable
     @SerialName("ramp")
@@ -105,6 +118,32 @@ sealed class ExciterDsl {
     @Serializable
     @SerialName("silence")
     data object Silence : ExciterDsl()
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Physical Models
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    @Serializable
+    @SerialName("pluck")
+    data class Pluck(
+        val decay: Double = 0.996,
+        val brightness: Double = 0.5,
+        val pickPosition: Double = 0.5,
+        val stiffness: Double = 0.0,
+        val gain: Double = 0.7,
+    ) : ExciterDsl()
+
+    @Serializable
+    @SerialName("superpluck")
+    data class SuperPluck(
+        val voices: Int = 5,
+        val freqSpread: Double = 0.2,
+        val decay: Double = 0.996,
+        val brightness: Double = 0.5,
+        val pickPosition: Double = 0.5,
+        val stiffness: Double = 0.0,
+        val gain: Double = 0.7,
+    ) : ExciterDsl()
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Arithmetic Composition

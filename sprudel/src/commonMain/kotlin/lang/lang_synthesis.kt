@@ -102,11 +102,11 @@ internal val PatternMapperFn._fmh by dslPatternMapperExtension { m, args, callIn
  * Integer ratios (1, 2, 3) produce harmonic spectra (clean, pitched sounds); non-integer
  * ratios (1.4, 2.7) produce inharmonic spectra (metallic, bell-like tones).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmh(2).fmenv(100)    // 2:1 ratio — FM brass/organ character
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmh(1.4).fmenv(500)  // non-integer ratio — FM bell tones
  * ```
  *
@@ -125,7 +125,7 @@ fun String.fmh(ratio: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the FM harmonicity ratio on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").apply(fmh(2))  // via mapper
  * ```
  *
@@ -172,11 +172,11 @@ internal val PatternMapperFn._fmatt by dslPatternMapperExtension { m, args, call
  * Short values create percussive, bright attacks; longer values create gradual timbre sweeps.
  * Use with [fmenv], [fmdecay], [fmsustain].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmenv(500).fmattack(0.01)   // instant FM attack — plucky
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmenv(300).fmattack(0.5)    // slow FM attack — timbre sweep
  * ```
  *
@@ -196,7 +196,7 @@ fun String.fmattack(seconds: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the FM modulation envelope attack time on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").apply(fmattack(0.01))  // via mapper
  * ```
  *
@@ -232,7 +232,7 @@ fun String.fmatt(seconds: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that is an alias for [fmattack].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").apply(fmatt(0.01))  // via mapper
  * ```
  *
@@ -280,11 +280,11 @@ internal val PatternMapperFn._fmdec by dslPatternMapperExtension { m, args, call
  * after the attack phase. Shorter decay produces a brighter, more percussive sound.
  * Use with [fmattack], [fmsustain], [fmenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmenv(500).fmattack(0.01).fmdecay(0.1)  // plucky FM
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmenv(300).fmdecay("<0.1 1.0>")          // short vs long decay
  * ```
  *
@@ -304,7 +304,7 @@ fun String.fmdecay(seconds: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the FM modulation envelope decay time on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").apply(fmdecay(0.1))  // via mapper
  * ```
  *
@@ -340,7 +340,7 @@ fun String.fmdec(seconds: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that is an alias for [fmdecay].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").apply(fmdec(0.1))  // via mapper
  * ```
  *
@@ -388,11 +388,11 @@ internal val PatternMapperFn._fmsus by dslPatternMapperExtension { m, args, call
  * the note is sustained. `0` produces no sustained modulation (percussive); `1` holds
  * the peak modulation. Use with [fmattack], [fmdecay], [fmenv].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmenv(400).fmsustain(0.0)  // percussive FM — no sustain
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmenv(400).fmsustain(0.7)  // sustained FM — held brightness
  * ```
  *
@@ -412,7 +412,7 @@ fun String.fmsustain(level: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that sets the FM modulation envelope sustain level on the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").apply(fmsustain(0.0))  // via mapper
  * ```
  *
@@ -448,7 +448,7 @@ fun String.fmsus(level: PatternLike? = null): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that is an alias for [fmsustain].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").apply(fmsus(0.0))  // via mapper
  * ```
  *
@@ -488,11 +488,11 @@ internal val String._fmmod by dslStringExtension { p, args, callInfo -> p._fmmod
  * harmonic richness; high values (500+ Hz) create complex, metallic, or noise-like timbres.
  * Can be driven by a continuous pattern for dynamic timbre evolution.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmh(2).fmenv(50)               // light FM — subtle richness
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").s("sine").fmh(1.4).fmenv(500)             // heavy FM — complex timbre
  * ```
  *

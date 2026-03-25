@@ -26,7 +26,7 @@ class StdLibTest : StringSpec({
     "print() outputs single argument" {
         val output = mutableListOf<String>()
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
+            registerLibrary(KlangStdLib.create(outputHandler = { _, args -> output.add(args.joinToString()) }))
         }
 
         engine.execute(
@@ -43,7 +43,7 @@ class StdLibTest : StringSpec({
     "print() outputs multiple arguments separated by spaces" {
         val output = mutableListOf<String>()
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
+            registerLibrary(KlangStdLib.create(outputHandler = { _, args -> output.add(args.joinToString()) }))
         }
 
         engine.execute(
@@ -63,7 +63,7 @@ class StdLibTest : StringSpec({
     "print() with no arguments outputs empty line" {
         val output = mutableListOf<String>()
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
+            registerLibrary(KlangStdLib.create(outputHandler = { _, args -> output.add(args.joinToString()) }))
         }
 
         engine.execute(
@@ -80,7 +80,7 @@ class StdLibTest : StringSpec({
     "console.log() works like print()" {
         val output = mutableListOf<String>()
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
+            registerLibrary(KlangStdLib.create(outputHandler = { _, args -> output.add(args.joinToString()) }))
         }
 
         engine.execute(
@@ -411,7 +411,7 @@ class StdLibTest : StringSpec({
     "functions work with variables and expressions" {
         val output = mutableListOf<String>()
         val engine = klangScript {
-            registerLibrary(KlangStdLib.create(outputHandler = { output.add(it.joinToString()) }))
+            registerLibrary(KlangStdLib.create(outputHandler = { _, args -> output.add(args.joinToString()) }))
         }
 
         engine.execute(

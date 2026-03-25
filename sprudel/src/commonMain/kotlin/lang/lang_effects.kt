@@ -77,47 +77,47 @@ internal val PatternMapperFn._dist by dslPatternMapperExtension { m, args, callI
  * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
  * @return A new pattern with distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort(0.5)   // moderate distortion (default shape)
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").distort("<0 0.3 0.6 1.0>")        // escalating distortion each beat
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.5:soft")       // warm tanh saturation
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.7:hard")       // aggressive hard clipping
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.4:gentle")     // smooth x/(1+|x|) saturation
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.6:cubic")      // tube-like, 3rd harmonic
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.5:diode")      // asymmetric, even harmonics
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.8:fold")       // sine wavefolding, metallic
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.5:chebyshev")  // T3 polynomial, tape saturation
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.7:rectify")    // full-wave rectification, octave-up
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.6:exp")        // exponential, transistor-style
  * ```
  * @alias dist
@@ -137,7 +137,7 @@ fun SprudelPattern.distort(amount: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as distortion.
  * @return A new pattern with distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c2 eb2 g2".distort(0.5).note().s("sawtooth")  // moderate distortion on bass notes
  * ```
  */
@@ -158,11 +158,11 @@ fun String.distort(amount: PatternLike? = null): SprudelPattern =
  * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").apply(distort(0.5))  // moderate distortion
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, distort(0.8))  // heavy distortion on every 4th cycle
  * ```
  * @alias dist
@@ -178,11 +178,11 @@ fun distort(amount: PatternLike? = null): PatternMapperFn = _distort(listOfNotNu
  * @param amount The distortion amount. Omit to reinterpret the pattern's values as distortion.
  * @return A new [PatternMapperFn] chaining this distortion after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").apply(crush(4).distort(0.5))  // bit-crush then distort
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, room(0.3).distort(0.8))  // room + distortion every 4th cycle
  * ```
  */
@@ -202,15 +202,15 @@ fun PatternMapperFn.distort(amount: PatternLike? = null): PatternMapperFn =
  * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
  * @return A new pattern with distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").dist(0.5)   // moderate distortion
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").dist("<0 0.3 0.6 1.0>")        // escalating distortion each beat
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 0.5 1.0").dist()                     // reinterpret values as distortion
  * ```
  * @alias distort
@@ -230,7 +230,7 @@ fun SprudelPattern.dist(amount: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as distortion.
  * @return A new pattern with distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c2 eb2 g2".dist(0.5).note().s("sawtooth")  // moderate distortion on bass notes
  * ```
  */
@@ -251,11 +251,11 @@ fun String.dist(amount: PatternLike? = null): SprudelPattern =
  * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").apply(dist(0.5))  // moderate distortion
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, dist(0.8))  // heavy distortion on every 4th cycle
  * ```
  * @alias distort
@@ -271,11 +271,11 @@ fun dist(amount: PatternLike? = null): PatternMapperFn = _dist(listOfNotNull(amo
  * @param amount The distortion amount. Omit to reinterpret the pattern's values as distortion.
  * @return A new [PatternMapperFn] chaining this distortion after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").apply(crush(4).dist(0.5))  // bit-crush then distort
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").firstOf(4, room(0.3).dist(0.8))  // room + distortion every 4th cycle
  * ```
  */
@@ -332,11 +332,11 @@ internal val PatternMapperFn._dshape by dslPatternMapperExtension { m, args, cal
  * @param-tool shape SprudelDistortShapeSequenceEditor
  * @return A new pattern with the distortion shape applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort(0.5).distortshape("fold")   // wavefolding distortion
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").distort(0.7).distortshape("<soft hard fold exp>")   // cycle through shapes
  * ```
  *
@@ -353,7 +353,7 @@ fun SprudelPattern.distortshape(shape: PatternLike): SprudelPattern =
  *
  * @param shape The waveshaper shape name.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c2 eb2 g2".distortshape("fold").distort(0.5).note().s("sawtooth")
  * ```
  */
@@ -367,7 +367,7 @@ fun String.distortshape(shape: PatternLike): SprudelPattern = this._distortshape
  * @param-tool shape SprudelDistortShapeSequenceEditor
  * @return A [PatternMapperFn] that sets the distortion shape.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").apply(distortshape("fold"))   // wavefolding via mapper
  * ```
  *
@@ -384,7 +384,7 @@ fun distortshape(shape: PatternLike): PatternMapperFn = _distortshape(listOf(sha
  * @param shape The waveshaper shape name.
  * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").apply(distort(0.5).distortshape("fold"))   // amount then shape
  * ```
  */
@@ -399,11 +399,11 @@ fun PatternMapperFn.distortshape(shape: PatternLike): PatternMapperFn =
  * @param-tool shape SprudelDistortShapeSequenceEditor
  * @return A new pattern with the distortion shape applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort(0.5).distshape("hard")   // hard clipping
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").distort(0.7).distshape("<soft hard fold exp>")   // cycle through shapes
  * ```
  *
@@ -420,7 +420,7 @@ fun SprudelPattern.distshape(shape: PatternLike): SprudelPattern =
  *
  * @param shape The waveshaper shape name.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c2 eb2 g2".distshape("fold").distort(0.5).note().s("sawtooth")
  * ```
  */
@@ -433,7 +433,7 @@ fun String.distshape(shape: PatternLike): SprudelPattern = this._distshape(listO
  * @param shape The waveshaper shape name.
  * @return A [PatternMapperFn] that sets the distortion shape.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").apply(distshape("fold"))   // wavefolding via mapper
  * ```
  *
@@ -451,7 +451,7 @@ fun distshape(shape: PatternLike): PatternMapperFn = _distshape(listOf(shape).as
  * @param shape The waveshaper shape name.
  * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").apply(distort(0.5).distshape("fold"))   // amount then shape
  * ```
  */
@@ -466,7 +466,7 @@ fun PatternMapperFn.distshape(shape: PatternLike): PatternMapperFn =
  * @param-tool shape SprudelDistortShapeSequenceEditor
  * @return A new pattern with the distortion shape applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort(0.5).dshape("hard")   // hard clipping
  * ```
  *
@@ -483,7 +483,7 @@ fun SprudelPattern.dshape(shape: PatternLike): SprudelPattern =
  *
  * @param shape The waveshaper shape name.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c2 eb2 g2".dshape("fold").distort(0.5).note().s("sawtooth")
  * ```
  */
@@ -496,7 +496,7 @@ fun String.dshape(shape: PatternLike): SprudelPattern = this._dshape(listOf(shap
  * @param shape The waveshaper shape name.
  * @return A [PatternMapperFn] that sets the distortion shape.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").apply(dshape("fold"))   // wavefolding via mapper
  * ```
  *
@@ -514,7 +514,7 @@ fun dshape(shape: PatternLike): PatternMapperFn = _dshape(listOf(shape).asSprude
  * @param shape The waveshaper shape name.
  * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").apply(distort(0.5).dshape("fold"))   // amount then shape
  * ```
  */
@@ -550,7 +550,7 @@ internal val String._soft by dslStringExtension { p, args, callInfo -> p._soft(a
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with soft distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").soft(0.5)
  * ```
  * @category effects
@@ -583,7 +583,7 @@ internal val String._hard by dslStringExtension { p, args, callInfo -> p._hard(a
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with hard-clipping distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").hard(0.5)
  * ```
  * @category effects
@@ -615,7 +615,7 @@ internal val String._gentle by dslStringExtension { p, args, callInfo -> p._gent
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with gentle distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").gentle(0.5)
  * ```
  * @category effects
@@ -647,7 +647,7 @@ internal val String._cubic by dslStringExtension { p, args, callInfo -> p._cubic
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with cubic distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").cubic(0.5)
  * ```
  * @category effects
@@ -680,7 +680,7 @@ internal val String._diode by dslStringExtension { p, args, callInfo -> p._diode
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with diode distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").diode(0.5)
  * ```
  * @category effects
@@ -713,7 +713,7 @@ internal val String._fold by dslStringExtension { p, args, callInfo -> p._fold(a
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with wavefolding applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").fold(0.5)
  * ```
  * @category effects
@@ -745,7 +745,7 @@ internal val String._chebyshev by dslStringExtension { p, args, callInfo -> p._c
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with Chebyshev distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").chebyshev(0.5)
  * ```
  * @category effects
@@ -778,7 +778,7 @@ internal val String._rectify by dslStringExtension { p, args, callInfo -> p._rec
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with rectification applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").rectify(0.5)
  * ```
  * @category effects
@@ -811,7 +811,7 @@ internal val String._expClip by dslStringExtension { p, args, callInfo -> p._exp
  * @param-tool amount SprudelDistortAmountSequenceEditor
  * @return A new pattern with exponential distortion applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").expClip(0.5)
  * ```
  * @category effects
@@ -856,15 +856,15 @@ internal val PatternMapperFn._crush by dslPatternMapperExtension { m, args, call
  *   Omit to reinterpret the pattern's values as crush.
  * @return A new pattern with bit-crushing applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").crush(4)              // 4-bit lo-fi crunch
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").crush("<16 8 4 2>")    // decreasing bit depth each beat
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("16 8 4 2").crush()             // reinterpret values as crush
  * ```
  *
@@ -884,7 +884,7 @@ fun SprudelPattern.crush(amount: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as crush.
  * @return A new pattern with bit-crushing applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd sd hh".crush(4).s()            // 4-bit lo-fi crunch on samples
  * ```
  */
@@ -902,11 +902,11 @@ fun String.crush(amount: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as crush.
  * @return A [PatternMapperFn] that applies bit-crushing.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh").apply(crush(4))              // 4-bit crunch via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, crush(2))            // maximum crush every 4th cycle
  * ```
  *
@@ -923,11 +923,11 @@ fun crush(amount: PatternLike? = null): PatternMapperFn = _crush(listOfNotNull(a
  *   Omit to reinterpret the pattern's values as crush.
  * @return A new [PatternMapperFn] chaining this bit-crushing after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(coarse(4).crush(4))   // sample-rate reduction then bit-crush
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, distort(0.5).crush(2))   // distort + max crush every 4th cycle
  * ```
  */
@@ -963,15 +963,15 @@ internal val PatternMapperFn._coarse by dslPatternMapperExtension { m, args, cal
  *   Omit to reinterpret the pattern's values as coarse.
  * @return A new pattern with sample-rate reduction applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").coarse(4)               // moderate sample-rate reduction
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*8").coarse("<1 2 4 8>")   // escalating downsampling
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2 4 8").coarse()            // reinterpret values as coarse
  * ```
  *
@@ -991,7 +991,7 @@ fun SprudelPattern.coarse(amount: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as coarse.
  * @return A new pattern with sample-rate reduction applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd sd".coarse(4).s()              // lo-fi samples
  * ```
  */
@@ -1009,11 +1009,11 @@ fun String.coarse(amount: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as coarse.
  * @return A [PatternMapperFn] that applies sample-rate reduction.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(coarse(4))        // lo-fi via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, coarse(8))   // heavy downsampling every 4th cycle
  * ```
  *
@@ -1030,11 +1030,11 @@ fun coarse(amount: PatternLike? = null): PatternMapperFn = _coarse(listOfNotNull
  *   Omit to reinterpret the pattern's values as coarse.
  * @return A new [PatternMapperFn] chaining this sample-rate reduction after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(crush(4).coarse(4))    // bit-crush then downsample
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").every(4, coarse(8).distort(0.5))  // heavy lo-fi every 4th cycle
  * ```
  */
@@ -1066,15 +1066,15 @@ internal val PatternMapperFn._room by dslPatternMapperExtension { m, args, callI
  * multiple patterns to separate reverb buses.
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as room mix.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").clip(0.5).s("sine").room(0.5)   // 50% reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").clip(0.5).room("<0 0.3 0.6 0.9>").roomsize(4)   // increasing wet mix
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 0.5 1.0").room()   // reinterpret values as room mix
  * ```
  *
@@ -1096,7 +1096,7 @@ fun SprudelPattern.room(amount: PatternLike? = null): SprudelPattern =
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
  * @return A new pattern with reverb wet/dry mix applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".room(0.5).note().clip(0.5)    // 50% reverb on bass notes
  * ```
  */
@@ -1113,11 +1113,11 @@ fun String.room(amount: PatternLike? = null): SprudelPattern =
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
  * @return A [PatternMapperFn] that sets the reverb wet/dry mix.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(room(0.5)).clip(0.5)     // 50% reverb via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.9)).clip(0.5)      // heavy reverb every 4th cycle
  * ```
  *
@@ -1133,11 +1133,11 @@ fun room(amount: PatternLike? = null): PatternMapperFn = _room(listOfNotNull(amo
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as room mix.
  * @return A new [PatternMapperFn] chaining this reverb mix after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(roomsize(4).room(0.5))     // set room size then wet mix
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, coarse(4).room(0.8))     // lo-fi with heavy reverb every 4th cycle
  * ```
  */
@@ -1194,15 +1194,15 @@ internal val PatternMapperFn._size by dslPatternMapperExtension { m, args, callI
  *   Omit to reinterpret the pattern's values as room size.
  * @return A new pattern with room size applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").clip(0.5).room(0.5).roomsize(4)   // long reverb tail
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").clip(0.5).roomsize("<1 2 4 8>")              // growing room size
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2 4 8").roomsize()                       // reinterpret values as room size
  * ```
  *
@@ -1224,7 +1224,7 @@ fun SprudelPattern.roomsize(amount: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as room size.
  * @return A new pattern with room size applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".roomsize(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
@@ -1242,11 +1242,11 @@ fun String.roomsize(amount: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as room size.
  * @return A [PatternMapperFn] that sets the reverb room size.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(roomsize(4)).clip(0.5)        // long reverb tail via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, roomsize(8)).clip(0.5)      // huge room every 4th cycle
  * ```
  *
@@ -1263,11 +1263,11 @@ fun roomsize(amount: PatternLike? = null): PatternMapperFn = _roomsize(listOfNot
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A new [PatternMapperFn] chaining this room size after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.5).roomsize(4))   // set wet mix then room size
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).roomsize(8))  // big reverb every 4th cycle
  * ```
  */
@@ -1281,7 +1281,7 @@ fun PatternMapperFn.roomsize(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A new pattern with room size applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").clip(0.5).room(0.5).rsize(4)   // long reverb tail
  * ```
  *
@@ -1299,7 +1299,7 @@ fun SprudelPattern.rsize(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".rsize(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
@@ -1313,7 +1313,7 @@ fun String.rsize(amount: PatternLike? = null): SprudelPattern =
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A [PatternMapperFn] that sets the reverb room size.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(rsize(4)).clip(0.5)   // long reverb tail via mapper
  * ```
  *
@@ -1330,11 +1330,11 @@ fun rsize(amount: PatternLike? = null): PatternMapperFn = _rsize(listOfNotNull(a
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A new [PatternMapperFn] chaining this room size after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.5).rsize(4))   // set wet mix then room size
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).rsize(8))  // big reverb every 4th cycle
  * ```
  */
@@ -1348,7 +1348,7 @@ fun PatternMapperFn.rsize(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A new pattern with room size applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").clip(0.5).room(0.5).sz(4)   // long reverb tail
  * ```
  *
@@ -1366,7 +1366,7 @@ fun SprudelPattern.sz(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".sz(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
@@ -1380,7 +1380,7 @@ fun String.sz(amount: PatternLike? = null): SprudelPattern =
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A [PatternMapperFn] that sets the reverb room size.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(sz(4)).clip(0.5)   // long reverb tail via mapper
  * ```
  *
@@ -1397,11 +1397,11 @@ fun sz(amount: PatternLike? = null): PatternMapperFn = _sz(listOfNotNull(amount)
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A new [PatternMapperFn] chaining this room size after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.5).sz(4))   // set wet mix then room size
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).sz(8))  // big reverb every 4th cycle
  * ```
  */
@@ -1415,7 +1415,7 @@ fun PatternMapperFn.sz(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A new pattern with room size applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").clip(0.5).room(0.5).size(4)   // long reverb tail
  * ```
  *
@@ -1432,7 +1432,7 @@ fun SprudelPattern.size(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".size(4).room(0.5).note().clip(0.5)    // long reverb tail on bass notes
  * ```
  */
@@ -1446,7 +1446,7 @@ fun String.size(amount: PatternLike? = null): SprudelPattern =
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A [PatternMapperFn] that sets the reverb room size.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(size(4)).clip(0.5)   // long reverb tail via mapper
  * ```
  *
@@ -1463,11 +1463,11 @@ fun size(amount: PatternLike? = null): PatternMapperFn = _size(listOfNotNull(amo
  * @param amount The room size. Omit to reinterpret the pattern's values as room size.
  * @return A new [PatternMapperFn] chaining this room size after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.5).size(4))   // set wet mix then room size
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).size(8))  // big reverb every 4th cycle
  * ```
  */
@@ -1509,15 +1509,15 @@ internal val PatternMapperFn._rfade by dslPatternMapperExtension { m, args, call
  * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
  * @return A new pattern with the reverb fade time applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").room(0.6).roomfade(2.0)    // 2-second reverb fade
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").roomfade("<0.5 1 2 4>")     // increasing fade time each beat
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.5 1 2 4").roomfade()              // reinterpret values as fade time
  * ```
  *
@@ -1536,7 +1536,7 @@ fun SprudelPattern.roomfade(time: PatternLike? = null): SprudelPattern =
  *
  * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".roomfade(2.0).room(0.6).note()   // 2-second fade on string pattern
  * ```
  */
@@ -1553,11 +1553,11 @@ fun String.roomfade(time: PatternLike? = null): SprudelPattern =
  * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
  * @return A [PatternMapperFn] that sets the reverb fade time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(roomfade(2.0)).room(0.6)   // 2-second fade via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, roomfade(4.0))            // long fade every 4th cycle
  * ```
  *
@@ -1574,11 +1574,11 @@ fun roomfade(time: PatternLike? = null): PatternMapperFn = _roomfade(listOfNotNu
  * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
  * @return A new [PatternMapperFn] chaining this fade time after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.6).roomfade(2.0))   // wet mix then fade time
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).roomfade(4.0))  // big reverb every 4th cycle
  * ```
  */
@@ -1594,11 +1594,11 @@ fun PatternMapperFn.roomfade(time: PatternLike? = null): PatternMapperFn =
  * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
  * @return A new pattern with the reverb fade time applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").room(0.6).rfade(2.0)    // 2-second reverb fade
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").rfade("<0.5 1 2 4>")     // increasing fade time each beat
  * ```
  *
@@ -1617,7 +1617,7 @@ fun SprudelPattern.rfade(time: PatternLike? = null): SprudelPattern =
  *
  * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".rfade(2.0).room(0.6).note()   // 2-second fade on string pattern
  * ```
  */
@@ -1631,11 +1631,11 @@ fun String.rfade(time: PatternLike? = null): SprudelPattern =
  * @param time The fade time in seconds.
  * @return A [PatternMapperFn] that sets the reverb fade time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(rfade(2.0)).room(0.6)   // 2-second fade via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, rfade(4.0))            // long fade every 4th cycle
  * ```
  *
@@ -1652,11 +1652,11 @@ fun rfade(time: PatternLike? = null): PatternMapperFn = _rfade(listOfNotNull(tim
  * @param time The fade time in seconds. Omit to reinterpret the pattern's values as fade time.
  * @return A new [PatternMapperFn] chaining this fade time after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.6).rfade(2.0))   // wet mix then fade time
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).rfade(4.0))  // big reverb every 4th cycle
  * ```
  */
@@ -1699,15 +1699,15 @@ internal val PatternMapperFn._rlp by dslPatternMapperExtension { m, args, callIn
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  * @return A new pattern with the reverb lowpass frequency applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").room(0.6).roomlp(4000)           // dark reverb tail
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").roomlp("<8000 4000 2000 1000>")   // increasingly dark reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("8000 4000 2000 1000").roomlp()             // reinterpret values as lowpass frequency
  * ```
  *
@@ -1727,7 +1727,7 @@ fun SprudelPattern.roomlp(freq: PatternLike? = null): SprudelPattern =
  * @param freq The lowpass filter start frequency in Hz.
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".roomlp(4000).room(0.6).note()   // dark reverb on string pattern
  * ```
  */
@@ -1745,11 +1745,11 @@ fun String.roomlp(freq: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  * @return A [PatternMapperFn] that sets the reverb lowpass frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(roomlp(4000)).room(0.6)   // dark reverb via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, roomlp(1000))            // very dark reverb every 4th cycle
  * ```
  *
@@ -1767,11 +1767,11 @@ fun roomlp(freq: PatternLike? = null): PatternMapperFn = _roomlp(listOfNotNull(f
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  * @return A new [PatternMapperFn] chaining this lowpass frequency after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.6).roomlp(4000))   // wet mix then dark reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).roomlp(1000))  // very dark reverb every 4th cycle
  * ```
  */
@@ -1788,11 +1788,11 @@ fun PatternMapperFn.roomlp(freq: PatternLike? = null): PatternMapperFn =
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  * @return A new pattern with the reverb lowpass frequency applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").room(0.6).rlp(4000)           // dark reverb tail
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").rlp("<8000 4000 2000 1000>")   // increasingly dark reverb
  * ```
  *
@@ -1812,7 +1812,7 @@ fun SprudelPattern.rlp(freq: PatternLike? = null): SprudelPattern =
  * @param freq The lowpass filter start frequency in Hz.
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".rlp(4000).room(0.6).note()   // dark reverb on string pattern
  * ```
  */
@@ -1829,11 +1829,11 @@ fun String.rlp(freq: PatternLike? = null): SprudelPattern =
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  * @return A [PatternMapperFn] that sets the reverb lowpass frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(rlp(4000)).room(0.6)   // dark reverb via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, rlp(1000))            // very dark reverb every 4th cycle
  * ```
  *
@@ -1851,11 +1851,11 @@ fun rlp(freq: PatternLike? = null): PatternMapperFn = _rlp(listOfNotNull(freq).a
  *   Omit to reinterpret the pattern's values as lowpass frequency.
  * @return A new [PatternMapperFn] chaining this lowpass frequency after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.6).rlp(4000))   // wet mix then dark reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).rlp(1000))  // very dark reverb every 4th cycle
  * ```
  */
@@ -1897,15 +1897,15 @@ internal val PatternMapperFn._rdim by dslPatternMapperExtension { m, args, callI
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  * @return A new pattern with the reverb -60 dB frequency applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").room(0.6).roomdim(500)   // very dark, dim reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").roomdim("<2000 1000 500 200>")   // progressively dimmer reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2000 1000 500 200").roomdim()   // reinterpret values as -60 dB frequency
  * ```
  *
@@ -1924,7 +1924,7 @@ fun SprudelPattern.roomdim(freq: PatternLike? = null): SprudelPattern =
  *
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".roomdim(500).room(0.6).note()   // very dark reverb on string pattern
  * ```
  */
@@ -1941,11 +1941,11 @@ fun String.roomdim(freq: PatternLike? = null): SprudelPattern =
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  * @return A [PatternMapperFn] that sets the reverb -60 dB frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(roomdim(500)).room(0.6)   // very dark reverb via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, roomdim(200))            // very dim reverb every 4th cycle
  * ```
  *
@@ -1962,11 +1962,11 @@ fun roomdim(freq: PatternLike? = null): PatternMapperFn = _roomdim(listOfNotNull
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  * @return A new [PatternMapperFn] chaining this frequency after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.6).roomdim(500))   // wet mix then dim frequency
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).roomdim(200))  // very dim reverb every 4th cycle
  * ```
  */
@@ -1982,15 +1982,15 @@ fun PatternMapperFn.roomdim(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  * @return A new pattern with the reverb -60 dB frequency applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").room(0.6).rdim(500)   // very dark, dim reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").rdim("<2000 1000 500 200>")   // progressively dimmer reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("2000 1000 500 200").rdim()   // reinterpret values as -60 dB frequency
  * ```
  *
@@ -2009,7 +2009,7 @@ fun SprudelPattern.rdim(freq: PatternLike? = null): SprudelPattern =
  *
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".rdim(500).room(0.6).note()   // very dark reverb on string pattern
  * ```
  */
@@ -2023,7 +2023,7 @@ fun String.rdim(freq: PatternLike? = null): SprudelPattern =
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  * @return A [PatternMapperFn] that sets the reverb -60 dB frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(rdim(500)).room(0.6)   // very dark reverb via mapper
  * ```
  *
@@ -2041,11 +2041,11 @@ fun rdim(freq: PatternLike? = null): PatternMapperFn = _rdim(listOfNotNull(freq)
  * @param freq The -60 dB lowpass frequency in Hz. Omit to reinterpret the pattern's values as frequency.
  * @return A new [PatternMapperFn] chaining this frequency after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.6).rdim(500))   // wet mix then dim frequency
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).rdim(200))  // very dim reverb every 4th cycle
  * ```
  */
@@ -2088,11 +2088,11 @@ internal val PatternMapperFn._ir by dslPatternMapperExtension { m, args, callInf
  * @param name The name of the impulse response sample.
  * @return A new pattern with the impulse response applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").iresponse("church")     // church reverb IR
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").iresponse("<room hall plate>")  // cycle through IR types
  * ```
  *
@@ -2108,7 +2108,7 @@ fun SprudelPattern.iresponse(name: PatternLike): SprudelPattern = this._irespons
  *
  * @param name The name of the impulse response sample.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".iresponse("church").note()   // church reverb IR on string pattern
  * ```
  */
@@ -2123,11 +2123,11 @@ fun String.iresponse(name: PatternLike): SprudelPattern = this._iresponse(listOf
  * @param name The name of the impulse response sample.
  * @return A [PatternMapperFn] that sets the impulse response.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(iresponse("church"))   // church reverb via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, iresponse("hall"))   // hall reverb every 4th cycle
  * ```
  *
@@ -2144,11 +2144,11 @@ fun iresponse(name: PatternLike): PatternMapperFn = _iresponse(listOf(name).asSp
  * @param name The name of the impulse response sample.
  * @return A new [PatternMapperFn] chaining this impulse response after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.5).iresponse("church"))   // room then IR reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).iresponse("hall"))   // hall IR every 4th cycle
  * ```
  */
@@ -2161,11 +2161,11 @@ fun PatternMapperFn.iresponse(name: PatternLike): PatternMapperFn = _iresponse(l
  * @param name The name of the impulse response sample.
  * @return A new pattern with the impulse response applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").ir("church")     // church reverb IR
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").ir("<room hall plate>")  // cycle through IR types
  * ```
  *
@@ -2181,7 +2181,7 @@ fun SprudelPattern.ir(name: PatternLike): SprudelPattern = this._ir(listOf(name)
  *
  * @param name The name of the impulse response sample.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".ir("church").note()   // church reverb IR on string pattern
  * ```
  */
@@ -2194,7 +2194,7 @@ fun String.ir(name: PatternLike): SprudelPattern = this._ir(listOf(name).asSprud
  * @param name The name of the impulse response sample.
  * @return A [PatternMapperFn] that sets the impulse response.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(ir("church"))   // church reverb via mapper
  * ```
  *
@@ -2211,11 +2211,11 @@ fun ir(name: PatternLike): PatternMapperFn = _ir(listOf(name).asSprudelDslArgs()
  * @param name The name of the impulse response sample.
  * @return A new [PatternMapperFn] chaining this impulse response after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(room(0.5).ir("church"))   // room then IR reverb
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, room(0.8).ir("hall"))   // hall IR every 4th cycle
  * ```
  */
@@ -2279,15 +2279,15 @@ internal val PatternMapperFn._delay by dslPatternMapperExtension { m, args, call
  * @param amount The delay parameters: a single value (wet/dry mix) or `"wet:time:feedback"`.
  * @return A new pattern with the delay applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").delay(0.4)                         // 40% delay mix
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").delay("0.5:0.25:0.6")               // wet=0.5, time=0.25s, feedback=0.6
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").delay("<0.3:0.125 0.6:0.25:0.8>")   // alternating delay per cycle
  * ```
  *
@@ -2309,7 +2309,7 @@ fun SprudelPattern.delay(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as delay mix.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".delay(0.4).note()   // 40% delay mix on string pattern
  * ```
  */
@@ -2326,11 +2326,11 @@ fun String.delay(amount: PatternLike? = null): SprudelPattern =
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as delay mix.
  * @return A [PatternMapperFn] that sets the delay mix.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delay(0.4))   // 40% delay mix via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delay(0.8))   // heavy delay every 4th cycle
  * ```
  *
@@ -2346,11 +2346,11 @@ fun delay(amount: PatternLike? = null): PatternMapperFn = _delay(listOfNotNull(a
  * @param amount The wet/dry mix (0–1). Omit to reinterpret the pattern's values as delay mix.
  * @return A new [PatternMapperFn] chaining this delay mix after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delaytime(0.25).delay(0.5))   // set delay time then mix
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delaytime(0.25).delay(0.8))   // delay every 4th cycle
  * ```
  */
@@ -2385,15 +2385,15 @@ internal val PatternMapperFn._delaytime by dslPatternMapperExtension { m, args, 
  * @param time The delay interval in seconds. Omit to reinterpret the pattern's values as delay time.
  * @return A new pattern with the delay time applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").delay(0.5).delaytime(0.375)   // dotted-eighth delay
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").delaytime("<0.125 0.25 0.5>")   // varying delay times
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.125 0.25 0.5").delaytime()   // reinterpret values as delay time
  * ```
  *
@@ -2412,7 +2412,7 @@ fun SprudelPattern.delaytime(time: PatternLike? = null): SprudelPattern =
  *
  * @param time The delay interval in seconds. Omit to reinterpret the pattern's values as delay time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".delaytime(0.25).delay(0.5).note()   // quarter-note delay on string pattern
  * ```
  */
@@ -2429,11 +2429,11 @@ fun String.delaytime(time: PatternLike? = null): SprudelPattern =
  * @param time The delay interval in seconds. Omit to reinterpret the pattern's values as delay time.
  * @return A [PatternMapperFn] that sets the delay time.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delaytime(0.25))   // quarter-note delay via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delaytime(0.125))   // eighth-note delay every 4th cycle
  * ```
  *
@@ -2449,11 +2449,11 @@ fun delaytime(time: PatternLike? = null): PatternMapperFn = _delaytime(listOfNot
  * @param time The delay interval in seconds. Omit to reinterpret the pattern's values as delay time.
  * @return A new [PatternMapperFn] chaining this delay time after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delay(0.5).delaytime(0.25))   // delay mix then time
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delay(0.8).delaytime(0.125))   // delay every 4th cycle
  * ```
  */
@@ -2506,15 +2506,15 @@ internal val PatternMapperFn._dfb by dslPatternMapperExtension { m, args, callIn
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A new pattern with the delay feedback applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").delay(0.4).delaytime(0.25).delayfeedback(0.6)   // 3-4 echoes
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").delayfeedback("<0.2 0.4 0.6 0.8>")            // increasing echoes
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.4 0.6 0.8").delayfeedback()   // reinterpret values as feedback
  * ```
  *
@@ -2534,7 +2534,7 @@ fun SprudelPattern.delayfeedback(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".delayfeedback(0.6).delay(0.4).note()   // echoing string pattern
  * ```
  */
@@ -2551,11 +2551,11 @@ fun String.delayfeedback(amount: PatternLike? = null): SprudelPattern =
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A [PatternMapperFn] that sets the delay feedback.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delayfeedback(0.6))   // feedback via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delayfeedback(0.8))   // lots of echoes every 4th cycle
  * ```
  *
@@ -2573,11 +2573,11 @@ fun delayfeedback(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A new [PatternMapperFn] chaining this feedback after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delay(0.5).delayfeedback(0.6))   // mix then feedback
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delay(0.8).delayfeedback(0.9))   // echoing delay every 4th cycle
  * ```
  */
@@ -2593,15 +2593,15 @@ fun PatternMapperFn.delayfeedback(amount: PatternLike? = null): PatternMapperFn 
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A new pattern with the delay feedback applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").delay(0.4).delaytime(0.25).delayfb(0.6)   // 3-4 echoes
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").delayfb("<0.2 0.4 0.6 0.8>")            // increasing echoes
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.4 0.6 0.8").delayfb()   // reinterpret values as feedback
  * ```
  *
@@ -2621,7 +2621,7 @@ fun SprudelPattern.delayfb(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".delayfb(0.6).delay(0.4).note()   // echoing string pattern
  * ```
  */
@@ -2635,7 +2635,7 @@ fun String.delayfb(amount: PatternLike? = null): SprudelPattern =
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A [PatternMapperFn] that sets the delay feedback.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delayfb(0.6))   // feedback via mapper
  * ```
  *
@@ -2653,11 +2653,11 @@ fun delayfb(amount: PatternLike? = null): PatternMapperFn = _delayfb(listOfNotNu
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A new [PatternMapperFn] chaining this feedback after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delay(0.5).delayfb(0.6))   // mix then feedback
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delay(0.8).delayfb(0.9))   // echoing delay every 4th cycle
  * ```
  */
@@ -2673,15 +2673,15 @@ fun PatternMapperFn.delayfb(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A new pattern with the delay feedback applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3").delay(0.4).delaytime(0.25).dfb(0.6)   // 3-4 echoes
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").dfb("<0.2 0.4 0.6 0.8>")            // increasing echoes
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.4 0.6 0.8").dfb()   // reinterpret values as feedback
  * ```
  *
@@ -2700,7 +2700,7 @@ fun SprudelPattern.dfb(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".dfb(0.6).delay(0.4).note()   // echoing string pattern
  * ```
  */
@@ -2714,7 +2714,7 @@ fun String.dfb(amount: PatternLike? = null): SprudelPattern =
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A [PatternMapperFn] that sets the delay feedback.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(dfb(0.6))   // feedback via mapper
  * ```
  *
@@ -2732,11 +2732,11 @@ fun dfb(amount: PatternLike? = null): PatternMapperFn = _dfb(listOfNotNull(amoun
  * @param amount The feedback amount (0–1). Omit to reinterpret the pattern's values as feedback.
  * @return A new [PatternMapperFn] chaining this feedback after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(delay(0.5).dfb(0.6))   // mix then feedback
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, delay(0.8).dfb(0.9))   // echoing delay every 4th cycle
  * ```
  */
@@ -2813,19 +2813,19 @@ internal val PatternMapperFn._ph by dslPatternMapperExtension { m, args, callInf
  * @param-sub rate sweep Sweep range in Hz around the center frequency
  * @return A new pattern with the phaser rate applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("sawtooth").phaser(0.5)   // slow phaser sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaser("<0.1 0.5 1 4>")         // accelerating phaser rate
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("sawtooth").phaser("0.5:0.8:500:1000")   // full compound phaser
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("sawtooth").phaser("2.0:0.6")   // rate + depth only
  * ```
  *
@@ -2844,7 +2844,7 @@ fun SprudelPattern.phaser(rate: PatternLike? = null): SprudelPattern =
  *
  * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".phaser(0.5).note().s("sawtooth")   // slow phaser on string pattern
  * ```
  */
@@ -2867,11 +2867,11 @@ fun String.phaser(rate: PatternLike? = null): SprudelPattern =
  * @param-sub rate sweep Sweep range in Hz around the center frequency
  * @return A [PatternMapperFn] that sets the phaser rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(phaser(0.5))   // slow phaser via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaser(4.0))   // fast phaser every 4th cycle
  * ```
  *
@@ -2888,11 +2888,11 @@ fun phaser(rate: PatternLike? = null): PatternMapperFn = _phaser(listOfNotNull(r
  * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
  * @return A new [PatternMapperFn] chaining this phaser rate after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaserdepth(0.8).phaser(0.5))   // depth then rate
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaserdepth(1.0).phaser(4.0))   // full-depth fast phaser
  * ```
  */
@@ -2914,15 +2914,15 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null): PatternMapperFn =
  * @param-sub rate sweep Sweep range in Hz around the center frequency
  * @return A new pattern with the phaser rate applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").s("sawtooth").ph(0.5)   // slow phaser sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").ph("<0.1 0.5 1 4>")         // accelerating phaser rate
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.1 0.5 1 4").ph()   // reinterpret values as phaser rate
  * ```
  *
@@ -2941,7 +2941,7 @@ fun SprudelPattern.ph(rate: PatternLike? = null): SprudelPattern =
  *
  * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".ph(0.5).note().s("sawtooth")   // slow phaser on string pattern
  * ```
  */
@@ -2961,7 +2961,7 @@ fun String.ph(rate: PatternLike? = null): SprudelPattern =
  * @param-sub rate sweep Sweep range in Hz around the center frequency
  * @return A [PatternMapperFn] that sets the phaser rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(ph(0.5))   // slow phaser via mapper
  * ```
  *
@@ -2978,11 +2978,11 @@ fun ph(rate: PatternLike? = null): PatternMapperFn = _ph(listOfNotNull(rate).asS
  * @param rate The phaser LFO rate in Hz. Omit to reinterpret the pattern's values as phaser rate.
  * @return A new [PatternMapperFn] chaining this phaser rate after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaserdepth(0.8).ph(0.5))   // depth then rate
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaserdepth(1.0).ph(4.0))   // full-depth fast phaser
  * ```
  */
@@ -3033,15 +3033,15 @@ internal val PatternMapperFn._phasdp by dslPatternMapperExtension { m, args, cal
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A new pattern with the phaser depth applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phaserdepth(0.8)   // deep phaser sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaserdepth("<0.2 0.5 0.8 1.0>")   // increasing phaser depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.5 0.8 1.0").phaserdepth()   // reinterpret values as phaser depth
  * ```
  *
@@ -3060,7 +3060,7 @@ fun SprudelPattern.phaserdepth(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".phaserdepth(0.8).phaser(0.5).note()   // deep phaser on string pattern
  * ```
  */
@@ -3077,11 +3077,11 @@ fun String.phaserdepth(amount: PatternLike? = null): SprudelPattern =
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A [PatternMapperFn] that sets the phaser depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(phaserdepth(0.8))   // deep phaser via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaserdepth(1.0))   // max depth every 4th cycle
  * ```
  *
@@ -3098,11 +3098,11 @@ fun phaserdepth(amount: PatternLike? = null): PatternMapperFn = _phaserdepth(lis
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A new [PatternMapperFn] chaining this phaser depth after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phaserdepth(0.8))   // rate then depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaser(4.0).phaserdepth(1.0))   // full-depth fast phaser
  * ```
  */
@@ -3118,15 +3118,15 @@ fun PatternMapperFn.phaserdepth(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A new pattern with the phaser depth applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phd(0.8)   // deep phaser sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phd("<0.2 0.5 0.8 1.0>")   // increasing phaser depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.5 0.8 1.0").phd()   // reinterpret values as phaser depth
  * ```
  *
@@ -3145,7 +3145,7 @@ fun SprudelPattern.phd(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".phd(0.8).phaser(0.5).note()   // deep phaser on string pattern
  * ```
  */
@@ -3159,7 +3159,7 @@ fun String.phd(amount: PatternLike? = null): SprudelPattern =
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A [PatternMapperFn] that sets the phaser depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(phd(0.8))   // deep phaser via mapper
  * ```
  *
@@ -3176,11 +3176,11 @@ fun phd(amount: PatternLike? = null): PatternMapperFn = _phd(listOfNotNull(amoun
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A new [PatternMapperFn] chaining this phaser depth after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phd(0.8))   // rate then depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaser(4.0).phd(1.0))   // full-depth fast phaser
  * ```
  */
@@ -3196,15 +3196,15 @@ fun PatternMapperFn.phd(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A new pattern with the phaser depth applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phasdp(0.8)   // deep phaser sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phasdp("<0.2 0.5 0.8 1.0>")   // increasing phaser depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.5 0.8 1.0").phasdp()   // reinterpret values as phaser depth
  * ```
  *
@@ -3223,7 +3223,7 @@ fun SprudelPattern.phasdp(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".phasdp(0.8).phaser(0.5).note()   // deep phaser on string pattern
  * ```
  */
@@ -3237,7 +3237,7 @@ fun String.phasdp(amount: PatternLike? = null): SprudelPattern =
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A [PatternMapperFn] that sets the phaser depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(phasdp(0.8))   // deep phaser via mapper
  * ```
  *
@@ -3254,11 +3254,11 @@ fun phasdp(amount: PatternLike? = null): PatternMapperFn = _phasdp(listOfNotNull
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as phaser depth.
  * @return A new [PatternMapperFn] chaining this phaser depth after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phasdp(0.8))   // rate then depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaser(4.0).phasdp(1.0))   // full-depth fast phaser
  * ```
  */
@@ -3302,15 +3302,15 @@ internal val PatternMapperFn._phc by dslPatternMapperExtension { m, args, callIn
  * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
  * @return A new pattern with the phaser center frequency applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phasercenter(1000)   // centered around 1 kHz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phasercenter("<500 1000 2000 4000>")   // sweeping center frequency
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("500 1000 2000 4000").phasercenter()   // reinterpret values as center frequency
  * ```
  *
@@ -3329,7 +3329,7 @@ fun SprudelPattern.phasercenter(freq: PatternLike? = null): SprudelPattern =
  *
  * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".phasercenter(1000).phaser(0.5).note()   // centered phaser on string pattern
  * ```
  */
@@ -3346,11 +3346,11 @@ fun String.phasercenter(freq: PatternLike? = null): SprudelPattern =
  * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
  * @return A [PatternMapperFn] that sets the phaser center frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(phasercenter(1000))   // 1 kHz center via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phasercenter(4000))   // high-frequency center every 4th cycle
  * ```
  *
@@ -3367,11 +3367,11 @@ fun phasercenter(freq: PatternLike? = null): PatternMapperFn = _phasercenter(lis
  * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
  * @return A new [PatternMapperFn] chaining this center frequency after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phasercenter(1000))   // rate then center frequency
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaser(2.0).phasercenter(2000))   // centered fast phaser
  * ```
  */
@@ -3387,15 +3387,15 @@ fun PatternMapperFn.phasercenter(freq: PatternLike? = null): PatternMapperFn =
  * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
  * @return A new pattern with the phaser center frequency applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phc(1000)   // centered around 1 kHz
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phc("<500 1000 2000 4000>")   // sweeping center frequency
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("500 1000 2000 4000").phc()   // reinterpret values as center frequency
  * ```
  *
@@ -3414,7 +3414,7 @@ fun SprudelPattern.phc(freq: PatternLike? = null): SprudelPattern =
  *
  * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".phc(1000).phaser(0.5).note()   // centered phaser on string pattern
  * ```
  */
@@ -3428,7 +3428,7 @@ fun String.phc(freq: PatternLike? = null): SprudelPattern =
  * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
  * @return A [PatternMapperFn] that sets the phaser center frequency.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(phc(1000))   // 1 kHz center via mapper
  * ```
  *
@@ -3446,11 +3446,11 @@ fun phc(freq: PatternLike? = null): PatternMapperFn = _phc(listOfNotNull(freq).a
  * @param freq The center frequency in Hz. Omit to reinterpret the pattern's values as center frequency.
  * @return A new [PatternMapperFn] chaining this center frequency after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phc(1000))   // rate then center frequency
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaser(2.0).phc(2000))   // centered fast phaser
  * ```
  */
@@ -3494,15 +3494,15 @@ internal val PatternMapperFn._phs by dslPatternMapperExtension { m, args, callIn
  * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
  * @return A new pattern with the phaser sweep range applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phasersweep(2000)   // ±2000 Hz sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phasersweep("<500 1000 2000 4000>")   // increasing sweep width
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("500 1000 2000 4000").phasersweep()   // reinterpret values as sweep range
  * ```
  *
@@ -3521,7 +3521,7 @@ fun SprudelPattern.phasersweep(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".phasersweep(2000).phaser(0.5).note()   // wide sweep on string pattern
  * ```
  */
@@ -3538,11 +3538,11 @@ fun String.phasersweep(amount: PatternLike? = null): SprudelPattern =
  * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
  * @return A [PatternMapperFn] that sets the phaser sweep range.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(phasersweep(2000))   // ±2000 Hz sweep via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phasersweep(4000))   // wide sweep every 4th cycle
  * ```
  *
@@ -3559,11 +3559,11 @@ fun phasersweep(amount: PatternLike? = null): PatternMapperFn = _phasersweep(lis
  * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
  * @return A new [PatternMapperFn] chaining this sweep range after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phasersweep(2000))   // rate then sweep range
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaser(2.0).phasersweep(4000))   // wide sweep fast phaser
  * ```
  */
@@ -3579,15 +3579,15 @@ fun PatternMapperFn.phasersweep(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
  * @return A new pattern with the phaser sweep range applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phaser(0.5).phs(2000)   // ±2000 Hz sweep
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").phs("<500 1000 2000 4000>")   // increasing sweep width
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("500 1000 2000 4000").phs()   // reinterpret values as sweep range
  * ```
  *
@@ -3606,7 +3606,7 @@ fun SprudelPattern.phs(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".phs(2000).phaser(0.5).note()   // wide sweep on string pattern
  * ```
  */
@@ -3620,7 +3620,7 @@ fun String.phs(amount: PatternLike? = null): SprudelPattern =
  * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
  * @return A [PatternMapperFn] that sets the phaser sweep range.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(phs(2000))   // ±2000 Hz sweep via mapper
  * ```
  *
@@ -3638,11 +3638,11 @@ fun phs(amount: PatternLike? = null): PatternMapperFn = _phs(listOfNotNull(amoun
  * @param amount The sweep range in Hz. Omit to reinterpret the pattern's values as sweep range.
  * @return A new [PatternMapperFn] chaining this sweep range after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(phaser(0.5).phs(2000))   // rate then sweep range
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, phaser(2.0).phs(4000))   // wide sweep fast phaser
  * ```
  */
@@ -3688,15 +3688,15 @@ internal val PatternMapperFn._tremsync by dslPatternMapperExtension { m, args, c
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  * @return A new pattern with the tremolo rate applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").s("sine").tremolosync(4)   // 4 Hz tremolo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremolosync("<1 2 4 8>")   // accelerating tremolo rate
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2 4 8").tremolosync()   // reinterpret values as tremolo rate
  * ```
  *
@@ -3715,7 +3715,7 @@ fun SprudelPattern.tremolosync(rate: PatternLike? = null): SprudelPattern =
  *
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".tremolosync(4).note().s("sine")   // 4 Hz tremolo on string pattern
  * ```
  */
@@ -3732,11 +3732,11 @@ fun String.tremolosync(rate: PatternLike? = null): SprudelPattern =
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  * @return A [PatternMapperFn] that sets the tremolo rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(4))   // 4 Hz tremolo via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(8))   // fast tremolo every 4th cycle
  * ```
  *
@@ -3753,11 +3753,11 @@ fun tremolosync(rate: PatternLike? = null): PatternMapperFn = _tremolosync(listO
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  * @return A new [PatternMapperFn] chaining this tremolo rate after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolodepth(0.8).tremolosync(4))   // depth then rate
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolodepth(1.0).tremolosync(8))   // full-depth fast tremolo
  * ```
  */
@@ -3773,15 +3773,15 @@ fun PatternMapperFn.tremolosync(rate: PatternLike? = null): PatternMapperFn =
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  * @return A new pattern with the tremolo rate applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").s("sine").tremsync(4)   // 4 Hz tremolo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremsync("<1 2 4 8>")   // accelerating tremolo rate
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("1 2 4 8").tremsync()   // reinterpret values as tremolo rate
  * ```
  *
@@ -3800,7 +3800,7 @@ fun SprudelPattern.tremsync(rate: PatternLike? = null): SprudelPattern =
  *
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".tremsync(4).note().s("sine")   // 4 Hz tremolo on string pattern
  * ```
  */
@@ -3814,7 +3814,7 @@ fun String.tremsync(rate: PatternLike? = null): SprudelPattern =
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  * @return A [PatternMapperFn] that sets the tremolo rate.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremsync(4))   // 4 Hz tremolo via mapper
  * ```
  *
@@ -3832,11 +3832,11 @@ fun tremsync(rate: PatternLike? = null): PatternMapperFn = _tremsync(listOfNotNu
  * @param rate The tremolo LFO rate in Hz. Omit to reinterpret the pattern's values as tremolo rate.
  * @return A new [PatternMapperFn] chaining this tremolo rate after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolodepth(0.8).tremsync(4))   // depth then rate
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolodepth(1.0).tremsync(8))   // full-depth fast tremolo
  * ```
  */
@@ -3882,15 +3882,15 @@ internal val PatternMapperFn._tremdepth by dslPatternMapperExtension { m, args, 
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
  * @return A new pattern with the tremolo depth applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").s("sine").tremolosync(4).tremolodepth(0.8)   // strong tremolo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremolodepth("<0.2 0.5 0.8 1.0>")             // increasing depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.5 0.8 1.0").tremolodepth()   // reinterpret values as tremolo depth
  * ```
  *
@@ -3909,7 +3909,7 @@ fun SprudelPattern.tremolodepth(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".tremolodepth(0.8).tremolosync(4).note()   // strong tremolo on string pattern
  * ```
  */
@@ -3926,11 +3926,11 @@ fun String.tremolodepth(amount: PatternLike? = null): SprudelPattern =
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
  * @return A [PatternMapperFn] that sets the tremolo depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolodepth(0.8))   // strong tremolo via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolodepth(1.0))   // max depth every 4th cycle
  * ```
  *
@@ -3947,11 +3947,11 @@ fun tremolodepth(amount: PatternLike? = null): PatternMapperFn = _tremolodepth(l
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
  * @return A new [PatternMapperFn] chaining this tremolo depth after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(4).tremolodepth(0.8))   // rate then depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(8).tremolodepth(1.0))   // full-depth fast tremolo
  * ```
  */
@@ -3967,15 +3967,15 @@ fun PatternMapperFn.tremolodepth(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
  * @return A new pattern with the tremolo depth applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").s("sine").tremolosync(4).tremdepth(0.8)   // strong tremolo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremdepth("<0.2 0.5 0.8 1.0>")             // increasing depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.5 0.8 1.0").tremdepth()   // reinterpret values as tremolo depth
  * ```
  *
@@ -3994,7 +3994,7 @@ fun SprudelPattern.tremdepth(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".tremdepth(0.8).tremolosync(4).note()   // strong tremolo on string pattern
  * ```
  */
@@ -4008,7 +4008,7 @@ fun String.tremdepth(amount: PatternLike? = null): SprudelPattern =
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
  * @return A [PatternMapperFn] that sets the tremolo depth.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremdepth(0.8))   // strong tremolo via mapper
  * ```
  *
@@ -4025,11 +4025,11 @@ fun tremdepth(amount: PatternLike? = null): PatternMapperFn = _tremdepth(listOfN
  * @param amount The modulation intensity (0–1). Omit to reinterpret the pattern's values as tremolo depth.
  * @return A new [PatternMapperFn] chaining this tremolo depth after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(4).tremdepth(0.8))   // rate then depth
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(8).tremdepth(1.0))   // full-depth fast tremolo
  * ```
  */
@@ -4075,15 +4075,15 @@ internal val PatternMapperFn._tremskew by dslPatternMapperExtension { m, args, c
  * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
  * @return A new pattern with the tremolo skew applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremolosync(2).tremoloskew(0.8)   // skewed toward peak
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremoloskew("<0.2 0.5 0.8>")      // varying asymmetry
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.5 0.8").tremoloskew()   // reinterpret values as tremolo skew
  * ```
  *
@@ -4102,7 +4102,7 @@ fun SprudelPattern.tremoloskew(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".tremoloskew(0.8).tremolosync(2).note()   // skewed tremolo on string pattern
  * ```
  */
@@ -4119,11 +4119,11 @@ fun String.tremoloskew(amount: PatternLike? = null): SprudelPattern =
  * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
  * @return A [PatternMapperFn] that sets the tremolo skew.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(tremoloskew(0.8))   // skewed tremolo via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremoloskew(0.2))   // inverted skew every 4th cycle
  * ```
  *
@@ -4140,11 +4140,11 @@ fun tremoloskew(amount: PatternLike? = null): PatternMapperFn = _tremoloskew(lis
  * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
  * @return A new [PatternMapperFn] chaining this tremolo skew after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(2).tremoloskew(0.8))   // rate then skew
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(4).tremoloskew(0.2))   // inverted skew fast tremolo
  * ```
  */
@@ -4160,15 +4160,15 @@ fun PatternMapperFn.tremoloskew(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
  * @return A new pattern with the tremolo skew applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremolosync(2).tremskew(0.8)   // skewed toward peak
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremskew("<0.2 0.5 0.8>")      // varying asymmetry
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0.2 0.5 0.8").tremskew()   // reinterpret values as tremolo skew
  * ```
  *
@@ -4187,7 +4187,7 @@ fun SprudelPattern.tremskew(amount: PatternLike? = null): SprudelPattern =
  *
  * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3*4".tremskew(0.8).tremolosync(2).note()   // skewed tremolo on string pattern
  * ```
  */
@@ -4201,7 +4201,7 @@ fun String.tremskew(amount: PatternLike? = null): SprudelPattern =
  * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
  * @return A [PatternMapperFn] that sets the tremolo skew.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").apply(tremskew(0.8))   // skewed tremolo via mapper
  * ```
  *
@@ -4219,11 +4219,11 @@ fun tremskew(amount: PatternLike? = null): PatternMapperFn = _tremskew(listOfNot
  * @param amount The skew value. Omit to reinterpret the pattern's values as tremolo skew.
  * @return A new [PatternMapperFn] chaining this tremolo skew after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(2).tremskew(0.8))   // rate then skew
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(4).tremskew(0.2))   // inverted skew fast tremolo
  * ```
  */
@@ -4269,18 +4269,18 @@ internal val PatternMapperFn._tremphase by dslPatternMapperExtension { m, args, 
  * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
  * @return A new pattern with the tremolo phase applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").tremolosync(2).tremolophase(1.57)   // start at 90°
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * stack(
  *   note("c3").tremolosync(2).tremolophase(0),
  *   note("e3").tremolosync(2).tremolophase(3.14),   // 180° offset
  * )
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 1.57 3.14 4.71").tremolophase()   // reinterpret values as tremolo phase
  * ```
  *
@@ -4299,7 +4299,7 @@ fun SprudelPattern.tremolophase(phase: PatternLike? = null): SprudelPattern =
  *
  * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".tremolophase(1.57).tremolosync(2).note()   // 90° tremolo on string pattern
  * ```
  */
@@ -4316,11 +4316,11 @@ fun String.tremolophase(phase: PatternLike? = null): SprudelPattern =
  * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
  * @return A [PatternMapperFn] that sets the tremolo phase.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolophase(1.57))   // 90° start via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolophase(3.14))   // 180° start every 4th cycle
  * ```
  *
@@ -4337,11 +4337,11 @@ fun tremolophase(phase: PatternLike? = null): PatternMapperFn = _tremolophase(li
  * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
  * @return A new [PatternMapperFn] chaining this tremolo phase after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(2).tremolophase(1.57))   // rate then phase
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(4).tremolophase(3.14))   // fast tremolo at 180°
  * ```
  */
@@ -4357,15 +4357,15 @@ fun PatternMapperFn.tremolophase(phase: PatternLike? = null): PatternMapperFn =
  * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
  * @return A new pattern with the tremolo phase applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").tremolosync(2).tremphase(1.57)   // start at 90°
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremphase("<0 1.57 3.14 4.71>")   // quarter-turn offsets
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("0 1.57 3.14 4.71").tremphase()   // reinterpret values as tremolo phase
  * ```
  *
@@ -4384,7 +4384,7 @@ fun SprudelPattern.tremphase(phase: PatternLike? = null): SprudelPattern =
  *
  * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".tremphase(1.57).tremolosync(2).note()   // 90° tremolo on string pattern
  * ```
  */
@@ -4398,7 +4398,7 @@ fun String.tremphase(phase: PatternLike? = null): SprudelPattern =
  * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
  * @return A [PatternMapperFn] that sets the tremolo phase.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremphase(1.57))   // 90° start via mapper
  * ```
  *
@@ -4416,11 +4416,11 @@ fun tremphase(phase: PatternLike? = null): PatternMapperFn = _tremphase(listOfNo
  * @param phase The starting phase in radians. Omit to reinterpret the pattern's values as tremolo phase.
  * @return A new [PatternMapperFn] chaining this tremolo phase after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(2).tremphase(1.57))   // rate then phase
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(4).tremphase(3.14))   // fast tremolo at 180°
  * ```
  */
@@ -4468,11 +4468,11 @@ internal val PatternMapperFn._tremshape by dslPatternMapperExtension { m, args, 
  * @param-tool shape SprudelWaveformSequenceEditor
  * @return A new pattern with the tremolo shape applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").tremolosync(4).tremoloshape("square")   // choppy on/off tremolo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremoloshape("<sine triangle square>")   // cycle through shapes
  * ```
  *
@@ -4489,7 +4489,7 @@ fun SprudelPattern.tremoloshape(shape: PatternLike): SprudelPattern =
  *
  * @param shape The LFO waveform shape name.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".tremoloshape("square").tremolosync(4).note()   // choppy tremolo on string pattern
  * ```
  */
@@ -4504,11 +4504,11 @@ fun String.tremoloshape(shape: PatternLike): SprudelPattern = this._tremoloshape
  * @param shape The LFO waveform shape name.
  * @return A [PatternMapperFn] that sets the tremolo shape.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremoloshape("square"))   // choppy tremolo via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremoloshape("triangle"))   // triangle tremolo every 4th cycle
  * ```
  *
@@ -4525,11 +4525,11 @@ fun tremoloshape(shape: PatternLike): PatternMapperFn = _tremoloshape(listOf(sha
  * @param shape The LFO waveform shape name.
  * @return A new [PatternMapperFn] chaining this tremolo shape after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(4).tremoloshape("square"))   // rate then shape
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(8).tremoloshape("triangle"))   // shaped fast tremolo
  * ```
  */
@@ -4543,11 +4543,11 @@ fun PatternMapperFn.tremoloshape(shape: PatternLike): PatternMapperFn = _tremolo
  * @param-tool shape SprudelWaveformSequenceEditor
  * @return A new pattern with the tremolo shape applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").tremolosync(4).tremshape("square")   // choppy on/off tremolo
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").tremshape("<sine triangle square>")   // cycle through shapes
  * ```
  *
@@ -4563,7 +4563,7 @@ fun SprudelPattern.tremshape(shape: PatternLike): SprudelPattern = this._tremsha
  *
  * @param shape The LFO waveform shape name.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3".tremshape("square").tremolosync(4).note()   // choppy tremolo on string pattern
  * ```
  */
@@ -4576,7 +4576,7 @@ fun String.tremshape(shape: PatternLike): SprudelPattern = this._tremshape(listO
  * @param shape The LFO waveform shape name.
  * @return A [PatternMapperFn] that sets the tremolo shape.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremshape("square"))   // choppy tremolo via mapper
  * ```
  *
@@ -4594,11 +4594,11 @@ fun tremshape(shape: PatternLike): PatternMapperFn = _tremshape(listOf(shape).as
  * @param shape The LFO waveform shape name.
  * @return A new [PatternMapperFn] chaining this tremolo shape after the previous mapper.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3").apply(tremolosync(4).tremshape("square"))   // rate then shape
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3*4").every(4, tremolosync(8).tremshape("triangle"))   // shaped fast tremolo
  * ```
  */

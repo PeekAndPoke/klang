@@ -78,6 +78,16 @@ fun ExciterRegistry.registerDefaults() {
     register("dust", ExciterDsl.Dust())
     register("crackle", ExciterDsl.Crackle())
 
+    // ─── Physical models ───────────────────────────────────────────────────
+
+    val pluck = ExciterDsl.Pluck()
+    register("pluck", pluck)
+    register("ks", pluck)
+    register("string", pluck)
+
+    val superPluck = ExciterDsl.SuperPluck()
+    register("superpluck", superPluck)
+
     // ─── Exciter compositions ──────────────────────────────────────────────
 
     // Rich detuned pad: two saws slightly detuned, mixed and lowpass filtered

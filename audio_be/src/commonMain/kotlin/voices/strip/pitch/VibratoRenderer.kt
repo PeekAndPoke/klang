@@ -37,6 +37,7 @@ class VibratoRenderer(
             ctx.freqModBufferWritten = true
         }
 
+        if (phase >= TWO_PI) phase -= TWO_PI
         vibrato.phase = phase
     }
 }

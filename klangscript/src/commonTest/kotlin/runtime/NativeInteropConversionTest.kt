@@ -57,7 +57,7 @@ class NativeInteropConversionTest : StringSpec({
         val obj = Foo(42)
         val wrapped = wrapAsRuntimeValue(obj)
         wrapped.shouldBeInstanceOf<NativeObjectValue<*>>()
-        (wrapped as NativeObjectValue<*>).value shouldBe obj
+        wrapped.value shouldBe obj
     }
 
     // ---- convertToKotlin for ArrayValue ----
@@ -270,7 +270,7 @@ class NativeInteropConversionTest : StringSpec({
             engine = klangScript()
         )
         shouldThrow<KlangScriptTypeError> {
-            fv.convertFunctionToKotlin<Any>()
+            fv.convertFunctionToKotlin()
         }
     }
 })

@@ -6,6 +6,9 @@ import io.kotest.matchers.maps.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 
+/** Helper to create a playable sample (the default type). */
+private fun playable(code: String) = ParsedCodeSample(code = code, type = ParsedCodeSampleType.PLAYABLE)
+
 class KDocParserTest : StringSpec({
 
     "parse empty KDoc" {
@@ -117,7 +120,7 @@ class KDocParserTest : StringSpec({
 
         val result = KDocParser.parse(kdoc)
 
-        result.samples shouldContainExactly listOf("""sound(seq("bd sd", "hh oh"))""")
+        result.samples shouldContainExactly listOf(playable("""sound(seq("bd sd", "hh oh"))"""))
     }
 
     "parse multiple KlangScript fenced blocks" {
@@ -140,9 +143,9 @@ class KDocParserTest : StringSpec({
         val result = KDocParser.parse(kdoc)
 
         result.samples shouldContainExactly listOf(
-            """sound(seq("bd sd", "hh oh"))""",
-            """note(seq("c e", "g b"))""",
-            """seq("bd", "sd", "hh").s()"""
+            playable("""sound(seq("bd sd", "hh oh"))"""),
+            playable("""note(seq("c e", "g b"))"""),
+            playable("""seq("bd", "sd", "hh").s()""")
         )
     }
 
@@ -161,7 +164,8 @@ class KDocParserTest : StringSpec({
         val result = KDocParser.parse(kdoc)
 
         result.samples.size shouldBe 1
-        result.samples[0] shouldBe "stack(\n    sound(\"bd\").every(4),\n    sound(\"hh\").fast(2)\n)"
+        result.samples[0].code shouldBe "stack(\n    sound(\"bd\").every(4),\n    sound(\"hh\").fast(2)\n)"
+        result.samples[0].type shouldBe ParsedCodeSampleType.PLAYABLE
     }
 
     "fenced blocks can appear anywhere — in description section" {
@@ -177,7 +181,7 @@ class KDocParserTest : StringSpec({
 
         val result = KDocParser.parse(kdoc)
 
-        result.samples shouldContainExactly listOf("""seq("a b c").note()""")
+        result.samples shouldContainExactly listOf(playable("""seq("a b c").note()"""))
         result.category shouldBe "structural"
         // description should not include the code block content
         result.description shouldBe "Creates a sequence."
@@ -198,7 +202,7 @@ class KDocParserTest : StringSpec({
 
         val result = KDocParser.parse(kdoc)
 
-        result.samples shouldContainExactly listOf("""seq("a b c").note()""")
+        result.samples shouldContainExactly listOf(playable("""seq("a b c").note()"""))
         result.returnDoc shouldBe "A new pattern."
         result.category shouldBe "structural"
     }
@@ -218,7 +222,7 @@ class KDocParserTest : StringSpec({
         val result = KDocParser.parse(kdoc)
 
         result.description shouldBe "Short description."
-        result.samples shouldContainExactly listOf("example().code()")
+        result.samples shouldContainExactly listOf(playable("example().code()"))
     }
 
     "parse category tag" {
@@ -278,8 +282,8 @@ class KDocParserTest : StringSpec({
         )
         result.returnDoc shouldBe "A sequential pattern that cycles through each input pattern"
         result.samples shouldContainExactly listOf(
-            """sound(seq("bd sd", "hh oh"))""",
-            """note(seq("c e", "g b"))"""
+            playable("""sound(seq("bd sd", "hh oh"))"""),
+            playable("""note(seq("c e", "g b"))""")
         )
     }
 
@@ -313,7 +317,7 @@ class KDocParserTest : StringSpec({
             "y" to "Second param"
         )
         result.returnDoc shouldBe "Some value"
-        result.samples shouldContainExactly listOf("example1()", "example2()")
+        result.samples shouldContainExactly listOf(playable("example1()"), playable("example2()"))
     }
 
     "normalize excessive whitespace in params" {
@@ -464,5 +468,62 @@ class KDocParserTest : StringSpec({
         val result = KDocParser.parse(kdoc)
 
         result.samples shouldBe emptyList()
+    }
+
+    "parse Executable fenced block" {
+        val kdoc = """
+            Returns the square root.
+
+            ```KlangScript(Executable)
+            Math.sqrt(16)  // 4.0
+            ```
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.samples.size shouldBe 1
+        result.samples[0].code shouldBe "Math.sqrt(16)  // 4.0"
+        result.samples[0].type shouldBe ParsedCodeSampleType.EXECUTABLE
+    }
+
+    "parse Playable fenced block explicitly" {
+        val kdoc = """
+            Plays a pattern.
+
+            ```KlangScript(Playable)
+            sound("bd sd hh")
+            ```
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.samples.size shouldBe 1
+        result.samples[0].code shouldBe """sound("bd sd hh")"""
+        result.samples[0].type shouldBe ParsedCodeSampleType.PLAYABLE
+    }
+
+    "parse mixed Playable and Executable fenced blocks" {
+        val kdoc = """
+            A function with mixed examples.
+
+            ```KlangScript
+            sound("bd sd hh")
+            ```
+
+            ```KlangScript(Executable)
+            Math.sqrt(16)
+            ```
+
+            ```KlangScript(Playable)
+            note("c4 e4 g4")
+            ```
+        """.trimIndent()
+
+        val result = KDocParser.parse(kdoc)
+
+        result.samples.size shouldBe 3
+        result.samples[0].type shouldBe ParsedCodeSampleType.PLAYABLE
+        result.samples[1].type shouldBe ParsedCodeSampleType.EXECUTABLE
+        result.samples[2].type shouldBe ParsedCodeSampleType.PLAYABLE
     }
 })

@@ -7,6 +7,9 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 /**
  * ADSR amplitude envelope (VCA stage).
  * Multiplies the audio buffer by the envelope value per sample.
+ *
+ * All per-sample arithmetic uses Int to avoid Long boxing on Kotlin/JS.
+ * Voice-relative offsets are computed once at the block boundary.
  */
 class EnvelopeRenderer(
     private val envelope: Voice.Envelope,
@@ -14,14 +17,17 @@ class EnvelopeRenderer(
     private val gateEndFrame: Long,
 ) : BlockRenderer {
 
+    // Voice-relative gate end position (Int, avoids Long in per-sample loop)
+    private val gateEndPos: Int = (gateEndFrame - startFrame).toInt()
+
     override fun render(ctx: BlockContext) {
         val env = envelope
         val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
         val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
         val relRateDen = if (env.releaseFrames > 0) env.releaseFrames else 1.0
 
-        var absPos = (ctx.blockStart + ctx.offset) - startFrame
-        val gateEndPos = gateEndFrame - startFrame
+        // Compute voice-relative position as Int (once per block, not per sample)
+        var absPos = ((ctx.blockStart + ctx.offset) - startFrame).toInt()
         var currentEnv = env.level
 
         for (i in 0 until ctx.length) {

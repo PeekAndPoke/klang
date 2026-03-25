@@ -36,7 +36,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("false && sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
         rightEvaluated shouldBe false  // Right side never evaluated!
     }
 
@@ -52,7 +52,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("0 && sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
         rightEvaluated shouldBe false
     }
 
@@ -68,7 +68,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("null && sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
         rightEvaluated shouldBe false
     }
 
@@ -84,7 +84,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("\"\" && sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
         rightEvaluated shouldBe false
     }
 
@@ -100,7 +100,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("true && sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         rightEvaluated shouldBe true  // Right side WAS evaluated
     }
 
@@ -116,7 +116,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("5 && sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
         rightEvaluated shouldBe true
     }
 
@@ -136,7 +136,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("true || sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         rightEvaluated shouldBe false  // Right side never evaluated!
     }
 
@@ -152,7 +152,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("5 || sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         rightEvaluated shouldBe false
     }
 
@@ -168,7 +168,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("\"hello\" || sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         rightEvaluated shouldBe false
     }
 
@@ -184,7 +184,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("false || sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         rightEvaluated shouldBe true  // Right side WAS evaluated
     }
 
@@ -200,7 +200,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("0 || sideEffect()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         rightEvaluated shouldBe true
     }
 
@@ -213,11 +213,11 @@ class ShortCircuitTest : StringSpec({
         // b != 0 && a / b should only divide if b is not zero
         val result1 = engine.execute("let a = 10\nlet b = 0\nb != 0 && a / b")
         result1.shouldBeInstanceOf<BooleanValue>()
-        (result1 as BooleanValue).value shouldBe false  // No division error!
+        result1.value shouldBe false  // No division error!
 
         val result2 = engine.execute("let a = 10\nlet b = 2\nb != 0 && a / b")
         result2.shouldBeInstanceOf<BooleanValue>()
-        (result2 as BooleanValue).value shouldBe true  // 5.0 is truthy
+        result2.value shouldBe true  // 5.0 is truthy
     }
 
     "default value using short-circuit" {
@@ -233,7 +233,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("getValue() || getDefault()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         defaultCalled shouldBe true  // Default was called because getValue() returned 0
     }
 
@@ -249,7 +249,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("false || false || computeExpensive()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         expensiveCalled shouldBe true  // Must evaluate because all previous are false
     }
 
@@ -265,7 +265,7 @@ class ShortCircuitTest : StringSpec({
 
         val result = engine.execute("false || true || computeExpensive()")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
         expensiveCalled shouldBe false  // Never called because true short-circuits
     }
 })

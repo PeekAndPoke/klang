@@ -22,28 +22,6 @@ class SampleVoiceRenderTest : StringSpec({
         )
     }
 
-    // Note: These tests have expectations that don't match current implementation
-    // SampleVoiceSpecificTest provides comprehensive coverage instead
-
-//    "render basic playback" {
-//        val sampleSize = 10
-//        val sample = createSample(sampleSize) // 0.0, 0.11, 0.22, ... 1.0
-//        val voice = createSampleVoice(sample = sample)
-//        val ctx = createContext()
-//
-//        // Render first block
-//        voice.render(ctx)
-//
-//        // Check output: should match sample data for first 10 frames
-//        // Since rate is 1.0, we expect exact sample values followed by 0 (since sample ended)
-//        for (i in 0 until sampleSize) {
-//            val expected = sample.pcm[i].toDouble()
-//            ctx.voiceBuffer[i] shouldBe (expected plusOrMinus 0.0001)
-//        }
-//        // After sample ends, should be 0
-//        ctx.voiceBuffer[sampleSize] shouldBe 0.0
-//    }
-
     "render with rate > 1 (faster)" {
         val sampleSize = 10
         val sample = createSample(sampleSize)
@@ -84,25 +62,4 @@ class SampleVoiceRenderTest : StringSpec({
         values.subList(0, 5) shouldBe expectedSegment // First pass
         values.subList(5, 10) shouldBe expectedSegment // Loop pass
     }
-
-//    "render stopFrame (end)" {
-//        val sampleSize = 10
-//        val sample = createSample(sampleSize)
-//        val voice = createSampleVoice(
-//            sample = sample,
-//            stopFrame = 5.0 // Stop at index 5 (halfway)
-//        )
-//        val ctx = createContext()
-//
-//        voice.render(ctx)
-//
-//        // Should play 0, 1, 2, 3, 4
-//        // At index 5, playhead >= stopFrame, so it should output 0
-//        for (i in 0 until 5) {
-//            ctx.voiceBuffer[i] shouldNotBe 0.0
-//        }
-//        for (i in 5 until 10) {
-//            ctx.voiceBuffer[i] shouldBe 0.0
-//        }
-//    }
 })

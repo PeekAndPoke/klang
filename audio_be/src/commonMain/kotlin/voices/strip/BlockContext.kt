@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_be.exciter.ExciteContext
 import io.peekandpoke.klang.audio_be.exciter.Exciter
 import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**
  * Shared context for all [BlockRenderer] stages in the voice pipeline.
@@ -15,6 +16,7 @@ import io.peekandpoke.klang.audio_be.orbits.Orbits
  * - **Pitch** stages write to [freqModBuffer] (frequency multipliers)
  * - **Excite** stages write to [audioBuffer] (raw waveform)
  * - **Filter** stages read/write [audioBuffer] (sculpt the waveform)
+ * - **Send** stage reads [audioBuffer] and routes to orbit mixer
  *
  * **Threading assumption:** Voices render sequentially within a block.
  * The shared buffers ([audioBuffer], [freqModBuffer]) are not thread-safe.
@@ -74,6 +76,9 @@ class BlockContext(
 
     /** Current block start frame (absolute) */
     var blockStart: Long = 0
+
+    /** Voice render context — set per block by Voice, read by SendRenderer for orbit routing */
+    lateinit var renderContext: Voice.RenderContext
 
     /** Pre-computed sample rate as Double */
     val sampleRateD: Double = sampleRate.toDouble()

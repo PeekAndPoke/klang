@@ -68,11 +68,11 @@ internal val PatternMapperFn._lateInCycle by dslPatternMapperExtension { m, args
  * Only shifts events already within the queried time window — does not pull events
  * from adjacent cycles. Useful for swing and intra-cycle timing adjustments.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").lateInCycle(0.02)                     // subtle late nudge
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh sd oh").lateInCycle("<0 0.1 0.3 0.5>")        // cycle through nudge amounts
  * ```
  *
@@ -88,7 +88,7 @@ fun SprudelPattern.lateInCycle(amount: PatternLike): SprudelPattern =
 /**
  * Parses this string as a pattern and nudges events later within their cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd hh sd oh".lateInCycle("<0 0.1 0.3 0.5>").s()       // cycle through nudge amounts
  * ```
  *
@@ -101,7 +101,7 @@ fun String.lateInCycle(amount: PatternLike): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that nudges events later within their cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(lateInCycle(0.1))                // nudge via mapper
  * ```
  *
@@ -117,7 +117,7 @@ fun lateInCycle(amount: PatternLike): PatternMapperFn =
 /**
  * Chains a late-nudge onto this [PatternMapperFn], shifting events later within their cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(stretchBy(2).lateInCycle(0.1))         // stretch then nudge late
  * ```
  *
@@ -146,11 +146,11 @@ internal val PatternMapperFn._earlyInCycle by dslPatternMapperExtension { m, arg
  * Only shifts events already within the queried time window — does not pull events
  * from adjacent cycles. Complementary to [lateInCycle].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").earlyInCycle(0.02)                     // subtle early nudge
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd hh sd oh").earlyInCycle("<0 0.1 0.3 0.5>")        // cycle through nudge amounts
  * ```
  *
@@ -166,7 +166,7 @@ fun SprudelPattern.earlyInCycle(amount: PatternLike): SprudelPattern =
 /**
  * Parses this string as a pattern and nudges events earlier within their cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd hh sd oh".earlyInCycle("<0 0.1 0.3 0.5>").s()       // cycle through nudge amounts
  * ```
  *
@@ -179,7 +179,7 @@ fun String.earlyInCycle(amount: PatternLike): SprudelPattern =
 /**
  * Creates a [PatternMapperFn] that nudges events earlier within their cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(earlyInCycle(0.1))                // nudge via mapper
  * ```
  *
@@ -195,7 +195,7 @@ fun earlyInCycle(amount: PatternLike): PatternMapperFn =
 /**
  * Chains an early-nudge onto this [PatternMapperFn], shifting events earlier within their cycle.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(stretchBy(2).earlyInCycle(0.1))         // stretch then nudge early
  * ```
  *
@@ -241,11 +241,11 @@ internal val PatternMapperFn._stretchBy by dslPatternMapperExtension { m, args, 
  * A factor of `2.0` doubles each event's duration; `0.5` halves it. Events can overlap
  * (factor > 1) or leave gaps (factor < 1).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").stretchBy(2)       // each note lasts twice as long
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").stretchBy("<1 2 0.5>")   // cycle through duration multipliers
  * ```
  *
@@ -261,7 +261,7 @@ fun SprudelPattern.stretchBy(factor: PatternLike): SprudelPattern =
 /**
  * Parses this string as a pattern and multiplies the duration of each event by the given factor.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 e3 g3".stretchBy(0.5)           // each note lasts half its original duration
  * ```
  *
@@ -273,11 +273,11 @@ fun String.stretchBy(factor: PatternLike): SprudelPattern = this._stretchBy(list
 /**
  * Creates a [PatternMapperFn] that multiplies the duration of each event by the given factor.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").apply(stretchBy(2))     // each note lasts twice as long via mapper
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").apply(stretchBy("<1 2 0.5>")) // cycle through duration multipliers via mapper
  * ```
  *
@@ -292,7 +292,7 @@ fun stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).
 /**
  * Chains a duration-stretch onto this [PatternMapperFn], multiplying each event's duration.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3").apply(lateInCycle(0.1).stretchBy(2))   // nudge late then double duration
  * ```
  *

@@ -23,7 +23,7 @@ internal val _cps by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() }
 /**
  * Returns the cycles per second at which playback is currently running as a continuous pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sound("sd").delay(0.25).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)  // Dalay time based in CPS
  * ```
  *
@@ -40,7 +40,7 @@ internal val _bpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() *
 /**
  * Returns the current beats per minute as a continuous pattern (assuming 4/4 time, 4 beats per cycle).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * sound("sd").delay(0.15).delaytime(pure(60).div(bpm)).delayfeedback(0.33)  // Dalay time based in BPM
  * ```
  *
@@ -73,11 +73,11 @@ internal val _timeOfDay by dslObject {
 /**
  * Returns the current time of day as a linear value: `0.0` (midnight) → `0.5` (noon) → `1.0` (midnight).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * gain(timeOfDay)                   // gain rises through the day
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(timeOfDay.range(200, 4000))  // filter opens as the day progresses
  * ```
  *
@@ -97,11 +97,11 @@ internal val _sinOfDay by dslObject {
 /**
  * Returns the current time of day as a sine wave: `0.0` (midnight) → `1.0` (noon) → `0.0` (midnight).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * gain(sinOfDay)                    // gain peaks at noon
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").vibrato(sinOfDay.range(0, 8))  // vibrato rises and falls with the sun
  * ```
  *
@@ -121,11 +121,11 @@ internal val _sinOfDay2 by dslObject {
 /**
  * Returns the current time of day as a bipolar sine wave: `-1.0` (midnight) → `1.0` (noon) → `-1.0` (midnight).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").transpose(sinOfDay2.range(-12, 12))  // transpose oscillates through the day
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * gain(sinOfDay2.range(0, 1))       // bipolar to unipolar conversion
  * ```
  *
@@ -144,11 +144,11 @@ internal val _timeOfNight by dslObject {
 /**
  * Returns the current time of night (inverse of [timeOfDay]): `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * gain(timeOfNight)                 // gain is highest at midnight
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").lpf(timeOfNight.range(200, 4000))  // filter opens at night
  * ```
  *
@@ -168,11 +168,11 @@ internal val _sinOfNight by dslObject {
 /**
  * Returns the current time of night as a sine wave: `1.0` (midnight) → `0.0` (noon) → `1.0` (midnight).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * gain(sinOfNight)                  // gain peaks at midnight
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").vibrato(sinOfNight.range(0, 8))  // vibrato is strongest at night
  * ```
  *
@@ -193,11 +193,11 @@ internal val _sinOfNight2 by dslObject {
  * Returns the current time of night as a bipolar sine wave:
  * `1.0` (midnight) → `-1.0` (noon) → `1.0` (midnight).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c4").transpose(sinOfNight2.range(-12, 12))  // transpose inverts through the day
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * gain(sinOfNight2.range(0, 1))     // bipolar night signal to unipolar gain
  * ```
  *

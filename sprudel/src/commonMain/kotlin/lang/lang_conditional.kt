@@ -58,11 +58,11 @@ internal val PatternMapperFn._firstOf by dslPatternMapperExtension { m, args, ca
  * @param transform The function to apply on the first cycle of each period.
  * @return A new pattern that applies [transform] periodically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").firstOf(4, x => x.rev())  // reverse every 4th cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").firstOf("<2 4>", x => x.fast(2))  // alternating period
  * ```
  * @alias every
@@ -80,7 +80,7 @@ fun SprudelPattern.firstOf(n: PatternLike, transform: PatternMapperFn): SprudelP
  * @param transform The function to apply on the first cycle of each period.
  * @return A new pattern that applies [transform] periodically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 d3 e3 g3".firstOf(4, x => x.rev()).note()  // reverse every 4th cycle
  * ```
  */
@@ -97,11 +97,11 @@ fun String.firstOf(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
  * @param transform The function to apply on the first cycle of each period.
  * @return A [PatternMapperFn] that applies [transform] periodically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").apply(firstOf(4, x => x.rev()))  // reverse every 4th cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").every(3, firstOf(2, x => x.fast(2)))  // nested periodic transforms
  * ```
  * @alias every
@@ -115,7 +115,7 @@ fun firstOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
 /**
  * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the first of every [n] cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("a").apply(lastOf(3, x => x.note("b")).firstOf(2, x => x.note("c")))
  * ```
  *
@@ -144,11 +144,11 @@ internal val PatternMapperFn._every by dslPatternMapperExtension { m, args, call
  * @param transform The function to apply on the first cycle of each period.
  * @return A new pattern that applies [transform] periodically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").every(4, x => x.rev())  // reverse every 4th cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").every("<2 4>", x => x.fast(2))  // alternating period
  * ```
  * @alias firstOf
@@ -166,7 +166,7 @@ fun SprudelPattern.every(n: PatternLike, transform: PatternMapperFn): SprudelPat
  * @param transform The function to apply on the first cycle of each period.
  * @return A new pattern that applies [transform] periodically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 d3 e3 g3".every(4, x => x.rev()).note()  // reverse every 4th cycle
  * ```
  */
@@ -183,11 +183,11 @@ fun String.every(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
  * @param transform The function to apply on the first cycle of each period.
  * @return A [PatternMapperFn] that applies [transform] periodically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").apply(every(4, x => x.rev()))  // reverse every 4th cycle
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").firstOf(3, every(2, x => x.fast(2)))  // nested periodic transforms
  * ```
  * @alias firstOf
@@ -201,7 +201,7 @@ fun every(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
 /**
  * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the first of every [n] cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3").apply(lastOf(4, x => x.rev()).every(2, x => x.fast(2)))  // alternate two transforms
  * ```
  *
@@ -256,11 +256,11 @@ internal val PatternMapperFn._lastOf by dslPatternMapperExtension { m, args, cal
  * @param transform The function to apply on the last cycle of each period.
  * @return A new pattern that applies [transform] at the end of each period.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").lastOf(4, x => x.rev())  // reverse on 4th of every 4
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").lastOf("<2 4>", x => x.fast(2))  // alternating period
  * ```
  * @category conditional
@@ -277,7 +277,7 @@ fun SprudelPattern.lastOf(n: PatternLike, transform: PatternMapperFn): SprudelPa
  * @param transform The function to apply on the last cycle of each period.
  * @return A new pattern that applies [transform] at the end of each period.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c3 d3 e3 g3".lastOf(4, x => x.rev()).note()  // reverse on the 4th of every 4 cycles
  * ```
  */
@@ -294,11 +294,11 @@ fun String.lastOf(n: PatternLike, transform: PatternMapperFn): SprudelPattern =
  * @param transform The function to apply on the last cycle of each period.
  * @return A [PatternMapperFn] that applies [transform] at the end of each period.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3 e3 g3").apply(lastOf(4, x => x.rev()))  // reverse on the 4th of every 4 cycles
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").firstOf(3, lastOf(2, x => x.fast(2)))  // nested periodic transforms
  * ```
  * @category conditional
@@ -311,7 +311,7 @@ fun lastOf(n: PatternLike, transform: PatternMapperFn): PatternMapperFn =
 /**
  * Chains a periodic transform onto this [PatternMapperFn], applying [transform] on the last of every [n] cycles.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3").apply(firstOf(4, x => x.rev()).lastOf(2, x => x.fast(2)))  // alternate two transforms
  * ```
  *
@@ -373,11 +373,11 @@ internal val PatternMapperFn._when by dslPatternMapperExtension { m, args, callI
  * @param transform The function to apply when [condition] is truthy.
  * @return A new pattern that conditionally applies [transform].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").when(pure(1).struct("t ~ t ~"), x => x.add(12))
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd sd").when("<1 0>", x => x.fast(2))
  * ```
  * @category conditional
@@ -395,7 +395,7 @@ fun SprudelPattern.`when`(condition: PatternLike, transform: PatternMapperFn): S
  * @param transform The function to apply when [condition] is truthy.
  * @return A new pattern that conditionally applies [transform].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "c d e f".when("1 0 1 0", x => x.add(12)).note()
  * ```
  */
@@ -413,11 +413,11 @@ fun String.`when`(condition: PatternLike, transform: PatternMapperFn): SprudelPa
  * @param transform The function to apply when [condition] is truthy.
  * @return A [PatternMapperFn] that conditionally applies [transform].
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").apply(when("1 0 1 0", x => x.add(12)))
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c d e f").firstOf(4, when("1 0 1 0", x => x.add(12)))
  * ```
  * @category conditional
@@ -430,7 +430,7 @@ fun `when`(condition: PatternLike, transform: PatternMapperFn): PatternMapperFn 
 /**
  * Chains a conditional transform onto this [PatternMapperFn], applying [transform] whenever [condition] is truthy.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 d3").apply(firstOf(4, x => x.rev()).when("1 0", x => x.add(12)))
  * ```
  *

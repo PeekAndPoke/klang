@@ -1,6 +1,25 @@
 package io.peekandpoke.klang.sprudel.ksp
 
 /**
+ * Type of a code sample parsed from a KDoc fenced block.
+ */
+enum class ParsedCodeSampleType {
+    /** ```KlangScript or ```KlangScript(Playable) — music example with play/stop controls. */
+    PLAYABLE,
+
+    /** ```KlangScript(Executable) — script example with run button and output panel. */
+    EXECUTABLE,
+}
+
+/**
+ * A code sample extracted from a KDoc fenced block.
+ */
+data class ParsedCodeSample(
+    val code: String,
+    val type: ParsedCodeSampleType,
+)
+
+/**
  * Parsed KDoc information from a function.
  */
 data class ParsedKDoc(
@@ -11,7 +30,7 @@ data class ParsedKDoc(
     /** @return tag description */
     val returnDoc: String,
     /** Code examples extracted from ```KlangScript...``` fenced blocks */
-    val samples: List<String>,
+    val samples: List<ParsedCodeSample>,
     /** @category tag (custom) */
     val category: String?,
     /** @tags tag (custom, comma-separated) */
@@ -48,9 +67,10 @@ object KDocParser {
         // Build a cleaned line list that excludes the fenced blocks entirely.
         // Raw lines are preserved for non-code content so that description indentation
         // and empty lines are retained (they matter for markdown rendering).
-        val samples = mutableListOf<String>()
+        val samples = mutableListOf<ParsedCodeSample>()
         val cleanedLines = mutableListOf<String>()
         var inCodeBlock = false
+        var currentBlockType = ParsedCodeSampleType.PLAYABLE
         val currentBlock = StringBuilder()
 
         for (rawLine in kdoc.lines()) {
@@ -58,13 +78,17 @@ object KDocParser {
             when {
                 !inCodeBlock && trimmed.startsWith("```KlangScript") -> {
                     inCodeBlock = true
+                    currentBlockType = when {
+                        trimmed.contains("(Executable)") -> ParsedCodeSampleType.EXECUTABLE
+                        else -> ParsedCodeSampleType.PLAYABLE
+                    }
                     currentBlock.clear()
                 }
 
                 inCodeBlock && trimmed.startsWith("```") -> {
                     inCodeBlock = false
                     val s = currentBlock.toString().trimEnd().trimIndent()
-                    if (s.isNotEmpty()) samples.add(s)
+                    if (s.isNotEmpty()) samples.add(ParsedCodeSample(code = s, type = currentBlockType))
                     currentBlock.clear()
                 }
 
@@ -99,6 +123,7 @@ object KDocParser {
             .dropWhile { it.trim().isEmpty() }
             .dropLastWhile { it.trim().isEmpty() }
             .joinToString("\n")
+            .trim()
 
         val params = mutableMapOf<String, String>()
         var returnDoc = ""

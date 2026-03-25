@@ -17,12 +17,21 @@ import kotlinx.browser.window
  */
 class EditorDocContext(
     availableLibraries: List<KlangScriptLibrary>,
+    autoImportedLibraries: List<KlangScriptLibrary> = emptyList(),
     private val debounceMs: Int = 300,
 ) {
     private val libsByName = availableLibraries.associateBy { it.name }
+    private val autoImportedNames = autoImportedLibraries.map { it.name }.toSet()
     private val activeRegistry = KlangDocsRegistry()
     private var lastImports: Set<String> = emptySet()
     private var debounceTimer: Int? = null
+
+    init {
+        // Load auto-imported library docs immediately
+        if (autoImportedNames.isNotEmpty()) {
+            rebuildRegistry(emptySet())
+        }
+    }
 
     /** Cached AST index from the last successful parse (stale on parse error, which is fine for hover). */
     var lastAstIndex: AstIndex? = null
@@ -83,7 +92,7 @@ class EditorDocContext(
 
     private fun rebuildRegistry(imports: Set<String>) {
         activeRegistry.clear()
-        for (libName in imports) {
+        for (libName in autoImportedNames + imports) {
             val lib = libsByName[libName] ?: continue
             activeRegistry.registerAll(lib.docs.symbols)
         }

@@ -51,10 +51,13 @@ Key files:
 - `voices/strip/excite/ExciteRenderer.kt` — wraps Exciter as BlockRenderer
 - `voices/strip/filter/` — FilterModRenderer, AudioFilterRenderer, EnvelopeRenderer, FilterPipelineBuilder
 
-Status: **All stages extracted.** VoiceImpl runs a single `List<BlockRenderer>` pipeline:
-Pitch renderers → ExciteRenderer → Filter renderers → mixToOrbit.
-Shared envelope calculation in `EnvelopeCalc.kt`. Rename SignalGen → Exciter completed.
-See `docs/agent-tasks/voice-pipeline-refactor.md` for full plan.
+Status: **Complete.** `Voice` (merged from Voice interface + VoiceImpl) runs a `List<BlockRenderer>` pipeline:
+Pitch renderers → ExciteRenderer → Filter renderers → SendRenderer.
+Bus pipeline: composable `BusEffect` pipeline (`orbits/bus/`).
+`VoiceScheduler` split into `VoiceScheduler` (scheduling) + `VoiceFactory` (voice construction).
+Legacy effect filters (BitCrush, SampleRateReducer, Distortion, Tremolo, Phaser) replaced by
+BlockRenderer implementations. ~426 tests across 35 files.
+See `docs/agent-tasks/audio-pipeline-open-topics.md` for remaining open topics.
 
 ## Lessons Learned
 

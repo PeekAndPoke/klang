@@ -43,7 +43,7 @@ class DocsPage(ctx: NoProps) : PureComponent(ctx) {
             ui.four.stackable.link.cards {
 
                 ui.horizontal.card {
-                    onClick { router.navToUri(Nav.manualsSprudel()) }
+                    onClick { router.navToUri(Nav.manualsLibrary("sprudel")) }
 
                     noui.image {
                         ui.basic.segment {
@@ -69,6 +69,19 @@ class DocsPage(ctx: NoProps) : PureComponent(ctx) {
                     }
                     noui.middle.aligned.content {
                         ui.large.header { +"KlangScript" }
+                    }
+                }
+
+                ui.horizontal.card {
+                    onClick { router.navToUri(Nav.tutorials()) }
+
+                    noui.image {
+                        ui.basic.segment {
+                            icon.big.graduation_cap()
+                        }
+                    }
+                    noui.middle.aligned.content {
+                        ui.large.header { +"Tutorials" }
                     }
                 }
             }

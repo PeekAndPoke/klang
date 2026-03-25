@@ -10,9 +10,9 @@ package io.peekandpoke.klang.audio_be.exciter
  * - Release: ramp from current level to 0.0 over [releaseSec]
  *
  * Voice timing (gate end, release duration) is read from [ExciteContext].
- * The envelope does NOT control voice lifecycle — that's handled by frame counting in VoiceImpl.
+ * The envelope does NOT control voice lifecycle — that's handled by frame counting in Voice.
  *
- * Ported from: VoiceImpl.applyEnvelope() in voices/VoiceImpl.kt
+ * Ported from: Voice.applyEnvelope() in voices/Voice.kt
  */
 fun Exciter.adsr(
     attackSec: Double,

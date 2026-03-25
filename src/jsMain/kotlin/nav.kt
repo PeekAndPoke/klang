@@ -2,13 +2,16 @@ package io.peekandpoke.klang
 
 import de.peekandpoke.kraft.routing.RootRouterBuilder
 import de.peekandpoke.kraft.routing.Route1
+import de.peekandpoke.kraft.routing.Router
 import de.peekandpoke.kraft.routing.Static
 import io.peekandpoke.klang.layouts.FullscreenLayout
 import io.peekandpoke.klang.layouts.MenuLayout
 import io.peekandpoke.klang.pages.*
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
-import io.peekandpoke.klang.pages.docs.SprudelDocsPage
+import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
+import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
 
 object Nav {
     val start = Static("")
@@ -23,9 +26,20 @@ object Nav {
 
     const val manualsBase = "/manuals"
     val manuals = Static(manualsBase)
-    val manualsSprudel = Static("$manualsBase/sprudel")
-    fun manualsSprudelSearch(search: String) = manualsSprudel().withQueryParams(SprudelDocsPage.PARAM_SEARCH to search)
     val manualsKlangScript = Static("$manualsBase/klang-script")
+
+    val manualsLibrary = Route1("$manualsBase/library/{library}")
+    fun manualsLibrarySearch(library: String, search: String) =
+        manualsLibrary(library).withQueryParams(KlangScriptLibraryDocsPage.PARAM_SEARCH to search)
+
+    const val tutorialsBase = "$manualsBase/tutorials"
+    val tutorials = Static(tutorialsBase)
+    fun tutorialsWithUpdatedParams(router: Router, vararg params: Pair<String, String>) =
+        tutorials().withQueryParams(
+            router.current().takeIf { it.route == tutorials }?.matchedRoute?.queryParams ?: emptyMap()
+        ).plusQueryParams(params.toMap())
+
+    val tutorial = Route1("$tutorialsBase/{slug}")
 
     val credits = Static("/credits")
 
@@ -51,8 +65,11 @@ fun RootRouterBuilder.mountNav() {
         mount(Nav.samplesLibrary) { SamplesLibraryPage() }
 
         mount(Nav.manuals) { DocsPage() }
-        mount(Nav.manualsSprudel) { SprudelDocsPage() }
         mount(Nav.manualsKlangScript) { KlangScriptDocsPage() }
+        mount(Nav.manualsLibrary) { KlangScriptLibraryDocsPage(it["library"]) }
+
+        mount(Nav.tutorials) { TutorialsListPage() }
+        mount(Nav.tutorial) { TutorialPage() }
 
         mount(Nav.credits) { CreditsPage() }
     }

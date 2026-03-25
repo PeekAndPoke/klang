@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.filters
 
+import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.tan
@@ -42,10 +43,10 @@ object LowPassHighPassFilters {
 
         override fun process(buffer: FloatArray, offset: Int, length: Int) {
             val end = offset + length
-            // Tight loop: very fast!
             for (i in offset until end) {
                 val x = buffer[i].toDouble()
                 y += lowPass * (x - y)
+                y = flushDenormal(y)
                 buffer[i] = y.toFloat()
             }
         }
@@ -71,6 +72,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 val x = buffer[i].toDouble()
                 y = a * (y + x - xPrev)
+                y = flushDenormal(y)
                 xPrev = x
                 buffer[i] = y.toFloat()
             }
@@ -107,18 +109,15 @@ object LowPassHighPassFilters {
 
     class SvfLPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
         override fun process(buffer: FloatArray, offset: Int, length: Int) {
-            // Inline loop for LPF specific output (v2)
             val end = offset + length
             for (i in offset until end) {
                 val v0 = buffer[i].toDouble()
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-
-                ic1eq = 2.0 * v1 - ic1eq
-                ic2eq = 2.0 * v2 - ic2eq
-
-                buffer[i] = v2.toFloat() // Low pass output
+                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
+                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                buffer[i] = v2.toFloat()
             }
         }
     }
@@ -131,11 +130,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-
-                ic1eq = 2.0 * v1 - ic1eq
-                ic2eq = 2.0 * v2 - ic2eq
-
-                // High pass output: v0 - k*v1 - v2
+                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
+                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
                 buffer[i] = (v0 - k * v1 - v2).toFloat()
             }
         }
@@ -149,11 +145,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-
-                ic1eq = 2.0 * v1 - ic1eq
-                ic2eq = 2.0 * v2 - ic2eq
-
-                // Band pass output: v1
+                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
+                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
                 buffer[i] = v1.toFloat()
             }
         }
@@ -167,11 +160,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-
-                ic1eq = 2.0 * v1 - ic1eq
-                ic2eq = 2.0 * v2 - ic2eq
-
-                // Notch output: v0 - k*v1
+                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
+                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
                 buffer[i] = (v0 - k * v1).toFloat()
             }
         }

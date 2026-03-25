@@ -200,11 +200,11 @@ internal val PatternMapperFn._pick by dslPatternMapperExtension { m, args, callI
  * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
  * @return A pattern playing the selected items in the order given by this pattern's values.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pick("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 [2,0]>").pick("bd sd", "cp cp", "hh hh").s()
  * ```
  *
@@ -222,7 +222,7 @@ fun SprudelPattern.pick(vararg args: PatternLike): SprudelPattern = this._pick(a
  * @param lookup List of items to pick from; index 0 is first, last index is max.
  * @return A pattern playing the item at each event's integer index (clamped).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pick(["g a", "e f", "f g f g" , "g c d"]).note()
  * ```
  */
@@ -238,7 +238,7 @@ fun SprudelPattern.pick(lookup: List<PatternLike>): SprudelPattern = this._pick(
  * @param lookup Map of string keys to items; each event value is used as a lookup key.
  * @return A pattern playing the item for each matched key; unmatched keys produce silence.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<a!2 [a,b] b>").pick({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -255,7 +255,7 @@ fun SprudelPattern.pick(lookup: Map<String, PatternLike>): SprudelPattern = this
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A pattern playing the selected items driven by this string's parsed values.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pick("bd", "sd", "hh").s().fast(2)
  * ```
  *
@@ -271,7 +271,7 @@ fun String.pick(vararg args: PatternLike): SprudelPattern = this._pick(args.toLi
  * @param lookup List of items to pick from; integer indices, clamped.
  * @return A pattern playing the item at each event's integer index (clamped).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pick(["bd", "sd", "hh"]).s().fast(2)
  * ```
  */
@@ -284,7 +284,7 @@ fun String.pick(lookup: List<PatternLike>): SprudelPattern = this._pick(listOf(l
  * @param lookup Map of string keys to items; each parsed event value is a lookup key.
  * @return A pattern playing the item for each matched key; unmatched keys produce silence.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".pick({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -301,7 +301,7 @@ fun String.pick(lookup: Map<String, PatternLike>): SprudelPattern = this._pick(l
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A [PatternMapperFn] that maps a source pattern to a pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pick("bd", "sd", "hh")).s().fast(2)
  * ```
  *
@@ -317,7 +317,7 @@ fun pick(vararg args: PatternLike): PatternMapperFn = _pick(args.toList().asSpru
  * @param lookup List of items; source pattern values are used as zero-based indices (clamped).
  * @return A [PatternMapperFn] that maps a source pattern to a pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pick(["bd", "sd", "hh"])).s().fast(2)
  * ```
  */
@@ -330,7 +330,7 @@ fun pick(lookup: List<PatternLike>): PatternMapperFn = _pick(listOf(lookup).asSp
  * @param lookup Map of string keys to items; source pattern values are used as keys.
  * @return A [PatternMapperFn] that maps a source pattern to a pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".apply(pick({a: "bd(3,8)", b: "sd sd"})).s()
  * ```
  */
@@ -385,11 +385,11 @@ internal val PatternMapperFn._pickmod by dslPatternMapperExtension { m, args, ca
  * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
  * @return A pattern playing the selected items with modulo-wrapped index resolution.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickmod("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 [2,0]>").pickmod("bd sd", "cp cp", "hh hh").s()
  * ```
  *
@@ -405,7 +405,7 @@ fun SprudelPattern.pickmod(vararg args: PatternLike): SprudelPattern = this._pic
  * @param lookup List of items; indices wrap cyclically with modulo.
  * @return A pattern playing the item at each event's wrapped integer index.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickmod(["g a", "e f", "f g f g" , "g c d"]).note()
  * ```
  */
@@ -418,7 +418,7 @@ fun SprudelPattern.pickmod(lookup: List<PatternLike>): SprudelPattern = this._pi
  * @param lookup Map of string keys; source pattern event values are used as keys.
  * @return A pattern playing the item for each matched key; unmatched keys produce silence.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<a!2 [a,b] b>").pickmod({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -431,7 +431,7 @@ fun SprudelPattern.pickmod(lookup: Map<String, PatternLike>): SprudelPattern = t
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A pattern playing the selected items driven by this string's parsed values (modulo-wrapped).
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickmod("bd", "sd", "hh").s().fast(2)
  * ```
  *
@@ -447,7 +447,7 @@ fun String.pickmod(vararg args: PatternLike): SprudelPattern = this._pickmod(arg
  * @param lookup List of items; this string is parsed as mini-notation to produce integer indices.
  * @return A pattern playing the item at each event's wrapped integer index.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickmod(["bd", "sd", "hh"]).s().fast(2)
  * ```
  */
@@ -460,7 +460,7 @@ fun String.pickmod(lookup: List<PatternLike>): SprudelPattern = this._pickmod(li
  * @param lookup Map of string keys; this string is parsed as mini-notation to produce keys.
  * @return A pattern playing the item for each matched key; unmatched keys produce silence.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".pickmod({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -475,7 +475,7 @@ fun String.pickmod(lookup: Map<String, PatternLike>): SprudelPattern = this._pic
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A [PatternMapperFn] that maps a source pattern to a modulo-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickmod("bd", "sd", "hh")).s().fast(2)
  * ```
  *
@@ -491,7 +491,7 @@ fun pickmod(vararg args: PatternLike): PatternMapperFn = _pickmod(args.toList().
  * @param lookup List of items; source pattern values are used as integer indices (modulo-wrapped).
  * @return A [PatternMapperFn] that maps a source pattern to a modulo-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickmod(["bd", "sd", "hh"])).s().fast(2)
  * ```
  */
@@ -504,7 +504,7 @@ fun pickmod(lookup: List<PatternLike>): PatternMapperFn = _pickmod(listOf(lookup
  * @param lookup Map of string keys to items; source pattern values are used as keys.
  * @return A [PatternMapperFn] that maps a source pattern to a map-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".apply(pickmod({a: "bd(3,8)", b: "sd sd"})).s()
  * ```
  */
@@ -616,11 +616,11 @@ internal val PatternMapperFn._pickOut by dslPatternMapperExtension { m, args, ca
  * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
  * @return A pattern playing the selected items with onset timing driven by this pattern's values.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickOut("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 [2,0]>").pickOut("bd sd", "cp cp", "hh hh").s()
  * ```
  *
@@ -636,7 +636,7 @@ fun SprudelPattern.pickOut(vararg args: PatternLike): SprudelPattern = this._pic
  * @param lookup List of items; indices are clamped to valid bounds.
  * @return A pattern playing the selected items with onset timing from this pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickOut(["g a", "e f", "f g f g" , "g c d"]).note()
  * ```
  */
@@ -649,7 +649,7 @@ fun SprudelPattern.pickOut(lookup: List<PatternLike>): SprudelPattern = this._pi
  * @param lookup Map of string keys to items; unmatched keys produce no output.
  * @return A pattern playing the selected items with onset timing from this pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<a!2 [a,b] b>").pickOut({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -663,7 +663,7 @@ fun SprudelPattern.pickOut(lookup: Map<String, Any>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A pattern with onset timing from this string's parsed values; selected items are outer-joined.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickOut("bd", "sd", "hh").s().fast(2)
  * ```
  *
@@ -679,7 +679,7 @@ fun String.pickOut(vararg args: PatternLike): SprudelPattern = this._pickOut(arg
  * @param lookup List of items; integer indices, clamped.
  * @return A pattern with onset timing from this string; selected items are outer-joined.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickOut(["bd", "sd", "hh"]).s().fast(2)
  * ```
  */
@@ -692,7 +692,7 @@ fun String.pickOut(lookup: List<PatternLike>): SprudelPattern = this._pickOut(li
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern with onset timing from this string; selected items are outer-joined.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".pickOut({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -707,7 +707,7 @@ fun String.pickOut(lookup: Map<String, Any>): SprudelPattern = this._pickOut(lis
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A [PatternMapperFn] that maps a source pattern to an outer-join pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickOut("bd", "sd", "hh")).s().fast(2)
  * ```
  *
@@ -723,7 +723,7 @@ fun pickOut(vararg args: PatternLike): PatternMapperFn = _pickOut(args.toList().
  * @param lookup List of items; source pattern values are used as zero-based indices (clamped).
  * @return A [PatternMapperFn] that maps a source pattern to an outer-join pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickOut(["bd", "sd", "hh"])).s().fast(2)
  * ```
  */
@@ -736,7 +736,7 @@ fun pickOut(lookup: List<PatternLike>): PatternMapperFn = _pickOut(listOf(lookup
  * @param lookup Map of string keys; source pattern values are used as keys.
  * @return A [PatternMapperFn] that maps a source pattern to an outer-join pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".apply(pickOut({a: "bd(3,8)", b: "sd sd"})).s()
  * ```
  */
@@ -789,11 +789,11 @@ internal val PatternMapperFn._pickmodOut by dslPatternMapperExtension { m, args,
  * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
  * @return A pattern with onset timing from this pattern; indices wrap cyclically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickmodOut("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 [2,0]>").pickmodOut("bd sd", "cp cp", "hh hh").s()
  * ```
  *
@@ -810,7 +810,7 @@ fun SprudelPattern.pickmodOut(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; indices wrap cyclically with modulo.
  * @return A pattern with onset timing from this pattern; selected items are outer-joined.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickmodOut(["g a", "e f", "f g f g" , "g c d"]).note()
  * ```
  */
@@ -824,7 +824,7 @@ fun SprudelPattern.pickmodOut(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern with onset timing from this pattern; selected items are outer-joined.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<a!2 [a,b] b>").pickmodOut({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -838,7 +838,7 @@ fun SprudelPattern.pickmodOut(lookup: Map<String, Any>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A pattern with onset timing from this string's parsed values; indices wrap cyclically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickmodOut("bd", "sd", "hh").s().fast(2)
  * ```
  *
@@ -854,7 +854,7 @@ fun String.pickmodOut(vararg args: PatternLike): SprudelPattern = this._pickmodO
  * @param lookup List of items; indices wrap cyclically with modulo.
  * @return A pattern with onset timing from this string; selected items are outer-joined.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickmodOut(["bd", "sd", "hh"]).s().fast(2)
  * ```
  */
@@ -867,7 +867,7 @@ fun String.pickmodOut(lookup: List<PatternLike>): SprudelPattern = this._pickmod
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern with onset timing from this string; selected items are outer-joined.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".pickmodOut({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -882,7 +882,7 @@ fun String.pickmodOut(lookup: Map<String, Any>): SprudelPattern = this._pickmodO
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A [PatternMapperFn] that maps a source pattern to an outer-join modulo-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickmodOut("bd", "sd", "hh")).s().fast(2)
  * ```
  *
@@ -898,7 +898,7 @@ fun pickmodOut(vararg args: PatternLike): PatternMapperFn = _pickmodOut(args.toL
  * @param lookup List of items; source pattern values are used as integer indices (modulo-wrapped).
  * @return A [PatternMapperFn] that maps a source pattern to an outer-join modulo-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickmodOut(["bd", "sd", "hh"])).s().fast(2)
  * ```
  */
@@ -911,7 +911,7 @@ fun pickmodOut(lookup: List<PatternLike>): PatternMapperFn = _pickmodOut(listOf(
  * @param lookup Map of string keys; source pattern values are used as keys.
  * @return A [PatternMapperFn] that maps a source pattern to an outer-join map-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".apply(pickmodOut({a: "bd(3,8)", b: "sd sd"})).s()
  * ```
  */
@@ -1037,11 +1037,11 @@ internal val PatternMapperFn._inhabit by dslPatternMapperExtension { m, args, ca
  * Selected patterns are squeezed so their full cycle fits within the selecting event's duration.
  * Indices are clamped to valid bounds.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * inhabit("bd sd hh", "rim cp", n("0 1 2 0"))   // picked pattern fills event duration
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * inhabit(["c3 e3", "g3 b3"], n("0 1 0"))        // each chosen pattern is squeezed in
  * ```
  *
@@ -1068,11 +1068,11 @@ fun SprudelPattern.inhabit(lookup: Map<String, Any>): SprudelPattern =
  * squeezes it so that the full cycle of the chosen pattern fits within the duration of the event.
  * This is equivalent to [squeeze] with arguments reversed.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 1 2".inhabit("bd sd hh", "rim cp", "hh*4").s()         // chosen pattern fills event
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 1".inhabit(note("c3 e3 g3"), note("b3 d4"))             // pattern squeezed per index
  * ```
  *
@@ -1097,7 +1097,7 @@ fun String.inhabit(lookup: Map<String, Any>): SprudelPattern = this._inhabit(lis
  * Like [inhabit] but as a top-level mapper: the last argument is the selector pattern and the
  * preceding arguments form the lookup. Indices are clamped to valid bounds.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1>".apply(inhabit("bd sd hh", "rim cp", n("0 1 2 0"))).s()
  * ```
  *
@@ -1263,11 +1263,11 @@ internal val PatternMapperFn._inhabitmod by dslPatternMapperExtension { m, args,
  * Selects patterns from the lookup using modulo-wrapped indices and squeezes each selected
  * pattern into the timespan of the event that triggered it. Negative indices are handled.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 1 2 3".inhabitmod("bd sd", "hh rim", "cp").s()       // 3→0 mod 3; squeezed
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n("0 5").inhabitmod(note("c3"), note("e3"), note("g3"))  // 5→2 mod 3; squeezed
  * ```
  *
@@ -1295,11 +1295,11 @@ fun SprudelPattern.inhabitmod(lookup: Map<String, Any>): SprudelPattern =
  * This string is parsed as mini-notation to produce indices that select patterns from the
  * lookup with modulo wrapping. Selected patterns are squeezed into each event's timespan.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 1 2 3".inhabitmod("bd sd", "hh rim", "cp").s()       // 3→0 mod 3; squeezed
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 5".inhabitmod(note("c3"), note("e3"), note("g3"))     // 5→2 mod 3; squeezed
  * ```
  *
@@ -1327,7 +1327,7 @@ fun String.inhabitmod(lookup: Map<String, Any>): SprudelPattern =
  * The last argument is the selector pattern and the preceding arguments form the lookup.
  * Indices wrap cyclically; negative indices are handled correctly.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 3>".apply(inhabitmod("bd", "sd", "hh")).s()   // 3→0 mod 3; squeezed into event
  * ```
  *
@@ -1476,11 +1476,11 @@ internal val PatternMapperFn._squeeze by dslPatternMapperExtension { m, args, ca
  * The receiver pattern provides the indices; the arguments are the lookup patterns squeezed
  * into each event's duration. Equivalent to calling `inhabit(lookup, this)`.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * n("0 1 2").squeeze("bd sd hh", "rim cp", "hh*4").s()  // receiver is index pattern
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 1".squeeze(note("c3 e3"), note("g3 b3"))            // string receiver; squeezes in
  * ```
  *
@@ -1505,7 +1505,7 @@ fun SprudelPattern.squeeze(lookup: Map<String, Any>): SprudelPattern =
  * This string is parsed as mini-notation to produce index values. Those values select from the
  * lookup with clamped out-of-bounds handling. Selected patterns are squeezed into each event's timespan.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "0 1".squeeze("bd sd hh", "rim cp").s()   // string receiver as index pattern
  * ```
  *
@@ -1532,11 +1532,11 @@ fun String.squeeze(lookup: Map<String, Any>): SprudelPattern =
  * Like [inhabit] but with arguments in the opposite order: the first argument is the selector
  * (index) pattern and the remaining arguments are the lookup patterns. Indices are clamped.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1>".apply(squeeze("bd sd hh", "rim cp")).s()   // selector first, then lookup
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1>".apply(squeeze(note("c3 e3"), note("g3 b3")))  // index → squeezed pattern
  * ```
  *
@@ -1644,11 +1644,11 @@ internal val PatternMapperFn._pickRestart by dslPatternMapperExtension { m, args
  * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickRestart("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 [2,0]>").pickRestart("bd sd", "cp cp", "hh hh").s()
  * ```
  *
@@ -1665,7 +1665,7 @@ fun SprudelPattern.pickRestart(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; integer indices, clamped. Selected item restarts on each trigger.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickRestart(["g a", "e f", "f g f g" , "g c d"]).note()
  * ```
  */
@@ -1679,7 +1679,7 @@ fun SprudelPattern.pickRestart(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys to items; unmatched keys produce no output.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<a!2 [a,b] b>").pickRestart({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -1693,7 +1693,7 @@ fun SprudelPattern.pickRestart(lookup: Map<String, Any>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickRestart("bd", "sd", "hh").s().fast(2)
  * ```
  *
@@ -1710,7 +1710,7 @@ fun String.pickRestart(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; integer indices, clamped.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickRestart(["bd", "sd", "hh"]).s().fast(2)
  * ```
  */
@@ -1724,7 +1724,7 @@ fun String.pickRestart(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".pickRestart({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -1740,7 +1740,7 @@ fun String.pickRestart(lookup: Map<String, Any>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A [PatternMapperFn] that maps a source pattern to a restart-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickRestart("bd", "sd", "hh")).s().fast(2)
  * ```
  *
@@ -1756,7 +1756,7 @@ fun pickRestart(vararg args: PatternLike): PatternMapperFn = _pickRestart(args.t
  * @param lookup List of items; source pattern values are used as zero-based indices (clamped).
  * @return A [PatternMapperFn] that maps a source pattern to a restart-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickRestart(["bd", "sd", "hh"])).s().fast(2)
  * ```
  */
@@ -1769,7 +1769,7 @@ fun pickRestart(lookup: List<PatternLike>): PatternMapperFn = _pickRestart(listO
  * @param lookup Map of string keys; source pattern values are used as keys.
  * @return A [PatternMapperFn] that maps a source pattern to a restart-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".apply(pickRestart({a: "bd(3,8)", b: "sd sd"})).s()
  * ```
  */
@@ -1823,11 +1823,11 @@ internal val PatternMapperFn._pickmodRestart by dslPatternMapperExtension { m, a
  * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
  * @return A pattern that restarts the selected item on each trigger; indices wrap cyclically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickmodRestart("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 [2,0]>").pickmodRestart("bd sd", "cp cp", "hh hh").s()
  * ```
  *
@@ -1844,7 +1844,7 @@ fun SprudelPattern.pickmodRestart(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; indices wrap cyclically with modulo.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickmodRestart(["g a", "e f", "f g f g" , "g c d"]).note()
  * ```
  */
@@ -1858,7 +1858,7 @@ fun SprudelPattern.pickmodRestart(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<a!2 [a,b] b>").pickmodRestart({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -1872,7 +1872,7 @@ fun SprudelPattern.pickmodRestart(lookup: Map<String, Any>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A pattern that restarts the selected item on each trigger; indices wrap cyclically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickmodRestart("bd", "sd", "hh").s().fast(2)
  * ```
  *
@@ -1889,7 +1889,7 @@ fun String.pickmodRestart(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; indices wrap cyclically.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickmodRestart(["bd", "sd", "hh"]).s().fast(2)
  * ```
  */
@@ -1903,7 +1903,7 @@ fun String.pickmodRestart(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern that restarts the selected item on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".pickmodRestart({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -1919,7 +1919,7 @@ fun String.pickmodRestart(lookup: Map<String, PatternLike>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A [PatternMapperFn] that maps a source pattern to a modulo restart-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickmodRestart("bd", "sd", "hh")).s().fast(2)
  * ```
  *
@@ -1936,7 +1936,7 @@ fun pickmodRestart(vararg args: PatternLike): PatternMapperFn =
  * @param lookup List of items; source pattern values are used as integer indices (modulo-wrapped).
  * @return A [PatternMapperFn] that maps a source pattern to a modulo restart-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickmodRestart(["bd", "sd", "hh"])).s().fast(2)
  * ```
  */
@@ -1950,7 +1950,7 @@ fun pickmodRestart(lookup: List<PatternLike>): PatternMapperFn =
  * @param lookup Map of string keys; source pattern values are used as keys.
  * @return A [PatternMapperFn] that maps a source pattern to a modulo restart-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".apply(pickmodRestart({a: "bd(3,8)", b: "sd sd"})).s()
  * ```
  */
@@ -2051,11 +2051,11 @@ internal val PatternMapperFn._pickReset by dslPatternMapperExtension { m, args, 
  * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickReset("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 [2,0]>").pickReset("bd sd", "cp cp", "hh hh").s()
  * ```
  *
@@ -2072,7 +2072,7 @@ fun SprudelPattern.pickReset(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; integer indices, clamped. Selected item's phase resets on each trigger.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickReset(["g a", "e f", "f g f g" , "g c d"]).note()
  * ```
  */
@@ -2086,7 +2086,7 @@ fun SprudelPattern.pickReset(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys to items; unmatched keys produce no output.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<a!2 [a,b] b>").pickReset({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -2100,7 +2100,7 @@ fun SprudelPattern.pickReset(lookup: Map<String, PatternLike>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickReset("bd", "sd", "hh").s().fast(2)
  * ```
  *
@@ -2117,7 +2117,7 @@ fun String.pickReset(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; integer indices, clamped.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickReset(["bd", "sd", "hh"]).s().fast(2)
  * ```
  */
@@ -2131,7 +2131,7 @@ fun String.pickReset(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".pickReset({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -2147,7 +2147,7 @@ fun String.pickReset(lookup: Map<String, PatternLike>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A [PatternMapperFn] that maps a source pattern to a reset-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickReset("bd", "sd", "hh")).s().fast(2)
  * ```
  *
@@ -2164,7 +2164,7 @@ fun pickReset(vararg args: PatternLike): PatternMapperFn =
  * @param lookup List of items; source pattern values are used as zero-based indices (clamped).
  * @return A [PatternMapperFn] that maps a source pattern to a reset-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickReset(["bd", "sd", "hh"])).s().fast(2)
  * ```
  */
@@ -2178,7 +2178,7 @@ fun pickReset(lookup: List<PatternLike>): PatternMapperFn =
  * @param lookup Map of string keys; source pattern values are used as keys.
  * @return A [PatternMapperFn] that maps a source pattern to a reset-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".apply(pickReset({a: "bd(3,8)", b: "sd sd"})).s()
  * ```
  */
@@ -2233,11 +2233,11 @@ internal val PatternMapperFn._pickmodReset by dslPatternMapperExtension { m, arg
  * @param args Lookup items to pick from — strings, patterns, or a single map for key-based lookup.
  * @return A pattern that resets the selected item's phase on each trigger; indices wrap cyclically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickmodReset("g a", "e f", "f g f g" , "g c d").note()
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 [2,0]>").pickmodReset("bd sd", "cp cp", "hh hh").s()
  * ```
  *
@@ -2254,7 +2254,7 @@ fun SprudelPattern.pickmodReset(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; indices wrap cyclically with modulo.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<0 1 2!2 3>").pickmodReset(["g a", "e f", "f g f g" , "g c d"]).note()
  * ```
  */
@@ -2268,7 +2268,7 @@ fun SprudelPattern.pickmodReset(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * seq("<a!2 [a,b] b>").pickmodReset({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -2282,7 +2282,7 @@ fun SprudelPattern.pickmodReset(lookup: Map<String, PatternLike>): SprudelPatter
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A pattern that resets the selected item's phase on each trigger; indices wrap cyclically.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickmodReset("bd", "sd", "hh").s().fast(2)
  * ```
  *
@@ -2299,7 +2299,7 @@ fun String.pickmodReset(vararg args: PatternLike): SprudelPattern =
  * @param lookup List of items; indices wrap cyclically.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".pickmodReset(["bd", "sd", "hh"]).s().fast(2)
  * ```
  */
@@ -2313,7 +2313,7 @@ fun String.pickmodReset(lookup: List<PatternLike>): SprudelPattern =
  * @param lookup Map of string keys; unmatched keys produce no output.
  * @return A pattern that resets the selected item's phase on each trigger.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".pickmodReset({a: "bd(3,8)", b: "sd sd"}).s()
  * ```
  */
@@ -2329,7 +2329,7 @@ fun String.pickmodReset(lookup: Map<String, PatternLike>): SprudelPattern =
  * @param args Lookup items to pick from — strings, patterns, or a single map.
  * @return A [PatternMapperFn] that maps a source pattern to a modulo reset-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickmodReset("bd", "sd", "hh")).s().fast(2)
  * ```
  *
@@ -2346,7 +2346,7 @@ fun pickmodReset(vararg args: PatternLike): PatternMapperFn =
  * @param lookup List of items; source pattern values are used as integer indices (modulo-wrapped).
  * @return A [PatternMapperFn] that maps a source pattern to a modulo reset-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<0 1 2 1>".apply(pickmodReset(["bd", "sd", "hh"])).s().fast(2)
  * ```
  */
@@ -2360,7 +2360,7 @@ fun pickmodReset(lookup: List<PatternLike>): PatternMapperFn =
  * @param lookup Map of string keys; source pattern values are used as keys.
  * @return A [PatternMapperFn] that maps a source pattern to a modulo reset-pick result.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "<a!2 [a,b] b>".apply(pickmodReset({a: "bd(3,8)", b: "sd sd"})).s()
  * ```
  */
@@ -2434,11 +2434,11 @@ internal val PatternMapperFn._pickF by dslPatternMapperExtension { m, args, call
  * @param args Index pattern followed by the function list — `pickF(indexPat, [fn1, fn2, ...])`.
  * @return A pattern with the selected function applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd rim hh").pickF("<0 1 2>", [rev, fast(2), jux(rev)])  // fn selected by index
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").pickF(n("0 1"), [slow(2), fast(3)])       // 0→slow(2), 1→fast(3)
  * ```
  *
@@ -2454,7 +2454,7 @@ fun SprudelPattern.pickF(vararg args: PatternLike): SprudelPattern = this._pickF
  * @param args Index pattern followed by the function list.
  * @return A pattern with the selected function applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd rim hh".pickF("<0 1 2>", [rev, fast(2), jux(rev)]).s()  // string source, fn by index
  * ```
  *
@@ -2472,7 +2472,7 @@ fun String.pickF(vararg args: PatternLike): SprudelPattern = this._pickF(args.to
  * @param args Index pattern followed by the function list.
  * @return A [PatternMapperFn] that applies the selected function to the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd rim hh").apply(pickF("<0 1 2>", [rev, fast(2), jux(rev)]))  // via mapper
  * ```
  *
@@ -2536,11 +2536,11 @@ internal val PatternMapperFn._pickmodF by dslPatternMapperExtension { m, args, c
  * @param args Index pattern followed by the function list.
  * @return A pattern with the modulo-selected function applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd rim hh").pickmodF("<0 1 2 3>", [rev, fast(2)])          // 2→0, 3→1 mod 2
  * ```
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * note("c3 e3 g3").pickmodF(n("0 5"), [slow(2), fast(3)])       // 5→1 mod 2
  * ```
  *
@@ -2556,7 +2556,7 @@ fun SprudelPattern.pickmodF(vararg args: PatternLike): SprudelPattern = this._pi
  * @param args Index pattern followed by the function list.
  * @return A pattern with the modulo-selected function applied.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * "bd rim hh".pickmodF("<0 1 2 3>", [rev, fast(2)]).s()  // string source, modulo index
  * ```
  *
@@ -2574,7 +2574,7 @@ fun String.pickmodF(vararg args: PatternLike): SprudelPattern = this._pickmodF(a
  * @param args Index pattern followed by the function list.
  * @return A [PatternMapperFn] that applies the modulo-selected function to the source pattern.
  *
- * ```KlangScript
+ * ```KlangScript(Playable)
  * s("bd rim hh").apply(pickmodF("<0 1 2 3>", [rev, fast(2)]))  // via mapper, modulo
  * ```
  *
