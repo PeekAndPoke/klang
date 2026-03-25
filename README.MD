@@ -1,5 +1,6 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.10-success.svg)](https://kotlinlang.org/docs/releases.html)
 [![CodeFactor](https://www.codefactor.io/repository/github/peekandpoke/klang/badge?s=a4aca92dba91c2faa10e953058445a301b2191d8)](https://www.codefactor.io/repository/github/peekandpoke/klang)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 # Klang Audio Motör
 
