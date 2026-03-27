@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.audio_engine
 
-import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -8,6 +7,7 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
+import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.coroutines.*
 
 /**

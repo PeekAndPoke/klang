@@ -1,7 +1,5 @@
 package io.peekandpoke.klang.audio_engine
 
-import de.peekandpoke.ultra.streams.Stream
-import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
 import io.peekandpoke.klang.audio_be.exciter.registerDefaults
@@ -9,6 +7,8 @@ import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.coroutines.delay
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource

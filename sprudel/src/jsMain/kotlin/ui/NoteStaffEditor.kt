@@ -1,11 +1,5 @@
 package io.peekandpoke.klang.sprudel.ui
 
-import de.peekandpoke.kraft.components.Component
-import de.peekandpoke.kraft.components.Ctx
-import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.*
-import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout
 import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.BracketType
 import io.peekandpoke.klang.sprudel.lang.editor.NoteStaffLayout.InsertTarget
@@ -16,6 +10,12 @@ import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.*
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.*
+import io.peekandpoke.ultra.streams.Stream
 import kotlinx.browser.window
 import kotlinx.css.Overflow
 import kotlinx.css.UserSelect

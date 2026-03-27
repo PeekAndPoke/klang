@@ -1,7 +1,5 @@
 package io.peekandpoke.klang.sprudel.lang.addons
 
-import de.peekandpoke.ultra.common.datetime.Kronos
-import de.peekandpoke.ultra.common.datetime.MpInstant
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
@@ -9,6 +7,8 @@ import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.ultra.datetime.Kronos
+import io.peekandpoke.ultra.datetime.MpInstant
 
 class LangTimeOfDaySpec : StringSpec({
 

@@ -57,8 +57,8 @@ data class FilterEnvelope(
  */
 fun Exciter.svf(
     mode: SvfMode,
-    cutoffHz: Double,
-    q: Double = 0.707,
+    cutoffHz: Exciter,
+    q: Exciter = ParamExciter("q", 0.707),
     env: FilterEnvelope = FilterEnvelope.NONE,
 ): Exciter {
     var ic1eq = 0.0
@@ -73,17 +73,21 @@ fun Exciter.svf(
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
+        // Read cutoff and Q per block (control rate)
+        val baseCutoff = Exciters.readParam(cutoffHz, freqHz, ctx)
+        val qVal = Exciters.readParam(q, freqHz, ctx)
+
         val effectiveCutoff = if (hasEnv) {
             val envValue = computeFilterEnvelope(ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec)
-            cutoffHz * (1.0 + env.depth * envValue)
+            baseCutoff * (1.0 + env.depth * envValue)
         } else {
-            cutoffHz
+            baseCutoff
         }
 
-        if (!initialized || hasEnv) {
+        if (!initialized || hasEnv || cutoffHz !is ParamExciter || q !is ParamExciter) {
             val nyquist = 0.5 * ctx.sampleRate
             val fc = effectiveCutoff.coerceIn(5.0, nyquist - 1.0)
-            val Q = q.coerceIn(0.1, 50.0)
+            val Q = qVal.coerceIn(0.1, 50.0)
             val g = tan(PI * fc / ctx.sampleRate)
             k = 1.0 / Q
             a1 = 1.0 / (1.0 + g * (g + k))
@@ -111,18 +115,38 @@ fun Exciter.svf(
     }
 }
 
+/** SVF filter with Double convenience params. */
+fun Exciter.svf(
+    mode: SvfMode,
+    cutoffHz: Double,
+    q: Double = 0.707,
+    env: FilterEnvelope = FilterEnvelope.NONE,
+): Exciter = svf(mode, ParamExciter("cutoffHz", cutoffHz), ParamExciter("q", q), env)
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Convenience wrappers — delegates to svf() with the appropriate mode
 // ═══════════════════════════════════════════════════════════════════════════════
 
+fun Exciter.lowpass(cutoffHz: Exciter, q: Exciter = ParamExciter("q", 0.707), env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
+    svf(SvfMode.LOWPASS, cutoffHz, q, env)
+
 fun Exciter.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.LOWPASS, cutoffHz, q, env)
+
+fun Exciter.highpass(cutoffHz: Exciter, q: Exciter = ParamExciter("q", 0.707), env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
+    svf(SvfMode.HIGHPASS, cutoffHz, q, env)
 
 fun Exciter.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.HIGHPASS, cutoffHz, q, env)
 
+fun Exciter.bandpass(cutoffHz: Exciter, q: Exciter = ParamExciter("q", 1.0), env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
+    svf(SvfMode.BANDPASS, cutoffHz, q, env)
+
 fun Exciter.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.BANDPASS, cutoffHz, q, env)
+
+fun Exciter.notch(cutoffHz: Exciter, q: Exciter = ParamExciter("q", 1.0), env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
+    svf(SvfMode.NOTCH, cutoffHz, q, env)
 
 fun Exciter.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.NOTCH, cutoffHz, q, env)
@@ -131,20 +155,15 @@ fun Exciter.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = Filte
 // One-Pole Lowpass (for warmth / simple smoothing)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-fun Exciter.onePoleLowpass(cutoffHz: Double): Exciter {
+fun Exciter.onePoleLowpass(cutoffHz: Exciter): Exciter {
     var y = 0.0
-    var alpha = 0.0
-    var initialized = false
 
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
-        if (!initialized) {
-            val nyquist = 0.5 * ctx.sampleRate
-            val fc = cutoffHz.coerceIn(5.0, nyquist - 1.0)
-            alpha = 1.0 - exp(-2.0 * PI * fc / ctx.sampleRate)
-            initialized = true
-        }
+        val fc = Exciters.readParam(cutoffHz, freqHz, ctx)
+        val nyquist = 0.5 * ctx.sampleRate
+        val alpha = 1.0 - exp(-2.0 * PI * fc.coerceIn(5.0, nyquist - 1.0) / ctx.sampleRate)
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
@@ -155,25 +174,22 @@ fun Exciter.onePoleLowpass(cutoffHz: Double): Exciter {
     }
 }
 
+fun Exciter.onePoleLowpass(cutoffHz: Double): Exciter = onePoleLowpass(ParamExciter("cutoffHz", cutoffHz))
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // One-Pole Highpass
 // ═══════════════════════════════════════════════════════════════════════════════
 
-fun Exciter.onePoleHighpass(cutoffHz: Double): Exciter {
+fun Exciter.onePoleHighpass(cutoffHz: Exciter): Exciter {
     var y = 0.0
     var xPrev = 0.0
-    var a = 0.0
-    var initialized = false
 
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
-        if (!initialized) {
-            val nyquist = 0.5 * ctx.sampleRate
-            val fc = cutoffHz.coerceIn(5.0, nyquist - 1.0)
-            a = exp(-2.0 * PI * fc / ctx.sampleRate)
-            initialized = true
-        }
+        val fc = Exciters.readParam(cutoffHz, freqHz, ctx)
+        val nyquist = 0.5 * ctx.sampleRate
+        val a = exp(-2.0 * PI * fc.coerceIn(5.0, nyquist - 1.0) / ctx.sampleRate)
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
@@ -185,6 +201,8 @@ fun Exciter.onePoleHighpass(cutoffHz: Double): Exciter {
         }
     }
 }
+
+fun Exciter.onePoleHighpass(cutoffHz: Double): Exciter = onePoleHighpass(ParamExciter("cutoffHz", cutoffHz))
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Formant Filter (parallel bandpass bank)

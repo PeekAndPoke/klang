@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.blocks.ui
 
-import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.blocks.model.KBProgramEditingCtx
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
+import io.peekandpoke.ultra.streams.Stream
 import kotlinx.html.FlowContent
 
 data class KlangBlocksCtx(

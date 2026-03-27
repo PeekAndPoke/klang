@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.utils
 
-import de.peekandpoke.ultra.streams.Stream
-import de.peekandpoke.ultra.streams.StreamSource
-import de.peekandpoke.ultra.streams.Unsubscribe
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.document
 import kotlinx.browser.window
 

@@ -32,7 +32,7 @@ class LetConstDeclarationRoundTripTest : StringSpec({
         val result = roundTrip("let x")
         val stmt = result.blocks.statements.single()
         stmt.shouldBeInstanceOf<KBLetStmt>()
-        (stmt as KBLetStmt).value shouldBe null
+        stmt.value shouldBe null
     }
 
     "let with number produces KBLetStmt with KBNumberArg" {

@@ -1,12 +1,12 @@
 package io.peekandpoke.klang
 
-import de.peekandpoke.kraft.kraftApp
-import de.peekandpoke.kraft.semanticui.semanticUI
-import de.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 import io.peekandpoke.klang.sprudel.lang.initSprudelDsl
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.utils.FullscreenController
+import io.peekandpoke.kraft.kraftApp
+import io.peekandpoke.kraft.semanticui.semanticUI
+import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 
 val kraft = kraftApp {
     semanticUI()

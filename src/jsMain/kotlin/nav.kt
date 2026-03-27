@@ -1,9 +1,5 @@
 package io.peekandpoke.klang
 
-import de.peekandpoke.kraft.routing.RootRouterBuilder
-import de.peekandpoke.kraft.routing.Route1
-import de.peekandpoke.kraft.routing.Router
-import de.peekandpoke.kraft.routing.Static
 import io.peekandpoke.klang.layouts.FullscreenLayout
 import io.peekandpoke.klang.layouts.MenuLayout
 import io.peekandpoke.klang.pages.*
@@ -12,6 +8,10 @@ import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialPage
 import io.peekandpoke.klang.pages.docs.tutorials.TutorialsListPage
+import io.peekandpoke.kraft.routing.RootRouterBuilder
+import io.peekandpoke.kraft.routing.Route1
+import io.peekandpoke.kraft.routing.Router
+import io.peekandpoke.kraft.routing.Static
 
 object Nav {
     val start = Static("")

@@ -2,8 +2,6 @@
 
 package io.peekandpoke.klang.sprudel
 
-import de.peekandpoke.ultra.common.datetime.Kronos
-import de.peekandpoke.ultra.common.datetime.MpInstant
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.common.math.Rational
@@ -14,6 +12,8 @@ import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.lang.*
 import io.peekandpoke.klang.sprudel.pattern.*
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.ultra.datetime.Kronos
+import io.peekandpoke.ultra.datetime.MpInstant
 import kotlin.jvm.JvmName
 import kotlin.random.Random
 

@@ -12,6 +12,10 @@ import io.peekandpoke.klang.audio_bridge.ExciterDsl
 import kotlin.math.abs
 import kotlin.random.Random
 
+private fun gain(value: Double) = ParamExciter("gain", value)
+private fun density(value: Double) = ParamExciter("density", value)
+private fun duty(value: Double) = ParamExciter("duty", value)
+
 /**
  * Audio-output tests for Exciter oscillator primitives.
  *
@@ -66,15 +70,15 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "triangle - amplitude matches gain" {
-        val gain = 0.7
-        val buf = generate(Exciters.triangle(gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.02)
+        val g = 0.7
+        val buf = generate(Exciters.triangle().withGain(gain(g)), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.02)
     }
 
     "triangle - custom gain scales amplitude" {
-        val gain = 0.3
-        val buf = generate(Exciters.triangle(gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.02)
+        val g = 0.3
+        val buf = generate(Exciters.triangle().withGain(gain(g)), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.02)
     }
 
     "triangle - correct frequency (zero crossings)" {
@@ -91,7 +95,7 @@ class ExcitersTest : StringSpec({
     "triangle - linear ramps (not curved like sine)" {
         // Generate at a low frequency so we have many samples per ramp
         val freqHz = 100.0
-        val buf = generate(Exciters.triangle(1.0), freqHz = freqHz, blockFrames = sampleRate)
+        val buf = generate(Exciters.triangle().withGain(gain(1.0)), freqHz = freqHz, blockFrames = sampleRate)
         // samplesPerCycle = 44100 / 100 = 441
         // Each quarter-cycle (110.25 samples) should be a linear ramp
         // Find the first rising zero crossing and check linearity of the ramp after it
@@ -149,15 +153,15 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "sine - amplitude matches gain" {
-        val gain = 1.0
-        val buf = generate(Exciters.sine(gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.02)
+        val g = 1.0
+        val buf = generate(Exciters.sine().withGain(gain(g)), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.02)
     }
 
     "sine - custom gain scales amplitude" {
-        val gain = 0.4
-        val buf = generate(Exciters.sine(gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.02)
+        val g = 0.4
+        val buf = generate(Exciters.sine().withGain(gain(g)), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.02)
     }
 
     "sine - correct frequency (zero crossings)" {
@@ -200,10 +204,10 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "sawtooth - amplitude close to gain (PolyBLEP softens peaks)" {
-        val gain = 0.6
-        val buf = generate(Exciters.sawtooth(gain), freqHz = 440.0)
+        val g = 0.6
+        val buf = generate(Exciters.sawtooth().withGain(gain(g)), freqHz = 440.0)
         // PolyBLEP rounds the discontinuity, so peak may be slightly below gain
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.05)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.05)
     }
 
     "sawtooth - correct frequency (zero crossings)" {
@@ -240,16 +244,16 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "square - amplitude close to gain (PolyBLEP softens transitions)" {
-        val gain = 0.5
-        val buf = generate(Exciters.square(gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.05)
+        val g = 0.5
+        val buf = generate(Exciters.square().withGain(gain(g)), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.05)
     }
 
     "square - mostly two output levels (PolyBLEP softens transitions)" {
-        val gain = 0.5
-        val buf = generate(Exciters.square(gain), freqHz = 440.0)
+        val g = 0.5
+        val buf = generate(Exciters.square().withGain(gain(g)), freqHz = 440.0)
         // Most samples should be close to +gain or -gain
-        val nearGain = buf.count { abs(abs(it.toDouble()) - gain) < 0.05 }
+        val nearGain = buf.count { abs(abs(it.toDouble()) - g) < 0.05 }
         // Allow ~5% of samples near transitions to deviate
         nearGain shouldBeGreaterThanOrEqual (buf.size * 0.9).toInt()
     }
@@ -296,10 +300,10 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "white noise - amplitude within gain bounds" {
-        val gain = 1.0
-        val buf = generate(Exciters.whiteNoise(Random(42), gain), freqHz = 440.0)
+        val g = 1.0
+        val buf = generate(Exciters.whiteNoise(Random(42)).withGain(gain(g)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan gain + 0.001
+            abs(sample.toDouble()) shouldBeLessThan g + 0.001
         }
     }
 
@@ -309,12 +313,12 @@ class ExcitersTest : StringSpec({
     }
 
     "white noise - custom gain scales amplitude" {
-        val gain = 0.3
-        val buf = generate(Exciters.whiteNoise(Random(42), gain), freqHz = 440.0)
+        val g = 0.3
+        val buf = generate(Exciters.whiteNoise(Random(42)).withGain(gain(g)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan gain + 0.001
+            abs(sample.toDouble()) shouldBeLessThan g + 0.001
         }
-        buf.peakAmplitude() shouldBeGreaterThan gain * 0.8
+        buf.peakAmplitude() shouldBeGreaterThan g * 0.8
     }
 
     "white noise - different seeds produce different output" {
@@ -362,15 +366,15 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "zawtooth - amplitude matches gain" {
-        val gain = 1.0
-        val buf = generate(Exciters.zawtooth(gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.02)
+        val g = 1.0
+        val buf = generate(Exciters.zawtooth().withGain(gain(g)), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.02)
     }
 
     "zawtooth - custom gain scales amplitude" {
-        val gain = 0.4
-        val buf = generate(Exciters.zawtooth(gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.02)
+        val g = 0.4
+        val buf = generate(Exciters.zawtooth().withGain(gain(g)), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.02)
     }
 
     "zawtooth - correct frequency (zero crossings)" {
@@ -431,10 +435,10 @@ class ExcitersTest : StringSpec({
     }
 
     "impulse - custom gain scales click amplitude" {
-        val gain = 0.3
-        val buf = generate(Exciters.impulse(gain), freqHz = 440.0)
+        val g = 0.3
+        val buf = generate(Exciters.impulse().withGain(gain(g)), freqHz = 440.0)
         val clickValue = buf.first { it != 0.0f }
-        clickValue.toDouble() shouldBe (gain plusOrMinus 0.001)
+        clickValue.toDouble() shouldBe (g plusOrMinus 0.001)
     }
 
     "impulse - phase continuity across blocks" {
@@ -474,18 +478,18 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "pulze - amplitude matches gain" {
-        val gain = 1.0
-        val buf = generate(Exciters.pulze(gain = gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBe (gain plusOrMinus 0.01)
+        val g = 1.0
+        val buf = generate(Exciters.pulze().withGain(gain(g)), freqHz = 440.0)
+        buf.peakAmplitude() shouldBe (g plusOrMinus 0.01)
     }
 
     "pulze - default duty 0.5 is symmetric" {
-        val buf = generate(Exciters.pulze(duty = 0.5), freqHz = 440.0)
+        val buf = generate(Exciters.pulze(duty = duty(0.5)), freqHz = 440.0)
         buf.dcOffset() shouldBe (0.0 plusOrMinus 0.02)
     }
 
     "pulze - duty 0.25 has negative DC bias" {
-        val buf = generate(Exciters.pulze(duty = 0.25), freqHz = 440.0)
+        val buf = generate(Exciters.pulze(duty = duty(0.25)), freqHz = 440.0)
         // 25% high, 75% low → mean ≈ 0.25*1 + 0.75*(-1) = -0.5
         buf.dcOffset() shouldBe (-0.5 plusOrMinus 0.05)
     }
@@ -524,8 +528,8 @@ class ExcitersTest : StringSpec({
     }
 
     "brown noise - custom gain scales amplitude" {
-        val buf1 = generate(Exciters.brownNoise(Random(42), gain = 1.0), freqHz = 440.0)
-        val buf2 = generate(Exciters.brownNoise(Random(42), gain = 0.5), freqHz = 440.0)
+        val buf1 = generate(Exciters.brownNoise(Random(42)).withGain(gain(1.0)), freqHz = 440.0)
+        val buf2 = generate(Exciters.brownNoise(Random(42)).withGain(gain(0.5)), freqHz = 440.0)
         // Half gain should produce roughly half amplitude
         val peak1 = buf1.peakAmplitude()
         val peak2 = buf2.peakAmplitude()
@@ -549,8 +553,8 @@ class ExcitersTest : StringSpec({
     }
 
     "pink noise - custom gain scales amplitude" {
-        val buf1 = generate(Exciters.pinkNoise(Random(42), gain = 1.0), freqHz = 440.0)
-        val buf2 = generate(Exciters.pinkNoise(Random(42), gain = 0.5), freqHz = 440.0)
+        val buf1 = generate(Exciters.pinkNoise(Random(42)).withGain(gain(1.0)), freqHz = 440.0)
+        val buf2 = generate(Exciters.pinkNoise(Random(42)).withGain(gain(0.5)), freqHz = 440.0)
         val peak1 = buf1.peakAmplitude()
         val peak2 = buf2.peakAmplitude()
         (peak2 / peak1) shouldBe (0.5 plusOrMinus 0.05)
@@ -561,21 +565,21 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "dust - mostly silence" {
-        val buf = generate(Exciters.dust(Random(42), density = 0.2), freqHz = 440.0)
+        val buf = generate(Exciters.dust(Random(42), density = density(0.2)), freqHz = 440.0)
         val silentCount = buf.count { it == 0.0f }
         silentCount shouldBeGreaterThanOrEqual (buf.size * 0.8).toInt()
     }
 
     "dust - output is non-negative" {
-        val buf = generate(Exciters.dust(Random(42), density = 0.5), freqHz = 440.0)
+        val buf = generate(Exciters.dust(Random(42), density = density(0.5)), freqHz = 440.0)
         for (sample in buf) {
             sample.toDouble() shouldBeGreaterThan -0.001
         }
     }
 
     "dust - higher density produces more impulses" {
-        val bufLow = generate(Exciters.dust(Random(42), density = 0.1), freqHz = 440.0)
-        val bufHigh = generate(Exciters.dust(Random(42), density = 0.9), freqHz = 440.0)
+        val bufLow = generate(Exciters.dust(Random(42), density = density(0.1)), freqHz = 440.0)
+        val bufHigh = generate(Exciters.dust(Random(42), density = density(0.9)), freqHz = 440.0)
         val countLow = bufLow.count { it > 0.0f }
         val countHigh = bufHigh.count { it > 0.0f }
         countHigh shouldBeGreaterThanOrEqual countLow
@@ -586,14 +590,14 @@ class ExcitersTest : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "crackle - mostly silence" {
-        val buf = generate(Exciters.crackle(Random(42), density = 0.2), freqHz = 440.0)
+        val buf = generate(Exciters.crackle(Random(42), density = density(0.2)), freqHz = 440.0)
         val silentCount = buf.count { it == 0.0f }
         silentCount shouldBeGreaterThanOrEqual (buf.size * 0.5).toInt()
     }
 
     "crackle - denser than dust at same density (higher maxRateHz)" {
-        val bufDust = generate(Exciters.dust(Random(42), density = 0.5), freqHz = 440.0)
-        val bufCrackle = generate(Exciters.crackle(Random(42), density = 0.5), freqHz = 440.0)
+        val bufDust = generate(Exciters.dust(Random(42), density = density(0.5)), freqHz = 440.0)
+        val bufCrackle = generate(Exciters.crackle(Random(42), density = density(0.5)), freqHz = 440.0)
         val countDust = bufDust.count { it > 0.0f }
         val countCrackle = bufCrackle.count { it > 0.0f }
         countCrackle shouldBeGreaterThanOrEqual countDust
@@ -666,15 +670,14 @@ class ExcitersTest : StringSpec({
         buf.any { it != 0.0f } shouldBe true
     }
 
-    "supersaw - amplitude bounded by gain" {
-        val gain = 0.6
-        val buf = generate(Exciters.superSaw(gain = gain), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan gain + 0.1
+    "supersaw - amplitude bounded by voice-normalized output" {
+        val buf = generate(Exciters.superSaw(), freqHz = 440.0)
+        buf.peakAmplitude() shouldBeLessThan 1.1
     }
 
     "supersaw - more voices increases energy" {
-        val buf1 = generate(Exciters.superSaw(voices = 1, gain = 1.0), freqHz = 440.0)
-        val buf5 = generate(Exciters.superSaw(voices = 5, gain = 1.0), freqHz = 440.0)
+        val buf1 = generate(Exciters.superSaw(voices = 1), freqHz = 440.0)
+        val buf5 = generate(Exciters.superSaw(voices = 5), freqHz = 440.0)
         // Both should produce output
         buf1.any { it != 0.0f } shouldBe true
         buf5.any { it != 0.0f } shouldBe true
@@ -682,7 +685,7 @@ class ExcitersTest : StringSpec({
 
     "supersaw - single voice equals sawtooth character" {
         // Single voice supersaw should have sawtooth-like zero crossings
-        val buf = generate(Exciters.superSaw(voices = 1, freqSpread = 0.0, gain = 1.0), freqHz = 440.0)
+        val buf = generate(Exciters.superSaw(voices = 1, freqSpread = ParamExciter("freqSpread", 0.0)), freqHz = 440.0)
         val crossings = buf.zeroCrossings()
         // 440Hz over 100ms ≈ 44 cycles, saw has ~1-2 crossings per cycle
         crossings shouldBeGreaterThanOrEqual 40
@@ -736,14 +739,14 @@ class ExcitersTest : StringSpec({
     }
 
     "supersaw DSL - oscParams override freqSpread" {
-        val dsl = ExciterDsl.SuperSaw(freqSpread = 0.1)
+        val dsl = ExciterDsl.SuperSaw(freqSpread = ExciterDsl.Param("freqSpread", 0.1))
         val sig = dsl.toExciter(mapOf("freqSpread" to 0.5))
         val buf = generate(sig, freqHz = 440.0)
         buf.any { it != 0.0f } shouldBe true
     }
 
     "dust DSL - oscParams override density" {
-        val dsl = ExciterDsl.Dust(density = 0.01)
+        val dsl = ExciterDsl.Dust(density = ExciterDsl.Param("density", 0.01))
         val sigOverride = dsl.toExciter(mapOf("density" to 0.99))
         val sigDefault = dsl.toExciter()
         val bufOverride = generate(sigOverride, freqHz = 440.0)

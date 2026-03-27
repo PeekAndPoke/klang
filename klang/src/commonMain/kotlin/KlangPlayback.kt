@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_engine
 
-import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.ultra.streams.Stream
 
 /**
  * Interface for playback implementations.

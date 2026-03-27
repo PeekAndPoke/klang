@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.ui.codetools
 
-import de.peekandpoke.ultra.streams.Stream
-import de.peekandpoke.ultra.streams.StreamSource
-import de.peekandpoke.ultra.streams.Unsubscribe
-import de.peekandpoke.ultra.streams.ops.persistInLocalStorage
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.Unsubscribe
+import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import kotlinx.serialization.builtins.serializer
 
 object KlangToolAutoUpdate : Stream<Boolean> {

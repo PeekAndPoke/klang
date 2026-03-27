@@ -1,10 +1,10 @@
 package io.peekandpoke.klang.audio_engine
 
-import de.peekandpoke.ultra.streams.Stream
-import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
 
 /**
  * Continuous playback that runs indefinitely until explicitly stopped.

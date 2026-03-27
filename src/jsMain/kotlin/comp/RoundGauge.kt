@@ -1,16 +1,16 @@
 package io.peekandpoke.klang.comp
 
-import de.peekandpoke.kraft.components.Component
-import de.peekandpoke.kraft.components.Ctx
-import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.utils.onResize
-import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.semanticui.SemanticIconFn
-import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.semanticui.semanticIcon
-import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.feel.ValueToColorMixer
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.utils.onResize
+import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.semanticui.SemanticIconFn
+import io.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.ultra.semanticui.semanticIcon
+import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.browser.window
 import kotlinx.css.*
 import kotlinx.html.Tag

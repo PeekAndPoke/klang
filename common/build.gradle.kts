@@ -39,6 +39,7 @@ kotlin {
                 implementation(Deps.KotlinX.serialization_json)
 
                 api(Deps.KotlinLibs.Ultra.common)
+                api(Deps.KotlinLibs.Ultra.maths)
             }
         }
 

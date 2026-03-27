@@ -1,16 +1,16 @@
 package io.peekandpoke.klang.sprudel.ui
 
-import de.peekandpoke.kraft.popups.PopupsManager
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.html.onMouseEnter
-import de.peekandpoke.ultra.html.onMouseLeave
-import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.kraft.popups.PopupsManager
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onMouseEnter
+import io.peekandpoke.ultra.html.onMouseLeave
+import io.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.div

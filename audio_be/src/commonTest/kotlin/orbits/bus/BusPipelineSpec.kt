@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.orbits.bus
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.floats.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor
@@ -66,8 +67,8 @@ class BusPipelineSpec : StringSpec({
             effect.process(ctx)
         }
 
-        ctx.mixBuffer.left[0] shouldBe 0.5f
-        ctx.mixBuffer.right[0] shouldBe 0.3f
+        ctx.mixBuffer.left[0] shouldBe (0.5f plusOrMinus 1e-6f)
+        ctx.mixBuffer.right[0] shouldBe (0.3f plusOrMinus 1e-6f)
     }
 
     "delay-only pipeline adds delayed signal to mix" {

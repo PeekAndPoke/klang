@@ -47,8 +47,8 @@ class DistortionSpec : StringSpec({
         // At zero, output should be near zero
         ClippingFuncs.sineFold(0.0) shouldBe (0.0 plusOrMinus 0.001)
         // At PI, should wrap back near zero
-        ClippingFuncs.sineFold(Math.PI) shouldBe (0.0 plusOrMinus 0.001)
-        ClippingFuncs.sineFold(Math.PI / 2.0) shouldBe (1.0 plusOrMinus 0.001)
+        ClippingFuncs.sineFold(kotlin.math.PI) shouldBe (0.0 plusOrMinus 0.001)
+        ClippingFuncs.sineFold(kotlin.math.PI / 2.0) shouldBe (1.0 plusOrMinus 0.001)
     }
 
     // ===== DistortionRenderer tests =====

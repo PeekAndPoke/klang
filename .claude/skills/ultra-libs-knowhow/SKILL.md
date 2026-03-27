@@ -1,6 +1,7 @@
 ---
 name: ultra-libs-knowhow
-description: Use when working with ultra libs, de.peekandpoke.ultra, ultra.html events, ultra streams, ultra common utilities, or any de.peekandpoke.ultra.* package.
+description: Use when working with ultra libs, io.peekandpoke.ultra, ultra.html events, ultra streams, 
+  ultra common utilities, or any io.peekandpoke.ultra.* package.
 ---
 
 # Ultra Libs — Source Reference
@@ -15,14 +16,14 @@ All ultra library source code lives at:
 
 | Module       | Package prefix                    | Source path       |
 |--------------|-----------------------------------|-------------------|
-| `html`       | `de.peekandpoke.ultra.html`       | `html/src/`       |
-| `common`     | `de.peekandpoke.ultra.common`     | `common/src/`     |
-| `streams`    | `de.peekandpoke.ultra.streams`    | `streams/src/`    |
-| `kontainer`  | `de.peekandpoke.ultra.kontainer`  | `kontainer/src/`  |
-| `semanticui` | `de.peekandpoke.ultra.semanticui` | `semanticui/src/` |
-| `meta`       | `de.peekandpoke.ultra.meta`       | `meta/src/`       |
-| `vault`      | `de.peekandpoke.ultra.vault`      | `vault/src/`      |
-| `slumber`    | `de.peekandpoke.ultra.slumber`    | `slumber/src/`    |
+| `html`       | `io.peekandpoke.ultra.html`       | `html/src/`       |
+| `common`     | `io.peekandpoke.ultra.common`     | `common/src/`     |
+| `streams`    | `io.peekandpoke.ultra.streams`    | `streams/src/`    |
+| `kontainer`  | `io.peekandpoke.ultra.kontainer`  | `kontainer/src/`  |
+| `semanticui` | `io.peekandpoke.ultra.semanticui` | `semanticui/src/` |
+| `meta`       | `io.peekandpoke.ultra.meta`       | `meta/src/`       |
+| `vault`      | `io.peekandpoke.ultra.vault`      | `vault/src/`      |
+| `slumber`    | `io.peekandpoke.ultra.slumber`    | `slumber/src/`    |
 
 ## How to Use This Skill
 

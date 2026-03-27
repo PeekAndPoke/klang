@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.ui
 
-import de.peekandpoke.ultra.common.TypedAttributes
-import de.peekandpoke.ultra.common.TypedKey
-import de.peekandpoke.ultra.semanticui.SemanticIconFn
-import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.ultra.common.TypedAttributes
+import io.peekandpoke.ultra.common.TypedKey
+import io.peekandpoke.ultra.semanticui.SemanticIconFn
+import io.peekandpoke.ultra.streams.Stream
 import kotlinx.html.FlowContent
 
 /**

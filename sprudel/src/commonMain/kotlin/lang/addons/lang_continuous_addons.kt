@@ -2,11 +2,11 @@
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
-import de.peekandpoke.ultra.common.datetime.Kronos
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.lang.dslObject
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
+import io.peekandpoke.ultra.datetime.Kronos
 import kotlin.math.PI
 import kotlin.math.sin
 

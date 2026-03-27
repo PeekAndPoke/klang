@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.common.math
 
-import de.peekandpoke.ultra.common.maths.Ease
+import io.peekandpoke.ultra.maths.Ease
 import kotlin.math.abs
 
 /**

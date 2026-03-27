@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.comp
 
-import de.peekandpoke.ultra.common.toFixed
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.ultra.common.toFixed
 import kotlinx.css.LinearDimension
 import kotlinx.html.Tag
 import kotlin.math.round

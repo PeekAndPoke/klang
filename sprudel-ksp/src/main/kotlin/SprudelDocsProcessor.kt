@@ -89,7 +89,7 @@ class SprudelDocsProcessor(
             appendLine("/**")
             appendLine(" * Auto-generated Sprudel DSL function documentation.")
             appendLine(" * Generated from @SprudelDsl annotated functions and properties.")
-            appendLine(" * Platform-specific actual implementation of the expected declaration.")
+            appendLine(" * Generated into commonMain via kspCommonMainMetadata — shared by all targets.")
             appendLine(" */")
 
             // One private function per chunk — each stays well within the 64 KB method limit.
@@ -108,8 +108,8 @@ class SprudelDocsProcessor(
                 appendLine()
             }
 
-            // The actual val just combines all chunk maps — keeps <clinit> tiny.
-            appendLine("actual val generatedSprudelKlangSymbols: Map<String, KlangSymbol> = buildMap {")
+            // The top-level val just combines all chunk maps — keeps <clinit> tiny.
+            appendLine("val generatedSprudelKlangSymbols: Map<String, KlangSymbol> = buildMap {")
             chunks.forEachIndexed { chunkIdx, _ ->
                 appendLine("    putAll(generatedDocsChunk$chunkIdx())")
             }

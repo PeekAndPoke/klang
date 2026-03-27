@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import de.peekandpoke.kraft.utils.async
 import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.kraft.utils.async
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.await
 import kotlin.js.Promise
