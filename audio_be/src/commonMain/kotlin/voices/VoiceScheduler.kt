@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.audio_be.voices
 
-import de.peekandpoke.ultra.common.maths.Ease
 import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
 import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
 import io.peekandpoke.klang.audio_be.orbits.Orbits
@@ -10,6 +9,7 @@ import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
 import io.peekandpoke.klang.common.math.ValueRamp
+import io.peekandpoke.ultra.maths.Ease
 
 class VoiceScheduler(
     val options: Options,

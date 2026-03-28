@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.ui.feel
 
-import de.peekandpoke.kraft.addons.styling.StyleSheets
-import de.peekandpoke.ultra.streams.Stream
-import de.peekandpoke.ultra.streams.StreamSource
-import de.peekandpoke.ultra.streams.Unsubscribe
 import io.peekandpoke.klang.ui.feel.KlangTheme.initialize
 import io.peekandpoke.klang.ui.feel.KlangTheme.update
+import io.peekandpoke.kraft.addons.styling.StyleSheets
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.document
 import kotlinx.css.Color
 import org.w3c.dom.HTMLElement

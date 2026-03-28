@@ -1,16 +1,5 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import de.peekandpoke.kraft.popups.PopupsManager
-import de.peekandpoke.kraft.utils.Vector2D
-import de.peekandpoke.kraft.utils.jsObject
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.html.onClick
-import de.peekandpoke.ultra.html.onMouseEnter
-import de.peekandpoke.ultra.html.onMouseLeave
-import de.peekandpoke.ultra.semanticui.SemanticIcon
-import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.semanticui.noui
-import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.codemirror.ext.*
 import io.peekandpoke.klang.script.ast.AstIndex
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -18,6 +7,17 @@ import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.ui.scheduleShow
+import io.peekandpoke.kraft.popups.PopupsManager
+import io.peekandpoke.kraft.utils.Vector2D
+import io.peekandpoke.kraft.utils.jsObject
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onMouseEnter
+import io.peekandpoke.ultra.html.onMouseLeave
+import io.peekandpoke.ultra.semanticui.SemanticIcon
+import io.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.ultra.semanticui.noui
+import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.minWidth

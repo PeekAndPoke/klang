@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.ui.feel
 
-import de.peekandpoke.kraft.addons.styling.StyleSheet
+import io.peekandpoke.kraft.addons.styling.StyleSheet
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.Color

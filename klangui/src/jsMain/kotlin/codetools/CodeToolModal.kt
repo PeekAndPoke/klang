@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.ui.codetools
 
-import de.peekandpoke.kraft.components.Ctx
-import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.modals.ModalsManager
-import de.peekandpoke.kraft.semanticui.modals.FadingModal
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.modals.ModalsManager
+import io.peekandpoke.kraft.semanticui.modals.FadingModal
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.css.LinearDimension
 import kotlinx.css.width
 import kotlinx.html.FlowContent

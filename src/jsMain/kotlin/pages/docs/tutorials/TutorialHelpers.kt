@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.semanticui.SemanticIconFn
-import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.semanticui.semanticIcon
-import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.semanticui.SemanticIconFn
+import io.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.ultra.semanticui.semanticIcon
+import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.css.Color
 import kotlinx.css.backgroundColor
 import kotlinx.css.color

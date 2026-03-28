@@ -43,14 +43,21 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.102.0"
+        private const val ultra_version = "0.104.2"
 
         object Ultra {
+            const val cache = "io.peekandpoke.ultra:cache:$ultra_version"
             const val common = "io.peekandpoke.ultra:common:$ultra_version"
+            const val datetime = "io.peekandpoke.ultra:datetime:$ultra_version"
+            const val fixture = "io.peekandpoke.ultra:fixture:$ultra_version"
             const val html = "io.peekandpoke.ultra:html:$ultra_version"
-            const val logging = "io.peekandpoke.ultra:logging:$ultra_version"
             const val kontainer = "io.peekandpoke.ultra:kontainer:$ultra_version"
+            const val log = "io.peekandpoke.ultra:log:$ultra_version"
+            const val maths = "io.peekandpoke.ultra:maths:$ultra_version"
             const val meta = "io.peekandpoke.ultra:meta:$ultra_version"
+            const val model = "io.peekandpoke.ultra:model:$ultra_version"
+            const val reflection = "io.peekandpoke.ultra:reflection:$ultra_version"
+            const val remote = "io.peekandpoke.ultra:remote:$ultra_version"
             const val security = "io.peekandpoke.ultra:security:$ultra_version"
             const val semanticui = "io.peekandpoke.ultra:semanticui:$ultra_version"
             const val slumber = "io.peekandpoke.ultra:slumber:$ultra_version"
@@ -408,7 +415,7 @@ object Deps {
         // https://www.npmjs.com/package/@codemirror/commands
         fun KotlinDependencyHandler.codemirrorCommands() = npm("@codemirror/commands", "6.10.3")
         // https://www.npmjs.com/package/@codemirror/language
-        fun KotlinDependencyHandler.codemirrorLanguage() = npm("@codemirror/language", "6.12.2")
+        fun KotlinDependencyHandler.codemirrorLanguage() = npm("@codemirror/language", "6.12.3")
         // https://www.npmjs.com/package/@codemirror/lang-javascript
         fun KotlinDependencyHandler.codemirrorLangJavascript() = npm("@codemirror/lang-javascript", "6.2.5")
         // https://www.npmjs.com/package/codemirror

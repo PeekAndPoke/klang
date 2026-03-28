@@ -1,12 +1,12 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.Completion
 import io.peekandpoke.klang.codemirror.ext.CompletionContext
 import io.peekandpoke.klang.codemirror.ext.CompletionResult
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.kraft.utils.jsObject
 
 /**
  * Creates a CodeMirror completion source that suggests DSL symbols from the [EditorDocContext].

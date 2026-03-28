@@ -1,15 +1,15 @@
 package io.peekandpoke.klang.ui.comp
 
-import de.peekandpoke.kraft.components.Component
-import de.peekandpoke.kraft.components.Ctx
-import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.klang.tones.note.Note
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.svgEllipse
 import io.peekandpoke.klang.ui.svgLine
 import io.peekandpoke.klang.ui.svgRoot
 import io.peekandpoke.klang.ui.svgText
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.vdom.VDom
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div

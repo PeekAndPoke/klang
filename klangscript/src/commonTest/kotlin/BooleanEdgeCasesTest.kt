@@ -27,70 +27,70 @@ class BooleanEdgeCasesTest : StringSpec({
         val engine = klangScript()
         val result = engine.execute("!!true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "double NOT converts false to false" {
         val engine = klangScript()
         val result = engine.execute("!!false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "double NOT converts null to false" {
         val engine = klangScript()
         val result = engine.execute("!!null")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "double NOT converts 0 to false" {
         val engine = klangScript()
         val result = engine.execute("!!0")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "double NOT converts non-zero number to true" {
         val engine = klangScript()
         val result = engine.execute("!!5")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "double NOT converts negative number to true" {
         val engine = klangScript()
         val result = engine.execute("!!(-1)")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "double NOT converts empty string to false" {
         val engine = klangScript()
         val result = engine.execute("!!\"\"")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "double NOT converts non-empty string to true" {
         val engine = klangScript()
         val result = engine.execute("!!\"hello\"")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "double NOT converts empty object to true" {
         val engine = klangScript()
         val result = engine.execute("!!{}")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "double NOT converts empty array to true" {
         val engine = klangScript()
         val result = engine.execute("!![]")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     // ============================================================
@@ -101,21 +101,21 @@ class BooleanEdgeCasesTest : StringSpec({
         val engine = klangScript()
         val result = engine.execute("!!!true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "triple NOT works correctly for false" {
         val engine = klangScript()
         val result = engine.execute("!!!false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "triple NOT works correctly for truthy value" {
         val engine = klangScript()
         val result = engine.execute("!!!5")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     // ============================================================
@@ -126,35 +126,35 @@ class BooleanEdgeCasesTest : StringSpec({
         val engine = klangScript()
         val result = engine.execute("true && true && true && true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "long AND chain: one false in middle" {
         val engine = klangScript()
         val result = engine.execute("true && true && false && true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "long OR chain: all false except last" {
         val engine = klangScript()
         val result = engine.execute("false || false || false || true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "long OR chain: all false" {
         val engine = klangScript()
         val result = engine.execute("false || false || false || false")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     "mixed long chain: AND and OR" {
         val engine = klangScript()
         val result = engine.execute("true && false || true && true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     // ============================================================
@@ -167,15 +167,15 @@ class BooleanEdgeCasesTest : StringSpec({
 
         val result1 = engine.execute("inRange(7)")
         result1.shouldBeInstanceOf<BooleanValue>()
-        (result1 as BooleanValue).value shouldBe true
+        result1.value shouldBe true
 
         val result2 = engine.execute("inRange(3)")
         result2.shouldBeInstanceOf<BooleanValue>()
-        (result2 as BooleanValue).value shouldBe false
+        result2.value shouldBe false
 
         val result3 = engine.execute("inRange(15)")
         result3.shouldBeInstanceOf<BooleanValue>()
-        (result3 as BooleanValue).value shouldBe false
+        result3.value shouldBe false
     }
 
     "boolean logic in arrow function: compound condition" {
@@ -184,22 +184,22 @@ class BooleanEdgeCasesTest : StringSpec({
 
         val result1 = engine.execute("isValid(50)")
         result1.shouldBeInstanceOf<BooleanValue>()
-        (result1 as BooleanValue).value shouldBe true
+        result1.value shouldBe true
 
         val result2 = engine.execute("isValid(0)")
         result2.shouldBeInstanceOf<BooleanValue>()
-        (result2 as BooleanValue).value shouldBe true
+        result2.value shouldBe true
 
         val result3 = engine.execute("isValid(-5)")
         result3.shouldBeInstanceOf<BooleanValue>()
-        (result3 as BooleanValue).value shouldBe false
+        result3.value shouldBe false
     }
 
     "arrow function returning boolean logic" {
         val engine = klangScript()
         val result = engine.execute("let fn = (a, b) => a && b\nfn(true, false)")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe false
+        result.value shouldBe false
     }
 
     // ============================================================
@@ -217,7 +217,7 @@ class BooleanEdgeCasesTest : StringSpec({
         """.trimIndent()
         )
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "boolean logic with comparison of variables" {
@@ -231,7 +231,7 @@ class BooleanEdgeCasesTest : StringSpec({
         """.trimIndent()
         )
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     // ============================================================
@@ -250,21 +250,21 @@ class BooleanEdgeCasesTest : StringSpec({
         val engine = klangScript()
         val result = engine.execute("(true && false) || (false || true)")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "deeply nested boolean expressions" {
         val engine = klangScript()
         val result = engine.execute("((true && true) || false) && ((false || true) && true)")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "complex expression with all operators" {
         val engine = klangScript()
         val result = engine.execute("!false && (5 > 3 || 2 == 1) && !(10 < 5)")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     // ============================================================
@@ -275,20 +275,20 @@ class BooleanEdgeCasesTest : StringSpec({
         val engine = klangScript()
         val result = engine.execute("5 && \"hello\" && true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "mixing different falsy types in OR" {
         val engine = klangScript()
         val result = engine.execute("0 || \"\" || null || true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 
     "object and array truthiness in boolean logic" {
         val engine = klangScript()
         val result = engine.execute("{} && [] && true")
         result.shouldBeInstanceOf<BooleanValue>()
-        (result as BooleanValue).value shouldBe true
+        result.value shouldBe true
     }
 })

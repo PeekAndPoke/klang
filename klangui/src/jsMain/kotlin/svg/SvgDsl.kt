@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.ui
 
-import de.peekandpoke.kraft.vdom.custom
+import io.peekandpoke.kraft.vdom.custom
 import kotlinx.html.FlowContent
 import kotlinx.html.svg
 

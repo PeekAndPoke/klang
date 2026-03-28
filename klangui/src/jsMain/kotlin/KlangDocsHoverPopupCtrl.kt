@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.ui
 
-import de.peekandpoke.kraft.popups.PopupsManager
-import de.peekandpoke.kraft.utils.Vector2D
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.kraft.popups.PopupsManager
+import io.peekandpoke.kraft.utils.Vector2D
 import kotlinx.html.FlowContent
 import org.w3c.dom.events.MouseEvent
 

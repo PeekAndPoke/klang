@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.blocks.ui
 
-import de.peekandpoke.kraft.addons.styling.StyleSheet
+import io.peekandpoke.kraft.addons.styling.StyleSheet
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 

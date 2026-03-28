@@ -91,9 +91,18 @@ tasks {
     configureJvmTests()
 }
 
+kotlin.sourceSets.commonMain {
+    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
+}
+
 dependencies {
-    add("kspJvm", project(":klangscript-ksp"))
-    add("kspJs", project(":klangscript-ksp"))
+    kspCommonMainMetadata(project(":klangscript-ksp"))
 
     add("kspJvmTest", project(":klangscript-ksp"))
     add("kspJsTest", project(":klangscript-ksp"))

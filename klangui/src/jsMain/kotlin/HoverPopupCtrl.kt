@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.ui
 
-import de.peekandpoke.kraft.popups.PopupsManager
-import de.peekandpoke.kraft.utils.Vector2D
-import de.peekandpoke.ultra.html.onMouseEnter
-import de.peekandpoke.ultra.html.onMouseLeave
+import io.peekandpoke.kraft.popups.PopupsManager
+import io.peekandpoke.kraft.utils.Vector2D
+import io.peekandpoke.ultra.html.onMouseEnter
+import io.peekandpoke.ultra.html.onMouseLeave
 import kotlinx.browser.window
 import kotlinx.html.FlowContent
 import kotlinx.html.div

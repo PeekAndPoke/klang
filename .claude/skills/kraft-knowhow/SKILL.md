@@ -1,6 +1,7 @@
 ---
 name: kraft-knowhow
-description: Use when working with Kraft UI framework, de.peekandpoke.kraft, Kraft components, VDom, Kraft routing, Kraft forms, Kraft modals, Kraft toasts, Kraft popups, or any de.peekandpoke.kraft.* package.
+description: Use when working with Kraft UI framework, io.peekandpoke.kraft, Kraft components, VDom, Kraft routing,
+  Kraft forms, Kraft modals, Kraft toasts, Kraft popups, or any io.peekandpoke.kraft.* package.
 ---
 
 # Kraft UI Framework — Source Reference
@@ -15,9 +16,9 @@ All Kraft library source code lives at:
 
 | Module       | Package prefix                    | Source path       |
 |--------------|-----------------------------------|-------------------|
-| `core`       | `de.peekandpoke.kraft`            | `core/src/`       |
-| `semanticui` | `de.peekandpoke.kraft.semanticui` | `semanticui/src/` |
-| `testing`    | `de.peekandpoke.kraft.testing`    | `testing/src/`    |
+| `core`       | `io.peekandpoke.kraft`            | `core/src/`       |
+| `semanticui` | `io.peekandpoke.kraft.semanticui` | `semanticui/src/` |
+| `testing`    | `io.peekandpoke.kraft.testing`    | `testing/src/`    |
 
 ## Source Root Layout (core)
 
@@ -44,7 +45,7 @@ Don't guess — the source is authoritative.
 
 ## Key Files Quick Reference
 
-### Components (`de.peekandpoke.kraft.components`)
+### Components (`io.peekandpoke.kraft.components`)
 
 | File                                  | What it contains                                     |
 |---------------------------------------|------------------------------------------------------|
@@ -58,7 +59,7 @@ Don't guess — the source is authoritative.
 | `components/state/`                   | `ComponentStateProperty`, `ComponentStreamProperty`  |
 | `components/ComponentRef.kt`          | `ComponentRef<C>` — typed ref to a mounted component |
 
-### VDom (`de.peekandpoke.kraft.vdom`)
+### VDom (`io.peekandpoke.kraft.vdom`)
 
 | File                      | What it contains                          |
 |---------------------------|-------------------------------------------|
@@ -69,7 +70,7 @@ Don't guess — the source is authoritative.
 | `vdom/CustomTag.kt`       | `CustomTag` — renders arbitrary HTML tags |
 | `vdom/preact/`            | Preact-specific engine implementation     |
 
-### Forms (`de.peekandpoke.kraft.forms`)
+### Forms (`io.peekandpoke.kraft.forms`)
 
 | File                          | What it contains                                            |
 |-------------------------------|-------------------------------------------------------------|
@@ -83,7 +84,7 @@ Don't guess — the source is authoritative.
 | `forms/validation/`           | Validation rules: strings, numbers, comparable, collections |
 | `forms/collections/`          | `ListFieldComponent` — list/collection field                |
 
-### Routing (`de.peekandpoke.kraft.routing`)
+### Routing (`io.peekandpoke.kraft.routing`)
 
 | File                              | What it contains                                     |
 |-----------------------------------|------------------------------------------------------|
@@ -94,11 +95,11 @@ Don't guess — the source is authoritative.
 
 | Package                       | Source path             | Key classes        |
 |-------------------------------|-------------------------|--------------------|
-| `de.peekandpoke.kraft.modals` | `jsMain/kotlin/modals/` | `Modal`, modal DSL |
-| `de.peekandpoke.kraft.toasts` | `jsMain/kotlin/toasts/` | `Toast`, toast DSL |
-| `de.peekandpoke.kraft.popups` | `jsMain/kotlin/popups/` | `Popup`, popup DSL |
+| `io.peekandpoke.kraft.modals` | `jsMain/kotlin/modals/` | `Modal`, modal DSL |
+| `io.peekandpoke.kraft.toasts` | `jsMain/kotlin/toasts/` | `Toast`, toast DSL |
+| `io.peekandpoke.kraft.popups` | `jsMain/kotlin/popups/` | `Popup`, popup DSL |
 
-### SemanticUI / FomanticUI Integration (`de.peekandpoke.kraft.semanticui`)
+### SemanticUI / FomanticUI Integration (`io.peekandpoke.kraft.semanticui`)
 
 ```
 semanticui/src/jsMain/kotlin/

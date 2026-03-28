@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_be
 
-import de.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBuffer
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBufferHistory
+import io.peekandpoke.ultra.streams.Stream
 
 /**
  * Audio visualization interface.

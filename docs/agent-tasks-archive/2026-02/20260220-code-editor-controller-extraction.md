@@ -43,7 +43,7 @@ are lines saved. It should stay in the components.
 ```kotlin
 package io.peekandpoke.klang.comp
 
-import de.peekandpoke.kraft.components.ComponentRef
+import io.peekandpoke.kraft.components.ComponentRef
 import io.peekandpoke.klang.codemirror.CodeMirrorComp
 import io.peekandpoke.klang.codemirror.EditorError
 

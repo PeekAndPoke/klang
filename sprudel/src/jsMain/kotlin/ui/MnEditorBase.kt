@@ -1,13 +1,5 @@
 package io.peekandpoke.klang.sprudel.ui
 
-import de.peekandpoke.kraft.components.Component
-import de.peekandpoke.kraft.components.Ctx
-import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.semanticui.ui
-import de.peekandpoke.ultra.streams.Stream
-import de.peekandpoke.ultra.streams.ops.filterIsInstance
-import de.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.sprudel.lang.editor.MnNodeOps
@@ -20,6 +12,14 @@ import io.peekandpoke.klang.ui.KlangUiToolContext
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangLookAndFeel
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.ops.filterIsInstance
+import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.*

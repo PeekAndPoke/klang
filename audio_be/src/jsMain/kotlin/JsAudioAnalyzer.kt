@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.audio_be
 
-import de.peekandpoke.ultra.streams.Stream
-import de.peekandpoke.ultra.streams.ops.animTicker
-import de.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.klang.audio_bridge.AnalyserNode
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBuffer
 import io.peekandpoke.klang.audio_bridge.analyzer.AnalyzerBufferHistory
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.ops.animTicker
+import io.peekandpoke.ultra.streams.ops.map
 
 class JsAudioAnalyzer(
     override val fftSize: Int = 2048,

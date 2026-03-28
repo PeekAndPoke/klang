@@ -80,8 +80,8 @@ class CodeHighlightBuffer(
 
 Required imports:
 
-- `de.peekandpoke.kraft.components.ComponentRef`
-- `de.peekandpoke.kraft.utils.setTimeout`
+- `io.peekandpoke.kraft.components.ComponentRef`
+- `io.peekandpoke.kraft.utils.setTimeout`
 - `io.peekandpoke.klang.audio_engine.KlangPlaybackSignal`
 - `io.peekandpoke.klang.script.ast.SourceLocation`
 - `io.peekandpoke.klang.script.ast.SourceLocationChain`
@@ -421,7 +421,7 @@ After implementation, verify:
 
 ### Notes for the implementer
 
-- **`window.setTimeout` vs Kraft `setTimeout`:** The Kraft utility `de.peekandpoke.kraft.utils.setTimeout` likely wraps
+- **`window.setTimeout` vs Kraft `setTimeout`:** The Kraft utility `io.peekandpoke.kraft.utils.setTimeout` likely wraps
   `window.setTimeout` but may not return the timeout ID. You need the ID for cancellation. Check the Kraft source. If it
   doesn't return `Int`, use `kotlinx.browser.window.setTimeout(handler, timeout)` directly in the buffer class.
 

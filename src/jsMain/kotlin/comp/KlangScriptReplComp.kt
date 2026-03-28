@@ -1,14 +1,5 @@
 package io.peekandpoke.klang.comp
 
-import de.peekandpoke.kraft.components.Component
-import de.peekandpoke.kraft.components.ComponentRef
-import de.peekandpoke.kraft.components.Ctx
-import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.css
-import de.peekandpoke.ultra.html.onClick
-import de.peekandpoke.ultra.semanticui.icon
-import de.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.runtime.NullValue
@@ -17,6 +8,15 @@ import io.peekandpoke.klang.script.stdlib.KlangStdLib
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.ComponentRef
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.css.*
 import kotlinx.css.properties.LineHeight
 import kotlinx.html.Tag

@@ -1,13 +1,13 @@
 package io.peekandpoke.klang.ui.comp
 
-import de.peekandpoke.kraft.addons.marked.markdown2html
-import de.peekandpoke.kraft.components.Component
-import de.peekandpoke.kraft.components.Ctx
-import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.utils.SimpleAsyncQueue
-import de.peekandpoke.kraft.utils.launch
-import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.key
+import io.peekandpoke.kraft.addons.marked.markdown2html
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.utils.SimpleAsyncQueue
+import io.peekandpoke.kraft.utils.launch
+import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.key
 import kotlinx.coroutines.delay
 import kotlinx.html.Tag
 import kotlinx.html.div

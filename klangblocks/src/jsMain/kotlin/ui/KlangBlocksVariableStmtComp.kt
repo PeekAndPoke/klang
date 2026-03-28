@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.blocks.ui
 
-import de.peekandpoke.kraft.components.Component
-import de.peekandpoke.kraft.components.Ctx
-import de.peekandpoke.kraft.components.comp
-import de.peekandpoke.kraft.vdom.VDom
-import de.peekandpoke.ultra.html.*
 import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.kraft.components.Ctx
+import io.peekandpoke.kraft.components.comp
+import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.html.*
 import kotlinx.css.*
 import kotlinx.html.DIV
 import kotlinx.html.Tag

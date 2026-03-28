@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.blocks.ui
 
-import de.peekandpoke.kraft.components.Component
-import de.peekandpoke.ultra.streams.Stream
-import de.peekandpoke.ultra.streams.ops.filter
+import io.peekandpoke.kraft.components.Component
+import io.peekandpoke.ultra.streams.Stream
+import io.peekandpoke.ultra.streams.ops.filter
 import kotlinx.browser.window
 
 /**

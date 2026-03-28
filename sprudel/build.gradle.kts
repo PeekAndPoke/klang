@@ -105,11 +105,18 @@ tasks {
     }
 }
 
+kotlin.sourceSets.commonMain {
+    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
+}
+
 dependencies {
     kspCommonMainMetadata(project(":sprudel-ksp"))
-
-    add("kspJvm", project(":sprudel-ksp"))
-    add("kspJs", project(":sprudel-ksp"))
 
     add("kspJvmTest", project(":sprudel-ksp"))
     add("kspJsTest", project(":sprudel-ksp"))

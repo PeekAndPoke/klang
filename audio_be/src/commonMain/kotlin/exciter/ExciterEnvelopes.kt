@@ -15,10 +15,10 @@ package io.peekandpoke.klang.audio_be.exciter
  * Ported from: Voice.applyEnvelope() in voices/Voice.kt
  */
 fun Exciter.adsr(
-    attackSec: Double,
-    decaySec: Double,
-    sustainLevel: Double,
-    releaseSec: Double,
+    attackSec: Exciter,
+    decaySec: Exciter,
+    sustainLevel: Exciter,
+    releaseSec: Exciter,
 ): Exciter {
     var currentLevel = 0.0
     var releaseStartLevel = 0.0
@@ -27,12 +27,17 @@ fun Exciter.adsr(
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
-        val attackFrames = (attackSec * ctx.sampleRate).toInt()
-        val decayFrames = (decaySec * ctx.sampleRate).toInt()
+        val attackSecVal = Exciters.readParam(attackSec, freqHz, ctx)
+        val decaySecVal = Exciters.readParam(decaySec, freqHz, ctx)
+        val sustainLevelVal = Exciters.readParam(sustainLevel, freqHz, ctx)
+        val releaseSecVal = Exciters.readParam(releaseSec, freqHz, ctx)
+
+        val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
+        val decayFrames = (decaySecVal * ctx.sampleRate).toInt()
         val gateEndPos = ctx.gateEndFrame
 
         val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-        val decRate = if (decayFrames > 0) (1.0 - sustainLevel) / decayFrames else 0.0
+        val decRate = if (decayFrames > 0) (1.0 - sustainLevelVal) / decayFrames else 0.0
         val relDenom = if (ctx.releaseFrames > 0) ctx.releaseFrames.toDouble() else 1.0
 
         var absPos = ctx.voiceElapsedFrames
@@ -58,7 +63,7 @@ fun Exciter.adsr(
                         1.0 - (decPos * decRate)
                     }
 
-                    else -> sustainLevel
+                    else -> sustainLevelVal
                 }
             }
 
@@ -69,3 +74,16 @@ fun Exciter.adsr(
         }
     }
 }
+
+/** Double convenience overload — delegates to the Exciter-param version. */
+fun Exciter.adsr(
+    attackSec: Double,
+    decaySec: Double,
+    sustainLevel: Double,
+    releaseSec: Double,
+): Exciter = adsr(
+    ParamExciter("attackSec", attackSec),
+    ParamExciter("decaySec", decaySec),
+    ParamExciter("sustainLevel", sustainLevel),
+    ParamExciter("releaseSec", releaseSec),
+)

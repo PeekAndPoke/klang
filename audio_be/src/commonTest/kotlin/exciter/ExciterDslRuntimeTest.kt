@@ -71,7 +71,7 @@ class ExciterDslRuntimeTest : StringSpec({
 
     "sgpad composition produces non-zero output" {
         val dsl = (ExciterDsl.Sawtooth() + ExciterDsl.Sawtooth().detune(0.1))
-            .div(2.0)
+            .div(ExciterDsl.Param("divisor", 2.0))
             .onePoleLowpass(3000.0)
         val sig = dsl.toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true

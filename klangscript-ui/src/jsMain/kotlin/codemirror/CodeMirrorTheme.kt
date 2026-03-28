@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import de.peekandpoke.kraft.utils.jsObject
 import io.peekandpoke.klang.codemirror.ext.*
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.kraft.utils.jsObject
 
 class CodeMirrorTheme {
 

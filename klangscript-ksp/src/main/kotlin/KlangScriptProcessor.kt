@@ -295,7 +295,7 @@ class KlangScriptProcessor(
         appendLine("/**")
         appendLine(" * Registers all @KlangScript annotated symbols for the '$libraryName' library.")
         appendLine(" */")
-        appendLine("actual fun KlangScriptExtensionBuilder.register${capitalizedName}Generated() {")
+        appendLine("fun KlangScriptExtensionBuilder.register${capitalizedName}Generated() {")
 
         // Objects
         for (obj in entries.objects) {
@@ -538,7 +538,7 @@ class KlangScriptProcessor(
         }
 
         appendLine("/** Generated documentation for the '$libraryName' library. */")
-        appendLine("actual val generated${capitalizedName}Docs: Map<String, KlangSymbol> = buildMap {")
+        appendLine("val generated${capitalizedName}Docs: Map<String, KlangSymbol> = buildMap {")
         chunks.forEachIndexed { chunkIdx, _ ->
             appendLine("    putAll(generated${capitalizedName}DocsChunk$chunkIdx())")
         }

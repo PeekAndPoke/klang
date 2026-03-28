@@ -11,17 +11,13 @@ import kotlin.math.*
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Distortion / waveshaping combinator.
+ * Distortion / waveshaping combinator. Processes per-sample.
  *
- * Distortion with selectable waveshaper shapes.
- *
- * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp"
- * Includes DC blocker for asymmetric shapes (diode, rectify).
+ * Amount is read once per block (control rate). Bypasses when amount <= 0.
+ * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+ * Includes a DC blocker for asymmetric shapes (diode, rectify).
  */
-fun Exciter.distort(amount: Double, shape: String = "soft"): Exciter {
-    if (amount <= 0.0) return this
-
-    val drive = 10.0.pow(amount * 1.2)
+fun Exciter.distort(amount: Exciter, shape: String = "soft"): Exciter {
     val resolved = resolveDistortionShape(shape)
     val waveshaper = resolved.fn
     val outputGain = resolved.outputGain
@@ -34,6 +30,11 @@ fun Exciter.distort(amount: Double, shape: String = "soft"): Exciter {
 
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
+
+        val amt = Exciters.readParam(amount, freqHz, ctx)
+        if (amt <= 0.0) return@Exciter
+
+        val drive = 10.0.pow(amt * 1.2)
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
@@ -50,6 +51,12 @@ fun Exciter.distort(amount: Double, shape: String = "soft"): Exciter {
             buffer[i] = y.toFloat()
         }
     }
+}
+
+/** Double convenience overload — keeps early return optimization. */
+fun Exciter.distort(amount: Double, shape: String = "soft"): Exciter {
+    if (amount <= 0.0) return this
+    return distort(ParamExciter("amount", amount), shape)
 }
 
 private data class ResolvedShape(
@@ -75,20 +82,20 @@ private fun resolveDistortionShape(shape: String): ResolvedShape = when (shape.l
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Bit depth reduction combinator.
- *
- * BitCrush — reduces bit depth for a lo-fi digital sound.
+ * Bit-depth reduction (bitcrush) for lo-fi digital sound. Processes per-sample.
+ * Amount is read once per block (control rate). Bypasses when amount <= 0 or levels <= 1.
  */
-fun Exciter.crush(amount: Double): Exciter {
-    if (amount <= 0.0) return this
-
-    val levels = 2.0.pow(amount).toInt().toDouble()
-    if (levels <= 1.0) return this
-
-    val halfLevels = levels / 2.0
-
+fun Exciter.crush(amount: Exciter): Exciter {
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
+
+        val amt = Exciters.readParam(amount, freqHz, ctx)
+        if (amt <= 0.0) return@Exciter
+
+        val levels = 2.0.pow(amt).toInt().toDouble()
+        if (levels <= 1.0) return@Exciter
+
+        val halfLevels = levels / 2.0
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
@@ -97,23 +104,31 @@ fun Exciter.crush(amount: Double): Exciter {
     }
 }
 
+/** Double convenience overload — keeps early return optimization. */
+fun Exciter.crush(amount: Double): Exciter {
+    if (amount <= 0.0) return this
+    val levels = 2.0.pow(amount).toInt().toDouble()
+    if (levels <= 1.0) return this
+    return crush(ParamExciter("amount", amount))
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Coarse (Sample Rate Reducer)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Sample-and-hold downsampling combinator.
- *
- * Sample rate reducer (coarse) — holds a sample value for multiple frames.
+ * Sample-rate reducer (coarse). Holds a sample value for multiple frames. Processes per-sample.
+ * Amount is read once per block (control rate). Bypasses when amount <= 1.0.
  */
-fun Exciter.coarse(amount: Double): Exciter {
-    if (amount <= 1.0) return this
-
+fun Exciter.coarse(amount: Exciter): Exciter {
     var lastValue = 0.0f
     var counter = 0.0
 
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
+
+        val amt = Exciters.readParam(amount, freqHz, ctx)
+        if (amt <= 1.0) return@Exciter
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
@@ -125,9 +140,15 @@ fun Exciter.coarse(amount: Double): Exciter {
             }
 
             buffer[i] = lastValue
-            counter += (1.0 / amount)
+            counter += (1.0 / amt)
         }
     }
+}
+
+/** Double convenience overload — keeps early return optimization. */
+fun Exciter.coarse(amount: Double): Exciter {
+    if (amount <= 1.0) return this
+    return coarse(ParamExciter("amount", amount))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -135,18 +156,15 @@ fun Exciter.coarse(amount: Double): Exciter {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * 4-stage all-pass cascade phaser with LFO.
- *
- * Phaser — 4-stage allpass cascade with sine LFO modulation.
+ * 4-stage all-pass cascade phaser with sine LFO modulation. Processes per-sample.
+ * Rate, depth, center, and sweep are read once per block (control rate). Bypasses when depth <= 0.
  */
 fun Exciter.phaser(
-    rate: Double,
-    depth: Double,
-    center: Double = 1000.0,
-    sweep: Double = 1000.0,
+    rate: Exciter,
+    depth: Exciter,
+    center: Exciter = ParamExciter("center", 1000.0),
+    sweep: Exciter = ParamExciter("sweep", 1000.0),
 ): Exciter {
-    if (depth <= 0.0) return this
-
     val stages = 4
     var lfoPhase = 0.0
     val filterState = DoubleArray(stages)
@@ -156,8 +174,15 @@ fun Exciter.phaser(
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
+        val rateVal = Exciters.readParam(rate, freqHz, ctx)
+        val depthVal = Exciters.readParam(depth, freqHz, ctx)
+        val centerVal = Exciters.readParam(center, freqHz, ctx)
+        val sweepVal = Exciters.readParam(sweep, freqHz, ctx)
+
+        if (depthVal <= 0.0) return@Exciter
+
         val inverseSampleRate = 1.0 / ctx.sampleRate
-        val lfoIncrement = rate * TWO_PI * inverseSampleRate
+        val lfoIncrement = rateVal * TWO_PI * inverseSampleRate
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
@@ -167,7 +192,7 @@ fun Exciter.phaser(
             val lfoValue = (sin(lfoPhase) + 1.0) * 0.5
 
             // Modulated frequency
-            var modFreq = center + (lfoValue - 0.5) * sweep
+            var modFreq = centerVal + (lfoValue - 0.5) * sweepVal
             modFreq = modFreq.coerceIn(100.0, 18000.0)
 
             // All-pass coefficient
@@ -186,9 +211,25 @@ fun Exciter.phaser(
             lastOutput = flushDenormal(signal)
 
             // Mix wet with dry
-            buffer[i] = (buffer[i] + signal * depth).toFloat()
+            buffer[i] = (buffer[i] + signal * depthVal).toFloat()
         }
     }
+}
+
+/** Double convenience overload — keeps early return optimization. */
+fun Exciter.phaser(
+    rate: Double,
+    depth: Double,
+    center: Double = 1000.0,
+    sweep: Double = 1000.0,
+): Exciter {
+    if (depth <= 0.0) return this
+    return phaser(
+        ParamExciter("rate", rate),
+        ParamExciter("depth", depth),
+        ParamExciter("center", center),
+        ParamExciter("sweep", sweep),
+    )
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -196,22 +237,24 @@ fun Exciter.phaser(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Amplitude modulation (tremolo) combinator with sine LFO.
- *
- * Tremolo — rhythmic amplitude modulation via sine LFO.
+ * Amplitude modulation (tremolo) via sine LFO. Processes per-sample.
+ * Rate and depth are read once per block (control rate). Bypasses when depth <= 0.
  */
 fun Exciter.tremolo(
-    rate: Double,
-    depth: Double,
+    rate: Exciter,
+    depth: Exciter,
 ): Exciter {
-    if (depth <= 0.0) return this
-
     var phase = 0.0
 
     return Exciter { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
-        val phaseInc = (TWO_PI * rate) / ctx.sampleRate
+        val rateVal = Exciters.readParam(rate, freqHz, ctx)
+        val depthVal = Exciters.readParam(depth, freqHz, ctx)
+
+        if (depthVal <= 0.0) return@Exciter
+
+        val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
@@ -219,10 +262,19 @@ fun Exciter.tremolo(
             if (phase > TWO_PI) phase -= TWO_PI
 
             val lfoNorm = (sin(phase) + 1.0) * 0.5
-            val gain = 1.0 - (depth * (1.0 - lfoNorm))
+            val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
             buffer[i] = (buffer[i] * gain).toFloat()
         }
     }
+}
+
+/** Double convenience overload — keeps early return optimization. */
+fun Exciter.tremolo(
+    rate: Double,
+    depth: Double,
+): Exciter {
+    if (depth <= 0.0) return this
+    return tremolo(ParamExciter("rate", rate), ParamExciter("depth", depth))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

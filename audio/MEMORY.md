@@ -24,6 +24,23 @@ New package `audio_be/.../exciter/` — composable per-voice effect combinators.
 Files: Exciter, ExciteContext, ScratchBuffers, ExciterEnvelopes, ExciterFilters,
 ExciterEffects, ExciterPitchMod, ExciterFm. Phase 0+1 complete (additive, nothing wired in yet).
 
+## Exciter Param Slots — "Everything is a Signal" (2026-03-26)
+
+All numeric exciter parameters converted from `Double` to `ExciterDsl` (Param slots).
+`ExciterDsl.Param(name, default, description)` is a new leaf node that produces a constant signal
+by default, but can be replaced with any exciter subtree for audio-rate modulation.
+
+Key changes:
+
+- **`ParamExciter`** runtime class fills buffer with constant value
+- **`getParamSlots()`** walks DSL tree to discover all Param leaves (for generic UI)
+- **Gain separated from oscillators**: factories produce raw output, gain applied via `withGain()`
+- **`analog`** param: lazy `AnalogDrift` init on first block via `initAnalogDrift()`
+- **Control-rate params** (filter cutoff, ADSR times, etc.): read once per block via `readParam()`
+- **oscParams override**: `toExciter(oscParams)` propagates through tree; Param nodes check map by name
+- **New DSL nodes**: Distort, Crush, Coarse, Phaser, Tremolo, Vibrato, Accelerate, PitchEnvelope
+- **Convenience wrappers**: Double-accepting extension functions on ExciterDsl still work
+
 ### Known Issues to Revisit
 
 - ~~**Filter envelope release jumps from sustainLevel**~~ **FIXED (2026-03-23)**:

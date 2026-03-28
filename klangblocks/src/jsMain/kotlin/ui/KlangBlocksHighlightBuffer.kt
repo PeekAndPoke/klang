@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.blocks.ui
 
-import de.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.klang.blocks.model.CodeGenResult
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.browser.window
 
 /**

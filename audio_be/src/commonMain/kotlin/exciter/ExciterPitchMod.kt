@@ -26,13 +26,19 @@ import kotlin.math.sin
  * @param rate LFO frequency in Hz
  * @param depth modulation depth (e.g. 0.02 = ±2% frequency deviation)
  */
-fun Exciter.vibrato(rate: Double, depth: Double): Exciter {
-    if (depth <= 0.0) return this
-
+fun Exciter.vibrato(rate: Exciter, depth: Exciter): Exciter {
     var lfoPhase = 0.0
     var modBuf: DoubleArray? = null
 
     return Exciter { buffer, freqHz, ctx ->
+        val rateVal = Exciters.readParam(rate, freqHz, ctx)
+        val depthVal = Exciters.readParam(depth, freqHz, ctx)
+
+        if (depthVal <= 0.0) {
+            this.generate(buffer, freqHz, ctx)
+            return@Exciter
+        }
+
         val bufSize = ctx.offset + ctx.length
         val existing0 = modBuf
         if (existing0 == null || existing0.size < bufSize) {
@@ -40,10 +46,10 @@ fun Exciter.vibrato(rate: Double, depth: Double): Exciter {
         }
         val mb = modBuf ?: error("unreachable")
 
-        val lfoInc = TWO_PI * rate / ctx.sampleRateD
+        val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            mb[i] = 1.0 + sin(lfoPhase) * depth
+            mb[i] = 1.0 + sin(lfoPhase) * depthVal
             lfoPhase += lfoInc
             if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
         }
@@ -63,6 +69,12 @@ fun Exciter.vibrato(rate: Double, depth: Double): Exciter {
     }
 }
 
+/** Double convenience overload — keeps early return optimization. */
+fun Exciter.vibrato(rate: Double, depth: Double): Exciter {
+    if (depth <= 0.0) return this
+    return vibrato(ParamExciter("rate", rate), ParamExciter("depth", depth))
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Accelerate (Exponential Pitch Ramp)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -75,12 +87,17 @@ fun Exciter.vibrato(rate: Double, depth: Double): Exciter {
  *   E.g., amount=1.0 means frequency doubles over voice duration.
  *   Positive = pitch rises, negative = pitch falls.
  */
-fun Exciter.accelerate(amount: Double): Exciter {
-    if (amount == 0.0) return this
-
+fun Exciter.accelerate(amount: Exciter): Exciter {
     var modBuf: DoubleArray? = null
 
     return Exciter { buffer, freqHz, ctx ->
+        val amountVal = Exciters.readParam(amount, freqHz, ctx)
+
+        if (amountVal == 0.0) {
+            this.generate(buffer, freqHz, ctx)
+            return@Exciter
+        }
+
         val bufSize = ctx.offset + ctx.length
         val existing0 = modBuf
         if (existing0 == null || existing0.size < bufSize) {
@@ -91,8 +108,8 @@ fun Exciter.accelerate(amount: Double): Exciter {
         val totalFrames = ctx.voiceDurationFrames.toDouble()
         // Multiplicative stepping: one pow() per block instead of per sample
         val startProgress = ctx.voiceElapsedFrames.toDouble() / totalFrames
-        val step = 2.0.pow(amount / totalFrames)
-        var ratio = 2.0.pow(amount * startProgress)
+        val step = 2.0.pow(amountVal / totalFrames)
+        var ratio = 2.0.pow(amountVal * startProgress)
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
@@ -115,6 +132,12 @@ fun Exciter.accelerate(amount: Double): Exciter {
     }
 }
 
+/** Double convenience overload — keeps early return optimization. */
+fun Exciter.accelerate(amount: Double): Exciter {
+    if (amount == 0.0) return this
+    return accelerate(ParamExciter("amount", amount))
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Pitch Envelope
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -132,18 +155,33 @@ fun Exciter.accelerate(amount: Double): Exciter {
  * @param anchor starting envelope level: 0.0 = start shifted, 1.0 = start normal
  */
 fun Exciter.pitchEnvelope(
-    attackSec: Double,
-    decaySec: Double,
-    releaseSec: Double = 0.0,
-    amount: Double,
-    curve: Double = 0.0,
-    anchor: Double = 0.0,
+    attackSec: Exciter,
+    decaySec: Exciter,
+    releaseSec: Exciter = ParamExciter("releaseSec", 0.0),
+    amount: Exciter,
+    curve: Exciter = ParamExciter("curve", 0.0),
+    anchor: Exciter = ParamExciter("anchor", 0.0),
 ): Exciter {
-    if (amount == 0.0) return this
-
     var modBuf: DoubleArray? = null
 
     return Exciter { buffer, freqHz, ctx ->
+        val amountVal = Exciters.readParam(amount, freqHz, ctx)
+
+        if (amountVal == 0.0) {
+            this.generate(buffer, freqHz, ctx)
+            return@Exciter
+        }
+
+        val attackSecVal = Exciters.readParam(attackSec, freqHz, ctx)
+        val decaySecVal = Exciters.readParam(decaySec, freqHz, ctx)
+
+        @Suppress("UNUSED_VARIABLE")
+        val releaseSecVal = Exciters.readParam(releaseSec, freqHz, ctx)
+
+        @Suppress("UNUSED_VARIABLE")
+        val curveVal = Exciters.readParam(curve, freqHz, ctx)
+        val anchorVal = Exciters.readParam(anchor, freqHz, ctx)
+
         val bufSize = ctx.offset + ctx.length
         val existing0 = modBuf
         if (existing0 == null || existing0.size < bufSize) {
@@ -151,25 +189,25 @@ fun Exciter.pitchEnvelope(
         }
         val mb = modBuf ?: error("unreachable")
 
-        val attackFrames = attackSec * ctx.sampleRate
-        val decayFrames = decaySec * ctx.sampleRate
+        val attackFrames = attackSecVal * ctx.sampleRate
+        val decayFrames = decaySecVal * ctx.sampleRate
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             val sampleOffset = i - ctx.offset
             val relPos = (ctx.voiceElapsedFrames + sampleOffset).toDouble()
 
-            var envLevel = anchor
+            var envLevel = anchorVal
             if (relPos < attackFrames) {
                 val progress = if (attackFrames > 0) relPos / attackFrames else 1.0
-                envLevel = anchor + (1.0 - anchor) * progress
+                envLevel = anchorVal + (1.0 - anchorVal) * progress
             } else if (relPos < (attackFrames + decayFrames)) {
                 val decayProgress = if (decayFrames > 0) (relPos - attackFrames) / decayFrames else 1.0
-                envLevel = 1.0 - (1.0 - anchor) * decayProgress
+                envLevel = 1.0 - (1.0 - anchorVal) * decayProgress
             }
 
             // Convert semitones to frequency ratio
-            mb[i] = 2.0.pow((amount * envLevel) / 12.0)
+            mb[i] = 2.0.pow((amountVal * envLevel) / 12.0)
         }
 
         // Chain with existing phaseMod
@@ -185,4 +223,24 @@ fun Exciter.pitchEnvelope(
         this.generate(buffer, freqHz, ctx)
         ctx.phaseMod = savedMod
     }
+}
+
+/** Double convenience overload — keeps early return optimization. */
+fun Exciter.pitchEnvelope(
+    attackSec: Double,
+    decaySec: Double,
+    releaseSec: Double = 0.0,
+    amount: Double,
+    curve: Double = 0.0,
+    anchor: Double = 0.0,
+): Exciter {
+    if (amount == 0.0) return this
+    return pitchEnvelope(
+        attackSec = ParamExciter("attackSec", attackSec),
+        decaySec = ParamExciter("decaySec", decaySec),
+        releaseSec = ParamExciter("releaseSec", releaseSec),
+        amount = ParamExciter("amount", amount),
+        curve = ParamExciter("curve", curve),
+        anchor = ParamExciter("anchor", anchor),
+    )
 }
