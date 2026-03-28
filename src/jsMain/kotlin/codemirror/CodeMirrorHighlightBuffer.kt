@@ -59,6 +59,13 @@ class CodeMirrorHighlightBuffer(
     fun attachTo(editorView: EditorView) {
         view = editorView
         window.addEventListener("blur", { cancelAll() })
+
+        // Keep overlay aligned with content during horizontal scroll
+        editorView.scrollDOM.addEventListener("scroll", {
+            val el = overlay ?: return@addEventListener
+            val scrollLeft = editorView.scrollDOM.scrollLeft.toDouble()
+            el.style.transform = "translateX(${-scrollLeft}px)"
+        })
     }
 
     fun detach() {
@@ -181,10 +188,11 @@ class CodeMirrorHighlightBuffer(
         val toCoords = view.coordsAtPos(to) ?: return
 
         // Get the overlay parent's bounding rect for relative positioning
-        // The overlay sits inside contentDOM.parentElement, so we must offset against that — not contentDOM itself
         val containerRect = view.contentDOM.parentElement?.getBoundingClientRect() ?: return
+        val scrollLeft = view.scrollDOM.scrollLeft.toDouble()
 
-        val left = (fromCoords.left - containerRect.left)
+        // Position marks in content-relative coordinates (the overlay is shifted by -scrollLeft on scroll)
+        val left = (fromCoords.left - containerRect.left) + scrollLeft
         val top = (fromCoords.top - containerRect.top) + 1
         val width = (toCoords.right - fromCoords.left) + 5
         val height = (fromCoords.bottom - fromCoords.top) + 2

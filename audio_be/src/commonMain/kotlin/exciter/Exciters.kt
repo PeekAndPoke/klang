@@ -538,18 +538,28 @@ object Exciters {
      * rather than fixed at construction, uses normalized 0..1 phase with PolyBLEP.
      */
     fun superSaw(
-        voices: Int = 5,
+        voices: Exciter = ParamExciter("voices", 8.0),
         freqSpread: Exciter = ParamExciter("freqSpread", 0.2),
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices
-        val phases = DoubleArray(v) { rng.nextDouble() }
-        val voiceGain = 1.0 / v.toDouble()
+        var v = 0
+        var phases = DoubleArray(0)
+        var voiceGain = 0.0
         var drift: AnalogDrift? = null
 
         return Exciter { buffer, freqHz, ctx ->
             val d = drift ?: initAnalogDrift(analog, freqHz, ctx).also { drift = it }
+
+            ctx.scratchBuffers.use { voicesBuf ->
+                voices.generate(voicesBuf, freqHz, ctx)
+                val newV = voicesBuf[ctx.offset].toInt()
+                if (newV != v) {
+                    v = newV
+                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
+                    val old = phases
+                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                }
 
             ctx.scratchBuffers.use { spreadBuf ->
                 freqSpread.generate(spreadBuf, freqHz, ctx)
@@ -651,6 +661,7 @@ object Exciters {
                     }
                 }
             }
+            }
         }
     }
 
@@ -660,18 +671,31 @@ object Exciters {
      * Uses TWO_PI phase with sin() — no anti-aliasing needed (sine is inherently band-limited).
      */
     fun superSine(
-        voices: Int = 5,
+        voices: Exciter = ParamExciter("voices", 8.0),
         freqSpread: Exciter = ParamExciter("freqSpread", 0.2),
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices
-        val phases = DoubleArray(v) { rng.nextDouble() * TWO_PI }
-        val voiceGain = 1.0 / v.toDouble()
+        var v = 0
+        var phases = DoubleArray(0)
+        var voiceGain = 0.0
         var drift: AnalogDrift? = null
 
         return Exciter { buffer, freqHz, ctx ->
             val d = drift ?: initAnalogDrift(analog, freqHz, ctx).also { drift = it }
+
+            ctx.scratchBuffers.use { voicesBuf ->
+                voices.generate(voicesBuf, freqHz, ctx)
+                val newV = voicesBuf[ctx.offset].toInt()
+                if (newV != v) {
+                    v = newV
+                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
+                    val old = phases
+                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() * TWO_PI }
+                }
+                if (v <= 0) {
+                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                }
 
             ctx.scratchBuffers.use { spreadBuf ->
                 freqSpread.generate(spreadBuf, freqHz, ctx)
@@ -753,6 +777,7 @@ object Exciters {
                     }
                 }
             }
+            }
         }
     }
 
@@ -762,18 +787,31 @@ object Exciters {
      * Uses normalized 0..1 phase with dual PolyBLEP transitions (at 0 and 0.5).
      */
     fun superSquare(
-        voices: Int = 5,
+        voices: Exciter = ParamExciter("voices", 8.0),
         freqSpread: Exciter = ParamExciter("freqSpread", 0.2),
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices
-        val phases = DoubleArray(v) { rng.nextDouble() }
-        val voiceGain = 1.0 / v.toDouble()
+        var v = 0
+        var phases = DoubleArray(0)
+        var voiceGain = 0.0
         var drift: AnalogDrift? = null
 
         return Exciter { buffer, freqHz, ctx ->
             val d = drift ?: initAnalogDrift(analog, freqHz, ctx).also { drift = it }
+
+            ctx.scratchBuffers.use { voicesBuf ->
+                voices.generate(voicesBuf, freqHz, ctx)
+                val newV = voicesBuf[ctx.offset].toInt()
+                if (newV != v) {
+                    v = newV
+                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
+                    val old = phases
+                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                }
+                if (v <= 0) {
+                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                }
 
             ctx.scratchBuffers.use { spreadBuf ->
                 freqSpread.generate(spreadBuf, freqHz, ctx)
@@ -892,6 +930,7 @@ object Exciters {
                     }
                 }
             }
+            }
         }
     }
 
@@ -902,18 +941,31 @@ object Exciters {
      * no anti-aliasing needed.
      */
     fun superTri(
-        voices: Int = 5,
+        voices: Exciter = ParamExciter("voices", 8.0),
         freqSpread: Exciter = ParamExciter("freqSpread", 0.2),
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices
-        val phases = DoubleArray(v) { rng.nextDouble() }
-        val voiceGain = 1.0 / v.toDouble()
+        var v = 0
+        var phases = DoubleArray(0)
+        var voiceGain = 0.0
         var drift: AnalogDrift? = null
 
         return Exciter { buffer, freqHz, ctx ->
             val d = drift ?: initAnalogDrift(analog, freqHz, ctx).also { drift = it }
+
+            ctx.scratchBuffers.use { voicesBuf ->
+                voices.generate(voicesBuf, freqHz, ctx)
+                val newV = voicesBuf[ctx.offset].toInt()
+                if (newV != v) {
+                    v = newV
+                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
+                    val old = phases
+                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                }
+                if (v <= 0) {
+                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                }
 
             ctx.scratchBuffers.use { spreadBuf ->
                 freqSpread.generate(spreadBuf, freqHz, ctx)
@@ -999,6 +1051,7 @@ object Exciters {
                     }
                 }
             }
+            }
         }
     }
 
@@ -1008,18 +1061,31 @@ object Exciters {
      * Uses normalized 0..1 phase with PolyBLEP anti-aliasing (inverted from supersaw).
      */
     fun superRamp(
-        voices: Int = 5,
+        voices: Exciter = ParamExciter("voices", 8.0),
         freqSpread: Exciter = ParamExciter("freqSpread", 0.2),
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices
-        val phases = DoubleArray(v) { rng.nextDouble() }
-        val voiceGain = 1.0 / v.toDouble()
+        var v = 0
+        var phases = DoubleArray(0)
+        var voiceGain = 0.0
         var drift: AnalogDrift? = null
 
         return Exciter { buffer, freqHz, ctx ->
             val d = drift ?: initAnalogDrift(analog, freqHz, ctx).also { drift = it }
+
+            ctx.scratchBuffers.use { voicesBuf ->
+                voices.generate(voicesBuf, freqHz, ctx)
+                val newV = voicesBuf[ctx.offset].toInt()
+                if (newV != v) {
+                    v = newV
+                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
+                    val old = phases
+                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                }
+                if (v <= 0) {
+                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                }
 
             ctx.scratchBuffers.use { spreadBuf ->
                 freqSpread.generate(spreadBuf, freqHz, ctx)
@@ -1119,6 +1185,7 @@ object Exciters {
                         buffer[i] = (sum * voiceGain).toFloat()
                     }
                 }
+            }
             }
         }
     }
@@ -1257,7 +1324,7 @@ object Exciters {
      * @param analog Perlin noise pitch drift amount.
      */
     fun superKarplusStrong(
-        voices: Int = 5,
+        voices: Exciter = ParamExciter("voices", 8.0),
         freqSpread: Exciter = ParamExciter("freqSpread", 0.2),
         decay: Exciter = ParamExciter("decay", 0.996),
         brightness: Exciter = ParamExciter("brightness", 0.5),
@@ -1265,8 +1332,6 @@ object Exciters {
         stiffness: Exciter = ParamExciter("stiffness", 0.0),
         analog: Exciter = ParamExciter("analog", 0.0),
     ): Exciter {
-        val v = voices
-        val voiceGain = 1.0 / v.toDouble()
         val maxDelay = 2500
 
         // Per-voice state
@@ -1280,10 +1345,26 @@ object Exciters {
             var drift: AnalogDrift? = null,
         )
 
-        val strings = Array(v) { StringState() }
+        var v = 0
+        var voiceGain = 0.0
+        var strings = Array(0) { StringState() }
         val rng = kotlin.random.Random
 
         return Exciter { buffer, freqHz, ctx ->
+
+            ctx.scratchBuffers.use { voicesBuf ->
+                voices.generate(voicesBuf, freqHz, ctx)
+                val newV = voicesBuf[ctx.offset].toInt()
+                if (newV != v) {
+                    v = newV
+                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
+                    val old = strings
+                    strings = Array(v) { i -> if (i < old.size) old[i] else StringState() }
+                }
+                if (v <= 0) {
+                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                }
+
             // Read control-rate params once per block
             val spread = readParam(freqSpread, freqHz, ctx)
             val decayVal = readParam(decay, freqHz, ctx)
@@ -1366,6 +1447,7 @@ object Exciters {
 
                     s.writePos = (s.writePos + 1) % maxDelay
                 }
+            }
             }
         }
     }

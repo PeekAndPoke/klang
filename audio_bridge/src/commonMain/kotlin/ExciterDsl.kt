@@ -192,65 +192,65 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("supersaw")
     data class SuperSaw(
-        val voices: Int = 8,
+        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
         val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
         val gain: ExciterDsl = Param("gain", 0.6, "Output amplitude."),
         val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
         }
     }
 
     @Serializable
     @SerialName("supersine")
     data class SuperSine(
-        val voices: Int = 8,
+        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
         val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
         val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
         val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
         }
     }
 
     @Serializable
     @SerialName("supersquare")
     data class SuperSquare(
-        val voices: Int = 8,
+        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
         val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
         val gain: ExciterDsl = Param("gain", 0.5, "Output amplitude."),
         val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
         }
     }
 
     @Serializable
     @SerialName("supertri")
     data class SuperTri(
-        val voices: Int = 8,
+        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
         val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
         val gain: ExciterDsl = Param("gain", 0.7, "Output amplitude."),
         val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
         }
     }
 
     @Serializable
     @SerialName("superramp")
     data class SuperRamp(
-        val voices: Int = 8,
+        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
         val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
         val gain: ExciterDsl = Param("gain", 0.6, "Output amplitude."),
         val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -283,7 +283,7 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("superpluck")
     data class SuperPluck(
-        val voices: Int = 8,
+        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
         val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
         val decay: ExciterDsl = Param("decay", 0.996, "Feedback decay factor. Lower = shorter sustain."),
         val brightness: ExciterDsl = Param("brightness", 0.5, "Lowpass cutoff in feedback loop. 0=dark, 1=bright."),
@@ -293,7 +293,7 @@ sealed interface ExciterDsl {
         val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            freqSpread.collectParams(out); decay.collectParams(out); brightness.collectParams(out)
+            voices.collectParams(out); freqSpread.collectParams(out); decay.collectParams(out); brightness.collectParams(out)
             pickPosition.collectParams(out); stiffness.collectParams(out); gain.collectParams(out); analog.collectParams(out)
         }
     }

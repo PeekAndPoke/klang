@@ -116,4 +116,10 @@ fun ExciterRegistry.registerDefaults() {
         "sgbuzz",
         ExciterDsl.Square().lowpass(2000.0),
     )
+
+    // TESTs
+//    register(
+//        name ="noisysaw",
+//        ExciterDsl.Sawtooth().mul(ExciterDsl.WhiteNoise())
+//    )
 }
