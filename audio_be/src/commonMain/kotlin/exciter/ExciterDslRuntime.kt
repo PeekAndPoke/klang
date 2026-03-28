@@ -31,6 +31,9 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
         is ExciterDsl.BrownNoise -> Exciters.brownNoise(Random).withGain(this.gain.toExciter(oscParams))
         is ExciterDsl.PinkNoise -> Exciters.pinkNoise(Random).withGain(this.gain.toExciter(oscParams))
 
+        is ExciterDsl.PerlinNoise -> Exciters.perlinNoise(Random, this.rate.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
+        is ExciterDsl.BerlinNoise -> Exciters.berlinNoise(Random, this.rate.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
+
         is ExciterDsl.Dust -> Exciters.dust(Random, this.density.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
         is ExciterDsl.Crackle -> Exciters.crackle(Random, this.density.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
 

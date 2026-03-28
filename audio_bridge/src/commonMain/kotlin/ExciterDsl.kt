@@ -3,13 +3,20 @@ package io.peekandpoke.klang.audio_bridge
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * Serializable sealed DSL for describing exciter signal graphs.
+ *
+ * Each subtype represents a primitive oscillator, noise source, effect, filter, envelope,
+ * or arithmetic combinator. Subtrees are composed declaratively and serialized across the
+ * audio bridge boundary for rendering in the audio worklet.
+ */
 @Serializable
 sealed interface ExciterDsl {
 
     /** Whether this exciter requires a frequency to produce sound. Noise sources override to false. */
     val needsFreq: Boolean get() = true
 
-    /** Collects all [Param] leaf nodes in this DSL subtree. */
+    /** Recursively collects all [Param] leaf nodes in this DSL subtree into [out]. */
     fun collectParams(out: MutableList<Param>)
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -43,6 +50,7 @@ sealed interface ExciterDsl {
     // Oscillator Primitives
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /** Sine wave oscillator. */
     @Serializable
     @SerialName("sine")
     data class Sine(
@@ -54,6 +62,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Sawtooth wave oscillator (rising ramp). */
     @Serializable
     @SerialName("sawtooth")
     data class Sawtooth(
@@ -65,6 +74,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Square wave oscillator. */
     @Serializable
     @SerialName("square")
     data class Square(
@@ -76,6 +86,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Triangle wave oscillator. */
     @Serializable
     @SerialName("triangle")
     data class Triangle(
@@ -87,6 +98,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** White noise generator. Produces uniformly distributed random samples. */
     @Serializable
     @SerialName("white-noise")
     data class WhiteNoise(
@@ -98,6 +110,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Zawtooth wave oscillator (falling ramp, inverse of sawtooth). */
     @Serializable
     @SerialName("zawtooth")
     data class Zawtooth(
@@ -109,6 +122,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Impulse oscillator. Emits a single-sample spike per cycle. */
     @Serializable
     @SerialName("impulse")
     data class Impulse(
@@ -120,6 +134,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Pulse wave oscillator with variable duty cycle. */
     @Serializable
     @SerialName("pulze")
     data class Pulze(
@@ -132,6 +147,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope. */
     @Serializable
     @SerialName("brown-noise")
     data class BrownNoise(
@@ -143,6 +159,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Pink noise generator. Equal energy per octave with -3 dB/oct slope. */
     @Serializable
     @SerialName("pink-noise")
     data class PinkNoise(
@@ -154,6 +171,33 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Perlin noise generator. Smooth, continuous random signal useful for organic modulation. */
+    @Serializable
+    @SerialName("perlin-noise")
+    data class PerlinNoise(
+        val rate: ExciterDsl = Param("rate", 1.0, "Speed of noise evolution. Higher = faster changes."),
+        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
+    ) : ExciterDsl {
+        override val needsFreq: Boolean get() = false
+        override fun collectParams(out: MutableList<Param>) {
+            rate.collectParams(out); gain.collectParams(out)
+        }
+    }
+
+    /** Berlin noise generator. Bipolar variant of Perlin noise (output ranges -1..+1). */
+    @Serializable
+    @SerialName("berlin-noise")
+    data class BerlinNoise(
+        val rate: ExciterDsl = Param("rate", 1.0, "Speed of noise evolution. Higher = faster changes."),
+        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
+    ) : ExciterDsl {
+        override val needsFreq: Boolean get() = false
+        override fun collectParams(out: MutableList<Param>) {
+            rate.collectParams(out); gain.collectParams(out)
+        }
+    }
+
+    /** Dust noise generator. Emits sparse random impulses at a controllable density. */
     @Serializable
     @SerialName("dust")
     data class Dust(
@@ -166,6 +210,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Crackle noise generator. Similar to [Dust] but with bipolar impulses for a crackle texture. */
     @Serializable
     @SerialName("crackle")
     data class Crackle(
@@ -178,6 +223,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Ramp oscillator. Alias for a falling sawtooth shape. */
     @Serializable
     @SerialName("ramp")
     data class Ramp(
@@ -189,6 +235,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Unison supersaw oscillator. Stacks multiple detuned sawtooth voices for a thick sound. */
     @Serializable
     @SerialName("supersaw")
     data class SuperSaw(
@@ -202,6 +249,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Unison supersine oscillator. Stacks multiple detuned sine voices. */
     @Serializable
     @SerialName("supersine")
     data class SuperSine(
@@ -215,6 +263,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Unison supersquare oscillator. Stacks multiple detuned square voices. */
     @Serializable
     @SerialName("supersquare")
     data class SuperSquare(
@@ -228,6 +277,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Unison supertriangle oscillator. Stacks multiple detuned triangle voices. */
     @Serializable
     @SerialName("supertri")
     data class SuperTri(
@@ -241,6 +291,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Unison superramp oscillator. Stacks multiple detuned ramp voices. */
     @Serializable
     @SerialName("superramp")
     data class SuperRamp(
@@ -254,6 +305,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Silent exciter. Outputs a zero-filled buffer. */
     @Serializable
     @SerialName("silence")
     data object Silence : ExciterDsl {
@@ -264,6 +316,7 @@ sealed interface ExciterDsl {
     // Physical Models
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /** Karplus-Strong plucked string physical model. */
     @Serializable
     @SerialName("pluck")
     data class Pluck(
@@ -280,6 +333,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Unison superpluck. Stacks multiple detuned Karplus-Strong voices for a chorus-like string sound. */
     @Serializable
     @SerialName("superpluck")
     data class SuperPluck(
@@ -302,6 +356,7 @@ sealed interface ExciterDsl {
     // Arithmetic Composition
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /** Additive combinator. Sums two exciter signals sample-by-sample. */
     @Serializable
     @SerialName("plus")
     data class Plus(val left: ExciterDsl, val right: ExciterDsl) : ExciterDsl {
@@ -310,6 +365,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Multiplicative combinator. Multiplies two exciter signals sample-by-sample (ring modulation). */
     @Serializable
     @SerialName("times")
     data class Times(val left: ExciterDsl, val right: ExciterDsl) : ExciterDsl {
@@ -318,6 +374,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Scales the inner signal by a constant or modulatable factor. */
     @Serializable
     @SerialName("mul")
     data class Mul(
@@ -329,6 +386,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Divides the inner signal by a constant or modulatable divisor. */
     @Serializable
     @SerialName("div")
     data class Div(
@@ -344,6 +402,7 @@ sealed interface ExciterDsl {
     // Frequency Modifiers
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /** Shifts the pitch of the inner exciter by a number of semitones. */
     @Serializable
     @SerialName("detune")
     data class Detune(
@@ -359,6 +418,7 @@ sealed interface ExciterDsl {
     // Filters
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /** Biquad lowpass filter. Attenuates frequencies above the cutoff. */
     @Serializable
     @SerialName("lowpass")
     data class Lowpass(
@@ -371,6 +431,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Biquad highpass filter. Attenuates frequencies below the cutoff. */
     @Serializable
     @SerialName("highpass")
     data class Highpass(
@@ -383,6 +444,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Simple one-pole lowpass filter. Lightweight with -6 dB/oct rolloff and no resonance. */
     @Serializable
     @SerialName("one-pole-lowpass")
     data class OnePoleLowpass(
@@ -398,6 +460,7 @@ sealed interface ExciterDsl {
     // Envelope
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /** ADSR amplitude envelope. Shapes the inner signal's volume over the note lifecycle. */
     @Serializable
     @SerialName("adsr")
     data class Adsr(
@@ -417,6 +480,10 @@ sealed interface ExciterDsl {
     // FM Synthesis
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Frequency modulation synthesis. The modulator's output shifts the carrier's frequency
+     * at audio rate, with an optional ADSR envelope controlling modulation depth over time.
+     */
     @Serializable
     @SerialName("fm")
     data class Fm(
@@ -441,6 +508,7 @@ sealed interface ExciterDsl {
     // Effects
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /** Waveshaping distortion effect. Applies a nonlinear transfer function to the signal. */
     @Serializable
     @SerialName("distort")
     data class Distort(
@@ -453,6 +521,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Bit-crush effect. Reduces amplitude resolution to create quantization noise. */
     @Serializable
     @SerialName("crush")
     data class Crush(
@@ -464,6 +533,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Sample-rate reduction effect. Holds samples to create aliasing artifacts. */
     @Serializable
     @SerialName("coarse")
     data class Coarse(
@@ -475,6 +545,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Phaser effect. Sweeps a series of allpass filters to create notch comb filtering. */
     @Serializable
     @SerialName("phaser")
     data class Phaser(
@@ -490,6 +561,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Tremolo effect. Modulates amplitude with an LFO for a pulsing volume change. */
     @Serializable
     @SerialName("tremolo")
     data class Tremolo(
@@ -506,6 +578,7 @@ sealed interface ExciterDsl {
     // Pitch Modulation
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /** Vibrato effect. Modulates pitch with an LFO for a wavering frequency change. */
     @Serializable
     @SerialName("vibrato")
     data class Vibrato(
@@ -518,6 +591,7 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** Pitch acceleration. Continuously shifts pitch over the voice's duration using an exponential curve. */
     @Serializable
     @SerialName("accelerate")
     data class Accelerate(
@@ -529,6 +603,10 @@ sealed interface ExciterDsl {
         }
     }
 
+    /**
+     * Pitch envelope. Applies an attack-decay-release envelope to pitch, useful for
+     * kick drum sweeps, laser effects, and other transient pitch gestures.
+     */
     @Serializable
     @SerialName("pitch-envelope")
     data class PitchEnvelope(
@@ -552,45 +630,69 @@ sealed interface ExciterDsl {
 // ═════════════════════════════════════════════════════════════════════════════════
 
 // Arithmetic
-operator fun ExciterDsl.plus(other: ExciterDsl) = ExciterDsl.Plus(this, other)
-operator fun ExciterDsl.times(other: ExciterDsl) = ExciterDsl.Times(this, other)
-fun ExciterDsl.mul(factor: Double) = ExciterDsl.Mul(this, ExciterDsl.Param("factor", factor, "Scale factor."))
-fun ExciterDsl.div(divisor: Double) = ExciterDsl.Div(this, ExciterDsl.Param("divisor", divisor, "Divisor."))
+
+/** Adds two exciter signals together (sample-by-sample sum). */
+operator fun ExciterDsl.plus(other: ExciterDsl) = ExciterDsl.Plus(left = this, right = other)
+
+/** Multiplies two exciter signals together (ring modulation). */
+operator fun ExciterDsl.times(other: ExciterDsl) = ExciterDsl.Times(left = this, right = other)
+
+/** Scales this signal by a modulatable [other] factor. */
+fun ExciterDsl.mul(other: ExciterDsl) = ExciterDsl.Mul(inner = this, factor = other)
+
+/** Divides this signal by a modulatable [other] divisor. */
+fun ExciterDsl.div(other: ExciterDsl) = ExciterDsl.Div(inner = this, divisor = other)
 
 // Frequency
-fun ExciterDsl.detune(semitones: Double) = ExciterDsl.Detune(this, ExciterDsl.Param("semitones", semitones, "Pitch shift in semitones."))
-fun ExciterDsl.octaveUp() = detune(12.0)
-fun ExciterDsl.octaveDown() = detune(-12.0)
+
+/** Shifts pitch by the given number of [semitones]. */
+fun ExciterDsl.detune(semitones: Double) = ExciterDsl.Detune(
+    inner = this,
+    semitones = ExciterDsl.Param(name = "semitones", default = semitones, description = "Pitch shift in semitones.")
+)
+
+/** Shifts pitch up by one octave (+12 semitones). */
+fun ExciterDsl.octaveUp() = detune(semitones = 12.0)
+
+/** Shifts pitch down by one octave (-12 semitones). */
+fun ExciterDsl.octaveDown() = detune(semitones = -12.0)
 
 // Filters
+
+/** Applies a biquad lowpass filter at [cutoffHz] with resonance [q]. */
 fun ExciterDsl.lowpass(cutoffHz: Double, q: Double = 0.707) = ExciterDsl.Lowpass(
-    this,
-    ExciterDsl.Param("cutoffHz", cutoffHz, "Filter cutoff frequency in Hz."),
-    ExciterDsl.Param("q", q, "Filter resonance (Q factor)."),
+    inner = this,
+    cutoffHz = ExciterDsl.Param(name = "cutoffHz", default = cutoffHz, description = "Filter cutoff frequency in Hz."),
+    q = ExciterDsl.Param(name = "q", default = q, description = "Filter resonance (Q factor)."),
 )
 
+/** Applies a biquad highpass filter at [cutoffHz] with resonance [q]. */
 fun ExciterDsl.highpass(cutoffHz: Double, q: Double = 0.707) = ExciterDsl.Highpass(
-    this,
-    ExciterDsl.Param("cutoffHz", cutoffHz, "Filter cutoff frequency in Hz."),
-    ExciterDsl.Param("q", q, "Filter resonance (Q factor)."),
+    inner = this,
+    cutoffHz = ExciterDsl.Param(name = "cutoffHz", default = cutoffHz, description = "Filter cutoff frequency in Hz."),
+    q = ExciterDsl.Param(name = "q", default = q, description = "Filter resonance (Q factor)."),
 )
 
+/** Applies a lightweight one-pole lowpass filter at [cutoffHz]. */
 fun ExciterDsl.onePoleLowpass(cutoffHz: Double) = ExciterDsl.OnePoleLowpass(
-    this,
-    ExciterDsl.Param("cutoffHz", cutoffHz, "Filter cutoff frequency in Hz."),
+    inner = this,
+    cutoffHz = ExciterDsl.Param(name = "cutoffHz", default = cutoffHz, description = "Filter cutoff frequency in Hz."),
 )
 
 // Envelope
-fun ExciterDsl.adsr(attackSec: Double, decaySec: Double, sustainLevel: Double, releaseSec: Double) =
-    ExciterDsl.Adsr(
-        this,
-        ExciterDsl.Param("attackSec", attackSec, "Attack time in seconds."),
-        ExciterDsl.Param("decaySec", decaySec, "Decay time in seconds."),
-        ExciterDsl.Param("sustainLevel", sustainLevel, "Sustain level 0.0..1.0."),
-        ExciterDsl.Param("releaseSec", releaseSec, "Release time in seconds."),
-    )
+
+/** Wraps this signal in an ADSR amplitude envelope. */
+fun ExciterDsl.adsr(attackSec: Double, decaySec: Double, sustainLevel: Double, releaseSec: Double) = ExciterDsl.Adsr(
+    inner = this,
+    attackSec = ExciterDsl.Param(name = "attackSec", default = attackSec, description = "Attack time in seconds."),
+    decaySec = ExciterDsl.Param(name = "decaySec", default = decaySec, description = "Decay time in seconds."),
+    sustainLevel = ExciterDsl.Param(name = "sustainLevel", default = sustainLevel, description = "Sustain level 0.0..1.0."),
+    releaseSec = ExciterDsl.Param(name = "releaseSec", default = releaseSec, description = "Release time in seconds."),
+)
 
 // FM
+
+/** Applies FM synthesis to this carrier using the given [modulator], [ratio], and [depth]. */
 fun ExciterDsl.fm(
     modulator: ExciterDsl,
     ratio: Double,
@@ -611,34 +713,55 @@ fun ExciterDsl.fm(
 )
 
 // Effects
-fun ExciterDsl.distort(amount: Double, shape: String = "soft") =
-    ExciterDsl.Distort(this, ExciterDsl.Param("amount", amount, "Distortion drive amount."), shape)
 
-fun ExciterDsl.crush(amount: Double) = ExciterDsl.Crush(this, ExciterDsl.Param("amount", amount, "Bit depth for quantization."))
-fun ExciterDsl.coarse(amount: Double) = ExciterDsl.Coarse(this, ExciterDsl.Param("amount", amount, "Sample rate reduction factor."))
-fun ExciterDsl.phaser(rate: Double, depth: Double, center: Double = 1000.0, sweep: Double = 1000.0) = ExciterDsl.Phaser(
-    this,
-    ExciterDsl.Param("rate", rate, "LFO rate in Hz."),
-    ExciterDsl.Param("depth", depth, "Wet/dry mix depth."),
-    ExciterDsl.Param("center", center, "Center frequency in Hz."),
-    ExciterDsl.Param("sweep", sweep, "Frequency sweep range in Hz."),
+/** Applies waveshaping distortion with the given [amount] and clipping [shape]. */
+fun ExciterDsl.distort(amount: Double, shape: String = "soft") = ExciterDsl.Distort(
+    inner = this,
+    amount = ExciterDsl.Param(name = "amount", default = amount, description = "Distortion drive amount."), shape = shape
 )
 
+/** Applies bit-crush quantization at the given bit [amount]. */
+fun ExciterDsl.crush(amount: Double) = ExciterDsl.Crush(
+    inner = this,
+    amount = ExciterDsl.Param(name = "amount", default = amount, description = "Bit depth for quantization.")
+)
+
+/** Applies sample-rate reduction by the given [amount] factor. */
+fun ExciterDsl.coarse(amount: Double) = ExciterDsl.Coarse(
+    inner = this,
+    amount = ExciterDsl.Param(name = "amount", default = amount, description = "Sample rate reduction factor.")
+)
+
+/** Applies a phaser effect with the given LFO [rate], [depth], [center] frequency, and [sweep] range. */
+fun ExciterDsl.phaser(rate: Double, depth: Double, center: Double = 1000.0, sweep: Double = 1000.0) = ExciterDsl.Phaser(
+    inner = this,
+    rate = ExciterDsl.Param(name = "rate", default = rate, description = "LFO rate in Hz."),
+    depth = ExciterDsl.Param(name = "depth", default = depth, description = "Wet/dry mix depth."),
+    center = ExciterDsl.Param(name = "center", default = center, description = "Center frequency in Hz."),
+    sweep = ExciterDsl.Param(name = "sweep", default = sweep, description = "Frequency sweep range in Hz."),
+)
+
+/** Applies a tremolo (amplitude modulation) at the given LFO [rate] and [depth]. */
 fun ExciterDsl.tremolo(rate: Double, depth: Double) = ExciterDsl.Tremolo(
-    this,
-    ExciterDsl.Param("rate", rate, "LFO rate in Hz."),
-    ExciterDsl.Param("depth", depth, "Modulation depth 0.0..1.0."),
+    inner = this,
+    rate = ExciterDsl.Param(name = "rate", default = rate, description = "LFO rate in Hz."),
+    depth = ExciterDsl.Param(name = "depth", default = depth, description = "Modulation depth 0.0..1.0."),
 )
 
 // Pitch modulation
+
+/** Applies vibrato (pitch modulation) at the given LFO [rate] and [depth]. */
 fun ExciterDsl.vibrato(rate: Double, depth: Double) = ExciterDsl.Vibrato(
-    this,
-    ExciterDsl.Param("rate", rate, "LFO rate in Hz."),
-    ExciterDsl.Param("depth", depth, "Frequency deviation."),
+    inner = this,
+    rate = ExciterDsl.Param(name = "rate", default = rate, description = "LFO rate in Hz."),
+    depth = ExciterDsl.Param(name = "depth", default = depth, description = "Frequency deviation."),
 )
 
-fun ExciterDsl.accelerate(amount: Double) =
-    ExciterDsl.Accelerate(this, ExciterDsl.Param("amount", amount, "Pitch change exponent over voice duration."))
+/** Applies continuous pitch acceleration over the voice's duration. */
+fun ExciterDsl.accelerate(amount: Double) = ExciterDsl.Accelerate(
+    inner = this,
+    amount = ExciterDsl.Param(name = "amount", default = amount, description = "Pitch change exponent over voice duration.")
+)
 
 // ═════════════════════════════════════════════════════════════════════════════════
 // Discovery

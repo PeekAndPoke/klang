@@ -197,7 +197,7 @@ stack( // Gitarre! -------------------------------------------------------------
   ).orbit(3).fast(1).scale("C2:chromatic").pan(0.3).hpf(120).lpf(2000).warmth(0.1)
     .s("supersaw").unison(6).detune(0.07).gain("0.6 0.525 0.55 0.525")
     .adsr("0.01:0.15:0.66:0.01").clip(1.01).distort("5").postgain(0.125)
-    .superimpose(x => x.orbit(4).pan(0.7).bandf("100 200 [100|200|400|800]*128".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.125))
+    .superimpose(x => x.orbit(4).pan(0.7).bandf("300 400 [300|400|600|800]*128".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.125))
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.075") // .solo()

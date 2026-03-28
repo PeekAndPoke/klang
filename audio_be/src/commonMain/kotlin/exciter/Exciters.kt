@@ -3,6 +3,8 @@ package io.peekandpoke.klang.audio_be.exciter
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.exciter.Exciters.dust
 import io.peekandpoke.klang.audio_be.exciter.Exciters.sawtooth
+import io.peekandpoke.klang.common.math.BerlinNoise
+import io.peekandpoke.klang.common.math.PerlinNoise
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
@@ -14,6 +16,7 @@ import kotlin.random.Random
  */
 object Exciters {
 
+    /** Sine wave oscillator. Inherently band-limited, no anti-aliasing needed. */
     fun sine(analog: Exciter = ParamExciter("analog", 0.0)): Exciter {
         var phase = 0.0
         var drift: AnalogDrift? = null
@@ -59,6 +62,7 @@ object Exciters {
         }
     }
 
+    /** Sawtooth wave oscillator with PolyBLEP anti-aliasing. Rich in harmonics, classic subtractive synth tone. */
     fun sawtooth(analog: Exciter = ParamExciter("analog", 0.0)): Exciter {
         var phase = 0.0 // Normalized 0..1
         var drift: AnalogDrift? = null
@@ -115,6 +119,7 @@ object Exciters {
         }
     }
 
+    /** Reverse sawtooth (ramp up) with PolyBLEP anti-aliasing. Inverted [sawtooth] waveform. */
     fun ramp(analog: Exciter = ParamExciter("analog", 0.0)): Exciter {
         var phase = 0.0 // Normalized 0..1
         var drift: AnalogDrift? = null
@@ -171,6 +176,7 @@ object Exciters {
         }
     }
 
+    /** Square wave oscillator with dual PolyBLEP anti-aliasing at both transitions. */
     fun square(analog: Exciter = ParamExciter("analog", 0.0)): Exciter {
         var phase = 0.0 // Normalized 0..1
         var drift: AnalogDrift? = null
@@ -237,6 +243,7 @@ object Exciters {
         }
     }
 
+    /** Triangle wave oscillator. Piecewise linear, inherently band-limited. Softer tone than square or saw. */
     fun triangle(analog: Exciter = ParamExciter("analog", 0.0)): Exciter {
         var phase = 0.0 // Normalized 0..1
         var drift: AnalogDrift? = null
@@ -288,6 +295,7 @@ object Exciters {
         }
     }
 
+    /** White noise generator. Flat spectrum with equal energy at all frequencies. */
     fun whiteNoise(rng: Random): Exciter {
         return Exciter { buffer, _, ctx ->
             val end = ctx.offset + ctx.length
@@ -394,11 +402,7 @@ object Exciters {
         }
     }
 
-    /**
-     * Pulse wave with variable duty cycle and PolyBLEP anti-aliasing.
-     * [duty] 0.0..1.0 controls the ratio of high to low.
-     * Applies PolyBLEP at both transitions (0 and duty) to reduce aliasing.
-     */
+    /** Pulse wave with variable [duty] cycle (0.0..1.0) and dual PolyBLEP anti-aliasing at both transitions. */
     fun pulze(duty: Exciter = ParamExciter("duty", 0.5), analog: Exciter = ParamExciter("analog", 0.0)): Exciter {
         var phase = 0.0 // Normalized 0..1
         var drift: AnalogDrift? = null
@@ -510,6 +514,43 @@ object Exciters {
         }
     }
 
+    /** Perlin noise: smooth organic noise using 1D Perlin noise. Output range -1..1. */
+    fun perlinNoise(rng: Random, rate: Exciter = ParamExciter("rate", 1.0)): Exciter {
+        val noise = PerlinNoise(rng)
+        var pos = rng.nextDouble() * 256.0
+
+        return Exciter { buffer, _, ctx ->
+            ctx.scratchBuffers.use { rateBuf ->
+                rate.generate(rateBuf, 0.0, ctx)
+                val step = rateBuf[ctx.offset].toDouble() * PERLIN_STEP
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    buffer[i] = noise.noise(pos).toFloat()
+                    pos += step
+                }
+            }
+        }
+    }
+
+    /** Berlin noise: piecewise-linear interpolated random noise, scaled to -1..1. */
+    fun berlinNoise(rng: Random, rate: Exciter = ParamExciter("rate", 1.0)): Exciter {
+        val noise = BerlinNoise(rng)
+        var pos = rng.nextDouble() * 256.0
+
+        return Exciter { buffer, _, ctx ->
+            ctx.scratchBuffers.use { rateBuf ->
+                rate.generate(rateBuf, 0.0, ctx)
+                val step = rateBuf[ctx.offset].toDouble() * PERLIN_STEP
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    // BerlinNoise outputs 0..1, scale to -1..1
+                    buffer[i] = (noise.noise(pos) * 2.0 - 1.0).toFloat()
+                    pos += step
+                }
+            }
+        }
+    }
+
     /** Dust: sparse random impulses. [density] 0.0..1.0 controls impulse rate. [maxRateHz] caps the rate. */
     fun dust(rng: Random, density: Exciter = ParamExciter("density", 0.2), maxRateHz: Double = 200.0): Exciter {
         return Exciter { buffer, _, ctx ->
@@ -532,10 +573,8 @@ object Exciters {
     }
 
     /**
-     * Supersaw: multiple detuned sawtooth oscillators summed together (mono).
-     *
-     * Ported from legacy [Oscillators.supersawFn]. Key difference: receives freqHz at render time
-     * rather than fixed at construction, uses normalized 0..1 phase with PolyBLEP.
+     * Supersaw: multiple detuned PolyBLEP sawtooth oscillators summed together (mono).
+     * Voice count is read lazily from the [voices] Exciter param on the first block.
      */
     fun superSaw(
         voices: Exciter = ParamExciter("voices", 8.0),
@@ -667,8 +706,7 @@ object Exciters {
 
     /**
      * Supersine: multiple detuned sine oscillators summed together (mono).
-     *
-     * Uses TWO_PI phase with sin() — no anti-aliasing needed (sine is inherently band-limited).
+     * Inherently band-limited, no anti-aliasing needed. Voice count is read lazily from the [voices] Exciter param on the first block.
      */
     fun superSine(
         voices: Exciter = ParamExciter("voices", 8.0),
@@ -782,9 +820,8 @@ object Exciters {
     }
 
     /**
-     * Supersquare: multiple detuned PolyBLEP square oscillators summed together (mono).
-     *
-     * Uses normalized 0..1 phase with dual PolyBLEP transitions (at 0 and 0.5).
+     * Supersquare: multiple detuned square oscillators with dual PolyBLEP anti-aliasing, summed together (mono).
+     * Voice count is read lazily from the [voices] Exciter param on the first block.
      */
     fun superSquare(
         voices: Exciter = ParamExciter("voices", 8.0),
@@ -936,9 +973,7 @@ object Exciters {
 
     /**
      * Supertri: multiple detuned triangle oscillators summed together (mono).
-     *
-     * Uses normalized 0..1 phase with piecewise linear triangle — inherently band-limited,
-     * no anti-aliasing needed.
+     * Piecewise linear, inherently band-limited. Voice count is read lazily from the [voices] Exciter param on the first block.
      */
     fun superTri(
         voices: Exciter = ParamExciter("voices", 8.0),
@@ -1056,9 +1091,8 @@ object Exciters {
     }
 
     /**
-     * Superramp: multiple detuned reverse-sawtooth oscillators summed together (mono).
-     *
-     * Uses normalized 0..1 phase with PolyBLEP anti-aliasing (inverted from supersaw).
+     * Superramp: multiple detuned reverse-sawtooth oscillators with PolyBLEP anti-aliasing, summed together (mono).
+     * Voice count is read lazily from the [voices] Exciter param on the first block.
      */
     fun superRamp(
         voices: Exciter = ParamExciter("voices", 8.0),
@@ -1191,17 +1225,8 @@ object Exciters {
     }
 
     /**
-     * Karplus-Strong plucked string synthesis.
-     *
-     * A short noise burst excites a delay line with filtered feedback, producing
-     * realistic plucked string sounds. Extended KS adds pick position modeling
-     * and allpass stiffness filtering.
-     *
-     * @param decay Feedback amount (0.9–0.999). Higher = longer ring.
-     * @param brightness Lowpass cutoff in feedback (0.0 = dark, 1.0 = bright).
-     * @param pickPosition Where the pluck occurs (0.0–1.0). Affects harmonic content.
-     * @param stiffness Higher harmonics decay faster (0.0 = nylon, 1.0 = piano wire). Bypassed when 0.
-     * @param analog Perlin noise pitch drift amount.
+     * Karplus-Strong plucked string synthesis via noise-burst-excited delay line with filtered feedback.
+     * Extended with pick position modeling and allpass stiffness filtering.
      */
     fun karplusStrong(
         decay: Exciter = ParamExciter("decay", 0.996),
@@ -1310,18 +1335,8 @@ object Exciters {
 
     /**
      * Super Karplus-Strong: multiple detuned plucked strings summed together.
-     *
-     * Like a 12-string guitar or a chorus of harps — each string has independent
-     * noise excitation and analog drift, creating rich evolving shimmer that
-     * naturally narrows as harmonics decay.
-     *
-     * @param voices Number of strings (1–16).
-     * @param freqSpread Detune spread in semitones.
-     * @param decay Feedback amount (0.9–0.999).
-     * @param brightness Lowpass cutoff in feedback (0.0–1.0).
-     * @param pickPosition Pluck position (0.0–1.0).
-     * @param stiffness Allpass stiffness (0.0–1.0).
-     * @param analog Perlin noise pitch drift amount.
+     * Each string has independent noise excitation and analog drift, creating rich evolving shimmer.
+     * Voice count is read lazily from the [voices] Exciter param on the first block.
      */
     fun superKarplusStrong(
         voices: Exciter = ParamExciter("voices", 8.0),
@@ -1485,6 +1500,9 @@ object Exciters {
 
     /** Minimum dt for PolyBLEP — avoids division by zero at freqHz=0 or negative phaseMod. */
     private const val BLEP_MIN_DT = 1e-5
+
+    /** Base step per sample for Perlin/Berlin noise. rate=1.0 walks ~144 noise-units/sec at 48kHz. */
+    private const val PERLIN_STEP = 0.003
 
     /** Wraps phase into [0, period). Handles both positive overflow and negative values. */
     @Suppress("NOTHING_TO_INLINE")

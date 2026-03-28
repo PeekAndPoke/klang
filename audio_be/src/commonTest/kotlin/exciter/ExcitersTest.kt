@@ -561,6 +561,82 @@ class ExcitersTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // Perlin Noise
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "perlin noise - produces non-zero output" {
+        val buf = generate(Exciters.perlinNoise(Random(42)))
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "perlin noise - output is bounded to -1..1" {
+        val buf = generate(Exciters.perlinNoise(Random(42)))
+        buf.peakAmplitude() shouldBeLessThan 1.01
+    }
+
+    "perlin noise - roughly zero mean (smooth noise)" {
+        val buf = generate(Exciters.perlinNoise(Random(42)))
+        buf.dcOffset() shouldBe (0.0 plusOrMinus 0.3)
+    }
+
+    "perlin noise - higher rate produces faster changes" {
+        val bufSlow = generate(Exciters.perlinNoise(Random(42), rate = ParamExciter("rate", 0.1)))
+        val bufFast = generate(Exciters.perlinNoise(Random(42), rate = ParamExciter("rate", 10.0)))
+        // Faster noise should have more zero crossings
+        bufFast.zeroCrossings() shouldBeGreaterThanOrEqual bufSlow.zeroCrossings()
+    }
+
+    "perlin noise - gain scales amplitude" {
+        val buf1 = generate(Exciters.perlinNoise(Random(42)).withGain(gain(1.0)))
+        val buf2 = generate(Exciters.perlinNoise(Random(42)).withGain(gain(0.5)))
+        val peak1 = buf1.peakAmplitude()
+        val peak2 = buf2.peakAmplitude()
+        (peak2 / peak1) shouldBe (0.5 plusOrMinus 0.1)
+    }
+
+    "perlin noise - DSL round-trip produces output" {
+        val dsl = ExciterDsl.PerlinNoise()
+        val sig = dsl.toExciter()
+        val buf = generate(sig)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Berlin Noise
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "berlin noise - produces non-zero output" {
+        val buf = generate(Exciters.berlinNoise(Random(42)))
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "berlin noise - output is bounded to -1..1" {
+        val buf = generate(Exciters.berlinNoise(Random(42)))
+        buf.peakAmplitude() shouldBeLessThan 1.01
+    }
+
+    "berlin noise - higher rate produces faster changes" {
+        val bufSlow = generate(Exciters.berlinNoise(Random(42), rate = ParamExciter("rate", 0.1)))
+        val bufFast = generate(Exciters.berlinNoise(Random(42), rate = ParamExciter("rate", 10.0)))
+        bufFast.zeroCrossings() shouldBeGreaterThanOrEqual bufSlow.zeroCrossings()
+    }
+
+    "berlin noise - gain scales amplitude" {
+        val buf1 = generate(Exciters.berlinNoise(Random(42)).withGain(gain(1.0)))
+        val buf2 = generate(Exciters.berlinNoise(Random(42)).withGain(gain(0.5)))
+        val peak1 = buf1.peakAmplitude()
+        val peak2 = buf2.peakAmplitude()
+        (peak2 / peak1) shouldBe (0.5 plusOrMinus 0.1)
+    }
+
+    "berlin noise - DSL round-trip produces output" {
+        val dsl = ExciterDsl.BerlinNoise()
+        val sig = dsl.toExciter()
+        val buf = generate(sig)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // Dust
     // ═════════════════════════════════════════════════════════════════════════════
 

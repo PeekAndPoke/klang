@@ -5,8 +5,9 @@ import kotlin.math.pow
 /**
  * Core signal generator interface.
  *
- * A Exciter is a composable unit that writes audio samples into a buffer.
+ * An Exciter is a composable unit that writes audio samples into a buffer.
  * Each instance is per-voice and owns its own mutable state (phase, filter memory, etc.).
+ * Exciters are composed via extension functions (filters, envelopes, arithmetic, pitch modulation).
  */
 fun interface Exciter {
     /**
@@ -21,7 +22,7 @@ fun interface Exciter {
 // Arithmetic Composition
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Mix two signals additively. Uses a scratch buffer for the second signal. */
+/** Mix two signals additively per-sample. Uses a scratch buffer for the second signal. */
 operator fun Exciter.plus(other: Exciter): Exciter = Exciter { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     ctx.scratchBuffers.use { tmp ->
@@ -33,7 +34,7 @@ operator fun Exciter.plus(other: Exciter): Exciter = Exciter { buffer, freqHz, c
     }
 }
 
-/** Ring-modulate two signals (multiply sample-by-sample). Uses a scratch buffer. */
+/** Ring-modulate two signals by per-sample multiplication. Uses a scratch buffer for the second signal. */
 operator fun Exciter.times(other: Exciter): Exciter = Exciter { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     ctx.scratchBuffers.use { tmp ->
@@ -45,10 +46,10 @@ operator fun Exciter.times(other: Exciter): Exciter = Exciter { buffer, freqHz, 
     }
 }
 
-/** Scale signal amplitude by a factor (Exciter param — audio-rate modulatable). */
+/** Scale signal amplitude per-sample by an audio-rate [factor]. Delegates to [times]. */
 fun Exciter.mul(factor: Exciter): Exciter = this * factor
 
-/** Scale signal amplitude by a constant factor. Convenience for [mul] with Exciter. */
+/** Scale signal amplitude per-sample by a constant [factor]. Short-circuits when factor is 1.0. */
 fun Exciter.mul(factor: Double): Exciter {
     if (factor == 1.0) return this
     return Exciter { buffer, freqHz, ctx ->
@@ -61,7 +62,7 @@ fun Exciter.mul(factor: Double): Exciter {
     }
 }
 
-/** Divide signal amplitude by a divisor (Exciter param). */
+/** Divide signal amplitude per-sample by an audio-rate [divisor]. Uses a scratch buffer. */
 fun Exciter.div(divisor: Exciter): Exciter = Exciter { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     ctx.scratchBuffers.use { tmp ->
@@ -73,14 +74,14 @@ fun Exciter.div(divisor: Exciter): Exciter = Exciter { buffer, freqHz, ctx ->
     }
 }
 
-/** Divide signal amplitude by a constant. Convenience for [div] with Exciter. */
+/** Divide signal amplitude by a constant [divisor]. Delegates to [mul] with the reciprocal. */
 fun Exciter.div(divisor: Double): Exciter = mul(1.0 / divisor)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Frequency Modifiers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Shift frequency by [semitones] (Exciter param — audio-rate modulatable). */
+/** Shift frequency by [semitones] from an audio-rate exciter. Reads the first sample per block for the detune value. */
 fun Exciter.detune(semitones: Exciter): Exciter {
     return Exciter { buffer, freqHz, ctx ->
         ctx.scratchBuffers.use { semiBuf ->
@@ -92,7 +93,7 @@ fun Exciter.detune(semitones: Exciter): Exciter {
     }
 }
 
-/** Shift frequency by [semitones] (constant). Convenience for [detune] with Exciter. */
+/** Shift frequency by a constant number of [semitones]. Short-circuits when semitones is 0.0. */
 fun Exciter.detune(semitones: Double): Exciter {
     if (semitones == 0.0) return this
     val ratio = 2.0.pow(semitones / 12.0)
@@ -105,7 +106,7 @@ fun Exciter.detune(semitones: Double): Exciter {
 // Gain from Exciter (param slot)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Apply audio-rate gain from another exciter. Skips if gain is constant 1.0. */
+/** Apply audio-rate gain from another exciter. Short-circuits when [gain] is a [ParamExciter] with default 1.0. */
 fun Exciter.withGain(gain: Exciter): Exciter {
     if (gain is ParamExciter && gain.default == 1.0) return this
     return this * gain

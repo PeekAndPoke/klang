@@ -11,12 +11,11 @@ import kotlin.math.*
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Distortion / waveshaping combinator.
+ * Distortion / waveshaping combinator. Processes per-sample.
  *
- * Distortion with selectable waveshaper shapes.
- *
- * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp"
- * Includes DC blocker for asymmetric shapes (diode, rectify).
+ * Amount is read once per block (control rate). Bypasses when amount <= 0.
+ * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+ * Includes a DC blocker for asymmetric shapes (diode, rectify).
  */
 fun Exciter.distort(amount: Exciter, shape: String = "soft"): Exciter {
     val resolved = resolveDistortionShape(shape)
@@ -83,9 +82,8 @@ private fun resolveDistortionShape(shape: String): ResolvedShape = when (shape.l
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Bit depth reduction combinator.
- *
- * BitCrush — reduces bit depth for a lo-fi digital sound.
+ * Bit-depth reduction (bitcrush) for lo-fi digital sound. Processes per-sample.
+ * Amount is read once per block (control rate). Bypasses when amount <= 0 or levels <= 1.
  */
 fun Exciter.crush(amount: Exciter): Exciter {
     return Exciter { buffer, freqHz, ctx ->
@@ -119,9 +117,8 @@ fun Exciter.crush(amount: Double): Exciter {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Sample-and-hold downsampling combinator.
- *
- * Sample rate reducer (coarse) — holds a sample value for multiple frames.
+ * Sample-rate reducer (coarse). Holds a sample value for multiple frames. Processes per-sample.
+ * Amount is read once per block (control rate). Bypasses when amount <= 1.0.
  */
 fun Exciter.coarse(amount: Exciter): Exciter {
     var lastValue = 0.0f
@@ -159,9 +156,8 @@ fun Exciter.coarse(amount: Double): Exciter {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * 4-stage all-pass cascade phaser with LFO.
- *
- * Phaser — 4-stage allpass cascade with sine LFO modulation.
+ * 4-stage all-pass cascade phaser with sine LFO modulation. Processes per-sample.
+ * Rate, depth, center, and sweep are read once per block (control rate). Bypasses when depth <= 0.
  */
 fun Exciter.phaser(
     rate: Exciter,
@@ -241,9 +237,8 @@ fun Exciter.phaser(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Amplitude modulation (tremolo) combinator with sine LFO.
- *
- * Tremolo — rhythmic amplitude modulation via sine LFO.
+ * Amplitude modulation (tremolo) via sine LFO. Processes per-sample.
+ * Rate and depth are read once per block (control rate). Bypasses when depth <= 0.
  */
 fun Exciter.tremolo(
     rate: Exciter,

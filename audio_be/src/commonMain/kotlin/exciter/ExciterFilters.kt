@@ -115,7 +115,7 @@ fun Exciter.svf(
     }
 }
 
-/** SVF filter with Double convenience params. */
+/** SVF filter with constant cutoff and Q. Convenience for the Exciter-param overload. */
 fun Exciter.svf(
     mode: SvfMode,
     cutoffHz: Double,
@@ -127,27 +127,35 @@ fun Exciter.svf(
 // Convenience wrappers — delegates to svf() with the appropriate mode
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/** SVF lowpass filter. Cutoff and Q are audio-rate modulatable. Processes per-sample. */
 fun Exciter.lowpass(cutoffHz: Exciter, q: Exciter = ParamExciter("q", 0.707), env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.LOWPASS, cutoffHz, q, env)
 
+/** SVF lowpass filter with constant cutoff and Q. Convenience for the Exciter-param overload. */
 fun Exciter.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.LOWPASS, cutoffHz, q, env)
 
+/** SVF highpass filter. Cutoff and Q are audio-rate modulatable. Processes per-sample. */
 fun Exciter.highpass(cutoffHz: Exciter, q: Exciter = ParamExciter("q", 0.707), env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.HIGHPASS, cutoffHz, q, env)
 
+/** SVF highpass filter with constant cutoff and Q. Convenience for the Exciter-param overload. */
 fun Exciter.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.HIGHPASS, cutoffHz, q, env)
 
+/** SVF bandpass filter. Cutoff and Q are audio-rate modulatable. Processes per-sample. */
 fun Exciter.bandpass(cutoffHz: Exciter, q: Exciter = ParamExciter("q", 1.0), env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.BANDPASS, cutoffHz, q, env)
 
+/** SVF bandpass filter with constant cutoff and Q. Convenience for the Exciter-param overload. */
 fun Exciter.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.BANDPASS, cutoffHz, q, env)
 
+/** SVF notch (band-reject) filter. Cutoff and Q are audio-rate modulatable. Processes per-sample. */
 fun Exciter.notch(cutoffHz: Exciter, q: Exciter = ParamExciter("q", 1.0), env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.NOTCH, cutoffHz, q, env)
 
+/** SVF notch (band-reject) filter with constant cutoff and Q. Convenience for the Exciter-param overload. */
 fun Exciter.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = FilterEnvelope.NONE): Exciter =
     svf(SvfMode.NOTCH, cutoffHz, q, env)
 
@@ -155,6 +163,10 @@ fun Exciter.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = Filte
 // One-Pole Lowpass (for warmth / simple smoothing)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Simple one-pole lowpass filter for warmth or smoothing. Processes per-sample.
+ * Cutoff is read once per block (control rate).
+ */
 fun Exciter.onePoleLowpass(cutoffHz: Exciter): Exciter {
     var y = 0.0
 
@@ -174,12 +186,17 @@ fun Exciter.onePoleLowpass(cutoffHz: Exciter): Exciter {
     }
 }
 
+/** One-pole lowpass with constant cutoff. Convenience for the Exciter-param overload. */
 fun Exciter.onePoleLowpass(cutoffHz: Double): Exciter = onePoleLowpass(ParamExciter("cutoffHz", cutoffHz))
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // One-Pole Highpass
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Simple one-pole highpass filter. Processes per-sample.
+ * Cutoff is read once per block (control rate).
+ */
 fun Exciter.onePoleHighpass(cutoffHz: Exciter): Exciter {
     var y = 0.0
     var xPrev = 0.0
@@ -202,6 +219,7 @@ fun Exciter.onePoleHighpass(cutoffHz: Exciter): Exciter {
     }
 }
 
+/** One-pole highpass with constant cutoff. Convenience for the Exciter-param overload. */
 fun Exciter.onePoleHighpass(cutoffHz: Double): Exciter = onePoleHighpass(ParamExciter("cutoffHz", cutoffHz))
 
 // ═══════════════════════════════════════════════════════════════════════════════
