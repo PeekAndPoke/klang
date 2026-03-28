@@ -543,7 +543,7 @@ object Exciters {
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices.coerceIn(1, 32)
+        val v = voices
         val phases = DoubleArray(v) { rng.nextDouble() }
         val voiceGain = 1.0 / v.toDouble()
         var drift: AnalogDrift? = null
@@ -665,7 +665,7 @@ object Exciters {
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices.coerceIn(1, 32)
+        val v = voices
         val phases = DoubleArray(v) { rng.nextDouble() * TWO_PI }
         val voiceGain = 1.0 / v.toDouble()
         var drift: AnalogDrift? = null
@@ -767,7 +767,7 @@ object Exciters {
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices.coerceIn(1, 32)
+        val v = voices
         val phases = DoubleArray(v) { rng.nextDouble() }
         val voiceGain = 1.0 / v.toDouble()
         var drift: AnalogDrift? = null
@@ -907,7 +907,7 @@ object Exciters {
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices.coerceIn(1, 32)
+        val v = voices
         val phases = DoubleArray(v) { rng.nextDouble() }
         val voiceGain = 1.0 / v.toDouble()
         var drift: AnalogDrift? = null
@@ -1013,7 +1013,7 @@ object Exciters {
         analog: Exciter = ParamExciter("analog", 0.0),
         rng: Random = Random
     ): Exciter {
-        val v = voices.coerceIn(1, 32)
+        val v = voices
         val phases = DoubleArray(v) { rng.nextDouble() }
         val voiceGain = 1.0 / v.toDouble()
         var drift: AnalogDrift? = null
@@ -1265,7 +1265,7 @@ object Exciters {
         stiffness: Exciter = ParamExciter("stiffness", 0.0),
         analog: Exciter = ParamExciter("analog", 0.0),
     ): Exciter {
-        val v = voices.coerceIn(1, 16)
+        val v = voices
         val voiceGain = 1.0 / v.toDouble()
         val maxDelay = 2500
 

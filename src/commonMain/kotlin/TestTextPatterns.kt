@@ -194,10 +194,10 @@ stack( // Gitarre! -------------------------------------------------------------
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").pan(0.3).hpf(120).lpf(2500).warmth(0.1)
+  ).orbit(3).fast(1).scale("C2:chromatic").pan(0.3).hpf(120).lpf(2000).warmth(0.1)
     .s("supersaw").unison(6).detune(0.07).gain("0.6 0.525 0.55 0.525")
     .adsr("0.01:0.15:0.66:0.01").clip(1.01).distort("5").postgain(0.125)
-    .superimpose(x => x.orbit(4).pan(0.7).bandf("800 900 [450|770|930|1025]*128".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.125))
+    .superimpose(x => x.orbit(4).pan(0.7).bandf("100 200 [100|200|400|800]*128".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.125))
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.075") // .solo()

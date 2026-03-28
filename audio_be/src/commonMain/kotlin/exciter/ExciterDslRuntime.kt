@@ -13,6 +13,10 @@ import kotlin.random.Random
  * [oscParams] provides runtime overrides from [VoiceData.oscParams]. Only leaf oscillator nodes
  * read overrides; composition nodes do NOT pass oscParams through — the tree structure IS the recipe.
  */
+/** Resolve an Int field from oscParams, falling back to the data class default. */
+private fun resolveIntParam(oscParams: Map<String, Double>?, name: String, default: Int): Int =
+    oscParams?.get(name)?.toInt() ?: default
+
 fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
     return when (this) {
         // Parameter slot — oscParams can override the default value by name
@@ -38,31 +42,31 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
 
         // Super oscillators — raw oscillator + gain applied via withGain
         is ExciterDsl.SuperSaw -> Exciters.superSaw(
-            voices = voices,
+            voices = resolveIntParam(oscParams, "voices", voices),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
         ).withGain(this.gain.toExciter(oscParams))
 
         is ExciterDsl.SuperSine -> Exciters.superSine(
-            voices = voices,
+            voices = resolveIntParam(oscParams, "voices", voices),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
         ).withGain(this.gain.toExciter(oscParams))
 
         is ExciterDsl.SuperSquare -> Exciters.superSquare(
-            voices = voices,
+            voices = resolveIntParam(oscParams, "voices", voices),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
         ).withGain(this.gain.toExciter(oscParams))
 
         is ExciterDsl.SuperTri -> Exciters.superTri(
-            voices = voices,
+            voices = resolveIntParam(oscParams, "voices", voices),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
         ).withGain(this.gain.toExciter(oscParams))
 
         is ExciterDsl.SuperRamp -> Exciters.superRamp(
-            voices = voices,
+            voices = resolveIntParam(oscParams, "voices", voices),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
         ).withGain(this.gain.toExciter(oscParams))
@@ -79,7 +83,7 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
         ).withGain(this.gain.toExciter(oscParams))
 
         is ExciterDsl.SuperPluck -> Exciters.superKarplusStrong(
-            voices = voices,
+            voices = resolveIntParam(oscParams, "voices", voices),
             freqSpread = this.freqSpread.toExciter(oscParams),
             decay = this.decay.toExciter(oscParams),
             brightness = this.brightness.toExciter(oscParams),

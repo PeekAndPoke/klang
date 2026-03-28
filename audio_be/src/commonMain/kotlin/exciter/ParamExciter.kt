@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.exciter
 
+import io.peekandpoke.klang.audio_bridge.ExciterDsl
+
 /**
  * Runtime exciter that fills a buffer with a constant value.
  *
