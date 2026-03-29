@@ -930,4 +930,73 @@ class ExcitersTest : StringSpec({
         countOverride shouldBeGreaterThanOrEqual countDefault
     }
 
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Constant vs Param behavior
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Constant is not overridden by oscParams" {
+        val dsl = ExciterDsl.Sine(freq = ExciterDsl.Constant(880.0))
+        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // oscParam tries to override
+        val buf = generate(sig, freqHz = 220.0)  // voice freq is 220
+        // Should use 880 Hz (Constant), not 440 (oscParam) or 220 (voice)
+        val crossings = buf.zeroCrossings()
+        // 880Hz over 100ms ≈ 88 cycles, ~176 zero crossings
+        crossings shouldBeInRange 170..185
+    }
+
+    "Param is overridden by oscParams" {
+        val dsl = ExciterDsl.Sine(freq = ExciterDsl.Param("freq", 880.0))
+        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // oscParam overrides
+        val buf = generate(sig, freqHz = 220.0)
+        // Should use 440 Hz (oscParam override), not 880 (default) or 220 (voice)
+        val crossings = buf.zeroCrossings()
+        // 440Hz over 100ms ≈ 44 cycles, ~88 zero crossings
+        crossings shouldBeInRange 84..92
+    }
+
+    "Param with freq=0 uses voice frequency" {
+        val dsl = ExciterDsl.Sine()  // default freq = Param("freq", 0.0)
+        val sig = dsl.toExciter()
+        val buf = generate(sig, freqHz = 440.0)
+        val crossings = buf.zeroCrossings()
+        crossings shouldBeInRange 84..92
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Freq override on oscillator
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "sine with fixed freq ignores voice freqHz" {
+        val sig = Exciters.sine(freq = ParamExciter("freq", 880.0))
+        val buf = generate(sig, freqHz = 220.0)  // voice is 220 but freq overrides to 880
+        val crossings = buf.zeroCrossings()
+        crossings shouldBeInRange 170..185
+    }
+
+    "sine with freq=0 uses voice freqHz" {
+        val sig = Exciters.sine()  // default freq=0
+        val buf = generate(sig, freqHz = 440.0)
+        val crossings = buf.zeroCrossings()
+        crossings shouldBeInRange 84..92
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Ramp oscillator
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "ramp - produces non-zero output" {
+        val buf = generate(Exciters.ramp(), freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "ramp - correct frequency" {
+        val buf = generate(Exciters.ramp(), freqHz = 440.0)
+        buf.zeroCrossings() shouldBeInRange 84..92
+    }
+
+    "ramp - bounded amplitude" {
+        val buf = generate(Exciters.ramp(), freqHz = 440.0)
+        buf.peakAmplitude() shouldBeLessThan 1.1
+    }
+
 })

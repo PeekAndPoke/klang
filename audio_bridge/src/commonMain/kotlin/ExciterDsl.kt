@@ -222,7 +222,7 @@ sealed interface ExciterDsl {
         }
     }
 
-    /** Ramp oscillator. Alias for a falling sawtooth shape. */
+    /** Ramp oscillator. Reverse sawtooth (ramp up, opposite slope of [Sawtooth]). */
     @Serializable
     @SerialName("ramp")
     data class Ramp(
@@ -308,6 +308,7 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("silence")
     data object Silence : ExciterDsl {
+        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {}
     }
 

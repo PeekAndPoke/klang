@@ -13,7 +13,7 @@ typealias ExciterRegistrar = (name: String, dsl: ExciterDsl) -> String
  *
  * Provides factory methods for all oscillator primitives, noise sources, and super oscillators.
  * Returns [ExciterDsl] instances that can be composed via extension methods (lowpass, adsr, mul, etc.)
- * and registered as named sounds via [register].
+ * and registered as named sounds via Osc.register.
  *
  * Usage in KlangScript:
  * ```
@@ -91,51 +91,62 @@ object KlangScriptOsc {
 
     /** Creates a Perlin noise source (smooth organic noise). */
     @KlangScript.Method
-    fun perlin(): ExciterDsl = ExciterDsl.PerlinNoise()
+    fun perlin(rate: ExciterDslLike = 1.0): ExciterDsl =
+        ExciterDsl.PerlinNoise(rate = rate.toExciterDsl())
 
     /** Creates a Berlin noise source (piecewise-linear interpolated noise). */
     @KlangScript.Method
-    fun berlin(): ExciterDsl = ExciterDsl.BerlinNoise()
+    fun berlin(rate: ExciterDslLike = 1.0): ExciterDsl =
+        ExciterDsl.BerlinNoise(rate = rate.toExciterDsl())
 
     /** Creates a dust source (sparse random impulses). */
     @KlangScript.Method
-    fun dust(): ExciterDsl = ExciterDsl.Dust()
+    fun dust(density: ExciterDslLike = 0.2): ExciterDsl =
+        ExciterDsl.Dust(density = density.toExciterDsl())
 
     /** Creates a crackle source (noise bursts). */
     @KlangScript.Method
-    fun crackle(): ExciterDsl = ExciterDsl.Crackle()
+    fun crackle(density: ExciterDslLike = 0.2): ExciterDsl =
+        ExciterDsl.Crackle(density = density.toExciterDsl())
 
     // ── Super Oscillators ────────────────────────────────────────────────────
 
     /** Creates a supersaw (multiple detuned sawtooth oscillators). */
     @KlangScript.Method
-    fun supersaw(): ExciterDsl = ExciterDsl.SuperSaw()
+    fun supersaw(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.SuperSaw(freq = freq.toExciterDsl())
 
     /** Creates a supersine (multiple detuned sine oscillators). */
     @KlangScript.Method
-    fun supersine(): ExciterDsl = ExciterDsl.SuperSine()
+    fun supersine(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.SuperSine(freq = freq.toExciterDsl())
 
     /** Creates a supersquare (multiple detuned square oscillators). */
     @KlangScript.Method
-    fun supersquare(): ExciterDsl = ExciterDsl.SuperSquare()
+    fun supersquare(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.SuperSquare(freq = freq.toExciterDsl())
 
     /** Creates a supertri (multiple detuned triangle oscillators). */
     @KlangScript.Method
-    fun supertri(): ExciterDsl = ExciterDsl.SuperTri()
+    fun supertri(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.SuperTri(freq = freq.toExciterDsl())
 
     /** Creates a superramp (multiple detuned ramp oscillators). */
     @KlangScript.Method
-    fun superramp(): ExciterDsl = ExciterDsl.SuperRamp()
+    fun superramp(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.SuperRamp(freq = freq.toExciterDsl())
 
     // ── Physical Models ──────────────────────────────────────────────────────
 
     /** Creates a Karplus-Strong plucked string model. */
     @KlangScript.Method
-    fun pluck(): ExciterDsl = ExciterDsl.Pluck()
+    fun pluck(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Pluck(freq = freq.toExciterDsl())
 
     /** Creates a unison Karplus-Strong plucked string model. */
     @KlangScript.Method
-    fun superpluck(): ExciterDsl = ExciterDsl.SuperPluck()
+    fun superpluck(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.SuperPluck(freq = freq.toExciterDsl())
 
     // ── Parameter Slot ───────────────────────────────────────────────────────
 

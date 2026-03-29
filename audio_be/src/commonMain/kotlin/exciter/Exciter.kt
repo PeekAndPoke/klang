@@ -62,14 +62,15 @@ fun Exciter.mul(factor: Double): Exciter {
     }
 }
 
-/** Divide signal amplitude per-sample by an audio-rate [divisor]. Uses a scratch buffer. */
+/** Divide signal amplitude per-sample by an audio-rate [divisor]. Guards against division by zero. */
 fun Exciter.div(divisor: Exciter): Exciter = Exciter { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     ctx.scratchBuffers.use { tmp ->
         divisor.generate(tmp, freqHz, ctx)
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = buffer[i] / tmp[i]
+            val d = tmp[i]
+            buffer[i] = if (d != 0.0f) buffer[i] / d else 0.0f
         }
     }
 }

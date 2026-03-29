@@ -627,12 +627,15 @@ object Exciters {
 
             ctx.scratchBuffers.use { voicesBuf ->
                 voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = voicesBuf[ctx.offset].toInt()
+                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
                 if (newV != v) {
                     v = newV
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
                     val old = phases
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                }
+                if (v <= 0) {
+                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
             ctx.scratchBuffers.use { spreadBuf ->
@@ -761,7 +764,7 @@ object Exciters {
 
             ctx.scratchBuffers.use { voicesBuf ->
                 voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = voicesBuf[ctx.offset].toInt()
+                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
                 if (newV != v) {
                     v = newV
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
@@ -878,7 +881,7 @@ object Exciters {
 
             ctx.scratchBuffers.use { voicesBuf ->
                 voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = voicesBuf[ctx.offset].toInt()
+                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
                 if (newV != v) {
                     v = newV
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
@@ -1032,7 +1035,7 @@ object Exciters {
 
             ctx.scratchBuffers.use { voicesBuf ->
                 voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = voicesBuf[ctx.offset].toInt()
+                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
                 if (newV != v) {
                     v = newV
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
@@ -1153,7 +1156,7 @@ object Exciters {
 
             ctx.scratchBuffers.use { voicesBuf ->
                 voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = voicesBuf[ctx.offset].toInt()
+                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
                 if (newV != v) {
                     v = newV
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
@@ -1416,7 +1419,7 @@ object Exciters {
 
             ctx.scratchBuffers.use { voicesBuf ->
                 voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = voicesBuf[ctx.offset].toInt()
+                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
                 if (newV != v) {
                     v = newV
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
