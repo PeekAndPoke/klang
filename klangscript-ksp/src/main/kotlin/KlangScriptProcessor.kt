@@ -382,32 +382,160 @@ class KlangScriptProcessor(
             }
 
             else -> {
-                if (scriptParams.size > MAX_FIXED_PARAMS) {
-                    logger.error(
-                        "@Method '${method.name}' has ${scriptParams.size} parameters (max $MAX_FIXED_PARAMS for fixed-arity registration)",
-                        fn
-                    )
-                }
-                val paramNames = scriptParams.map { p ->
-                    val name = p.name?.asString() ?: "p"
-                    "$name: ${resolveKotlinType(p.type.resolve())}"
-                }
-                val callArgs = scriptParams.map { it.name?.asString() ?: "p" }
-                val callArgsStr = if (callArgs.isEmpty()) "" else callArgs.joinToString(", ")
-                val fullCallArgs = if (isTypeExtension) {
-                    if (callArgsStr.isEmpty()) "this" else "this, $callArgsStr"
-                } else {
-                    callArgsStr
-                }
+                val hasDefaults = scriptParams.any { it.hasDefault }
 
-                when (scriptParams.size) {
-                    0 -> "registerMethod(\"${method.name}\") { $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
-                    else -> {
-                        val paramDecl = paramNames.joinToString(", ")
-                        "registerMethod(\"${method.name}\") { $paramDecl -> $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
+                if (hasDefaults) {
+                    // Generate raw registerExtensionMethod with arity dispatch
+                    // so Kotlin default parameters work when fewer args are provided
+                    generateMethodWithDefaults(method, ownerCls, isTypeExtension, scriptParams)
+                } else {
+                    if (scriptParams.size > MAX_FIXED_PARAMS) {
+                        logger.error(
+                            "@Method '${method.name}' has ${scriptParams.size} parameters (max $MAX_FIXED_PARAMS for fixed-arity registration)",
+                            fn
+                        )
+                    }
+                    val paramNames = scriptParams.map { p ->
+                        val name = p.name?.asString() ?: "p"
+                        "$name: ${resolveKotlinType(p.type.resolve())}"
+                    }
+                    val callArgs = scriptParams.map { it.name?.asString() ?: "p" }
+                    val callArgsStr = if (callArgs.isEmpty()) "" else callArgs.joinToString(", ")
+                    val fullCallArgs = if (isTypeExtension) {
+                        if (callArgsStr.isEmpty()) "this" else "this, $callArgsStr"
+                    } else {
+                        callArgsStr
+                    }
+
+                    when (scriptParams.size) {
+                        0 -> "registerMethod(\"${method.name}\") { $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
+                        else -> {
+                            val paramDecl = paramNames.joinToString(", ")
+                            "registerMethod(\"${method.name}\") { $paramDecl -> $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
+                        }
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Generates a raw registerExtensionMethod for methods with default parameters.
+     * Dispatches by args.size so Kotlin's own default mechanism fills in missing values.
+     */
+    private fun generateMethodWithDefaults(
+        method: MethodEntry,
+        ownerCls: KSClassDeclaration,
+        isTypeExtension: Boolean,
+        scriptParams: List<KSValueParameter>,
+    ): String {
+        val fn = method.fn
+        val ownerName = ownerCls.simpleName.asString()
+        val fnName = fn.simpleName.asString()
+
+        // Count required params (no default)
+        val requiredCount = scriptParams.count { !it.hasDefault }
+
+        return buildString {
+            append("builder.registerExtensionMethod(cls, \"${method.name}\") { receiver, args, loc ->")
+            appendLine()
+            append("    checkArgsSize(fn = \"${method.name}\", args = args, expected = $requiredCount, location = loc)")
+            appendLine()
+
+            // Declare variables for each param that's provided
+            scriptParams.forEachIndexed { i, param ->
+                val paramName = param.name?.asString() ?: "p$i"
+                val paramType = resolveKotlinType(param.type.resolve())
+                if (!param.hasDefault) {
+                    // Required param — always convert
+                    append("    val $paramName = convertArgToKotlin(fn = \"${method.name}\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
+                    appendLine()
+                }
+            }
+
+            // Build the call with arity dispatch for optional params
+            // For type extensions, the receiver is passed as the `receiver` parameter
+            val selfPrefix = if (isTypeExtension) {
+                val receiverType = fn.parameters.first().type.resolve().declaration.simpleName.asString()
+                "@Suppress(\"UNCHECKED_CAST\") val self = receiver as $receiverType\n"
+            } else ""
+            val selfArg = if (isTypeExtension) "self, " else ""
+            if (isTypeExtension) {
+                append("    $selfPrefix")
+            }
+
+            // Find the first optional param index
+            val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
+
+            // Generate nested if/else chain from last optional to first
+            val optionalParams = scriptParams.withIndex().filter { it.value.hasDefault }
+
+            if (optionalParams.isEmpty()) {
+                // No optional params (shouldn't happen, but safe)
+                val allArgs = scriptParams.map { it.name?.asString() ?: "p" }.joinToString(", ")
+                append("    wrapAsRuntimeValue($ownerName.$fnName($selfArg$allArgs))")
+                appendLine()
+            } else {
+                // Generate dispatch: check args.size for each optional param level
+                // Start with the max-args case and work down
+                append("    wrapAsRuntimeValue(")
+                appendLine()
+
+                // Generate from most args to fewest
+                for (level in scriptParams.size downTo firstOptionalIdx + 1) {
+                    val argsForLevel = scriptParams.take(level)
+                    val allRequired = argsForLevel.all { !it.hasDefault }
+
+                    if (level == scriptParams.size) {
+                        // Max args case
+                        append("        if (args.size >= $level) {")
+                        appendLine()
+                        // Declare optional params for this level
+                        argsForLevel.forEachIndexed { i, param ->
+                            if (param.hasDefault) {
+                                val paramName = param.name?.asString() ?: "p$i"
+                                val paramType = resolveKotlinType(param.type.resolve())
+                                append("            val $paramName = convertArgToKotlin(fn = \"${method.name}\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
+                                appendLine()
+                            }
+                        }
+                        val callArgs = argsForLevel.map { it.name?.asString() ?: "p" }.joinToString(", ")
+                        append("            $ownerName.$fnName($selfArg$callArgs)")
+                        appendLine()
+                        append("        }")
+                    } else {
+                        // Intermediate level
+                        append(" else if (args.size >= $level) {")
+                        appendLine()
+                        argsForLevel.forEachIndexed { i, param ->
+                            if (param.hasDefault) {
+                                val paramName = param.name?.asString() ?: "p$i"
+                                val paramType = resolveKotlinType(param.type.resolve())
+                                append("            val $paramName = convertArgToKotlin(fn = \"${method.name}\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
+                                appendLine()
+                            }
+                        }
+                        val callArgs = argsForLevel.map { it.name?.asString() ?: "p" }.joinToString(", ")
+                        append("            $ownerName.$fnName($selfArg$callArgs)")
+                        appendLine()
+                        append("        }")
+                    }
+                }
+
+                // Final else: only required params
+                append(" else {")
+                appendLine()
+                val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name?.asString() ?: "p" }.joinToString(", ")
+                append("            $ownerName.$fnName($selfArg$requiredArgs)")
+                appendLine()
+                append("        }")
+                appendLine()
+
+                append("    )")
+                appendLine()
+            }
+
+            append("}")
         }
     }
 
@@ -692,8 +820,14 @@ class KlangScriptProcessor(
 
     private fun resolveKotlinType(type: KSType?): String {
         if (type == null) return "Any"
-        val name = type.declaration.simpleName.asString()
-        val nullable = if (type.nullability == Nullability.NULLABLE) "?" else ""
+        // Resolve type aliases to their underlying type
+        val resolved = if (type.declaration is KSTypeAlias) {
+            (type.declaration as KSTypeAlias).type.resolve()
+        } else {
+            type
+        }
+        val name = resolved.declaration.simpleName.asString()
+        val nullable = if (resolved.nullability == Nullability.NULLABLE) "?" else ""
         return "$name$nullable"
     }
 

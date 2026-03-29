@@ -5,6 +5,18 @@ import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
+ * Accepts [ExciterDsl] or [Number]. Numbers are converted to [ExciterDsl.Param] automatically.
+ */
+typealias ExciterDslLike = Any
+
+/** Converts an [ExciterDslLike] value to [ExciterDsl]. Numbers become [ExciterDsl.Param]. */
+private fun ExciterDslLike.toExciterDsl(name: String = ""): ExciterDsl = when (this) {
+    is ExciterDsl -> this
+    is Number -> ExciterDsl.Param(name, this.toDouble())
+    else -> error("Expected ExciterDsl or Number, got ${this::class.simpleName}")
+}
+
+/**
  * Extension methods on [ExciterDsl] for KlangScript.
  *
  * Enables chaining: `Osc.sine().lowpass(1000).adsr(0.01, 0.1, 0.5, 0.3)`
@@ -17,78 +29,90 @@ object KlangScriptExciterDslExtensions {
 
     // ── Filters ──────────────────────────────────────────────────────────────
 
-    /** Applies a resonant lowpass filter. */
+    /** Applies a resonant lowpass filter. Cutoff and Q accept Number or ExciterDsl. */
     @KlangScript.Method
-    fun lowpass(self: ExciterDsl, cutoffHz: Double, q: Double = 0.707): ExciterDsl =
-        self.lowpass(cutoffHz, q)
+    fun lowpass(self: ExciterDsl, cutoffHz: Any, q: Any = 0.707): ExciterDsl =
+        ExciterDsl.Lowpass(self, cutoffHz.toExciterDsl("cutoffHz"), q.toExciterDsl("q"))
 
-    /** Applies a resonant lowpass filter with modulatable cutoff. */
-    @KlangScript.Method(name = "lowpass")
-    fun lowpassMod(self: ExciterDsl, cutoffHz: ExciterDsl): ExciterDsl =
-        ExciterDsl.Lowpass(self, cutoffHz)
-
-    /** Applies a resonant highpass filter. */
+    /** Applies a resonant highpass filter. Cutoff and Q accept Number or ExciterDsl. */
     @KlangScript.Method
-    fun highpass(self: ExciterDsl, cutoffHz: Double, q: Double = 0.707): ExciterDsl =
-        self.highpass(cutoffHz, q)
+    fun highpass(self: ExciterDsl, cutoffHz: Any, q: Any = 0.707): ExciterDsl =
+        ExciterDsl.Highpass(self, cutoffHz.toExciterDsl("cutoffHz"), q.toExciterDsl("q"))
 
-    /** Applies a one-pole lowpass filter (gentle rolloff). */
+    /** Applies a one-pole lowpass filter (gentle rolloff). Alias: onePoleLowpass. */
     @KlangScript.Method
-    fun onePoleLowpass(self: ExciterDsl, cutoffHz: Double): ExciterDsl =
-        self.onePoleLowpass(cutoffHz)
+    fun warmth(self: ExciterDsl, cutoffHz: Any): ExciterDsl =
+        ExciterDsl.OnePoleLowpass(self, cutoffHz.toExciterDsl("cutoffHz"))
+
+    /** Applies a one-pole lowpass filter (gentle rolloff). Alias for warmth. */
+    @KlangScript.Method
+    fun onePoleLowpass(self: ExciterDsl, cutoffHz: Any): ExciterDsl =
+        ExciterDsl.OnePoleLowpass(self, cutoffHz.toExciterDsl("cutoffHz"))
 
     // ── Envelope ─────────────────────────────────────────────────────────────
 
-    /** Applies an ADSR amplitude envelope. */
+    /** Applies an ADSR amplitude envelope. All times accept Number or ExciterDsl. */
     @KlangScript.Method
-    fun adsr(self: ExciterDsl, attackSec: Double, decaySec: Double, sustainLevel: Double, releaseSec: Double): ExciterDsl =
-        self.adsr(attackSec, decaySec, sustainLevel, releaseSec)
+    fun adsr(self: ExciterDsl, attackSec: Any, decaySec: Any, sustainLevel: Any, releaseSec: Any): ExciterDsl =
+        ExciterDsl.Adsr(
+            self,
+            attackSec.toExciterDsl("attackSec"),
+            decaySec.toExciterDsl("decaySec"),
+            sustainLevel.toExciterDsl("sustainLevel"),
+            releaseSec.toExciterDsl("releaseSec"),
+        )
 
     // ── Effects ──────────────────────────────────────────────────────────────
 
     /** Applies waveshaping distortion. */
     @KlangScript.Method
-    fun distort(self: ExciterDsl, amount: Double, shape: String = "soft"): ExciterDsl =
-        self.distort(amount, shape)
+    fun distort(self: ExciterDsl, amount: Any, shape: String = "soft"): ExciterDsl =
+        ExciterDsl.Distort(self, amount.toExciterDsl("amount"), shape)
 
     /** Applies bit-depth reduction (bitcrusher). */
     @KlangScript.Method
-    fun crush(self: ExciterDsl, amount: Double): ExciterDsl =
-        self.crush(amount)
+    fun crush(self: ExciterDsl, amount: Any): ExciterDsl =
+        ExciterDsl.Crush(self, amount.toExciterDsl("amount"))
 
     /** Applies sample-rate reduction. */
     @KlangScript.Method
-    fun coarse(self: ExciterDsl, amount: Double): ExciterDsl =
-        self.coarse(amount)
+    fun coarse(self: ExciterDsl, amount: Any): ExciterDsl =
+        ExciterDsl.Coarse(self, amount.toExciterDsl("amount"))
 
     /** Applies a multi-stage phaser effect. */
     @KlangScript.Method
-    fun phaser(self: ExciterDsl, rate: Double, depth: Double, center: Double = 1000.0, sweep: Double = 1000.0): ExciterDsl =
-        self.phaser(rate, depth, center, sweep)
+    fun phaser(self: ExciterDsl, rate: Any, depth: Any, center: Any = 1000.0, sweep: Any = 1000.0): ExciterDsl =
+        ExciterDsl.Phaser(
+            self,
+            rate.toExciterDsl("rate"),
+            depth.toExciterDsl("depth"),
+            center.toExciterDsl("center"),
+            sweep.toExciterDsl("sweep")
+        )
 
     /** Applies amplitude tremolo. */
     @KlangScript.Method
-    fun tremolo(self: ExciterDsl, rate: Double, depth: Double): ExciterDsl =
-        self.tremolo(rate, depth)
+    fun tremolo(self: ExciterDsl, rate: Any, depth: Any): ExciterDsl =
+        ExciterDsl.Tremolo(self, rate.toExciterDsl("rate"), depth.toExciterDsl("depth"))
 
     // ── FM Synthesis ─────────────────────────────────────────────────────────
 
     /** Applies FM synthesis with a modulator exciter. */
     @KlangScript.Method
-    fun fm(self: ExciterDsl, modulator: ExciterDsl, ratio: Double, depth: Double): ExciterDsl =
-        self.fm(modulator, ratio, depth)
-
-    /** Applies FM synthesis with a modulator exciter and envelope control. */
-    @KlangScript.Method(name = "fm")
-    fun fmEnv(self: ExciterDsl, modulator: ExciterDsl, ratio: Double, depth: Double, envDecaySec: Double): ExciterDsl =
-        self.fm(modulator, ratio, depth, envDecaySec = envDecaySec, envSustainLevel = 0.0)
+    fun fm(self: ExciterDsl, modulator: ExciterDsl, ratio: Any, depth: Any): ExciterDsl =
+        ExciterDsl.Fm(
+            carrier = self,
+            modulator = modulator,
+            ratio = ratio.toExciterDsl("ratio"),
+            depth = depth.toExciterDsl("depth"),
+        )
 
     // ── Pitch Modulation ─────────────────────────────────────────────────────
 
     /** Shifts pitch by semitones. */
     @KlangScript.Method
-    fun detune(self: ExciterDsl, semitones: Double): ExciterDsl =
-        self.detune(semitones)
+    fun detune(self: ExciterDsl, semitones: Any): ExciterDsl =
+        ExciterDsl.Detune(self, semitones.toExciterDsl("semitones"))
 
     /** Shifts pitch up one octave. */
     @KlangScript.Method
@@ -102,13 +126,13 @@ object KlangScriptExciterDslExtensions {
 
     /** Applies pitch vibrato. */
     @KlangScript.Method
-    fun vibrato(self: ExciterDsl, rate: Double, depth: Double): ExciterDsl =
-        self.vibrato(rate, depth)
+    fun vibrato(self: ExciterDsl, rate: Any, depth: Any): ExciterDsl =
+        ExciterDsl.Vibrato(self, rate.toExciterDsl("rate"), depth.toExciterDsl("depth"))
 
     /** Applies continuous pitch acceleration over the voice duration. */
     @KlangScript.Method
-    fun accelerate(self: ExciterDsl, amount: Double): ExciterDsl =
-        self.accelerate(amount)
+    fun accelerate(self: ExciterDsl, amount: Any): ExciterDsl =
+        ExciterDsl.Accelerate(self, amount.toExciterDsl("amount"))
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 
@@ -122,23 +146,13 @@ object KlangScriptExciterDslExtensions {
     fun times(self: ExciterDsl, other: ExciterDsl): ExciterDsl =
         self * other
 
-    /** Scales the signal by a factor. */
+    /** Scales the signal by a factor (ExciterDsl or Number). */
     @KlangScript.Method
-    fun mul(self: ExciterDsl, other: ExciterDsl): ExciterDsl =
-        self.mul(other)
+    fun mul(self: ExciterDsl, other: Any): ExciterDsl =
+        self.mul(other.toExciterDsl("factor"))
 
-    /** Scales the signal by a constant factor. */
-    @KlangScript.Method(name = "mul")
-    fun mulConst(self: ExciterDsl, factor: Double): ExciterDsl =
-        self.mul(ExciterDsl.Param("factor", factor))
-
-    /** Divides the signal by a divisor. */
+    /** Divides the signal by a divisor (ExciterDsl or Number). */
     @KlangScript.Method
-    fun div(self: ExciterDsl, other: ExciterDsl): ExciterDsl =
-        self.div(other)
-
-    /** Divides the signal by a constant divisor. */
-    @KlangScript.Method(name = "div")
-    fun divConst(self: ExciterDsl, divisor: Double): ExciterDsl =
-        self.div(ExciterDsl.Param("divisor", divisor))
+    fun div(self: ExciterDsl, other: Any): ExciterDsl =
+        self.div(other.toExciterDsl("divisor"))
 }
