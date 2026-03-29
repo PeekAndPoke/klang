@@ -59,7 +59,7 @@ class ExciterDslSerializationTest : StringSpec({
     }
 
     "Nested composition (Sine + Sawtooth.detune).div round-trips" {
-        val dsl = (ExciterDsl.Sine() + ExciterDsl.Sawtooth().detune(0.1)).div(2.0)
+        val dsl = (ExciterDsl.Sine() + ExciterDsl.Sawtooth().detune(0.1)).div(ExciterDsl.Param("divisor", 2.0))
         roundTrip(dsl) shouldBe dsl
     }
 
@@ -69,7 +69,7 @@ class ExciterDslSerializationTest : StringSpec({
     }
 
     "Mul round-trips" {
-        val dsl = ExciterDsl.Sine().mul(0.5)
+        val dsl = ExciterDsl.Sine().mul(ExciterDsl.Param("factor", 0.5))
         roundTrip(dsl) shouldBe dsl
     }
 
@@ -125,7 +125,7 @@ class ExciterDslSerializationTest : StringSpec({
 
     "sgpad composition round-trips" {
         val dsl = (ExciterDsl.Sawtooth() + ExciterDsl.Sawtooth().detune(0.1))
-            .div(2.0)
+            .div(ExciterDsl.Param("divisor", 2.0))
             .onePoleLowpass(3000.0)
         roundTrip(dsl) shouldBe dsl
     }

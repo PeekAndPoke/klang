@@ -109,6 +109,10 @@ class JvmAudioBackend(
                         }
 
                         is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
+
+                        is KlangCommLink.Cmd.RegisterExciter -> {
+                            exciterRegistry.register(cmd.name, cmd.dsl)
+                        }
                     }
                 }
 

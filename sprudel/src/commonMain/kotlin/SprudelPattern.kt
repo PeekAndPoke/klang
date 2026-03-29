@@ -12,6 +12,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.lang.*
 import io.peekandpoke.klang.sprudel.pattern.*
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.ultra.common.MutableTypedAttributes
 import io.peekandpoke.ultra.datetime.Kronos
 import io.peekandpoke.ultra.datetime.MpInstant
 import kotlin.jvm.JvmName
@@ -29,10 +30,13 @@ interface SprudelPattern : KlangPattern {
         /** Small epsilon value for point queries (sampling control patterns at a specific time) */
         val QUERY_EPSILON = 1e-6.toRational()
 
-        fun compileRaw(code: String): SprudelPattern? {
+        fun compileRaw(
+            code: String,
+            attrs: MutableTypedAttributes = MutableTypedAttributes.empty(),
+        ): SprudelPattern? {
             val beforeEngine = MpInstant.now()
 
-            val klangScriptEngine = klangScript {
+            val klangScriptEngine = klangScript(attrs) {
                 registerLibrary(sprudelLib)
             }
 
@@ -65,11 +69,14 @@ interface SprudelPattern : KlangPattern {
          * @param code The Sprudel pattern code to compile (without import statements)
          * @return The compiled pattern, or null if compilation fails
          */
-        fun compile(code: String): SprudelPattern? {
+        fun compile(
+            code: String,
+            attrs: MutableTypedAttributes = MutableTypedAttributes.empty(),
+        ): SprudelPattern? {
             val beforeEngine = MpInstant.now()
 
             // Create engine with native registrations
-            val klangScriptEngine = klangScript {
+            val klangScriptEngine = klangScript(attrs) {
                 registerLibrary(sprudelLib)
             }
 

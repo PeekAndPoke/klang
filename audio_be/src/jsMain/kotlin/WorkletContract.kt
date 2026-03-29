@@ -1,9 +1,6 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
-import io.peekandpoke.klang.audio_bridge.SampleMetadata
-import io.peekandpoke.klang.audio_bridge.SampleRequest
-import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromDynamic
@@ -32,6 +29,8 @@ object WorkletContract {
     const val PROP_TOTAL_SIZE = "totalSize"
     const val PROP_VOICE = "voice"
     const val PROP_VOICES = "voices"
+    const val PROP_NAME = "name"
+    const val PROP_DSL = "dsl"
 
     private val codec = Json {
         ignoreUnknownKeys = true
@@ -115,6 +114,13 @@ object WorkletContract {
                 it[PROP_CHUNK_OFFSET] = chunkOffset
                 it[PROP_DATA] = data
             }
+
+            is KlangCommLink.Cmd.RegisterExciter -> jsObject {
+                it[PROP_TYPE] = KlangCommLink.Cmd.RegisterExciter.SERIAL_NAME
+                it[PROP_PLAYBACK_ID] = playbackId
+                it[PROP_NAME] = name
+                it[PROP_DSL] = codec.encodeToDynamic(ExciterDsl.serializer(), dsl)
+            }
         }
     }
 
@@ -161,6 +167,12 @@ object WorkletContract {
                 isLastChunk = msg[PROP_IS_LAST_CHUNK],
                 chunkOffset = msg[PROP_CHUNK_OFFSET],
                 data = msg[PROP_DATA],
+            )
+
+            KlangCommLink.Cmd.RegisterExciter.SERIAL_NAME -> KlangCommLink.Cmd.RegisterExciter(
+                playbackId = msg[PROP_PLAYBACK_ID],
+                name = msg[PROP_NAME],
+                dsl = codec.decodeFromDynamic(ExciterDsl.serializer(), msg[PROP_DSL]),
             )
 
             else -> error("Unknown cmd type: $type")

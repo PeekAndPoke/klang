@@ -1143,7 +1143,7 @@ class Interpreter(
                 return BoundNativeMethod(
                     methodName = memberAccess.property,
                     receiver = objValue,
-                    invoker = { args, location -> extensionMethod.invoker(objValue.value, args, location) }
+                    invoker = { args, location -> extensionMethod.invoker(objValue.value, args, location, engine) }
                 )
             }
 
@@ -1171,7 +1171,7 @@ class Interpreter(
                 return BoundNativeMethod(
                     methodName = memberAccess.property,
                     receiver = NativeObjectValue.fromValue(objValue),
-                    invoker = { args, location -> extensionMethod.invoker(objValue, args, location) }
+                    invoker = { args, location -> extensionMethod.invoker(objValue, args, location, engine) }
                 )
             }
 

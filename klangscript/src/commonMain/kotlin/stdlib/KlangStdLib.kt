@@ -1,9 +1,12 @@
 package io.peekandpoke.klang.script.stdlib
 
+import io.peekandpoke.klang.audio_bridge.ExciterDsl
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.generated.registerStdlibGenerated
 import io.peekandpoke.klang.script.klangScriptLibrary
+import io.peekandpoke.klang.script.runtime.NativeObjectValue
+import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.script.stdlib.KlangStdLib.defaultOutputHandler
 
 /**
@@ -41,7 +44,8 @@ object KlangStdLib {
                 export {
                     console,
                     Math,
-                    Object
+                    Object,
+                    Osc
                 }
                 """.trimIndent()
             )
@@ -73,6 +77,18 @@ object KlangStdLib {
             // print() -- uses the captured outputHandler at LOG level
             registerVarargFunction("print") { args: List<Any?> ->
                 outputHandler(ConsoleLevel.LOG, args.map { it?.toString() ?: "null" })
+            }
+
+            // Osc.register() -- registered manually because it needs engine access to read
+            // the ExciterRegistrar from engine.attrs at call time.
+            registerExtensionMethodWithEngine(KlangScriptOsc::class, "register") { _, args, _, engine ->
+                val registrar = engine.attrs[KlangScriptOsc.REGISTRAR_KEY]
+                    ?: error("Osc.register() requires an audio player. No player is connected.")
+                val name = (args[0] as StringValue).value
+
+                @Suppress("UNCHECKED_CAST")
+                val dsl = (args[1] as NativeObjectValue<ExciterDsl>).value
+                StringValue(registrar(name, dsl))
             }
         }
     }

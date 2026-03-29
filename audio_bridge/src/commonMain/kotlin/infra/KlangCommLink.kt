@@ -55,6 +55,17 @@ class KlangCommLink(capacity: Int = 8192) {
             }
         }
 
+        /** Registers a custom ExciterDsl in the backend's exciter registry. */
+        data class RegisterExciter(
+            override val playbackId: String,
+            val name: String,
+            val dsl: io.peekandpoke.klang.audio_bridge.ExciterDsl,
+        ) : Cmd {
+            companion object {
+                const val SERIAL_NAME = "register-exciter"
+            }
+        }
+
         sealed interface Sample : Cmd {
             data class NotFound(
                 override val req: SampleRequest,

@@ -113,6 +113,10 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
                         }
 
                         is KlangCommLink.Cmd.Sample -> ctx.voices.addSample(msg = cmd)
+
+                        is KlangCommLink.Cmd.RegisterExciter -> {
+                            ctx.exciterRegistry.register(cmd.name, cmd.dsl)
+                        }
                     }
                 }
             }

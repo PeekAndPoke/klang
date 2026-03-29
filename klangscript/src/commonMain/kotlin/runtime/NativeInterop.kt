@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
 import kotlin.reflect.KClass
 
@@ -25,7 +26,7 @@ data class NativeTypeInfo(
 data class NativeExtensionMethod(
     val methodName: String,
     val receiverClass: KClass<*>,
-    val invoker: (receiver: Any, args: List<RuntimeValue>, location: SourceLocation?) -> RuntimeValue,
+    val invoker: (receiver: Any, args: List<RuntimeValue>, location: SourceLocation?, engine: KlangScriptEngine) -> RuntimeValue,
 )
 
 /**

@@ -44,6 +44,7 @@ kotlin {
             dependencies {
                 api(project(":common"))
                 api(project(":klangscript-annotations"))
+                api(project(":audio_bridge"))
                 implementation(kotlin("reflect"))
                 implementation(Deps.KotlinX.coroutines_core)
                 implementation(Deps.KotlinX.serialization_core)
