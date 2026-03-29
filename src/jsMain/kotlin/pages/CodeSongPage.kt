@@ -3,9 +3,7 @@ package io.peekandpoke.klang.pages
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
 import io.peekandpoke.klang.Player
-import io.peekandpoke.klang.audio_bridge.ExciterDsl
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.play
@@ -17,7 +15,6 @@ import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.fs
-import io.peekandpoke.klang.script.stdlib.KlangScriptOsc
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -40,7 +37,6 @@ import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.utils.documentCtrl
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.common.MutableTypedAttributes
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
@@ -195,23 +191,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         return Player.ensure().await()
     }
 
-    private fun createEngineAttrs(player: KlangPlayer? = null): MutableTypedAttributes {
-        return MutableTypedAttributes {
-            if (player != null) {
-                add(KlangScriptOsc.REGISTRAR_KEY) { name: String, dsl: ExciterDsl ->
-                    player.sendControl(
-                        KlangCommLink.Cmd.RegisterExciter(
-                            playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID,
-                            name = name,
-                            dsl = dsl,
-                        )
-                    )
-                    name
-                }
-            }
-        }
-    }
-
     private fun resetToOriginal() {
         builtIn?.let { b ->
             code = b.code
@@ -278,7 +257,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 if (!loading) {
                     withEditorErrorHandling(codeEditorRef) {
                         getPlayer().let { p ->
-                            val pattern = SprudelPattern.compileRaw(code, createEngineAttrs(p))
+                            val engine = Player.createEngine(player = p)
+                            val pattern = SprudelPattern.compile(engine, code)
                                 ?: error("Failed to compile Sprudel pattern from code")
 
                             playback = p.play(pattern)
@@ -320,8 +300,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
             else -> launch {
                 withEditorErrorHandling(codeEditorRef) {
-                    val p = Player.get()
-                    val pattern = SprudelPattern.compileRaw(code, createEngineAttrs(p))
+                    val engine = Player.createEngine()
+                    val pattern = SprudelPattern.compile(engine, code)
                         ?: error("Failed to compile Sprudel pattern from code")
                     s.updatePattern(pattern)
                 }

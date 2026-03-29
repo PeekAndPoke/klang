@@ -1,10 +1,9 @@
 package io.peekandpoke.klang.comp
 
-import io.peekandpoke.klang.script.KlangScriptEngine
+import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.runtime.NullValue
 import io.peekandpoke.klang.script.runtime.RuntimeValue
-import io.peekandpoke.klang.script.stdlib.KlangStdLib
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -53,21 +52,9 @@ class KlangScriptReplComp(ctx: Ctx<Props>) : Component<KlangScriptReplComp.Props
     private fun run() {
         val outputLines = mutableListOf<String>()
 
-        val stdlib = KlangStdLib.create(outputHandler = { _, args ->
-            outputLines.add(args.joinToString(" "))
-        })
-
-        val engine = KlangScriptEngine.builder()
-        engine.registerLibrary(stdlib)
-
-        // Register additional auto-imported libraries (beyond stdlib which is always registered)
-        for (lib in props.autoImportLibraries) {
-            if (lib.name != "stdlib") {
-                engine.registerLibrary(lib)
-            }
-        }
-
-        val built = engine.build()
+        val built = Player.createEngine(
+            outputHandler = { _, args -> outputLines.add(args.joinToString(" ")) }
+        )
 
         // Pre-execute import statements for auto-imported libraries
         for (lib in props.autoImportLibraries) {
