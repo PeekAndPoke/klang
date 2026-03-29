@@ -31,37 +31,45 @@ object KlangScriptOsc {
 
     // ── Oscillator Primitives ────────────────────────────────────────────────
 
-    /** Creates a sine wave oscillator. */
+    /** Creates a sine wave oscillator. freq=0 uses voice frequency, or pass Hz for LFO. */
     @KlangScript.Method
-    fun sine(): ExciterDsl = ExciterDsl.Sine()
+    fun sine(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Sine(freq = freq.toExciterDsl())
 
     /** Creates a sawtooth wave oscillator (PolyBLEP anti-aliased). */
     @KlangScript.Method
-    fun saw(): ExciterDsl = ExciterDsl.Sawtooth()
+    fun saw(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Sawtooth(freq = freq.toExciterDsl())
 
     /** Creates a square wave oscillator (PolyBLEP anti-aliased). */
     @KlangScript.Method
-    fun square(): ExciterDsl = ExciterDsl.Square()
+    fun square(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Square(freq = freq.toExciterDsl())
 
     /** Creates a triangle wave oscillator. */
     @KlangScript.Method
-    fun triangle(): ExciterDsl = ExciterDsl.Triangle()
+    fun triangle(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Triangle(freq = freq.toExciterDsl())
 
     /** Creates a ramp (reverse sawtooth) wave oscillator. */
     @KlangScript.Method
-    fun ramp(): ExciterDsl = ExciterDsl.Ramp()
+    fun ramp(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Ramp(freq = freq.toExciterDsl())
 
     /** Creates a naive sawtooth without anti-aliasing (brighter/harsher). */
     @KlangScript.Method
-    fun zawtooth(): ExciterDsl = ExciterDsl.Zawtooth()
+    fun zawtooth(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Zawtooth(freq = freq.toExciterDsl())
 
     /** Creates an impulse (click) oscillator. */
     @KlangScript.Method
-    fun impulse(): ExciterDsl = ExciterDsl.Impulse()
+    fun impulse(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Impulse(freq = freq.toExciterDsl())
 
     /** Creates a pulse wave with variable duty cycle. */
     @KlangScript.Method
-    fun pulze(): ExciterDsl = ExciterDsl.Pulze()
+    fun pulze(freq: ExciterDslLike = 0.0): ExciterDsl =
+        ExciterDsl.Pulze(freq = freq.toExciterDsl())
 
     /** Creates a silent exciter (zero output). */
     @KlangScript.Method
@@ -71,15 +79,15 @@ object KlangScriptOsc {
 
     /** Creates a white noise source (flat spectrum). */
     @KlangScript.Method
-    fun whitenoise(): ExciterDsl = ExciterDsl.WhiteNoise()
+    fun whitenoise(): ExciterDsl = ExciterDsl.WhiteNoise
 
     /** Creates a brown noise source (1/f^2 spectrum, deeper). */
     @KlangScript.Method
-    fun brownnoise(): ExciterDsl = ExciterDsl.BrownNoise()
+    fun brownnoise(): ExciterDsl = ExciterDsl.BrownNoise
 
     /** Creates a pink noise source (1/f spectrum). */
     @KlangScript.Method
-    fun pinknoise(): ExciterDsl = ExciterDsl.PinkNoise()
+    fun pinknoise(): ExciterDsl = ExciterDsl.PinkNoise
 
     /** Creates a Perlin noise source (smooth organic noise). */
     @KlangScript.Method
@@ -144,4 +152,17 @@ object KlangScriptOsc {
     @KlangScript.Method
     fun param(name: String, default: Double, description: String = ""): ExciterDsl =
         ExciterDsl.Param(name, default, description)
+
+    // ── Constant ────────────────────────────────────────────────────────────
+
+    /**
+     * Creates a fixed constant value that cannot be overridden by oscParams.
+     *
+     * Use when you want an explicit, locked value in the signal graph.
+     *
+     * @param value the constant value
+     */
+    @KlangScript.Method
+    fun constant(value: Double): ExciterDsl =
+        ExciterDsl.Constant(value)
 }

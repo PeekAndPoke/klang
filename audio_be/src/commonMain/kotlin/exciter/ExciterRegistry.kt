@@ -9,7 +9,10 @@ import io.peekandpoke.klang.audio_bridge.VoiceData
  * Each [createExciter] call produces a fresh [Exciter] with independent mutable state
  * (phase accumulators, filter memory, etc.) — two voices never share a Exciter instance.
  */
-class ExciterRegistry {
+class ExciterRegistry(
+    /** Parent registry — lookups delegate here when not found locally. */
+    private val parent: ExciterRegistry? = null,
+) {
     companion object {
         /** Default sound when none is specified */
         const val DEFAULT_SOUND = "triangle"
@@ -21,19 +24,19 @@ class ExciterRegistry {
         defs[name.lowercase()] = dsl
     }
 
-    fun get(name: String): ExciterDsl? = defs[name.lowercase()]
+    fun get(name: String): ExciterDsl? = defs[name.lowercase()] ?: parent?.get(name)
 
     fun contains(name: String?): Boolean {
         val key = (name ?: DEFAULT_SOUND).lowercase()
-        return defs.containsKey(key)
+        return defs.containsKey(key) || (parent?.contains(name) == true)
     }
 
     fun needsFreq(name: String?): Boolean {
         val key = (name ?: DEFAULT_SOUND).lowercase()
-        return defs[key]?.needsFreq ?: true
+        return defs[key]?.needsFreq ?: parent?.needsFreq(name) ?: true
     }
 
-    fun names(): Set<String> = defs.keys.toSet()
+    fun names(): Set<String> = (parent?.names() ?: emptySet()) + defs.keys
 
     /**
      * Creates a fresh [Exciter] for the given oscillator name.
@@ -44,17 +47,13 @@ class ExciterRegistry {
         val key = (name ?: DEFAULT_SOUND).lowercase()
         val oscParams = data.oscParams
 
-        val dsl = defs[key] ?: return null
+        val dsl = get(key) ?: return null
 
         val raw = dsl.toExciter(oscParams)
         val warmth = oscParams?.get("warmth") ?: 0.0
         return if (warmth > 0.0) raw.withWarmth(warmth) else raw
     }
 
-    /** Create a child that inherits all defs. Child can add/override without affecting parent. */
-    fun fork(): ExciterRegistry {
-        val child = ExciterRegistry()
-        child.defs.putAll(this.defs)
-        return child
-    }
+    /** Create a child that delegates to this registry for keys not found locally. */
+    fun fork(): ExciterRegistry = ExciterRegistry(parent = this)
 }

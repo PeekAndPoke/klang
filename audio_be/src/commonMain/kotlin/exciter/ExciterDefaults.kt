@@ -63,15 +63,15 @@ fun ExciterRegistry.registerDefaults() {
 
     // ─── Noises ──────────────────────────────────────────────────────────────
 
-    val whiteNoise = ExciterDsl.WhiteNoise()
+    val whiteNoise = ExciterDsl.WhiteNoise
     register(name = "whitenoise", dsl = whiteNoise)
     register(name = "white", dsl = whiteNoise)
 
-    val brownNoise = ExciterDsl.BrownNoise()
+    val brownNoise = ExciterDsl.BrownNoise
     register(name = "brownnoise", dsl = brownNoise)
     register(name = "brown", dsl = brownNoise)
 
-    val pinkNoise = ExciterDsl.PinkNoise()
+    val pinkNoise = ExciterDsl.PinkNoise
     register(name = "pinknoise", dsl = pinkNoise)
     register(name = "pink", dsl = pinkNoise)
 

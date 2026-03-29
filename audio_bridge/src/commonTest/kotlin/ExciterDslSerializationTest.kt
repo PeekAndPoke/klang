@@ -19,8 +19,8 @@ class ExciterDslSerializationTest : StringSpec({
     // Primitives
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "Sine with custom gain round-trips" {
-        val dsl = ExciterDsl.Sine(gain = ExciterDsl.Param("gain", 0.8))
+    "Sine with custom freq round-trips" {
+        val dsl = ExciterDsl.Sine(freq = ExciterDsl.Param("freq", 440.0))
         roundTrip(dsl) shouldBe dsl
     }
 
@@ -29,8 +29,8 @@ class ExciterDslSerializationTest : StringSpec({
         roundTrip(dsl) shouldBe dsl
     }
 
-    "Square round-trips" {
-        val dsl = ExciterDsl.Square(gain = ExciterDsl.Param("gain", 0.3))
+    "Square with custom freq round-trips" {
+        val dsl = ExciterDsl.Square(freq = ExciterDsl.Param("freq", 220.0))
         roundTrip(dsl) shouldBe dsl
     }
 
@@ -40,7 +40,7 @@ class ExciterDslSerializationTest : StringSpec({
     }
 
     "WhiteNoise round-trips" {
-        val dsl = ExciterDsl.WhiteNoise(gain = ExciterDsl.Param("gain", 0.5))
+        val dsl = ExciterDsl.WhiteNoise
         roundTrip(dsl) shouldBe dsl
     }
 

@@ -898,13 +898,11 @@ class ExcitersTest : StringSpec({
     "supersaw DSL - multiple oscParams applied together" {
         val dsl = ExciterDsl.SuperSaw()
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "freqSpread" to 0.5, "gain" to 0.3)), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "freqSpread" to 0.5)), freqHz = 440.0)
         bufDefault.any { it != 0.0f } shouldBe true
         bufOverride.any { it != 0.0f } shouldBe true
-        // Output should differ due to different voices, spread, and gain
+        // Output should differ due to different voices and spread
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
-        // Gain override to 0.3 should reduce amplitude
-        bufOverride.peakAmplitude() shouldBeLessThan bufDefault.peakAmplitude()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
