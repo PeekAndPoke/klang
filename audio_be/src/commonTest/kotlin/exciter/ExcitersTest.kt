@@ -999,4 +999,63 @@ class ExcitersTest : StringSpec({
         buf.peakAmplitude() shouldBeLessThan 1.1
     }
 
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Edge cases — zero/negative voices, division by zero
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "supersaw - zero voices produces silence" {
+        val buf = generate(Exciters.superSaw(voices = ParamExciter("voices", 0.0)), freqHz = 440.0)
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    "supersaw - negative voices produces silence" {
+        val buf = generate(Exciters.superSaw(voices = ParamExciter("voices", -5.0)), freqHz = 440.0)
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    "supersine - zero voices produces silence" {
+        val buf = generate(Exciters.superSine(voices = ParamExciter("voices", 0.0)), freqHz = 440.0)
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    "plus - two sines summed roughly double amplitude" {
+        val single = generate(Exciters.sine(), freqHz = 440.0)
+        val doubled = generate(Exciters.sine() + Exciters.sine(), freqHz = 440.0)
+        doubled.peakAmplitude() shouldBe (single.peakAmplitude() * 2.0 plusOrMinus 0.05)
+    }
+
+    "mul by 0.5 halves amplitude" {
+        val full = generate(Exciters.sine(), freqHz = 440.0)
+        val half = generate(Exciters.sine().mul(0.5), freqHz = 440.0)
+        (half.peakAmplitude() / full.peakAmplitude()) shouldBe (0.5 plusOrMinus 0.02)
+    }
+
+    "mul by 1.0 preserves signal (withGain short-circuit)" {
+        val original = generate(Exciters.sine(), freqHz = 440.0)
+        val unchanged = generate(Exciters.sine().withGain(ParamExciter("gain", 1.0)), freqHz = 440.0)
+        original.zip(unchanged).all { (a, b) -> a == b } shouldBe true
+    }
+
+    "div by 2.0 halves amplitude" {
+        val full = generate(Exciters.sine(), freqHz = 440.0)
+        val half = generate(Exciters.sine().div(2.0), freqHz = 440.0)
+        (half.peakAmplitude() / full.peakAmplitude()) shouldBe (0.5 plusOrMinus 0.02)
+    }
+
+    "times - signal times itself is squared (always positive)" {
+        val buf = generate(Exciters.sine() * Exciters.sine(), freqHz = 440.0)
+        // Squared sine is always >= 0
+        buf.all { it >= -0.001f } shouldBe true
+    }
+
+    "div by zero produces silence, not NaN" {
+        val sig = Exciters.sine() * Exciters.silence()  // silence = all zeros
+        val dividend = Exciters.sine()
+        val divResult = dividend.div(Exciters.silence())
+        val buf = generate(divResult, freqHz = 440.0)
+        // Should be all zeros (guarded), not NaN or Infinity
+        buf.none { it.isNaN() || it.isInfinite() } shouldBe true
+        buf.all { it == 0.0f } shouldBe true
+    }
+
 })

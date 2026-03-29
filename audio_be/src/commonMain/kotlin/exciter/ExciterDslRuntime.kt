@@ -103,8 +103,8 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
         // Arithmetic
         is ExciterDsl.Plus -> left.toExciter(oscParams) + right.toExciter(oscParams)
         is ExciterDsl.Times -> left.toExciter(oscParams) * right.toExciter(oscParams)
-        is ExciterDsl.Mul -> inner.toExciter(oscParams).mul(this.factor.toExciter(oscParams))
-        is ExciterDsl.Div -> inner.toExciter(oscParams).div(this.divisor.toExciter(oscParams))
+        is ExciterDsl.Mul -> left.toExciter(oscParams).mul(right.toExciter(oscParams))
+        is ExciterDsl.Div -> left.toExciter(oscParams).div(right.toExciter(oscParams))
 
         // Frequency
         is ExciterDsl.Detune -> inner.toExciter(oscParams).detune(this.semitones.toExciter(oscParams))

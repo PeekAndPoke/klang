@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.*
+import io.peekandpoke.klang.audio_bridge.ExciterDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
@@ -187,22 +187,26 @@ object KlangScriptOscExtensions {
 
     /** Adds two exciter signals together (summing). */
     @KlangScript.Method
-    fun plus(self: ExciterDsl, other: ExciterDslLike): ExciterDsl = self + other.toExciterDsl()
+    fun plus(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
+        ExciterDsl.Plus(left = self, right = other.toExciterDsl())
 
-    /** Subtracts another signal from this one. Implemented as plus(other.mul(-1)). */
+    /** Subtracts another signal from this one. */
     @KlangScript.Method
     fun minus(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
-        self + ExciterDsl.Mul(other.toExciterDsl(), ExciterDsl.Constant(-1.0))
+        ExciterDsl.Plus(left = self, right = ExciterDsl.Mul(left = other.toExciterDsl(), right = ExciterDsl.Constant(-1.0)))
 
     /** Multiplies two exciter signals (ring modulation / amplitude modulation). */
     @KlangScript.Method
-    fun times(self: ExciterDsl, other: ExciterDslLike): ExciterDsl = self * other.toExciterDsl()
+    fun times(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
+        ExciterDsl.Times(left = self, right = other.toExciterDsl())
 
     /** Scales the signal by a factor (ExciterDsl or Number). */
     @KlangScript.Method
-    fun mul(self: ExciterDsl, other: ExciterDslLike): ExciterDsl = self.mul(other.toExciterDsl())
+    fun mul(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
+        ExciterDsl.Mul(left = self, right = other.toExciterDsl())
 
     /** Divides the signal by a divisor (ExciterDsl or Number). */
     @KlangScript.Method
-    fun div(self: ExciterDsl, other: ExciterDslLike): ExciterDsl = self.div(other.toExciterDsl())
+    fun div(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
+        ExciterDsl.Div(left = self, right = other.toExciterDsl())
 }

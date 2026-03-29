@@ -376,27 +376,27 @@ sealed interface ExciterDsl {
         }
     }
 
-    /** Scales the inner signal by a constant or modulatable factor. */
+    /** Scales the left signal by the right signal (per-sample multiplication). */
     @Serializable
     @SerialName("mul")
     data class Mul(
-        val inner: ExciterDsl,
-        val factor: ExciterDsl = Param("factor", 1.0, "Scale factor."),
+        val left: ExciterDsl,
+        val right: ExciterDsl = Param("factor", 1.0, "Scale factor."),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); factor.collectParams(out)
+            left.collectParams(out); right.collectParams(out)
         }
     }
 
-    /** Divides the inner signal by a constant or modulatable divisor. */
+    /** Divides the left signal by the right signal (per-sample division). */
     @Serializable
     @SerialName("div")
     data class Div(
-        val inner: ExciterDsl,
-        val divisor: ExciterDsl = Param("divisor", 1.0, "Divisor."),
+        val left: ExciterDsl,
+        val right: ExciterDsl = Param("divisor", 1.0, "Divisor."),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); divisor.collectParams(out)
+            left.collectParams(out); right.collectParams(out)
         }
     }
 
@@ -640,10 +640,10 @@ operator fun ExciterDsl.plus(other: ExciterDsl) = ExciterDsl.Plus(left = this, r
 operator fun ExciterDsl.times(other: ExciterDsl) = ExciterDsl.Times(left = this, right = other)
 
 /** Scales this signal by a modulatable [other] factor. */
-fun ExciterDsl.mul(other: ExciterDsl) = ExciterDsl.Mul(inner = this, factor = other)
+fun ExciterDsl.mul(other: ExciterDsl) = ExciterDsl.Mul(left = this, right = other)
 
 /** Divides this signal by a modulatable [other] divisor. */
-fun ExciterDsl.div(other: ExciterDsl) = ExciterDsl.Div(inner = this, divisor = other)
+fun ExciterDsl.div(other: ExciterDsl) = ExciterDsl.Div(left = this, right = other)
 
 // Frequency
 
