@@ -13,9 +13,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface ExciterDsl {
 
-    /** Whether this exciter requires a frequency to produce sound. Noise sources override to false. */
-    val needsFreq: Boolean get() = true
-
     /** Recursively collects all [Param] leaf nodes in this DSL subtree into [out]. */
     fun collectParams(out: MutableList<Param>)
 
@@ -40,7 +37,6 @@ sealed interface ExciterDsl {
         val default: Double,
         val description: String = "",
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
             out.add(this)
         }
@@ -57,7 +53,6 @@ sealed interface ExciterDsl {
     data class Constant(
         val value: Double,
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {}
     }
 
@@ -117,7 +112,6 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("white-noise")
     data object WhiteNoise : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {}
     }
 
@@ -162,7 +156,6 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("brown-noise")
     data object BrownNoise : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {}
     }
 
@@ -170,7 +163,6 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("pink-noise")
     data object PinkNoise : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {}
     }
 
@@ -180,7 +172,6 @@ sealed interface ExciterDsl {
     data class PerlinNoise(
         val rate: ExciterDsl = Param("rate", 1.0, "Speed of noise evolution. Higher = faster changes."),
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
             rate.collectParams(out)
         }
@@ -192,7 +183,6 @@ sealed interface ExciterDsl {
     data class BerlinNoise(
         val rate: ExciterDsl = Param("rate", 1.0, "Speed of noise evolution. Higher = faster changes."),
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
             rate.collectParams(out)
         }
@@ -204,7 +194,6 @@ sealed interface ExciterDsl {
     data class Dust(
         val density: ExciterDsl = Param("density", 0.2, "Impulse rate 0.0..1.0."),
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
             density.collectParams(out)
         }
@@ -216,7 +205,6 @@ sealed interface ExciterDsl {
     data class Crackle(
         val density: ExciterDsl = Param("density", 0.2, "Impulse rate 0.0..1.0."),
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
             density.collectParams(out)
         }
@@ -308,7 +296,6 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("silence")
     data object Silence : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {}
     }
 

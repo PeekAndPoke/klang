@@ -175,7 +175,7 @@ class VoiceFactory(
         // Decision: oscillator vs sample
         val freqHz = data.freqHz
         val sound = data.sound
-        val isOsci = exciterRegistry.contains(sound) && (freqHz != null || !exciterRegistry.needsFreq(sound))
+        val isOsci = exciterRegistry.contains(sound)
         val isSample = !exciterRegistry.contains(sound) && sound != null
 
         return when {

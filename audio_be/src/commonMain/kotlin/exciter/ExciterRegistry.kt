@@ -31,11 +31,6 @@ class ExciterRegistry(
         return defs.containsKey(key) || (parent?.contains(name) == true)
     }
 
-    fun needsFreq(name: String?): Boolean {
-        val key = (name ?: DEFAULT_SOUND).lowercase()
-        return defs[key]?.needsFreq ?: parent?.needsFreq(name) ?: true
-    }
-
     fun names(): Set<String> = (parent?.names() ?: emptySet()) + defs.keys
 
     /**

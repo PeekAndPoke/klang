@@ -423,63 +423,84 @@ class KlangScriptProcessor(
      * Generates a raw registerExtensionMethod for methods with default parameters.
      * Dispatches by args.size so Kotlin's own default mechanism fills in missing values.
      */
+    /**
+     * Generates the arity-dispatching body for a function/method with default parameters.
+     * Shared between method and top-level function registration.
+     *
+     * @param name script-visible name (for error messages)
+     * @param fnCall how to call the Kotlin function, e.g. "OwnerName.fnName"
+     * @param selfArg prefix for the call args, e.g. "receiver, " for type extensions, "" for functions
+     * @param scriptParams the script-visible parameters (receiver already stripped for type extensions)
+     * @param indent base indentation for the generated code
+     */
+    private fun StringBuilder.generateArityDispatchBody(
+        name: String,
+        fnCall: String,
+        selfArg: String,
+        scriptParams: List<KSValueParameter>,
+        indent: String,
+    ) {
+        val requiredCount = scriptParams.count { !it.hasDefault }
+        val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
+
+        appendLine("${indent}checkArgsSize(fn = \"$name\", args = args, expected = $requiredCount, location = loc)")
+
+        // Required params — always convert
+        scriptParams.forEachIndexed { i, param ->
+            if (!param.hasDefault) {
+                val paramName = param.name?.asString() ?: "p$i"
+                val paramType = resolveKotlinType(param.type.resolve())
+                appendLine("${indent}val $paramName = convertArgToKotlin(fn = \"$name\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
+            }
+        }
+
+        appendLine("${indent}wrapAsRuntimeValue(")
+
+        // Generate if/else chain for each arity level
+        for (level in scriptParams.size downTo firstOptionalIdx + 1) {
+            val argsForLevel = scriptParams.take(level)
+            val prefix = if (level == scriptParams.size) "if" else "} else if"
+            appendLine("$indent    $prefix (args.size >= $level) {")
+
+            argsForLevel.forEachIndexed { i, param ->
+                if (param.hasDefault) {
+                    val paramName = param.name?.asString() ?: "p$i"
+                    val paramType = resolveKotlinType(param.type.resolve())
+                    appendLine("$indent        val $paramName = convertArgToKotlin(fn = \"$name\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
+                }
+            }
+
+            val callArgs = argsForLevel.map { it.name?.asString() ?: "p" }.joinToString(", ")
+            appendLine("$indent        $fnCall($selfArg$callArgs)")
+        }
+
+        // Final else: only required params
+        val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name?.asString() ?: "p" }.joinToString(", ")
+        appendLine("$indent    } else {")
+        appendLine("$indent        $fnCall($selfArg$requiredArgs)")
+        appendLine("$indent    }")
+        appendLine("$indent)")
+    }
+
     private fun generateMethodWithDefaults(
         method: MethodEntry,
         ownerCls: KSClassDeclaration,
         isTypeExtension: Boolean,
         scriptParams: List<KSValueParameter>,
     ): String {
-        val fn = method.fn
         val ownerName = ownerCls.simpleName.asString()
-        val fnName = fn.simpleName.asString()
-
-        // Count required params (no default)
-        val requiredCount = scriptParams.count { !it.hasDefault }
-
+        val fnName = method.fn.simpleName.asString()
         val selfArg = if (isTypeExtension) "receiver, " else ""
-        val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
-        val name = method.name
 
         return buildString {
-            appendLine("builder.registerExtensionMethod(cls, \"$name\") { receiver, args, loc ->")
-            appendLine("                checkArgsSize(fn = \"$name\", args = args, expected = $requiredCount, location = loc)")
-
-            // Required params — always convert
-            scriptParams.forEachIndexed { i, param ->
-                if (!param.hasDefault) {
-                    val paramName = param.name?.asString() ?: "p$i"
-                    val paramType = resolveKotlinType(param.type.resolve())
-                    appendLine("                val $paramName = convertArgToKotlin(fn = \"$name\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
-                }
-            }
-
-            appendLine("                wrapAsRuntimeValue(")
-
-            // Generate if/else chain for each arity level
-            for (level in scriptParams.size downTo firstOptionalIdx + 1) {
-                val argsForLevel = scriptParams.take(level)
-                val prefix = if (level == scriptParams.size) "if" else "} else if"
-                appendLine("                    $prefix (args.size >= $level) {")
-
-                // Convert optional params for this level
-                argsForLevel.forEachIndexed { i, param ->
-                    if (param.hasDefault) {
-                        val paramName = param.name?.asString() ?: "p$i"
-                        val paramType = resolveKotlinType(param.type.resolve())
-                        appendLine("                        val $paramName = convertArgToKotlin(fn = \"$name\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
-                    }
-                }
-
-                val callArgs = argsForLevel.map { it.name?.asString() ?: "p" }.joinToString(", ")
-                appendLine("                        $ownerName.$fnName($selfArg$callArgs)")
-            }
-
-            // Final else: only required params
-            val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name?.asString() ?: "p" }.joinToString(", ")
-            appendLine("                    } else {")
-            appendLine("                        $ownerName.$fnName($selfArg$requiredArgs)")
-            appendLine("                    }")
-            appendLine("                )")
+            appendLine("builder.registerExtensionMethod(cls, \"${method.name}\") { receiver, args, loc ->")
+            generateArityDispatchBody(
+                name = method.name,
+                fnCall = "$ownerName.$fnName",
+                selfArg = selfArg,
+                scriptParams = scriptParams,
+                indent = "                ",
+            )
             append("            }")
         }
     }
@@ -522,6 +543,7 @@ class KlangScriptProcessor(
         val params = getScriptParams(fn)
         val hasCallInfo = hasCallInfoParam(fn)
         val isVararg = params.any { it.isVararg }
+        val hasDefaults = params.any { it.hasDefault }
         val fnName = fn.simpleName.asString()
 
         return when {
@@ -535,6 +557,21 @@ class KlangScriptProcessor(
                 val paramType = getVarargComponentType(params.first { it.isVararg })
                 val returnType = resolveKotlinType(fn.returnType?.resolve())
                 "registerVarargFunction<$paramType, $returnType>(\"${entry.name}\") { args -> $fnName(*args.toTypedArray()) }"
+            }
+
+            hasDefaults -> {
+                // Use arity-dispatching raw registration so Kotlin defaults work
+                buildString {
+                    appendLine("registerFunctionRaw(\"${entry.name}\") { args, loc ->")
+                    generateArityDispatchBody(
+                        name = entry.name,
+                        fnCall = fnName,
+                        selfArg = "",
+                        scriptParams = params,
+                        indent = "        ",
+                    )
+                    append("    }")
+                }
             }
 
             else -> {

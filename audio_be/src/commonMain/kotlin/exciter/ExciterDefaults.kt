@@ -75,6 +75,14 @@ fun ExciterRegistry.registerDefaults() {
     register(name = "pinknoise", dsl = pinkNoise)
     register(name = "pink", dsl = pinkNoise)
 
+    val perlinNoise = ExciterDsl.PerlinNoise()
+    register(name = "perlinnoise", dsl = perlinNoise)
+    register(name = "perlin", dsl = perlinNoise)
+
+    val berlinNoise = ExciterDsl.BerlinNoise()
+    register(name = "berlinnoise", dsl = berlinNoise)
+    register(name = "berlin", dsl = berlinNoise)
+
     register(name = "dust", dsl = ExciterDsl.Dust())
     register(name = "crackle", dsl = ExciterDsl.Crackle())
 
@@ -117,17 +125,6 @@ fun ExciterRegistry.registerDefaults() {
         dsl = ExciterDsl.Square().lowpass(cutoffHz = 2000.0),
     )
 
-    // TESTs
-    register(
-        name = "noisysaw",
-        dsl = ExciterDsl.Sawtooth()
-            .plus(other = ExciterDsl.BerlinNoise().mul(other = ExciterDsl.Param(name = "density", default = 0.5)))
-    )
-
-    register(
-        name = "sinesaw",
-        dsl = ExciterDsl.Sawtooth().plus(other = ExciterDsl.Sine()).div(other = ExciterDsl.Param(name = "divisor", default = 2.0))
-    )
 }
 
 // ═════════════════════════════════════════════════════════════════════════════════
