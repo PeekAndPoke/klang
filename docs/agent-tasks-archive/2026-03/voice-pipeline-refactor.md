@@ -95,6 +95,7 @@ parameters and allow per-orbit effect settings independent of voice scheduling.
 ## Code Review Fixes Applied
 
 ### Review 1 (after Phase 2)
+
 1. Removed unused `hasFreqMod` field from BlockContext
 2. Extracted `buildFilterPipeline()` to shared utility
 3. Fixed FilterModRenderer release phase bug

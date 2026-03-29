@@ -129,6 +129,7 @@ Params: `shape` (saw/square/pulse/resonant1/resonant2/resonant3), `dcw` (morph 0
 snd* DSL: `sndPhaseDistort("shape:dcw")` or `sndCZ("shape:dcw")`
 
 References:
+
 - https://electricdruid.net/phase-distortion-synthesis/
 - https://en.wikipedia.org/wiki/Phase_distortion_synthesis
 
@@ -187,6 +188,7 @@ Params: `vowel` (a/e/i/o/u or continuous 0..1 morph)
 snd* DSL: `sndVocal("vowel")`
 
 References:
+
 - Smith, Formant Synthesis Models: https://ccrma.stanford.edu/~jos/pasp/Formant_Synthesis_Models.html
 
 ---
@@ -204,6 +206,7 @@ Params: `pressure` (blowing pressure), `stiffness` (reed stiffness)
 snd* DSL: `sndReed("pressure:stiffness")`
 
 References:
+
 - Smith, "Physical Modeling Using Digital Waveguides" (1992): https://ccrma.stanford.edu/~jos/pmudw/pmudw.pdf
 - Full free textbook: https://www.dsprelated.com/freebooks/pasp/
 
