@@ -163,7 +163,7 @@ stack(
     c5  ~  ~  ~  ~  ~ a4  ~
     e5  ~  ~  ~ c5  ~ b4  ~
     a4  ~  ~  ~  ~  ~  ~  ~
-  `).sound(shaku).legato(1.3).slow(14).gain(0.2)
+  `).sound(shaku).legato(2.0).slow(14).gain(0.2)
 
   // Drums
   ,note("a1 ~ ~ ~ ~ ~ ~ ~ a1 ~ ~ ~ ~ ~ ~ ~").sound(kick).gain(0.8)
@@ -186,7 +186,7 @@ stack(
   ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.3)
   // High fifth
   ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.3)
-).room("0.25:10:0.75").delay(0.1).delaytime(pure(1/8).div(cps))
+).room("0.25:10:0.75").delay(0.2).delaytime(pure(1/8).div(cps))
 
 
             

@@ -7,58 +7,100 @@ import io.peekandpoke.klang.audio_bridge.*
  *
  * Includes basic waveforms (with aliases) and Exciter compositions (sgpad, sgbell, sgbuzz).
  */
+/**
+ * Registers all built-in oscillators with explicit Param slots for sprudel oscParam() compatibility.
+ *
+ * ExciterDsl types default to Constant (locked, no oscParam override). Here we explicitly
+ * open Param slots for the parameters that sprudel's oscParam() functions target:
+ * - "analog" on all pitched oscillators
+ * - "voices", "freqSpread" on super oscillators
+ * - "density" on dust/crackle
+ * - "decay", "brightness", "pickPosition", "stiffness" on pluck
+ */
 fun ExciterRegistry.registerDefaults() {
-    // Basic waveforms
-    val sine = ExciterDsl.Sine()
+
+    // Helper to create a Param slot with a given name and default
+    fun p(name: String, default: Double) = ExciterDsl.Param(name, default)
+
+    // ─── Basic waveforms ─────────────────────────────────────────────────────
+    // Each gets "analog" as an overridable param
+
+    val sine = ExciterDsl.Sine(freq = p("freq", 0.0), analog = p("analog", 0.0))
     register(name = "sine", dsl = sine)
     register(name = "sin", dsl = sine)
 
-    val saw = ExciterDsl.Sawtooth()
+    val saw = ExciterDsl.Sawtooth(freq = p("freq", 0.0), analog = p("analog", 0.0))
     register(name = "sawtooth", dsl = saw)
     register(name = "saw", dsl = saw)
 
-    val square = ExciterDsl.Square()
+    val square = ExciterDsl.Square(freq = p("freq", 0.0), analog = p("analog", 0.0))
     register(name = "square", dsl = square)
     register(name = "sqr", dsl = square)
     register(name = "pulse", dsl = square)
 
-    val triangle = ExciterDsl.Triangle()
+    val triangle = ExciterDsl.Triangle(freq = p("freq", 0.0), analog = p("analog", 0.0))
     register(name = "triangle", dsl = triangle)
     register(name = "tri", dsl = triangle)
 
-    val ramp = ExciterDsl.Ramp()
+    val ramp = ExciterDsl.Ramp(freq = p("freq", 0.0), analog = p("analog", 0.0))
     register(name = "ramp", dsl = ramp)
 
-    val zawtooth = ExciterDsl.Zawtooth()
+    val zawtooth = ExciterDsl.Zawtooth(freq = p("freq", 0.0), analog = p("analog", 0.0))
     register(name = "zawtooth", dsl = zawtooth)
     register(name = "zaw", dsl = zawtooth)
 
-    val pulze = ExciterDsl.Pulze()
+    val pulze = ExciterDsl.Pulze(freq = p("freq", 0.0), analog = p("analog", 0.0))
     register(name = "pulze", dsl = pulze)
 
-    val impulse = ExciterDsl.Impulse()
+    val impulse = ExciterDsl.Impulse(freq = p("freq", 0.0), analog = p("analog", 0.0))
     register(name = "impulse", dsl = impulse)
 
     val silence = ExciterDsl.Silence
     register(name = "silence", dsl = silence)
 
-    // ─── SuperOsc ────────────────────────────────────────────────────────────
+    // ─── Super oscillators ───────────────────────────────────────────────────
+    // Each gets "voices", "freqSpread", "analog" as overridable params
 
-    val superSaw = ExciterDsl.SuperSaw()
+    val superSaw = ExciterDsl.SuperSaw(
+        freq = p("freq", 0.0),
+        voices = p("voices", 8.0),
+        freqSpread = p("freqSpread", 0.2),
+        analog = p("analog", 0.0),
+    )
     register(name = "supersaw", dsl = superSaw)
 
-    val superSine = ExciterDsl.SuperSine()
+    val superSine = ExciterDsl.SuperSine(
+        freq = p("freq", 0.0),
+        voices = p("voices", 8.0),
+        freqSpread = p("freqSpread", 0.2),
+        analog = p("analog", 0.0),
+    )
     register(name = "supersine", dsl = superSine)
 
-    val superSquare = ExciterDsl.SuperSquare()
+    val superSquare = ExciterDsl.SuperSquare(
+        freq = p("freq", 0.0),
+        voices = p("voices", 8.0),
+        freqSpread = p("freqSpread", 0.2),
+        analog = p("analog", 0.0),
+    )
     register(name = "supersquare", dsl = superSquare)
     register(name = "supersqr", dsl = superSquare)
     register(name = "superpulse", dsl = superSquare)
 
-    val superTri = ExciterDsl.SuperTri()
+    val superTri = ExciterDsl.SuperTri(
+        freq = p("freq", 0.0),
+        voices = p("voices", 8.0),
+        freqSpread = p("freqSpread", 0.2),
+        analog = p("analog", 0.0),
+    )
     register(name = "supertri", dsl = superTri)
 
-    val superRamp = ExciterDsl.SuperRamp()
+    val superRamp = ExciterDsl.SuperRamp(
+        freq = p("freq", 0.0),
+        voices = p("voices", 8.0),
+        freqSpread = p("freqSpread", 0.2),
+        analog = p("analog", 0.0),
+    )
     register(name = "superramp", dsl = superRamp)
 
     // ─── Noises ──────────────────────────────────────────────────────────────
@@ -75,25 +117,41 @@ fun ExciterRegistry.registerDefaults() {
     register(name = "pinknoise", dsl = pinkNoise)
     register(name = "pink", dsl = pinkNoise)
 
-    val perlinNoise = ExciterDsl.PerlinNoise()
+    val perlinNoise = ExciterDsl.PerlinNoise(rate = p("rate", 1.0))
     register(name = "perlinnoise", dsl = perlinNoise)
     register(name = "perlin", dsl = perlinNoise)
 
-    val berlinNoise = ExciterDsl.BerlinNoise()
+    val berlinNoise = ExciterDsl.BerlinNoise(rate = p("rate", 1.0))
     register(name = "berlinnoise", dsl = berlinNoise)
     register(name = "berlin", dsl = berlinNoise)
 
-    register(name = "dust", dsl = ExciterDsl.Dust())
-    register(name = "crackle", dsl = ExciterDsl.Crackle())
+    register(name = "dust", dsl = ExciterDsl.Dust(density = p("density", 0.2)))
+    register(name = "crackle", dsl = ExciterDsl.Crackle(density = p("density", 0.2)))
 
-    // ─── Physical models ───────────────────────────────────────────────────
+    // ─── Physical models ────────────────────────────────────────────────────
 
-    val pluck = ExciterDsl.Pluck()
+    val pluck = ExciterDsl.Pluck(
+        freq = p("freq", 0.0),
+        decay = p("decay", 0.996),
+        brightness = p("brightness", 0.5),
+        pickPosition = p("pickPosition", 0.5),
+        stiffness = p("stiffness", 0.0),
+        analog = p("analog", 0.0),
+    )
     register(name = "pluck", dsl = pluck)
     register(name = "ks", dsl = pluck)
     register(name = "string", dsl = pluck)
 
-    val superPluck = ExciterDsl.SuperPluck()
+    val superPluck = ExciterDsl.SuperPluck(
+        freq = p("freq", 0.0),
+        voices = p("voices", 8.0),
+        freqSpread = p("freqSpread", 0.2),
+        decay = p("decay", 0.996),
+        brightness = p("brightness", 0.5),
+        pickPosition = p("pickPosition", 0.5),
+        stiffness = p("stiffness", 0.0),
+        analog = p("analog", 0.0),
+    )
     register(name = "superpluck", dsl = superPluck)
 
     // ─── Exciter compositions ──────────────────────────────────────────────
