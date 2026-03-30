@@ -271,6 +271,7 @@ class KlangScriptProcessor(
         appendLine()
         appendLine("package $packageName")
         appendLine()
+        appendLine("import io.peekandpoke.klang.script.KlangScriptLibrary")
         appendLine("import io.peekandpoke.klang.script.builder.*")
         appendLine("import io.peekandpoke.klang.script.runtime.*")
         appendLine("import io.peekandpoke.klang.script.types.*")
@@ -334,6 +335,11 @@ class KlangScriptProcessor(
             appendLine("    // @Function on ${fn.fn.simpleName.asString()}")
             appendLine("    ${generateFunctionRegistration(fn)}")
         }
+
+        // Auto-register docs when called from a library builder
+        appendLine()
+        appendLine("    // Auto-register documentation for code completion")
+        appendLine("    (this as? KlangScriptLibrary.Builder)?.docs { registerAll(generated${capitalizedName}Docs) }")
 
         appendLine("}")
 
@@ -628,7 +634,7 @@ class KlangScriptProcessor(
             docItems.add(DocItem(fn.name, null, fn.fn))
         }
 
-        if (docItems.isEmpty()) return
+        if (docItems.isEmpty() && entries.objects.isEmpty()) return
 
         // Group by script name (handles overloads)
         val grouped = docItems.groupBy { it.scriptName }
@@ -647,8 +653,43 @@ class KlangScriptProcessor(
             appendLine()
         }
 
+        // Generate object-level symbol entries (e.g., "Osc", "Math", "Object")
+        if (entries.objects.isNotEmpty()) {
+            appendLine("private fun generated${capitalizedName}DocsObjects() = mapOf(")
+            entries.objects.forEachIndexed { index, obj ->
+                val kdoc = KDocParser.parse(obj.cls.docString)
+                val description = kdoc.description.escapeForRawString()
+                val category = kdoc.category ?: "object"
+                val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
+                appendLine()
+                appendLine("    \"${obj.name}\" to KlangSymbol(")
+                appendLine("        name = \"${obj.name}\",")
+                appendLine("        category = \"$category\",")
+                appendLine("        tags = listOf($tagsString),")
+                appendLine("        aliases = listOf(),")
+                appendLine("        library = \"$libraryName\",")
+                appendLine("        variants = listOf(")
+                appendLine("            KlangProperty(")
+                appendLine("                name = \"${obj.name}\",")
+                appendLine("                type = KlangType(simpleName = \"${obj.name}\"),")
+                appendLine("                description = \"\"\"$description\"\"\",")
+                appendLine("            )")
+                appendLine("        )")
+                if (index < entries.objects.size - 1) {
+                    appendLine("    ),")
+                } else {
+                    appendLine("    )")
+                }
+            }
+            appendLine(")")
+            appendLine()
+        }
+
         appendLine("/** Generated documentation for the '$libraryName' library. */")
         appendLine("val generated${capitalizedName}Docs: Map<String, KlangSymbol> = buildMap {")
+        if (entries.objects.isNotEmpty()) {
+            appendLine("    putAll(generated${capitalizedName}DocsObjects())")
+        }
         chunks.forEachIndexed { chunkIdx, _ ->
             appendLine("    putAll(generated${capitalizedName}DocsChunk$chunkIdx())")
         }
