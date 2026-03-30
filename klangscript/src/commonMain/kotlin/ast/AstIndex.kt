@@ -103,10 +103,16 @@ class AstIndex private constructor(
         }
     }
 
+    /** Returns the parent of [node], or null if it is the root. */
+    fun parentOf(node: AstNode): AstNode? = parentMap[node]
+
+    /** Returns the source offset range for [node], or null if not positioned. */
+    fun offsetOf(node: AstNode): IntRange? = offsetMap[node]
+
     /**
      * Returns the deepest (highest level) AST node whose range contains [pos].
      */
-    private fun nodeAt(pos: Int): AstNode? {
+    fun nodeAt(pos: Int): AstNode? {
         var best: PositionedEntry? = null
 
         // Binary search for approximate start

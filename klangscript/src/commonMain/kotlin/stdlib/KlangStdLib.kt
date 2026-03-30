@@ -8,6 +8,9 @@ import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
 import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.script.stdlib.KlangStdLib.defaultOutputHandler
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangParam
+import io.peekandpoke.klang.script.types.KlangType
 
 /**
  * KlangScript Standard Library
@@ -81,7 +84,27 @@ object KlangStdLib {
 
             // Osc.register() -- registered manually because it needs engine access to read
             // the ExciterRegistrar from engine.attrs at call time.
-            registerExtensionMethodWithEngine(KlangScriptOsc::class, "register") { _, args, _, engine ->
+            registerExtensionMethodWithEngine(
+                receiver = KlangScriptOsc::class,
+                name = "register",
+                docs = KlangCallable(
+                    library = "stdlib",
+                    name = "register",
+                    receiver = KlangType(simpleName = "Osc"),
+                    params = listOf(
+                        KlangParam(
+                            name = "name", type = KlangType(simpleName = "String"),
+                            description = "Name for the sound, used with .sound()"
+                        ),
+                        KlangParam(
+                            name = "dsl", type = KlangType(simpleName = "ExciterDsl"),
+                            description = "The ExciterDsl signal graph to register"
+                        ),
+                    ),
+                    returnType = KlangType(simpleName = "String"),
+                    description = "Registers an ExciterDsl signal graph as a named sound for use with .sound().",
+                ),
+            ) { _, args, _, engine ->
                 val registrar = engine.attrs[KlangScriptOsc.REGISTRAR_KEY]
                     ?: error("Osc.register() requires an audio player. No player is connected.")
                 val name = (args[0] as StringValue).value

@@ -367,6 +367,17 @@ inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.regist
     }
 }
 
+/** Registers a native vararg function with inline documentation. */
+@Suppress("UNCHECKED_CAST")
+inline fun <reified P : Any, reified R : Any> KlangScriptLibrary.Builder.registerVarargFunction(
+    name: String,
+    docs: io.peekandpoke.klang.script.types.KlangCallable,
+    noinline fn: (List<P>) -> R,
+) {
+    (this as KlangScriptExtensionBuilder).registerVarargFunction<P, R>(name, fn)
+    registerDocs(docs)
+}
+
 /** Registers a native function as a top-level function with no parameters */
 @JvmName("registerNativeFunction0")
 inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(

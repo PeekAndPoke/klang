@@ -254,10 +254,11 @@ class SprudelDocsProcessor(
                 appendLine("                samples = listOf(")
                 append(samplesString)
                 appendLine()
-                appendLine("                )")
+                appendLine("                ),")
             } else {
-                appendLine("                samples = emptyList()")
+                appendLine("                samples = emptyList(),")
             }
+            appendLine("                library = \"sprudel\"")
             append("            )")
         }
     }
@@ -321,10 +322,11 @@ class SprudelDocsProcessor(
                 appendLine("                samples = listOf(")
                 append(samplesString)
                 appendLine()
-                appendLine("                )")
+                appendLine("                ),")
             } else {
-                appendLine("                samples = emptyList()")
+                appendLine("                samples = emptyList(),")
             }
+            appendLine("                library = \"sprudel\"")
             append("            )")
         }
     }

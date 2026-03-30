@@ -1,8 +1,15 @@
 package io.peekandpoke.klang.script
 
+import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
+import io.peekandpoke.klang.script.builder.NativeObjectExtensionsBuilder
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.runtime.RuntimeValue
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangProperty
+import io.peekandpoke.klang.script.types.KlangSymbol
+import kotlin.reflect.KClass
 
 /**
  * Immutable library definition for KlangScript
@@ -94,6 +101,56 @@ class KlangScriptLibrary internal constructor(
          */
         fun docs(block: KlangDocsRegistry.() -> Unit) = apply { docs.block() }
 
+        // ── Docs-aware registration overloads ─────────────────────────────
+
+        /** Register a [KlangCallable] as documentation for a manually registered function. */
+        fun registerDocs(callable: KlangCallable) = apply {
+            docs.register(callable.toSymbol())
+        }
+
+        /** Register an extension method with inline documentation. */
+        fun <T : Any> registerExtensionMethod(
+            receiver: KClass<T>,
+            name: String,
+            docs: KlangCallable,
+            fn: (T, List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+        ) {
+            registry.registerExtensionMethod(receiver, name, fn)
+            this.docs.register(docs.toSymbol())
+        }
+
+        /** Register an extension method (with engine access) with inline documentation. */
+        fun <T : Any> registerExtensionMethodWithEngine(
+            receiver: KClass<T>,
+            name: String,
+            docs: KlangCallable,
+            fn: (T, List<RuntimeValue>, SourceLocation?, KlangScriptEngine) -> RuntimeValue,
+        ) {
+            registry.registerExtensionMethodWithEngine(receiver, name, fn)
+            this.docs.register(docs.toSymbol())
+        }
+
+        /** Register a raw function with inline documentation. */
+        fun registerFunctionRaw(
+            name: String,
+            docs: KlangCallable,
+            fn: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+        ) {
+            registry.registerFunctionRaw(name, fn)
+            this.docs.register(docs.toSymbol())
+        }
+
+        /** Register a native object with inline documentation. */
+        fun <T : Any> registerObject(
+            name: String,
+            obj: T,
+            docs: KlangProperty,
+            block: NativeObjectExtensionsBuilder<T>.() -> Unit = {},
+        ) {
+            registry.registerObject(name, obj, block)
+            this.docs.register(KlangSymbol(name = name, category = "object", variants = listOf(docs)))
+        }
+
         /**
          * Build an immutable KlangScriptLibrary from this builder's configuration
          *
@@ -107,8 +164,18 @@ class KlangScriptLibrary internal constructor(
                 name = name,
                 sourceCode = sourceCode.joinToString("\n\n"),
                 native = registry.buildNativeRegistry(),
-                docs = docs,
+                docs = docs.snapshot(),
             )
         }
     }
+}
+
+/** Convert a [KlangCallable] to a [KlangSymbol] with receiver type as category. */
+fun KlangCallable.toSymbol(): KlangSymbol {
+    return KlangSymbol(
+        name = name,
+        category = receiver?.simpleName ?: "",
+        library = library,
+        variants = listOf(this),
+    )
 }

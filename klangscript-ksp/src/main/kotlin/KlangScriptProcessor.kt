@@ -673,6 +673,7 @@ class KlangScriptProcessor(
                 appendLine("                name = \"${obj.name}\",")
                 appendLine("                type = KlangType(simpleName = \"${obj.name}\"),")
                 appendLine("                description = \"\"\"$description\"\"\",")
+                appendLine("                library = \"$libraryName\",")
                 appendLine("            )")
                 appendLine("        )")
                 if (index < entries.objects.size - 1) {
@@ -711,7 +712,7 @@ class KlangScriptProcessor(
         val aliasesString = allAliases.joinToString(", ") { "\"$it\"" }
 
         val variants = items.zip(parsedKDocs).map { (item, kdoc) ->
-            generateCallableDoc(item, kdoc)
+            generateCallableDoc(item, kdoc, libraryName)
         }
 
         return buildString {
@@ -733,7 +734,7 @@ class KlangScriptProcessor(
         }
     }
 
-    private fun generateCallableDoc(item: DocItem, kdoc: ParsedKDoc): String {
+    private fun generateCallableDoc(item: DocItem, kdoc: ParsedKDoc, libraryName: String = ""): String {
         val fn = item.fn
         val allParams = getScriptParams(fn)
         // Raw-args methods have internal params (List<RuntimeValue>, SourceLocation?) — exclude all from docs
@@ -789,10 +790,11 @@ class KlangScriptProcessor(
                 kdoc.samples.forEach { sample ->
                     appendLine("                    KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})")
                 }
-                appendLine("                )")
+                appendLine("                ),")
             } else {
-                appendLine("                samples = emptyList()")
+                appendLine("                samples = emptyList(),")
             }
+            appendLine("                library = \"$libraryName\"")
             append("            )")
         }
     }
