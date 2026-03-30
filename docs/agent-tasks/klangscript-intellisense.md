@@ -107,7 +107,8 @@ extend it to also run the analyzer when imports change or code changes.
 
 ### Step 1: `KlangScriptAnalyzer` (commonMain)
 
-Create `klangscript/src/commonMain/kotlin/analyzer/KlangScriptAnalyzer.kt`:
+Create `klangscript/src/commonMain/kotlin/intel/KlangScriptAnalyzer.kt` (all intellisense code lives in the `intel`
+package):
 
 - Input: `Program` AST + `KlangDocsRegistry`
 - Walk all `ExpressionStatement` nodes
@@ -187,9 +188,9 @@ Test the analyzer on JVM with known code snippets:
 
 | File                                                                | Role                            |
 |---------------------------------------------------------------------|---------------------------------|
-| `klangscript/src/commonMain/kotlin/analyzer/KlangScriptAnalyzer.kt` | Core analyzer (new)             |
-| `klangscript/src/commonMain/kotlin/analyzer/TypeInference.kt`       | Type inference (new)            |
-| `klangscript/src/commonTest/kotlin/analyzer/AnalyzerSpec.kt`        | Tests (new)                     |
+| `klangscript/src/commonMain/kotlin/intel/KlangScriptAnalyzer.kt`    | Core analyzer (new)             |
+| `klangscript/src/commonMain/kotlin/intel/ExpressionTypeInferrer.kt` | Type inference (new)            |
+| `klangscript/src/commonTest/kotlin/intel/AnalyzerSpec.kt`           | Tests (new)                     |
 | `src/jsMain/kotlin/codemirror/EditorDocContext.kt`                  | Trigger analysis on code change |
 | `src/jsMain/kotlin/codemirror/CodeMirrorComp.kt`                    | Feed diagnostics to linter      |
 | `klangscript/src/commonMain/kotlin/ast/Ast.kt`                      | AST nodes                       |
