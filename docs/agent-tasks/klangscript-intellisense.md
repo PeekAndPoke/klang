@@ -1,197 +1,320 @@
-# KlangScript IntelliSense — Semantic Analysis Plan
+# KlangScript IntelliSense — Full Diagnostics & Web Worker Plan
 
 ## Goal
 
-Add IntelliSense-like semantic checking to the CodeMirror editor: validate function calls
-against the imported libraries' documentation, checking that functions exist, are called in
-the right context (top-level vs on receiver), and receive valid arguments.
+Add real-time semantic diagnostics to the CodeMirror editor: highlight unknown functions,
+wrong-context calls, and argument errors as the user types. Run analysis in a **web worker**
+to avoid blocking the main thread.
 
-## What We Have
+## Foundation Already Built
 
-| Piece                                                   | Location                         | Status         |
-|---------------------------------------------------------|----------------------------------|----------------|
-| AST with `CallExpression`, `MemberAccess`, `Identifier` | `klangscript/ast/Ast.kt`         | exists         |
-| `KlangScriptParser.parse(code)`                         | `klangscript/parser/`            | exists         |
-| `KlangSymbol` with `KlangCallable` variants             | `klangscript/types/`             | exists         |
-| `KlangCallable.receiver: KlangType?`                    | generated docs                   | populated      |
-| `KlangCallable.returnType: KlangType?`                  | generated docs                   | populated      |
-| `EditorDocContext` — parses imports, builds registry    | `codemirror/EditorDocContext.kt` | exists         |
-| CodeMirror linter integration                           | `CodeMirrorComp.kt`              | exists (empty) |
+The receiver-aware code completion work (see `receiver-aware-editor.md` — DONE) provides:
 
-### Type Landscape (Strudel)
+| Component                  | Location                | What It Does                                         |
+|----------------------------|-------------------------|------------------------------------------------------|
+| `ExpressionTypeInferrer`   | `klangscript/intel/`    | Infers types through call chains using docs metadata |
+| `KlangDocsRegistry`        | `klangscript/docs/`     | Merged registry with receiver-aware lookups          |
+| `AstIndex`                 | `klangscript/ast/`      | O(log n) cursor-to-node lookup, public API           |
+| `KlangScriptParser`        | `klangscript/parser/`   | Full recursive-descent parser                        |
+| CodeMirror linter bindings | `klangjs/.../Lint.kt`   | `Diagnostic`, `linter()`, `setDiagnostics()`         |
+| Linter extension           | `CodeMirrorComp.kt:112` | Wired up but source returns `[]`                     |
+| `setErrors()`              | `CodeMirrorComp.kt:228` | Converts `EditorError` → `Diagnostic` and renders    |
 
-| Type                       | Role                                                    |
-|----------------------------|---------------------------------------------------------|
-| `StrudelPattern`           | Main pattern type — most methods return this            |
-| `String`                   | String literals — many DSL functions accept as receiver |
-| `PatternMapperFn`          | Mapper functions — chainable transformers               |
-| `PatternLike` (type alias) | Parameter type — accepts strings, numbers, patterns     |
+**All analyzer code lives in `commonMain` (Kotlin Multiplatform)** — already compiles to both JVM (for tests) and JS (
+for browser/worker).
 
-### Variant Structure per Symbol
+## Type Landscape
 
-Each `KlangSymbol` has multiple `KlangCallable` variants:
-
-- **No receiver** (`receiver = null`) → top-level function: `note("c3")`
-- **receiver = StrudelPattern** → method: `pattern.note("c3")`
-- **receiver = String** → string extension: `"c3".note()`
-- **receiver = PatternMapperFn** → mapper chain: `mapper.note("c3")`
-
-Plus `KlangProperty` for top-level objects (`sine`, `rand`, `perlin`).
+| Type                                   | Source   | Role                                                    |
+|----------------------------------------|----------|---------------------------------------------------------|
+| `SprudelPattern`                       | sprudel  | Main pattern type — most DSL methods return this        |
+| `String`                               | built-in | String literals — many DSL functions accept as receiver |
+| `PatternMapperFn`                      | sprudel  | Mapper functions — chainable transformers               |
+| `ExciterDsl`                           | stdlib   | Oscillator signal graph builder                         |
+| `Number`, `Boolean`, `Array`, `Object` | built-in | Primitive types                                         |
+| `Osc`, `Math`                          | stdlib   | Singleton objects                                       |
 
 ## Architecture
 
-### Core: `KlangScriptAnalyzer`
-
-A new class in `commonMain` (usable from both JVM tests and JS editor) that walks the AST
-and produces diagnostics.
-
 ```
-KlangScriptAnalyzer
-  ├── analyze(program: Program, registry: KlangDocsRegistry) → List<Diagnostic>
-  ├── inferType(expr: Expression) → KlangType?
-  └── checkCall(call: CallExpression, receiverType: KlangType?) → Diagnostic?
-```
-
-### Type Inference (simplified)
-
-Walk expressions bottom-up to infer types:
-
-| Expression                                         | Inferred Type                                                                |
-|----------------------------------------------------|------------------------------------------------------------------------------|
-| `StringLiteral`                                    | `String`                                                                     |
-| `NumberLiteral`                                    | `Number`                                                                     |
-| `Identifier("sine")`                               | look up in registry → `KlangProperty.type`                                   |
-| `Identifier("note")`                               | look up → top-level function                                                 |
-| `CallExpression(Identifier("note"), args)`         | `KlangCallable.returnType` where `receiver = null`                           |
-| `CallExpression(MemberAccess(expr, "gain"), args)` | infer type of `expr` → find `gain` variant with that receiver → `returnType` |
-| `MemberAccess(expr, "property")`                   | not a call → check if property exists on inferred type                       |
-
-### Checks to Perform
-
-#### Tier 1 — Unknown symbols (high value, low complexity)
-
-- **Unknown top-level function**: `foo("x")` where `foo` has no variant with `receiver = null`
-- **Unknown method**: `note("c3").foo()` where `foo` has no variant with `receiver = StrudelPattern`
-- **Unknown identifier**: bare `foo` that's not in the registry at all
-
-#### Tier 2 — Wrong context (medium complexity)
-
-- **Method used as top-level**: `gain(0.5)` — `gain` exists but only with a receiver,
-  no top-level variant → "gain() must be called on a pattern, e.g. note('c3').gain(0.5)"
-- **Top-level used as method**: `note("c3").note("d3")` — if `note` as a method on
-  StrudelPattern has different semantics, this is valid. Check receiver compatibility.
-
-#### Tier 3 — Argument validation (higher complexity)
-
-- **Wrong argument count**: `note("c3", "d3", "e3")` when `note` expects 1 param
-  (but many strudel functions are vararg, so check `isVararg`)
-- **Type mismatch**: harder — `PatternLike` accepts almost anything
-
-### Integration with Editor
-
-The analyzer produces a list of diagnostics with source locations. These feed into
-CodeMirror's existing linter extension (currently empty in `KlangScriptEditorComp`).
-
-```kotlin
-// In KlangScriptEditorComp, replace the empty linter:
-val linterSource: (EditorView) -> Array<Diagnostic> = { view ->
-    val code = view.state.doc.toString()
-    analyzer.analyze(code).toTypedArray()
-}
+┌──────────────────────────────────────────────────────────┐
+│  Main Thread                                             │
+│                                                          │
+│  CodeMirror Editor                                       │
+│    ↓ onCodeChanged (debounced)                           │
+│  EditorDocContext                                         │
+│    ↓ postMessage({ code, registrySnapshot })             │
+│  ┌────────────────────────────────────┐                  │
+│  │  Web Worker (klang-analyzer.js)    │                  │
+│  │                                    │                  │
+│  │  KlangScriptParser.parse(code)     │                  │
+│  │    ↓                               │                  │
+│  │  KlangScriptAnalyzer.analyze(      │                  │
+│  │    program, registry               │                  │
+│  │  )                                 │                  │
+│  │    ↓                               │                  │
+│  │  List<AnalyzerDiagnostic>          │                  │
+│  │    ↓ postMessage(diagnostics)      │                  │
+│  └────────────────────────────────────┘                  │
+│    ↓                                                     │
+│  setDiagnostics(view, diagnostics)                       │
+│    ↓                                                     │
+│  CodeMirror renders squiggles + gutter markers           │
+└──────────────────────────────────────────────────────────┘
 ```
 
-The analysis runs on the same debounced parse that `EditorDocContext` already does —
-extend it to also run the analyzer when imports change or code changes.
+### Phase 1: Main-thread analyzer (MVP)
+
+Run the analyzer synchronously on the main thread, debounced. This is the simplest path
+to get diagnostics working. Move to a web worker in Phase 3 if performance becomes an issue.
+
+### Phase 2: Full diagnostic tiers
+
+### Phase 3: Web worker offloading
+
+---
+
+## Diagnostic Tiers
+
+### Tier 1 — Unknown symbols (high value, low complexity)
+
+| Check                      | Example            | Message                                   |
+|----------------------------|--------------------|-------------------------------------------|
+| Unknown top-level function | `foo("x")`         | `Unknown function 'foo'`                  |
+| Unknown method on type     | `note("c3").foo()` | `'foo' is not a method on SprudelPattern` |
+| Unknown identifier         | bare `foo`         | `Unknown identifier 'foo'`                |
+
+**Implementation**: Walk all `ExpressionStatement` nodes. For each `CallExpression`, resolve the callee via
+`ExpressionTypeInferrer`. If the callable/identifier is not found in the registry, emit a diagnostic.
+
+### Tier 2 — Wrong context (medium complexity)
+
+| Check                    | Example           | Message                                                          |
+|--------------------------|-------------------|------------------------------------------------------------------|
+| Method used as top-level | `gain(0.5)`       | `'gain' must be called on a receiver, e.g. note("c3").gain(0.5)` |
+| Receiver type mismatch   | `Math.note("c3")` | `'note' is not a method on Math`                                 |
+
+**Implementation**: When a symbol IS found but has no variant matching the call context (no receiver for top-level,
+wrong receiver for method call), emit a context-specific diagnostic with a suggestion.
+
+### Tier 3 — Argument validation (higher complexity)
+
+| Check              | Example          | Message                                |
+|--------------------|------------------|----------------------------------------|
+| Too few arguments  | `note()`         | `'note' expects at least 1 argument`   |
+| Too many arguments | `Math.abs(1, 2)` | `'Math.abs' expects 1 argument, got 2` |
+
+**Implementation**: After resolving the callable, compare `args.size` against `params.size` (respecting `isVararg`).
+Skip type checking — `PatternLike` accepts almost anything.
+
+### Tier 4 — Variable type tracking (future)
+
+| Check                 | Example                                   | What's needed                                        |
+|-----------------------|-------------------------------------------|------------------------------------------------------|
+| Variable inference    | `let x = Osc.sine(); x.lowpass(1000)`     | Track `let`/`const` initializer types in a scope map |
+| Reassignment          | `let x = note("c3"); x = 42; x.gain(0.5)` | Track latest assignment type                         |
+| Function return types | `const f = (x) => x.gain(0.5)`            | Infer arrow function return types                    |
+
+---
 
 ## Implementation Plan
 
 ### Step 1: `KlangScriptAnalyzer` (commonMain)
 
-Create `klangscript/src/commonMain/kotlin/intel/KlangScriptAnalyzer.kt` (all intellisense code lives in the `intel`
-package):
+**New file**: `klangscript/src/commonMain/kotlin/intel/KlangScriptAnalyzer.kt`
 
-- Input: `Program` AST + `KlangDocsRegistry`
-- Walk all `ExpressionStatement` nodes
-- For each `CallExpression`, resolve the callee:
-    - `Identifier(name)` → top-level call → check `registry.get(name)` has a variant with `receiver = null`
-    - `MemberAccess(obj, name)` → method call → infer type of `obj`, check variant with matching receiver
-- Return list of `AnalyzerDiagnostic(message, location, severity)`
+```kotlin
+data class AnalyzerDiagnostic(
+    val message: String,
+    val startLine: Int,
+    val startColumn: Int,
+    val endLine: Int,
+    val endColumn: Int,
+    val severity: DiagnosticSeverity,
+)
 
-### Step 2: Type inference
+enum class DiagnosticSeverity { ERROR, WARNING, INFO, HINT }
 
-Add `inferType(expr: Expression): KlangType?`:
+class KlangScriptAnalyzer(private val registry: KlangDocsRegistry) {
 
-- `StringLiteral` → `KlangType("String")`
-- `NumberLiteral` → `KlangType("Number")`
-- `Identifier(name)` → look up property type in registry
-- `CallExpression` → find matching callable variant → `returnType`
-- `MemberAccess` → defer to call resolution (most member accesses are part of call chains)
+    private val inferrer = ExpressionTypeInferrer(registry)
 
-This enables chained validation: `note("c3").gain(0.5).foo()` — infer `note()` returns
-`StrudelPattern`, `gain()` on `StrudelPattern` returns `StrudelPattern`, `foo()` on
-`StrudelPattern` → not found → error.
+    fun analyze(program: Program): List<AnalyzerDiagnostic> {
+        val diagnostics = mutableListOf<AnalyzerDiagnostic>()
+        for (stmt in program.statements) {
+            analyzeStatement(stmt, diagnostics)
+        }
+        return diagnostics
+    }
 
-### Step 3: Wire into editor
+    private fun analyzeStatement(stmt: Statement, out: MutableList<AnalyzerDiagnostic>) {
+        when (stmt) {
+            is ExpressionStatement -> analyzeExpression(stmt.expression, out)
+            is LetDeclaration -> stmt.initializer?.let { analyzeExpression(it, out) }
+            is ConstDeclaration -> analyzeExpression(stmt.initializer, out)
+            // ... other statement types with expressions
+        }
+    }
 
-Extend `EditorDocContext` or create a sibling `EditorAnalysisContext`:
+    private fun analyzeExpression(expr: Expression, out: MutableList<AnalyzerDiagnostic>) {
+        when (expr) {
+            is CallExpression -> checkCall(expr, out)
+            is MemberAccess -> checkMemberAccess(expr, out)
+            // recurse into sub-expressions
+        }
+    }
+}
+```
 
-- On code change (debounced), run analyzer
-- Convert `AnalyzerDiagnostic` → CodeMirror `Diagnostic`
-- Feed into the linter extension
+Reuses the existing `ExpressionTypeInferrer` for type resolution.
 
-### Step 4: Context-aware completion (enhancement)
+### Step 2: Wire into editor (main thread, debounced)
 
-Use the same type inference to improve code completion:
+**File**: `klangscript-ui/.../EditorDocContext.kt` or new `EditorAnalysisContext.kt`
 
-- After typing `.` on a `StrudelPattern` expression → only show methods with
-  `receiver = StrudelPattern`, not top-level functions
-- At top level → only show functions with `receiver = null` and properties
+- On code change (debounced 500ms — longer than the 300ms import debounce), run analyzer
+- Convert `AnalyzerDiagnostic` → CodeMirror `Diagnostic` (line/col → offset)
+- Call `setDiagnostics(view, diagnostics)` to update the editor
 
-### Step 5: Tests (commonMain)
+**File**: `klangscript-ui/.../CodeMirrorComp.kt`
 
-Test the analyzer on JVM with known code snippets:
+- Replace the empty linter source with one that reads from the analysis context
+- OR use `setDiagnostics()` directly (simpler, avoids the linter callback model)
+
+### Step 3: Web worker offloading
+
+#### Why a web worker?
+
+The analyzer parses + walks the full AST on every change. For large files (500+ lines) this could
+cause ~50-100ms jank on the main thread. A web worker keeps the editor responsive.
+
+#### Build strategy
+
+Follow the `audio_jsworklet` pattern:
+
+1. **New module**: `klangscript-worker/`
+  - Depends on `klangscript` (parser, analyzer, types)
+  - Compiles to a standalone JS bundle via Webpack
+  - Entry point: `init.kt` with `self.onmessage` handler
+
+2. **Webpack config** (like `audio_jsworklet/webpack.config.d/worklet.js`):
+   ```javascript
+   config.output.globalObject = "(typeof self !== 'undefined' ? self : globalThis)"
+   config.optimization.runtimeChunk = false
+   config.optimization.splitChunks = false
+   ```
+
+3. **Build integration** (root `build.gradle.kts`):
+   ```kotlin
+   val copyWorkerProd by registering(Copy::class) {
+       dependsOn(":klangscript-worker:jsBrowserProductionWebpack")
+       from(project(":klangscript-worker").layout.buildDirectory.dir("..."))
+       into(layout.projectDirectory.dir("src/jsMain/resources"))
+       include("klang-analyzer.js", "klang-analyzer.js.map")
+   }
+   ```
+
+#### Worker protocol
+
+```kotlin
+// Main thread → Worker
+sealed class AnalyzerRequest {
+    data class Analyze(val code: String, val registryJson: String) : AnalyzerRequest()
+    data class UpdateRegistry(val registryJson: String) : AnalyzerRequest()
+}
+
+// Worker → Main thread
+sealed class AnalyzerResponse {
+    data class Diagnostics(val items: List<AnalyzerDiagnostic>) : AnalyzerResponse()
+}
+```
+
+#### Registry serialization
+
+The `KlangDocsRegistry` needs to be serialized to the worker. Options:
+
+- **JSON**: Serialize symbols map to JSON, deserialize in worker. Simple but potentially large.
+- **Build-time**: Bake the registry into the worker bundle at compile time (like how generated docs are compiled in).
+  Faster startup, but requires rebuild when docs change.
+- **Hybrid**: Bake generated docs into the worker, send only runtime-registered docs (manual registrations) via
+  postMessage.
+
+**Recommended**: Build-time baking. The worker module depends on `klangscript` which already has
+`generatedStdlibDocs`. The worker can import these directly. Only the set of imported library names
+needs to be sent via postMessage.
+
+#### Cancellation
+
+When the user types faster than the analyzer runs, stale analyses should be discarded:
+
+- Each `Analyze` request carries a `version: Int` (monotonically increasing)
+- The worker includes the version in its response
+- Main thread ignores responses where `version < latestSentVersion`
+
+#### Fallback
+
+If the Worker fails to load (e.g., CSP restrictions), fall back to main-thread analysis with
+longer debounce (1000ms).
+
+### Step 4: Tests (commonMain)
+
+All analyzer tests run on JVM (fast, no browser needed):
 
 ```kotlin
 "analyzer flags unknown top-level function" {
-    val code = """import * from "strudel"; foo("x")"""
-    val diagnostics = analyzer.analyze(code, registry)
+    val code = """foo("x")"""
+    val diagnostics = analyzer.analyze(KlangScriptParser.parse(code))
     diagnostics shouldHaveSize 1
     diagnostics[0].message shouldContain "foo"
 }
 
-"analyzer accepts valid chain" {
-    val code = """import * from "strudel"; note("c3").gain(0.5)"""
-    val diagnostics = analyzer.analyze(code, registry)
+"analyzer accepts valid sprudel chain" {
+    val code = """note("c3").gain(0.5)"""
+    val diagnostics = analyzer.analyze(KlangScriptParser.parse(code))
     diagnostics shouldHaveSize 0
+}
+
+"analyzer flags unknown method on known type" {
+    val code = """note("c3").unknownFn()"""
+    val diagnostics = analyzer.analyze(KlangScriptParser.parse(code))
+    diagnostics shouldHaveSize 1
+    diagnostics[0].message shouldContain "unknownFn"
+    diagnostics[0].message shouldContain "SprudelPattern"
 }
 ```
 
+---
+
 ## Challenges & Decisions
 
-| Challenge                                        | Approach                                                                            |
-|--------------------------------------------------|-------------------------------------------------------------------------------------|
-| Variables (`let x = note("c3"); x.gain(0.5)`)    | Phase 1: skip variable tracking. Phase 2: simple single-assignment inference        |
-| Functions returning different types per overload | Use first matching variant's returnType                                             |
-| `PatternLike` accepts almost anything            | Don't validate argument types initially, just counts                                |
-| Parse errors in incomplete code                  | Analyzer silently skips unparseable code (same as EditorDocContext)                 |
-| Performance on large files                       | Cache analysis results alongside import cache in EditorDocContext                   |
-| String extensions (`"c3".note()`)                | Infer `String` type for string literals, match against `receiver = String` variants |
+| Challenge                                     | Approach                                                        |
+|-----------------------------------------------|-----------------------------------------------------------------|
+| Variables (`let x = note("c3"); x.gain(0.5)`) | Phase 1: skip. Phase 2: single-assignment scope map             |
+| `PatternLike` accepts almost anything         | Don't validate argument types, only counts                      |
+| Parse errors in incomplete code               | Analyzer skips unparseable code gracefully                      |
+| Performance on large files                    | Phase 1: main thread + 500ms debounce. Phase 3: web worker      |
+| String extensions (`"c3".note()`)             | Already handled by `ExpressionTypeInferrer`                     |
+| Noise from transient errors while typing      | Longer debounce (500ms+) + version-based cancellation           |
+| Worker bundle size                            | Worker includes klangscript (parser + analyzer) but NOT UI code |
+| Registry sync to worker                       | Build-time baking; only imported library names sent via message |
 
 ## Incremental Rollout
 
-1. **v1**: Unknown function/method warnings only (Tier 1)
-2. **v2**: "Wrong context" warnings (Tier 2) + context-aware completion
-3. **v3**: Argument count validation (Tier 3)
-4. **v4**: Variable type tracking
+1. **v1**: Tier 1 diagnostics (unknown symbols) on main thread — immediate value
+2. **v2**: Tier 2 diagnostics (wrong context) + helpful error messages with suggestions
+3. **v3**: Web worker offloading — performance for large files
+4. **v4**: Tier 3 (argument count validation)
+5. **v5**: Tier 4 (variable type tracking)
 
 ## Key Files
 
-| File                                                                | Role                            |
-|---------------------------------------------------------------------|---------------------------------|
-| `klangscript/src/commonMain/kotlin/intel/KlangScriptAnalyzer.kt`    | Core analyzer (new)             |
-| `klangscript/src/commonMain/kotlin/intel/ExpressionTypeInferrer.kt` | Type inference (new)            |
-| `klangscript/src/commonTest/kotlin/intel/AnalyzerSpec.kt`           | Tests (new)                     |
-| `src/jsMain/kotlin/codemirror/EditorDocContext.kt`                  | Trigger analysis on code change |
-| `src/jsMain/kotlin/codemirror/CodeMirrorComp.kt`                    | Feed diagnostics to linter      |
-| `klangscript/src/commonMain/kotlin/ast/Ast.kt`                      | AST nodes                       |
-| `klangscript/src/commonMain/kotlin/docs/KlangDocsRegistry.kt`       | Symbol lookup                   |
+| File                                                                 | Role                                |
+|----------------------------------------------------------------------|-------------------------------------|
+| `klangscript/src/commonMain/kotlin/intel/KlangScriptAnalyzer.kt`     | Core analyzer (new)                 |
+| `klangscript/src/commonMain/kotlin/intel/ExpressionTypeInferrer.kt`  | Type inference (exists)             |
+| `klangscript/src/commonMain/kotlin/intel/AnalyzerDiagnostic.kt`      | Diagnostic data class (new)         |
+| `klangscript/src/commonTest/kotlin/intel/KlangScriptAnalyzerTest.kt` | Tests (new)                         |
+| `klangscript-ui/src/jsMain/kotlin/codemirror/EditorDocContext.kt`    | Trigger analysis on change          |
+| `klangscript-ui/src/jsMain/kotlin/codemirror/CodeMirrorComp.kt`      | Feed diagnostics to linter          |
+| `klangscript-worker/`                                                | Web worker module (new, Phase 3)    |
+| `klangjs/src/jsMain/kotlin/.../Lint.kt`                              | CodeMirror linter bindings (exists) |

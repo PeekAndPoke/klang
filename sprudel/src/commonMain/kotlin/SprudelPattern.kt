@@ -1022,8 +1022,8 @@ fun SprudelPattern._liftOrReinterpretNumericalField(
 ): SprudelPattern {
     if (args.isEmpty()) {
         return this.reinterpretVoice {
-        it.update(it.value?.asDouble)
-    }
+            it.update(it.value?.asDouble)
+        }
     }
 
     return this._liftNumericField(args, update)
@@ -1067,8 +1067,8 @@ fun SprudelPattern._liftOrReinterpretStringField(
 ): SprudelPattern {
     if (args.isEmpty()) {
         return this.reinterpretVoice {
-        it.update(it.value?.asString)
-    }
+            it.update(it.value?.asString)
+        }
     }
 
     return this._liftStringField(args, update)

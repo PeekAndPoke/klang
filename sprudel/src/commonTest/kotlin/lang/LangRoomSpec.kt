@@ -89,6 +89,57 @@ class LangRoomSpec : StringSpec({
         events[0].data.room shouldBe 0.5
     }
 
+    // ── Colon-separated reverb params via room() ──────────────────────
+
+    "room() parses colon-separated string setting all reverb params" {
+        val p = note("c").room("0.5:2:0.3:4000:2000")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        assertSoftly {
+            events[0].data.room shouldBe 0.5
+            events[0].data.roomSize shouldBe 2.0
+            events[0].data.roomFade shouldBe 0.3
+            events[0].data.roomLp shouldBe 4000.0
+            events[0].data.roomDim shouldBe 2000.0
+        }
+    }
+
+    "room() parses partial colon-separated string (only room and size)" {
+        val p = note("c").room("0.8:4")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        assertSoftly {
+            events[0].data.room shouldBe 0.8
+            events[0].data.roomSize shouldBe 4.0
+            events[0].data.roomFade shouldBe null // not specified
+            events[0].data.roomLp shouldBe null
+            events[0].data.roomDim shouldBe null
+        }
+    }
+
+    "room() still works with a plain number" {
+        val p = note("c").room(0.6)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.room shouldBe (0.6 plusOrMinus EPSILON)
+    }
+
+    "room() with sequenced colon-separated values" {
+        val p = note("c c").room("0.3:1 0.8:4")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 2
+        assertSoftly {
+            events[0].data.room shouldBe 0.3
+            events[0].data.roomSize shouldBe 1.0
+            events[1].data.room shouldBe 0.8
+            events[1].data.roomSize shouldBe 4.0
+        }
+    }
+
     "room() with continuous pattern sets room correctly" {
         // sine goes from 0.5 (at t=0) to 1.0 (at t=0.25) to 0.5 (at t=0.5) to 0.0 (at t=0.75)
         val p = note("a b c d").room(sine)

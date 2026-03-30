@@ -6,6 +6,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -1044,10 +1045,36 @@ fun PatternMapperFn.coarse(amount: PatternLike? = null): PatternMapperFn =
 
 // -- room() -----------------------------------------------------------------------------------------------------------
 
-private val roomMutation = voiceModifier { copy(room = it?.asDoubleOrNull()) }
+private val roomMutation = voiceModifier {
+    val parts = it?.toString()?.split(":")
+        ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
+
+    copy(
+        room = parts.getOrNull(0) ?: room,
+        roomSize = parts.getOrNull(1) ?: roomSize,
+        roomFade = parts.getOrNull(2) ?: roomFade,
+        roomLp = parts.getOrNull(3) ?: roomLp,
+        roomDim = parts.getOrNull(4) ?: roomDim,
+    )
+}
 
 fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretNumericalField(args, roomMutation)
+    // No args: reinterpret pattern's own values as room mix (backward compat)
+    if (args.isEmpty()) {
+        return source.reinterpretVoice {
+            it.copy(room = it.value?.asDouble)
+        }
+    }
+
+    return source._applyControlFromParams(args, roomMutation) { src, ctrl ->
+        src.copy(
+            room = ctrl.room ?: src.room,
+            roomSize = ctrl.roomSize ?: src.roomSize,
+            roomFade = ctrl.roomFade ?: src.roomFade,
+            roomLp = ctrl.roomLp ?: src.roomLp,
+            roomDim = ctrl.roomDim ?: src.roomDim,
+        )
+    }
 }
 
 internal val _room by dslPatternMapper { args, callInfo -> { p -> p._room(args, callInfo) } }
