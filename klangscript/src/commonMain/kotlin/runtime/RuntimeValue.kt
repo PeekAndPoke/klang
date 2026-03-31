@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.math.formatAsIntOrDouble
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
 import io.peekandpoke.klang.script.getUniqueClassName
@@ -112,8 +113,7 @@ data class NumberValue(
     override val value: Double,
     val location: SourceLocation? = null,
 ) : RuntimeValue {
-    override fun toDisplayString(): String =
-        if (value.isFinite() && value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+    override fun toDisplayString(): String = value.formatAsIntOrDouble()
 
     // Only compare value, not location
     override fun equals(other: Any?): Boolean {

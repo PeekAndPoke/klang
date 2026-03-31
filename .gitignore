@@ -47,7 +47,7 @@ bin/
 
 node_modules
 /cache
-/tmp
+#/tmp
 
 ### Claude Code ###
 .claude/worktrees/

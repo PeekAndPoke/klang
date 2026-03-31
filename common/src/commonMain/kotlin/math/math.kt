@@ -28,3 +28,17 @@ fun lcm(numbers: List<Int>): Int = numbers.fold(1) { acc, i -> lcm(acc, i) }
  * due to floating-point precision (e.g., log2(8.0) could be 2.9999999999999996).
  */
 fun Int.isPowerOfTwo(): Boolean = this > 0 && (this and (this - 1)) == 0
+
+/**
+ * Formats a Double as an integer string if it has no fractional part, otherwise as a decimal.
+ * E.g., 3.0 → "3", 3.14 → "3.14", NaN → "NaN", Infinity → "Infinity".
+ *
+ * Uses Int (not Long) for the integer check to avoid Long boxing on Kotlin/JS.
+ * Int.MAX_VALUE = 2,147,483,647 — numbers larger than this will display as decimals even
+ * if they have no fractional part, which is acceptable for display purposes.
+ */
+fun Double.formatAsIntOrDouble(): String {
+    if (!isFinite()) return toString()
+    val i = toInt()
+    return if (this == i.toDouble()) i.toString() else toString()
+}

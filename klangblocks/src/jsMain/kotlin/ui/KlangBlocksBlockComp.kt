@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.blocks.ui
 
 import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.common.math.formatAsIntOrDouble
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.scheduleShow
@@ -304,10 +305,7 @@ class KlangBlocksBlockComp(ctx: Ctx<Props>) : Component<KlangBlocksBlockComp.Pro
                     event.stopPropagation()
                     val currentText = when (arg) {
                         is KBStringArg -> arg.value
-                        is KBNumberArg -> {
-                            val l = arg.value.toLong()
-                            if (arg.value == l.toDouble()) l.toString() else arg.value.toString()
-                        }
+                        is KBNumberArg -> arg.value.formatAsIntOrDouble()
 
                         else -> ""
                     }

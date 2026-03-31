@@ -2,6 +2,7 @@ package io.peekandpoke.klang.blocks.model
 
 import io.peekandpoke.klang.blocks.model.AstToKBlocks.extractChain
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.common.math.formatAsIntOrDouble
 import io.peekandpoke.klang.script.ast.*
 
 object AstToKBlocks {
@@ -289,10 +290,7 @@ internal fun uuid(): String = "id-${idCounter.incrementAndGet()}"
 
 private fun Expression.toSourceString(): String = when (this) {
     is StringLiteral -> "\"$value\""
-    is NumberLiteral -> {
-        val l = value.toLong()
-        if (value == l.toDouble()) l.toString() else value.toString()
-    }
+    is NumberLiteral -> value.formatAsIntOrDouble()
 
     is BooleanLiteral -> value.toString()
     NullLiteral -> "null"

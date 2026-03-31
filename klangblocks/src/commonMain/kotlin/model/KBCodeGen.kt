@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.blocks.model
 
+import io.peekandpoke.klang.common.math.formatAsIntOrDouble
+
 // ── Public result type + lookup ───────────────────────────────────────────────
 
 /**
@@ -33,9 +35,10 @@ class CodeGenResult(
             .sortedBy { it.first }
     }
 
-    // Caches (line, col) → HitResult; same location is queried on every audio tick.
-    // Key packs both values into a single Long to avoid boxing.
-    private val hitCache = mutableMapOf<Long, HitResult?>()
+    // Caches (line, col) → HitResult. String key instead of Long bit-packing: Long is boxed
+    // in Kotlin/JS, so packing line+col into a Long actually causes heap allocation. String keys
+    // are fine here since findAt() is called on UI interaction (hover/click), not in audio hot paths.
+    private val hitCache = mutableMapOf<String, HitResult?>()
 
     /**
      * Returns the [KBCallBlock.id] whose generated-code range contains the given
@@ -49,7 +52,7 @@ class CodeGenResult(
      * argument's content.  Results are cached — repeated calls are O(1).
      */
     fun findAt(line: Int, col: Int): HitResult? {
-        val key = line.toLong().shl(32) or (col.toLong() and 0xFFFFFFFFL)
+        val key = "$line:$col"
         return hitCache.getOrPut(key) {
             val offset = code.lineColToCharOffset(line, col)
             val blockId = findByOffset(offset) ?: return@getOrPut null
@@ -163,10 +166,7 @@ fun KBImportStmt.toCode(): String {
 fun KBArgValue.toCode(): String = when (this) {
     is KBEmptyArg -> ""
     is KBStringArg -> if ('\n' in value) "`$value`" else "\"$value\""
-    is KBNumberArg -> {
-        val long = value.toLong()
-        if (value == long.toDouble()) long.toString() else value.toString()
-    }
+    is KBNumberArg -> value.formatAsIntOrDouble()
     is KBBoolArg -> value.toString()
     is KBIdentifierArg -> name
     is KBNestedChainArg -> chain.toCode() ?: ""  // fallback; appendTo handles tracking

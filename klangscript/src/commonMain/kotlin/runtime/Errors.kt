@@ -80,13 +80,15 @@ sealed class KlangScriptRuntimeError(
     cause: Throwable? = null,
 ) : RuntimeException(message, cause), KlangScriptError {
 
-    override fun format(): String {
-        val header = if (location != null) {
-            "${errorType.name} at $location: $message"
-        } else {
-            "${errorType.name}: $message"
-        }
+    /** Builds the error prefix: "ErrorType at location" or just "ErrorType". */
+    protected fun formatPrefix(): String =
+        if (location != null) "${errorType.name} at $location" else errorType.name
 
+    /** Builds the single-line header. Override in subclasses to add context (operation, function name, etc.). */
+    protected open fun formatHeader(): String = "${formatPrefix()}: $message"
+
+    override fun format(): String {
+        val header = formatHeader()
         return if (callStackTrace.isNotEmpty()) {
             header + "\n" + callStackTrace.joinToString("\n") { it.format() }
         } else {
@@ -108,20 +110,8 @@ class KlangScriptTypeError(
     callStackTrace: List<CallStackFrame> = emptyList(),
 ) : KlangScriptRuntimeError(message, KlangScriptErrorType.TypeError, location, astNode, callStackTrace) {
 
-    override fun format(): String {
-        val prefix = if (location != null) "${errorType.name} at $location" else errorType.name
-        val header = if (operation != null) {
-            "$prefix in $operation: $message"
-        } else {
-            "$prefix: $message"
-        }
-
-        return if (callStackTrace.isNotEmpty()) {
-            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
-        } else {
-            header
-        }
-    }
+    override fun formatHeader(): String =
+        if (operation != null) "${formatPrefix()} in $operation: $message" else "${formatPrefix()}: $message"
 }
 
 /**
@@ -152,18 +142,12 @@ class KlangScriptArgumentError(
     callStackTrace: List<CallStackFrame> = emptyList(),
 ) : KlangScriptRuntimeError(message, KlangScriptErrorType.ArgumentError, location, astNode, callStackTrace) {
 
-    override fun format(): String {
-        val prefix = if (location != null) "${errorType.name} at $location" else errorType.name
-        val header = if (expected != null && actual != null) {
+    override fun formatHeader(): String {
+        val prefix = formatPrefix()
+        return if (expected != null && actual != null) {
             "$prefix in $functionName: Expected $expected arguments, got $actual"
         } else {
             "$prefix in $functionName: $message"
-        }
-
-        return if (callStackTrace.isNotEmpty()) {
-            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
-        } else {
-            header
         }
     }
 }
@@ -181,20 +165,8 @@ class KlangScriptImportError(
     callStackTrace: List<CallStackFrame> = emptyList(),
 ) : KlangScriptRuntimeError(message, KlangScriptErrorType.ImportError, location, astNode, callStackTrace) {
 
-    override fun format(): String {
-        val prefix = if (location != null) "${errorType.name} at $location" else errorType.name
-        val header = if (libraryName != null) {
-            "$prefix in library '$libraryName': $message"
-        } else {
-            "$prefix: $message"
-        }
-
-        return if (callStackTrace.isNotEmpty()) {
-            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
-        } else {
-            header
-        }
-    }
+    override fun formatHeader(): String =
+        if (libraryName != null) "${formatPrefix()} in library '$libraryName': $message" else "${formatPrefix()}: $message"
 }
 
 /**
@@ -210,20 +182,8 @@ class KlangScriptAssignmentError(
     callStackTrace: List<CallStackFrame> = emptyList(),
 ) : KlangScriptRuntimeError(message, KlangScriptErrorType.AssignmentError, location, astNode, callStackTrace) {
 
-    override fun format(): String {
-        val prefix = if (location != null) "${errorType.name} at $location" else errorType.name
-        val header = if (variableName != null) {
-            "$prefix for variable '$variableName': $message"
-        } else {
-            "$prefix: $message"
-        }
-
-        return if (callStackTrace.isNotEmpty()) {
-            header + "\n" + callStackTrace.joinToString("\n") { it.format() }
-        } else {
-            header
-        }
-    }
+    override fun formatHeader(): String =
+        if (variableName != null) "${formatPrefix()} for variable '$variableName': $message" else "${formatPrefix()}: $message"
 }
 
 /**

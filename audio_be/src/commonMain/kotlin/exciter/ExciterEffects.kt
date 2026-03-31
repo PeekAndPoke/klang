@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_be.exciter
 
-import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.resolveDistortionShape
 import kotlin.math.*
 
 
@@ -122,23 +122,7 @@ fun Exciter.clip(shape: String = "soft"): Exciter {
     }
 }
 
-internal data class ResolvedShape(
-    val fn: (Double) -> Double,
-    val outputGain: Double = 1.0,
-    val needsDcBlock: Boolean = false,
-)
-
-internal fun resolveDistortionShape(shape: String): ResolvedShape = when (shape.lowercase()) {
-    "hard" -> ResolvedShape(fn = ClippingFuncs::hardClip)
-    "gentle" -> ResolvedShape(fn = ClippingFuncs::softClip, outputGain = 2.0)
-    "cubic" -> ResolvedShape(fn = ClippingFuncs::cubicClip)
-    "diode" -> ResolvedShape(fn = ClippingFuncs::diodeClip, needsDcBlock = true)
-    "fold" -> ResolvedShape(fn = ClippingFuncs::sineFold)
-    "chebyshev" -> ResolvedShape(fn = ClippingFuncs::chebyshevT3)
-    "rectify" -> ResolvedShape(fn = ClippingFuncs::rectify, needsDcBlock = true)
-    "exp" -> ResolvedShape(fn = ClippingFuncs::expClip)
-    else -> ResolvedShape(fn = ClippingFuncs::fastTanh) // "soft" & fallback
-}
+// ResolvedShape and resolveDistortionShape() moved to audio_be/DistortionShape.kt
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BitCrush
