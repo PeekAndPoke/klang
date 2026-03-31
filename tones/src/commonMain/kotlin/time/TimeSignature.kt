@@ -125,6 +125,10 @@ sealed class TimeSignature {
          *
          * Why not log2: `(log2(x.toDouble()) % 1.0) == 0.0` fails for certain integers
          * due to floating-point precision.
+         *
+         * Note: also exists as `Int.isPowerOfTwo()` in common/math. Duplicated here because
+         * tones does not depend on the common module and adding that dependency for one function
+         * would be overkill.
          */
         private fun isPowerOfTwo(x: Int): Boolean = x > 0 && (x and (x - 1)) == 0
 

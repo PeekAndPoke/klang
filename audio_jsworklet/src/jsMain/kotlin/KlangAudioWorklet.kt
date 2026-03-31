@@ -64,6 +64,8 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         // Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper object),
         // causing heap allocation on every arithmetic operation. Int maps directly to a JS number.
         // At 48kHz, Int overflows after ~12.4 hours — sufficient for any continuous session.
+        // On overflow, cursorFrame wraps to Int.MIN_VALUE causing silent audio stop (no crash).
+        // For long-running sessions, consider resetting cursorFrame when no voices are active.
         var cursorFrame = 0
 
         var isPlaying = true

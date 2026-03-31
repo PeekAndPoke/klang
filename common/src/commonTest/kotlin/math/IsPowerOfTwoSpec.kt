@@ -6,7 +6,10 @@ import io.kotest.matchers.shouldBe
 class IsPowerOfTwoSpec : StringSpec({
 
     "powers of two return true" {
-        listOf(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 65536, 1_048_576).forEach { n ->
+        listOf(
+            1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 65536, 1_048_576,
+            1 shl 30  // 1,073,741,824 — largest power of two that fits in Int
+        ).forEach { n ->
             n.isPowerOfTwo() shouldBe true
         }
     }

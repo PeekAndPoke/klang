@@ -52,6 +52,31 @@ class MiniNotationParser(
     private val input: String,
     private val baseLocation: SourceLocation? = null,
 ) {
+    companion object {
+        // Pre-computed char codes — avoids any ambiguity about runtime Char boxing.
+        // Kotlin inlines 'x'.code as a compile-time Int constant, but named vals are clearer.
+        private val C_LF = '\n'.code
+        private val C_SPACE = ' '.code
+        private val C_TAB = '\t'.code
+        private val C_CR = '\r'.code
+        private val C_LPAREN = '('.code
+        private val C_RPAREN = ')'.code
+        private val C_LBRACKET = '['.code
+        private val C_RBRACKET = ']'.code
+        private val C_LANGLE = '<'.code
+        private val C_RANGLE = '>'.code
+        private val C_COMMA = ','.code
+        private val C_STAR = '*'.code
+        private val C_TILDE = '~'.code
+        private val C_AT = '@'.code
+        private val C_PIPE = '|'.code
+        private val C_QUESTION = '?'.code
+        private val C_BANG = '!'.code
+        private val C_SLASH = '/'.code
+        private val C_DOT = '.'.code
+        private val C_0 = '0'.code
+        private val C_9 = '9'.code
+    }
 
     private val tokens = tokenize(input)
     private var pos = 0
@@ -305,72 +330,72 @@ class MiniNotationParser(
         while (i < input.length) {
             val c = codes[i]
             when (c) {
-                '\n'.code -> {
+                C_LF -> {
                     addToken(TokenType.LINEBREAK, "\n", i, i + 1, line, column)
                     i++; line++; column = 1
                 }
 
-                ' '.code, '\t'.code, '\r'.code -> {
+                C_SPACE, C_TAB, C_CR -> {
                     i++; column++
                 }
 
-                '('.code -> {
+                C_LPAREN -> {
                     addToken(TokenType.L_PAREN, "(", i, i + 1, line, column); i++; column++
                 }
 
-                ')'.code -> {
+                C_RPAREN -> {
                     addToken(TokenType.R_PAREN, ")", i, i + 1, line, column); i++; column++
                 }
 
-                '['.code -> {
+                C_LBRACKET -> {
                     addToken(TokenType.L_BRACKET, "[", i, i + 1, line, column); i++; column++
                 }
 
-                ']'.code -> {
+                C_RBRACKET -> {
                     addToken(TokenType.R_BRACKET, "]", i, i + 1, line, column); i++; column++
                 }
 
-                '<'.code -> {
+                C_LANGLE -> {
                     addToken(TokenType.L_ANGLE, "<", i, i + 1, line, column); i++; column++
                 }
 
-                '>'.code -> {
+                C_RANGLE -> {
                     addToken(TokenType.R_ANGLE, ">", i, i + 1, line, column); i++; column++
                 }
 
-                ','.code -> {
+                C_COMMA -> {
                     addToken(TokenType.COMMA, ",", i, i + 1, line, column); i++; column++
                 }
 
-                '*'.code -> {
+                C_STAR -> {
                     addToken(TokenType.STAR, "*", i, i + 1, line, column); i++; column++
                 }
 
-                '~'.code -> {
+                C_TILDE -> {
                     addToken(TokenType.TILDE, "~", i, i + 1, line, column); i++; column++
                 }
 
-                '@'.code -> {
+                C_AT -> {
                     addToken(TokenType.AT, "@", i, i + 1, line, column); i++; column++
                 }
 
-                '|'.code -> {
+                C_PIPE -> {
                     addToken(TokenType.PIPE, "|", i, i + 1, line, column); i++; column++
                 }
 
-                '?'.code -> {
+                C_QUESTION -> {
                     addToken(TokenType.QUESTION, "?", i, i + 1, line, column); i++; column++
                 }
 
-                '!'.code -> {
+                C_BANG -> {
                     addToken(TokenType.BANG, "!", i, i + 1, line, column); i++; column++
                 }
 
-                '/'.code -> {
-                    if (i + 1 < input.length && codes[i + 1] == '/'.code) {
+                C_SLASH -> {
+                    if (i + 1 < input.length && codes[i + 1] == C_SLASH) {
                         // Skip comment until end of line
                         i += 2
-                        while (i < input.length && codes[i] != '\n'.code) i++
+                        while (i < input.length && codes[i] != C_LF) i++
                     } else {
                         addToken(TokenType.SLASH, "/", i, i + 1, line, column)
                         i++; column++
@@ -383,16 +408,16 @@ class MiniNotationParser(
                     val tokenColumn = column
                     while (i < input.length) {
                         val ci = codes[i]
-                        if (ci == ' '.code || ci == '['.code || ci == ']'.code || ci == '<'.code ||
-                            ci == '>'.code || ci == ','.code || ci == '*'.code || ci == '~'.code ||
-                            ci == '@'.code || ci == '('.code || ci == ')'.code || ci == '|'.code ||
-                            ci == '?'.code || ci == '!'.code || ci == '\t'.code || ci == '\n'.code ||
-                            ci == '\r'.code
+                        if (ci == C_SPACE || ci == C_LBRACKET || ci == C_RBRACKET || ci == C_LANGLE ||
+                            ci == C_RANGLE || ci == C_COMMA || ci == C_STAR || ci == C_TILDE ||
+                            ci == C_AT || ci == C_LPAREN || ci == C_RPAREN || ci == C_PIPE ||
+                            ci == C_QUESTION || ci == C_BANG || ci == C_TAB || ci == C_LF ||
+                            ci == C_CR
                         ) break
-                        if (ci == '/'.code) {
+                        if (ci == C_SLASH) {
                             val next = if (i + 1 < input.length) codes[i + 1] else -1
-                            if (next == -1 || next in '0'.code..'9'.code || next == '.'.code ||
-                                next == ' '.code || next == '\t'.code || next == '\n'.code || next == '\r'.code
+                            if (next == -1 || next in C_0..C_9 || next == C_DOT ||
+                                next == C_SPACE || next == C_TAB || next == C_LF || next == C_CR
                             ) break
                         }
                         i++; column++

@@ -35,9 +35,14 @@ class KlangMinHeap<T>(private val less: (T, T) -> Boolean) {
         var writeIdx = 0
         for (readIdx in data.indices) {
             if (!predicate(data[readIdx])) {
-                data[writeIdx++] = data[readIdx]
+                if (writeIdx != readIdx) {
+                    data[writeIdx] = data[readIdx]
+                }
+                writeIdx++
             }
         }
+        // Nothing removed — skip trim and heapify
+        if (writeIdx == data.size) return
         // Trim removed elements from the end
         while (data.size > writeIdx) {
             data.removeLast()
