@@ -39,11 +39,18 @@ if (condition) {
 ### 2. File Naming Conventions
 
 - **Files containing a class/object/interface:** PascalCase matching the primary declaration.
-- **Files containing only utility/helper/extension functions:** lowercase with `_` separators is acceptable.
-  Examples: `_utils.kt`, `math.kt`, `pattern_test_utils.kt`, `_chain_rendering.kt`.
+- **Files containing only utility/helper/extension functions:** `lower_case.kt`.
+  In folders that also contain class files, use a `_` prefix (e.g., `_staff_pos_helpers.kt`) to
+  group utility files at the top of the file tree. In folders with only utility files, skip the
+  prefix — when every file starts with `_`, it adds noise instead of value.
+- **Utility file names must be unique and descriptive.** Generic names like `_utils.kt` make it
+  impossible to tell what's inside without opening the file.
 
-**Wrong:** `ClippingFunctions.kt` → class inside is `ClippingFuncs` (name mismatch)
-**Correct:** `ClippingFuncs.kt` (matches class), `math.kt` (utility functions, no class)
+**Wrong:** `ClippingFunctions.kt` (class inside is `ClippingFuncs` — name mismatch)
+**Wrong:** `_utils.kt` (not unique, not descriptive)
+**Correct:** `ClippingFuncs.kt` (matches class)
+**Correct:** `_staff_pos_helpers.kt` (utility file alongside class files — `_` groups it at top)
+**Correct:** `math.kt`, `chain_rendering.kt` (utility-only folder — no `_` prefix needed)
 
 ---
 

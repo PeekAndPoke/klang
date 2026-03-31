@@ -33,12 +33,12 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 
 ## OPEN — LOW PRIORITY
 
-### L2. Scattered helper functions
+### ~~L2. Scattered helper functions~~ — DONE
 
-- `audio_be/util.kt` — `TWO_PI`, `ONE_OVER_TWELVE` should be in `DspUtil.kt`
-- `Exciters.kt` — `wrapPhase()`, `polyBlep()` locked as private, should be shared DSP utils
-- `sprudel/ui/_utils.kt` — `Note.staffPosition()` belongs in `tones`, numeric utils in `common`
-- `klangscript/index_common.kt:46` — `KClass<*>.getUniqueClassName()` belongs in common
+- DSP helpers consolidated in `audio_be/DspUtil.kt` (wrapPhase, polyBlep, smallNumFastMod, etc.)
+- Note staff helpers moved to `tones/note/NoteStaffPosition.kt`
+- `audio_be/util.kt` deleted
+- `getUniqueClassName` stays in klangscript (only consumer)
 
 ### L3. Boxed types in non-hot-path code (low impact but violate project rule)
 
@@ -79,28 +79,29 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 
 ### Completed Items
 
-| ID  | Description                                                                                   | Step |
-|-----|-----------------------------------------------------------------------------------------------|------|
-| H1  | Long-to-Int cascade through entire audio chain (22 files, ~12.4h overflow documented)         | 3    |
-| H2  | Char boxing eliminated in KlangScriptParser + MiniNotationParser (IntArray + named constants) | 4    |
-| H4  | `isInsideString()` fixed to handle both `"` and `'` quotes + deduplicated                     | 7    |
-| H5  | `isPowerOfTwo` — bitwise fix in common + TimeSignature, with tests                            | 1    |
-| H6  | Division-by-zero guards in SequencePattern + ratioMutation, with tests                        | 1    |
-| M1  | Audio thread allocations fixed (pre-allocated set, deferred mutation pattern)                 | 5    |
-| M2  | Denormal flushing added in Karplus-Strong + Super Karplus-Strong                              | 5    |
-| M3  | `error("unreachable")` → `return@Exciter` in ExciterFm + ExciterPitchMod                      | 5    |
-| M4  | ResolvedShape / resolveDistortionShape extracted to shared DistortionShape.kt                 | 6    |
-| M5  | Number-to-integer-string formatting → `Double.formatAsIntOrDouble()` in common (5 sites)      | 6    |
-| M6  | KBCodeGen Long cache key → String key `"$line:$col"`                                          | 6    |
-| M7  | Errors.kt format() deduplicated via `formatPrefix()` / `formatHeader()` base methods          | 6    |
-| M8  | `roundToLong()` → `kotlin.math.round()` (avoids Long boxing)                                  | 1    |
-| M11 | `1.0.toRational()` → `Rational.ONE` in RepeatCyclesPattern                                    | 1    |
-| M12 | Badge container DOM leak fixed (attached to editor DOM, not document.body)                    | 1    |
-| M13 | Undo stack capped at 1,000                                                                    | 1    |
-| M14 | Double `asSampleRequest()` call → reuse `req` variable                                        | 1    |
-| L1  | File naming rule clarified in code-style skill (not a violation)                              | 1    |
-| L5  | Interpreter `else -> error()` branches uncommented                                            | 1    |
-| L7  | `isInsideString()` deduplicated (shared with H4 fix)                                          | 7    |
+| ID  | Description                                                                                        | Step |
+|-----|----------------------------------------------------------------------------------------------------|------|
+| H1  | Long-to-Int cascade through entire audio chain (22 files, ~12.4h overflow documented)              | 3    |
+| H2  | Char boxing eliminated in KlangScriptParser + MiniNotationParser (IntArray + named constants)      | 4    |
+| H4  | `isInsideString()` fixed to handle both `"` and `'` quotes + deduplicated                          | 7    |
+| H5  | `isPowerOfTwo` — bitwise fix in common + TimeSignature, with tests                                 | 1    |
+| H6  | Division-by-zero guards in SequencePattern + ratioMutation, with tests                             | 1    |
+| M1  | Audio thread allocations fixed (pre-allocated set, deferred mutation pattern)                      | 5    |
+| M2  | Denormal flushing added in Karplus-Strong + Super Karplus-Strong                                   | 5    |
+| M3  | `error("unreachable")` → `return@Exciter` in ExciterFm + ExciterPitchMod                           | 5    |
+| M4  | ResolvedShape / resolveDistortionShape extracted to shared DistortionShape.kt                      | 6    |
+| M5  | Number-to-integer-string formatting → `Double.formatAsIntOrDouble()` in common (5 sites)           | 6    |
+| M6  | KBCodeGen Long cache key → String key `"$line:$col"`                                               | 6    |
+| M7  | Errors.kt format() deduplicated via `formatPrefix()` / `formatHeader()` base methods               | 6    |
+| M8  | `roundToLong()` → `kotlin.math.round()` (avoids Long boxing)                                       | 1    |
+| M11 | `1.0.toRational()` → `Rational.ONE` in RepeatCyclesPattern                                         | 1    |
+| M12 | Badge container DOM leak fixed (attached to editor DOM, not document.body)                         | 1    |
+| M13 | Undo stack capped at 1,000                                                                         | 1    |
+| M14 | Double `asSampleRequest()` call → reuse `req` variable                                             | 1    |
+| L1  | File naming rule clarified in code-style skill (not a violation)                                   | 1    |
+| L5  | Interpreter `else -> error()` branches uncommented                                                 | 1    |
+| L7  | `isInsideString()` deduplicated (shared with H4 fix)                                               | 7    |
+| L2  | Scattered helpers consolidated: DspUtil.kt, NoteStaffPosition.kt, smallNumFastMod, util.kt deleted | 8    |
 
 ### Infra Moves
 
@@ -114,6 +115,9 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 - `common/math/math.kt`: `Int.isPowerOfTwo()`, `Double.formatAsIntOrDouble()`
 - `audio_be/DistortionShape.kt`: `ResolvedShape`, `resolveDistortionShape()`
 - `audio_bridge/KlangAudioDebug.kt`: `KLANG_AUDIO_DEBUG` compile-time flag
+- `audio_be/DspUtil.kt`: wrapPhase, polyBlep, smallNumFastMod, applySemitoneDetuneToFrequency, TWO_PI, ONE_OVER_TWELVE
+- `tones/note/NoteStaffPosition.kt`: staffPosition, staffPositionToNote, scaleDegreeToStaffPosition, nearestScaleDegree
+- `audio_benchmark` module: multiplatform benchmark suite (JVM + Node.js + Browser)
 
 ### New Tests
 
