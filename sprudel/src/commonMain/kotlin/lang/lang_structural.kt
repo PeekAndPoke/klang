@@ -3895,9 +3895,10 @@ private val ratioMutation = voiceModifier { inputValue ->
 
     val ratioValue = if (parts.size > 1) {
         // Parse all parts as numbers and divide them: "5:4" -> 5/4 = 1.25
+        // Guard: if any divisor is zero, the fold produces NaN/Infinity → takeIf discards it
         val numbers = parts.mapNotNull { it.toDoubleOrNull() }
         if (numbers.isNotEmpty()) {
-            numbers.drop(1).fold(numbers[0]) { acc, divisor -> acc / divisor }
+            numbers.drop(1).fold(numbers[0]) { acc, divisor -> acc / divisor }.takeIf { it.isFinite() }
         } else {
             null
         }

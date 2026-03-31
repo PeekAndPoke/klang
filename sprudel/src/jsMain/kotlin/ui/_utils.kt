@@ -3,7 +3,6 @@ package io.peekandpoke.klang.sprudel.ui
 import io.peekandpoke.klang.sprudel.lang.parser.MnNode
 import io.peekandpoke.klang.tones.note.Note
 import kotlin.math.pow
-import kotlin.math.roundToLong
 
 // ── Selection ─────────────────────────────────────────────────────────────────
 
@@ -102,7 +101,9 @@ internal fun Double.toFixed(decimals: Int): String {
 
 internal fun Double.roundTo(decimals: Int): Double {
     val factor = 10.0.pow(decimals)
-    return (this * factor).roundToLong().toDouble() / factor
+    // Use round() instead of roundToLong(): Long is boxed in Kotlin/JS (emulated via wrapper object),
+    // causing unnecessary heap allocation. round() returns Double directly — no boxing.
+    return kotlin.math.round(this * factor) / factor
 }
 
 internal fun Double.decimalPlaces(): Int {

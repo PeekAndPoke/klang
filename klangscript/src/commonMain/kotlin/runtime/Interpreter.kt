@@ -946,7 +946,7 @@ class Interpreter(
                     BinaryOperator.LESS_THAN_OR_EQUAL -> leftValue.value <= rightValue.value
                     BinaryOperator.GREATER_THAN -> leftValue.value > rightValue.value
                     BinaryOperator.GREATER_THAN_OR_EQUAL -> leftValue.value >= rightValue.value
-//                    else -> error("Unexpected comparison operator: ${binOp.operator}")
+                    else -> error("Unexpected comparison operator: ${binOp.operator}")
                 }
                 return BooleanValue(result)
             }
@@ -976,7 +976,7 @@ class Interpreter(
                     BinaryOperator.SHIFT_LEFT -> l shl r
                     BinaryOperator.SHIFT_RIGHT -> l shr r
                     BinaryOperator.UNSIGNED_SHIFT_RIGHT -> l ushr r
-                    // else -> error("Unexpected bitwise operator")
+                    else -> error("Unexpected bitwise operator: ${binOp.operator}")
                 }
                 return NumberValue(result.toDouble())
             }
@@ -1034,7 +1034,7 @@ class Interpreter(
                         leftValue.value % rightValue.value
                     }
 
-//                    else -> error("Unexpected arithmetic operator: ${binOp.operator}")
+                    else -> error("Unexpected arithmetic operator: ${binOp.operator}")
                 }
 
                 return NumberValue(result)

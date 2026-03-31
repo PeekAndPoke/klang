@@ -300,14 +300,24 @@ fun dslEditorExtension(
         badgesHideTimer = window.setTimeout({ hideBadges() }, 300)
     }
 
-    fun getOrCreateBadgeContainer(): Element {
+    // TODO: Future improvement — create a Kraft component lifecycle "attachment" mechanism:
+    //  a self-cleanup object that reacts to onMount/onUnMount, keeping state (like badge container,
+    //  timers, caches) in one place instead of scattered across the host component. The pattern is
+    //  always the same: onMount creates resources, onUnMount tears them down. The attachment would
+    //  own all state variables and auto-cleanup when the host component unmounts.
+
+    /** Lazily created badge container. Attached to the editor's own DOM so it is automatically
+     *  removed when the editor is destroyed — prevents orphaned elements leaking in document.body. */
+    fun getOrCreateBadgeContainer(view: EditorView): Element {
         return badgeContainer ?: run {
             val div = document.createElement("div")
             div.asDynamic().style.cssText =
                 "position:fixed;z-index:9999;display:none;flex-direction:row;gap:3px;pointer-events:auto;"
             div.addEventListener("mouseenter", { cancelBadgesClose() })
             div.addEventListener("mouseleave", { scheduleBadgesClose() })
-            document.body?.appendChild(div)
+            // Append to editor DOM instead of document.body: position:fixed still positions
+            // relative to the viewport, but the element's lifetime is tied to the editor.
+            view.dom.appendChild(div)
             badgeContainer = div
             div
         }
@@ -323,7 +333,7 @@ fun dslEditorExtension(
             return
         }
 
-        val container = getOrCreateBadgeContainer()
+        val container = getOrCreateBadgeContainer(view)
         // Dampen horizontal tracking: move at 50% of mouse offset from initial hover position
         val dampedX = badgeInitialMouseX + (mouseX - badgeInitialMouseX) * 0.5
         container.asDynamic().style.left = "${dampedX}px"

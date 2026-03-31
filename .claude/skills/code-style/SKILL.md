@@ -36,12 +36,14 @@ if (condition) {
 }
 ```
 
-### 2. File Names Use PascalCase
+### 2. File Naming Conventions
 
-All `.kt` files must be named in PascalCase matching their primary declaration.
+- **Files containing a class/object/interface:** PascalCase matching the primary declaration.
+- **Files containing only utility/helper/extension functions:** lowercase with `_` separators is acceptable.
+  Examples: `_utils.kt`, `math.kt`, `pattern_test_utils.kt`, `_chain_rendering.kt`.
 
-**Wrong:** `clipping_functions.kt`, `index_common.kt`
-**Correct:** `ClippingFunctions.kt`, `IndexCommon.kt`
+**Wrong:** `ClippingFunctions.kt` → class inside is `ClippingFuncs` (name mismatch)
+**Correct:** `ClippingFuncs.kt` (matches class), `math.kt` (utility functions, no class)
 
 ---
 

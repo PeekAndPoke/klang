@@ -70,5 +70,14 @@ class LangRatioSpec : StringSpec({
             events.size shouldBe 1
             events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
         }
+
+        withClue("ratio with zero divisor produces no value") {
+            // "5:0" would be division by zero — should produce null value, not crash or Infinity
+            val p = seq("5:0").ratio()
+            val events = p.queryArc(0.0, 1.0)
+
+            events.size shouldBe 1
+            events[0].data.value shouldBe null
+        }
     }
 })

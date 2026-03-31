@@ -379,7 +379,7 @@ class VoiceScheduler(
                 options.commLink.feedback.send(
                     KlangCommLink.Feedback.RequestSample(
                         playbackId = pid,
-                        req = voice.data.asSampleRequest(),
+                        req = req,
                     )
                 )
             }

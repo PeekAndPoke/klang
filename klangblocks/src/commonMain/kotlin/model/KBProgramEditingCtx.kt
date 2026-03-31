@@ -10,6 +10,11 @@ class KBProgramEditingCtx(
     private val undoStack = ArrayDeque<KBProgram>()
     private val redoStack = ArrayDeque<KBProgram>()
 
+    companion object {
+        /** Maximum number of undo steps to retain. Prevents unbounded memory growth in long editing sessions. */
+        const val MAX_UNDO_DEPTH = 1_000
+    }
+
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
 
@@ -18,6 +23,9 @@ class KBProgramEditingCtx(
         val next = block(current)
         if (next != current) {
             undoStack.addLast(current)
+            if (undoStack.size > MAX_UNDO_DEPTH) {
+                undoStack.removeFirst()
+            }
             redoStack.clear()
             program = next
             onChanged(program)
