@@ -7,7 +7,7 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
+import io.peekandpoke.klang.common.infra.KlangMinHeap
 import io.peekandpoke.klang.common.math.ValueRamp
 import io.peekandpoke.ultra.maths.Ease
 

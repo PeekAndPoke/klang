@@ -1,4 +1,4 @@
-package io.peekandpoke.klang.audio_bridge.infra
+package io.peekandpoke.klang.common.infra
 
 class KlangMinHeap<T>(private val less: (T, T) -> Boolean) {
     private val data = ArrayList<T>()
@@ -27,12 +27,23 @@ class KlangMinHeap<T>(private val less: (T, T) -> Boolean) {
 
     /**
      * Removes all elements matching the predicate and rebuilds the heap.
-     * More efficient than popping all, filtering, and re-pushing.
+     *
+     * Uses in-place compaction (no intermediate list allocation) followed by Floyd's heapify O(n).
+     * This is important when called from the audio thread where heap allocations must be avoided.
      */
     fun removeWhen(predicate: (T) -> Boolean) {
-        val remaining = data.filter { !predicate(it) }
-        data.clear()
-        remaining.forEach { push(it) }
+        var writeIdx = 0
+        for (readIdx in data.indices) {
+            if (!predicate(data[readIdx])) {
+                data[writeIdx++] = data[readIdx]
+            }
+        }
+        // Trim removed elements from the end
+        while (data.size > writeIdx) {
+            data.removeLast()
+        }
+        // Restore heap property using Floyd's algorithm — O(n)
+        heapify()
     }
 
     private fun siftUp(i0: Int) {
@@ -62,6 +73,16 @@ class KlangMinHeap<T>(private val less: (T, T) -> Boolean) {
             data[i] = data[m]
             data[m] = tmp
             i = m
+        }
+    }
+
+    /**
+     * Floyd's heapify: sift down from the last parent node to the root.
+     * Restores the heap property in O(n) time after bulk modifications.
+     */
+    private fun heapify() {
+        for (i in (data.size / 2 - 1) downTo 0) {
+            siftDown(i)
         }
     }
 }

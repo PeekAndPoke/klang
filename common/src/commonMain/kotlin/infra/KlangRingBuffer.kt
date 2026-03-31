@@ -1,11 +1,8 @@
-package io.peekandpoke.klang.audio_bridge.infra
-
-import io.peekandpoke.klang.common.infra.KlangLock
-import io.peekandpoke.klang.common.infra.withLock
+package io.peekandpoke.klang.common.infra
 
 /**
- * A simple ring buffer to pass events from the fetcher (Main Thread) to the audio loop (Audio Thread).
- * Uses a fixed capacity.
+ * A simple ring buffer to pass events between threads (e.g., Main Thread to Audio Thread).
+ * Uses a fixed capacity and a lock for thread safety.
  */
 class KlangRingBuffer<T>(private val capacity: Int) : KlangMessageSender<T>, KlangMessageReceiver<T> {
     private val buffer = arrayOfNulls<Any?>(capacity)
