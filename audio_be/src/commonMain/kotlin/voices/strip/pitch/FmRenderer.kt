@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
+import io.peekandpoke.klang.audio_be.wrapPhase
 import kotlin.math.sin
 
 /**
@@ -43,6 +44,6 @@ class FmRenderer(
             buf[ctx.offset + i] *= fmMult
         }
 
-        fm.modPhase = modPhase % TWO_PI
+        fm.modPhase = wrapPhase(modPhase, TWO_PI)
     }
 }

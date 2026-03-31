@@ -52,6 +52,23 @@ inline fun polyBlep(t: Double, dt: Double): Double {
 }
 
 /**
+ * Fast modulo for values that overshoot by at most one period.
+ *
+ * Typical for per-sample phase accumulators where the phase increments by a small dt each sample
+ * and can overshoot [period] by at most one step. Avoids JS `%` on doubles which internally
+ * computes a full floating-point division (`a - floor(a/b) * b`).
+ *
+ * Use this instead of `value % period` in per-sample DSP loops. NOT safe for values that
+ * could overshoot by more than one period — use [wrapPhase] for those cases.
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun smallNumFastMod(value: Double, period: Double): Double {
+    return if (value >= period) value - period
+    else if (value < 0.0) value + period
+    else value
+}
+
+/**
  * Converts a semitone detune offset to a frequency multiplier.
  * E.g., +12 semitones = 2x frequency (one octave up).
  */

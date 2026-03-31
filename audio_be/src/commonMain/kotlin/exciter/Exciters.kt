@@ -1,12 +1,10 @@
 package io.peekandpoke.klang.audio_be.exciter
 
-import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.*
 import io.peekandpoke.klang.audio_be.exciter.Exciters.dust
 import io.peekandpoke.klang.audio_be.exciter.Exciters.sawtooth
-import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
-import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -213,7 +211,7 @@ object Exciters {
                         // PolyBLEP square: two sawtooths subtracted, shifted by half period
                         var out = if (phase < 0.5) 1.0 else -1.0
                         out += polyBlep(phase, dt)                  // transition at 0
-                        out -= polyBlep((phase + 0.5) % 1.0, dt)   // transition at 0.5
+                        out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)   // transition at 0.5
                         buffer[i] = out.toFloat()
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
@@ -224,7 +222,7 @@ object Exciters {
                         var out = if (phase < 0.5) 1.0 else -1.0
                         if (dt > BLEP_MIN_DT) {
                             out += polyBlep(phase, dt)
-                            out -= polyBlep((phase + 0.5) % 1.0, dt)
+                            out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)
                         }
                         buffer[i] = out.toFloat()
                         phase += dt
@@ -238,7 +236,7 @@ object Exciters {
                         // PolyBLEP square: two sawtooths subtracted, shifted by half period
                         var out = if (phase < 0.5) 1.0 else -1.0
                         out += polyBlep(phase, inc)                  // transition at 0
-                        out -= polyBlep((phase + 0.5) % 1.0, inc)   // transition at 0.5
+                        out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), inc)   // transition at 0.5
                         buffer[i] = out.toFloat()
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
@@ -249,7 +247,7 @@ object Exciters {
                         var out = if (phase < 0.5) 1.0 else -1.0
                         if (dt > BLEP_MIN_DT) {
                             out += polyBlep(phase, dt)
-                            out -= polyBlep((phase + 0.5) % 1.0, dt)
+                            out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)
                         }
                         buffer[i] = out.toFloat()
                         phase += dt
@@ -458,7 +456,7 @@ object Exciters {
                             val dt = inc * dr.nextMultiplier()
                             var out = if (phase < d) 1.0 else -1.0
                             out += polyBlep(phase, dt)
-                            out -= polyBlep((phase + (1.0 - d)) % 1.0, dt)
+                            out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
                             buffer[i] = out.toFloat()
                             phase += dt
                             phase = wrapPhase(phase, 1.0)
@@ -470,7 +468,7 @@ object Exciters {
                             var out = if (phase < d) 1.0 else -1.0
                             if (dt > BLEP_MIN_DT) {
                                 out += polyBlep(phase, dt)
-                                out -= polyBlep((phase + (1.0 - d)) % 1.0, dt)
+                                out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
                             }
                             buffer[i] = out.toFloat()
                             phase += dt
@@ -483,7 +481,7 @@ object Exciters {
                             val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
                             var out = if (phase < d) 1.0 else -1.0
                             out += polyBlep(phase, inc)
-                            out -= polyBlep((phase + (1.0 - d)) % 1.0, inc)
+                            out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), inc)
                             buffer[i] = out.toFloat()
                             phase += inc
                             phase = wrapPhase(phase, 1.0)
@@ -495,7 +493,7 @@ object Exciters {
                             var out = if (phase < d) 1.0 else -1.0
                             if (dt > BLEP_MIN_DT) {
                                 out += polyBlep(phase, dt)
-                                out -= polyBlep((phase + (1.0 - d)) % 1.0, dt)
+                                out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
                             }
                             buffer[i] = out.toFloat()
                             phase += dt
@@ -918,7 +916,7 @@ object Exciters {
                                 var out = if (p < 0.5) 1.0 else -1.0
                                 if (dt > BLEP_MIN_DT) {
                                     out += polyBlep(p, dt)
-                                    out -= polyBlep((p + 0.5) % 1.0, dt)
+                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                 }
                                 buffer[i] = (out * voiceGain).toFloat()
                                 p += dt; p = wrapPhase(p, 1.0)
@@ -934,7 +932,7 @@ object Exciters {
                                 var out = if (p < 0.5) 1.0 else -1.0
                                 if (dt > BLEP_MIN_DT) {
                                     out += polyBlep(p, dt)
-                                    out -= polyBlep((p + 0.5) % 1.0, dt)
+                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                 }
                                 buffer[i] = (buffer[i] + out * voiceGain).toFloat()
                                 p += dt; p = wrapPhase(p, 1.0)
@@ -956,7 +954,7 @@ object Exciters {
                                 for (i in ctx.offset until end) {
                                     var out = if (p < 0.5) 1.0 else -1.0
                                     out += polyBlep(p, dt)
-                                    out -= polyBlep((p + 0.5) % 1.0, dt)
+                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                     buffer[i] = (out * voiceGain).toFloat()
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
@@ -977,7 +975,7 @@ object Exciters {
                                 for (i in ctx.offset until end) {
                                     var out = if (p < 0.5) 1.0 else -1.0
                                     out += polyBlep(p, dt)
-                                    out -= polyBlep((p + 0.5) % 1.0, dt)
+                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                     buffer[i] = (buffer[i] + out * voiceGain).toFloat()
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
@@ -1000,7 +998,7 @@ object Exciters {
                             } else {
                                 var out = if (p < 0.5) 1.0 else -1.0
                                 out += polyBlep(p, dt)
-                                out -= polyBlep((p + 0.5) % 1.0, dt)
+                                out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                 out
                             }
                             p += dt; p = wrapPhase(p, 1.0)
@@ -1574,43 +1572,8 @@ object Exciters {
     private const val PERLIN_STEP = 0.003
 
     // ═════════════════════════════════════════════════════════════════════════════
-    // Per-sample DSP helpers — kept as member functions for guaranteed inlining.
-    // Moving these to DspUtil.kt caused a 2x regression in superSaw benchmarks
-    // because Kotlin/JS may not inline cross-file functions in the audio hot path.
-    // Canonical implementations are in DspUtil.kt; these are hot-path copies.
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    /** Wraps phase into [0, period). Uses subtraction instead of modulo (%) because
-     *  JS `%` on doubles is much slower than a conditional subtract for the common case
-     *  where phase overshoots by exactly one period per sample. */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun wrapPhase(phase: Double, period: Double): Double {
-        var p = phase
-        while (p >= period) p -= period
-        while (p < 0.0) p += period
-        return p
-    }
-
-    /**
-     * First-order PolyBLEP residual for anti-aliased discontinuities.
-     * [t] is the normalized phase (0..1), [dt] is the normalized phase increment per sample.
-     */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun polyBlep(t: Double, dt: Double): Double {
-        var correction = 0.0
-        if (t < dt) {
-            val r = t / dt
-            correction += r + r - r * r - 1.0
-        }
-        if (t > 1.0 - dt) {
-            val r = (t - 1.0) / dt
-            correction += r * r + r + r + 1.0
-        }
-        return correction
-    }
-
-    private fun applySemitoneDetuneToFrequency(frequency: Double, detuneSemitones: Double): Double =
-        frequency * 2.0.pow(detuneSemitones / 12.0)
+    // wrapPhase(), polyBlep(), smallNumFastMod(), applySemitoneDetuneToFrequency()
+    // are in DspUtil.kt — imported via `import io.peekandpoke.klang.audio_be.*`
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Unison / supersaw helpers
