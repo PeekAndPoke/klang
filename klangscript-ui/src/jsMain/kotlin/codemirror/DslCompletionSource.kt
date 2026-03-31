@@ -255,23 +255,46 @@ private fun KlangSymbol.toAliasCompletion(alias: String): Completion = jsObject 
 }
 
 /**
- * Check if the cursor is inside a string literal by counting unescaped quotes.
+ * Check if the cursor is inside a string literal by scanning for unescaped quotes.
+ * Handles both double-quote ("...") and single-quote ('...') strings.
  */
 private fun isInsideString(context: CompletionContext, wordFrom: Int): Boolean {
     val line = context.state.doc.lineAt(wordFrom)
     val prefix = context.state.doc.sliceString(line.from, wordFrom)
-    var quoteCount = 0
+    return isInsideStringLiteral(prefix)
+}
+
+/**
+ * Returns true if the end of [prefix] falls inside an unclosed string literal.
+ *
+ * Scans for unescaped `"` and `'` — when we encounter an opening quote, everything until
+ * the matching closing quote (or end of prefix) is inside a string. Escaped quotes (`\"`, `\'`)
+ * are skipped. Handles both double-quote and single-quote strings as used in KlangScript.
+ *
+ * Shared between [dslCompletionSource] and [dslEditorExtension].
+ */
+internal fun isInsideStringLiteral(prefix: String): Boolean {
+    var inString = false
+    var openQuote = ' ' // the quote character that opened the current string
     var i = 0
     while (i < prefix.length) {
-        if (prefix[i] == '\\') {
-            i += 2; continue
-        }
-        if (prefix[i] == '"') {
-            quoteCount++
+        val ch = prefix[i]
+        if (inString) {
+            if (ch == '\\') {
+                i += 2; continue // skip escaped character
+            }
+            if (ch == openQuote) {
+                inString = false // closing quote
+            }
+        } else {
+            if (ch == '"' || ch == '\'') {
+                inString = true
+                openQuote = ch
+            }
         }
         i++
     }
-    return quoteCount % 2 != 0
+    return inString
 }
 
 /**
