@@ -1,6 +1,17 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.klang.codemirror.ext.Diagnostic
+import io.peekandpoke.klang.codemirror.ext.EditorState
+import io.peekandpoke.klang.codemirror.ext.EditorStateConfig
+import io.peekandpoke.klang.codemirror.ext.EditorView
+import io.peekandpoke.klang.codemirror.ext.EditorViewConfig
+import io.peekandpoke.klang.codemirror.ext.Extension
+import io.peekandpoke.klang.codemirror.ext.autocompletion
+import io.peekandpoke.klang.codemirror.ext.basicSetup
+import io.peekandpoke.klang.codemirror.ext.javascript
+import io.peekandpoke.klang.codemirror.ext.lintGutter
+import io.peekandpoke.klang.codemirror.ext.linter
+import io.peekandpoke.klang.codemirror.ext.setDiagnostics
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl

@@ -94,7 +94,7 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
     val importMatch = checkImportContext(context)
     if (importMatch != null) {
         for (libName in docContext.availableLibraryNames) {
-            options.add(jsObject<Completion> {
+            options.add(jsObject {
                 label = libName
                 type = "keyword"
                 detail = "library"

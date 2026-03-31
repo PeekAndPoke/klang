@@ -83,8 +83,8 @@ class CodeMirrorHighlightBuffer(
             .filter { it.isValid() }
             .distinct()
             .take(maxHighlightsPerEvent).forEach { location ->
-            scheduleForLocation(location, event)
-        }
+                scheduleForLocation(location, event)
+            }
     }
 
     fun cancelAll() {
@@ -153,6 +153,7 @@ class CodeMirrorHighlightBuffer(
                             showHighlight(op.key, op.location, op.durationMs)
                         }
                     }
+
                     is PendingOp.Remove -> removeHighlight(op.key)
                 }
             }
