@@ -30,8 +30,8 @@ import kotlin.time.TimeSource
 class ExciterBenchmark(
     private val sampleRate: Int = 44100,
     private val blockFrames: Int = 128,
-    private val warmupBlocks: Int = 1000,
-    private val measureBlocks: Int = 500,
+    private val warmupBlocks: Int = 10000,
+    private val measureBlocks: Int = 5000,
     private val iterations: Int = 3,
 ) {
     /**
