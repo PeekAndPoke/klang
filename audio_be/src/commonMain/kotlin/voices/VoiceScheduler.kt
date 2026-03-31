@@ -78,15 +78,15 @@ class VoiceScheduler(
     private class SoloSourceTracker(val rampDurationSec: Double, val sampleRate: Int) {
         private data class SourceState(
             val sourceId: String,
-            val cleanupFrame: Long?,
+            val cleanupFrame: Int?,
         )
 
         private val sources = mutableMapOf<String, SourceState>()
 
-        fun update(activeSoloSourceIds: Set<String>, currentFrame: Long): Set<String> {
+        fun update(activeSoloSourceIds: Set<String>, currentFrame: Int): Set<String> {
             for ((sourceId, state) in sources.toList()) {
                 if (sourceId !in activeSoloSourceIds && state.cleanupFrame == null) {
-                    val cleanupFrame = currentFrame + (rampDurationSec * sampleRate).toLong()
+                    val cleanupFrame = currentFrame + (rampDurationSec * sampleRate).toInt()
                     sources[sourceId] = state.copy(cleanupFrame = cleanupFrame)
                 }
             }
@@ -119,7 +119,7 @@ class VoiceScheduler(
     private val playbackContexts = mutableMapOf<String, PlaybackCtx>()
 
     // Track the last processed frame (for epoch recording)
-    private var lastProcessedFrame: Long = 0
+    private var lastProcessedFrame: Int = 0
 
     // Scratch buffers
     private val voiceBuffer = FloatArray(options.blockFrames)
@@ -263,7 +263,7 @@ class VoiceScheduler(
         prefetchSampleSound(voice)
     }
 
-    fun process(cursorFrame: Long) {
+    fun process(cursorFrame: Int) {
         val startMs = options.performanceTimeMs()
 
         lastProcessedFrame = cursorFrame
@@ -386,7 +386,7 @@ class VoiceScheduler(
         }
     }
 
-    private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
+    private fun promoteScheduled(nowFrame: Int, blockEnd: Int) {
         val blockEndSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
         val nowSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
         val blockSizeSec = options.blockFrames.toDouble() / options.sampleRate.toDouble()

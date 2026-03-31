@@ -65,7 +65,7 @@ class KlangAudioRendererSpec : StringSpec({
         val out = ShortArray(blockFrames * 2)
 
         repeat(10) { block ->
-            renderer.renderBlock(cursorFrame = block.toLong() * blockFrames, out = out)
+            renderer.renderBlock(cursorFrame = block * blockFrames, out = out)
 
             for (i in out.indices) {
                 out[i] shouldBe 0.toShort()
@@ -330,7 +330,7 @@ class KlangAudioRendererSpec : StringSpec({
         val renderer = createRenderer()
         val out = ShortArray(blockFrames * 2)
 
-        val cursorPositions = listOf(0L, 128L, 44100L, 1_000_000L)
+        val cursorPositions = listOf(0, 128, 44100, 1_000_000)
 
         for (cursor in cursorPositions) {
             out.fill(999.toShort()) // fill with non-zero to verify it gets overwritten

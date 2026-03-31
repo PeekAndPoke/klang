@@ -25,12 +25,12 @@ class FilterModulationTest : StringSpec({
     }
 
     fun createSignalCtx(
-        startFrame: Long = 0,
-        gateEndFrame: Long = 1000,
-        endFrame: Long = 1000,
+        startFrame: Int = 0,
+        gateEndFrame: Int = 1000,
+        endFrame: Int = 1000,
     ): ExciteContext {
-        val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-        val releaseFrames = (endFrame - gateEndFrame).toInt()
+        val voiceDurationFrames = gateEndFrame - startFrame
+        val releaseFrames = endFrame - gateEndFrame
         return ExciteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
@@ -42,7 +42,7 @@ class FilterModulationTest : StringSpec({
     }
 
     // Helper to create a dummy context
-    fun createCtx(blockStart: Long = 0): Voice.RenderContext {
+    fun createCtx(blockStart: Int = 0): Voice.RenderContext {
         return Voice.RenderContext(
             orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,

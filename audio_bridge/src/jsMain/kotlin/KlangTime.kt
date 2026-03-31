@@ -29,16 +29,20 @@ actual class KlangTime private constructor(
     }
 
     /**
-     * AudioWorklet implementation using Date.now() + frame count for precision
+     * AudioWorklet implementation using Date.now() + frame count for precision.
+     *
+     * Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via
+     * a wrapper object), causing heap allocation on every arithmetic operation on the audio thread.
+     * Int maps directly to a JS number. At 48kHz, Int overflows after ~12.4 hours.
      */
     private class AudioWorkletTimeSource(
         private val sampleRate: Double,
     ) : TimeSource {
         private val baseTimeMs = Date.now()
-        private var startFrame: Long = 0
-        var currentFrame: Long = 0
+        private var startFrame: Int = 0
+        var currentFrame: Int = 0
             set(value) {
-                if (field == 0L && value > 0L) {
+                if (field == 0 && value > 0) {
                     startFrame = value  // Capture first non-zero frame as start
                 }
                 field = value
@@ -55,7 +59,7 @@ actual class KlangTime private constructor(
     /**
      * For AudioWorklet context: update the current frame count
      */
-    fun updateCurrentFrame(frame: Long) {
+    fun updateCurrentFrame(frame: Int) {
         (impl as? AudioWorkletTimeSource)?.let {
             it.currentFrame = frame
         }

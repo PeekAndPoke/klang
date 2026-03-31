@@ -17,9 +17,9 @@ fun BlockRenderer.renderInPlace(buffer: FloatArray, sampleRate: Int = 44100) {
         freqModBuffer = DoubleArray(buffer.size),
         scratchBuffers = ScratchBuffers(buffer.size),
         sampleRate = sampleRate,
-        startFrame = 0L,
-        endFrame = buffer.size.toLong(),
-        gateEndFrame = buffer.size.toLong(),
+        startFrame = 0,
+        endFrame = buffer.size,
+        gateEndFrame = buffer.size,
         freqHz = 440.0,
         signal = Exciter { _, _, _ -> },
         signalCtx = ExciteContext(
@@ -34,7 +34,7 @@ fun BlockRenderer.renderInPlace(buffer: FloatArray, sampleRate: Int = 44100) {
     )
     ctx.offset = 0
     ctx.length = buffer.size
-    ctx.blockStart = 0L
+    ctx.blockStart = 0
 
     render(ctx)
 }

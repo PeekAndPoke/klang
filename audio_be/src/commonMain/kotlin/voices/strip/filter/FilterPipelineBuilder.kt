@@ -20,8 +20,8 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  */
 fun buildFilterPipeline(
     modulators: List<Voice.FilterModulator>,
-    startFrame: Long,
-    gateEndFrame: Long,
+    startFrame: Int,
+    gateEndFrame: Int,
     crush: Voice.Crush,
     coarse: Voice.Coarse,
     mainFilter: AudioFilter,

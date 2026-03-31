@@ -15,13 +15,13 @@ class ExciteRenderer(
     private val signal: Exciter,
     private val signalCtx: ExciteContext,
     private val freqHz: Double,
-    private val startFrame: Long,
+    private val startFrame: Int,
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
         signalCtx.offset = ctx.offset
         signalCtx.length = ctx.length
-        signalCtx.voiceElapsedFrames = (ctx.blockStart - startFrame).toInt()
+        signalCtx.voiceElapsedFrames = ctx.blockStart - startFrame
         signalCtx.phaseMod = if (ctx.freqModBufferWritten) ctx.freqModBuffer else null
 
         signal.generate(ctx.audioBuffer, freqHz, signalCtx)

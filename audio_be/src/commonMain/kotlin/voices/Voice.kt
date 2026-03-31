@@ -8,6 +8,10 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 
+// Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
+// object), causing heap allocation on every operation. Int maps directly to a JS number.
+// At 48kHz with 128-sample blocks, Int overflows after ~12.4 hours — sufficient for any session.
+
 /**
  * A voice in the audio engine.
  *
@@ -17,9 +21,9 @@ class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     // Lifecycle & Routing
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    val startFrame: Long,
-    val endFrame: Long,
-    private val gateEndFrame: Long,
+    val startFrame: Int,
+    val endFrame: Int,
+    private val gateEndFrame: Int,
     val orbitId: Int,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -74,8 +78,8 @@ class Voice(
 
         val vStart = maxOf(ctx.blockStart, startFrame)
         val vEnd = minOf(blockEnd, endFrame)
-        val offset = (vStart - ctx.blockStart).toInt()
-        val length = (vEnd - vStart).toInt()
+        val offset = vStart - ctx.blockStart
+        val length = vEnd - vStart
 
         // Update per-block state
         blockCtx.audioBuffer = ctx.voiceBuffer
@@ -109,7 +113,7 @@ class Voice(
         val freqModBuffer: DoubleArray,
         val scratchBuffers: ScratchBuffers,
     ) {
-        var blockStart: Long = 0
+        var blockStart: Int = 0
     }
 
     class Fm(

@@ -13,12 +13,12 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  */
 class EnvelopeRenderer(
     private val envelope: Voice.Envelope,
-    private val startFrame: Long,
-    private val gateEndFrame: Long,
+    private val startFrame: Int,
+    private val gateEndFrame: Int,
 ) : BlockRenderer {
 
     // Voice-relative gate end position (Int, avoids Long in per-sample loop)
-    private val gateEndPos: Int = (gateEndFrame - startFrame).toInt()
+    private val gateEndPos: Int = gateEndFrame - startFrame
 
     override fun render(ctx: BlockContext) {
         val env = envelope
@@ -27,7 +27,7 @@ class EnvelopeRenderer(
         val relRateDen = if (env.releaseFrames > 0) env.releaseFrames else 1.0
 
         // Compute voice-relative position as Int (once per block, not per sample)
-        var absPos = ((ctx.blockStart + ctx.offset) - startFrame).toInt()
+        var absPos = (ctx.blockStart + ctx.offset) - startFrame
         var currentEnv = env.level
 
         for (i in 0 until ctx.length) {

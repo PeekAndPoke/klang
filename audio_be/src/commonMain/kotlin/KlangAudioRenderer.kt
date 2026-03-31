@@ -27,7 +27,7 @@ class KlangAudioRenderer(
     )
 
     fun renderBlock(
-        cursorFrame: Long,
+        cursorFrame: Int,
         out: ShortArray,
     ) {
         // 1. Reset Mix Buffers

@@ -22,9 +22,9 @@ fun buildPitchPipeline(
     fm: Voice.Fm?,
     freqHz: Double,
     sampleRate: Int,
-    startFrame: Long,
-    endFrame: Long,
-    gateEndFrame: Long,
+    startFrame: Int,
+    endFrame: Int,
+    gateEndFrame: Int,
 ): List<BlockRenderer> = buildList {
     if (vibrato.depth > 0.0) {
         add(VibratoRenderer(vibrato, sampleRate))

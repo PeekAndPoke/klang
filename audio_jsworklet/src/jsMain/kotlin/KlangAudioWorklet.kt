@@ -60,7 +60,11 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
         // Buffers
         val renderBuffer = ShortArray(blockFrames * 2) // 16-bit Stereo PCM (2 shorts per frame)
-        var cursorFrame = 0L
+
+        // Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper object),
+        // causing heap allocation on every arithmetic operation. Int maps directly to a JS number.
+        // At 48kHz, Int overflows after ~12.4 hours — sufficient for any continuous session.
+        var cursorFrame = 0
 
         var isPlaying = true
     }

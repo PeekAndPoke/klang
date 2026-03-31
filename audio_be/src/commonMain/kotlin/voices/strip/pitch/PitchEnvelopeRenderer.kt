@@ -13,7 +13,7 @@ import kotlin.math.pow
  */
 class PitchEnvelopeRenderer(
     private val pitchEnvelope: Voice.PitchEnvelope,
-    private val startFrame: Long,
+    private val startFrame: Int,
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
@@ -21,7 +21,7 @@ class PitchEnvelopeRenderer(
         val pEnv = pitchEnvelope
 
         // Compute voice-relative position as Int (once per block)
-        val blockRelStart = ((ctx.blockStart + ctx.offset) - startFrame).toInt()
+        val blockRelStart = (ctx.blockStart + ctx.offset) - startFrame
 
         if (ctx.freqModBufferWritten) {
             for (i in 0 until ctx.length) {
