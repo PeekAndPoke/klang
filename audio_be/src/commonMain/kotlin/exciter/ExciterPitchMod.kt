@@ -44,7 +44,8 @@ fun Exciter.vibrato(rate: Exciter, depth: Exciter): Exciter {
         if (existing0 == null || existing0.size < bufSize) {
             modBuf = DoubleArray(bufSize)
         }
-        val mb = modBuf ?: error("unreachable")
+        // Audio renderer must never throw — silently skip if buffer is unexpectedly null
+        val mb = modBuf ?: return@Exciter
 
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val end = ctx.offset + ctx.length
@@ -103,7 +104,8 @@ fun Exciter.accelerate(amount: Exciter): Exciter {
         if (existing0 == null || existing0.size < bufSize) {
             modBuf = DoubleArray(bufSize)
         }
-        val mb = modBuf ?: error("unreachable")
+        // Audio renderer must never throw — silently skip if buffer is unexpectedly null
+        val mb = modBuf ?: return@Exciter
 
         val totalFrames = ctx.voiceDurationFrames.toDouble()
         if (totalFrames <= 0.0) {
@@ -190,7 +192,8 @@ fun Exciter.pitchEnvelope(
         if (existing0 == null || existing0.size < bufSize) {
             modBuf = DoubleArray(bufSize)
         }
-        val mb = modBuf ?: error("unreachable")
+        // Audio renderer must never throw — silently skip if buffer is unexpectedly null
+        val mb = modBuf ?: return@Exciter
 
         val attackFrames = attackSecVal * ctx.sampleRate
         val decayFrames = decaySecVal * ctx.sampleRate

@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.exciter
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.exciter.Exciters.dust
 import io.peekandpoke.klang.audio_be.exciter.Exciters.sawtooth
+import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
 import kotlin.math.pow
@@ -1359,13 +1360,14 @@ object Exciters {
 
                 // One-pole lowpass (brightness)
                 lpState = lpState + lpAlpha * (sample.toDouble() - lpState)
+                lpState = flushDenormal(lpState)
                 var filtered = lpState
 
                 // Allpass stiffness filter (bypassed when stiffness = 0)
                 if (hasStiffness) {
                     val apOut = apCoeff * (filtered - apPrevOut) + apPrevIn
-                    apPrevIn = filtered
-                    apPrevOut = apOut
+                    apPrevIn = flushDenormal(filtered)
+                    apPrevOut = flushDenormal(apOut)
                     filtered = apOut
                 }
 
@@ -1489,13 +1491,14 @@ object Exciters {
 
                     // One-pole lowpass (brightness)
                     s.lpState = s.lpState + lpAlpha * (sample.toDouble() - s.lpState)
+                    s.lpState = flushDenormal(s.lpState)
                     var filtered = s.lpState
 
                     // Allpass stiffness
                     if (hasStiffness) {
                         val apOut = apCoeff * (filtered - s.apPrevOut) + s.apPrevIn
-                        s.apPrevIn = filtered
-                        s.apPrevOut = apOut
+                        s.apPrevIn = flushDenormal(filtered)
+                        s.apPrevOut = flushDenormal(apOut)
                         filtered = apOut
                     }
 

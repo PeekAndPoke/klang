@@ -83,12 +83,22 @@ class VoiceScheduler(
 
         private val sources = mutableMapOf<String, SourceState>()
 
+        // Pre-allocated list for deferred mutations — avoids toList() allocation on the audio thread.
+        // Entries are (sourceId, newState) pairs to apply after the read-only iteration.
+        private val pendingUpdates = mutableListOf<Pair<String, SourceState>>()
+
         fun update(activeSoloSourceIds: Set<String>, currentFrame: Int): Set<String> {
-            for ((sourceId, state) in sources.toList()) {
+            // Pass 1: find sources that need a cleanup frame — collect updates without mutating
+            pendingUpdates.clear()
+            for ((sourceId, state) in sources) {
                 if (sourceId !in activeSoloSourceIds && state.cleanupFrame == null) {
                     val cleanupFrame = currentFrame + (rampDurationSec * sampleRate).toInt()
-                    sources[sourceId] = state.copy(cleanupFrame = cleanupFrame)
+                    pendingUpdates.add(sourceId to state.copy(cleanupFrame = cleanupFrame))
                 }
+            }
+            // Apply deferred mutations
+            for ((sourceId, newState) in pendingUpdates) {
+                sources[sourceId] = newState
             }
 
             for (sourceId in activeSoloSourceIds) {
@@ -121,10 +131,11 @@ class VoiceScheduler(
     // Track the last processed frame (for epoch recording)
     private var lastProcessedFrame: Int = 0
 
-    // Scratch buffers
+    // Scratch buffers — pre-allocated to avoid per-block heap allocation on the audio thread
     private val voiceBuffer = FloatArray(options.blockFrames)
     private val freqModBuffer = DoubleArray(options.blockFrames)
     private val scratchBuffers = ScratchBuffers(options.blockFrames)
+    private val activeSoloSourceIds = mutableSetOf<String>()
 
     // Context reused per block
     private val ctx = Voice.RenderContext(
@@ -276,7 +287,7 @@ class VoiceScheduler(
         ctx.blockStart = cursorFrame
 
         // 2.5. Calculate solo/mute gain multipliers
-        val activeSoloSourceIds = mutableSetOf<String>()
+        activeSoloSourceIds.clear()
         var maxSoloAmount = 0.0
         for (voice in active) {
             if (voice.soloAmount > 0.0 && voice.sourceId != null) {

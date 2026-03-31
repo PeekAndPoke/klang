@@ -55,8 +55,9 @@ fun Exciter.fm(
         if (existingPm == null || existingPm.size < bufSize) {
             phaseModBuf = DoubleArray(bufSize)
         }
-        val mb = modBuf ?: error("unreachable")
-        val pmb = phaseModBuf ?: error("unreachable")
+        // Audio renderer must never throw — silently skip if buffers are unexpectedly null
+        val mb = modBuf ?: return@Exciter
+        val pmb = phaseModBuf ?: return@Exciter
 
         // Compute FM envelope level (control rate — once per block)
         val envLevel = if (envAttackSecVal > 0.0 || envDecaySecVal > 0.0 || envSustainLevelVal < 1.0) {

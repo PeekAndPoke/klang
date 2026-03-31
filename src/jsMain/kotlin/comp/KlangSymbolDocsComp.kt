@@ -73,22 +73,31 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             onClick { event -> event.stopPropagation() }
             onContextMenu { event -> event.stopPropagation() }
 
-            ui.relaxed.list {
-                noui.item {
-                    sectionLabel(symbol.name)
-                    noui.content {
+            ui.two.column.grid {
+                noui.middle.aligned.column {
+                    ui.header {
+                        +symbol.name
+                    }
+                }
+                noui.middle.aligned.right.aligned.column {
+                    ui.basic.label {
                         if (symbol.library.isBlank()) {
                             +"Built-in"
                         } else {
-                            +"Library: ${symbol.library}"
+                            icon.book()
+                            +symbol.library.uppercase()
                         }
                     }
                 }
+            }
+
+            ui.divider()
+
+            ui.relaxed.list {
 
                 // ── Description ───────────────────────────────────────────────────
                 if (description != null) {
                     noui.item {
-                        sectionLabel("Description")
                         noui.content {
                             MarkdownDisplay(description)
                         }
