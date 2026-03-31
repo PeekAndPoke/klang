@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.sprudel.ui
 
 import io.peekandpoke.klang.tones.note.Note
+import io.peekandpoke.klang.tones.note.staffPosition
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext

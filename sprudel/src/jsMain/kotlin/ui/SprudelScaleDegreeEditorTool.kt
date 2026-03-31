@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.sprudel.ui
 
+import io.peekandpoke.klang.tones.note.nearestScaleDegree
+import io.peekandpoke.klang.tones.note.scaleDegreeToStaffPosition
 import io.peekandpoke.klang.tones.scale.Scale
 import io.peekandpoke.klang.ui.KlangUiTool
 import io.peekandpoke.klang.ui.KlangUiToolContext

@@ -1573,12 +1573,44 @@ object Exciters {
     /** Base step per sample for Perlin/Berlin noise. rate=1.0 walks ~144 noise-units/sec at 48kHz. */
     private const val PERLIN_STEP = 0.003
 
-    /** Wraps phase into [0, period). Constant-time using modulo arithmetic. */
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Per-sample DSP helpers — kept as member functions for guaranteed inlining.
+    // Moving these to DspUtil.kt caused a 2x regression in superSaw benchmarks
+    // because Kotlin/JS may not inline cross-file functions in the audio hot path.
+    // Canonical implementations are in DspUtil.kt; these are hot-path copies.
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    /** Wraps phase into [0, period). Uses subtraction instead of modulo (%) because
+     *  JS `%` on doubles is much slower than a conditional subtract for the common case
+     *  where phase overshoots by exactly one period per sample. */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun wrapPhase(phase: Double, period: Double): Double {
-        val p = phase % period
-        return if (p < 0.0) p + period else p
+        var p = phase
+        while (p >= period) p -= period
+        while (p < 0.0) p += period
+        return p
     }
+
+    /**
+     * First-order PolyBLEP residual for anti-aliased discontinuities.
+     * [t] is the normalized phase (0..1), [dt] is the normalized phase increment per sample.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun polyBlep(t: Double, dt: Double): Double {
+        var correction = 0.0
+        if (t < dt) {
+            val r = t / dt
+            correction += r + r - r * r - 1.0
+        }
+        if (t > 1.0 - dt) {
+            val r = (t - 1.0) / dt
+            correction += r * r + r + r + 1.0
+        }
+        return correction
+    }
+
+    private fun applySemitoneDetuneToFrequency(frequency: Double, detuneSemitones: Double): Double =
+        frequency * 2.0.pow(detuneSemitones / 12.0)
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Unison / supersaw helpers
@@ -1590,29 +1622,5 @@ object Exciters {
         val b = detune * 0.5
         val n = voiceIndex.toDouble() / (unison - 1).toDouble()
         return n * (b - a) + a
-    }
-
-    private fun applySemitoneDetuneToFrequency(frequency: Double, detuneSemitones: Double): Double =
-        frequency * 2.0.pow(detuneSemitones / 12.0)
-
-    /**
-     * First-order PolyBLEP residual for anti-aliased discontinuities.
-     * [t] is the normalized phase (0..1), [dt] is the normalized phase increment per sample.
-     */
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun polyBlep(t: Double, dt: Double): Double {
-        var correction = 0.0
-
-        if (t < dt) {
-            val r = t / dt
-            correction += r + r - r * r - 1.0
-        }
-
-        if (t > 1.0 - dt) {
-            val r = (t - 1.0) / dt
-            correction += r * r + r + r + 1.0
-        }
-
-        return correction
     }
 }
