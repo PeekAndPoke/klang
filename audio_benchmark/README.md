@@ -11,10 +11,16 @@ Measures real-time factor (RTF) — values below 1.0 mean faster than real-time.
 ./gradlew :audio_benchmark:jvmRun
 ```
 
-### JS (browser via Karma/Node)
+### JS (Node.js — console output)
 
 ```bash
-./gradlew :audio_benchmark:jsBrowserProductionRun
+./gradlew :audio_benchmark:jsNodeProductionRun
+```
+
+### JS (Browser — webpack dev server)
+
+```bash
+./gradlew :audio_benchmark:jsBrowserDevelopmentRun
 ```
 
 ## Output
@@ -22,7 +28,7 @@ Measures real-time factor (RTF) — values below 1.0 mean faster than real-time.
 The benchmark prints:
 
 - **Table** — aligned human-readable output to stdout
-- **CSV** — machine-parseable, pipe to a file: `./gradlew :audio_benchmark:jvmRun > results.csv`
+- **CSV** — machine-parseable
 - **Markdown** — copy into `docs/benchmarks/` for historical tracking
 
 ## What it benchmarks
@@ -33,6 +39,8 @@ The benchmark prints:
 - **4 noise generators** — white, pink, brown, dust
 - **4 scaling tests** — supersaw at 1, 4, 8, 16 internal voices
 - **5 compositions** — supersaw+lpf+adsr, +reverb, pluck+distort, square+fm, sine+vibrato+tremolo
+
+Results are sorted most expensive first.
 
 ## Saving results
 

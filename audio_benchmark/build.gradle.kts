@@ -17,12 +17,14 @@ kotlin {
         browser {
             binaries.executable()
         }
+        nodejs {
+            binaries.executable()
+        }
     }
 
     jvmToolchain(Deps.jvmTargetVersion)
 
     jvm {
-        withJava()
     }
 
     sourceSets {

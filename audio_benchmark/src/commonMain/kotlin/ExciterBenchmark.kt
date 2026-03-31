@@ -30,7 +30,7 @@ import kotlin.time.TimeSource
 class ExciterBenchmark(
     private val sampleRate: Int = 44100,
     private val blockFrames: Int = 128,
-    private val warmupBlocks: Int = 100,
+    private val warmupBlocks: Int = 1000,
     private val measureBlocks: Int = 500,
     private val iterations: Int = 3,
 ) {
@@ -65,7 +65,7 @@ class ExciterBenchmark(
     fun toCsv(results: List<Result>): String = buildString {
         appendLine("name,voices,rtf,render_us_per_block,audio_us_per_block")
         for (r in results) {
-            appendLine("${r.name},${r.voices},${fmt(r.rtf)},${fmt(r.renderUsPerBlock)},${fmt(r.audioUsPerBlock)}")
+            appendLine("${r.name},${r.voices},${fmt(r.rtf, 6)},${fmt(r.renderUsPerBlock)},${fmt(r.audioUsPerBlock)}")
         }
     }
 
@@ -84,7 +84,7 @@ class ExciterBenchmark(
         appendLine("| Name | Voices | RTF | Render µs/block | Audio µs/block |")
         appendLine("|------|-------:|----:|----------------:|---------------:|")
         for (r in results) {
-            appendLine("| ${r.name} | ${r.voices} | ${fmt(r.rtf)} | ${fmt(r.renderUsPerBlock)} | ${fmt(r.audioUsPerBlock)} |")
+            appendLine("| ${r.name} | ${r.voices} | ${fmt(r.rtf, 6)} | ${fmt(r.renderUsPerBlock)} | ${fmt(r.audioUsPerBlock)} |")
         }
     }
 
