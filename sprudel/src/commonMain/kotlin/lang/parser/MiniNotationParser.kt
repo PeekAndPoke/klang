@@ -291,6 +291,9 @@ class MiniNotationParser(
 
     private fun tokenize(input: String): List<Token> {
         val tokens = mutableListOf<Token>()
+        // Convert to IntArray once: on Kotlin/JS, String[i] returns a boxed Char (heap-allocated
+        // wrapper). IntArray[i] returns a plain JS number — no boxing per access.
+        val codes = IntArray(input.length) { input[it].code }
         var i = 0
         var line = 1
         var column = 1
@@ -300,74 +303,74 @@ class MiniNotationParser(
         }
 
         while (i < input.length) {
-            val c = input[i]
+            val c = codes[i]
             when (c) {
-                '\n' -> {
+                '\n'.code -> {
                     addToken(TokenType.LINEBREAK, "\n", i, i + 1, line, column)
                     i++; line++; column = 1
                 }
 
-                ' ', '\t', '\r' -> {
+                ' '.code, '\t'.code, '\r'.code -> {
                     i++; column++
                 }
 
-                '(' -> {
+                '('.code -> {
                     addToken(TokenType.L_PAREN, "(", i, i + 1, line, column); i++; column++
                 }
 
-                ')' -> {
+                ')'.code -> {
                     addToken(TokenType.R_PAREN, ")", i, i + 1, line, column); i++; column++
                 }
 
-                '[' -> {
+                '['.code -> {
                     addToken(TokenType.L_BRACKET, "[", i, i + 1, line, column); i++; column++
                 }
 
-                ']' -> {
+                ']'.code -> {
                     addToken(TokenType.R_BRACKET, "]", i, i + 1, line, column); i++; column++
                 }
 
-                '<' -> {
+                '<'.code -> {
                     addToken(TokenType.L_ANGLE, "<", i, i + 1, line, column); i++; column++
                 }
 
-                '>' -> {
+                '>'.code -> {
                     addToken(TokenType.R_ANGLE, ">", i, i + 1, line, column); i++; column++
                 }
 
-                ',' -> {
+                ','.code -> {
                     addToken(TokenType.COMMA, ",", i, i + 1, line, column); i++; column++
                 }
 
-                '*' -> {
+                '*'.code -> {
                     addToken(TokenType.STAR, "*", i, i + 1, line, column); i++; column++
                 }
 
-                '~' -> {
+                '~'.code -> {
                     addToken(TokenType.TILDE, "~", i, i + 1, line, column); i++; column++
                 }
 
-                '@' -> {
+                '@'.code -> {
                     addToken(TokenType.AT, "@", i, i + 1, line, column); i++; column++
                 }
 
-                '|' -> {
+                '|'.code -> {
                     addToken(TokenType.PIPE, "|", i, i + 1, line, column); i++; column++
                 }
 
-                '?' -> {
+                '?'.code -> {
                     addToken(TokenType.QUESTION, "?", i, i + 1, line, column); i++; column++
                 }
 
-                '!' -> {
+                '!'.code -> {
                     addToken(TokenType.BANG, "!", i, i + 1, line, column); i++; column++
                 }
 
-                '/' -> {
-                    if (i + 1 < input.length && input[i + 1] == '/') {
+                '/'.code -> {
+                    if (i + 1 < input.length && codes[i + 1] == '/'.code) {
                         // Skip comment until end of line
                         i += 2
-                        while (i < input.length && input[i] != '\n') i++
+                        while (i < input.length && codes[i] != '\n'.code) i++
                     } else {
                         addToken(TokenType.SLASH, "/", i, i + 1, line, column)
                         i++; column++
@@ -379,10 +382,18 @@ class MiniNotationParser(
                     val tokenLine = line
                     val tokenColumn = column
                     while (i < input.length) {
-                        if (input[i] in " []<>,*~@()|?! \t\n\r") break
-                        if (input[i] == '/') {
-                            val next = if (i + 1 < input.length) input[i + 1] else null
-                            if (next == null || next.isDigit() || next == '.' || next.isWhitespace()) break
+                        val ci = codes[i]
+                        if (ci == ' '.code || ci == '['.code || ci == ']'.code || ci == '<'.code ||
+                            ci == '>'.code || ci == ','.code || ci == '*'.code || ci == '~'.code ||
+                            ci == '@'.code || ci == '('.code || ci == ')'.code || ci == '|'.code ||
+                            ci == '?'.code || ci == '!'.code || ci == '\t'.code || ci == '\n'.code ||
+                            ci == '\r'.code
+                        ) break
+                        if (ci == '/'.code) {
+                            val next = if (i + 1 < input.length) codes[i + 1] else -1
+                            if (next == -1 || next in '0'.code..'9'.code || next == '.'.code ||
+                                next == ' '.code || next == '\t'.code || next == '\n'.code || next == '\r'.code
+                            ) break
                         }
                         i++; column++
                     }

@@ -150,6 +150,17 @@ class KlangScriptParser private constructor(
      */
     private fun tokenize(source: String): List<Token> {
         val tokens = mutableListOf<Token>()
+
+        // Convert source string to IntArray of char codes once. On Kotlin/JS, String[i] returns
+        // a boxed Char (heap-allocated wrapper). IntArray[i] returns a plain JS number — no boxing.
+        // This is critical for a lexer that runs on every keystroke in a live-coding environment.
+        val codes = IntArray(source.length) { source[it].code }
+
+        // Unboxed char classification helpers — Char.isDigit() etc. box on Kotlin/JS
+        fun Int.isAsciiDigit(): Boolean = this in 48..57           // '0'.code..'9'.code
+        fun Int.isAsciiLetter(): Boolean = this in 65..90 || this in 97..122  // A-Z, a-z
+        fun Int.isAsciiLetterOrDigit(): Boolean = isAsciiLetter() || isAsciiDigit()
+
         var i = 0
         var line = 1
         var column = 1
@@ -173,44 +184,44 @@ class KlangScriptParser private constructor(
         }
 
         while (i < source.length) {
-            val ch = source[i]
+            val ch = codes[i]
             val startColumn = column
 
             when {
                 // Whitespace
-                ch == ' ' || ch == '\t' || ch == '\r' -> {
+                ch == ' '.code || ch == '\t'.code || ch == '\r'.code -> {
                     i++
                     column++
                 }
 
                 // Newline
-                ch == '\n' -> {
+                ch == '\n'.code -> {
                     i++
                     line++
                     column = 1
                 }
 
                 // Single-line comment
-                ch == '/' && i + 1 < source.length && source[i + 1] == '/' -> {
+                ch == '/'.code && i + 1 < source.length && codes[i + 1] == '/'.code -> {
                     i += 2
                     column += 2
-                    while (i < source.length && source[i] != '\n') {
+                    while (i < source.length && codes[i] != '\n'.code) {
                         i++
                         column++
                     }
                 }
 
                 // Multi-line comment
-                ch == '/' && i + 1 < source.length && source[i + 1] == '*' -> {
+                ch == '/'.code && i + 1 < source.length && codes[i + 1] == '*'.code -> {
                     i += 2
                     column += 2
                     while (i < source.length - 1) {
-                        if (source[i] == '*' && source[i + 1] == '/') {
+                        if (codes[i] == '*'.code && codes[i + 1] == '/'.code) {
                             i += 2
                             column += 2
                             break
                         }
-                        if (source[i] == '\n') {
+                        if (codes[i] == '\n'.code) {
                             line++
                             column = 1
                         } else {
@@ -223,368 +234,368 @@ class KlangScriptParser private constructor(
                 // Multi-char operators (MUST check before single-char — longer before shorter)
 
                 // === (before == and =)
-                ch == '=' && i + 2 < source.length && source[i + 1] == '=' && source[i + 2] == '=' -> {
+                ch == '='.code && i + 2 < source.length && codes[i + 1] == '='.code && codes[i + 2] == '='.code -> {
                     addToken(TokenType.TRIPLE_EQUALS, "===", startColumn)
                     i += 3
                     column += 3
                 }
 
                 // => (before ==)
-                ch == '=' && i + 1 < source.length && source[i + 1] == '>' -> {
+                ch == '='.code && i + 1 < source.length && codes[i + 1] == '>'.code -> {
                     addToken(TokenType.ARROW, "=>", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // == (before =)
-                ch == '=' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '='.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.DOUBLE_EQUALS, "==", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // !== (before != and !)
-                ch == '!' && i + 2 < source.length && source[i + 1] == '=' && source[i + 2] == '=' -> {
+                ch == '!'.code && i + 2 < source.length && codes[i + 1] == '='.code && codes[i + 2] == '='.code -> {
                     addToken(TokenType.NOT_DOUBLE_EQUALS, "!==", startColumn)
                     i += 3
                     column += 3
                 }
 
                 // != (before !)
-                ch == '!' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '!'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.NOT_EQUALS, "!=", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // <<= (before << and <=)
-                ch == '<' && i + 2 < source.length && source[i + 1] == '<' && source[i + 2] == '=' -> {
+                ch == '<'.code && i + 2 < source.length && codes[i + 1] == '<'.code && codes[i + 2] == '='.code -> {
                     addToken(TokenType.SHIFT_LEFT_EQUALS, "<<=", startColumn)
                     i += 3
                     column += 3
                 }
 
                 // << (before <=)
-                ch == '<' && i + 1 < source.length && source[i + 1] == '<' -> {
+                ch == '<'.code && i + 1 < source.length && codes[i + 1] == '<'.code -> {
                     addToken(TokenType.SHIFT_LEFT, "<<", startColumn)
                     i += 2
                     column += 2
                 }
 
-                ch == '<' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '<'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.LESS_EQUAL, "<=", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // >>> (before >>= and >>)
-                ch == '>' && i + 2 < source.length && source[i + 1] == '>' && source[i + 2] == '>' -> {
+                ch == '>'.code && i + 2 < source.length && codes[i + 1] == '>'.code && codes[i + 2] == '>'.code -> {
                     addToken(TokenType.UNSIGNED_SHIFT_RIGHT, ">>>", startColumn)
                     i += 3
                     column += 3
                 }
 
                 // >>= (before >> and >=)
-                ch == '>' && i + 2 < source.length && source[i + 1] == '>' && source[i + 2] == '=' -> {
+                ch == '>'.code && i + 2 < source.length && codes[i + 1] == '>'.code && codes[i + 2] == '='.code -> {
                     addToken(TokenType.SHIFT_RIGHT_EQUALS, ">>=", startColumn)
                     i += 3
                     column += 3
                 }
 
                 // >> (before >=)
-                ch == '>' && i + 1 < source.length && source[i + 1] == '>' -> {
+                ch == '>'.code && i + 1 < source.length && codes[i + 1] == '>'.code -> {
                     addToken(TokenType.SHIFT_RIGHT, ">>", startColumn)
                     i += 2
                     column += 2
                 }
 
-                ch == '>' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '>'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.GREATER_EQUAL, ">=", startColumn)
                     i += 2
                     column += 2
                 }
 
-                ch == '&' && i + 1 < source.length && source[i + 1] == '&' -> {
+                ch == '&'.code && i + 1 < source.length && codes[i + 1] == '&'.code -> {
                     addToken(TokenType.DOUBLE_AMP, "&&", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // &= (before &)
-                ch == '&' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '&'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.AMP_EQUALS, "&=", startColumn)
                     i += 2
                     column += 2
                 }
 
-                ch == '|' && i + 1 < source.length && source[i + 1] == '|' -> {
+                ch == '|'.code && i + 1 < source.length && codes[i + 1] == '|'.code -> {
                     addToken(TokenType.DOUBLE_PIPE, "||", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // |= (before |)
-                ch == '|' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '|'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.PIPE_EQUALS, "|=", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // ++ (before + and +=)
-                ch == '+' && i + 1 < source.length && source[i + 1] == '+' -> {
+                ch == '+'.code && i + 1 < source.length && codes[i + 1] == '+'.code -> {
                     addToken(TokenType.PLUS_PLUS, "++", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // += (before +)
-                ch == '+' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '+'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.PLUS_EQUALS, "+=", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // -- (before - and -=)
-                ch == '-' && i + 1 < source.length && source[i + 1] == '-' -> {
+                ch == '-'.code && i + 1 < source.length && codes[i + 1] == '-'.code -> {
                     addToken(TokenType.MINUS_MINUS, "--", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // -= (before -)
-                ch == '-' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '-'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.MINUS_EQUALS, "-=", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // **= (before ** and *=)
-                ch == '*' && i + 2 < source.length && source[i + 1] == '*' && source[i + 2] == '=' -> {
+                ch == '*'.code && i + 2 < source.length && codes[i + 1] == '*'.code && codes[i + 2] == '='.code -> {
                     addToken(TokenType.DOUBLE_STAR_EQUALS, "**=", startColumn)
                     i += 3
                     column += 3
                 }
 
                 // ** (before *=)
-                ch == '*' && i + 1 < source.length && source[i + 1] == '*' -> {
+                ch == '*'.code && i + 1 < source.length && codes[i + 1] == '*'.code -> {
                     addToken(TokenType.DOUBLE_STAR, "**", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // *= (before *)
-                ch == '*' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '*'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.STAR_EQUALS, "*=", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // /= (before /)
-                ch == '/' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '/'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.SLASH_EQUALS, "/=", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // %= (before %)
-                ch == '%' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '%'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.PERCENT_EQUALS, "%=", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // Single-char tokens
-                ch == '(' -> {
+                ch == '('.code -> {
                     addToken(TokenType.LEFT_PAREN, "(", startColumn)
                     i++
                     column++
                 }
 
-                ch == ')' -> {
+                ch == ')'.code -> {
                     addToken(TokenType.RIGHT_PAREN, ")", startColumn)
                     i++
                     column++
                 }
 
-                ch == '{' -> {
+                ch == '{'.code -> {
                     addToken(TokenType.LEFT_BRACE, "{", startColumn)
                     i++
                     column++
                 }
 
-                ch == '}' -> {
+                ch == '}'.code -> {
                     addToken(TokenType.RIGHT_BRACE, "}", startColumn)
                     i++
                     column++
                 }
 
-                ch == '[' -> {
+                ch == '['.code -> {
                     addToken(TokenType.LEFT_BRACKET, "[", startColumn)
                     i++
                     column++
                 }
 
-                ch == ']' -> {
+                ch == ']'.code -> {
                     addToken(TokenType.RIGHT_BRACKET, "]", startColumn)
                     i++
                     column++
                 }
 
-                ch == ',' -> {
+                ch == ','.code -> {
                     addToken(TokenType.COMMA, ",", startColumn)
                     i++
                     column++
                 }
 
-                ch == ':' -> {
+                ch == ':'.code -> {
                     addToken(TokenType.COLON, ":", startColumn)
                     i++
                     column++
                 }
 
-                ch == '.' -> {
+                ch == '.'.code -> {
                     addToken(TokenType.DOT, ".", startColumn)
                     i++
                     column++
                 }
 
                 // ?? (before ?. and ?)
-                ch == '?' && i + 1 < source.length && source[i + 1] == '?' -> {
+                ch == '?'.code && i + 1 < source.length && codes[i + 1] == '?'.code -> {
                     addToken(TokenType.DOUBLE_QUESTION, "??", startColumn)
                     i += 2
                     column += 2
                 }
 
                 // ?. (before ?)
-                ch == '?' && i + 1 < source.length && source[i + 1] == '.' -> {
+                ch == '?'.code && i + 1 < source.length && codes[i + 1] == '.'.code -> {
                     addToken(TokenType.QUESTION_DOT, "?.", startColumn)
                     i += 2
                     column += 2
                 }
 
-                ch == '?' -> {
+                ch == '?'.code -> {
                     addToken(TokenType.QUESTION, "?", startColumn)
                     i++
                     column++
                 }
 
-                ch == ';' -> {
+                ch == ';'.code -> {
                     addToken(TokenType.SEMICOLON, ";", startColumn)
                     i++
                     column++
                 }
 
-                ch == '=' -> {
+                ch == '='.code -> {
                     addToken(TokenType.EQUALS, "=", startColumn)
                     i++
                     column++
                 }
 
-                ch == '+' -> {
+                ch == '+'.code -> {
                     addToken(TokenType.PLUS, "+", startColumn)
                     i++
                     column++
                 }
 
-                ch == '-' -> {
+                ch == '-'.code -> {
                     addToken(TokenType.MINUS, "-", startColumn)
                     i++
                     column++
                 }
 
-                ch == '*' -> {
+                ch == '*'.code -> {
                     addToken(TokenType.STAR, "*", startColumn)
                     i++
                     column++
                 }
 
-                ch == '/' -> {
+                ch == '/'.code -> {
                     addToken(TokenType.SLASH, "/", startColumn)
                     i++
                     column++
                 }
 
-                ch == '%' -> {
+                ch == '%'.code -> {
                     addToken(TokenType.PERCENT, "%", startColumn)
                     i++
                     column++
                 }
 
-                ch == '!' -> {
+                ch == '!'.code -> {
                     addToken(TokenType.EXCLAMATION, "!", startColumn)
                     i++
                     column++
                 }
 
-                ch == '<' -> {
+                ch == '<'.code -> {
                     addToken(TokenType.LESS_THAN, "<", startColumn)
                     i++
                     column++
                 }
 
-                ch == '>' -> {
+                ch == '>'.code -> {
                     addToken(TokenType.GREATER_THAN, ">", startColumn)
                     i++
                     column++
                 }
 
                 // ^= (before ^)
-                ch == '^' && i + 1 < source.length && source[i + 1] == '=' -> {
+                ch == '^'.code && i + 1 < source.length && codes[i + 1] == '='.code -> {
                     addToken(TokenType.CARET_EQUALS, "^=", startColumn)
                     i += 2
                     column += 2
                 }
 
-                ch == '&' -> {
+                ch == '&'.code -> {
                     addToken(TokenType.AMP, "&", startColumn)
                     i++
                     column++
                 }
 
-                ch == '|' -> {
+                ch == '|'.code -> {
                     addToken(TokenType.PIPE, "|", startColumn)
                     i++
                     column++
                 }
 
-                ch == '^' -> {
+                ch == '^'.code -> {
                     addToken(TokenType.CARET, "^", startColumn)
                     i++
                     column++
                 }
 
-                ch == '~' -> {
+                ch == '~'.code -> {
                     addToken(TokenType.TILDE, "~", startColumn)
                     i++
                     column++
                 }
 
                 // String literals
-                ch == '"' || ch == '\'' -> {
+                ch == '"'.code || ch == '\''.code -> {
                     val startLine = line  // Save starting line for multiline strings
                     val quote = ch
                     val sb = StringBuilder()
                     i++ // Skip opening quote
                     column++
 
-                    while (i < source.length && source[i] != quote) {
-                        if (source[i] == '\\' && i + 1 < source.length) {
+                    while (i < source.length && codes[i] != quote) {
+                        if (codes[i] == '\\'.code && i + 1 < source.length) {
                             // Escape sequence
                             i++
                             column++
-                            when (source[i]) {
-                                'n' -> sb.append('\n')
-                                't' -> sb.append('\t')
-                                'r' -> sb.append('\r')
-                                '\\' -> sb.append('\\')
-                                '"' -> sb.append('"')
-                                '\'' -> sb.append('\'')
-                                else -> sb.append(source[i])
+                            when (codes[i]) {
+                                'n'.code -> sb.append('\n')
+                                't'.code -> sb.append('\t')
+                                'r'.code -> sb.append('\r')
+                                '\\'.code -> sb.append('\\')
+                                '"'.code -> sb.append('"')
+                                '\''.code -> sb.append('\'')
+                                else -> sb.append(codes[i].toChar())
                             }
                         } else {
-                            sb.append(source[i])
+                            sb.append(codes[i].toChar())
                         }
-                        if (source[i] == '\n') {
+                        if (codes[i] == '\n'.code) {
                             line++
                             column = 1
                         } else {
@@ -606,29 +617,29 @@ class KlangScriptParser private constructor(
                 }
 
                 // Backtick strings
-                ch == '`' -> {
+                ch == '`'.code -> {
                     val startLine = line  // Save starting line for multiline strings
                     val sb = StringBuilder()
                     i++ // Skip opening backtick
                     column++
 
-                    while (i < source.length && source[i] != '`') {
-                        if (source[i] == '\\' && i + 1 < source.length) {
+                    while (i < source.length && codes[i] != '`'.code) {
+                        if (codes[i] == '\\'.code && i + 1 < source.length) {
                             // Escape sequence
                             i++
                             column++
-                            when (source[i]) {
-                                'n' -> sb.append('\n')
-                                't' -> sb.append('\t')
-                                'r' -> sb.append('\r')
-                                '\\' -> sb.append('\\')
-                                '`' -> sb.append('`')
-                                else -> sb.append(source[i])
+                            when (codes[i]) {
+                                'n'.code -> sb.append('\n')
+                                't'.code -> sb.append('\t')
+                                'r'.code -> sb.append('\r')
+                                '\\'.code -> sb.append('\\')
+                                '`'.code -> sb.append('`')
+                                else -> sb.append(codes[i].toChar())
                             }
                         } else {
-                            sb.append(source[i])
+                            sb.append(codes[i].toChar())
                         }
-                        if (source[i] == '\n') {
+                        if (codes[i] == '\n'.code) {
                             line++
                             column = 1
                         } else {
@@ -650,21 +661,21 @@ class KlangScriptParser private constructor(
                 }
 
                 // Numbers (including hex 0x, octal 0o, binary 0b, scientific notation: 1e6, 2.5e-3, 1E+10)
-                ch.isDigit() -> {
+                ch.isAsciiDigit() -> {
                     val start = i
 
                     // Check for hex, octal, or binary prefix
-                    if (ch == '0' && i + 1 < source.length) {
-                        val prefix = source[i + 1]
+                    if (ch == '0'.code && i + 1 < source.length) {
+                        val prefix = codes[i + 1]
                         when {
                             // Hex: 0x or 0X
-                            prefix == 'x' || prefix == 'X' -> {
+                            prefix == 'x'.code || prefix == 'X'.code -> {
                                 i += 2
                                 column += 2
                                 val hexStart = i
-                                while (i < source.length && source[i].let { c ->
-                                        c.isDigit() || c in 'a'..'f' || c in 'A'..'F'
-                                    }) {
+                                while (i < source.length &&
+                                    (codes[i].isAsciiDigit() || codes[i] in 'a'.code..'f'.code || codes[i] in 'A'.code..'F'.code)
+                                ) {
                                     i++
                                     column++
                                 }
@@ -673,11 +684,11 @@ class KlangScriptParser private constructor(
                                 addToken(TokenType.NUMBER, numValue.toString(), startColumn)
                             }
                             // Octal: 0o or 0O
-                            prefix == 'o' || prefix == 'O' -> {
+                            prefix == 'o'.code || prefix == 'O'.code -> {
                                 i += 2
                                 column += 2
                                 val octStart = i
-                                while (i < source.length && source[i] in '0'..'7') {
+                                while (i < source.length && codes[i] in '0'.code..'7'.code) {
                                     i++
                                     column++
                                 }
@@ -686,11 +697,11 @@ class KlangScriptParser private constructor(
                                 addToken(TokenType.NUMBER, numValue.toString(), startColumn)
                             }
                             // Binary: 0b or 0B
-                            prefix == 'b' || prefix == 'B' -> {
+                            prefix == 'b'.code || prefix == 'B'.code -> {
                                 i += 2
                                 column += 2
                                 val binStart = i
-                                while (i < source.length && (source[i] == '0' || source[i] == '1')) {
+                                while (i < source.length && (codes[i] == '0'.code || codes[i] == '1'.code)) {
                                     i++
                                     column++
                                 }
@@ -700,19 +711,19 @@ class KlangScriptParser private constructor(
                             }
                             // Regular number starting with 0
                             else -> {
-                                while (i < source.length && (source[i].isDigit() || source[i] == '.')) {
+                                while (i < source.length && (codes[i].isAsciiDigit() || codes[i] == '.'.code)) {
                                     i++
                                     column++
                                 }
                                 // Scientific notation
-                                if (i < source.length && (source[i] == 'e' || source[i] == 'E')) {
+                                if (i < source.length && (codes[i] == 'e'.code || codes[i] == 'E'.code)) {
                                     i++
                                     column++
-                                    if (i < source.length && (source[i] == '+' || source[i] == '-')) {
+                                    if (i < source.length && (codes[i] == '+'.code || codes[i] == '-'.code)) {
                                         i++
                                         column++
                                     }
-                                    while (i < source.length && source[i].isDigit()) {
+                                    while (i < source.length && codes[i].isAsciiDigit()) {
                                         i++
                                         column++
                                     }
@@ -721,19 +732,19 @@ class KlangScriptParser private constructor(
                             }
                         }
                     } else {
-                        while (i < source.length && (source[i].isDigit() || source[i] == '.')) {
+                        while (i < source.length && (codes[i].isAsciiDigit() || codes[i] == '.'.code)) {
                             i++
                             column++
                         }
                         // Scientific notation: optional e/E followed by optional +/- and digits
-                        if (i < source.length && (source[i] == 'e' || source[i] == 'E')) {
+                        if (i < source.length && (codes[i] == 'e'.code || codes[i] == 'E'.code)) {
                             i++
                             column++
-                            if (i < source.length && (source[i] == '+' || source[i] == '-')) {
+                            if (i < source.length && (codes[i] == '+'.code || codes[i] == '-'.code)) {
                                 i++
                                 column++
                             }
-                            while (i < source.length && source[i].isDigit()) {
+                            while (i < source.length && codes[i].isAsciiDigit()) {
                                 i++
                                 column++
                             }
@@ -743,9 +754,9 @@ class KlangScriptParser private constructor(
                 }
 
                 // Identifiers and keywords
-                ch.isLetter() || ch == '_' -> {
+                ch.isAsciiLetter() || ch == '_'.code -> {
                     val start = i
-                    while (i < source.length && (source[i].isLetterOrDigit() || source[i] == '_')) {
+                    while (i < source.length && (codes[i].isAsciiLetterOrDigit() || codes[i] == '_'.code)) {
                         i++
                         column++
                     }
@@ -756,7 +767,7 @@ class KlangScriptParser private constructor(
 
                 else -> {
                     throw KlangScriptSyntaxError(
-                        "Unexpected character: $ch",
+                        "Unexpected character: ${ch.toChar()}",
                         location = SourceLocation(currentSource, line, column, line, column + 1),
                     )
                 }
