@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.ultra.common.toFixed
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
@@ -89,21 +90,7 @@ class ExciterBenchmark(
     }
 
     internal fun fmt(v: Double, decimals: Int = 4): String {
-        val factor = pow10(decimals)
-        val intPart = (v * factor).toLong()
-        // Build string manually to avoid Double.toString() scientific notation for small values
-        val negative = intPart < 0
-        val abs = if (negative) -intPart else intPart
-        val whole = abs / factor.toLong()
-        val frac = abs % factor.toLong()
-        val fracStr = frac.toString().padStart(decimals, '0')
-        return (if (negative) "-" else "") + whole.toString() + "." + fracStr
-    }
-
-    private fun pow10(n: Int): Double {
-        var r = 1.0
-        repeat(n) { r *= 10.0 }
-        return r
+        return v.toFixed(decimals)
     }
 
     private fun runCase(case: Case): Result {
