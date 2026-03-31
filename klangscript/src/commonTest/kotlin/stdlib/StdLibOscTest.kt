@@ -145,10 +145,12 @@ class StdLibOscTest : StringSpec({
         dsl.inner.shouldBeInstanceOf<ExciterDsl.Sine>()
     }
 
-    "distort chaining" {
+    "distort chaining produces Clip(Drive(...))" {
         val dsl = evalExciterDsl("Osc.saw().distort(0.5)")
-        dsl.shouldBeInstanceOf<ExciterDsl.Distort>()
-        dsl.inner.shouldBeInstanceOf<ExciterDsl.Sawtooth>()
+        dsl.shouldBeInstanceOf<ExciterDsl.Clip>()
+        val drive = dsl.inner
+        drive.shouldBeInstanceOf<ExciterDsl.Drive>()
+        drive.inner.shouldBeInstanceOf<ExciterDsl.Sawtooth>()
     }
 
     "detune chaining" {
@@ -290,5 +292,52 @@ class StdLibOscTest : StringSpec({
         val result = engine.execute("Osc.whitenoise().analog(0.5)")
         result.shouldBeInstanceOf<NativeObjectValue<*>>()
         result.value shouldBe ExciterDsl.WhiteNoise
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Drive, Clip, Bandpass, Notch via KlangScript
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "drive chaining" {
+        val dsl = evalExciterDsl("Osc.sine().drive(0.5)")
+        dsl.shouldBeInstanceOf<ExciterDsl.Drive>()
+        dsl.inner.shouldBeInstanceOf<ExciterDsl.Sine>()
+    }
+
+    "clip chaining" {
+        val dsl = evalExciterDsl("""Osc.sine().clip("hard")""")
+        dsl.shouldBeInstanceOf<ExciterDsl.Clip>()
+        dsl.inner.shouldBeInstanceOf<ExciterDsl.Sine>()
+        dsl.shape shouldBe "hard"
+    }
+
+    "clip with default shape" {
+        val dsl = evalExciterDsl("Osc.sine().clip()")
+        dsl.shouldBeInstanceOf<ExciterDsl.Clip>()
+        dsl.shape shouldBe "soft"
+    }
+
+    "bandpass chaining" {
+        val dsl = evalExciterDsl("Osc.sine().bandpass(1000)")
+        dsl.shouldBeInstanceOf<ExciterDsl.Bandpass>()
+        dsl.inner.shouldBeInstanceOf<ExciterDsl.Sine>()
+    }
+
+    "bandpass with explicit Q" {
+        val dsl = evalExciterDsl("Osc.sine().bandpass(1000, 5.0)")
+        dsl.shouldBeInstanceOf<ExciterDsl.Bandpass>()
+    }
+
+    "notch chaining" {
+        val dsl = evalExciterDsl("Osc.sine().notch(1000)")
+        dsl.shouldBeInstanceOf<ExciterDsl.Notch>()
+        dsl.inner.shouldBeInstanceOf<ExciterDsl.Sine>()
+    }
+
+    "drive + clip chain" {
+        val dsl = evalExciterDsl("""Osc.saw().drive(0.3).clip("fold")""")
+        dsl.shouldBeInstanceOf<ExciterDsl.Clip>()
+        dsl.shape shouldBe "fold"
+        dsl.inner.shouldBeInstanceOf<ExciterDsl.Drive>()
     }
 })

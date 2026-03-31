@@ -49,6 +49,16 @@ object KlangScriptOscExtensions {
     fun onePoleLowpass(self: ExciterDsl, cutoffHz: ExciterDslLike): ExciterDsl =
         ExciterDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toExciterDsl())
 
+    /** SVF bandpass filter. Passes frequencies near the cutoff, attenuates others. */
+    @KlangScript.Method
+    fun bandpass(self: ExciterDsl, cutoffHz: ExciterDslLike, q: ExciterDslLike = 1.0): ExciterDsl =
+        ExciterDsl.Bandpass(inner = self, cutoffHz = cutoffHz.toExciterDsl(), q = q.toExciterDsl())
+
+    /** SVF notch (band-reject) filter. Removes frequencies near the cutoff, passes others. */
+    @KlangScript.Method
+    fun notch(self: ExciterDsl, cutoffHz: ExciterDslLike, q: ExciterDslLike = 1.0): ExciterDsl =
+        ExciterDsl.Notch(inner = self, cutoffHz = cutoffHz.toExciterDsl(), q = q.toExciterDsl())
+
     // ── Envelope ─────────────────────────────────────────────────────────────
 
     /** Applies an ADSR amplitude envelope. All times accept Number or ExciterDsl. */
@@ -69,10 +79,29 @@ object KlangScriptOscExtensions {
 
     // ── Effects ──────────────────────────────────────────────────────────────
 
-    /** Applies waveshaping distortion. */
+    /**
+     * Pre-amplification stage. Boosts signal level before clipping.
+     * Types: "linear".
+     */
+    @KlangScript.Method
+    fun drive(self: ExciterDsl, amount: ExciterDslLike, driveType: String = "linear"): ExciterDsl =
+        ExciterDsl.Drive(inner = self, amount = amount.toExciterDsl(), driveType = driveType)
+
+    /**
+     * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
+     * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     */
+    @KlangScript.Method
+    fun clip(self: ExciterDsl, shape: String = "soft"): ExciterDsl =
+        ExciterDsl.Clip(inner = self, shape = shape)
+
+    /**
+     * Waveshaping distortion. Convenience for drive(amount) + clip(shape).
+     * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     */
     @KlangScript.Method
     fun distort(self: ExciterDsl, amount: ExciterDslLike, shape: String = "soft"): ExciterDsl =
-        ExciterDsl.Distort(inner = self, amount = amount.toExciterDsl(), shape = shape)
+        ExciterDsl.Clip(inner = ExciterDsl.Drive(inner = self, amount = amount.toExciterDsl()), shape = shape)
 
     /** Applies bit-depth reduction (bitcrusher). */
     @KlangScript.Method

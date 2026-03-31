@@ -28,7 +28,7 @@ class ExciterRegistry(
 
     fun contains(name: String?): Boolean {
         val key = (name ?: DEFAULT_SOUND).lowercase()
-        return defs.containsKey(key) || (parent?.contains(name) == true)
+        return defs.containsKey(key) || (parent?.contains(key) == true)
     }
 
     fun names(): Set<String> = (parent?.names() ?: emptySet()) + defs.keys

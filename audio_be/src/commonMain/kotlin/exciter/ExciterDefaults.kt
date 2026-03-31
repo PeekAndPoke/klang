@@ -3,17 +3,14 @@ package io.peekandpoke.klang.audio_be.exciter
 import io.peekandpoke.klang.audio_bridge.*
 
 /**
- * Registers all built-in Exciter oscillators into the registry.
- *
- * Includes basic waveforms (with aliases) and Exciter compositions (sgpad, sgbell, sgbuzz).
- */
-/**
  * Registers all built-in oscillators with explicit Param slots for sprudel oscParam() compatibility.
  *
  * ExciterDsl types default to Constant (locked, no oscParam override). Here we explicitly
  * open Param slots for the parameters that sprudel's oscParam() functions target:
+ * - "freq" on all pitched oscillators
  * - "analog" on all pitched oscillators
  * - "voices", "freqSpread" on super oscillators
+ * - "duty" on pulze
  * - "density" on dust/crackle
  * - "decay", "brightness", "pickPosition", "stiffness" on pluck
  */
@@ -49,7 +46,7 @@ fun ExciterRegistry.registerDefaults() {
     register(name = "zawtooth", dsl = zawtooth)
     register(name = "zaw", dsl = zawtooth)
 
-    val pulze = ExciterDsl.Pulze(freq = p("freq", 0.0), analog = p("analog", 0.0))
+    val pulze = ExciterDsl.Pulze(freq = p("freq", 0.0), duty = p("duty", 0.5), analog = p("analog", 0.0))
     register(name = "pulze", dsl = pulze)
 
     val impulse = ExciterDsl.Impulse(freq = p("freq", 0.0), analog = p("analog", 0.0))

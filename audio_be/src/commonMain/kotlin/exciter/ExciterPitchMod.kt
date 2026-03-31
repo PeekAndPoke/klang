@@ -106,6 +106,9 @@ fun Exciter.accelerate(amount: Exciter): Exciter {
         val mb = modBuf ?: error("unreachable")
 
         val totalFrames = ctx.voiceDurationFrames.toDouble()
+        if (totalFrames <= 0.0) {
+            this.generate(buffer, freqHz, ctx); return@Exciter
+        }
         // Multiplicative stepping: one pow() per block instead of per sample
         val startProgress = ctx.voiceElapsedFrames.toDouble() / totalFrames
         val step = 2.0.pow(amountVal / totalFrames)

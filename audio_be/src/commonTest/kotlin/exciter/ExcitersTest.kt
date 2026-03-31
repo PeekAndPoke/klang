@@ -1058,4 +1058,50 @@ class ExcitersTest : StringSpec({
         buf.all { it == 0.0f } shouldBe true
     }
 
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Drive, Clip, Bandpass, Notch
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "drive amplifies signal" {
+        val dry = generate(Exciters.sine(), freqHz = 440.0)
+        val driven = generate(Exciters.sine().drive(0.5), freqHz = 440.0)
+        driven.peakAmplitude() shouldBeGreaterThan dry.peakAmplitude()
+    }
+
+    "drive with amount=0 bypasses" {
+        val dry = generate(Exciters.sine(), freqHz = 440.0)
+        val driven = generate(Exciters.sine().drive(0.0), freqHz = 440.0)
+        dry.zip(driven).all { (a, b) -> a == b } shouldBe true
+    }
+
+    "clip soft limits output to approximately +-1" {
+        // Drive signal way above 1.0, then clip
+        val buf = generate(Exciters.sine().drive(1.0).clip("soft"), freqHz = 440.0)
+        buf.peakAmplitude() shouldBeLessThan 1.05
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "clip hard limits output to exactly +-1" {
+        val buf = generate(Exciters.sine().drive(1.0).clip("hard"), freqHz = 440.0)
+        buf.peakAmplitude() shouldBeLessThan 1.01
+    }
+
+    "clip fold produces non-zero output" {
+        val buf = generate(Exciters.sine().clip("fold"), freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "bandpass passes center frequency" {
+        val buf = generate(Exciters.sine().bandpass(440.0, 1.0), freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+        buf.peakAmplitude() shouldBeGreaterThan 0.3
+    }
+
+    "notch attenuates center frequency" {
+        val dry = generate(Exciters.sine(), freqHz = 440.0)
+        val notched = generate(Exciters.sine().notch(440.0, 10.0), freqHz = 440.0)
+        // Notch at exactly the signal frequency should reduce amplitude
+        notched.peakAmplitude() shouldBeLessThan dry.peakAmplitude()
+    }
+
 })

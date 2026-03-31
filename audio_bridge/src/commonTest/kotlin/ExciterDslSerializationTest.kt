@@ -296,4 +296,43 @@ class ExciterDslSerializationTest : StringSpec({
             .adsr(0.01, 0.3, 0.5, 0.5)
         roundTrip(dsl) shouldBe dsl
     }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Drive, Clip, Bandpass, Notch, Coarse, Accelerate
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Drive round-trips" {
+        val dsl = ExciterDsl.Sine().drive(0.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Clip round-trips" {
+        val dsl = ExciterDsl.Sine().clip("hard")
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Bandpass round-trips" {
+        val dsl = ExciterDsl.Sine().bandpass(1000.0, 2.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Notch round-trips" {
+        val dsl = ExciterDsl.Sine().notch(1000.0, 2.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Drive + Clip chain round-trips" {
+        val dsl = ExciterDsl.Sine().drive(0.5).clip("fold")
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Coarse round-trips" {
+        val dsl = ExciterDsl.Sine().coarse(4.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Accelerate round-trips" {
+        val dsl = ExciterDsl.Sine().accelerate(1.0)
+        roundTrip(dsl) shouldBe dsl
+    }
 })

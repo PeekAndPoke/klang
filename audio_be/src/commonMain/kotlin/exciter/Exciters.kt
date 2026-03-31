@@ -1570,13 +1570,11 @@ object Exciters {
     /** Base step per sample for Perlin/Berlin noise. rate=1.0 walks ~144 noise-units/sec at 48kHz. */
     private const val PERLIN_STEP = 0.003
 
-    /** Wraps phase into [0, period). Handles both positive overflow and negative values. */
+    /** Wraps phase into [0, period). Constant-time using modulo arithmetic. */
     @Suppress("NOTHING_TO_INLINE")
     private inline fun wrapPhase(phase: Double, period: Double): Double {
-        var p = phase
-        while (p >= period) p -= period
-        while (p < 0.0) p += period
-        return p
+        val p = phase % period
+        return if (p < 0.0) p + period else p
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

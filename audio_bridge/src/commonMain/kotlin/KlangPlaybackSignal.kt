@@ -75,13 +75,7 @@ sealed class KlangPlaybackSignal {
             val data: VoiceData,
             /** Source locations for code highlighting */
             val sourceLocations: SourceLocationChain?,
-        ) {
-            /** Start time in milliseconds */
-            val startTimeMs get() = (startTime * 1000).toInt()
-
-            /** End time in milliseconds */
-            val endTimeMs get() = (endTime * 1000).toInt()
-        }
+        )
     }
 
     /**

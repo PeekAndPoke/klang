@@ -113,6 +113,8 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
         is ExciterDsl.Lowpass -> inner.toExciter(oscParams).lowpass(this.cutoffHz.toExciter(oscParams), this.q.toExciter(oscParams))
         is ExciterDsl.Highpass -> inner.toExciter(oscParams).highpass(this.cutoffHz.toExciter(oscParams), this.q.toExciter(oscParams))
         is ExciterDsl.OnePoleLowpass -> inner.toExciter(oscParams).onePoleLowpass(this.cutoffHz.toExciter(oscParams))
+        is ExciterDsl.Bandpass -> inner.toExciter(oscParams).bandpass(this.cutoffHz.toExciter(oscParams), this.q.toExciter(oscParams))
+        is ExciterDsl.Notch -> inner.toExciter(oscParams).notch(this.cutoffHz.toExciter(oscParams), this.q.toExciter(oscParams))
 
         // Envelope
         is ExciterDsl.Adsr -> inner.toExciter(oscParams).adsr(
@@ -135,6 +137,8 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
 
         // Effects
         is ExciterDsl.Distort -> inner.toExciter(oscParams).distort(this.amount.toExciter(oscParams), shape)
+        is ExciterDsl.Drive -> inner.toExciter(oscParams).drive(this.amount.toExciter(oscParams), driveType)
+        is ExciterDsl.Clip -> inner.toExciter(oscParams).clip(shape)
         is ExciterDsl.Crush -> inner.toExciter(oscParams).crush(this.amount.toExciter(oscParams))
         is ExciterDsl.Coarse -> inner.toExciter(oscParams).coarse(this.amount.toExciter(oscParams))
         is ExciterDsl.Phaser -> inner.toExciter(oscParams).phaser(

@@ -58,9 +58,12 @@ sealed interface ExciterDsl {
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Oscillator Primitives
+    //
+    // freq convention: 0 = use the note's frequency from the voice (e.g. 440 Hz for A4).
+    // Non-zero = fixed frequency in Hz (e.g. 5.0 for a 5 Hz LFO).
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Sine wave oscillator. */
+    /** Sine wave oscillator. @param freq 0 = voice frequency, non-zero = fixed Hz. */
     @Serializable
     @SerialName("sine")
     data class Sine(
@@ -115,7 +118,7 @@ sealed interface ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
-    /** Zawtooth wave oscillator (falling ramp, inverse of sawtooth). */
+    /** Zawtooth wave oscillator. Naive sawtooth without PolyBLEP anti-aliasing (brighter/harsher). */
     @Serializable
     @SerialName("zawtooth")
     data class Zawtooth(
@@ -445,6 +448,32 @@ sealed interface ExciterDsl {
         }
     }
 
+    /** SVF bandpass filter. Passes frequencies near the cutoff, attenuates others. */
+    @Serializable
+    @SerialName("bandpass")
+    data class Bandpass(
+        val inner: ExciterDsl,
+        val cutoffHz: ExciterDsl = Constant(1000.0),
+        val q: ExciterDsl = Constant(1.0),
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
+        }
+    }
+
+    /** SVF notch (band-reject) filter. Removes frequencies near the cutoff, passes others. */
+    @Serializable
+    @SerialName("notch")
+    data class Notch(
+        val inner: ExciterDsl,
+        val cutoffHz: ExciterDsl = Constant(1000.0),
+        val q: ExciterDsl = Constant(1.0),
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
+        }
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Envelope
     // ═════════════════════════════════════════════════════════════════════════════
@@ -497,7 +526,43 @@ sealed interface ExciterDsl {
     // Effects
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Waveshaping distortion effect. Applies a nonlinear transfer function to the signal. */
+    /**
+     * Pre-amplification stage. Boosts signal level before clipping.
+     * Types: "linear" (current gain curve).
+     */
+    @Serializable
+    @SerialName("drive")
+    data class Drive(
+        val inner: ExciterDsl,
+        val amount: ExciterDsl = Constant(0.5),
+        val driveType: String = "linear",
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); amount.collectParams(out)
+        }
+    }
+
+    /**
+     * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
+     * Includes DC blocker for asymmetric shapes.
+     * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     */
+    @Serializable
+    @SerialName("clip")
+    data class Clip(
+        val inner: ExciterDsl,
+        val shape: String = "soft",
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Legacy distortion node. Kept for backward compatibility with serialized trees.
+     * New code should use [Drive] + [Clip] instead. The builder extension [ExciterDsl.distort]
+     * creates a Clip(Drive(...)) chain.
+     */
     @Serializable
     @SerialName("distort")
     data class Distort(
@@ -662,6 +727,19 @@ fun ExciterDsl.onePoleLowpass(cutoffHz: Double) = ExciterDsl.OnePoleLowpass(
     cutoffHz = ExciterDsl.Constant(cutoffHz),
 )
 
+fun ExciterDsl.bandpass(cutoffHz: Double, q: Double = 1.0) = ExciterDsl.Bandpass(
+    this, ExciterDsl.Constant(cutoffHz), ExciterDsl.Constant(q),
+)
+
+fun ExciterDsl.notch(cutoffHz: Double, q: Double = 1.0) = ExciterDsl.Notch(
+    this, ExciterDsl.Constant(cutoffHz), ExciterDsl.Constant(q),
+)
+
+fun ExciterDsl.drive(amount: Double, driveType: String = "linear") =
+    ExciterDsl.Drive(this, ExciterDsl.Constant(amount), driveType)
+
+fun ExciterDsl.clip(shape: String = "soft") = ExciterDsl.Clip(this, shape)
+
 // Envelope
 
 /** Wraps this signal in an ADSR amplitude envelope. */
@@ -698,10 +776,8 @@ fun ExciterDsl.fm(
 // Effects
 
 /** Applies waveshaping distortion with the given [amount] and clipping [shape]. */
-fun ExciterDsl.distort(amount: Double, shape: String = "soft") = ExciterDsl.Distort(
-    inner = this,
-    amount = ExciterDsl.Constant(amount), shape = shape
-)
+fun ExciterDsl.distort(amount: Double, shape: String = "soft") =
+    ExciterDsl.Clip(inner = ExciterDsl.Drive(inner = this, amount = ExciterDsl.Constant(amount)), shape = shape)
 
 /** Applies bit-crush quantization at the given bit [amount]. */
 fun ExciterDsl.crush(amount: Double) = ExciterDsl.Crush(

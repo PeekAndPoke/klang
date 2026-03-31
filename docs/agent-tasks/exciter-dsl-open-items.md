@@ -1,5 +1,9 @@
 # ExciterDsl — Open Items
 
+> **Completed work** is archived in
+`docs/agent-tasks-archive/2026-03/20260329-exciter-dsl-klangscript-stabilization.md`.
+> Everything below is NOT YET IMPLEMENTED — these are future features and designs.
+
 ## Per-Playback Numerical Attributes (CPS etc.)
 
 Let the frontend push named numerical values (like `cps`) to the audio backend per-playback.
