@@ -154,7 +154,10 @@ class Samples(
     }
 
     private val resolveCache = mutableMapOf<SampleRequest, ResolvedSample?>()
-    private val loadCache = mutableMapOf<SampleRequest, LoadedSample?>()
+
+    // Keyed by Sample instance identity — avoids duplicate decoding when multiple requests
+    // resolve to the same underlying audio (e.g., pitched samples where C4 and D4 both pick C4.mp3)
+    private val pcmCache = mutableMapOf<Sample, MonoSamplePcm?>()
 
     /**
      * Resolve a sample by the given [request].
@@ -164,24 +167,21 @@ class Samples(
     }
 
     /**
-     * Resolved a sample by the given [request] and loads it pcm audio data.
+     * Resolves a sample by the given [request] and loads its PCM audio data.
      */
     suspend fun get(request: SampleRequest): LoadedSample? {
+        val resolved = resolveCache.getOrPut(request) {
+            index.resolve(request)
+        } ?: return null
 
-        return loadCache.getOrPut(request) {
-            val resolved = resolveCache.getOrPut(request) {
-                index.resolve(request)
-            }
-
-            resolved?.let {
-                val pcm = resolved.sample.getPcm(loader, decoder)
-
-                LoadedSample(
-                    request = resolved.request,
-                    sample = resolved.sample,
-                    pcm = pcm,
-                )
-            }
+        val pcm = pcmCache.getOrPut(resolved.sample) {
+            resolved.sample.getPcm(loader, decoder)
         }
+
+        return LoadedSample(
+            request = resolved.request,
+            sample = resolved.sample,
+            pcm = pcm,
+        )
     }
 }

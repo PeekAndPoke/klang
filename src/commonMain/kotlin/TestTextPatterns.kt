@@ -70,7 +70,7 @@ stack(                                                                 //////// 
     [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5|a5|a5|e5 a4] [a2 a3]]                                   //////// //////// ////////
   >`)                                                                                                                  //////// //////// ////////
     .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.5)                                       //////// //////// //////// 
-    .orbit(1).gain(1.0).pan(cosine2.slow(32).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")                                              
+    .orbit(1).gain(0.85).pan(cosine2.slow(32).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")                                              
     .superimpose(x => x.transpose("<0 12 0 -12>/8").bandf(sine.range(2000, 6000).slow(24)).bandq(1.2).gain(0.75))                          ////////
     .detune(sine.range(0.05, 0.3).early(1.5).slow(12))                                                                                      ////////
     .filterWhen(x => x > 31.4 && x % 64 > 15.4) // .solo()                                                                                   ////////

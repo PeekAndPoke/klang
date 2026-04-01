@@ -236,8 +236,8 @@ class VoiceFactory(
                     loopEnd = endSample
                     isLooping = loopStart >= 0.0 && loopEnd > loopStart
                 } else if (useMetaLoop && sampleMetaLoop != null) {
-                    loopStart = sampleMetaLoop.start.toDouble()
-                    loopEnd = sampleMetaLoop.end.toDouble()
+                    loopStart = sampleMetaLoop.startSec * sample.sampleRate
+                    loopEnd = sampleMetaLoop.endSec * sample.sampleRate
                     isLooping = loopStart >= 0.0 && loopEnd > loopStart
                 } else {
                     loopStart = -1.0
@@ -248,7 +248,7 @@ class VoiceFactory(
                 val playhead0 = if (data.begin != null) {
                     startSample
                 } else if (useMetaLoop && sampleMetaLoop != null) {
-                    sampleMetaLoop.start.toDouble()
+                    sampleMetaLoop.startSec * sample.sampleRate
                 } else {
                     sample.meta.anchor * sample.sampleRate
                 }

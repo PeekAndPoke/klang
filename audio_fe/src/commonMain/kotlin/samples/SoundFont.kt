@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_fe.samples
 
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
+import io.peekandpoke.klang.tones.Tones
 import kotlinx.serialization.Serializable
 
 /** Sound font index */
@@ -46,6 +47,12 @@ data class SoundfontIndex(
             val file: String, // "SUQzBAAAAAAAI1RTU...",
             val anchor: Double, // 6.46648502
         ) {
+            /** Effective pitch in cents, applying coarseTune (semitones) and fineTune (cents). */
+            fun effectivePitchCents(): Double = originalPitch + coarseTune * 100.0 + fineTune
+
+            /** Effective pitch in Hz, applying coarseTune and fineTune. */
+            fun effectivePitchHz(): Double = Tones.midiToFreq(effectivePitchCents() / 100.0)
+
             /**
              * Get loop info.
              *
@@ -60,7 +67,10 @@ data class SoundfontIndex(
                 val isSustainLoop = loopDuration > minLoopLen
 
                 val loop = if (isSustainLoop) {
-                    SampleMetadata.LoopRange(start = loopStart, end = loopEnd)
+                    SampleMetadata.LoopRange(
+                        startSec = loopStart.toDouble() / sampleRate,
+                        endSec = loopEnd.toDouble() / sampleRate,
+                    )
                 } else {
                     null
                 }

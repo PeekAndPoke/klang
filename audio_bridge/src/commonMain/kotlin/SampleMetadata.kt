@@ -14,7 +14,9 @@ data class SampleMetadata(
 
     @Serializable
     data class LoopRange(
-        val start: Int,
-        val end: Int,
+        /** Loop start in seconds (sample-rate independent) */
+        val startSec: Double,
+        /** Loop end in seconds (sample-rate independent) */
+        val endSec: Double,
     )
 }

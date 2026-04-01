@@ -7,7 +7,13 @@ import io.peekandpoke.klang.audio_fe.utils.AssetLoader
 import io.peekandpoke.klang.audio_fe.utils.isUrlWithProtocol
 import io.peekandpoke.klang.tones.Tones
 import kotlinx.coroutines.coroutineScope
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
 
 class SampleIndexLoader(
@@ -85,6 +91,12 @@ class SampleIndexLoader(
             // Soundfonts handle pitch internally, so always treat as single
             override val sampleType: Samples.SampleType = Samples.SampleType.SINGLE
 
+            // Cache parsed variant data to avoid re-parsing JSON on every provide() call
+            private val variantDataCache = mutableMapOf<String, SoundfontIndex.SoundData?>()
+
+            // Cache decoded zone samples by zone index to avoid redundant Base64 decoding
+            private val zoneSampleCache = mutableMapOf<Int, Sample.FromBytes>()
+
             override suspend fun provide(request: SampleRequest): ResolvedSample? {
                 if (variants.isEmpty()) return null
 
@@ -93,24 +105,24 @@ class SampleIndexLoader(
                 val variantData = loadVariantData(variant) ?: return null
                 val zones = variantData.zones
                     .takeIf { it.isNotEmpty() }
-                    ?.sortedBy { it.originalPitch }
+                    ?.sortedBy { it.effectivePitchCents() }
                     ?: return null
 
                 val requestedPitch = Tones.noteToFreq(request.note ?: "")
 
-                val selected = zones
-                    .firstOrNull { Tones.midiToFreq(it.originalPitch / 100.0) >= requestedPitch }
-                    ?: zones.last()
+                val selectedIndex = zones.indexOfFirst { it.effectivePitchHz() >= requestedPitch }
+                    .let { if (it < 0) zones.lastIndex else it }
+                val selected = zones[selectedIndex]
 
-                val bytes = Base64.decode(selected.file)
-
-                val sample = Sample.FromBytes(
-                    note = request.note,
-                    pitchHz = Tones.midiToFreq(selected.originalPitch / 100.0),
-                    sampleRate = selected.sampleRate,
-                    bytes = bytes,
-                    meta = selected.getSampleMetadata()
-                )
+                val sample = zoneSampleCache.getOrPut(selectedIndex) {
+                    Sample.FromBytes(
+                        note = request.note,
+                        pitchHz = selected.effectivePitchHz(),
+                        sampleRate = selected.sampleRate,
+                        bytes = Base64.decode(selected.file),
+                        meta = selected.getSampleMetadata()
+                    )
+                }
 
                 return ResolvedSample(
                     request = request,
@@ -119,16 +131,17 @@ class SampleIndexLoader(
             }
 
             private suspend fun loadVariantData(variant: SoundfontIndex.Variant): SoundfontIndex.SoundData? {
+                return variantDataCache.getOrPut(variant.file) {
+                    val detailsUrl = index.baseUrl.trimEnd('/') + '/' + variant.file.trimStart('/')
+                    val loaded = loader.download(detailsUrl)?.decodeToString()
+                        ?: return@getOrPut null
 
-                val detailsUrl = index.baseUrl.trimEnd('/') + '/' + variant.file.trimStart('/')
-                val loaded = loader.download(detailsUrl)?.decodeToString()
-                    ?: return null
-
-                return try {
-                    json.decodeFromString<SoundfontIndex.SoundData>(loaded)
-                } catch (e: Exception) {
-                    println("Could not load soundfont: $detailsUrl \n${e.stackTraceToString()}")
-                    null
+                    try {
+                        json.decodeFromString<SoundfontIndex.SoundData>(loaded)
+                    } catch (e: Exception) {
+                        println("Could not load soundfont: $detailsUrl \n${e.stackTraceToString()}")
+                        null
+                    }
                 }
             }
         }
