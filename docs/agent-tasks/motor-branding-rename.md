@@ -12,10 +12,10 @@ Rename the audio engine's core vocabulary to follow the combustion engine metaph
 | 1     | Exciter → Ignitor                 | DONE, verified |
 | 2     | Orbit → Cylinder + Bus → Katalyst | DONE, verified |
 | 3     | Master → Fusion                   | DONE, verified |
-| 4     | CPS → RPM (engine API level)      | TODO           |
-| 5     | Sprudel additions (rpm, cylinder) | TODO           |
+| 4     | CPS → RPM (engine API level)      | DONE, verified |
+| 5     | Sprudel additions (rpm, cylinder) | DONE, verified |
 
-All phases 1-3 verified: JVM+JS compile, all module tests pass, audio playback confirmed working.
+All phases verified: JVM+JS compile, all module tests pass, audio playback confirmed working (phases 1-3).
 
 ## Naming Table
 
@@ -221,7 +221,7 @@ Files: `Cylinders.kt`, `KlangAudioRenderer.kt`, `CylindersCleanupTest.kt`, `opti
 
 ---
 
-## Phase 4: CPS → RPM (engine API level)
+## Phase 4: CPS → RPM (DONE)
 
 **Important: RPM = CPS * 60. This is a unit conversion, not just a rename.**
 
@@ -259,7 +259,7 @@ fun updateRpm(rpm: Double) {
 
 ---
 
-## Phase 5: Sprudel Additions (additive only, no renames)
+## Phase 5: Sprudel Additions (DONE)
 
 ### 5a. Add `rpm` continuous pattern
 

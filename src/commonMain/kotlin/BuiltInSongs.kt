@@ -18,7 +18,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0001",
             title = "Synthris",
-            cps = 0.67,
+            rpm = 40.2,
             code = TestTextPatterns.tetris,
             icon = "gamepad",
         )
@@ -28,7 +28,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0002",
             title = "Synthtown Boy",
-            cps = 0.62,
+            rpm = 37.2,
             code = TestTextPatterns.smallTownBoy,
             icon = "record vinyl",
         )
@@ -38,7 +38,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0006",
             title = "Sound of the sea",
-            cps = 0.5,
+            rpm = 30.0,
             code = """
 
 
@@ -95,7 +95,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-0009",
             title = "Synthkura",
-            cps = 0.6,
+            rpm = 36.0,
             icon = "globe asia",
             code = """
 import * from "stdlib"
@@ -199,7 +199,7 @@ stack(
         Song(
             id = "$PREFIX-0003",
             title = "A Synth Worth Lying For",
-            cps = 0.49,
+            rpm = 29.4,
             code = TestTextPatterns.aTruthWorthLyingFor,
             icon = "guitar",
         )
@@ -209,7 +209,7 @@ stack(
         Song(
             id = "$PREFIX-0004",
             title = "Stranger Synths",
-            cps = 0.58,
+            rpm = 34.8,
             code = TestTextPatterns.strangerThingsNetflix,
             icon = "film",
         )
@@ -219,7 +219,7 @@ stack(
         Song(
             id = "$PREFIX-0005",
             title = "Final Synthasy VII Prelude",
-            cps = 0.7,
+            rpm = 42.0,
             icon = "gamepad",
             code = """
 import * from "stdlib"
@@ -241,7 +241,7 @@ stack(
         Song(
             id = "$PREFIX-0007",
             title = "Osynthris",
-            cps = 0.55,
+            rpm = 33.0,
             code = """
 import * from "stdlib"
 import * from "sprudel"
@@ -295,7 +295,7 @@ stack(
         Song(
             id = "$PREFIX-0008",
             title = "Drunken Synthlor",
-            cps = 0.65,
+            rpm = 39.0,
             code = """
 import * from "stdlib"
 import * from "sprudel"

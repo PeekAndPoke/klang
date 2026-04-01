@@ -295,7 +295,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 }
             }
 
-            playback?.start(KlangCyclicPlayback.Options(cyclesPerSecond = 1.0))
+            playback?.start(KlangCyclicPlayback.Options(rpm = 60.0))
         }
 
         fun getResult() = result

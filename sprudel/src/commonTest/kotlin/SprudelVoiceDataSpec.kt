@@ -163,7 +163,7 @@ class SprudelVoiceDataSpec : StringSpec({
             distort = 0.3,
             coarse = 1.0,
             crush = 4.0,
-            orbit = 1,
+            cylinder = 1,
             pan = 0.5,
             delay = 0.3,
             delayTime = 0.25,

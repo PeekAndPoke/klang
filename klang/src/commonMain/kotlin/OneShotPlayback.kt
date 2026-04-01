@@ -51,8 +51,8 @@ internal class OneShotPlayback internal constructor(
         controller.updatePattern(pattern)
     }
 
-    override fun updateCyclesPerSecond(cps: Double) {
-        controller.updateCyclesPerSecond(cps)
+    override fun updateRpm(rpm: Double) {
+        controller.updateRpm(rpm)
     }
 
     override fun reemitVoiceSignals() {

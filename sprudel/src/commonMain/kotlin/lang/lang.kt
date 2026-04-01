@@ -7,7 +7,15 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.lang.addons.*
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangArithmeticAddonsInit
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangContinuousAddonsInit
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangDynamicsAddonsInit
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangEffectsAddonsInit
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangFiltersAddonsInit
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangOscAddonsInit
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangSndAddonsInit
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangStructuralAddonsInit
+import io.peekandpoke.klang.sprudel.lang.addons.sprudelLangTempoAddonsInit
 import io.peekandpoke.klang.sprudel.lang.docs.registerSprudelDocs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
@@ -44,6 +52,7 @@ fun initSprudelDsl() {
     // register sprudel addon functions, that are not part of the original strudel impl
     sprudelLangArithmeticAddonsInit = true
     sprudelLangContinuousAddonsInit = true
+    sprudelLangDynamicsAddonsInit = true
     sprudelLangEffectsAddonsInit = true
     sprudelLangFiltersAddonsInit = true
     sprudelLangOscAddonsInit = true

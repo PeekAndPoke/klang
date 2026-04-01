@@ -67,7 +67,7 @@ private suspend fun helloStrudel() {
         val playback1 = player.play(pattern1)
         playback1.start(
             KlangCyclicPlayback.Options(
-                cyclesPerSecond = 0.54,
+                rpm = 32.4,
             )
         )
 
