@@ -14,7 +14,11 @@ import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.document
 import kotlinx.browser.window
-import kotlinx.css.*
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.cursor
+import kotlinx.css.height
+import kotlinx.css.pct
 import kotlinx.html.Tag
 import kotlinx.html.canvas
 import kotlinx.html.div
@@ -370,7 +374,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         }
 
         // Stroke shadow behind for contrast
-        ctx.strokeStyle = "#10101040"
+        ctx.strokeStyle = KlangTheme.good.withAlpha(0.15).toString()
         ctx.lineWidth = strokeWidth + 5.0
         ctx.stroke()
 

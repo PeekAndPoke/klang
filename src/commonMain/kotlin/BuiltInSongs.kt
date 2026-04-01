@@ -239,7 +239,7 @@ stack(
   .sound("sine").warmth(0.5).scale("C3:major").gain(0.5).clip(0.5)
   .adsr("0.05:0.2:0.5:0.15")
   
-).room(0.2).rsize(5.0)
+).room(0.2).rsize(5.0).analog(1)
             """,
         )
     )
@@ -276,8 +276,8 @@ stack(
         [32!8] [32!4 36!4] [36!8]!2 [31!8]!4 [30!8]!4 [27!8] [27!4 26!4] [26!4 25!4] [25!4 24!4]
     >`).delay("<~!24 0.5::0.5!8>").delaytime(pure(1).div(cps)),
   ).orbit(2).pan(0.5).scale("e2:chromatic")
-  .fast(4).clip(0.5).hpf(200).lpf("1800:1:100").lpadsr("0.05:0.05:0.1:0.02").adsr("0.118:0.1:0.1:0.02")
-  .s("[[sqr pulse]!16]").gain(0.8).distort(3).postgain(0.1).warmth(0.5)
+  .fast(4).clip(0.5).hpf(200).lpf("1800:1:100").lpadsr("0.05:0.05:0.1:0.02").adsr("0.118:0.1:0.1:0.025")
+  .s("[[supersqr supersaw]!16]").gain(0.8).distort(3).postgain(0.1).warmth(0.5)
   .superimpose(x => x.notchf("720:1:50").notchq(1)) // . solo()
    // .mute()
 
@@ -292,8 +292,7 @@ stack(
   .accelerate(saw.seg(8).pow(10).mul(0.05).add(0.0).slow(16))
   
   
-  
-        """.trimIndent(),
+          """.trimIndent(),
             icon = "guitar",
         )
     )
@@ -304,6 +303,7 @@ stack(
             title = "Drunken Synthlor",
             rpm = 39.0,
             code = """
+
 import * from "stdlib"
 import * from "sprudel"
 
@@ -312,13 +312,14 @@ stack(
   n(`<[8@2 8 8 8@2 8 8] [8 4  6  8]  [7@2 7 7 7@2 7 7] [7 3  5  7]
       [8@2 8 8 8@2 8 8] [8 9 10 11]  [10 8 7 5]        [4@2 4@2  ]
   >`).sndPluck("0.999:0.8").clip(0.8).scale("c3:dorian").gain(0.8).lpf("2000").lpadsr("0.01:0.1:0.2:0.1")
- .tremolosync(8).tremolodepth(0.33).tremoloshape("sine").analog(3)
+ .tremolosync(8).tremolodepth(0.33).tremoloshape("sine").analog(1)
   // . solo(0.99) 
   
   // Bass
   , n(`<[8 15 13 15]!2  [7 14 10 14]!2
         [8 15 13 15]!2  [7 14 10 14] [6 7 8 9]
->`).scale("C1:minor").sound("pluck").adsr("0.01:0.2:0.5:0.1").clip(0.5).distort(0.1).warmth(0.2).postgain(0.4) 
+>`).scale("C1:minor").sound("pluck").adsr("0.01:0.2:0.5:0.2").clip(0.5).distort(0.1).warmth(0.2).postgain(0.2) 
+  .superimpose(x => x.sound("tri"))
   // Drums 1 
   , s("hh!8").adsr("0.01:0.1:0.1:1.0").gain(0.8) // .solo()
   // Drums 2
