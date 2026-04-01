@@ -1,6 +1,6 @@
 package io.peekandpoke.klang
 
-import io.peekandpoke.klang.audio_bridge.ExciterDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
@@ -68,9 +68,9 @@ object Player {
     ): KlangScriptEngine {
         val attrs = MutableTypedAttributes {
             if (player != null) {
-                add(KlangScriptOsc.REGISTRAR_KEY) { name: String, dsl: ExciterDsl ->
+                add(KlangScriptOsc.REGISTRAR_KEY) { name: String, dsl: IgnitorDsl ->
                     player.sendControl(
-                        KlangCommLink.Cmd.RegisterExciter(
+                        KlangCommLink.Cmd.RegisterIgnitor(
                             playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID,
                             name = name,
                             dsl = dsl,

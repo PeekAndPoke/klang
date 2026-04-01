@@ -90,7 +90,7 @@ class LangEffectAliasesSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.orbit shouldBe 1
+        events[0].data.cylinder shouldBe 1
     }
 
     "orbit() alias 'o' works as top-level function" {
@@ -98,7 +98,7 @@ class LangEffectAliasesSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.orbit shouldBe 2
+        events[0].data.cylinder shouldBe 2
     }
 
     "orbit() alias 'o' works as string extension" {
@@ -106,7 +106,7 @@ class LangEffectAliasesSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.orbit shouldBe 3
+        events[0].data.cylinder shouldBe 3
     }
 
     "orbit() alias 'o' works with control patterns" {
@@ -114,8 +114,8 @@ class LangEffectAliasesSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.orbit shouldBe 0
-        events[1].data.orbit shouldBe 1
+        events[0].data.cylinder shouldBe 0
+        events[1].data.cylinder shouldBe 1
     }
 
     "orbit() alias 'o' works in compiled code" {
@@ -123,6 +123,6 @@ class LangEffectAliasesSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
-        events[0].data.orbit shouldBe 1
+        events[0].data.cylinder shouldBe 1
     }
 })

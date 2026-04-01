@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
-import io.peekandpoke.klang.audio_be.exciter.registerDefaults
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -27,13 +27,13 @@ class JvmAudioBackend(
     private val klangTime = KlangTime.create()
 
     // 1. Setup DSP Graph
-    val orbits = Orbits(
-        maxOrbits = 16,
+    val cylinders = Cylinders(
+        maxCylinders = 16,
         blockFrames = blockSize,
         sampleRate = sampleRate
     )
 
-    val exciterRegistry = ExciterRegistry().apply {
+    val ignitorRegistry = IgnitorRegistry().apply {
         registerDefaults()
     }
 
@@ -42,8 +42,8 @@ class JvmAudioBackend(
             commLink = commLink,
             sampleRate = sampleRate,
             blockFrames = blockSize,
-            exciterRegistry = exciterRegistry,
-            orbits = orbits,
+            ignitorRegistry = ignitorRegistry,
+            cylinders = cylinders,
             performanceTimeMs = { klangTime.internalMsNow() },
         )
     )
@@ -53,7 +53,7 @@ class JvmAudioBackend(
         sampleRate = sampleRate,
         blockFrames = blockSize,
         voices = voices,
-        orbits = orbits
+        cylinders = cylinders
     )
 
     override suspend fun run(scope: CoroutineScope) {
@@ -112,8 +112,8 @@ class JvmAudioBackend(
 
                         is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
 
-                        is KlangCommLink.Cmd.RegisterExciter -> {
-                            exciterRegistry.register(cmd.name, cmd.dsl)
+                        is KlangCommLink.Cmd.RegisterIgnitor -> {
+                            ignitorRegistry.register(cmd.name, cmd.dsl)
                         }
                     }
                 }

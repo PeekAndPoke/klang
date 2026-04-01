@@ -6,28 +6,28 @@ import kotlinx.css.LinearDimension
 import kotlinx.html.Tag
 import kotlin.math.round
 
-fun Tag.roundOrbitsGauge(
+fun Tag.roundCylindersGauge(
     value: Double?,
     size: LinearDimension,
 ) = RoundGauge(
     size = size,
     value = { value ?: 0.0 },
     display = { if (value == null) "-" else round(it).toInt().toString() },
-    title = "Active Orbits",
+    title = "Active Cylinders",
     range = 0.0..32.0,
-    icon = { small.satellite },
+    icon = { small.layer_group },
     colors = KlangTheme.rangedMixer(0, 32),
     disabled = value == null
 )
 
-fun Tag.renderHeadroomGauge(
+fun Tag.renderMotorHeatGauge(
     value: Double?,
     size: LinearDimension,
 ) = RoundGauge(
     size = size,
     value = { if (value != null) 1.0 - value else 0.0 },
-    display = { if (value == null) "-.--" else (1.0 - it).toFixed(2) },
-    title = "Render Headroom",
+    display = { if (value == null) "-.--" else it.toFixed(2) },
+    title = "Motör Heat",
     range = 0.0..1.0,
     icon = { small.microchip },
     colors = KlangTheme.rangedMixer(0.0, 1.0),

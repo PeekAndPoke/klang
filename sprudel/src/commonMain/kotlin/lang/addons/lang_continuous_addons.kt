@@ -33,6 +33,23 @@ internal val _cps by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() }
 @SprudelDsl
 val cps: SprudelPattern get() = _cps
 
+// -- rpm() ------------------------------------------------------------------------------------------------------------
+
+internal val _rpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 } }
+
+/**
+ * Returns the current revolutions per minute as a continuous pattern (RPM = CPS × 60).
+ *
+ * ```KlangScript(Playable)
+ * sound("sd").delay(0.25).delaytime(pure(1).div(rpm)).delayfeedback(0.5)  // Delay time based in RPM
+ * ```
+ *
+ * @category continuous
+ * @tags rpm, tempo, revolutions per minute, continuous, addon
+ */
+@SprudelDsl
+val rpm: SprudelPattern get() = _rpm
+
 // -- bpm() ------------------------------------------------------------------------------------------------------------
 
 internal val _bpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() * 240.0 } }

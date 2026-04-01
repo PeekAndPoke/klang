@@ -41,7 +41,7 @@ val chordsAndHarmonyTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Putting It All Together",
-            text = "Here is a full composition: wide stereo chords with an octave layer, a simple bass line anchoring the root notes, and a drum groove underneath. Each layer with different effects uses its own orbit to keep the reverb separate from the dry drums.",
+            text = "Here is a full composition: wide stereo chords with an octave layer, a simple bass line anchoring the root notes, and a drum groove underneath. Each layer with different effects uses its own cylinder to keep the reverb separate from the dry drums.",
             code = """stack(
   chord("<Am C F G>").voicing()
     .sound("supersaw").lpf(500)

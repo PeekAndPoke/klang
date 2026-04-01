@@ -5,19 +5,19 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.exciter.Exciter
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 
 /**
  * Tests specific to SynthVoice implementation.
- * Verifies Exciter integration and synthesis-specific behavior.
+ * Verifies Ignitor integration and synthesis-specific behavior.
  */
 class SynthVoiceTest : StringSpec({
 
     "SynthVoice with constant signal produces constant output" {
         val voice = createSynthVoice(
-            signal = TestExciters.constant
+            signal = TestIgnitors.constant
         )
 
         val ctx = createContext()
@@ -28,7 +28,7 @@ class SynthVoiceTest : StringSpec({
 
     "SynthVoice with silence signal produces no output" {
         val voice = createSynthVoice(
-            signal = TestExciters.silence
+            signal = TestIgnitors.silence
         )
 
         val ctx = createContext()
@@ -39,7 +39,7 @@ class SynthVoiceTest : StringSpec({
 
     "SynthVoice with ramp signal produces ramping output" {
         val voice = createSynthVoice(
-            signal = TestExciters.ramp,
+            signal = TestIgnitors.ramp,
             blockFrames = 10,
         )
 
@@ -53,7 +53,7 @@ class SynthVoiceTest : StringSpec({
     "SynthVoice passes pitch modulation to signal" {
         var receivedPhaseMod: DoubleArray? = null
 
-        val trackingSignal = Exciter { buffer, _, ctx ->
+        val trackingSignal = Ignitor { buffer, _, ctx ->
             receivedPhaseMod = ctx.phaseMod
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) buffer[i] = 1.0f
@@ -75,7 +75,7 @@ class SynthVoiceTest : StringSpec({
     "SynthVoice without pitch modulation passes null to signal" {
         var receivedPhaseMod: DoubleArray? = null
 
-        val trackingSignal = Exciter { buffer, _, ctx ->
+        val trackingSignal = Ignitor { buffer, _, ctx ->
             receivedPhaseMod = ctx.phaseMod
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) buffer[i] = 1.0f
@@ -101,7 +101,7 @@ class SynthVoiceTest : StringSpec({
 
     "SynthVoice with envelope modulates signal output" {
         val voice = createSynthVoice(
-            signal = TestExciters.constant,
+            signal = TestIgnitors.constant,
             blockFrames = 100,
             envelope = Voice.Envelope(
                 attackFrames = 100.0,
@@ -121,7 +121,7 @@ class SynthVoiceTest : StringSpec({
 
     "SynthVoice with filter affects signal output" {
         val voice = createSynthVoice(
-            signal = TestExciters.constant,
+            signal = TestIgnitors.constant,
             filter = VoiceTestHelpers.NoOpFilter,
         )
 
@@ -131,7 +131,7 @@ class SynthVoiceTest : StringSpec({
 
     "SynthVoice with all modulations renders correctly" {
         val voice = createSynthVoice(
-            signal = TestExciters.constant,
+            signal = TestIgnitors.constant,
             freqHz = 440.0,
             vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02),
             accelerate = Voice.Accelerate(amount = 1.0),
@@ -164,7 +164,7 @@ class SynthVoiceTest : StringSpec({
         var receivedOffset = -1
         var receivedLength = -1
 
-        val trackingSignal = Exciter { buffer, _, ctx ->
+        val trackingSignal = Ignitor { buffer, _, ctx ->
             receivedOffset = ctx.offset
             receivedLength = ctx.length
             val end = ctx.offset + ctx.length
@@ -187,7 +187,7 @@ class SynthVoiceTest : StringSpec({
     "SynthVoice with partial block renders correct length" {
         var receivedLength = -1
 
-        val trackingSignal = Exciter { buffer, _, ctx ->
+        val trackingSignal = Ignitor { buffer, _, ctx ->
             receivedLength = ctx.length
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) buffer[i] = 1.0f
@@ -208,7 +208,7 @@ class SynthVoiceTest : StringSpec({
     "SynthVoice tracks elapsed frames across multiple renders" {
         val elapsedFrames = mutableListOf<Int>()
 
-        val trackingSignal = Exciter { buffer, _, ctx ->
+        val trackingSignal = Ignitor { buffer, _, ctx ->
             elapsedFrames.add(ctx.voiceElapsedFrames)
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) buffer[i] = 1.0f

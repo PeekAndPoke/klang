@@ -39,8 +39,8 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | `src/commonMain/kotlin/voices/SynthVoice.kt`     | Oscillator-based synthesis                |
 | `src/commonMain/kotlin/voices/SampleVoice.kt`    | Sample playback                           |
 | `src/commonMain/kotlin/voices/VoiceScheduler.kt` | Voice lifecycle management                |
-| `src/commonMain/kotlin/orbits/Orbits.kt`         | Effect bus manager                        |
-| `src/commonMain/kotlin/orbits/Orbit.kt`          | Single effect bus (delay/reverb/phaser/…) |
+| `src/commonMain/kotlin/cylinders/Cylinders.kt`   | Effect bus manager                        |
+| `src/commonMain/kotlin/cylinders/Cylinder.kt`    | Single effect bus (delay/reverb/phaser/…) |
 | `src/commonMain/kotlin/osci/Oscillators.kt`      | Waveform factory (sine/saw/square/noise…) |
 | `src/jvmMain/kotlin/JvmAudioBackend.kt`          | JVM: javax.sound.sampled output           |
 | `src/jsMain/kotlin/JsAudioBackend.kt`            | JS: Web Audio API AudioContext output     |
@@ -68,7 +68,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | Architecture, data flow, comm-link protocol, platform backends       | `ref/architecture.md`      |
 | VoiceData fields (all parameters), FilterDefs, ADSR, ScheduledVoice  | `ref/data-model.md`        |
 | Voice interface, AbstractVoice, SynthVoice, SampleVoice, oscillators | `ref/voice-synthesis.md`   |
-| KlangAudioRenderer, Orbits, effects (Delay/Reverb/Compressor/…)      | `ref/effects-mixing.md`    |
+| KlangAudioRenderer, Cylinders, effects (Delay/Reverb/Compressor/…)   | `ref/effects-mixing.md`    |
 | Samples registry, audio decoders, URL caching (audio_fe)             | `ref/sample-management.md` |
 
 ## Build & Test

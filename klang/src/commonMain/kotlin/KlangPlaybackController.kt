@@ -1,12 +1,22 @@
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_bridge.*
+import io.peekandpoke.klang.audio_bridge.KlangPattern
+import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
+import io.peekandpoke.klang.audio_bridge.KlangTime
+import io.peekandpoke.klang.audio_bridge.SampleRequest
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.ultra.streams.StreamSource
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -86,9 +96,11 @@ internal class KlangPlaybackController(
     }
 
     /**
-     * Update the cycles per second (tempo)
+     * Update the RPM (revolutions per minute = tempo).
+     * Internally converts to CPS for cycle-based math.
      */
-    fun updateCyclesPerSecond(cps: Double) {
+    fun updateRpm(rpm: Double) {
+        val cps = rpm / 60.0
         // The grace window (same as in resyncCurrentCycle) defines the switchover point:
         // voices before it keep the old tempo, voices after it use the new tempo.
         val nowMs = klangTime.internalMsNow()
@@ -114,7 +126,7 @@ internal class KlangPlaybackController(
         onStarted()
 
         // Update playback parameters
-        this.cyclesPerSecond = options.cyclesPerSecond
+        this.cyclesPerSecond = options.rpm / 60.0
         this.lookaheadCycles = options.lookaheadCycles
 
         // Start the fetcher job

@@ -494,7 +494,7 @@ class LangDynamicsSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.gain shouldBe 0.8
-        events[0].data.orbit shouldBe 2
+        events[0].data.cylinder shouldBe 2
     }
 
     "script apply(orbit()) works in compiled code" {
@@ -502,7 +502,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.orbit shouldBe 2
+        events[0].data.cylinder shouldBe 2
     }
 
     // ---- duckorbit() / duck() ---------------------------------------------------------------------------
@@ -538,7 +538,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckOrbit shouldBe 1
+        events[0].data.duckCylinder shouldBe 1
         events[0].data.duckDepth shouldBe 0.8
     }
 
@@ -547,7 +547,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckOrbit shouldBe 1
+        events[0].data.duckCylinder shouldBe 1
     }
 
     // ---- duckattack() / duckatt() -----------------------------------------------------------------------
@@ -584,7 +584,7 @@ class LangDynamicsSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckOrbit shouldBe 1
+        events[0].data.duckCylinder shouldBe 1
         events[0].data.duckAttack shouldBe 0.2
         events[0].data.duckDepth shouldBe 0.8
     }

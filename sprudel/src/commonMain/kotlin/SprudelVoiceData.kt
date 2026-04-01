@@ -1,6 +1,10 @@
 package io.peekandpoke.klang.sprudel
 
-import io.peekandpoke.klang.audio_bridge.*
+import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.FilterEnvelope
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlinx.serialization.Serializable
 
 /**
@@ -26,7 +30,7 @@ data class SprudelVoiceData(
     val legato: Double?,
     /** Volume scaling (0-1), multiplies with gain */
     val velocity: Double?,
-    /** Gain applied after voice processing, before mixing to orbit */
+    /** Gain applied after voice processing, before mixing to the cylinder */
     val postGain: Double?,
 
     // Sound, bank, sound index
@@ -103,8 +107,8 @@ data class SprudelVoiceData(
     val tremoloShape: String?,
 
     // Ducking / Sidechain
-    /** Target orbit to listen to for ducking (source of sidechain signal) */
-    val duckOrbit: Int?,
+    /** Target cylinder to listen to for ducking (source of sidechain signal) */
+    val duckCylinder: Int?,
     /** Duck return-to-normal time in seconds (attack/release time) */
     val duckAttack: Double?,
     /** Ducking amount (0.0 = no ducking, 1.0 = full silence) */
@@ -177,7 +181,8 @@ data class SprudelVoiceData(
     val nfenv: Double?,
 
     // Routing
-    val orbit: Int?,
+    /** The mix channel / bus / orbit / cylinder */
+    val cylinder: Int?,
 
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
     val pan: Double?,
@@ -272,7 +277,7 @@ data class SprudelVoiceData(
             tremoloSkew = null,
             tremoloPhase = null,
             tremoloShape = null,
-            duckOrbit = null,
+            duckCylinder = null,
             duckAttack = null,
             duckDepth = null,
             cutoff = null,
@@ -303,7 +308,7 @@ data class SprudelVoiceData(
             nfsustain = null,
             nfrelease = null,
             nfenv = null,
-            orbit = null,
+            cylinder = null,
             pan = null,
             delay = null,
             delayTime = null,
@@ -375,7 +380,7 @@ data class SprudelVoiceData(
             tremoloSkew = other.tremoloSkew ?: tremoloSkew,
             tremoloPhase = other.tremoloPhase ?: tremoloPhase,
             tremoloShape = other.tremoloShape ?: tremoloShape,
-            duckOrbit = other.duckOrbit ?: duckOrbit,
+            duckCylinder = other.duckCylinder ?: duckCylinder,
             duckAttack = other.duckAttack ?: duckAttack,
             duckDepth = other.duckDepth ?: duckDepth,
             cutoff = other.cutoff ?: cutoff,
@@ -406,7 +411,7 @@ data class SprudelVoiceData(
             nfsustain = other.nfsustain ?: nfsustain,
             nfrelease = other.nfrelease ?: nfrelease,
             nfenv = other.nfenv ?: nfenv,
-            orbit = other.orbit ?: orbit,
+            cylinder = other.cylinder ?: cylinder,
             pan = other.pan ?: pan,
             delay = other.delay ?: delay,
             delayTime = other.delayTime ?: delayTime,
@@ -606,14 +611,14 @@ data class SprudelVoiceData(
             tremoloSkew = tremoloSkew,
             tremoloPhase = tremoloPhase,
             tremoloShape = tremoloShape,
-            duckOrbit = duckOrbit,
+            duckCylinder = duckCylinder,
             duckAttack = duckAttack,
             duckDepth = duckDepth,
             cutoff = cutoff,
             hcutoff = hcutoff,
             bandf = bandf,
             resonance = resonance, // For backward compatibility, use LPF resonance as default
-            orbit = orbit,
+            cylinder = cylinder,
             pan = pan,
             delay = delay,
             delayTime = delayTime,

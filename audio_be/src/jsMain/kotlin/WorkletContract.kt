@@ -1,6 +1,10 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_bridge.*
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
+import io.peekandpoke.klang.audio_bridge.SampleMetadata
+import io.peekandpoke.klang.audio_bridge.SampleRequest
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromDynamic
@@ -115,11 +119,11 @@ object WorkletContract {
                 it[PROP_DATA] = data
             }
 
-            is KlangCommLink.Cmd.RegisterExciter -> jsObject {
-                it[PROP_TYPE] = KlangCommLink.Cmd.RegisterExciter.SERIAL_NAME
+            is KlangCommLink.Cmd.RegisterIgnitor -> jsObject {
+                it[PROP_TYPE] = KlangCommLink.Cmd.RegisterIgnitor.SERIAL_NAME
                 it[PROP_PLAYBACK_ID] = playbackId
                 it[PROP_NAME] = name
-                it[PROP_DSL] = codec.encodeToDynamic(ExciterDsl.serializer(), dsl)
+                it[PROP_DSL] = codec.encodeToDynamic(IgnitorDsl.serializer(), dsl)
             }
         }
     }
@@ -169,10 +173,10 @@ object WorkletContract {
                 data = msg[PROP_DATA],
             )
 
-            KlangCommLink.Cmd.RegisterExciter.SERIAL_NAME -> KlangCommLink.Cmd.RegisterExciter(
+            KlangCommLink.Cmd.RegisterIgnitor.SERIAL_NAME -> KlangCommLink.Cmd.RegisterIgnitor(
                 playbackId = msg[PROP_PLAYBACK_ID],
                 name = msg[PROP_NAME],
-                dsl = codec.decodeFromDynamic(ExciterDsl.serializer(), msg[PROP_DSL]),
+                dsl = codec.decodeFromDynamic(IgnitorDsl.serializer(), msg[PROP_DSL]),
             )
 
             else -> error("Unknown cmd type: $type")

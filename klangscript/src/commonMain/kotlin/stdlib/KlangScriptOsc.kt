@@ -1,18 +1,18 @@
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.ExciterDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 import io.peekandpoke.ultra.common.TypedKey
 
-/** Callback type for registering an ExciterDsl with the audio backend. Returns the registered name. */
-typealias ExciterRegistrar = (name: String, dsl: ExciterDsl) -> String
+/** Callback type for registering an IgnitorDsl with the audio backend. Returns the registered name. */
+typealias IgnitorRegistrar = (name: String, dsl: IgnitorDsl) -> String
 
 /**
- * Osc object for KlangScript — builds ExciterDsl signal graphs.
+ * Osc object for KlangScript — builds IgnitorDsl signal graphs.
  *
  * Provides factory methods for all oscillator primitives, noise sources, and super oscillators.
- * Returns [ExciterDsl] instances that can be composed via extension methods (lowpass, adsr, mul, etc.)
+ * Returns [IgnitorDsl] instances that can be composed via extension methods (lowpass, adsr, mul, etc.)
  * and registered as named sounds via Osc.register.
  *
  * Usage in KlangScript:
@@ -24,8 +24,8 @@ typealias ExciterRegistrar = (name: String, dsl: ExciterDsl) -> String
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("Osc")
 object KlangScriptOsc {
-    /** TypedKey for the exciter registrar callback. Set on engine.attrs by the app when the player is available. */
-    val REGISTRAR_KEY = TypedKey<ExciterRegistrar>("ExciterRegistrar")
+    /** TypedKey for the ignitor registrar callback. Set on engine.attrs by the app when the player is available. */
+    val REGISTRAR_KEY = TypedKey<IgnitorRegistrar>("IgnitorRegistrar")
 
     override fun toString(): String = "[Osc object]"
 
@@ -39,102 +39,102 @@ object KlangScriptOsc {
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice. Non-zero = fixed Hz (e.g. 5 for a 5 Hz LFO).
      */
     @KlangScript.Method
-    fun sine(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Sine(freq = freq.toExciterDsl())
+    fun sine(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Sine(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a sawtooth wave oscillator (PolyBLEP anti-aliased).
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun saw(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Sawtooth(freq = freq.toExciterDsl())
+    fun saw(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Sawtooth(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a square wave oscillator (PolyBLEP anti-aliased).
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun square(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Square(freq = freq.toExciterDsl())
+    fun square(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Square(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a triangle wave oscillator.
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun triangle(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Triangle(freq = freq.toExciterDsl())
+    fun triangle(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Triangle(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a ramp (reverse sawtooth) wave oscillator.
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun ramp(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Ramp(freq = freq.toExciterDsl())
+    fun ramp(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Ramp(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a naive sawtooth without anti-aliasing (brighter/harsher).
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun zawtooth(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Zawtooth(freq = freq.toExciterDsl())
+    fun zawtooth(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Zawtooth(freq = freq.toIgnitorDsl())
 
     /**
      * Creates an impulse (click) oscillator.
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun impulse(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Impulse(freq = freq.toExciterDsl())
+    fun impulse(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Impulse(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a pulse wave with variable duty cycle.
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun pulze(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Pulze(freq = freq.toExciterDsl())
+    fun pulze(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Pulze(freq = freq.toIgnitorDsl())
 
-    /** Creates a silent exciter (zero output). */
+    /** Creates a silent ignitor (zero output). */
     @KlangScript.Method
-    fun silence(): ExciterDsl = ExciterDsl.Silence
+    fun silence(): IgnitorDsl = IgnitorDsl.Silence
 
     // ── Noise Sources ────────────────────────────────────────────────────────
 
     /** Creates a white noise source (flat spectrum). */
     @KlangScript.Method
-    fun whitenoise(): ExciterDsl = ExciterDsl.WhiteNoise
+    fun whitenoise(): IgnitorDsl = IgnitorDsl.WhiteNoise
 
     /** Creates a brown noise source (1/f^2 spectrum, deeper). */
     @KlangScript.Method
-    fun brownnoise(): ExciterDsl = ExciterDsl.BrownNoise
+    fun brownnoise(): IgnitorDsl = IgnitorDsl.BrownNoise
 
     /** Creates a pink noise source (1/f spectrum). */
     @KlangScript.Method
-    fun pinknoise(): ExciterDsl = ExciterDsl.PinkNoise
+    fun pinknoise(): IgnitorDsl = IgnitorDsl.PinkNoise
 
     /** Creates a Perlin noise source (smooth organic noise). */
     @KlangScript.Method
-    fun perlin(rate: ExciterDslLike = 1.0): ExciterDsl =
-        ExciterDsl.PerlinNoise(rate = rate.toExciterDsl())
+    fun perlin(rate: IgnitorDslLike = 1.0): IgnitorDsl =
+        IgnitorDsl.PerlinNoise(rate = rate.toIgnitorDsl())
 
     /** Creates a Berlin noise source (piecewise-linear interpolated noise). */
     @KlangScript.Method
-    fun berlin(rate: ExciterDslLike = 1.0): ExciterDsl =
-        ExciterDsl.BerlinNoise(rate = rate.toExciterDsl())
+    fun berlin(rate: IgnitorDslLike = 1.0): IgnitorDsl =
+        IgnitorDsl.BerlinNoise(rate = rate.toIgnitorDsl())
 
     /** Creates a dust source (sparse random impulses). */
     @KlangScript.Method
-    fun dust(density: ExciterDslLike = 0.2): ExciterDsl =
-        ExciterDsl.Dust(density = density.toExciterDsl())
+    fun dust(density: IgnitorDslLike = 0.2): IgnitorDsl =
+        IgnitorDsl.Dust(density = density.toIgnitorDsl())
 
     /** Creates a crackle source (noise bursts). */
     @KlangScript.Method
-    fun crackle(density: ExciterDslLike = 0.2): ExciterDsl =
-        ExciterDsl.Crackle(density = density.toExciterDsl())
+    fun crackle(density: IgnitorDslLike = 0.2): IgnitorDsl =
+        IgnitorDsl.Crackle(density = density.toIgnitorDsl())
 
     // ── Super Oscillators ────────────────────────────────────────────────────
     //
@@ -145,40 +145,40 @@ object KlangScriptOsc {
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun supersaw(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.SuperSaw(freq = freq.toExciterDsl())
+    fun supersaw(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.SuperSaw(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a supersine (multiple detuned sine oscillators).
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun supersine(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.SuperSine(freq = freq.toExciterDsl())
+    fun supersine(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.SuperSine(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a supersquare (multiple detuned square oscillators).
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun supersquare(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.SuperSquare(freq = freq.toExciterDsl())
+    fun supersquare(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.SuperSquare(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a supertri (multiple detuned triangle oscillators).
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun supertri(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.SuperTri(freq = freq.toExciterDsl())
+    fun supertri(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.SuperTri(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a superramp (multiple detuned ramp oscillators).
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun superramp(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.SuperRamp(freq = freq.toExciterDsl())
+    fun superramp(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.SuperRamp(freq = freq.toIgnitorDsl())
 
     // ── Physical Models ──────────────────────────────────────────────────────
 
@@ -187,23 +187,23 @@ object KlangScriptOsc {
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun pluck(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.Pluck(freq = freq.toExciterDsl())
+    fun pluck(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.Pluck(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a unison Karplus-Strong plucked string model.
      * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
      */
     @KlangScript.Method
-    fun superpluck(freq: ExciterDslLike = 0.0): ExciterDsl =
-        ExciterDsl.SuperPluck(freq = freq.toExciterDsl())
+    fun superpluck(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+        IgnitorDsl.SuperPluck(freq = freq.toIgnitorDsl())
 
     // ── Parameter Slot ───────────────────────────────────────────────────────
 
     /**
      * Creates a named parameter slot with a default value.
      *
-     * Param slots are the leaf nodes of the exciter tree — they produce a constant signal
+     * Param slots are the leaf nodes of the ignitor tree — they produce a constant signal
      * at [default] unless overridden by oscParam() at play time.
      *
      * @param name parameter name — used for oscParam() overrides and UI discovery
@@ -211,8 +211,8 @@ object KlangScriptOsc {
      * @param description human-readable description for documentation
      */
     @KlangScript.Method
-    fun param(name: String, default: Double, description: String = ""): ExciterDsl =
-        ExciterDsl.Param(name, default, description)
+    fun param(name: String, default: Double, description: String = ""): IgnitorDsl =
+        IgnitorDsl.Param(name, default, description)
 
     // ── Constant ────────────────────────────────────────────────────────────
 
@@ -224,6 +224,6 @@ object KlangScriptOsc {
      * @param value the constant value
      */
     @KlangScript.Method
-    fun constant(value: Double): ExciterDsl =
-        ExciterDsl.Constant(value)
+    fun constant(value: Double): IgnitorDsl =
+        IgnitorDsl.Constant(value)
 }

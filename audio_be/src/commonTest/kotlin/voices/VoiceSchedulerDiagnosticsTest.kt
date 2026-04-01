@@ -5,9 +5,9 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.ints.shouldBeAtLeast
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
-import io.peekandpoke.klang.audio_be.exciter.registerDefaults
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
@@ -28,8 +28,8 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
             commLink = commLink.backend,
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            exciterRegistry = ExciterRegistry().apply { registerDefaults() },
-            orbits = Orbits(maxOrbits = 4, blockFrames = blockFrames, sampleRate = sampleRate),
+            ignitorRegistry = IgnitorRegistry().apply { registerDefaults() },
+            cylinders = Cylinders(maxCylinders = 4, blockFrames = blockFrames, sampleRate = sampleRate),
             performanceTimeMs = timeMs
         )
 
@@ -106,11 +106,11 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
         diagnostics.activeVoiceCount shouldBe 1
     }
 
-    "diagnostics report orbit states" {
+    "diagnostics report cylinder states" {
         var currentTimeMs = 0.0
         val (scheduler, commLink) = createTestScheduler { currentTimeMs }
 
-        // Schedule voices on different orbits
+        // Schedule voices on different cylinders
         val voice1 = ScheduledVoice(
             playbackId = "test",
             startTime = 0.0,
@@ -118,7 +118,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
             data = VoiceData.empty.copy(
                 sound = "sine",
                 freqHz = 440.0,
-                orbit = 0
+                cylinder = 0
             ),
             playbackStartTime = 0.0,
         )
@@ -126,7 +126,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
             playbackId = "test",
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = 880.0, orbit = 2),
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 880.0, cylinder = 2),
             playbackStartTime = 0.0,
         )
         scheduler.scheduleVoice(voice1)
@@ -139,15 +139,15 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
 
         val diagnostics = commLink.readAllDiagnostics().first()
 
-        // Should have 2 orbits reported
-        diagnostics.orbits shouldHaveSize 2
+        // Should have 2 cylinders reported
+        diagnostics.cylinders shouldHaveSize 2
 
-        // Both orbits should be active
-        val orbit0 = diagnostics.orbits.find { it.id == 0 }
-        val orbit2 = diagnostics.orbits.find { it.id == 2 }
+        // Both cylinders should be active
+        val cylinder0 = diagnostics.cylinders.find { it.id == 0 }
+        val cylinder2 = diagnostics.cylinders.find { it.id == 2 }
 
-        orbit0?.active shouldBe true
-        orbit2?.active shouldBe true
+        cylinder0?.active shouldBe true
+        cylinder2?.active shouldBe true
     }
 
     "diagnostics calculate headroom correctly" {
@@ -189,36 +189,36 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
         diagnosticsMessages.size shouldBeAtLeast 3
     }
 
-    "allocatedIds property returns correct orbit IDs" {
+    "allocatedIds property returns correct cylinder IDs" {
         var currentTimeMs = 0.0
         val (scheduler, _) = createTestScheduler { currentTimeMs }
 
-        // Initially no orbits allocated
-        scheduler.options.orbits.orbitsIds shouldHaveSize 0
+        // Initially no cylinders allocated
+        scheduler.options.cylinders.cylindersIds shouldHaveSize 0
 
-        // Schedule voices on orbits 0 and 3
+        // Schedule voices on cylinders 0 and 3
         val voice1 = ScheduledVoice(
             playbackId = "test",
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, orbit = 0),
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 440.0, cylinder = 0),
             playbackStartTime = 0.0,
         )
         val voice2 = ScheduledVoice(
             playbackId = "test",
             startTime = 0.0,
             gateEndTime = 1.0,
-            data = VoiceData.empty.copy(sound = "sine", freqHz = 880.0, orbit = 3),
+            data = VoiceData.empty.copy(sound = "sine", freqHz = 880.0, cylinder = 3),
             playbackStartTime = 0.0,
         )
         scheduler.scheduleVoice(voice1)
         scheduler.scheduleVoice(voice2)
 
-        // Process to allocate orbits
+        // Process to allocate cylinders
         scheduler.process(0)
 
-        // Should have 2 orbits allocated
-        val allocatedIds = scheduler.options.orbits.orbitsIds
+        // Should have 2 cylinders allocated
+        val allocatedIds = scheduler.options.cylinders.cylindersIds
         allocatedIds shouldHaveSize 2
         allocatedIds.contains(0) shouldBe true
         allocatedIds.contains(3) shouldBe true

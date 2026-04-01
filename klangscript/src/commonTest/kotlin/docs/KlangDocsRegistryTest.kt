@@ -60,7 +60,7 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "sine", category = "test",
                 variants = listOf(
-                    KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList(), returnType = KlangType("ExciterDsl")),
+                    KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList(), returnType = KlangType("IgnitorDsl")),
                     KlangCallable(name = "sine", receiver = null, params = emptyList(), returnType = KlangType("Pattern")),
                 )
             )
@@ -68,7 +68,7 @@ class KlangDocsRegistryTest : StringSpec({
 
         val oscVariant = registry.getCallable("sine", KlangType("Osc"))
         oscVariant shouldNotBe null
-        oscVariant!!.returnType?.simpleName shouldBe "ExciterDsl"
+        oscVariant!!.returnType?.simpleName shouldBe "IgnitorDsl"
 
         val topLevel = registry.getCallable("sine", null)
         topLevel shouldNotBe null
@@ -98,13 +98,13 @@ class KlangDocsRegistryTest : StringSpec({
         registry.register(
             KlangSymbol(
                 name = "lowpass", category = "filter",
-                variants = listOf(KlangCallable(name = "lowpass", receiver = KlangType("ExciterDsl"), params = emptyList()))
+                variants = listOf(KlangCallable(name = "lowpass", receiver = KlangType("IgnitorDsl"), params = emptyList()))
             )
         )
         registry.register(
             KlangSymbol(
                 name = "adsr", category = "envelope",
-                variants = listOf(KlangCallable(name = "adsr", receiver = KlangType("ExciterDsl"), params = emptyList()))
+                variants = listOf(KlangCallable(name = "adsr", receiver = KlangType("IgnitorDsl"), params = emptyList()))
             )
         )
         registry.register(
@@ -114,9 +114,9 @@ class KlangDocsRegistryTest : StringSpec({
             )
         )
 
-        val exciterMethods = registry.getVariantsForReceiver(KlangType("ExciterDsl"))
-        exciterMethods shouldHaveSize 2
-        exciterMethods.map { it.name }.toSet() shouldBe setOf("lowpass", "adsr")
+        val ignitorMethods = registry.getVariantsForReceiver(KlangType("IgnitorDsl"))
+        ignitorMethods shouldHaveSize 2
+        ignitorMethods.map { it.name }.toSet() shouldBe setOf("lowpass", "adsr")
     }
 
     // ── getSymbolWithReceiver ───────────────────────────────────────────
@@ -186,7 +186,7 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "adsr", category = "uncategorized", library = "stdlib",
                 variants = listOf(
-                    KlangCallable(name = "adsr", receiver = KlangType("ExciterDsl"), params = emptyList(), library = "stdlib"),
+                    KlangCallable(name = "adsr", receiver = KlangType("IgnitorDsl"), params = emptyList(), library = "stdlib"),
                 )
             )
         )
@@ -194,7 +194,7 @@ class KlangDocsRegistryTest : StringSpec({
         val sprudelAdsr = registry.getSymbolWithReceiver("adsr", KlangType("Pattern"))!!
         sprudelAdsr.library shouldBe "sprudel"
 
-        val stdlibAdsr = registry.getSymbolWithReceiver("adsr", KlangType("ExciterDsl"))!!
+        val stdlibAdsr = registry.getSymbolWithReceiver("adsr", KlangType("IgnitorDsl"))!!
         stdlibAdsr.library shouldBe "stdlib"
     }
 
@@ -234,7 +234,7 @@ class KlangDocsRegistryTest : StringSpec({
             KlangSymbol(
                 name = "lowpass", category = "filter",
                 variants = listOf(
-                    KlangCallable(name = "lowpass", receiver = KlangType("ExciterDsl"), params = emptyList()),
+                    KlangCallable(name = "lowpass", receiver = KlangType("IgnitorDsl"), params = emptyList()),
                 )
             )
         )

@@ -1,9 +1,8 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
-import io.peekandpoke.klang.audio_be.exciter.ExciteContext
-import io.peekandpoke.klang.audio_be.exciter.Exciter
-import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 
@@ -21,8 +20,8 @@ fun BlockRenderer.renderInPlace(buffer: FloatArray, sampleRate: Int = 44100) {
         endFrame = buffer.size,
         gateEndFrame = buffer.size,
         freqHz = 440.0,
-        signal = Exciter { _, _, _ -> },
-        signalCtx = ExciteContext(
+        signal = { _, _, _ -> },
+        signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = buffer.size,
             gateEndFrame = buffer.size,
@@ -30,7 +29,7 @@ fun BlockRenderer.renderInPlace(buffer: FloatArray, sampleRate: Int = 44100) {
             voiceEndFrame = buffer.size,
             scratchBuffers = ScratchBuffers(buffer.size),
         ),
-        orbits = Orbits(blockFrames = buffer.size, sampleRate = sampleRate),
+        cylinders = Cylinders(blockFrames = buffer.size, sampleRate = sampleRate),
     )
     ctx.offset = 0
     ctx.length = buffer.size

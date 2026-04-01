@@ -79,7 +79,7 @@ data class VoiceData(
     val tremoloShape: String?,
 
     // Ducking / Sidechain
-    val duckOrbit: Int?,
+    val duckCylinder: Int?,
     val duckAttack: Double?,
     val duckDepth: Double?,
 
@@ -94,7 +94,7 @@ data class VoiceData(
     val resonance: Double?,
 
     // Routing
-    val orbit: Int?,
+    val cylinder: Int?,
 
     // Panning (-1.0 = Left, 0.0 = Center, 1.0 = Right)
     val pan: Double?,
@@ -173,14 +173,14 @@ data class VoiceData(
             tremoloSkew = null,
             tremoloPhase = null,
             tremoloShape = null,
-            duckOrbit = null,
+            duckCylinder = null,
             duckAttack = null,
             duckDepth = null,
             cutoff = null,
             hcutoff = null,
             bandf = null,
             resonance = null,
-            orbit = null,
+            cylinder = null,
             pan = null,
             delay = null,
             delayTime = null,

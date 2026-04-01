@@ -8,10 +8,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Routes the processed voice signal to the orbit mixer.
+ * Routes the processed voice signal to the cylinder mixer.
  *
  * This is the final stage of the voice pipeline. Reads the processed audio from
- * [BlockContext.audioBuffer] and mixes it into the orbit's stereo buffers with
+ * [BlockContext.audioBuffer] and mixes it into the cylinder's stereo buffers with
  * panning and effect sends (delay, reverb).
  */
 class SendRenderer(
@@ -19,7 +19,7 @@ class SendRenderer(
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {
-        val orbit = ctx.renderContext.orbits.getOrInit(voice.orbitId, voice)
+        val cylinder = ctx.renderContext.cylinders.getOrInit(voice.cylinderId, voice)
 
         // Equal Power Panning
         // Input: 0.0 (Left) .. 1.0 (Right)
@@ -33,14 +33,14 @@ class SendRenderer(
         val gainL = cos(panAngle) * effectiveGain
         val gainR = sin(panAngle) * effectiveGain
 
-        // Pre-fetch orbit buffers
+        // Pre-fetch cylinder buffers
         val audioBuffer = ctx.audioBuffer
-        val outL = orbit.mixBuffer.left
-        val outR = orbit.mixBuffer.right
-        val delaySendL = orbit.delaySendBuffer.left
-        val delaySendR = orbit.delaySendBuffer.right
-        val reverbSendL = orbit.reverbSendBuffer.left
-        val reverbSendR = orbit.reverbSendBuffer.right
+        val outL = cylinder.mixBuffer.left
+        val outR = cylinder.mixBuffer.right
+        val delaySendL = cylinder.delaySendBuffer.left
+        val delaySendR = cylinder.delaySendBuffer.right
+        val reverbSendL = cylinder.reverbSendBuffer.left
+        val reverbSendR = cylinder.reverbSendBuffer.right
 
         // Delay and Reverb send amounts
         val delayAmount = voice.delay.amount
@@ -64,7 +64,7 @@ class SendRenderer(
             val left = signal * gainL
             val right = signal * gainR
 
-            // Sum to orbit mix buffer
+            // Sum to cylinder mix buffer
             outL[idx] = (outL[idx] + left).toFloat()
             outR[idx] = (outR[idx] + right).toFloat()
 

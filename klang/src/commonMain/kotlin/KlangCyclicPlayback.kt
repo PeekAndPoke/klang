@@ -15,9 +15,10 @@ interface KlangCyclicPlayback : KlangPlayback {
     fun updatePattern(pattern: KlangPattern)
 
     /**
-     * Update the cycles per second (tempo).
+     * Update the RPM (revolutions per minute = tempo).
+     * RPM = CPS * 60, e.g. RPM 30 = 0.5 cycles per second.
      */
-    fun updateCyclesPerSecond(cps: Double)
+    fun updateRpm(rpm: Double)
 
     /**
      * Re-emits VoicesScheduled signals for all events currently in the lookahead window.
@@ -36,8 +37,8 @@ interface KlangCyclicPlayback : KlangPlayback {
     data class Options(
         /** Number of cycles to look ahead when scheduling events */
         val lookaheadCycles: Double = 2.0,
-        /** Cycles per second (tempo) */
-        val cyclesPerSecond: Double = 0.5,
+        /** RPM (revolutions per minute = tempo). RPM 30 = 0.5 CPS. */
+        val rpm: Double = 30.0,
         /** Initial cycles prefetch, so that the audio starts flawlessly. Auto-calculated if null. */
         val prefetchCycles: Int? = null,
     )

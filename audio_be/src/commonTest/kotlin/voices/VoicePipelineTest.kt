@@ -9,7 +9,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 
 /**
  * Tests for Voice pipeline ordering.
- * Verifies that the Pitch → Excite → Filter pipeline executes correctly.
+ * Verifies that the Pitch → Ignite → Filter pipeline executes correctly.
  */
 class VoicePipelineTest : StringSpec({
 

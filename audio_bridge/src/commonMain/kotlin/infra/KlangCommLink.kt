@@ -58,14 +58,14 @@ class KlangCommLink(capacity: Int = 8192) {
             }
         }
 
-        /** Registers a custom ExciterDsl in the backend's exciter registry. */
-        data class RegisterExciter(
+        /** Registers a custom IgnitorDsl in the backend's exciter registry. */
+        data class RegisterIgnitor(
             override val playbackId: String,
             val name: String,
-            val dsl: io.peekandpoke.klang.audio_bridge.ExciterDsl,
+            val dsl: io.peekandpoke.klang.audio_bridge.IgnitorDsl,
         ) : Cmd {
             companion object {
-                const val SERIAL_NAME = "register-exciter"
+                const val SERIAL_NAME = "register-ignitor"
             }
         }
 
@@ -175,9 +175,9 @@ class KlangCommLink(capacity: Int = 8192) {
              */
             val activeVoiceCount: Int,
             /**
-             * State of all allocated orbits (mixing channels)
+             * State of all allocated cylinders (mixing channels)
              */
-            val orbits: List<OrbitState>,
+            val cylinders: List<CylinderState>,
             /**
              * Backend KlangTime.internalMsNow() at the moment this message was sent.
              * Used by the frontend to continuously correct clock drift via EMA.
@@ -191,10 +191,10 @@ class KlangCommLink(capacity: Int = 8192) {
             val outputLatencyMs: Double = 0.0,
         ) : Feedback {
             @Serializable
-            data class OrbitState(
-                /** Orbit ID (0-15 typically) */
+            data class CylinderState(
+                /** Cylinder ID (0-15 typically) */
                 val id: Int,
-                /** Whether this orbit is currently active (processing audio or effect tails) */
+                /** Whether this cylinder is currently active (processing audio or effect tails) */
                 val active: Boolean,
             )
         }

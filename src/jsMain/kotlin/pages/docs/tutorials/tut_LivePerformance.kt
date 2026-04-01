@@ -23,7 +23,7 @@ val livePerformanceTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Layered Melodies with superimpose()",
-            text = "A single melody becomes an orchestra when you superimpose transformed copies. Here the original melody plays normally while a transposed copy echoes above it. Each layer gets its own pan position for width and its own orbit for independent effects.",
+            text = "A single melody becomes an orchestra when you superimpose transformed copies. Here the original melody plays normally while a transposed copy echoes above it. Each layer gets its own pan position for width and its own cylinder for independent effects.",
             code = """n("0 2 4 7 6 4 2 0").scale("C3:minor")
   .sound("saw").lpf(800)
   .adsr("0.01:0.1:0.5:0.2").gain(0.3)
@@ -62,7 +62,7 @@ val livePerformanceTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Putting It All Together",
-            text = "Here is a complete self-evolving live set. The drums mutate every 4 and 8 cycles. The melody superimposes an octave copy in stereo. The chords spread wide with jux(). The bass drops in and out with slowcat(). Each layer has its own orbit for independent effects. Hit play and let it perform itself.",
+            text = "Here is a complete self-evolving live set. The drums mutate every 4 and 8 cycles. The melody superimposes an octave copy in stereo. The chords spread wide with jux(). The bass drops in and out with slowcat(). Each layer has its own cylinder for independent effects. Hit play and let it perform itself.",
             code = """stack(
   sound("bd ~ bd ~").every(8, fast(2)).orbit(0),
   sound("~ sd ~ sd").orbit(0),

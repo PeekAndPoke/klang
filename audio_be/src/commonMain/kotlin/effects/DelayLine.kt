@@ -42,7 +42,7 @@ class DelayLine(
 
     /**
      * Returns true if the internal delay buffer still contains audio above the given threshold.
-     * Used to detect effect tails that should keep the orbit alive.
+     * Used to detect effect tails that should keep the cylinder alive.
      */
     fun hasTail(threshold: Double = 0.00001): Boolean {
         val thresholdF = threshold.toFloat()

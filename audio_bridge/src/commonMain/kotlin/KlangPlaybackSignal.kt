@@ -80,7 +80,7 @@ sealed class KlangPlaybackSignal {
 
     /**
      * Emitted with system-wide diagnostics information.
-     * Contains performance metrics and orbit states.
+     * Contains performance metrics and cylinder states.
      */
     data class Diagnostics(
         val diagnostics: KlangCommLink.Feedback.Diagnostics,

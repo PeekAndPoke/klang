@@ -1,80 +1,80 @@
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.ExciterDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
 
 /**
- * Accepts [ExciterDsl] or [Number]. Numbers are converted to [ExciterDsl.Constant] automatically.
+ * Accepts [IgnitorDsl] or [Number]. Numbers are converted to [IgnitorDsl.Constant] automatically.
  */
-typealias ExciterDslLike = Any
+typealias IgnitorDslLike = Any
 
-/** Converts an [ExciterDslLike] value to [ExciterDsl]. Numbers become [ExciterDsl.Constant] (not overridable by oscParams). */
-fun ExciterDslLike.toExciterDsl(): ExciterDsl = when (this) {
-    is ExciterDsl -> this
-    is Number -> ExciterDsl.Constant(this.toDouble())
-    else -> error("Expected ExciterDsl or Number, got ${this::class.simpleName}")
+/** Converts an [IgnitorDslLike] value to [IgnitorDsl]. Numbers become [IgnitorDsl.Constant] (not overridable by oscParams). */
+fun IgnitorDslLike.toIgnitorDsl(): IgnitorDsl = when (this) {
+    is IgnitorDsl -> this
+    is Number -> IgnitorDsl.Constant(this.toDouble())
+    else -> error("Expected IgnitorDsl or Number, got ${this::class.simpleName}")
 }
 
 /**
- * Extension methods on [ExciterDsl] for KlangScript.
+ * Extension methods on [IgnitorDsl] for KlangScript.
  *
  * Enables chaining: `Osc.sine().lowpass(1000).adsr(0.01, 0.1, 0.5, 0.3)`
- * Any numeric parameter also accepts an ExciterDsl for audio-rate modulation:
+ * Any numeric parameter also accepts an IgnitorDsl for audio-rate modulation:
  * `Osc.sine().lowpass(Osc.perlin())` — modulated cutoff.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
-@KlangScript.TypeExtensions(ExciterDsl::class)
+@KlangScript.TypeExtensions(IgnitorDsl::class)
 object KlangScriptOscExtensions {
 
     // ── Filters ──────────────────────────────────────────────────────────────
 
-    /** Applies a resonant lowpass filter. Cutoff and Q accept Number or ExciterDsl. */
+    /** Applies a resonant lowpass filter. Cutoff and Q accept Number or IgnitorDsl. */
     @KlangScript.Method
-    fun lowpass(self: ExciterDsl, cutoffHz: ExciterDslLike, q: ExciterDslLike = 0.707): ExciterDsl =
-        ExciterDsl.Lowpass(inner = self, cutoffHz = cutoffHz.toExciterDsl(), q = q.toExciterDsl())
+    fun lowpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike, q: IgnitorDslLike = 0.707): IgnitorDsl =
+        IgnitorDsl.Lowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl())
 
-    /** Applies a resonant highpass filter. Cutoff and Q accept Number or ExciterDsl. */
+    /** Applies a resonant highpass filter. Cutoff and Q accept Number or IgnitorDsl. */
     @KlangScript.Method
-    fun highpass(self: ExciterDsl, cutoffHz: ExciterDslLike, q: ExciterDslLike = 0.707): ExciterDsl =
-        ExciterDsl.Highpass(inner = self, cutoffHz = cutoffHz.toExciterDsl(), q = q.toExciterDsl())
+    fun highpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike, q: IgnitorDslLike = 0.707): IgnitorDsl =
+        IgnitorDsl.Highpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl())
 
     /** Applies a one-pole lowpass filter (gentle rolloff). Alias: onePoleLowpass. */
     @KlangScript.Method
-    fun warmth(self: ExciterDsl, cutoffHz: ExciterDslLike): ExciterDsl =
-        ExciterDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toExciterDsl())
+    fun warmth(self: IgnitorDsl, cutoffHz: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl())
 
     /** Applies a one-pole lowpass filter (gentle rolloff). Alias for warmth. */
     @KlangScript.Method
-    fun onePoleLowpass(self: ExciterDsl, cutoffHz: ExciterDslLike): ExciterDsl =
-        ExciterDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toExciterDsl())
+    fun onePoleLowpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl())
 
     /** SVF bandpass filter. Passes frequencies near the cutoff, attenuates others. */
     @KlangScript.Method
-    fun bandpass(self: ExciterDsl, cutoffHz: ExciterDslLike, q: ExciterDslLike = 1.0): ExciterDsl =
-        ExciterDsl.Bandpass(inner = self, cutoffHz = cutoffHz.toExciterDsl(), q = q.toExciterDsl())
+    fun bandpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike, q: IgnitorDslLike = 1.0): IgnitorDsl =
+        IgnitorDsl.Bandpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl())
 
     /** SVF notch (band-reject) filter. Removes frequencies near the cutoff, passes others. */
     @KlangScript.Method
-    fun notch(self: ExciterDsl, cutoffHz: ExciterDslLike, q: ExciterDslLike = 1.0): ExciterDsl =
-        ExciterDsl.Notch(inner = self, cutoffHz = cutoffHz.toExciterDsl(), q = q.toExciterDsl())
+    fun notch(self: IgnitorDsl, cutoffHz: IgnitorDslLike, q: IgnitorDslLike = 1.0): IgnitorDsl =
+        IgnitorDsl.Notch(inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl())
 
     // ── Envelope ─────────────────────────────────────────────────────────────
 
-    /** Applies an ADSR amplitude envelope. All times accept Number or ExciterDsl. */
+    /** Applies an ADSR amplitude envelope. All times accept Number or IgnitorDsl. */
     @KlangScript.Method
     fun adsr(
-        self: ExciterDsl,
-        attackSec: ExciterDslLike,
-        decaySec: ExciterDslLike,
-        sustainLevel: ExciterDslLike,
-        releaseSec: ExciterDslLike,
-    ): ExciterDsl = ExciterDsl.Adsr(
+        self: IgnitorDsl,
+        attackSec: IgnitorDslLike,
+        decaySec: IgnitorDslLike,
+        sustainLevel: IgnitorDslLike,
+        releaseSec: IgnitorDslLike,
+    ): IgnitorDsl = IgnitorDsl.Adsr(
         inner = self,
-        attackSec = attackSec.toExciterDsl(),
-        decaySec = decaySec.toExciterDsl(),
-        sustainLevel = sustainLevel.toExciterDsl(),
-        releaseSec = releaseSec.toExciterDsl(),
+        attackSec = attackSec.toIgnitorDsl(),
+        decaySec = decaySec.toIgnitorDsl(),
+        sustainLevel = sustainLevel.toIgnitorDsl(),
+        releaseSec = releaseSec.toIgnitorDsl(),
     )
 
     // ── Effects ──────────────────────────────────────────────────────────────
@@ -84,158 +84,158 @@ object KlangScriptOscExtensions {
      * Types: "linear".
      */
     @KlangScript.Method
-    fun drive(self: ExciterDsl, amount: ExciterDslLike, driveType: String = "linear"): ExciterDsl =
-        ExciterDsl.Drive(inner = self, amount = amount.toExciterDsl(), driveType = driveType)
+    fun drive(self: IgnitorDsl, amount: IgnitorDslLike, driveType: String = "linear"): IgnitorDsl =
+        IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl(), driveType = driveType)
 
     /**
      * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
      * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
      */
     @KlangScript.Method
-    fun clip(self: ExciterDsl, shape: String = "soft"): ExciterDsl =
-        ExciterDsl.Clip(inner = self, shape = shape)
+    fun clip(self: IgnitorDsl, shape: String = "soft"): IgnitorDsl =
+        IgnitorDsl.Clip(inner = self, shape = shape)
 
     /**
      * Waveshaping distortion. Convenience for drive(amount) + clip(shape).
      * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
      */
     @KlangScript.Method
-    fun distort(self: ExciterDsl, amount: ExciterDslLike, shape: String = "soft"): ExciterDsl =
-        ExciterDsl.Clip(inner = ExciterDsl.Drive(inner = self, amount = amount.toExciterDsl()), shape = shape)
+    fun distort(self: IgnitorDsl, amount: IgnitorDslLike, shape: String = "soft"): IgnitorDsl =
+        IgnitorDsl.Clip(inner = IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl()), shape = shape)
 
     /** Applies bit-depth reduction (bitcrusher). */
     @KlangScript.Method
-    fun crush(self: ExciterDsl, amount: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Crush(inner = self, amount = amount.toExciterDsl())
+    fun crush(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Crush(inner = self, amount = amount.toIgnitorDsl())
 
     /** Applies sample-rate reduction. */
     @KlangScript.Method
-    fun coarse(self: ExciterDsl, amount: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Coarse(inner = self, amount = amount.toExciterDsl())
+    fun coarse(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Coarse(inner = self, amount = amount.toIgnitorDsl())
 
     /** Applies a multi-stage phaser effect. */
     @KlangScript.Method
     fun phaser(
-        self: ExciterDsl,
-        rate: ExciterDslLike,
-        depth: ExciterDslLike,
-        center: ExciterDslLike = 1000.0,
-        sweep: ExciterDslLike = 1000.0,
-    ): ExciterDsl = ExciterDsl.Phaser(
+        self: IgnitorDsl,
+        rate: IgnitorDslLike,
+        depth: IgnitorDslLike,
+        center: IgnitorDslLike = 1000.0,
+        sweep: IgnitorDslLike = 1000.0,
+    ): IgnitorDsl = IgnitorDsl.Phaser(
         inner = self,
-        rate = rate.toExciterDsl(),
-        depth = depth.toExciterDsl(),
-        center = center.toExciterDsl(),
-        sweep = sweep.toExciterDsl(),
+        rate = rate.toIgnitorDsl(),
+        depth = depth.toIgnitorDsl(),
+        center = center.toIgnitorDsl(),
+        sweep = sweep.toIgnitorDsl(),
     )
 
     /** Applies amplitude tremolo. */
     @KlangScript.Method
-    fun tremolo(self: ExciterDsl, rate: ExciterDslLike, depth: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Tremolo(inner = self, rate = rate.toExciterDsl(), depth = depth.toExciterDsl())
+    fun tremolo(self: IgnitorDsl, rate: IgnitorDslLike, depth: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Tremolo(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl())
 
     // ── FM Synthesis ─────────────────────────────────────────────────────────
 
-    /** Applies FM synthesis with a modulator exciter. */
+    /** Applies FM synthesis with a modulator ignitor. */
     @KlangScript.Method
-    fun fm(self: ExciterDsl, modulator: ExciterDslLike, ratio: ExciterDslLike, depth: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Fm(
+    fun fm(self: IgnitorDsl, modulator: IgnitorDslLike, ratio: IgnitorDslLike, depth: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Fm(
             carrier = self,
-            modulator = modulator.toExciterDsl(),
-            ratio = ratio.toExciterDsl(),
-            depth = depth.toExciterDsl(),
+            modulator = modulator.toIgnitorDsl(),
+            ratio = ratio.toIgnitorDsl(),
+            depth = depth.toIgnitorDsl(),
         )
 
     // ── Pitch Modulation ─────────────────────────────────────────────────────
 
     /** Shifts pitch by semitones. */
     @KlangScript.Method
-    fun detune(self: ExciterDsl, semitones: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Detune(inner = self, semitones = semitones.toExciterDsl())
+    fun detune(self: IgnitorDsl, semitones: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Detune(inner = self, semitones = semitones.toIgnitorDsl())
 
     /** Shifts pitch up one octave (+12 semitones). */
     @KlangScript.Method
-    fun octaveUp(self: ExciterDsl): ExciterDsl =
-        ExciterDsl.Detune(inner = self, semitones = ExciterDsl.Constant(12.0))
+    fun octaveUp(self: IgnitorDsl): IgnitorDsl =
+        IgnitorDsl.Detune(inner = self, semitones = IgnitorDsl.Constant(12.0))
 
     /** Shifts pitch down one octave (-12 semitones). */
     @KlangScript.Method
-    fun octaveDown(self: ExciterDsl): ExciterDsl =
-        ExciterDsl.Detune(inner = self, semitones = ExciterDsl.Constant(-12.0))
+    fun octaveDown(self: IgnitorDsl): IgnitorDsl =
+        IgnitorDsl.Detune(inner = self, semitones = IgnitorDsl.Constant(-12.0))
 
     /** Applies pitch vibrato. */
     @KlangScript.Method
-    fun vibrato(self: ExciterDsl, rate: ExciterDslLike, depth: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Vibrato(inner = self, rate = rate.toExciterDsl(), depth = depth.toExciterDsl())
+    fun vibrato(self: IgnitorDsl, rate: IgnitorDslLike, depth: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Vibrato(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl())
 
     /** Applies continuous pitch acceleration over the voice duration. */
     @KlangScript.Method
-    fun accelerate(self: ExciterDsl, amount: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Accelerate(inner = self, amount = amount.toExciterDsl())
+    fun accelerate(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Accelerate(inner = self, amount = amount.toIgnitorDsl())
 
     /** Applies a pitch envelope (pitch sweep over time). */
     @KlangScript.Method
     fun pitchEnvelope(
-        self: ExciterDsl,
-        amount: ExciterDslLike,
-        attackSec: ExciterDslLike = 0.01,
-        decaySec: ExciterDslLike = 0.1,
-        releaseSec: ExciterDslLike = 0.0,
-    ): ExciterDsl = ExciterDsl.PitchEnvelope(
+        self: IgnitorDsl,
+        amount: IgnitorDslLike,
+        attackSec: IgnitorDslLike = 0.01,
+        decaySec: IgnitorDslLike = 0.1,
+        releaseSec: IgnitorDslLike = 0.0,
+    ): IgnitorDsl = IgnitorDsl.PitchEnvelope(
         inner = self,
-        amount = amount.toExciterDsl(),
-        attackSec = attackSec.toExciterDsl(),
-        decaySec = decaySec.toExciterDsl(),
-        releaseSec = releaseSec.toExciterDsl(),
+        amount = amount.toIgnitorDsl(),
+        attackSec = attackSec.toIgnitorDsl(),
+        decaySec = decaySec.toIgnitorDsl(),
+        releaseSec = releaseSec.toIgnitorDsl(),
     )
 
     // ── Analog Drift ────────────────────────────────────────────────────────
 
     /** Sets the analog drift amount (Perlin noise pitch jitter). */
     @KlangScript.Method
-    fun analog(self: ExciterDsl, amount: ExciterDslLike): ExciterDsl = when (self) {
-        is ExciterDsl.Sine -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.Sawtooth -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.Square -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.Triangle -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.Ramp -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.Zawtooth -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.Impulse -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.Pulze -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.SuperSaw -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.SuperSine -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.SuperSquare -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.SuperTri -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.SuperRamp -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.Pluck -> self.copy(analog = amount.toExciterDsl())
-        is ExciterDsl.SuperPluck -> self.copy(analog = amount.toExciterDsl())
+    fun analog(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl = when (self) {
+        is IgnitorDsl.Sine -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Sawtooth -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Square -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Triangle -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Ramp -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Zawtooth -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Impulse -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Pulze -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.SuperSaw -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.SuperSine -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.SuperSquare -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.SuperTri -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.SuperRamp -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.Pluck -> self.copy(analog = amount.toIgnitorDsl())
+        is IgnitorDsl.SuperPluck -> self.copy(analog = amount.toIgnitorDsl())
         else -> self // no-op for types without analog drift (noise sources, wrappers, etc.)
     }
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 
-    /** Adds two exciter signals together (summing). */
+    /** Adds two ignitor signals together (summing). */
     @KlangScript.Method
-    fun plus(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Plus(left = self, right = other.toExciterDsl())
+    fun plus(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Plus(left = self, right = other.toIgnitorDsl())
 
     /** Subtracts another signal from this one. */
     @KlangScript.Method
-    fun minus(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Plus(left = self, right = ExciterDsl.Mul(left = other.toExciterDsl(), right = ExciterDsl.Constant(-1.0)))
+    fun minus(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Plus(left = self, right = IgnitorDsl.Mul(left = other.toIgnitorDsl(), right = IgnitorDsl.Constant(-1.0)))
 
-    /** Multiplies two exciter signals (ring modulation / amplitude modulation). */
+    /** Multiplies two ignitor signals (ring modulation / amplitude modulation). */
     @KlangScript.Method
-    fun times(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Times(left = self, right = other.toExciterDsl())
+    fun times(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Times(left = self, right = other.toIgnitorDsl())
 
-    /** Scales the signal by a factor (ExciterDsl or Number). */
+    /** Scales the signal by a factor (IgnitorDsl or Number). */
     @KlangScript.Method
-    fun mul(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Mul(left = self, right = other.toExciterDsl())
+    fun mul(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Mul(left = self, right = other.toIgnitorDsl())
 
-    /** Divides the signal by a divisor (ExciterDsl or Number). */
+    /** Divides the signal by a divisor (IgnitorDsl or Number). */
     @KlangScript.Method
-    fun div(self: ExciterDsl, other: ExciterDslLike): ExciterDsl =
-        ExciterDsl.Div(left = self, right = other.toExciterDsl())
+    fun div(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Div(left = self, right = other.toIgnitorDsl())
 }

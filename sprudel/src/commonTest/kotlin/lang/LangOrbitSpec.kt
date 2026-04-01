@@ -40,8 +40,8 @@ class LangOrbitSpec : StringSpec({
                     SprudelPattern.compile("""seq("$pat").apply(o("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.orbit shouldBe 1
-            events[1].data.orbit shouldBe 2
+            events[0].data.cylinder shouldBe 1
+            events[1].data.cylinder shouldBe 2
         }
     }
 
@@ -50,9 +50,9 @@ class LangOrbitSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events[0].data.orbit shouldBe 0
-        events[1].data.orbit shouldBe 1
-        events[2].data.orbit shouldBe 2
+        events[0].data.cylinder shouldBe 0
+        events[1].data.cylinder shouldBe 1
+        events[2].data.cylinder shouldBe 2
     }
 
     "o() alias sets VoiceData.orbit" {
@@ -60,9 +60,9 @@ class LangOrbitSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events[0].data.orbit shouldBe 0
-        events[1].data.orbit shouldBe 1
-        events[2].data.orbit shouldBe 2
+        events[0].data.cylinder shouldBe 0
+        events[1].data.cylinder shouldBe 1
+        events[2].data.cylinder shouldBe 2
     }
 
     "orbit() sets orbit on existing pattern" {
@@ -73,11 +73,11 @@ class LangOrbitSpec : StringSpec({
         events.size shouldBe 3
 
         events[0].data.sound shouldBe "bd"
-        events[0].data.orbit shouldBe 0
+        events[0].data.cylinder shouldBe 0
         events[1].data.sound shouldBe "hh"
-        events[1].data.orbit shouldBe 1
+        events[1].data.cylinder shouldBe 1
         events[2].data.sound shouldBe "sn"
-        events[2].data.orbit shouldBe 2
+        events[2].data.cylinder shouldBe 2
     }
 
     "orbit() works as string extension" {
@@ -86,7 +86,7 @@ class LangOrbitSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.value?.asString shouldBe "bd"
-        events[0].data.orbit shouldBe 1
+        events[0].data.cylinder shouldBe 1
     }
 
     "orbit() works in compiled code" {
@@ -94,10 +94,10 @@ class LangOrbitSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 4
-        events[0].data.orbit shouldBe 0
-        events[1].data.orbit shouldBe 1
-        events[2].data.orbit shouldBe 2
-        events[3].data.orbit shouldBe 3
+        events[0].data.cylinder shouldBe 0
+        events[1].data.cylinder shouldBe 1
+        events[2].data.cylinder shouldBe 2
+        events[3].data.cylinder shouldBe 3
     }
 
     "orbit() as modifier works in compiled code" {
@@ -106,9 +106,9 @@ class LangOrbitSpec : StringSpec({
 
         events.size shouldBe 2
         events[0].data.sound shouldBe "bd"
-        events[0].data.orbit shouldBe 0
+        events[0].data.cylinder shouldBe 0
         events[1].data.sound shouldBe "hh"
-        events[1].data.orbit shouldBe 2
+        events[1].data.cylinder shouldBe 2
     }
 
     "orbit() with continuous pattern sets orbit correctly" {
@@ -118,12 +118,12 @@ class LangOrbitSpec : StringSpec({
 
         events.size shouldBe 4
         // t=0.0: sine(0) = 0.5 -> 0
-        events[0].data.orbit shouldBe 0
+        events[0].data.cylinder shouldBe 0
         // t=0.25: sine(0.25) = 1.0 -> 1
-        events[1].data.orbit shouldBe 1
+        events[1].data.cylinder shouldBe 1
         // t=0.5: sine(0.5) = 0.5 -> 0
-        events[2].data.orbit shouldBe 0
+        events[2].data.cylinder shouldBe 0
         // t=0.75: sine(0.75) = 0.0 -> 0
-        events[3].data.orbit shouldBe 0
+        events[3].data.cylinder shouldBe 0
     }
 })

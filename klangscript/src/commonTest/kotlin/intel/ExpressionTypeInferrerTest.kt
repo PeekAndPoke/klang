@@ -2,9 +2,27 @@ package io.peekandpoke.klang.script.intel
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.ast.ArrayLiteral
+import io.peekandpoke.klang.script.ast.ArrowFunction
+import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.ast.BinaryOperation
+import io.peekandpoke.klang.script.ast.BinaryOperator
+import io.peekandpoke.klang.script.ast.BooleanLiteral
+import io.peekandpoke.klang.script.ast.CallExpression
+import io.peekandpoke.klang.script.ast.Identifier
+import io.peekandpoke.klang.script.ast.MemberAccess
+import io.peekandpoke.klang.script.ast.NullLiteral
+import io.peekandpoke.klang.script.ast.NumberLiteral
+import io.peekandpoke.klang.script.ast.ObjectLiteral
+import io.peekandpoke.klang.script.ast.StringLiteral
+import io.peekandpoke.klang.script.ast.TemplateLiteral
+import io.peekandpoke.klang.script.ast.TemplatePart
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.types.*
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangParam
+import io.peekandpoke.klang.script.types.KlangProperty
+import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.script.types.KlangType
 
 class ExpressionTypeInferrerTest : StringSpec({
 
@@ -23,7 +41,7 @@ class ExpressionTypeInferrerTest : StringSpec({
                 variants = listOf(KlangProperty(name = "Math", type = KlangType("Math")))
             )
         )
-        // Osc.sine() -> ExciterDsl
+        // Osc.sine() -> IgnitorDsl
         register(
             KlangSymbol(
                 name = "sine", category = "oscillator", library = "stdlib",
@@ -32,21 +50,21 @@ class ExpressionTypeInferrerTest : StringSpec({
                         name = "sine",
                         receiver = KlangType("Osc"),
                         params = emptyList(),
-                        returnType = KlangType("ExciterDsl"),
+                        returnType = KlangType("IgnitorDsl"),
                     )
                 )
             )
         )
-        // ExciterDsl.lowpass() -> ExciterDsl
+        // IgnitorDsl.lowpass() -> IgnitorDsl
         register(
             KlangSymbol(
                 name = "lowpass", category = "filter", library = "stdlib",
                 variants = listOf(
                     KlangCallable(
                         name = "lowpass",
-                        receiver = KlangType("ExciterDsl"),
+                        receiver = KlangType("IgnitorDsl"),
                         params = listOf(KlangParam(name = "cutoffHz", type = KlangType("Number"))),
-                        returnType = KlangType("ExciterDsl"),
+                        returnType = KlangType("IgnitorDsl"),
                     )
                 )
             )
@@ -162,13 +180,13 @@ class ExpressionTypeInferrerTest : StringSpec({
 
     // ── Method calls ────────────────────────────────────────────────────
 
-    "Osc.sine() infers ExciterDsl" {
+    "Osc.sine() infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
         val call = CallExpression(
             callee = MemberAccess(obj = Identifier("Osc"), property = "sine"),
             arguments = emptyList(),
         )
-        inferrer.inferType(call)?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(call)?.simpleName shouldBe "IgnitorDsl"
     }
 
     "Math.sqrt(16) infers Number" {
@@ -182,7 +200,7 @@ class ExpressionTypeInferrerTest : StringSpec({
 
     // ── Call chains ─────────────────────────────────────────────────────
 
-    "Osc.sine().lowpass(1000) infers ExciterDsl" {
+    "Osc.sine().lowpass(1000) infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
         val chain = CallExpression(
             callee = MemberAccess(
@@ -194,7 +212,7 @@ class ExpressionTypeInferrerTest : StringSpec({
             ),
             arguments = listOf(NumberLiteral(1000.0)),
         )
-        inferrer.inferType(chain)?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(chain)?.simpleName shouldBe "IgnitorDsl"
     }
 
     "note(c3).gain(0.5) infers Pattern" {

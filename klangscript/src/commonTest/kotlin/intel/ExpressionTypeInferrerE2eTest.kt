@@ -3,10 +3,19 @@ package io.peekandpoke.klang.script.intel
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.ast.AstIndex
+import io.peekandpoke.klang.script.ast.AstNode
+import io.peekandpoke.klang.script.ast.CallExpression
+import io.peekandpoke.klang.script.ast.Expression
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.ast.MemberAccess
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.parser.KlangScriptParser
-import io.peekandpoke.klang.script.types.*
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangParam
+import io.peekandpoke.klang.script.types.KlangProperty
+import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.script.types.KlangType
 
 /**
  * End-to-end tests: parse real KlangScript source → build AstIndex → infer types
@@ -33,7 +42,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
                 variants = listOf(
                     KlangCallable(
                         name = "sine", receiver = KlangType("Osc"),
-                        params = emptyList(), returnType = KlangType("ExciterDsl")
+                        params = emptyList(), returnType = KlangType("IgnitorDsl")
                     )
                 )
             )
@@ -43,9 +52,9 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
                 name = "lowpass", category = "filter", library = "stdlib",
                 variants = listOf(
                     KlangCallable(
-                        name = "lowpass", receiver = KlangType("ExciterDsl"),
+                        name = "lowpass", receiver = KlangType("IgnitorDsl"),
                         params = listOf(KlangParam(name = "cutoffHz", type = KlangType("Number"))),
-                        returnType = KlangType("ExciterDsl")
+                        returnType = KlangType("IgnitorDsl")
                     )
                 )
             )
@@ -55,14 +64,14 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
                 name = "adsr", category = "envelope", library = "stdlib",
                 variants = listOf(
                     KlangCallable(
-                        name = "adsr", receiver = KlangType("ExciterDsl"),
+                        name = "adsr", receiver = KlangType("IgnitorDsl"),
                         params = listOf(
                             KlangParam(name = "a", type = KlangType("Number")),
                             KlangParam(name = "d", type = KlangType("Number")),
                             KlangParam(name = "s", type = KlangType("Number")),
                             KlangParam(name = "r", type = KlangType("Number")),
                         ),
-                        returnType = KlangType("ExciterDsl")
+                        returnType = KlangType("IgnitorDsl")
                     )
                 )
             )
@@ -152,9 +161,9 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
 
     // ── Parsed method calls ─────────────────────────────────────────────
 
-    "parsed: Osc.sine() infers ExciterDsl" {
+    "parsed: Osc.sine() infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
-        inferrer.inferType(parseExpr("Osc.sine()"))?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(parseExpr("Osc.sine()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
     "parsed: Math.sqrt(16) infers Number" {
@@ -169,14 +178,14 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
 
     // ── Parsed call chains ──────────────────────────────────────────────
 
-    "parsed: Osc.sine().lowpass(1000) infers ExciterDsl" {
+    "parsed: Osc.sine().lowpass(1000) infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
-        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000)"))?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000)"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "parsed: Osc.sine().lowpass(1000).adsr(0.01, 0.2, 0.5, 0.5) infers ExciterDsl" {
+    "parsed: Osc.sine().lowpass(1000).adsr(0.01, 0.2, 0.5, 0.5) infers IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(registry())
-        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000).adsr(0.01, 0.2, 0.5, 0.5)"))?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000).adsr(0.01, 0.2, 0.5, 0.5)"))?.simpleName shouldBe "IgnitorDsl"
     }
 
     "parsed: note(c3).gain(0.5) infers Pattern" {
@@ -211,7 +220,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         callExpr shouldNotBe null
         // This should be the inner CallExpression: Osc.sine()
         // Infer its type
-        inferrer.inferType(callExpr!!)?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(callExpr!!)?.simpleName shouldBe "IgnitorDsl"
     }
 
     "AstIndex nodeAt: infer type of node found inside Osc.sine() call" {
@@ -234,7 +243,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
             current = astIndex.parentOf(current)
         }
         callExpr shouldNotBe null
-        inferrer.inferType(callExpr!!)?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(callExpr!!)?.simpleName shouldBe "IgnitorDsl"
     }
 
     // ── Receiver-aware hover: detect MemberAccess context ───────────────
@@ -270,8 +279,8 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
                     name = "adsr", category = "uncategorized", library = "stdlib",
                     variants = listOf(
                         KlangCallable(
-                            name = "adsr", receiver = KlangType("ExciterDsl"),
-                            params = emptyList(), returnType = KlangType("ExciterDsl")
+                            name = "adsr", receiver = KlangType("IgnitorDsl"),
+                            params = emptyList(), returnType = KlangType("IgnitorDsl")
                         )
                     )
                 )
@@ -348,8 +357,8 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
                     name = "adsr", category = "uncategorized", library = "stdlib",
                     variants = listOf(
                         KlangCallable(
-                            name = "adsr", receiver = KlangType("ExciterDsl"),
-                            params = emptyList(), returnType = KlangType("ExciterDsl")
+                            name = "adsr", receiver = KlangType("IgnitorDsl"),
+                            params = emptyList(), returnType = KlangType("IgnitorDsl")
                         )
                     )
                 )
@@ -380,7 +389,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         // Look up the correct variant
         val symbol = reg.getSymbolWithReceiver("adsr", receiverType)
         symbol shouldNotBe null
-        // Should have only the SprudelPattern variant, not the ExciterDsl one
+        // Should have only the SprudelPattern variant, not the IgnitorDsl one
         symbol!!.variants.size shouldBe 1
         (symbol.variants[0] as KlangCallable).receiver?.simpleName shouldBe "SprudelPattern"
     }
@@ -411,12 +420,12 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
 
         // Infer receiver type
         val receiverType = inferrer.inferType(memberAccess!!.obj)
-        receiverType?.simpleName shouldBe "ExciterDsl"
+        receiverType?.simpleName shouldBe "IgnitorDsl"
 
         // Look up the correct symbol variant
         val symbol = reg.getSymbolWithReceiver("lowpass", receiverType)
         symbol shouldNotBe null
         symbol!!.variants.size shouldBe 1
-        (symbol.variants[0] as KlangCallable).receiver?.simpleName shouldBe "ExciterDsl"
+        (symbol.variants[0] as KlangCallable).receiver?.simpleName shouldBe "IgnitorDsl"
     }
 })

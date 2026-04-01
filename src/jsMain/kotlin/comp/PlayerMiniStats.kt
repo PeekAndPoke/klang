@@ -67,13 +67,13 @@ class PlayerMiniStats(ctx: NoProps) : PureComponent(ctx) {
         div {
             ui.horizontal.list {
                 noui.bottom.aligned.item {
-                    val active = playerDiagnostics?.diagnostics?.orbits?.count { it.active }
-                    roundOrbitsGauge(value = active?.toDouble(), size = 50.px)
+                    val active = playerDiagnostics?.diagnostics?.cylinders?.count { it.active }
+                    roundCylindersGauge(value = active?.toDouble(), size = 50.px)
                 }
 
                 noui.bottom.aligned.item {
                     val headroom = playerDiagnostics?.diagnostics?.renderHeadroom
-                    renderHeadroomGauge(value = headroom, size = 62.px)
+                    renderMotorHeatGauge(value = headroom, size = 62.px)
                 }
 
                 noui.bottom.aligned.item {

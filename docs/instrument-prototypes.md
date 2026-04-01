@@ -1,4 +1,4 @@
-# Instrument Prototypes — ExciterDsl
+# Instrument Prototypes — IgnitorDsl
 
 A collection of instrument designs built with the Osc DSL.
 These are starting points — tweak parameters to taste.

@@ -13,33 +13,33 @@
 - **Ring-buffer IPC**: `KlangCommLink` uses two `KlangRingBuffer`s — no locking between threads.
 - **Voice pipeline**: `Voice` interface + `VoiceImpl` runs a **Pitch → Excite → Filter** pipeline.
   Filter stage is a composable `List<BlockRenderer>` built by `buildFilterPipeline()`.
-  Pitch stage is still inline (pending extraction). Excite delegates to `Exciter`.
-- **Orbits = effect buses**: up to 16 mixing channels, each with independent delay/reverb/phaser/compressor/ducking.
+  Pitch stage is still inline (pending extraction). Excite delegates to `Ignitor`.
+- **Cylinders = effect buses**: up to 16 mixing channels, each with independent delay/reverb/phaser/compressor/ducking.
 - **Master limiter**: −1 dB threshold, 20:1 ratio, 1 ms attack, 100 ms release — always last in chain.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
 
-## Exciter Composable Architecture (2026-03-19)
+## Ignitor Composable Architecture (2026-03-19)
 
-New package `audio_be/.../exciter/` — composable per-voice effect combinators.
-Files: Exciter, ExciteContext, ScratchBuffers, ExciterEnvelopes, ExciterFilters,
-ExciterEffects, ExciterPitchMod, ExciterFm. Phase 0+1 complete (additive, nothing wired in yet).
+New package `audio_be/.../ignitor/` — composable per-voice effect combinators.
+Files: Ignitor, IgniteContext, ScratchBuffers, IgnitorEnvelopes, IgnitorFilters,
+IgnitorEffects, IgnitorPitchMod, IgnitorFm. Phase 0+1 complete (additive, nothing wired in yet).
 
-## Exciter Param Slots — "Everything is a Signal" (2026-03-26)
+## Ignitor Param Slots — "Everything is a Signal" (2026-03-26)
 
-All numeric exciter parameters converted from `Double` to `ExciterDsl` (Param slots).
-`ExciterDsl.Param(name, default, description)` is a new leaf node that produces a constant signal
-by default, but can be replaced with any exciter subtree for audio-rate modulation.
+All numeric ignitor parameters converted from `Double` to `IgnitorDsl` (Param slots).
+`IgnitorDsl.Param(name, default, description)` is a new leaf node that produces a constant signal
+by default, but can be replaced with any ignitor subtree for audio-rate modulation.
 
 Key changes:
 
-- **`ParamExciter`** runtime class fills buffer with constant value
+- **`ParamIgnitor`** runtime class fills buffer with constant value
 - **`getParamSlots()`** walks DSL tree to discover all Param leaves (for generic UI)
 - **Gain separated from oscillators**: factories produce raw output, gain applied via `withGain()`
 - **`analog`** param: lazy `AnalogDrift` init on first block via `initAnalogDrift()`
 - **Control-rate params** (filter cutoff, ADSR times, etc.): read once per block via `readParam()`
-- **oscParams override**: `toExciter(oscParams)` propagates through tree; Param nodes check map by name
+- **oscParams override**: `toIgnitor(oscParams)` propagates through tree; Param nodes check map by name
 - **New DSL nodes**: Distort, Crush, Coarse, Phaser, Tremolo, Vibrato, Accelerate, PitchEnvelope
-- **Convenience wrappers**: Double-accepting extension functions on ExciterDsl still work
+- **Convenience wrappers**: Double-accepting extension functions on IgnitorDsl still work
 
 ### Known Issues to Revisit
 
@@ -62,15 +62,15 @@ Voice rendering refactored into **Pitch → Excite → Filter** pipeline using c
 Key files:
 
 - `voices/strip/BlockRenderer.kt` — `fun interface BlockRenderer { fun render(ctx: BlockContext) }`
-- `voices/strip/BlockContext.kt` — shared context (buffers, timing, exciter)
+- `voices/strip/BlockContext.kt` — shared context (buffers, timing, ignitor)
 - `voices/strip/EnvelopeCalc.kt` — shared control-rate envelope calculation
 - `voices/strip/pitch/` — VibratoRenderer, AccelerateRenderer, PitchEnvelopeRenderer, FmRenderer
-- `voices/strip/excite/ExciteRenderer.kt` — wraps Exciter as BlockRenderer
+- `voices/strip/excite/IgniteRenderer.kt` — wraps Ignitor as BlockRenderer
 - `voices/strip/filter/` — FilterModRenderer, AudioFilterRenderer, EnvelopeRenderer, FilterPipelineBuilder
 
 Status: **Complete.** `Voice` (merged from Voice interface + VoiceImpl) runs a `List<BlockRenderer>` pipeline:
-Pitch renderers → ExciteRenderer → Filter renderers → SendRenderer.
-Bus pipeline: composable `BusEffect` pipeline (`orbits/bus/`).
+Pitch renderers → IgniteRenderer → Filter renderers → SendRenderer.
+Bus pipeline: composable `KatalystEffect` pipeline (`cylinders/bus/`).
 `VoiceScheduler` split into `VoiceScheduler` (scheduling) + `VoiceFactory` (voice construction).
 Legacy effect filters (BitCrush, SampleRateReducer, Distortion, Tremolo, Phaser) replaced by
 BlockRenderer implementations. ~426 tests across 35 files.
@@ -80,7 +80,7 @@ See `docs/agent-tasks/audio-pipeline-open-topics.md` for remaining open topics.
 
 - `KlangTime.internalMsNow()` is monotonic, NOT wall-clock — use only for relative timing.
 - JS target requires ES2015 classes for AudioWorkletProcessor inheritance (KMP default is ES5 — override needed).
-- `MonoSamplePcm` is always mono; stereo is handled at the `Orbits` pan/mix level.
+- `MonoSamplePcm` is always mono; stereo is handled at the `Cylinders` pan/mix level.
 - `FilterDefs.addOrReplace()` is additive — calling it twice with the same filter type replaces, not duplicates.
 - `VoiceData` fields are nullable with defaults — omitting a field means "use engine default".
-- `duckOrbit` in `VoiceData` sets the orbit ID to duck when a voice plays; ducking is cross-orbit sidechain.
+- `duckCylinder` in `VoiceData` sets the cylinder ID to duck when a voice plays; ducking is cross-cylinder sidechain.

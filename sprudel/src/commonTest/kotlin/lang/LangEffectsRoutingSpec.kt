@@ -144,7 +144,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val p = note("a b").apply(orbit("0 2"))
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
-        events.map { it.data.orbit } shouldBe listOf(0, 2)
+        events.map { it.data.cylinder } shouldBe listOf(0, 2)
     }
 
     "control pattern orbit() sets VoiceData.orbit on existing pattern" {
@@ -152,7 +152,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val p = base.orbit("1 3")
         val events = p.queryArc(0.0, 2.0)
         events.size shouldBe 4
-        events.map { it.data.orbit } shouldBe listOf(1, 3, 1, 3)
+        events.map { it.data.cylinder } shouldBe listOf(1, 3, 1, 3)
     }
 
     "distort() works within compiled code as top-level PatternMapper" {
@@ -305,7 +305,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.orbit } shouldBe listOf(0, 2)
+        events.map { it.data.cylinder } shouldBe listOf(0, 2)
     }
 
     "orbit() works within compiled code as chained-level function" {
@@ -314,7 +314,7 @@ class LangEffectsRoutingSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.orbit } shouldBe listOf(0, 2)
+        events.map { it.data.cylinder } shouldBe listOf(0, 2)
     }
 
     // PatternMapperFn chaining

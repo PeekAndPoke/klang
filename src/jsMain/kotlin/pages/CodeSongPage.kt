@@ -46,8 +46,39 @@ import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.Flex
+import kotlinx.css.FlexBasis
+import kotlinx.css.FlexDirection
+import kotlinx.css.LinearDimension
+import kotlinx.css.Overflow
+import kotlinx.css.Padding
+import kotlinx.css.alignSelf
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.flex
+import kotlinx.css.flexDirection
+import kotlinx.css.flexShrink
+import kotlinx.css.height
+import kotlinx.css.minHeight
+import kotlinx.css.overflow
+import kotlinx.css.overflowX
+import kotlinx.css.overflowY
+import kotlinx.css.padding
+import kotlinx.css.paddingBottom
+import kotlinx.css.paddingLeft
+import kotlinx.css.px
+import kotlinx.css.vh
+import kotlinx.css.width
+import kotlinx.html.FlowContent
+import kotlinx.html.Tag
+import kotlinx.html.div
+import kotlinx.html.p
+import kotlinx.html.title
 import kotlinx.serialization.builtins.serializer
 import org.w3c.dom.pointerevents.PointerEvent
 import kotlin.js.Date
@@ -87,8 +118,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     val v = 2
 
-    val cpsStream = StreamSource(builtIn?.cps ?: 0.5)
-        .persistInLocalStorage("song-$v-$songId-cps", Double.serializer())
+    val rpmStream = StreamSource(builtIn?.rpm ?: 30.0)
+        .persistInLocalStorage("song-$v-$songId-rpm", Double.serializer())
 
     val songTitleStream = StreamSource(builtIn?.title ?: "New Song")
         .persistInLocalStorage("song-$v-$songId-title", String.serializer())
@@ -121,10 +152,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private var songTitle: String by value(songTitleStream()) { songTitleStream(it) }
 
-    private var cps: Double by value(cpsStream()) {
-        cpsStream(it)
+    private var rpm: Double by value(rpmStream()) {
+        rpmStream(it)
         cancelHighlights()
-        playback?.updateCyclesPerSecond(it)
+        playback?.updateRpm(it)
     }
 
     private var code: String by value(codeStream()) {
@@ -195,8 +226,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         builtIn?.let { b ->
             code = b.code
             codeStream(b.code)
-            cps = b.cps
-            cpsStream(b.cps)
+            rpm = b.rpm
+            rpmStream(b.rpm)
             songTitle = b.title
             songTitleStream(b.title)
 
@@ -291,7 +322,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             }
 
                             playback?.start(
-                                KlangCyclicPlayback.Options(cyclesPerSecond = cps)
+                                KlangCyclicPlayback.Options(rpm = rpm)
                             )
                         }
                     }
@@ -445,17 +476,17 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             }
                         }
 
-                        // CPS field
+                        // RPM field
                         noui.item {
                             css { width = 140.px }
-                            UiInputField(cps, { cps = it }) {
-                                step(0.01)
+                            UiInputField(rpm, { rpm = it }) {
+                                step(0.5)
                                 appear { large }
                                 wrapFieldWith { fluid }
                                 leftLabel {
                                     ui.grey.label {
-                                        title = "Cycles per second"
-                                        +"CPS"
+                                        title = "Revolutions per minute"
+                                        +"RPM"
                                     }
                                 }
                             }

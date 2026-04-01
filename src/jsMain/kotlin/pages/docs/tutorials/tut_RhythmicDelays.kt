@@ -58,7 +58,7 @@ val rhythmicDelaysTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Putting It All Together",
-            text = "Here is a full track built around delay as a creative force. The melody uses dotted delay for cascading echoes. The percussion uses short delay to generate rhythmic fills. The bass stays dry for clarity. Each layer with different delay settings uses its own orbit.",
+            text = "Here is a full track built around delay as a creative force. The melody uses dotted delay for cascading echoes. The percussion uses short delay to generate rhythmic fills. The bass stays dry for clarity. Each layer with different delay settings uses its own cylinder.",
             code = """stack(
   n("0 ~ 4 ~ 7 ~ 4 ~").scale("C3:minor")
     .sound("saw").lpf(800)

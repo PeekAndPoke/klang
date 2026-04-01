@@ -2,8 +2,13 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel._applyControlFromParams
+import io.peekandpoke.klang.sprudel._liftNumericField
+import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
+import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.withOscParam
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -1494,7 +1499,7 @@ fun PatternMapperFn.adsr(params: PatternLike? = null): PatternMapperFn =
 // -- orbit() / o() ----------------------------------------------------------------------------------------------------
 
 private val orbitMutation = voiceModifier {
-    copy(orbit = it?.asIntOrNull())
+    copy(cylinder = it?.asIntOrNull())
 }
 
 private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -1636,7 +1641,7 @@ fun o(index: PatternLike? = null): PatternMapperFn =
 // -- duckorbit() / duck() ---------------------------------------------------------------------------------------------
 
 private val duckOrbitMutation = voiceModifier {
-    copy(duckOrbit = it?.asIntOrNull())
+    copy(duckCylinder = it?.asIntOrNull())
 }
 
 private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {

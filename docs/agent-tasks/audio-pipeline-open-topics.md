@@ -8,9 +8,9 @@ Last updated: 2026-03-24. Final review: 3x SHIP (SW, QA, Audio).
 
 ## 1. Bus-Level Configuration
 
-Voice currently carries orbit config (delay.time, reverb.roomSize, phaser.*, compressor.*,
+Voice currently carries cylinder config (delay.time, reverb.roomSize, phaser.*, compressor.*,
 ducking.*) that should move to Bus-level configuration. This would decouple voice data from
-bus parameters and allow per-orbit effect settings independent of voice scheduling.
+bus parameters and allow per-cylinder effect settings independent of voice scheduling.
 
 ## 2. Master Configuration & Analog Saturation
 
@@ -42,6 +42,6 @@ Karplus-Strong is already implemented. See archived `modulated-delay-line-effect
 
 - **PitchEnvelopeRenderer per-sample `pow()`** — could optimize sustain phase (constant value).
 - **Triangle oscillator not band-limited** — aliasing at -12dB/oct, acceptable for most use.
-- **Orbit "last writer wins"** — by design (strudel convention), can cause parameter flickering.
+- **Cylinder "last writer wins"** — by design (strudel convention), can cause parameter flickering.
 - **VoiceScheduler cut group TODO** — "Use a fade out / release phase instead of hard cut?"
 - **VoiceScheduler scheduling tests** — only diagnostics tested, promotion logic untested.

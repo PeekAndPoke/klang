@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.audio_be
 
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.effects.Compressor
-import io.peekandpoke.klang.audio_be.orbits.Orbits
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 
 /**
- * Standard renderer that drives the DSP graph (VoiceScheduler -> Orbits -> Stereo Output).
+ * Standard renderer that drives the DSP graph (VoiceScheduler -> Cylinders -> Stereo Output).
  *
  * This class is stateless regarding the playback cursor. It simply renders "what is requested".
  */
@@ -13,7 +13,7 @@ class KlangAudioRenderer(
     sampleRate: Int,
     private val blockFrames: Int,
     private val voices: VoiceScheduler,
-    private val orbits: Orbits,
+    private val cylinders: Cylinders,
 ) {
     private val mix = StereoBuffer(blockFrames)
 
@@ -32,13 +32,13 @@ class KlangAudioRenderer(
     ) {
         // 1. Reset Mix Buffers
         mix.clear()
-        orbits.clearAll()
+        cylinders.clearAll()
 
         // 2. Process Voices
         voices.process(cursorFrame)
 
-        // 3. Mix Voices into Orbits -> Main Mix
-        orbits.processAndMix(mix)
+        // 3. Mix Voices into Cylinders -> Main Mix
+        cylinders.processAndMix(mix)
 
         // 4. Apply dynamic limiter
         // This handles the bulk of the loudness management musically

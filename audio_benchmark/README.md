@@ -1,6 +1,6 @@
 # Audio Benchmark
 
-Performance benchmark suite for Klang's exciter oscillators and DSP compositions.
+Performance benchmark suite for Klang's ignitor oscillators and DSP compositions.
 Measures real-time factor (RTF) — values below 1.0 mean faster than real-time.
 
 ## Running

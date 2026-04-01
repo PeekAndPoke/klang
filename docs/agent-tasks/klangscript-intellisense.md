@@ -30,7 +30,7 @@ for browser/worker).
 | `SprudelPattern`                       | sprudel  | Main pattern type — most DSL methods return this        |
 | `String`                               | built-in | String literals — many DSL functions accept as receiver |
 | `PatternMapperFn`                      | sprudel  | Mapper functions — chainable transformers               |
-| `ExciterDsl`                           | stdlib   | Oscillator signal graph builder                         |
+| `IgnitorDsl`                           | stdlib   | Oscillator signal graph builder                         |
 | `Number`, `Boolean`, `Array`, `Object` | built-in | Primitive types                                         |
 | `Osc`, `Math`                          | stdlib   | Singleton objects                                       |
 

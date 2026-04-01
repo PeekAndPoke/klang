@@ -2,7 +2,7 @@ package io.peekandpoke.klang.audio_be
 
 /**
  * Resolved distortion shape: clipping function + optional output gain and DC block flag.
- * Shared between the exciter-based and block-renderer-based distortion implementations.
+ * Shared between the ignitor-based and block-renderer-based distortion implementations.
  */
 internal data class ResolvedShape(
     val fn: (Double) -> Double,

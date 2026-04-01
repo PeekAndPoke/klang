@@ -3,8 +3,8 @@ package io.peekandpoke.klang.audio_be
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlin.math.abs
@@ -16,15 +16,15 @@ class KlangAudioRendererSpec : StringSpec({
 
     fun createRenderer(): KlangAudioRenderer {
         val commLink = KlangCommLink()
-        val orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate)
+        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
 
         val voiceScheduler = VoiceScheduler(
             options = VoiceScheduler.Options(
                 commLink = commLink.backend,
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
-                exciterRegistry = ExciterRegistry(),
-                orbits = orbits,
+                ignitorRegistry = IgnitorRegistry(),
+                cylinders = cylinders,
             )
         )
 
@@ -32,7 +32,7 @@ class KlangAudioRendererSpec : StringSpec({
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voices = voiceScheduler,
-            orbits = orbits,
+            cylinders = cylinders,
         )
     }
 

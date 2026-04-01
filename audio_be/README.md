@@ -114,11 +114,11 @@ Every voice follows this exact processing order:
     │                                      │
     │   • Post-Gain                        │
     │   • Equal-Power Panning (L/R)        │
-    │   • Sum to Orbit Mix Buffer          │
+    │   • Sum to Cylinder Mix Buffer          │
     │   • Delay Send                       │
     │   • Reverb Send                      │
     │                                      │
-    │   Final stage before orbit effects.  │
+    │   Final stage before cylinder effects.  │
     └──────────────────────────────────────┘
                     ↓
     ┌──────────────────────────────────────┐
@@ -151,7 +151,7 @@ Effects are implemented as separate `AudioFilter` classes:
 - **SynthVoice / SampleVoice** - Implement source generation
 - **AudioFilter** - Independent, reusable effect modules
 - **VoiceScheduler** - Manages voice lifecycle and routing
-- **Orbit** - Handles bus-level effects and mixing
+- **Cylinder** - Handles bus-level effects and mixing
 
 ### 3. Correct Signal Flow
 
@@ -195,15 +195,15 @@ audio_be/src/commonMain/kotlin/
 ├── osci/
 │   └── OscFn.kt              # Oscillator functions
 │
-├── orbits/
-│   ├── Orbit.kt              # Per-orbit mixing and effects
-│   └── Orbits.kt             # Orbit management
+├── cylinders/
+│   ├── Cylinder.kt              # Per-cylinder mixing and effects
+│   └── Cylinders.kt             # Cylinder management
 │
 └── effects/
     ├── Delay.kt              # Time-based effects
     ├── Reverb.kt
     ├── Compressor.kt
-    └── Phaser.kt             # Orbit-level phaser
+    └── Phaser.kt             # Cylinder-level phaser
 ```
 
 ## Adding New Effects
@@ -268,6 +268,6 @@ Run the audio backend tests:
 - [ ] Configurable effect chains (user-defined order)
 - [ ] Parallel effect processing (multiple paths)
 - [ ] Effect presets/snapshots
-- [ ] Per-voice compression (currently orbit-level)
+- [ ] Per-voice compression (currently cylinder-level)
 - [ ] Dynamic filter instantiation (runtime effect changes)
 - [ ] SIMD optimizations for effect processing

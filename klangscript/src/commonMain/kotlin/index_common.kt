@@ -11,7 +11,7 @@ val stdlibLib: KlangScriptLibrary = KlangStdLib.create()
  * Create a [KlangScriptEngine] with the standard library pre-registered.
  *
  * @param attrs Mutable typed attributes for engine-level state. The app can set
- *   values (e.g. ExciterRegistrar) on it before or after building.
+ *   values (e.g. IgnitorRegistrar) on it before or after building.
  * @param builder Optional configuration block for additional registrations
  * @return A fully configured engine
  */

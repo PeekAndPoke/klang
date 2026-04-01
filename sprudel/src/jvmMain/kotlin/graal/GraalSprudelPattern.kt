@@ -366,7 +366,7 @@ class GraalSprudelPattern(
                 tremoloPhase = tremoloPhase,
                 tremoloShape = tremoloShape,
                 // Ducking / Sidechain
-                duckOrbit = duckOrbit,
+                duckCylinder = duckOrbit,
                 duckAttack = duckAttack,
                 duckDepth = duckDepth,
                 // Filters (flat fields) - each filter has its own resonance
@@ -403,7 +403,7 @@ class GraalSprudelPattern(
                 nfrelease = nfrelease,
                 nfenv = nfenv,
                 // Routing
-                orbit = orbit,
+                cylinder = orbit,
                 // Pan
                 pan = pan,
                 // Delay

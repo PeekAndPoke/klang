@@ -109,24 +109,24 @@ data class ScheduledVoice(
 
 ### Ducking (sidechain)
 
-| Field        | Type      | Meaning                                    |
-|--------------|-----------|--------------------------------------------|
-| `duckOrbit`  | `Int?`    | Orbit ID to duck when this voice plays     |
-| `duckAttack` | `Double?` | Ducking attack time (s)                    |
-| `duckDepth`  | `Double?` | Ducking depth (0 = full mute, 1 = no duck) |
+| Field          | Type      | Meaning                                    |
+|----------------|-----------|--------------------------------------------|
+| `duckCylinder` | `Int?`    | Cylinder ID to duck when this voice plays  |
+| `duckAttack`   | `Double?` | Ducking attack time (s)                    |
+| `duckDepth`    | `Double?` | Ducking depth (0 = full mute, 1 = no duck) |
 
 ### Routing
 
-| Field   | Type      | Meaning                                      |
-|---------|-----------|----------------------------------------------|
-| `orbit` | `Int?`    | Orbit (effect bus) ID for this voice         |
-| `pan`   | `Double?` | Stereo pan (−1 = full left, +1 = full right) |
+| Field      | Type      | Meaning                                      |
+|------------|-----------|----------------------------------------------|
+| `cylinder` | `Int?`    | Cylinder (effect bus) ID for this voice      |
+| `pan`      | `Double?` | Stereo pan (−1 = full left, +1 = full right) |
 
-### Time-Based Effects (on orbit)
+### Time-Based Effects (on cylinder)
 
 | Field           | Type      | Meaning                                 |
 |-----------------|-----------|-----------------------------------------|
-| `delay`         | `Double?` | Dry/wet mix for orbit delay             |
+| `delay`         | `Double?` | Dry/wet mix for cylinder delay          |
 | `delayTime`     | `Double?` | Delay time (s)                          |
 | `delayFeedback` | `Double?` | Delay feedback (0–1)                    |
 | `room`          | `Double?` | Reverb dry/wet mix                      |

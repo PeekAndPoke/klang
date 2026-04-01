@@ -40,8 +40,8 @@ class LangDuckingSpec : StringSpec({
                     SprudelPattern.compile("""seq("$pat").apply(duck("$ctrl"))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.duckOrbit shouldBe 1
-            events[1].data.duckOrbit shouldBe 2
+            events[0].data.duckCylinder shouldBe 1
+            events[1].data.duckCylinder shouldBe 2
         }
     }
 
@@ -111,7 +111,7 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckOrbit shouldBe 1
+        events[0].data.duckCylinder shouldBe 1
     }
 
     "duck() alias sets duckOrbit" {
@@ -119,7 +119,7 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckOrbit shouldBe 0
+        events[0].data.duckCylinder shouldBe 0
     }
 
     "duck() can be used as PatternMapper" {
@@ -127,7 +127,7 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckOrbit shouldBe 1
+        events[0].data.duckCylinder shouldBe 1
     }
 
     "duckattack() sets duckAttack" {
@@ -178,7 +178,7 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.duckOrbit shouldBe 0
+        events[0].data.duckCylinder shouldBe 0
         events[0].data.duckAttack shouldBe 0.1
         events[0].data.duckDepth shouldBe 0.8
     }
@@ -193,7 +193,7 @@ class LangDuckingSpec : StringSpec({
         events.size shouldBe 1
         val voiceData = events[0].data.toVoiceData()
 
-        voiceData.duckOrbit shouldBe 0
+        voiceData.duckCylinder shouldBe 0
         voiceData.duckAttack shouldBe 0.15
         voiceData.duckDepth shouldBe 0.6
     }
@@ -206,7 +206,7 @@ class LangDuckingSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.duckOrbit shouldBe 2
+        events[0].data.duckCylinder shouldBe 2
         events[0].data.duckAttack shouldBe 0.1
         events[0].data.duckDepth shouldBe 0.5
     }
