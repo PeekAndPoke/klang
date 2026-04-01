@@ -2,8 +2,20 @@
 
 Rename the audio engine's core vocabulary to follow the combustion engine metaphor.
 
-**Branch:** `motor-branding-rename` (create from current)  
+**Branch:** `renaming-motor-metaphor`  
 **Slogan:** "Prepare, Ignite, Refine, Fuse"
+
+## Progress
+
+| Phase | Description                       | Status         |
+|-------|-----------------------------------|----------------|
+| 1     | Exciter → Ignitor                 | DONE, verified |
+| 2     | Orbit → Cylinder + Bus → Katalyst | DONE, verified |
+| 3     | Master → Fusion                   | DONE, verified |
+| 4     | CPS → RPM (engine API level)      | TODO           |
+| 5     | Sprudel additions (rpm, cylinder) | TODO           |
+
+All phases 1-3 verified: JVM+JS compile, all module tests pass, audio playback confirmed working.
 
 ## Naming Table
 
@@ -22,7 +34,7 @@ Rename the audio engine's core vocabulary to follow the combustion engine metaph
 
 Sprudel module is **excluded** from renames. Only additions (aliases) in sprudel.
 
-## Phase 1: Exciter → Ignitor (largest, most self-contained)
+## Phase 1: Exciter → Ignitor (DONE)
 
 ### 1a. Directory renames (git mv)
 
@@ -103,7 +115,7 @@ Modules affected: `audio_be`, `audio_bridge`, `klangscript`, `audio_benchmark`, 
 
 ---
 
-## Phase 2: Orbit → Cylinder + Bus → Katalyst
+## Phase 2: Orbit → Cylinder + Bus → Katalyst (DONE)
 
 ### 2a. Directory renames
 
@@ -165,6 +177,11 @@ Package renames:
 **SprudelVoiceData:** Do NOT rename sprudel internal fields. Keep `orbit`/`duckOrbit` in `SprudelVoiceData`. In
 `toVoiceData()`, map: `orbit → cylinder`, `duckOrbit → duckCylinder`.
 
+**Implementation note (done):** SprudelVoiceData.toVoiceData() updated to map `orbit → cylinder` and
+`duckOrbit → duckCylinder`.
+Sprudel tests that assert on `SprudelVoiceData.orbit` keep using `.data.orbit`. Tests that assert on `VoiceData` (via
+`.toVoiceData()`) now use `.cylinder` / `.duckCylinder`.
+
 ### 2e. Tutorial strings
 
 Tutorial files contain sprudel code strings like `.orbit(1)` — these do NOT change (sprudel DSL preserved). Only rename
@@ -181,7 +198,7 @@ Kotlin class references.
 
 ---
 
-## Phase 3: Master → Fusion (~6 files)
+## Phase 3: Master → Fusion (DONE)
 
 Smallest phase. Variable/parameter renames only.
 
