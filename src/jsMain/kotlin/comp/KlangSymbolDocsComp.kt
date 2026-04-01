@@ -16,8 +16,49 @@ import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import kotlinx.browser.window
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Align
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.Flex
+import kotlinx.css.FlexBasis
+import kotlinx.css.FlexDirection
+import kotlinx.css.LinearDimension
+import kotlinx.css.Margin
+import kotlinx.css.Overflow
+import kotlinx.css.Padding
+import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
+import kotlinx.css.border
+import kotlinx.css.borderColor
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.flex
+import kotlinx.css.flexDirection
+import kotlinx.css.flexShrink
+import kotlinx.css.fontFamily
+import kotlinx.css.fontSize
+import kotlinx.css.gap
+import kotlinx.css.margin
+import kotlinx.css.marginBottom
+import kotlinx.css.maxWidth
+import kotlinx.css.minWidth
+import kotlinx.css.overflowX
+import kotlinx.css.padding
+import kotlinx.css.px
+import kotlinx.css.vw
+import kotlinx.css.width
+import kotlinx.html.FlowContent
+import kotlinx.html.Tag
+import kotlinx.html.b
+import kotlinx.html.div
+import kotlinx.html.pre
+import kotlinx.html.tbody
+import kotlinx.html.td
+import kotlinx.html.tr
 
 @Suppress("FunctionName")
 fun Tag.KlangSymbolDocsComp(
@@ -73,12 +114,22 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             onClick { event -> event.stopPropagation() }
             onContextMenu { event -> event.stopPropagation() }
 
-            ui.two.column.grid {
+            ui.three.column.grid {
                 noui.middle.aligned.column {
-                    ui.header {
-                        +symbol.name
+                    ui.header { +symbol.name }
+                }
+
+                noui.middle.aligned.column {
+                    if (symbol.aliases.isNotEmpty()) {
+                        ui.horizontal.list {
+                            noui.item { +"Alias:" }
+                            symbol.aliases.forEach { alias ->
+                                noui.item { +alias }
+                            }
+                        }
                     }
                 }
+
                 noui.middle.aligned.right.aligned.column {
                     ui.basic.label {
                         if (symbol.library.isBlank()) {
@@ -114,21 +165,42 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                     }
                 }
 
-                // ── Aliases ───────────────────────────────────────────────────────
-                if (symbol.aliases.isNotEmpty()) {
+                // ── Parameters ───────────────────────────────────────────────────
+                val params = sortedVariants
+                    .filterIsInstance<KlangCallable>()
+                    .flatMap { it.params }
+                    .distinctBy { it.name }
+
+                if (params.isNotEmpty()) {
                     noui.item {
-                        sectionLabel("Aliases")
+                        sectionLabel("Parameters")
                         noui.content {
-                            ui.horizontal.list {
-                                symbol.aliases.forEach { alias ->
-                                    noui.item {
-                                        +alias
+                            ui.very.basic.compact.small.table Table {
+                                css {
+                                    color = Color(laf.textPrimary)
+                                }
+                                tbody {
+                                    params.forEach { param ->
+                                        tr {
+                                            td {
+                                                css { fontFamily = "monospace" }
+                                                b { +param.name }
+                                            }
+                                            td {
+                                                css { fontFamily = "monospace" }
+                                                +"${param.type}"
+                                            }
+                                            td {
+                                                +param.description
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+
                 // ── Examples ───────────────────────────────────────────────────────
                 noui.item {
                     if (firstSample != null) {

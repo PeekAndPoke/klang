@@ -17,3 +17,4 @@
 - [Current state March 2026](project_current_state.md) — What exists today, strategic identity, audience priorities
 - [Tutorial factory strategy](project_tutorial_factory.md) — Evolutionary generative approach: breadth-first creation,
   morning review as selection, explore then exploit
+- [Engine naming system](project_engine_naming.md) — Motor, Cylinders, Injection, Combustion, Katalyst vocabulary

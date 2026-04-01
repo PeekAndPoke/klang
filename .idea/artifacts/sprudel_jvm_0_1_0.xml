@@ -1,8 +1,6 @@
 <component name="ArtifactManager">
   <artifact type="jar" name="sprudel-jvm-0.1.0">
     <output-path>$PROJECT_DIR$/sprudel/build/libs</output-path>
-    <root id="archive" name="sprudel-jvm-0.1.0.jar">
-      <element id="module-output" name="klang-engine.sprudel.jvmMain" />
-    </root>
+    <root id="archive" name="sprudel-jvm-0.1.0.jar" />
   </artifact>
 </component>
