@@ -26,7 +26,7 @@ fun Tag.renderMotorHeatGauge(
 ) = RoundGauge(
     size = size,
     value = { if (value != null) 1.0 - value else 0.0 },
-    display = { if (value == null) "-.--" else (1.0 - it).toFixed(2) },
+    display = { if (value == null) "-.--" else it.toFixed(2) },
     title = "Motör Heat",
     range = 0.0..1.0,
     icon = { small.microchip },

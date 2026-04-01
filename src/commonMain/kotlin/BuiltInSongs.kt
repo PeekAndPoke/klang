@@ -98,9 +98,12 @@ object BuiltInSongs {
             rpm = 36.0,
             icon = "globe asia",
             code = """
+
 import * from "stdlib"
 import * from "sprudel"
-                
+
+let wait = 14
+
 let koto = Osc.register("koto", Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
@@ -143,7 +146,7 @@ let pad = Osc.register("pad", Osc.supersine().analog(0.3)
       .adsr(0.8, 0.5, 0.9, 2.0)
 )
 
-//          Am    Dm    Am    F     C     E     Am
+
 stack(
   // Sakura melody
   note(`
@@ -152,43 +155,47 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
   `).sound(koto).legato(0.8).slow(14)
-    .superimpose(fast(2).gain(0.1).pan(0.0), fast(2).gain(0.1).pan(1.0))
+    .superimpose(fast(2).gain(0.075).pan(0.0), fast(2).gain(0.075).pan(1.0))
 
   // Shakuhachi
   ,note(`
-    a4  ~  ~  ~  ~  ~ b4  ~
-    a4  ~  ~  ~  ~  ~ f4  ~
-    e4  ~  ~  ~  ~  ~ a4  ~
-    e5  ~  ~  ~ c5  ~ b4 a4
-    c5  ~  ~  ~  ~  ~ a4  ~
-    e5  ~  ~  ~ c5  ~ b4  ~
-    a4  ~  ~  ~  ~  ~  ~  ~
-  `).sound(shaku).legato(2.0).slow(14).gain(0.2)
+    a4@2  ~  ~  ~  ~  b4 ~
+    a4@2  ~  ~  ~  ~  f4 ~
+    e4@2  ~  ~  ~  ~  a4 ~
+    e5@2  ~  ~  c5@2  b4 a4
+    c5@2  ~  ~  ~  ~  a4 ~
+    e5@2  ~  ~  c5@2  b4@2 
+    a4@2  ~  ~  ~  ~  ~  ~
+  `).sound(shaku).legato(1.0).slow(14).gain(0.175).adsr("0.05:0.1:1:0.5")
+    .filterWhen(x => x >= wait * 2)
 
   // Drums
-  ,note("a1 ~ ~ ~ ~ ~ ~ ~ a1 ~ ~ ~ ~ ~ ~ ~").sound(kick).gain(0.8)
-  ,note("~ ~ ~ ~ x ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~").sound(rim).gain(0.4)
-  ,note("~ ~ ~ ~ ~ ~ ~ ~ x ~ ~ ~ ~ ~ ~ ~").sound(brush).gain(0.3)
+  ,note("a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~").sound(kick).gain(0.8)
+  ,note("~  ~  ~  ~  x  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~").sound(rim).gain(0.4)
+  ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").sound(brush).gain(0.3)
 
-  // Bass — Am  Dm  Am  F   C   E   Am
-  ,note("a1 d2 a1 f1 c2 e1 a1").sound(sub).slow(14).legato(1.5)
-
-  //       Am   Dm   Am   F    C    E    Am
-  // Root
-  ,note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.05).gain(0.3)
-  // Third (minor/major character)
-  ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.05).gain(0.3)
-  // Fifth
-  ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.05).gain(0.3)
-  // Octave
-  ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.3)
-  // High third
-  ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.3)
-  // High fifth
-  ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.3)
+  // Sub-Bass
+  ,note("a1 d2 a1 f1 c2 e1 a1").sound(sub).slow(14).legato(1.5).gain(0.75)
+    .filterWhen(x => x >= wait * 1)
+  
+  ,stack(
+    // Root
+    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.05).gain(0.25)
+    // Third (minor/major character)
+    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.05).gain(0.25)
+    // Fifth
+    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.05).gain(0.25)
+    // Octave
+    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.25)
+    // High third
+    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.25)
+    // High fifth
+    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.25)    
+  ).filterWhen(x => x >= wait * 3)
 ).room("0.25:10:0.75").delay(0.2).delaytime(pure(1/8).div(cps))
 
 
+            
             
             
             """    // END: Sakura

@@ -480,7 +480,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         noui.item {
                             css { width = 140.px }
                             UiInputField(rpm, { rpm = it }) {
-                                step(0.01)
+                                step(0.5)
                                 appear { large }
                                 wrapFieldWith { fluid }
                                 leftLabel {
