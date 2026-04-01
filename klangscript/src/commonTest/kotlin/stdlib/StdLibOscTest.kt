@@ -49,6 +49,11 @@ class StdLibOscTest : StringSpec({
         dsl.freq shouldBe IgnitorDsl.Freq
     }
 
+    "Osc.freq() returns IgnitorDsl.Freq" {
+        val dsl = evalIgnitorDsl("Osc.freq()")
+        dsl shouldBe IgnitorDsl.Freq
+    }
+
     "Osc.saw() returns Sawtooth" {
         evalIgnitorDsl("Osc.saw()").shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
     }

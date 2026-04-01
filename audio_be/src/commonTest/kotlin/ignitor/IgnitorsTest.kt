@@ -954,8 +954,8 @@ class ExcitersTest : StringSpec({
         crossings shouldBeInRange 84..92
     }
 
-    "Param with freq=0 uses voice frequency" {
-        val dsl = IgnitorDsl.Sine()  // default freq = Param("freq", 0.0)
+    "default Freq uses voice frequency" {
+        val dsl = IgnitorDsl.Sine()  // default freq = Freq (voice note frequency)
         val sig = dsl.toExciter()
         val buf = generate(sig, freqHz = 440.0)
         val crossings = buf.zeroCrossings()
@@ -973,8 +973,8 @@ class ExcitersTest : StringSpec({
         crossings shouldBeInRange 170..185
     }
 
-    "sine with freq=0 uses voice freqHz" {
-        val sig = Ignitors.sine()  // default freq=0
+    "sine with default FreqIgnitor uses voice freqHz" {
+        val sig = Ignitors.sine()  // default freq = FreqIgnitor (voice note frequency)
         val buf = generate(sig, freqHz = 440.0)
         val crossings = buf.zeroCrossings()
         crossings shouldBeInRange 84..92

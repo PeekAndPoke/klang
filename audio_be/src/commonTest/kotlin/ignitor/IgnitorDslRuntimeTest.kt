@@ -51,6 +51,14 @@ class IgnitorDslRuntimeTest : StringSpec({
         buffer.all { it == 440.0f } shouldBe true
     }
 
+    "Constant(0.0) as freq produces 0 Hz (silence), not voice frequency" {
+        val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Constant(0.0))
+        val sig = dsl.toExciter()
+        val buffer = generateBlock(sig, freqHz = 440.0)
+        // 0 Hz sine stays at sin(0) = 0, so all samples should be zero
+        buffer.all { it == 0.0f } shouldBe true
+    }
+
     "Sine DSL produces non-zero output" {
         val sig = IgnitorDsl.Sine().toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true

@@ -1561,8 +1561,9 @@ object Ignitors {
         }
     }
 
-    /** Read a control-rate parameter once per block. Optimized for constant ParamIgnitor. */
+    /** Read a control-rate parameter once per block. Optimized for FreqIgnitor and constant ParamIgnitor. */
     internal fun readParam(param: Ignitor, freqHz: Double, ctx: IgniteContext): Double {
+        if (param is FreqIgnitor) return freqHz
         if (param is ParamIgnitor) return param.default
         return ctx.scratchBuffers.use { tmp -> param.generate(tmp, freqHz, ctx); tmp[ctx.offset].toDouble() }
     }
