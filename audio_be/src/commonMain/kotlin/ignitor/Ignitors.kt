@@ -18,11 +18,12 @@ import kotlin.random.Random
  *
  * Each factory returns a fresh Ignitor with its own phase state.
  */
+@Suppress(/* False positives */ "EmptyRange")
 object Ignitors {
 
     /** Sine wave oscillator. Inherently band-limited, no anti-aliasing needed. */
     fun sine(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
     ): Ignitor {
         var phase = 0.0
@@ -72,7 +73,7 @@ object Ignitors {
 
     /** Sawtooth wave oscillator with PolyBLEP anti-aliasing. Rich in harmonics, classic subtractive synth tone. */
     fun sawtooth(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
     ): Ignitor {
         var phase = 0.0 // Normalized 0..1
@@ -133,7 +134,7 @@ object Ignitors {
 
     /** Reverse sawtooth (ramp up) with PolyBLEP anti-aliasing. Inverted [sawtooth] waveform. */
     fun ramp(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
     ): Ignitor {
         var phase = 0.0 // Normalized 0..1
@@ -194,7 +195,7 @@ object Ignitors {
 
     /** Square wave oscillator with dual PolyBLEP anti-aliasing at both transitions. */
     fun square(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
     ): Ignitor {
         var phase = 0.0 // Normalized 0..1
@@ -265,7 +266,7 @@ object Ignitors {
 
     /** Triangle wave oscillator. Piecewise linear, inherently band-limited. Softer tone than square or saw. */
     fun triangle(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
     ): Ignitor {
         var phase = 0.0 // Normalized 0..1
@@ -331,7 +332,7 @@ object Ignitors {
 
     /** Naive sawtooth without anti-aliasing. Brighter/harsher than [sawtooth] (PolyBLEP). */
     fun zawtooth(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
     ): Ignitor {
         var phase = 0.0 // Normalized 0..1
@@ -381,7 +382,7 @@ object Ignitors {
 
     /** Impulse: outputs 1.0 once per cycle (at phase wrap), 0.0 otherwise. */
     fun impulse(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
     ): Ignitor {
         var phase = 0.0
@@ -436,7 +437,7 @@ object Ignitors {
 
     /** Pulse wave with variable [duty] cycle (0.0..1.0) and dual PolyBLEP anti-aliasing at both transitions. */
     fun pulze(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         duty: Ignitor = ParamIgnitor("duty", 0.5),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
     ): Ignitor {
@@ -614,7 +615,7 @@ object Ignitors {
      * Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
     fun superSaw(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         voices: Ignitor = ParamIgnitor("voices", 8.0),
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
@@ -642,106 +643,106 @@ object Ignitors {
                     buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
-            ctx.scratchBuffers.use { spreadBuf ->
-                freqSpread.generate(spreadBuf, actualFreq, ctx)
-                val spread = spreadBuf[ctx.offset].toDouble()
+                ctx.scratchBuffers.use { spreadBuf ->
+                    freqSpread.generate(spreadBuf, actualFreq, ctx)
+                    val spread = spreadBuf[ctx.offset].toDouble()
 
-                val sr = ctx.sampleRateD
-                val phaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                    val sr = ctx.sampleRateD
+                    val phaseMod = ctx.phaseMod
+                    val end = ctx.offset + ctx.length
 
-                if (phaseMod == null) {
-                    // Non-modulated: compute detune increments once per block
-                    val detunes = DoubleArray(v) { n ->
-                        val det = getUnisonDetune(v, spread, n)
-                        applySemitoneDetuneToFrequency(actualFreq, det) / sr
-                    }
-
-                    if (d.active) {
-                        // Analog path: per-sample per-voice jitter
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val baseDt = detunes[0]
-                            for (i in ctx.offset until end) {
-                                val dt = baseDt * d.nextMultiplier()
-                                buffer[i] = ((2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
-                                p += dt; p = wrapPhase(p, 1.0)
-                            }
-                            phases[0] = p
+                    if (phaseMod == null) {
+                        // Non-modulated: compute detune increments once per block
+                        val detunes = DoubleArray(v) { n ->
+                            val det = getUnisonDetune(v, spread, n)
+                            applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val baseDt = detunes[n]
-                            for (i in ctx.offset until end) {
-                                val dt = baseDt * d.nextMultiplier()
-                                buffer[i] =
-                                    (buffer[i] + (2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
-                                p += dt; p = wrapPhase(p, 1.0)
+
+                        if (d.active) {
+                            // Analog path: per-sample per-voice jitter
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val baseDt = detunes[0]
+                                for (i in ctx.offset until end) {
+                                    val dt = baseDt * d.nextMultiplier()
+                                    buffer[i] = ((2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                    p += dt; p = wrapPhase(p, 1.0)
+                                }
+                                phases[0] = p
                             }
-                            phases[n] = p
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val baseDt = detunes[n]
+                                for (i in ctx.offset until end) {
+                                    val dt = baseDt * d.nextMultiplier()
+                                    buffer[i] =
+                                        (buffer[i] + (2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                    p += dt; p = wrapPhase(p, 1.0)
+                                }
+                                phases[n] = p
+                            }
+                        } else {
+                            // Clean digital path
+                            // Voice 0: write (overwrite buffer)
+                            run {
+                                var p = phases[0]
+                                val dt = detunes[0]
+                                if (dt <= BLEP_MIN_DT) {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = ((2.0 * p - 1.0) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                } else {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = ((2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                }
+                                phases[0] = p
+                            }
+
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val dt = detunes[n]
+                                if (dt <= BLEP_MIN_DT) {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                } else {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                }
+                                phases[n] = p
+                            }
                         }
                     } else {
-                        // Clean digital path
-                        // Voice 0: write (overwrite buffer)
-                        run {
-                            var p = phases[0]
-                            val dt = detunes[0]
-                            if (dt <= BLEP_MIN_DT) {
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = ((2.0 * p - 1.0) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
+                        // Modulated path: per-sample (jitter on top of modulation)
+                        for (i in ctx.offset until end) {
+                            val mod = phaseMod[i]
+                            var sum = 0.0
+                            for (n in 0 until v) {
+                                var p = phases[n]
+                                val det = getUnisonDetune(v, spread, n)
+                                var dt = applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
+                                if (d.active) dt *= d.nextMultiplier()
+                                sum += if (dt <= BLEP_MIN_DT) {
+                                    2.0 * p - 1.0
+                                } else {
+                                    2.0 * p - 1.0 - polyBlep(p, dt)
                                 }
-                            } else {
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = ((2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
-                                }
+                                p += dt; p = wrapPhase(p, 1.0)
+                                phases[n] = p
                             }
-                            phases[0] = p
+                            buffer[i] = (sum * voiceGain).toFloat()
                         }
-
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val dt = detunes[n]
-                            if (dt <= BLEP_MIN_DT) {
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
-                                }
-                            } else {
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + (2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
-                                }
-                            }
-                            phases[n] = p
-                        }
-                    }
-                } else {
-                    // Modulated path: per-sample (jitter on top of modulation)
-                    for (i in ctx.offset until end) {
-                        val mod = phaseMod[i]
-                        var sum = 0.0
-                        for (n in 0 until v) {
-                            var p = phases[n]
-                            val det = getUnisonDetune(v, spread, n)
-                            var dt = applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
-                            if (d.active) dt *= d.nextMultiplier()
-                            sum += if (dt <= BLEP_MIN_DT) {
-                                2.0 * p - 1.0
-                            } else {
-                                2.0 * p - 1.0 - polyBlep(p, dt)
-                            }
-                            p += dt; p = wrapPhase(p, 1.0)
-                            phases[n] = p
-                        }
-                        buffer[i] = (sum * voiceGain).toFloat()
                     }
                 }
-            }
             }
         }
     }
@@ -751,7 +752,7 @@ object Ignitors {
      * Inherently band-limited, no anti-aliasing needed. Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
     fun superSine(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         voices: Ignitor = ParamIgnitor("voices", 8.0),
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
@@ -779,86 +780,86 @@ object Ignitors {
                     buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
-            ctx.scratchBuffers.use { spreadBuf ->
-                freqSpread.generate(spreadBuf, actualFreq, ctx)
-                val spread = spreadBuf[ctx.offset].toDouble()
+                ctx.scratchBuffers.use { spreadBuf ->
+                    freqSpread.generate(spreadBuf, actualFreq, ctx)
+                    val spread = spreadBuf[ctx.offset].toDouble()
 
-                val sr = ctx.sampleRateD
-                val phaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                    val sr = ctx.sampleRateD
+                    val phaseMod = ctx.phaseMod
+                    val end = ctx.offset + ctx.length
 
-                if (phaseMod == null) {
-                    val detunes = DoubleArray(v) { n ->
-                        val det = getUnisonDetune(v, spread, n)
-                        TWO_PI * applySemitoneDetuneToFrequency(actualFreq, det) / sr
-                    }
-
-                    if (d.active) {
-                        // Analog path: per-sample per-voice jitter
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val baseInc = detunes[0]
-                            for (i in ctx.offset until end) {
-                                buffer[i] = (sin(p) * voiceGain).toFloat()
-                                p += baseInc * d.nextMultiplier()
-                                p = wrapPhase(p, TWO_PI)
-                            }
-                            phases[0] = p
+                    if (phaseMod == null) {
+                        val detunes = DoubleArray(v) { n ->
+                            val det = getUnisonDetune(v, spread, n)
+                            TWO_PI * applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val baseInc = detunes[n]
-                            for (i in ctx.offset until end) {
-                                buffer[i] = (buffer[i] + sin(p) * voiceGain).toFloat()
-                                p += baseInc * d.nextMultiplier()
-                                p = wrapPhase(p, TWO_PI)
+
+                        if (d.active) {
+                            // Analog path: per-sample per-voice jitter
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val baseInc = detunes[0]
+                                for (i in ctx.offset until end) {
+                                    buffer[i] = (sin(p) * voiceGain).toFloat()
+                                    p += baseInc * d.nextMultiplier()
+                                    p = wrapPhase(p, TWO_PI)
+                                }
+                                phases[0] = p
                             }
-                            phases[n] = p
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val baseInc = detunes[n]
+                                for (i in ctx.offset until end) {
+                                    buffer[i] = (buffer[i] + sin(p) * voiceGain).toFloat()
+                                    p += baseInc * d.nextMultiplier()
+                                    p = wrapPhase(p, TWO_PI)
+                                }
+                                phases[n] = p
+                            }
+                        } else {
+                            // Clean digital path
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val inc = detunes[0]
+                                for (i in ctx.offset until end) {
+                                    buffer[i] = (sin(p) * voiceGain).toFloat()
+                                    p += inc; p = wrapPhase(p, TWO_PI)
+                                }
+                                phases[0] = p
+                            }
+
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val inc = detunes[n]
+                                for (i in ctx.offset until end) {
+                                    buffer[i] = (buffer[i] + sin(p) * voiceGain).toFloat()
+                                    p += inc; p = wrapPhase(p, TWO_PI)
+                                }
+                                phases[n] = p
+                            }
                         }
                     } else {
-                        // Clean digital path
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val inc = detunes[0]
-                            for (i in ctx.offset until end) {
-                                buffer[i] = (sin(p) * voiceGain).toFloat()
+                        // Modulated path: per-sample (jitter on top of modulation)
+                        for (i in ctx.offset until end) {
+                            val mod = phaseMod[i]
+                            var sum = 0.0
+                            for (n in 0 until v) {
+                                var p = phases[n]
+                                val det = getUnisonDetune(v, spread, n)
+                                var inc = TWO_PI * applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
+                                if (d.active) inc *= d.nextMultiplier()
+                                sum += sin(p)
                                 p += inc; p = wrapPhase(p, TWO_PI)
+                                phases[n] = p
                             }
-                            phases[0] = p
+                            buffer[i] = (sum * voiceGain).toFloat()
                         }
-
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val inc = detunes[n]
-                            for (i in ctx.offset until end) {
-                                buffer[i] = (buffer[i] + sin(p) * voiceGain).toFloat()
-                                p += inc; p = wrapPhase(p, TWO_PI)
-                            }
-                            phases[n] = p
-                        }
-                    }
-                } else {
-                    // Modulated path: per-sample (jitter on top of modulation)
-                    for (i in ctx.offset until end) {
-                        val mod = phaseMod[i]
-                        var sum = 0.0
-                        for (n in 0 until v) {
-                            var p = phases[n]
-                            val det = getUnisonDetune(v, spread, n)
-                            var inc = TWO_PI * applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
-                            if (d.active) inc *= d.nextMultiplier()
-                            sum += sin(p)
-                            p += inc; p = wrapPhase(p, TWO_PI)
-                            phases[n] = p
-                        }
-                        buffer[i] = (sum * voiceGain).toFloat()
                     }
                 }
-            }
             }
         }
     }
@@ -868,7 +869,7 @@ object Ignitors {
      * Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
     fun superSquare(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         voices: Ignitor = ParamIgnitor("voices", 8.0),
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
@@ -896,123 +897,123 @@ object Ignitors {
                     buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
-            ctx.scratchBuffers.use { spreadBuf ->
-                freqSpread.generate(spreadBuf, actualFreq, ctx)
-                val spread = spreadBuf[ctx.offset].toDouble()
+                ctx.scratchBuffers.use { spreadBuf ->
+                    freqSpread.generate(spreadBuf, actualFreq, ctx)
+                    val spread = spreadBuf[ctx.offset].toDouble()
 
-                val sr = ctx.sampleRateD
-                val phaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                    val sr = ctx.sampleRateD
+                    val phaseMod = ctx.phaseMod
+                    val end = ctx.offset + ctx.length
 
-                if (phaseMod == null) {
-                    val detunes = DoubleArray(v) { n ->
-                        val det = getUnisonDetune(v, spread, n)
-                        applySemitoneDetuneToFrequency(actualFreq, det) / sr
-                    }
-
-                    if (d.active) {
-                        // Analog path: per-sample per-voice jitter
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val baseDt = detunes[0]
-                            for (i in ctx.offset until end) {
-                                val dt = baseDt * d.nextMultiplier()
-                                var out = if (p < 0.5) 1.0 else -1.0
-                                if (dt > BLEP_MIN_DT) {
-                                    out += polyBlep(p, dt)
-                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
-                                }
-                                buffer[i] = (out * voiceGain).toFloat()
-                                p += dt; p = wrapPhase(p, 1.0)
-                            }
-                            phases[0] = p
+                    if (phaseMod == null) {
+                        val detunes = DoubleArray(v) { n ->
+                            val det = getUnisonDetune(v, spread, n)
+                            applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val baseDt = detunes[n]
-                            for (i in ctx.offset until end) {
-                                val dt = baseDt * d.nextMultiplier()
-                                var out = if (p < 0.5) 1.0 else -1.0
-                                if (dt > BLEP_MIN_DT) {
-                                    out += polyBlep(p, dt)
-                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
-                                }
-                                buffer[i] = (buffer[i] + out * voiceGain).toFloat()
-                                p += dt; p = wrapPhase(p, 1.0)
-                            }
-                            phases[n] = p
-                        }
-                    } else {
-                        // Clean digital path
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val dt = detunes[0]
-                            if (dt <= BLEP_MIN_DT) {
+
+                        if (d.active) {
+                            // Analog path: per-sample per-voice jitter
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val baseDt = detunes[0]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = ((if (p < 0.5) 1.0 else -1.0) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
-                                }
-                            } else {
-                                for (i in ctx.offset until end) {
+                                    val dt = baseDt * d.nextMultiplier()
                                     var out = if (p < 0.5) 1.0 else -1.0
-                                    out += polyBlep(p, dt)
-                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
+                                    if (dt > BLEP_MIN_DT) {
+                                        out += polyBlep(p, dt)
+                                        out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
+                                    }
                                     buffer[i] = (out * voiceGain).toFloat()
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
+                                phases[0] = p
                             }
-                            phases[0] = p
-                        }
-
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val dt = detunes[n]
-                            if (dt <= BLEP_MIN_DT) {
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val baseDt = detunes[n]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + (if (p < 0.5) 1.0 else -1.0) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
-                                }
-                            } else {
-                                for (i in ctx.offset until end) {
+                                    val dt = baseDt * d.nextMultiplier()
                                     var out = if (p < 0.5) 1.0 else -1.0
-                                    out += polyBlep(p, dt)
-                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
+                                    if (dt > BLEP_MIN_DT) {
+                                        out += polyBlep(p, dt)
+                                        out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
+                                    }
                                     buffer[i] = (buffer[i] + out * voiceGain).toFloat()
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
+                                phases[n] = p
                             }
-                            phases[n] = p
-                        }
-                    }
-                } else {
-                    // Modulated path: per-sample (jitter on top of modulation)
-                    for (i in ctx.offset until end) {
-                        val mod = phaseMod[i]
-                        var sum = 0.0
-                        for (n in 0 until v) {
-                            var p = phases[n]
-                            val det = getUnisonDetune(v, spread, n)
-                            var dt = applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
-                            if (d.active) dt *= d.nextMultiplier()
-                            sum += if (dt <= BLEP_MIN_DT) {
-                                if (p < 0.5) 1.0 else -1.0
-                            } else {
-                                var out = if (p < 0.5) 1.0 else -1.0
-                                out += polyBlep(p, dt)
-                                out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
-                                out
+                        } else {
+                            // Clean digital path
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val dt = detunes[0]
+                                if (dt <= BLEP_MIN_DT) {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = ((if (p < 0.5) 1.0 else -1.0) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                } else {
+                                    for (i in ctx.offset until end) {
+                                        var out = if (p < 0.5) 1.0 else -1.0
+                                        out += polyBlep(p, dt)
+                                        out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
+                                        buffer[i] = (out * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                }
+                                phases[0] = p
                             }
-                            p += dt; p = wrapPhase(p, 1.0)
-                            phases[n] = p
+
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val dt = detunes[n]
+                                if (dt <= BLEP_MIN_DT) {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = (buffer[i] + (if (p < 0.5) 1.0 else -1.0) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                } else {
+                                    for (i in ctx.offset until end) {
+                                        var out = if (p < 0.5) 1.0 else -1.0
+                                        out += polyBlep(p, dt)
+                                        out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
+                                        buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                }
+                                phases[n] = p
+                            }
                         }
-                        buffer[i] = (sum * voiceGain).toFloat()
+                    } else {
+                        // Modulated path: per-sample (jitter on top of modulation)
+                        for (i in ctx.offset until end) {
+                            val mod = phaseMod[i]
+                            var sum = 0.0
+                            for (n in 0 until v) {
+                                var p = phases[n]
+                                val det = getUnisonDetune(v, spread, n)
+                                var dt = applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
+                                if (d.active) dt *= d.nextMultiplier()
+                                sum += if (dt <= BLEP_MIN_DT) {
+                                    if (p < 0.5) 1.0 else -1.0
+                                } else {
+                                    var out = if (p < 0.5) 1.0 else -1.0
+                                    out += polyBlep(p, dt)
+                                    out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
+                                    out
+                                }
+                                p += dt; p = wrapPhase(p, 1.0)
+                                phases[n] = p
+                            }
+                            buffer[i] = (sum * voiceGain).toFloat()
+                        }
                     }
                 }
-            }
             }
         }
     }
@@ -1022,7 +1023,7 @@ object Ignitors {
      * Piecewise linear, inherently band-limited. Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
     fun superTri(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         voices: Ignitor = ParamIgnitor("voices", 8.0),
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
@@ -1050,90 +1051,90 @@ object Ignitors {
                     buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
-            ctx.scratchBuffers.use { spreadBuf ->
-                freqSpread.generate(spreadBuf, actualFreq, ctx)
-                val spread = spreadBuf[ctx.offset].toDouble()
+                ctx.scratchBuffers.use { spreadBuf ->
+                    freqSpread.generate(spreadBuf, actualFreq, ctx)
+                    val spread = spreadBuf[ctx.offset].toDouble()
 
-                val sr = ctx.sampleRateD
-                val phaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                    val sr = ctx.sampleRateD
+                    val phaseMod = ctx.phaseMod
+                    val end = ctx.offset + ctx.length
 
-                if (phaseMod == null) {
-                    val detunes = DoubleArray(v) { n ->
-                        val det = getUnisonDetune(v, spread, n)
-                        applySemitoneDetuneToFrequency(actualFreq, det) / sr
-                    }
-
-                    if (d.active) {
-                        // Analog path: per-sample per-voice jitter
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val baseDt = detunes[0]
-                            for (i in ctx.offset until end) {
-                                val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                buffer[i] = (out * voiceGain).toFloat()
-                                p += baseDt * d.nextMultiplier()
-                                p = wrapPhase(p, 1.0)
-                            }
-                            phases[0] = p
+                    if (phaseMod == null) {
+                        val detunes = DoubleArray(v) { n ->
+                            val det = getUnisonDetune(v, spread, n)
+                            applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val baseDt = detunes[n]
-                            for (i in ctx.offset until end) {
-                                val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                buffer[i] = (buffer[i] + out * voiceGain).toFloat()
-                                p += baseDt * d.nextMultiplier()
-                                p = wrapPhase(p, 1.0)
+
+                        if (d.active) {
+                            // Analog path: per-sample per-voice jitter
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val baseDt = detunes[0]
+                                for (i in ctx.offset until end) {
+                                    val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
+                                    buffer[i] = (out * voiceGain).toFloat()
+                                    p += baseDt * d.nextMultiplier()
+                                    p = wrapPhase(p, 1.0)
+                                }
+                                phases[0] = p
                             }
-                            phases[n] = p
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val baseDt = detunes[n]
+                                for (i in ctx.offset until end) {
+                                    val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
+                                    buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                    p += baseDt * d.nextMultiplier()
+                                    p = wrapPhase(p, 1.0)
+                                }
+                                phases[n] = p
+                            }
+                        } else {
+                            // Clean digital path
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val dt = detunes[0]
+                                for (i in ctx.offset until end) {
+                                    val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
+                                    buffer[i] = (out * voiceGain).toFloat()
+                                    p += dt; p = wrapPhase(p, 1.0)
+                                }
+                                phases[0] = p
+                            }
+
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val dt = detunes[n]
+                                for (i in ctx.offset until end) {
+                                    val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
+                                    buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                    p += dt; p = wrapPhase(p, 1.0)
+                                }
+                                phases[n] = p
+                            }
                         }
                     } else {
-                        // Clean digital path
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val dt = detunes[0]
-                            for (i in ctx.offset until end) {
-                                val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                buffer[i] = (out * voiceGain).toFloat()
+                        // Modulated path: per-sample (jitter on top of modulation)
+                        for (i in ctx.offset until end) {
+                            val mod = phaseMod[i]
+                            var sum = 0.0
+                            for (n in 0 until v) {
+                                var p = phases[n]
+                                val det = getUnisonDetune(v, spread, n)
+                                var dt = applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
+                                if (d.active) dt *= d.nextMultiplier()
+                                sum += if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
                                 p += dt; p = wrapPhase(p, 1.0)
+                                phases[n] = p
                             }
-                            phases[0] = p
+                            buffer[i] = (sum * voiceGain).toFloat()
                         }
-
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val dt = detunes[n]
-                            for (i in ctx.offset until end) {
-                                val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                buffer[i] = (buffer[i] + out * voiceGain).toFloat()
-                                p += dt; p = wrapPhase(p, 1.0)
-                            }
-                            phases[n] = p
-                        }
-                    }
-                } else {
-                    // Modulated path: per-sample (jitter on top of modulation)
-                    for (i in ctx.offset until end) {
-                        val mod = phaseMod[i]
-                        var sum = 0.0
-                        for (n in 0 until v) {
-                            var p = phases[n]
-                            val det = getUnisonDetune(v, spread, n)
-                            var dt = applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
-                            if (d.active) dt *= d.nextMultiplier()
-                            sum += if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                            p += dt; p = wrapPhase(p, 1.0)
-                            phases[n] = p
-                        }
-                        buffer[i] = (sum * voiceGain).toFloat()
                     }
                 }
-            }
             }
         }
     }
@@ -1143,7 +1144,7 @@ object Ignitors {
      * Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
     fun superRamp(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         voices: Ignitor = ParamIgnitor("voices", 8.0),
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
@@ -1171,105 +1172,105 @@ object Ignitors {
                     buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
-            ctx.scratchBuffers.use { spreadBuf ->
-                freqSpread.generate(spreadBuf, actualFreq, ctx)
-                val spread = spreadBuf[ctx.offset].toDouble()
+                ctx.scratchBuffers.use { spreadBuf ->
+                    freqSpread.generate(spreadBuf, actualFreq, ctx)
+                    val spread = spreadBuf[ctx.offset].toDouble()
 
-                val sr = ctx.sampleRateD
-                val phaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
+                    val sr = ctx.sampleRateD
+                    val phaseMod = ctx.phaseMod
+                    val end = ctx.offset + ctx.length
 
-                if (phaseMod == null) {
-                    val detunes = DoubleArray(v) { n ->
-                        val det = getUnisonDetune(v, spread, n)
-                        applySemitoneDetuneToFrequency(actualFreq, det) / sr
-                    }
-
-                    if (d.active) {
-                        // Analog path: per-sample per-voice jitter
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val baseDt = detunes[0]
-                            for (i in ctx.offset until end) {
-                                val dt = baseDt * d.nextMultiplier()
-                                buffer[i] = ((1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
-                                p += dt; p = wrapPhase(p, 1.0)
-                            }
-                            phases[0] = p
+                    if (phaseMod == null) {
+                        val detunes = DoubleArray(v) { n ->
+                            val det = getUnisonDetune(v, spread, n)
+                            applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val baseDt = detunes[n]
-                            for (i in ctx.offset until end) {
-                                val dt = baseDt * d.nextMultiplier()
-                                buffer[i] =
-                                    (buffer[i] + (1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
-                                p += dt; p = wrapPhase(p, 1.0)
+
+                        if (d.active) {
+                            // Analog path: per-sample per-voice jitter
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val baseDt = detunes[0]
+                                for (i in ctx.offset until end) {
+                                    val dt = baseDt * d.nextMultiplier()
+                                    buffer[i] = ((1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                    p += dt; p = wrapPhase(p, 1.0)
+                                }
+                                phases[0] = p
                             }
-                            phases[n] = p
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val baseDt = detunes[n]
+                                for (i in ctx.offset until end) {
+                                    val dt = baseDt * d.nextMultiplier()
+                                    buffer[i] =
+                                        (buffer[i] + (1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                    p += dt; p = wrapPhase(p, 1.0)
+                                }
+                                phases[n] = p
+                            }
+                        } else {
+                            // Clean digital path
+                            // Voice 0: write
+                            run {
+                                var p = phases[0]
+                                val dt = detunes[0]
+                                if (dt <= BLEP_MIN_DT) {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = ((1.0 - 2.0 * p) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                } else {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = ((1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                }
+                                phases[0] = p
+                            }
+
+                            // Voices 1..v: accumulate
+                            for (n in 1 until v) {
+                                var p = phases[n]
+                                val dt = detunes[n]
+                                if (dt <= BLEP_MIN_DT) {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                } else {
+                                    for (i in ctx.offset until end) {
+                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain).toFloat()
+                                        p += dt; p = wrapPhase(p, 1.0)
+                                    }
+                                }
+                                phases[n] = p
+                            }
                         }
                     } else {
-                        // Clean digital path
-                        // Voice 0: write
-                        run {
-                            var p = phases[0]
-                            val dt = detunes[0]
-                            if (dt <= BLEP_MIN_DT) {
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = ((1.0 - 2.0 * p) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
+                        // Modulated path: per-sample (jitter on top of modulation)
+                        for (i in ctx.offset until end) {
+                            val mod = phaseMod[i]
+                            var sum = 0.0
+                            for (n in 0 until v) {
+                                var p = phases[n]
+                                val det = getUnisonDetune(v, spread, n)
+                                var dt = applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
+                                if (d.active) dt *= d.nextMultiplier()
+                                sum += if (dt <= BLEP_MIN_DT) {
+                                    1.0 - 2.0 * p
+                                } else {
+                                    1.0 - 2.0 * p + polyBlep(p, dt)
                                 }
-                            } else {
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = ((1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
-                                }
+                                p += dt; p = wrapPhase(p, 1.0)
+                                phases[n] = p
                             }
-                            phases[0] = p
+                            buffer[i] = (sum * voiceGain).toFloat()
                         }
-
-                        // Voices 1..v: accumulate
-                        for (n in 1 until v) {
-                            var p = phases[n]
-                            val dt = detunes[n]
-                            if (dt <= BLEP_MIN_DT) {
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + (1.0 - 2.0 * p) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
-                                }
-                            } else {
-                                for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + (1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain).toFloat()
-                                    p += dt; p = wrapPhase(p, 1.0)
-                                }
-                            }
-                            phases[n] = p
-                        }
-                    }
-                } else {
-                    // Modulated path: per-sample (jitter on top of modulation)
-                    for (i in ctx.offset until end) {
-                        val mod = phaseMod[i]
-                        var sum = 0.0
-                        for (n in 0 until v) {
-                            var p = phases[n]
-                            val det = getUnisonDetune(v, spread, n)
-                            var dt = applySemitoneDetuneToFrequency(actualFreq, det) / sr * mod
-                            if (d.active) dt *= d.nextMultiplier()
-                            sum += if (dt <= BLEP_MIN_DT) {
-                                1.0 - 2.0 * p
-                            } else {
-                                1.0 - 2.0 * p + polyBlep(p, dt)
-                            }
-                            p += dt; p = wrapPhase(p, 1.0)
-                            phases[n] = p
-                        }
-                        buffer[i] = (sum * voiceGain).toFloat()
                     }
                 }
-            }
             }
         }
     }
@@ -1278,8 +1279,9 @@ object Ignitors {
      * Karplus-Strong plucked string synthesis via noise-burst-excited delay line with filtered feedback.
      * Extended with pick position modeling and allpass stiffness filtering.
      */
+    @Suppress("DuplicatedCode")
     fun karplusStrong(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         decay: Ignitor = ParamIgnitor("decay", 0.996),
         brightness: Ignitor = ParamIgnitor("brightness", 0.5),
         pickPosition: Ignitor = ParamIgnitor("pickPosition", 0.5),
@@ -1300,7 +1302,7 @@ object Ignitors {
         var apPrevIn = 0.0
         var apPrevOut = 0.0
 
-        val rng = kotlin.random.Random
+        val rng = Random
 
         return Ignitor { buffer, freqHz, ctx ->
             val actualFreq = resolveFreq(freq, freqHz, ctx)
@@ -1391,8 +1393,9 @@ object Ignitors {
      * Each string has independent noise excitation and analog drift, creating rich evolving shimmer.
      * Voice count is read lazily from the [voices] Ignitor param on the first block.
      */
+    @Suppress("DuplicatedCode")
     fun superKarplusStrong(
-        freq: Ignitor = ParamIgnitor("freq", 0.0),
+        freq: Ignitor = FreqIgnitor,
         voices: Ignitor = ParamIgnitor("voices", 8.0),
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         decay: Ignitor = ParamIgnitor("decay", 0.996),
@@ -1404,7 +1407,7 @@ object Ignitors {
         val maxDelay = 2500
 
         // Per-voice state
-        data class StringState(
+        class StringState(
             val delayLine: FloatArray = FloatArray(maxDelay),
             var writePos: Int = 0,
             var excited: Boolean = false,
@@ -1417,7 +1420,7 @@ object Ignitors {
         var v = 0
         var voiceGain = 0.0
         var strings = Array(0) { StringState() }
-        val rng = kotlin.random.Random
+        val rng = Random
 
         return Ignitor { buffer, freqHz, ctx ->
             val actualFreq = resolveFreq(freq, freqHz, ctx)
@@ -1435,90 +1438,90 @@ object Ignitors {
                     buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
-            // Read control-rate params once per block
+                // Read control-rate params once per block
                 val spread = readParam(freqSpread, actualFreq, ctx)
                 val decayVal = readParam(decay, actualFreq, ctx)
                 val brightnessVal = readParam(brightness, actualFreq, ctx)
                 val stiffnessVal = readParam(stiffness, actualFreq, ctx)
 
-            val lpAlpha = brightnessVal.coerceIn(0.01, 1.0)
-            val hasStiffness = stiffnessVal > 0.0
-            val apCoeff = stiffnessVal.coerceIn(0.0, 0.99) * 0.5
+                val lpAlpha = brightnessVal.coerceIn(0.01, 1.0)
+                val hasStiffness = stiffnessVal > 0.0
+                val apCoeff = stiffnessVal.coerceIn(0.0, 0.99) * 0.5
 
-            val sr = ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
+                val sr = ctx.sampleRateD
+                val phaseMod = ctx.phaseMod
+                val end = ctx.offset + ctx.length
 
-            for (n in 0 until v) {
-                val s = strings[n]
-                val sd = s.drift ?: initAnalogDrift(analog, actualFreq, ctx).also { s.drift = it }
-                val detuneSemitones = getUnisonDetune(v, spread, n)
-                val detunedFreq = applySemitoneDetuneToFrequency(actualFreq, detuneSemitones)
-                val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1).toDouble())
+                for (n in 0 until v) {
+                    val s = strings[n]
+                    val sd = s.drift ?: initAnalogDrift(analog, actualFreq, ctx).also { s.drift = it }
+                    val detuneSemitones = getUnisonDetune(v, spread, n)
+                    val detunedFreq = applySemitoneDetuneToFrequency(actualFreq, detuneSemitones)
+                    val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1).toDouble())
 
-                // Excite each string independently
-                if (!s.excited) {
-                    s.excited = true
-                    val pickPosVal = readParam(pickPosition, actualFreq, ctx)
-                    val delayLen = baseDelay.toInt()
-                    val pp = pickPosVal.coerceIn(0.0, 1.0)
-                    val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
-                    val burstStart = ((delayLen - burstLen) * pp).toInt()
+                    // Excite each string independently
+                    if (!s.excited) {
+                        s.excited = true
+                        val pickPosVal = readParam(pickPosition, actualFreq, ctx)
+                        val delayLen = baseDelay.toInt()
+                        val pp = pickPosVal.coerceIn(0.0, 1.0)
+                        val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
+                        val burstStart = ((delayLen - burstLen) * pp).toInt()
 
-                    for (j in 0 until delayLen) {
-                        s.delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                            (rng.nextDouble() * 2.0 - 1.0).toFloat()
-                        } else {
-                            0.0f
+                        for (j in 0 until delayLen) {
+                            s.delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
+                                (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                            } else {
+                                0.0f
+                            }
                         }
+                        s.writePos = delayLen % maxDelay
                     }
-                    s.writePos = delayLen % maxDelay
+
+                    val isFirst = n == 0
+
+                    for (i in ctx.offset until end) {
+                        // Effective delay with detune, phaseMod, and per-voice drift
+                        var dl = baseDelay
+                        if (phaseMod != null) dl /= phaseMod[i]
+                        if (sd.active) dl /= sd.nextMultiplier()
+                        dl = dl.coerceIn(2.0, (maxDelay - 1).toDouble())
+
+                        // Read with linear interpolation
+                        val readPosF = s.writePos - dl
+                        val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
+                        val readIdx = readPosWrapped.toInt() % maxDelay
+                        val frac = readPosWrapped - readPosWrapped.toInt()
+                        val nextIdx = (readIdx + 1) % maxDelay
+                        val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac.toFloat()
+
+                        // One-pole lowpass (brightness)
+                        s.lpState = s.lpState + lpAlpha * (sample.toDouble() - s.lpState)
+                        s.lpState = flushDenormal(s.lpState)
+                        var filtered = s.lpState
+
+                        // Allpass stiffness
+                        if (hasStiffness) {
+                            val apOut = apCoeff * (filtered - s.apPrevOut) + s.apPrevIn
+                            s.apPrevIn = flushDenormal(filtered)
+                            s.apPrevOut = flushDenormal(apOut)
+                            filtered = apOut
+                        }
+
+                        // Write back with decay
+                        s.delayLine[s.writePos] = (filtered * decayVal).toFloat()
+
+                        // Sum to output
+                        val out = (sample * voiceGain).toFloat()
+                        if (isFirst) {
+                            buffer[i] = out
+                        } else {
+                            buffer[i] = buffer[i] + out
+                        }
+
+                        s.writePos = (s.writePos + 1) % maxDelay
+                    }
                 }
-
-                val isFirst = n == 0
-
-                for (i in ctx.offset until end) {
-                    // Effective delay with detune, phaseMod, and per-voice drift
-                    var dl = baseDelay
-                    if (phaseMod != null) dl /= phaseMod[i]
-                    if (sd.active) dl /= sd.nextMultiplier()
-                    dl = dl.coerceIn(2.0, (maxDelay - 1).toDouble())
-
-                    // Read with linear interpolation
-                    val readPosF = s.writePos - dl
-                    val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
-                    val readIdx = readPosWrapped.toInt() % maxDelay
-                    val frac = readPosWrapped - readPosWrapped.toInt()
-                    val nextIdx = (readIdx + 1) % maxDelay
-                    val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac.toFloat()
-
-                    // One-pole lowpass (brightness)
-                    s.lpState = s.lpState + lpAlpha * (sample.toDouble() - s.lpState)
-                    s.lpState = flushDenormal(s.lpState)
-                    var filtered = s.lpState
-
-                    // Allpass stiffness
-                    if (hasStiffness) {
-                        val apOut = apCoeff * (filtered - s.apPrevOut) + s.apPrevIn
-                        s.apPrevIn = flushDenormal(filtered)
-                        s.apPrevOut = flushDenormal(apOut)
-                        filtered = apOut
-                    }
-
-                    // Write back with decay
-                    s.delayLine[s.writePos] = (filtered * decayVal).toFloat()
-
-                    // Sum to output
-                    val out = (sample * voiceGain).toFloat()
-                    if (isFirst) {
-                        buffer[i] = out
-                    } else {
-                        buffer[i] = buffer[i] + out
-                    }
-
-                    s.writePos = (s.writePos + 1) % maxDelay
-                }
-            }
             }
         }
     }
@@ -1538,13 +1541,11 @@ object Ignitors {
      * Otherwise evaluates the exciter and uses its output if non-zero, falling back to [voiceFreqHz].
      */
     internal fun resolveFreq(freq: Ignitor, voiceFreqHz: Double, ctx: IgniteContext): Double {
-        if (freq is ParamIgnitor && freq.default == 0.0) {
-            return voiceFreqHz // fast path: no scratch buffer needed
-        }
+        if (freq is FreqIgnitor) return voiceFreqHz
+        if (freq is ParamIgnitor) return freq.default
         return ctx.scratchBuffers.use { buf ->
             freq.generate(buf, voiceFreqHz, ctx)
-            val f = buf[ctx.offset].toDouble()
-            if (f == 0.0) voiceFreqHz else f
+            buf[ctx.offset].toDouble()
         }
     }
 

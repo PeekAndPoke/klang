@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_bridge.plus
  *
  * IgnitorDsl types default to Constant (locked, no oscParam override). Here we explicitly
  * open Param slots for the parameters that sprudel's oscParam() functions target:
- * - "freq" on all pitched oscillators
+ * - freq uses [IgnitorDsl.Freq] (voice note frequency) on all pitched oscillators
  * - "analog" on all pitched oscillators
  * - "voices", "freqSpread" on super oscillators
  * - "duty" on pulze
@@ -28,34 +28,34 @@ fun IgnitorRegistry.registerDefaults() {
     // ─── Basic waveforms ─────────────────────────────────────────────────────
     // Each gets "analog" as an overridable param
 
-    val sine = IgnitorDsl.Sine(freq = p("freq", 0.0), analog = p("analog", 0.0))
+    val sine = IgnitorDsl.Sine(freq = IgnitorDsl.Freq, analog = p("analog", 0.0))
     register(name = "sine", dsl = sine)
     register(name = "sin", dsl = sine)
 
-    val saw = IgnitorDsl.Sawtooth(freq = p("freq", 0.0), analog = p("analog", 0.0))
+    val saw = IgnitorDsl.Sawtooth(freq = IgnitorDsl.Freq, analog = p("analog", 0.0))
     register(name = "sawtooth", dsl = saw)
     register(name = "saw", dsl = saw)
 
-    val square = IgnitorDsl.Square(freq = p("freq", 0.0), analog = p("analog", 0.0))
+    val square = IgnitorDsl.Square(freq = IgnitorDsl.Freq, analog = p("analog", 0.0))
     register(name = "square", dsl = square)
     register(name = "sqr", dsl = square)
     register(name = "pulse", dsl = square)
 
-    val triangle = IgnitorDsl.Triangle(freq = p("freq", 0.0), analog = p("analog", 0.0))
+    val triangle = IgnitorDsl.Triangle(freq = IgnitorDsl.Freq, analog = p("analog", 0.0))
     register(name = "triangle", dsl = triangle)
     register(name = "tri", dsl = triangle)
 
-    val ramp = IgnitorDsl.Ramp(freq = p("freq", 0.0), analog = p("analog", 0.0))
+    val ramp = IgnitorDsl.Ramp(freq = IgnitorDsl.Freq, analog = p("analog", 0.0))
     register(name = "ramp", dsl = ramp)
 
-    val zawtooth = IgnitorDsl.Zawtooth(freq = p("freq", 0.0), analog = p("analog", 0.0))
+    val zawtooth = IgnitorDsl.Zawtooth(freq = IgnitorDsl.Freq, analog = p("analog", 0.0))
     register(name = "zawtooth", dsl = zawtooth)
     register(name = "zaw", dsl = zawtooth)
 
-    val pulze = IgnitorDsl.Pulze(freq = p("freq", 0.0), duty = p("duty", 0.5), analog = p("analog", 0.0))
+    val pulze = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = p("duty", 0.5), analog = p("analog", 0.0))
     register(name = "pulze", dsl = pulze)
 
-    val impulse = IgnitorDsl.Impulse(freq = p("freq", 0.0), analog = p("analog", 0.0))
+    val impulse = IgnitorDsl.Impulse(freq = IgnitorDsl.Freq, analog = p("analog", 0.0))
     register(name = "impulse", dsl = impulse)
 
     val silence = IgnitorDsl.Silence
@@ -65,7 +65,7 @@ fun IgnitorRegistry.registerDefaults() {
     // Each gets "voices", "freqSpread", "analog" as overridable params
 
     val superSaw = IgnitorDsl.SuperSaw(
-        freq = p("freq", 0.0),
+        freq = IgnitorDsl.Freq,
         voices = p("voices", 8.0),
         freqSpread = p("freqSpread", 0.2),
         analog = p("analog", 0.0),
@@ -73,7 +73,7 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "supersaw", dsl = superSaw)
 
     val superSine = IgnitorDsl.SuperSine(
-        freq = p("freq", 0.0),
+        freq = IgnitorDsl.Freq,
         voices = p("voices", 8.0),
         freqSpread = p("freqSpread", 0.2),
         analog = p("analog", 0.0),
@@ -81,7 +81,7 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "supersine", dsl = superSine)
 
     val superSquare = IgnitorDsl.SuperSquare(
-        freq = p("freq", 0.0),
+        freq = IgnitorDsl.Freq,
         voices = p("voices", 8.0),
         freqSpread = p("freqSpread", 0.2),
         analog = p("analog", 0.0),
@@ -91,7 +91,7 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "superpulse", dsl = superSquare)
 
     val superTri = IgnitorDsl.SuperTri(
-        freq = p("freq", 0.0),
+        freq = IgnitorDsl.Freq,
         voices = p("voices", 8.0),
         freqSpread = p("freqSpread", 0.2),
         analog = p("analog", 0.0),
@@ -99,7 +99,7 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "supertri", dsl = superTri)
 
     val superRamp = IgnitorDsl.SuperRamp(
-        freq = p("freq", 0.0),
+        freq = IgnitorDsl.Freq,
         voices = p("voices", 8.0),
         freqSpread = p("freqSpread", 0.2),
         analog = p("analog", 0.0),
@@ -134,7 +134,7 @@ fun IgnitorRegistry.registerDefaults() {
     // ─── Physical models ────────────────────────────────────────────────────
 
     val pluck = IgnitorDsl.Pluck(
-        freq = p("freq", 0.0),
+        freq = IgnitorDsl.Freq,
         decay = p("decay", 0.996),
         brightness = p("brightness", 0.5),
         pickPosition = p("pickPosition", 0.5),
@@ -146,7 +146,7 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "string", dsl = pluck)
 
     val superPluck = IgnitorDsl.SuperPluck(
-        freq = p("freq", 0.0),
+        freq = IgnitorDsl.Freq,
         voices = p("voices", 8.0),
         freqSpread = p("freqSpread", 0.2),
         decay = p("decay", 0.996),

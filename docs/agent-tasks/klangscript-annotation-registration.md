@@ -24,8 +24,6 @@ To avoid repeating library names as string literals, define constants:
 ```kotlin
 object KlangScriptLibraries {
     const val STDLIB = "stdlib"
-    const val SPRUDEL = "sprudel"
-    // ...
 }
 ```
 

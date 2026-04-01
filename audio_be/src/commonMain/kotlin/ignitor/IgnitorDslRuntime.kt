@@ -16,6 +16,7 @@ fun IgnitorDsl.toExciter(oscParams: Map<String, Double>? = null): Ignitor {
     return when (this) {
         is IgnitorDsl.Param -> ParamIgnitor(name, oscParams?.get(name) ?: default)
         is IgnitorDsl.Constant -> ParamIgnitor("", value)  // no name = no oscParam override
+        is IgnitorDsl.Freq -> FreqIgnitor
 
         // Primitives
         is IgnitorDsl.Sine -> Ignitors.sine(freq = this.freq.toExciter(oscParams), analog = this.analog.toExciter(oscParams))

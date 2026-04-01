@@ -43,12 +43,10 @@ class StdLibOscTest : StringSpec({
         (dsl.freq as IgnitorDsl.Constant).value shouldBe 5.0
     }
 
-    "Osc.sine() with no args uses Constant(0.0) for freq (= voice frequency)" {
+    "Osc.sine() with no args uses Freq for freq (= voice frequency)" {
         val dsl = evalIgnitorDsl("Osc.sine()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
-        // Default 0.0 goes through toIgnitorDsl() → Constant(0.0), meaning "use voice freq"
-        dsl.freq.shouldBeInstanceOf<IgnitorDsl.Constant>()
-        (dsl.freq as IgnitorDsl.Constant).value shouldBe 0.0
+        dsl.freq shouldBe IgnitorDsl.Freq
     }
 
     "Osc.saw() returns Sawtooth" {

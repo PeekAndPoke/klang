@@ -31,71 +31,74 @@ object KlangScriptOsc {
 
     // ── Oscillator Primitives ────────────────────────────────────────────────
     //
-    // freq convention: 0 = use the note's frequency from the voice (e.g. 440 Hz for A4).
-    // Pass a non-zero value in Hz to set a fixed frequency (e.g. Osc.sine(5) = 5 Hz LFO).
+    // freq default: Freq (voice note frequency). Pass a value in Hz for a fixed frequency (e.g. Osc.sine(5) = 5 Hz LFO).
+
+    /** Returns the voice's note frequency (e.g. 440 Hz for A4). Usable anywhere a frequency value is needed. */
+    @KlangScript.Method
+    fun freq(): IgnitorDsl = IgnitorDsl.Freq
 
     /**
      * Creates a sine wave oscillator.
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice. Non-zero = fixed Hz (e.g. 5 for a 5 Hz LFO).
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency (e.g. 5 for a 5 Hz LFO).
      */
     @KlangScript.Method
-    fun sine(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun sine(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Sine(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a sawtooth wave oscillator (PolyBLEP anti-aliased).
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun saw(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun saw(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Sawtooth(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a square wave oscillator (PolyBLEP anti-aliased).
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun square(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun square(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Square(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a triangle wave oscillator.
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun triangle(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun triangle(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Triangle(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a ramp (reverse sawtooth) wave oscillator.
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun ramp(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun ramp(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Ramp(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a naive sawtooth without anti-aliasing (brighter/harsher).
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun zawtooth(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun zawtooth(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Zawtooth(freq = freq.toIgnitorDsl())
 
     /**
      * Creates an impulse (click) oscillator.
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun impulse(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun impulse(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Impulse(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a pulse wave with variable duty cycle.
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun pulze(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun pulze(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Pulze(freq = freq.toIgnitorDsl())
 
     /** Creates a silent ignitor (zero output). */
@@ -137,65 +140,63 @@ object KlangScriptOsc {
         IgnitorDsl.Crackle(density = density.toIgnitorDsl())
 
     // ── Super Oscillators ────────────────────────────────────────────────────
-    //
-    // freq convention: 0 = use the note's frequency from the voice.
 
     /**
      * Creates a supersaw (multiple detuned sawtooth oscillators).
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun supersaw(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun supersaw(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.SuperSaw(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a supersine (multiple detuned sine oscillators).
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun supersine(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun supersine(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.SuperSine(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a supersquare (multiple detuned square oscillators).
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun supersquare(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun supersquare(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.SuperSquare(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a supertri (multiple detuned triangle oscillators).
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun supertri(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun supertri(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.SuperTri(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a superramp (multiple detuned ramp oscillators).
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun superramp(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun superramp(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.SuperRamp(freq = freq.toIgnitorDsl())
 
     // ── Physical Models ──────────────────────────────────────────────────────
 
     /**
      * Creates a Karplus-Strong plucked string model.
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun pluck(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun pluck(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.Pluck(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a unison Karplus-Strong plucked string model.
-     * @param freq frequency in Hz. 0 = use the note's frequency from the voice.
+     * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
-    fun superpluck(freq: IgnitorDslLike = 0.0): IgnitorDsl =
+    fun superpluck(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
         IgnitorDsl.SuperPluck(freq = freq.toIgnitorDsl())
 
     // ── Parameter Slot ───────────────────────────────────────────────────────

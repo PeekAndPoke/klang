@@ -56,18 +56,28 @@ sealed interface IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
+    /**
+     * The voice's note frequency (e.g. 440 Hz for A4).
+     * Use anywhere a frequency value is needed to track the played note.
+     */
+    @Serializable
+    @SerialName("freq")
+    data object Freq : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {}
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Oscillator Primitives
     //
-    // freq convention: 0 = use the note's frequency from the voice (e.g. 440 Hz for A4).
-    // Non-zero = fixed frequency in Hz (e.g. 5.0 for a 5 Hz LFO).
+    // freq default: Freq = use the voice's note frequency (e.g. 440 Hz for A4).
+    // Constant(n) = fixed frequency in Hz (e.g. Constant(5.0) for a 5 Hz LFO).
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Sine wave oscillator. @param freq 0 = voice frequency, non-zero = fixed Hz. */
+    /** Sine wave oscillator. */
     @Serializable
     @SerialName("sine")
     data class Sine(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -79,7 +89,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("sawtooth")
     data class Sawtooth(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -91,7 +101,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("square")
     data class Square(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -103,7 +113,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("triangle")
     data class Triangle(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -122,7 +132,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("zawtooth")
     data class Zawtooth(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -134,7 +144,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("impulse")
     data class Impulse(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -146,7 +156,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("pulze")
     data class Pulze(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val duty: IgnitorDsl = Constant(0.5),
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
@@ -217,7 +227,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("ramp")
     data class Ramp(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -229,7 +239,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("supersaw")
     data class SuperSaw(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
         val freqSpread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
@@ -243,7 +253,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("supersine")
     data class SuperSine(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
         val freqSpread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
@@ -257,7 +267,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("supersquare")
     data class SuperSquare(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
         val freqSpread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
@@ -271,7 +281,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("supertri")
     data class SuperTri(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
         val freqSpread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
@@ -285,7 +295,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("superramp")
     data class SuperRamp(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
         val freqSpread: IgnitorDsl = Constant(0.2),
         val analog: IgnitorDsl = Constant(0.0),
@@ -310,7 +320,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("pluck")
     data class Pluck(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val decay: IgnitorDsl = Constant(0.996),
         val brightness: IgnitorDsl = Constant(0.5),
         val pickPosition: IgnitorDsl = Constant(0.5),
@@ -327,7 +337,7 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("superpluck")
     data class SuperPluck(
-        val freq: IgnitorDsl = Constant(0.0),
+        val freq: IgnitorDsl = Freq,
         val voices: IgnitorDsl = Constant(8.0),
         val freqSpread: IgnitorDsl = Constant(0.2),
         val decay: IgnitorDsl = Constant(0.996),

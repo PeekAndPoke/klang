@@ -16,6 +16,22 @@ class IgnitorDslSerializationTest : StringSpec({
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // Freq
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Freq round-trips" {
+        val dsl = IgnitorDsl.Freq
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Sine with default Freq round-trips" {
+        val dsl = IgnitorDsl.Sine()
+        val result = roundTrip(dsl)
+        result shouldBe dsl
+        (result as IgnitorDsl.Sine).freq shouldBe IgnitorDsl.Freq
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // Primitives
     // ═════════════════════════════════════════════════════════════════════════════
 

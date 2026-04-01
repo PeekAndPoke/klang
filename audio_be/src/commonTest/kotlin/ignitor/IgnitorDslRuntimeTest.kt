@@ -39,6 +39,18 @@ class IgnitorDslRuntimeTest : StringSpec({
 
     fun FloatArray.hasNonZeroSamples(): Boolean = any { it != 0.0f }
 
+    "Freq DSL maps to FreqIgnitor" {
+        val sig = IgnitorDsl.Freq.toExciter()
+        sig shouldBe FreqIgnitor
+    }
+
+    "FreqIgnitor fills buffer with voice frequency" {
+        val buffer = FloatArray(blockFrames)
+        val ctx = createCtx()
+        FreqIgnitor.generate(buffer, 440.0, ctx)
+        buffer.all { it == 440.0f } shouldBe true
+    }
+
     "Sine DSL produces non-zero output" {
         val sig = IgnitorDsl.Sine().toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
