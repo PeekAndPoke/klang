@@ -126,7 +126,7 @@ stack(
   n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.1).slow(256))
-    .gain(0.225).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
+    .gain(0.275).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
     .pan(0.29).superimpose(pan(0.61))
     .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3).analog(1)
     .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
@@ -135,7 +135,7 @@ stack(
     .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.275)
     .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
-    .lpf(5 * 440).hpf(180).notchf(notch).notchq(0.75).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
+    .lpf(5 * 440).hpf(180).notchf(notch).notchq(1.25).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
     .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).analog(1) // . solo()
     .filterWhen(x => x < (wait * 4 + keep))
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
@@ -195,7 +195,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
   ).orbit(3).fast(1).scale("C2:chromatic").pan(0.3).hpf(120).lpf(2000).warmth(0.1)
     .s("supersaw").unison(6).detune(0.07).gain("0.6 0.525 0.55 0.525")
-    .adsr("0.01:0.15:0.66:0.01").clip(1.01).distort("5").postgain(0.125)
+    .adsr("0.01:0.1:0.66:0.01").clip(1.01).distort("5").postgain(0.125)
     .superimpose(x => x.orbit(4).pan(0.7).bandf("300 400 [300|400|600|800]*128".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.125))
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------

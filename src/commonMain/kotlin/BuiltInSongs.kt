@@ -206,7 +206,7 @@ stack(
         Song(
             id = "$PREFIX-0003",
             title = "A Synth Worth Lying For",
-            rpm = 29.4,
+            rpm = 32.0,
             code = TestTextPatterns.aTruthWorthLyingFor,
             icon = "guitar",
         )
@@ -216,7 +216,7 @@ stack(
         Song(
             id = "$PREFIX-0004",
             title = "Stranger Synths",
-            rpm = 34.8,
+            rpm = 34.0,
             code = TestTextPatterns.strangerThingsNetflix,
             icon = "film",
         )
