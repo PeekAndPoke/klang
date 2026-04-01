@@ -40,11 +40,11 @@ class BlockContext(
     /** Audio sample rate in Hz */
     val sampleRate: Int,
     /** Voice start frame (absolute) */
-    val startFrame: Long,
+    val startFrame: Int,
     /** Voice end frame including release (absolute) */
-    val endFrame: Long,
+    val endFrame: Int,
     /** Frame when gate ends / release begins (absolute) */
-    val gateEndFrame: Long,
+    val gateEndFrame: Int,
     /** Base frequency in Hz */
     val freqHz: Double,
 
@@ -75,7 +75,7 @@ class BlockContext(
     var length: Int = 0
 
     /** Current block start frame (absolute) */
-    var blockStart: Long = 0
+    var blockStart: Int = 0
 
     /** Voice render context — set per block by Voice, read by SendRenderer for orbit routing */
     lateinit var renderContext: Voice.RenderContext

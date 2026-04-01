@@ -85,7 +85,7 @@ class SamplePreloader(
         // Wait for backend acknowledgements
         ackJobs.forEach { it.await() }
 
-        val durationMs = (klangTime.internalMsNow() - startTimeMs).toLong()
+        val durationMs = (klangTime.internalMsNow() - startTimeMs).toInt()
 
         // Emit completion signal
         signals?.invoke(

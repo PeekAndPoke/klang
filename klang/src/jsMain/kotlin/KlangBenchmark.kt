@@ -181,7 +181,7 @@ class KlangBenchmark(
             // 2. Warmup (Crucial for JIT) - only on first iteration
             // Render 50 blocks of silence to wake up the CPU governor and JIT
             repeat(50) { frame ->
-                renderer.renderBlock(frame * blockFrames.toLong(), outBuffer)
+                renderer.renderBlock(frame * blockFrames, outBuffer)
             }
             console.log("[Benchmark] Warmup complete")
         }
@@ -190,7 +190,7 @@ class KlangBenchmark(
 
         // 3. Ramp Up Loop
         var currentVoices = 0
-        var cursorFrame = 0L
+        var cursorFrame = 0
         val batchSize = 1 // Add 4 voices at a time
         val blocksToMeasure = 50 // Measure over ~150ms of audio
 

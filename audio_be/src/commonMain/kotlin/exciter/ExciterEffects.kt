@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_be.exciter
 
-import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.resolveDistortionShape
 import kotlin.math.*
 
 
@@ -59,23 +59,70 @@ fun Exciter.distort(amount: Double, shape: String = "soft"): Exciter {
     return distort(ParamExciter("amount", amount), shape)
 }
 
-private data class ResolvedShape(
-    val fn: (Double) -> Double,
-    val outputGain: Double = 1.0,
-    val needsDcBlock: Boolean = false,
-)
+/**
+ * Pre-amplification stage. Boosts signal level.
+ * Amount is read once per block (control rate). Bypasses when amount <= 0.
+ */
+fun Exciter.drive(amount: Exciter, type: String = "linear"): Exciter {
+    return Exciter { buffer, freqHz, ctx ->
+        this.generate(buffer, freqHz, ctx)
 
-private fun resolveDistortionShape(shape: String): ResolvedShape = when (shape.lowercase()) {
-    "hard" -> ResolvedShape(fn = ClippingFuncs::hardClip)
-    "gentle" -> ResolvedShape(fn = ClippingFuncs::softClip, outputGain = 2.0)
-    "cubic" -> ResolvedShape(fn = ClippingFuncs::cubicClip)
-    "diode" -> ResolvedShape(fn = ClippingFuncs::diodeClip, needsDcBlock = true)
-    "fold" -> ResolvedShape(fn = ClippingFuncs::sineFold)
-    "chebyshev" -> ResolvedShape(fn = ClippingFuncs::chebyshevT3)
-    "rectify" -> ResolvedShape(fn = ClippingFuncs::rectify, needsDcBlock = true)
-    "exp" -> ResolvedShape(fn = ClippingFuncs::expClip)
-    else -> ResolvedShape(fn = ClippingFuncs::fastTanh) // "soft" & fallback
+        val amt = Exciters.readParam(amount, freqHz, ctx)
+        if (amt <= 0.0) return@Exciter
+
+        val driveGain = when (type.lowercase()) {
+            "linear" -> 10.0.pow(amt * 1.2)
+            else -> 10.0.pow(amt * 1.2) // default to linear, future: tube, fet, tape
+        }
+
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
+            buffer[i] = (buffer[i] * driveGain).toFloat()
+        }
+    }
 }
+
+/** Double convenience overload. */
+fun Exciter.drive(amount: Double, type: String = "linear"): Exciter {
+    if (amount <= 0.0) return this
+    return drive(ParamExciter("amount", amount), type)
+}
+
+/**
+ * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
+ * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+ * Includes DC blocker for asymmetric shapes (diode, rectify).
+ */
+fun Exciter.clip(shape: String = "soft"): Exciter {
+    val resolved = resolveDistortionShape(shape)
+    val clipFn = resolved.fn
+    val outputGain = resolved.outputGain
+    val needsDcBlock = resolved.needsDcBlock
+
+    val dcBlockCoeff = 0.995
+    var dcBlockX1 = 0.0
+    var dcBlockY1 = 0.0
+
+    return Exciter { buffer, freqHz, ctx ->
+        this.generate(buffer, freqHz, ctx)
+
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
+            var y = clipFn(buffer[i].toDouble()) * outputGain
+
+            if (needsDcBlock) {
+                val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                dcBlockX1 = y
+                dcBlockY1 = flushDenormal(dcOut)
+                y = dcOut
+            }
+
+            buffer[i] = y.toFloat()
+        }
+    }
+}
+
+// ResolvedShape and resolveDistortionShape() moved to audio_be/DistortionShape.kt
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BitCrush

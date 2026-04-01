@@ -35,7 +35,7 @@ class RepeatCyclesPattern(
 
         while (currentCycle < lastCycle) {
             val cycleStart = currentCycle.toDouble().toRational()
-            val cycleEnd = cycleStart + 1.0.toRational()
+            val cycleEnd = cycleStart + Rational.ONE
 
             // Calculate which source cycle corresponds to this output cycle
             // Source cycle = floor(current_output_cycle / n)
@@ -94,7 +94,7 @@ class RepeatCyclesPattern(
                     to: Rational,
                     ctx: SprudelPattern.QueryContext,
                 ): List<SprudelPatternEvent> {
-                    val repsEvents = repetitionsPattern.queryArcContextual(from, from + 1.0.toRational(), ctx)
+                    val repsEvents = repetitionsPattern.queryArcContextual(from, from + Rational.ONE, ctx)
                     val repsValue = repsEvents.firstOrNull()?.data?.value?.asDouble ?: 1.0
                     val repetitions = repsValue.toRational()
 

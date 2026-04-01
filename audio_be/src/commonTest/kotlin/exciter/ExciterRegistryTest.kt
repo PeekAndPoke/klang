@@ -57,8 +57,8 @@ class ExciterRegistryTest : StringSpec({
         parent.contains("custom") shouldBe false
 
         // Child can override without affecting parent
-        child.register("sine", ExciterDsl.Sine(gain = ExciterDsl.Param("gain", 0.5)))
-        child.get("sine") shouldBe ExciterDsl.Sine(gain = ExciterDsl.Param("gain", 0.5))
+        child.register("sine", ExciterDsl.Sine(freq = ExciterDsl.Param("freq", 440.0)))
+        child.get("sine") shouldBe ExciterDsl.Sine(freq = ExciterDsl.Param("freq", 440.0))
         parent.get("sine") shouldBe ExciterDsl.Sine()
     }
 
@@ -133,7 +133,7 @@ class ExciterRegistryTest : StringSpec({
 
     "createExciter produces independent instances per call" {
         val registry = ExciterRegistry()
-        registry.register("test", ExciterDsl.Sine(gain = ExciterDsl.Param("gain", 0.5)))
+        registry.register("test", ExciterDsl.Sine(freq = ExciterDsl.Param("freq", 440.0)))
 
         val data = VoiceData.empty.copy(sound = "test", freqHz = 440.0)
 

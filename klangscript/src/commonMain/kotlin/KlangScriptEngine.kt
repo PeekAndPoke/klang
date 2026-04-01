@@ -4,6 +4,7 @@ import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.*
+import io.peekandpoke.ultra.common.MutableTypedAttributes
 
 /**
  * Main facade for the KlangScript engine
@@ -34,6 +35,8 @@ import io.peekandpoke.klang.script.runtime.*
  */
 class KlangScriptEngine private constructor(
     native: KlangScriptExtension,
+    /** Mutable typed attributes for engine-level state (e.g. KlangPlayer). Set by the app at runtime. */
+    val attrs: MutableTypedAttributes = MutableTypedAttributes.empty(),
 ) : LibraryLoader {
     companion object {
         /**
@@ -212,16 +215,16 @@ class KlangScriptEngine private constructor(
     ) : KlangScriptExtensionBuilder by registry {
 
         /**
-         * Build the configured KlangScript engine
+         * Build the configured KlangScript engine.
          *
-         * After build(), the engine is ready to execute scripts.
-         * All registrations have been applied.
-         *
+         * @param attrs Mutable typed attributes for engine-level state. The app can set
+         *   values (e.g. KlangPlayer) on it after building. Native methods access it via the engine reference.
          * @return The configured KlangScript engine
          */
-        fun build(): KlangScriptEngine {
+        fun build(attrs: MutableTypedAttributes = MutableTypedAttributes.empty()): KlangScriptEngine {
             return KlangScriptEngine(
                 native = registry.buildNativeRegistry(),
+                attrs = attrs,
             )
         }
     }

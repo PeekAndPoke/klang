@@ -3,7 +3,7 @@ package io.peekandpoke.klang.audio_be
 import io.peekandpoke.klang.audio_be.WorkletContract.sendCmd
 import io.peekandpoke.klang.audio_bridge.*
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangRingBuffer
+import io.peekandpoke.klang.common.infra.KlangRingBuffer
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.await
@@ -162,6 +162,7 @@ class JsAudioBackend(
                         // Direct forwarding for control commands
                         is KlangCommLink.Cmd.Cleanup,
                         is KlangCommLink.Cmd.ClearScheduled,
+                        is KlangCommLink.Cmd.RegisterExciter,
                         is KlangCommLink.Cmd.ReplaceVoices,
                         is KlangCommLink.Cmd.ScheduleVoice,
                             -> node.port.sendCmd(cmd)

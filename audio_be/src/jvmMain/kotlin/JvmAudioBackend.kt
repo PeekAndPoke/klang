@@ -60,7 +60,9 @@ class JvmAudioBackend(
         // Set backend start time from KlangTime relative clock
         voices.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
 
-        var currentFrame = 0L
+        // Int instead of Long: keeps JVM backend consistent with JS (where Long is boxed).
+        // At 48kHz, Int overflows after ~12.4 hours — sufficient for any session.
+        var currentFrame = 0
 
         // Stereo
         val format = AudioFormat(sampleRate.toFloat(), 16, 2, true, false)
@@ -109,6 +111,10 @@ class JvmAudioBackend(
                         }
 
                         is KlangCommLink.Cmd.Sample -> voices.addSample(msg = cmd)
+
+                        is KlangCommLink.Cmd.RegisterExciter -> {
+                            exciterRegistry.register(cmd.name, cmd.dsl)
+                        }
                     }
                 }
 

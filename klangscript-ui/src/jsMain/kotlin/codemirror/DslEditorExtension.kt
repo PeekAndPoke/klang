@@ -2,6 +2,10 @@ package io.peekandpoke.klang.ui.codemirror
 
 import io.peekandpoke.klang.codemirror.ext.*
 import io.peekandpoke.klang.script.ast.AstIndex
+import io.peekandpoke.klang.script.ast.CallExpression
+import io.peekandpoke.klang.script.ast.MemberAccess
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.intel.ExpressionTypeInferrer
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -36,6 +40,7 @@ import org.w3c.dom.Element
  */
 fun dslEditorExtension(
     docProvider: (String) -> KlangSymbol?,
+    registryProvider: () -> KlangDocsRegistry? = { null },
     astIndexProvider: () -> AstIndex? = { null },
     hoverPopup: HoverPopupCtrl,
     hoverContent: FlowContent.(KlangSymbol) -> Unit,
@@ -87,7 +92,7 @@ fun dslEditorExtension(
     fun isModifier(event: dynamic): Boolean =
         event.ctrlKey == true || event.metaKey == true
 
-    /** Resolve the word under the mouse and look it up in the doc registry. */
+    /** Resolve the word under the mouse and look it up in the doc registry (receiver-aware). */
     fun wordDocAt(view: EditorView, event: dynamic): Pair<SelectionRange, KlangSymbol>? {
         val coords = jsObject<dynamic> {
             this.x = event.clientX
@@ -96,23 +101,45 @@ fun dslEditorExtension(
         val pos = view.posAtCoords(coords) ?: return null
         val word = view.state.wordAt(pos) ?: return null
         val name = view.state.doc.sliceString(word.from, word.to)
-        val doc = docProvider(name) ?: return null
 
-        // Skip words inside string literals: count unescaped quotes from line start
-        // to word start. An odd count means we are inside a string.
+        // Skip words inside string literals (both "..." and '...')
         val line = view.state.doc.lineAt(word.from)
         val prefix = view.state.doc.sliceString(line.from, word.from)
-        var quoteCount = 0
-        var i = 0
-        while (i < prefix.length) {
-            if (prefix[i] == '\\') {
-                i += 2; continue
-            }
-            if (prefix[i] == '"') quoteCount++
-            i++
+        if (isInsideStringLiteral(prefix)) {
+            return null
         }
-        if (quoteCount % 2 != 0) return null
 
+        // Try receiver-aware lookup using AST
+        val registry = registryProvider()
+        val astIndex = astIndexProvider()
+        if (registry != null && astIndex != null) {
+            val node = astIndex.nodeAt(pos)
+            if (node != null) {
+                val parent = astIndex.parentOf(node)
+                // Cursor is on the property part of a MemberAccess (e.g., hovering "lowpass" in obj.lowpass())
+                val memberAccess = when {
+                    parent is MemberAccess && parent.property == name -> parent
+                    node is MemberAccess && node.property == name -> node
+                    node is CallExpression && (node.callee as? MemberAccess)?.property == name ->
+                        node.callee as MemberAccess
+
+                    else -> null
+                }
+                if (memberAccess != null) {
+                    val inferrer = ExpressionTypeInferrer(registry)
+                    val receiverType = inferrer.inferType(memberAccess.obj)
+                    if (receiverType != null) {
+                        val symbol = registry.getSymbolWithReceiver(name, receiverType)
+                        if (symbol != null) {
+                            return word to symbol
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: name-only lookup
+        val doc = docProvider(name) ?: return null
         return word to doc
     }
 
@@ -139,7 +166,7 @@ fun dslEditorExtension(
         val source = view.state.doc.toString()
         val coords = jsObject<dynamic> { this.x = event.clientX; this.y = event.clientY }.unsafeCast<Coords>()
         val pos = view.posAtCoords(coords) ?: return null
-        return findCallArgAtAst(astIndexProvider(), source, pos, docProvider)
+        return findCallArgAtAst(astIndexProvider(), source, pos, docProvider, registryProvider())
     }
 
     fun makeToolContext(argInfo: CallArgInfo, view: EditorView): KlangUiToolContext {
@@ -261,14 +288,24 @@ fun dslEditorExtension(
         badgesHideTimer = window.setTimeout({ hideBadges() }, 300)
     }
 
-    fun getOrCreateBadgeContainer(): Element {
+    // TODO: Future improvement — create a Kraft component lifecycle "attachment" mechanism:
+    //  a self-cleanup object that reacts to onMount/onUnMount, keeping state (like badge container,
+    //  timers, caches) in one place instead of scattered across the host component. The pattern is
+    //  always the same: onMount creates resources, onUnMount tears them down. The attachment would
+    //  own all state variables and auto-cleanup when the host component unmounts.
+
+    /** Lazily created badge container. Attached to the editor's own DOM so it is automatically
+     *  removed when the editor is destroyed — prevents orphaned elements leaking in document.body. */
+    fun getOrCreateBadgeContainer(view: EditorView): Element {
         return badgeContainer ?: run {
             val div = document.createElement("div")
             div.asDynamic().style.cssText =
                 "position:fixed;z-index:9999;display:none;flex-direction:row;gap:3px;pointer-events:auto;"
             div.addEventListener("mouseenter", { cancelBadgesClose() })
             div.addEventListener("mouseleave", { scheduleBadgesClose() })
-            document.body?.appendChild(div)
+            // Append to editor DOM instead of document.body: position:fixed still positions
+            // relative to the viewport, but the element's lifetime is tied to the editor.
+            view.dom.appendChild(div)
             badgeContainer = div
             div
         }
@@ -284,11 +321,11 @@ fun dslEditorExtension(
             return
         }
 
-        val container = getOrCreateBadgeContainer()
+        val container = getOrCreateBadgeContainer(view)
         // Dampen horizontal tracking: move at 50% of mouse offset from initial hover position
         val dampedX = badgeInitialMouseX + (mouseX - badgeInitialMouseX) * 0.5
         container.asDynamic().style.left = "${dampedX}px"
-        container.asDynamic().style.top = "${rect.top - 25}px"
+        container.asDynamic().style.top = "${rect.top - 26}px"
         container.asDynamic().style.transform = "translateX(-50%)"
         container.asDynamic().style.display = "flex"
 
@@ -304,8 +341,8 @@ fun dslEditorExtension(
             btn.asDynamic().title = tool.title ?: toolName
             btn.asDynamic().style.cssText =
                 "cursor:pointer;background:${KlangTheme.Hex.cardBackground};" +
-                        "border:1px solid ${KlangTheme.Hex.textTertiary};border-radius:3px;" +
-                        "padding:1px 5px;font-size:12px;line-height:1.5;color:${KlangTheme.Hex.textPrimary};"
+                        "border:1px solid ${KlangTheme.Hex.textSecondary};border-radius:3px;" +
+                        "padding:2px 8px;font-size:12px;line-height:1.5;color:${KlangTheme.Hex.gold};"
 
             btn.innerHTML = """<i class="$iconCss icon" style="margin:0;font-size:12px;"></i>"""
 

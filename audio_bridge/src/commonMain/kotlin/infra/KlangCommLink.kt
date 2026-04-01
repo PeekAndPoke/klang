@@ -4,6 +4,9 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.common.infra.KlangMessageReceiver
+import io.peekandpoke.klang.common.infra.KlangMessageSender
+import io.peekandpoke.klang.common.infra.KlangRingBuffer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -52,6 +55,17 @@ class KlangCommLink(capacity: Int = 8192) {
         ) : Cmd {
             companion object {
                 const val SERIAL_NAME = "schedule-voice"
+            }
+        }
+
+        /** Registers a custom ExciterDsl in the backend's exciter registry. */
+        data class RegisterExciter(
+            override val playbackId: String,
+            val name: String,
+            val dsl: io.peekandpoke.klang.audio_bridge.ExciterDsl,
+        ) : Cmd {
+            companion object {
+                const val SERIAL_NAME = "register-exciter"
             }
         }
 

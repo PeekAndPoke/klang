@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
-import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.resolveDistortionShape
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import kotlin.math.pow
@@ -28,7 +28,7 @@ class DistortionRenderer(
     private var dcBlockY1 = 0.0
 
     init {
-        val resolved = resolveShape(shape)
+        val resolved = resolveDistortionShape(shape)
         waveshaper = resolved.fn
         outputGain = resolved.outputGain
         needsDcBlock = resolved.needsDcBlock
@@ -59,23 +59,5 @@ class DistortionRenderer(
         }
     }
 
-    companion object {
-        private data class ResolvedShape(
-            val fn: (Double) -> Double,
-            val outputGain: Double = 1.0,
-            val needsDcBlock: Boolean = false,
-        )
-
-        private fun resolveShape(shape: String): ResolvedShape = when (shape.lowercase()) {
-            "hard" -> ResolvedShape(fn = ClippingFuncs::hardClip)
-            "gentle" -> ResolvedShape(fn = ClippingFuncs::softClip, outputGain = 2.0)
-            "cubic" -> ResolvedShape(fn = ClippingFuncs::cubicClip)
-            "diode" -> ResolvedShape(fn = ClippingFuncs::diodeClip, needsDcBlock = true)
-            "fold" -> ResolvedShape(fn = ClippingFuncs::sineFold)
-            "chebyshev" -> ResolvedShape(fn = ClippingFuncs::chebyshevT3)
-            "rectify" -> ResolvedShape(fn = ClippingFuncs::rectify, needsDcBlock = true)
-            "exp" -> ResolvedShape(fn = ClippingFuncs::expClip)
-            else -> ResolvedShape(fn = ClippingFuncs::fastTanh)
-        }
-    }
+    // ResolvedShape and resolveDistortionShape() shared from audio_be/DistortionShape.kt
 }

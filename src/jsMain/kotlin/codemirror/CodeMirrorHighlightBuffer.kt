@@ -19,8 +19,8 @@ import kotlin.js.Date
  * loop so that highlights due at the same time appear in the same paint frame.
  */
 class CodeMirrorHighlightBuffer(
-    private val maxRefreshRatePerLocation: Int = 60,
-    private val maxSimultaneousHighlights: Int = 500,
+    private val maxRefreshRatePerLocation: Int = 300,
+    private val maxSimultaneousHighlights: Int = 2000,
     var maxHighlightsPerEvent: Int = 10,
 ) {
     private val minIntervalMs: Double get() = 1000.0 / maxRefreshRatePerLocation
@@ -83,8 +83,8 @@ class CodeMirrorHighlightBuffer(
             .filter { it.isValid() }
             .distinct()
             .take(maxHighlightsPerEvent).forEach { location ->
-            scheduleForLocation(location, event)
-        }
+                scheduleForLocation(location, event)
+            }
     }
 
     fun cancelAll() {
@@ -153,6 +153,7 @@ class CodeMirrorHighlightBuffer(
                             showHighlight(op.key, op.location, op.durationMs)
                         }
                     }
+
                     is PendingOp.Remove -> removeHighlight(op.key)
                 }
             }

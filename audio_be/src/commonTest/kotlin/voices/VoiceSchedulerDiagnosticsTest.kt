@@ -63,7 +63,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
 
         // Advance time past 50ms threshold
         currentTimeMs = 60.0
-        scheduler.process(blockFrames.toLong())
+        scheduler.process(blockFrames)
 
         // Now we should have diagnostics
         val diagnosticsAfter = commLink.readAllDiagnostics()
@@ -77,7 +77,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
         // Process and trigger diagnostics
         scheduler.process(0)
         currentTimeMs = 60.0
-        scheduler.process(blockFrames.toLong())
+        scheduler.process(blockFrames)
 
         val diagnostics = commLink.readAllDiagnostics().first()
         diagnostics.playbackId shouldBe KlangCommLink.SYSTEM_PLAYBACK_ID
@@ -100,7 +100,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
         // Process to activate the voice
         scheduler.process(0)
         currentTimeMs = 60.0
-        scheduler.process(blockFrames.toLong())
+        scheduler.process(blockFrames)
 
         val diagnostics = commLink.readAllDiagnostics().first()
         diagnostics.activeVoiceCount shouldBe 1
@@ -135,7 +135,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
         // Process to activate voices
         scheduler.process(0)
         currentTimeMs = 60.0
-        scheduler.process(blockFrames.toLong())
+        scheduler.process(blockFrames)
 
         val diagnostics = commLink.readAllDiagnostics().first()
 
@@ -161,7 +161,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
 
         // Advance past 50ms to trigger diagnostics
         currentTimeMs = 60.0
-        scheduler.process(blockFrames.toLong())
+        scheduler.process(blockFrames)
 
         val diagnostics = commLink.readAllDiagnostics().first()
 
@@ -178,7 +178,7 @@ class VoiceSchedulerDiagnosticsTest : StringSpec({
 
         // Process multiple blocks with 15ms per block
         for (i in 0..10) {
-            scheduler.process(i * blockFrames.toLong())
+            scheduler.process(i * blockFrames)
             currentTimeMs += 15.0 // 15ms per block
         }
 

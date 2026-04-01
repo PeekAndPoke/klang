@@ -30,7 +30,7 @@ sealed class KlangPlaybackSignal {
         /** Number of samples that were loaded */
         val count: Int,
         /** How long preloading took in milliseconds */
-        val durationMs: Long,
+        val durationMs: Int,
     ) : KlangPlaybackSignal()
 
     /**
@@ -75,13 +75,7 @@ sealed class KlangPlaybackSignal {
             val data: VoiceData,
             /** Source locations for code highlighting */
             val sourceLocations: SourceLocationChain?,
-        ) {
-            /** Start time in milliseconds */
-            val startTimeMs get() = (startTime * 1000).toLong()
-
-            /** End time in milliseconds */
-            val endTimeMs get() = (endTime * 1000).toLong()
-        }
+        )
     }
 
     /**

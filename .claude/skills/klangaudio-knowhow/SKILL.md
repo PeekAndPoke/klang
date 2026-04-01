@@ -41,10 +41,11 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 
 ## Critical Rules
 
-- **NEVER use `Long` in audio_be, audio_fe, or audio_jsworklet hot paths.** `Long` is boxed in Kotlin/JS, causing
-  severe performance degradation (object allocation on every operation). Use `Int` for frame counts (max ~2.1B frames
-  = ~12.4 hours at 48kHz) or `Double` for time values. This applies especially to loop counters, buffer indices,
-  frame positions, and any field on objects used in per-sample or per-block processing.
+- **NEVER use boxed types in audio modules.** The following types are banned in audio_be, audio_fe, audio_bridge,
+  and audio_jsworklet: `Long`, `ULong` (emulated wrapper objects), `Byte`, `Short`, `UByte`, `UShort`
+  (range-check overhead on every operation), `Char` (heap-allocated wrapper). Use `Int` for frame counts, buffer
+  indices, loop counters, MIDI notes (max ~2.1B frames = ~12.4 hours at 48kHz). Use `Double` for time values.
+  Convert banned types from external APIs to `Int`/`Double` at the boundary immediately.
 - Real-time audio: no heap allocations in hot paths; block-based processing (128–256 frames/block).
 - `audio_bridge` is the dependency root — all other audio modules depend on it.
 

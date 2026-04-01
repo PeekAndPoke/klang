@@ -15,71 +15,82 @@ import kotlin.random.Random
 fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
     return when (this) {
         is ExciterDsl.Param -> ParamExciter(name, oscParams?.get(name) ?: default)
+        is ExciterDsl.Constant -> ParamExciter("", value)  // no name = no oscParam override
 
         // Primitives
-        is ExciterDsl.Sine -> Exciters.sine(this.analog.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.Sawtooth -> Exciters.sawtooth(this.analog.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.Square -> Exciters.square(this.analog.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.Triangle -> Exciters.triangle(this.analog.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.Ramp -> Exciters.ramp(this.analog.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.Zawtooth -> Exciters.zawtooth(this.analog.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.Pulze -> Exciters.pulze(this.duty.toExciter(oscParams), this.analog.toExciter(oscParams))
-            .withGain(this.gain.toExciter(oscParams))
+        is ExciterDsl.Sine -> Exciters.sine(freq = this.freq.toExciter(oscParams), analog = this.analog.toExciter(oscParams))
+        is ExciterDsl.Sawtooth -> Exciters.sawtooth(freq = this.freq.toExciter(oscParams), analog = this.analog.toExciter(oscParams))
+        is ExciterDsl.Square -> Exciters.square(freq = this.freq.toExciter(oscParams), analog = this.analog.toExciter(oscParams))
+        is ExciterDsl.Triangle -> Exciters.triangle(freq = this.freq.toExciter(oscParams), analog = this.analog.toExciter(oscParams))
+        is ExciterDsl.Ramp -> Exciters.ramp(freq = this.freq.toExciter(oscParams), analog = this.analog.toExciter(oscParams))
+        is ExciterDsl.Zawtooth -> Exciters.zawtooth(freq = this.freq.toExciter(oscParams), analog = this.analog.toExciter(oscParams))
+        is ExciterDsl.Pulze -> Exciters.pulze(
+            freq = this.freq.toExciter(oscParams),
+            duty = this.duty.toExciter(oscParams),
+            analog = this.analog.toExciter(oscParams),
+        )
 
-        is ExciterDsl.WhiteNoise -> Exciters.whiteNoise(Random).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.Impulse -> Exciters.impulse(this.analog.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.BrownNoise -> Exciters.brownNoise(Random).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.PinkNoise -> Exciters.pinkNoise(Random).withGain(this.gain.toExciter(oscParams))
+        is ExciterDsl.WhiteNoise -> Exciters.whiteNoise(Random)
+        is ExciterDsl.Impulse -> Exciters.impulse(freq = this.freq.toExciter(oscParams), analog = this.analog.toExciter(oscParams))
+        is ExciterDsl.BrownNoise -> Exciters.brownNoise(Random)
+        is ExciterDsl.PinkNoise -> Exciters.pinkNoise(Random)
 
-        is ExciterDsl.PerlinNoise -> Exciters.perlinNoise(Random, this.rate.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.BerlinNoise -> Exciters.berlinNoise(Random, this.rate.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
+        is ExciterDsl.PerlinNoise -> Exciters.perlinNoise(Random, this.rate.toExciter(oscParams))
+        is ExciterDsl.BerlinNoise -> Exciters.berlinNoise(Random, this.rate.toExciter(oscParams))
 
-        is ExciterDsl.Dust -> Exciters.dust(Random, this.density.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
-        is ExciterDsl.Crackle -> Exciters.crackle(Random, this.density.toExciter(oscParams)).withGain(this.gain.toExciter(oscParams))
+        is ExciterDsl.Dust -> Exciters.dust(Random, this.density.toExciter(oscParams))
+        is ExciterDsl.Crackle -> Exciters.crackle(Random, this.density.toExciter(oscParams))
 
         // Super oscillators
         is ExciterDsl.SuperSaw -> Exciters.superSaw(
+            freq = this.freq.toExciter(oscParams),
             voices = this.voices.toExciter(oscParams),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
-        ).withGain(this.gain.toExciter(oscParams))
+        )
 
         is ExciterDsl.SuperSine -> Exciters.superSine(
+            freq = this.freq.toExciter(oscParams),
             voices = this.voices.toExciter(oscParams),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
-        ).withGain(this.gain.toExciter(oscParams))
+        )
 
         is ExciterDsl.SuperSquare -> Exciters.superSquare(
+            freq = this.freq.toExciter(oscParams),
             voices = this.voices.toExciter(oscParams),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
-        ).withGain(this.gain.toExciter(oscParams))
+        )
 
         is ExciterDsl.SuperTri -> Exciters.superTri(
+            freq = this.freq.toExciter(oscParams),
             voices = this.voices.toExciter(oscParams),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
-        ).withGain(this.gain.toExciter(oscParams))
+        )
 
         is ExciterDsl.SuperRamp -> Exciters.superRamp(
+            freq = this.freq.toExciter(oscParams),
             voices = this.voices.toExciter(oscParams),
             freqSpread = this.freqSpread.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
-        ).withGain(this.gain.toExciter(oscParams))
+        )
 
         is ExciterDsl.Silence -> Exciters.silence()
 
         // Physical models
         is ExciterDsl.Pluck -> Exciters.karplusStrong(
+            freq = this.freq.toExciter(oscParams),
             decay = this.decay.toExciter(oscParams),
             brightness = this.brightness.toExciter(oscParams),
             pickPosition = this.pickPosition.toExciter(oscParams),
             stiffness = this.stiffness.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
-        ).withGain(this.gain.toExciter(oscParams))
+        )
 
         is ExciterDsl.SuperPluck -> Exciters.superKarplusStrong(
+            freq = this.freq.toExciter(oscParams),
             voices = this.voices.toExciter(oscParams),
             freqSpread = this.freqSpread.toExciter(oscParams),
             decay = this.decay.toExciter(oscParams),
@@ -87,13 +98,13 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
             pickPosition = this.pickPosition.toExciter(oscParams),
             stiffness = this.stiffness.toExciter(oscParams),
             analog = this.analog.toExciter(oscParams),
-        ).withGain(this.gain.toExciter(oscParams))
+        )
 
         // Arithmetic
         is ExciterDsl.Plus -> left.toExciter(oscParams) + right.toExciter(oscParams)
         is ExciterDsl.Times -> left.toExciter(oscParams) * right.toExciter(oscParams)
-        is ExciterDsl.Mul -> inner.toExciter(oscParams).mul(this.factor.toExciter(oscParams))
-        is ExciterDsl.Div -> inner.toExciter(oscParams).div(this.divisor.toExciter(oscParams))
+        is ExciterDsl.Mul -> left.toExciter(oscParams).mul(right.toExciter(oscParams))
+        is ExciterDsl.Div -> left.toExciter(oscParams).div(right.toExciter(oscParams))
 
         // Frequency
         is ExciterDsl.Detune -> inner.toExciter(oscParams).detune(this.semitones.toExciter(oscParams))
@@ -102,6 +113,8 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
         is ExciterDsl.Lowpass -> inner.toExciter(oscParams).lowpass(this.cutoffHz.toExciter(oscParams), this.q.toExciter(oscParams))
         is ExciterDsl.Highpass -> inner.toExciter(oscParams).highpass(this.cutoffHz.toExciter(oscParams), this.q.toExciter(oscParams))
         is ExciterDsl.OnePoleLowpass -> inner.toExciter(oscParams).onePoleLowpass(this.cutoffHz.toExciter(oscParams))
+        is ExciterDsl.Bandpass -> inner.toExciter(oscParams).bandpass(this.cutoffHz.toExciter(oscParams), this.q.toExciter(oscParams))
+        is ExciterDsl.Notch -> inner.toExciter(oscParams).notch(this.cutoffHz.toExciter(oscParams), this.q.toExciter(oscParams))
 
         // Envelope
         is ExciterDsl.Adsr -> inner.toExciter(oscParams).adsr(
@@ -124,6 +137,8 @@ fun ExciterDsl.toExciter(oscParams: Map<String, Double>? = null): Exciter {
 
         // Effects
         is ExciterDsl.Distort -> inner.toExciter(oscParams).distort(this.amount.toExciter(oscParams), shape)
+        is ExciterDsl.Drive -> inner.toExciter(oscParams).drive(this.amount.toExciter(oscParams), driveType)
+        is ExciterDsl.Clip -> inner.toExciter(oscParams).clip(shape)
         is ExciterDsl.Crush -> inner.toExciter(oscParams).crush(this.amount.toExciter(oscParams))
         is ExciterDsl.Coarse -> inner.toExciter(oscParams).coarse(this.amount.toExciter(oscParams))
         is ExciterDsl.Phaser -> inner.toExciter(oscParams).phaser(

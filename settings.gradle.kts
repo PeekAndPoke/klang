@@ -27,6 +27,7 @@ include(
     ":audio_be",
     ":audio_bridge",
     ":audio_jsworklet",
+    ":audio_benchmark",
 
     // utils
     ":tones",

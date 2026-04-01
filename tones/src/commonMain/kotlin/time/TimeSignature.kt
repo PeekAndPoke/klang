@@ -1,7 +1,5 @@
 package io.peekandpoke.klang.tones.time
 
-import kotlin.math.log2
-
 /**
  * Represents a musical time signature.
  */
@@ -120,11 +118,19 @@ sealed class TimeSignature {
             return Pair(upperList, lower)
         }
 
-        // Checks if a number is a power of two
-        private fun isPowerOfTwo(x: Int): Boolean {
-            if (x <= 0) return false
-            return (log2(x.toDouble()) % 1.0) == 0.0
-        }
+        /**
+         * A power of two has exactly one bit set in binary (e.g., 8 = 0b1000).
+         * Subtracting 1 flips that bit and sets all lower bits (e.g., 7 = 0b0111).
+         * AND-ing the two gives zero only for powers of two: 0b1000 & 0b0111 = 0b0000.
+         *
+         * Why not log2: `(log2(x.toDouble()) % 1.0) == 0.0` fails for certain integers
+         * due to floating-point precision.
+         *
+         * Note: also exists as `Int.isPowerOfTwo()` in common/math. Duplicated here because
+         * tones does not depend on the common module and adding that dependency for one function
+         * would be overkill.
+         */
+        private fun isPowerOfTwo(x: Int): Boolean = x > 0 && (x and (x - 1)) == 0
 
         // Internal builder for TimeSignature objects
         private fun buildTimeSignature(up: List<Int>, down: Int): TimeSignature {

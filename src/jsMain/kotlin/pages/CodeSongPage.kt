@@ -257,7 +257,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                 if (!loading) {
                     withEditorErrorHandling(codeEditorRef) {
                         getPlayer().let { p ->
-                            val pattern = SprudelPattern.compileRaw(code)
+                            val engine = Player.createEngine(player = p)
+                            val pattern = SprudelPattern.compile(engine, code)
                                 ?: error("Failed to compile Sprudel pattern from code")
 
                             playback = p.play(pattern)
@@ -299,7 +300,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
             else -> launch {
                 withEditorErrorHandling(codeEditorRef) {
-                    val pattern = SprudelPattern.compileRaw(code)
+                    val engine = Player.createEngine()
+                    val pattern = SprudelPattern.compile(engine, code)
                         ?: error("Failed to compile Sprudel pattern from code")
                     s.updatePattern(pattern)
                 }

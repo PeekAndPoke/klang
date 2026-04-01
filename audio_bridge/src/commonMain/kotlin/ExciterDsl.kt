@@ -13,9 +13,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface ExciterDsl {
 
-    /** Whether this exciter requires a frequency to produce sound. Noise sources override to false. */
-    val needsFreq: Boolean get() = true
-
     /** Recursively collects all [Param] leaf nodes in this DSL subtree into [out]. */
     fun collectParams(out: MutableList<Param>)
 
@@ -40,25 +37,41 @@ sealed interface ExciterDsl {
         val default: Double,
         val description: String = "",
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
             out.add(this)
         }
     }
 
+    /**
+     * A fixed constant value that cannot be overridden by oscParams.
+     *
+     * Use when the user explicitly sets a value (e.g. `Osc.sine(5)` = 5 Hz).
+     * Unlike [Param], this is not discoverable and not overridable at play time.
+     */
+    @Serializable
+    @SerialName("const")
+    data class Constant(
+        val value: Double,
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {}
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Oscillator Primitives
+    //
+    // freq convention: 0 = use the note's frequency from the voice (e.g. 440 Hz for A4).
+    // Non-zero = fixed frequency in Hz (e.g. 5.0 for a 5 Hz LFO).
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Sine wave oscillator. */
+    /** Sine wave oscillator. @param freq 0 = voice frequency, non-zero = fixed Hz. */
     @Serializable
     @SerialName("sine")
     data class Sine(
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -66,11 +79,11 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("sawtooth")
     data class Sawtooth(
-        val gain: ExciterDsl = Param("gain", 0.6, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -78,11 +91,11 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("square")
     data class Square(
-        val gain: ExciterDsl = Param("gain", 0.5, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -90,35 +103,30 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("triangle")
     data class Triangle(
-        val gain: ExciterDsl = Param("gain", 0.7, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out)
         }
     }
 
     /** White noise generator. Produces uniformly distributed random samples. */
     @Serializable
     @SerialName("white-noise")
-    data class WhiteNoise(
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
-    ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
-        override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out)
-        }
+    data object WhiteNoise : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {}
     }
 
-    /** Zawtooth wave oscillator (falling ramp, inverse of sawtooth). */
+    /** Zawtooth wave oscillator. Naive sawtooth without PolyBLEP anti-aliasing (brighter/harsher). */
     @Serializable
     @SerialName("zawtooth")
     data class Zawtooth(
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -126,11 +134,11 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("impulse")
     data class Impulse(
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -138,49 +146,37 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("pulze")
     data class Pulze(
-        val duty: ExciterDsl = Param("duty", 0.5, "Duty cycle 0.0..1.0. Controls high/low ratio."),
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val duty: ExciterDsl = Constant(0.5),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            duty.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); duty.collectParams(out); analog.collectParams(out)
         }
     }
 
     /** Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope. */
     @Serializable
     @SerialName("brown-noise")
-    data class BrownNoise(
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
-    ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
-        override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out)
-        }
+    data object BrownNoise : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {}
     }
 
     /** Pink noise generator. Equal energy per octave with -3 dB/oct slope. */
     @Serializable
     @SerialName("pink-noise")
-    data class PinkNoise(
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
-    ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
-        override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out)
-        }
+    data object PinkNoise : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {}
     }
 
     /** Perlin noise generator. Smooth, continuous random signal useful for organic modulation. */
     @Serializable
     @SerialName("perlin-noise")
     data class PerlinNoise(
-        val rate: ExciterDsl = Param("rate", 1.0, "Speed of noise evolution. Higher = faster changes."),
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
+        val rate: ExciterDsl = Constant(1.0),
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
-            rate.collectParams(out); gain.collectParams(out)
+            rate.collectParams(out)
         }
     }
 
@@ -188,12 +184,10 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("berlin-noise")
     data class BerlinNoise(
-        val rate: ExciterDsl = Param("rate", 1.0, "Speed of noise evolution. Higher = faster changes."),
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
+        val rate: ExciterDsl = Constant(1.0),
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
-            rate.collectParams(out); gain.collectParams(out)
+            rate.collectParams(out)
         }
     }
 
@@ -201,12 +195,10 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("dust")
     data class Dust(
-        val density: ExciterDsl = Param("density", 0.2, "Impulse rate 0.0..1.0."),
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
+        val density: ExciterDsl = Constant(0.2),
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
-            density.collectParams(out); gain.collectParams(out)
+            density.collectParams(out)
         }
     }
 
@@ -214,24 +206,22 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("crackle")
     data class Crackle(
-        val density: ExciterDsl = Param("density", 0.2, "Impulse rate 0.0..1.0."),
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
+        val density: ExciterDsl = Constant(0.2),
     ) : ExciterDsl {
-        override val needsFreq: Boolean get() = false
         override fun collectParams(out: MutableList<Param>) {
-            density.collectParams(out); gain.collectParams(out)
+            density.collectParams(out)
         }
     }
 
-    /** Ramp oscillator. Alias for a falling sawtooth shape. */
+    /** Ramp oscillator. Reverse sawtooth (ramp up, opposite slope of [Sawtooth]). */
     @Serializable
     @SerialName("ramp")
     data class Ramp(
-        val gain: ExciterDsl = Param("gain", 0.6, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -239,13 +229,13 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("supersaw")
     data class SuperSaw(
-        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
-        val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
-        val gain: ExciterDsl = Param("gain", 0.6, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val voices: ExciterDsl = Constant(8.0),
+        val freqSpread: ExciterDsl = Constant(0.2),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); freqSpread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -253,13 +243,13 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("supersine")
     data class SuperSine(
-        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
-        val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
-        val gain: ExciterDsl = Param("gain", 1.0, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val voices: ExciterDsl = Constant(8.0),
+        val freqSpread: ExciterDsl = Constant(0.2),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); freqSpread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -267,13 +257,13 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("supersquare")
     data class SuperSquare(
-        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
-        val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
-        val gain: ExciterDsl = Param("gain", 0.5, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val voices: ExciterDsl = Constant(8.0),
+        val freqSpread: ExciterDsl = Constant(0.2),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); freqSpread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -281,13 +271,13 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("supertri")
     data class SuperTri(
-        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
-        val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
-        val gain: ExciterDsl = Param("gain", 0.7, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val voices: ExciterDsl = Constant(8.0),
+        val freqSpread: ExciterDsl = Constant(0.2),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); freqSpread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -295,13 +285,13 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("superramp")
     data class SuperRamp(
-        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
-        val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
-        val gain: ExciterDsl = Param("gain", 0.6, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val voices: ExciterDsl = Constant(8.0),
+        val freqSpread: ExciterDsl = Constant(0.2),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            voices.collectParams(out); freqSpread.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); freqSpread.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -320,16 +310,16 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("pluck")
     data class Pluck(
-        val decay: ExciterDsl = Param("decay", 0.996, "Feedback decay factor. Lower = shorter sustain."),
-        val brightness: ExciterDsl = Param("brightness", 0.5, "Lowpass cutoff in feedback loop. 0=dark, 1=bright."),
-        val pickPosition: ExciterDsl = Param("pickPosition", 0.5, "Pluck position along string. Affects harmonic content."),
-        val stiffness: ExciterDsl = Param("stiffness", 0.0, "Higher harmonics decay faster. 0=nylon, 1=piano wire."),
-        val gain: ExciterDsl = Param("gain", 0.7, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val decay: ExciterDsl = Constant(0.996),
+        val brightness: ExciterDsl = Constant(0.5),
+        val pickPosition: ExciterDsl = Constant(0.5),
+        val stiffness: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            decay.collectParams(out); brightness.collectParams(out); pickPosition.collectParams(out)
-            stiffness.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); decay.collectParams(out); brightness.collectParams(out); pickPosition.collectParams(out)
+            stiffness.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -337,18 +327,20 @@ sealed interface ExciterDsl {
     @Serializable
     @SerialName("superpluck")
     data class SuperPluck(
-        val voices: ExciterDsl = Param("voices", 8.0, "Number of unison voices."),
-        val freqSpread: ExciterDsl = Param("freqSpread", 0.2, "Detune spread in semitones between voices."),
-        val decay: ExciterDsl = Param("decay", 0.996, "Feedback decay factor. Lower = shorter sustain."),
-        val brightness: ExciterDsl = Param("brightness", 0.5, "Lowpass cutoff in feedback loop. 0=dark, 1=bright."),
-        val pickPosition: ExciterDsl = Param("pickPosition", 0.5, "Pluck position along string. Affects harmonic content."),
-        val stiffness: ExciterDsl = Param("stiffness", 0.0, "Higher harmonics decay faster. 0=nylon, 1=piano wire."),
-        val gain: ExciterDsl = Param("gain", 0.7, "Output amplitude."),
-        val analog: ExciterDsl = Param("analog", 0.0, "Perlin noise pitch drift amount."),
+        val freq: ExciterDsl = Constant(0.0),
+        val voices: ExciterDsl = Constant(8.0),
+        val freqSpread: ExciterDsl = Constant(0.2),
+        val decay: ExciterDsl = Constant(0.996),
+        val brightness: ExciterDsl = Constant(0.5),
+        val pickPosition: ExciterDsl = Constant(0.5),
+        val stiffness: ExciterDsl = Constant(0.0),
+        val analog: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            voices.collectParams(out); freqSpread.collectParams(out); decay.collectParams(out); brightness.collectParams(out)
-            pickPosition.collectParams(out); stiffness.collectParams(out); gain.collectParams(out); analog.collectParams(out)
+            freq.collectParams(out); voices.collectParams(out); freqSpread.collectParams(out); decay.collectParams(out); brightness.collectParams(
+                out
+            )
+            pickPosition.collectParams(out); stiffness.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -374,27 +366,27 @@ sealed interface ExciterDsl {
         }
     }
 
-    /** Scales the inner signal by a constant or modulatable factor. */
+    /** Scales the left signal by the right signal (per-sample multiplication). */
     @Serializable
     @SerialName("mul")
     data class Mul(
-        val inner: ExciterDsl,
-        val factor: ExciterDsl = Param("factor", 1.0, "Scale factor."),
+        val left: ExciterDsl,
+        val right: ExciterDsl = Constant(1.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); factor.collectParams(out)
+            left.collectParams(out); right.collectParams(out)
         }
     }
 
-    /** Divides the inner signal by a constant or modulatable divisor. */
+    /** Divides the left signal by the right signal (per-sample division). */
     @Serializable
     @SerialName("div")
     data class Div(
-        val inner: ExciterDsl,
-        val divisor: ExciterDsl = Param("divisor", 1.0, "Divisor."),
+        val left: ExciterDsl,
+        val right: ExciterDsl = Constant(1.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); divisor.collectParams(out)
+            left.collectParams(out); right.collectParams(out)
         }
     }
 
@@ -407,7 +399,7 @@ sealed interface ExciterDsl {
     @SerialName("detune")
     data class Detune(
         val inner: ExciterDsl,
-        val semitones: ExciterDsl = Param("semitones", 0.0, "Pitch shift in semitones."),
+        val semitones: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); semitones.collectParams(out)
@@ -423,8 +415,8 @@ sealed interface ExciterDsl {
     @SerialName("lowpass")
     data class Lowpass(
         val inner: ExciterDsl,
-        val cutoffHz: ExciterDsl = Param("cutoffHz", 2000.0, "Filter cutoff frequency in Hz."),
-        val q: ExciterDsl = Param("q", 0.707, "Filter resonance (Q factor)."),
+        val cutoffHz: ExciterDsl = Constant(2000.0),
+        val q: ExciterDsl = Constant(0.707),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
@@ -436,8 +428,8 @@ sealed interface ExciterDsl {
     @SerialName("highpass")
     data class Highpass(
         val inner: ExciterDsl,
-        val cutoffHz: ExciterDsl = Param("cutoffHz", 200.0, "Filter cutoff frequency in Hz."),
-        val q: ExciterDsl = Param("q", 0.707, "Filter resonance (Q factor)."),
+        val cutoffHz: ExciterDsl = Constant(200.0),
+        val q: ExciterDsl = Constant(0.707),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
@@ -449,10 +441,36 @@ sealed interface ExciterDsl {
     @SerialName("one-pole-lowpass")
     data class OnePoleLowpass(
         val inner: ExciterDsl,
-        val cutoffHz: ExciterDsl = Param("cutoffHz", 2000.0, "Filter cutoff frequency in Hz."),
+        val cutoffHz: ExciterDsl = Constant(2000.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); cutoffHz.collectParams(out)
+        }
+    }
+
+    /** SVF bandpass filter. Passes frequencies near the cutoff, attenuates others. */
+    @Serializable
+    @SerialName("bandpass")
+    data class Bandpass(
+        val inner: ExciterDsl,
+        val cutoffHz: ExciterDsl = Constant(1000.0),
+        val q: ExciterDsl = Constant(1.0),
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
+        }
+    }
+
+    /** SVF notch (band-reject) filter. Removes frequencies near the cutoff, passes others. */
+    @Serializable
+    @SerialName("notch")
+    data class Notch(
+        val inner: ExciterDsl,
+        val cutoffHz: ExciterDsl = Constant(1000.0),
+        val q: ExciterDsl = Constant(1.0),
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
         }
     }
 
@@ -465,10 +483,10 @@ sealed interface ExciterDsl {
     @SerialName("adsr")
     data class Adsr(
         val inner: ExciterDsl,
-        val attackSec: ExciterDsl = Param("attackSec", 0.01, "Attack time in seconds."),
-        val decaySec: ExciterDsl = Param("decaySec", 0.1, "Decay time in seconds."),
-        val sustainLevel: ExciterDsl = Param("sustainLevel", 0.7, "Sustain level 0.0..1.0."),
-        val releaseSec: ExciterDsl = Param("releaseSec", 0.3, "Release time in seconds."),
+        val attackSec: ExciterDsl = Constant(0.01),
+        val decaySec: ExciterDsl = Constant(0.1),
+        val sustainLevel: ExciterDsl = Constant(0.7),
+        val releaseSec: ExciterDsl = Constant(0.3),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)
@@ -489,12 +507,12 @@ sealed interface ExciterDsl {
     data class Fm(
         val carrier: ExciterDsl,
         val modulator: ExciterDsl,
-        val ratio: ExciterDsl = Param("ratio", 1.0, "Frequency ratio between modulator and carrier."),
-        val depth: ExciterDsl = Param("depth", 0.0, "Modulation depth in Hz."),
-        val envAttackSec: ExciterDsl = Param("envAttackSec", 0.0, "FM envelope attack time in seconds."),
-        val envDecaySec: ExciterDsl = Param("envDecaySec", 0.0, "FM envelope decay time in seconds."),
-        val envSustainLevel: ExciterDsl = Param("envSustainLevel", 1.0, "FM envelope sustain level."),
-        val envReleaseSec: ExciterDsl = Param("envReleaseSec", 0.0, "FM envelope release time in seconds."),
+        val ratio: ExciterDsl = Constant(1.0),
+        val depth: ExciterDsl = Constant(0.0),
+        val envAttackSec: ExciterDsl = Constant(0.0),
+        val envDecaySec: ExciterDsl = Constant(0.0),
+        val envSustainLevel: ExciterDsl = Constant(1.0),
+        val envReleaseSec: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             carrier.collectParams(out); modulator.collectParams(out); ratio.collectParams(out); depth.collectParams(out)
@@ -508,12 +526,48 @@ sealed interface ExciterDsl {
     // Effects
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Waveshaping distortion effect. Applies a nonlinear transfer function to the signal. */
+    /**
+     * Pre-amplification stage. Boosts signal level before clipping.
+     * Types: "linear" (current gain curve).
+     */
+    @Serializable
+    @SerialName("drive")
+    data class Drive(
+        val inner: ExciterDsl,
+        val amount: ExciterDsl = Constant(0.5),
+        val driveType: String = "linear",
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); amount.collectParams(out)
+        }
+    }
+
+    /**
+     * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
+     * Includes DC blocker for asymmetric shapes.
+     * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     */
+    @Serializable
+    @SerialName("clip")
+    data class Clip(
+        val inner: ExciterDsl,
+        val shape: String = "soft",
+    ) : ExciterDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Legacy distortion node. Kept for backward compatibility with serialized trees.
+     * New code should use [Drive] + [Clip] instead. The builder extension [ExciterDsl.distort]
+     * creates a Clip(Drive(...)) chain.
+     */
     @Serializable
     @SerialName("distort")
     data class Distort(
         val inner: ExciterDsl,
-        val amount: ExciterDsl = Param("amount", 0.5, "Distortion drive amount."),
+        val amount: ExciterDsl = Constant(0.5),
         val shape: String = "soft",
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
@@ -526,7 +580,7 @@ sealed interface ExciterDsl {
     @SerialName("crush")
     data class Crush(
         val inner: ExciterDsl,
-        val amount: ExciterDsl = Param("amount", 8.0, "Bit depth for quantization."),
+        val amount: ExciterDsl = Constant(8.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); amount.collectParams(out)
@@ -538,7 +592,7 @@ sealed interface ExciterDsl {
     @SerialName("coarse")
     data class Coarse(
         val inner: ExciterDsl,
-        val amount: ExciterDsl = Param("amount", 4.0, "Sample rate reduction factor."),
+        val amount: ExciterDsl = Constant(4.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); amount.collectParams(out)
@@ -550,10 +604,10 @@ sealed interface ExciterDsl {
     @SerialName("phaser")
     data class Phaser(
         val inner: ExciterDsl,
-        val rate: ExciterDsl = Param("rate", 0.5, "LFO rate in Hz."),
-        val depth: ExciterDsl = Param("depth", 0.5, "Wet/dry mix depth."),
-        val center: ExciterDsl = Param("center", 1000.0, "Center frequency in Hz."),
-        val sweep: ExciterDsl = Param("sweep", 1000.0, "Frequency sweep range in Hz."),
+        val rate: ExciterDsl = Constant(0.5),
+        val depth: ExciterDsl = Constant(0.5),
+        val center: ExciterDsl = Constant(1000.0),
+        val sweep: ExciterDsl = Constant(1000.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
@@ -566,8 +620,8 @@ sealed interface ExciterDsl {
     @SerialName("tremolo")
     data class Tremolo(
         val inner: ExciterDsl,
-        val rate: ExciterDsl = Param("rate", 5.0, "LFO rate in Hz."),
-        val depth: ExciterDsl = Param("depth", 0.5, "Modulation depth 0.0..1.0."),
+        val rate: ExciterDsl = Constant(5.0),
+        val depth: ExciterDsl = Constant(0.5),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
@@ -583,8 +637,8 @@ sealed interface ExciterDsl {
     @SerialName("vibrato")
     data class Vibrato(
         val inner: ExciterDsl,
-        val rate: ExciterDsl = Param("rate", 5.0, "LFO rate in Hz."),
-        val depth: ExciterDsl = Param("depth", 0.02, "Frequency deviation (e.g. 0.02 = ±2%)."),
+        val rate: ExciterDsl = Constant(5.0),
+        val depth: ExciterDsl = Constant(0.02),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
@@ -596,7 +650,7 @@ sealed interface ExciterDsl {
     @SerialName("accelerate")
     data class Accelerate(
         val inner: ExciterDsl,
-        val amount: ExciterDsl = Param("amount", 0.0, "Pitch change exponent over voice duration."),
+        val amount: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); amount.collectParams(out)
@@ -611,12 +665,12 @@ sealed interface ExciterDsl {
     @SerialName("pitch-envelope")
     data class PitchEnvelope(
         val inner: ExciterDsl,
-        val amount: ExciterDsl = Param("amount", 0.0, "Semitones of pitch shift at peak."),
-        val attackSec: ExciterDsl = Param("attackSec", 0.01, "Attack time in seconds."),
-        val decaySec: ExciterDsl = Param("decaySec", 0.1, "Decay time in seconds."),
-        val releaseSec: ExciterDsl = Param("releaseSec", 0.0, "Release time in seconds."),
-        val curve: ExciterDsl = Param("curve", 0.0, "Envelope curve shape."),
-        val anchor: ExciterDsl = Param("anchor", 0.0, "Starting envelope level. 0=start shifted, 1=start normal."),
+        val amount: ExciterDsl = Constant(0.0),
+        val attackSec: ExciterDsl = Constant(0.01),
+        val decaySec: ExciterDsl = Constant(0.1),
+        val releaseSec: ExciterDsl = Constant(0.0),
+        val curve: ExciterDsl = Constant(0.0),
+        val anchor: ExciterDsl = Constant(0.0),
     ) : ExciterDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); amount.collectParams(out); attackSec.collectParams(out)
@@ -638,56 +692,63 @@ operator fun ExciterDsl.plus(other: ExciterDsl) = ExciterDsl.Plus(left = this, r
 operator fun ExciterDsl.times(other: ExciterDsl) = ExciterDsl.Times(left = this, right = other)
 
 /** Scales this signal by a modulatable [other] factor. */
-fun ExciterDsl.mul(other: ExciterDsl) = ExciterDsl.Mul(inner = this, factor = other)
+fun ExciterDsl.mul(other: ExciterDsl) = ExciterDsl.Mul(left = this, right = other)
 
 /** Divides this signal by a modulatable [other] divisor. */
-fun ExciterDsl.div(other: ExciterDsl) = ExciterDsl.Div(inner = this, divisor = other)
+fun ExciterDsl.div(other: ExciterDsl) = ExciterDsl.Div(left = this, right = other)
 
 // Frequency
 
 /** Shifts pitch by the given number of [semitones]. */
 fun ExciterDsl.detune(semitones: Double) = ExciterDsl.Detune(
     inner = this,
-    semitones = ExciterDsl.Param(name = "semitones", default = semitones, description = "Pitch shift in semitones.")
+    semitones = ExciterDsl.Constant(semitones),
 )
-
-/** Shifts pitch up by one octave (+12 semitones). */
-fun ExciterDsl.octaveUp() = detune(semitones = 12.0)
-
-/** Shifts pitch down by one octave (-12 semitones). */
-fun ExciterDsl.octaveDown() = detune(semitones = -12.0)
 
 // Filters
 
 /** Applies a biquad lowpass filter at [cutoffHz] with resonance [q]. */
 fun ExciterDsl.lowpass(cutoffHz: Double, q: Double = 0.707) = ExciterDsl.Lowpass(
     inner = this,
-    cutoffHz = ExciterDsl.Param(name = "cutoffHz", default = cutoffHz, description = "Filter cutoff frequency in Hz."),
-    q = ExciterDsl.Param(name = "q", default = q, description = "Filter resonance (Q factor)."),
+    cutoffHz = ExciterDsl.Constant(cutoffHz),
+    q = ExciterDsl.Constant(q),
 )
 
 /** Applies a biquad highpass filter at [cutoffHz] with resonance [q]. */
 fun ExciterDsl.highpass(cutoffHz: Double, q: Double = 0.707) = ExciterDsl.Highpass(
     inner = this,
-    cutoffHz = ExciterDsl.Param(name = "cutoffHz", default = cutoffHz, description = "Filter cutoff frequency in Hz."),
-    q = ExciterDsl.Param(name = "q", default = q, description = "Filter resonance (Q factor)."),
+    cutoffHz = ExciterDsl.Constant(cutoffHz),
+    q = ExciterDsl.Constant(q),
 )
 
 /** Applies a lightweight one-pole lowpass filter at [cutoffHz]. */
 fun ExciterDsl.onePoleLowpass(cutoffHz: Double) = ExciterDsl.OnePoleLowpass(
     inner = this,
-    cutoffHz = ExciterDsl.Param(name = "cutoffHz", default = cutoffHz, description = "Filter cutoff frequency in Hz."),
+    cutoffHz = ExciterDsl.Constant(cutoffHz),
 )
+
+fun ExciterDsl.bandpass(cutoffHz: Double, q: Double = 1.0) = ExciterDsl.Bandpass(
+    this, ExciterDsl.Constant(cutoffHz), ExciterDsl.Constant(q),
+)
+
+fun ExciterDsl.notch(cutoffHz: Double, q: Double = 1.0) = ExciterDsl.Notch(
+    this, ExciterDsl.Constant(cutoffHz), ExciterDsl.Constant(q),
+)
+
+fun ExciterDsl.drive(amount: Double, driveType: String = "linear") =
+    ExciterDsl.Drive(this, ExciterDsl.Constant(amount), driveType)
+
+fun ExciterDsl.clip(shape: String = "soft") = ExciterDsl.Clip(this, shape)
 
 // Envelope
 
 /** Wraps this signal in an ADSR amplitude envelope. */
 fun ExciterDsl.adsr(attackSec: Double, decaySec: Double, sustainLevel: Double, releaseSec: Double) = ExciterDsl.Adsr(
     inner = this,
-    attackSec = ExciterDsl.Param(name = "attackSec", default = attackSec, description = "Attack time in seconds."),
-    decaySec = ExciterDsl.Param(name = "decaySec", default = decaySec, description = "Decay time in seconds."),
-    sustainLevel = ExciterDsl.Param(name = "sustainLevel", default = sustainLevel, description = "Sustain level 0.0..1.0."),
-    releaseSec = ExciterDsl.Param(name = "releaseSec", default = releaseSec, description = "Release time in seconds."),
+    attackSec = ExciterDsl.Constant(attackSec),
+    decaySec = ExciterDsl.Constant(decaySec),
+    sustainLevel = ExciterDsl.Constant(sustainLevel),
+    releaseSec = ExciterDsl.Constant(releaseSec),
 )
 
 // FM
@@ -704,48 +765,46 @@ fun ExciterDsl.fm(
 ) = ExciterDsl.Fm(
     carrier = this,
     modulator = modulator,
-    ratio = ExciterDsl.Param("ratio", ratio, "Frequency ratio between modulator and carrier."),
-    depth = ExciterDsl.Param("depth", depth, "Modulation depth in Hz."),
-    envAttackSec = ExciterDsl.Param("envAttackSec", envAttackSec, "FM envelope attack time in seconds."),
-    envDecaySec = ExciterDsl.Param("envDecaySec", envDecaySec, "FM envelope decay time in seconds."),
-    envSustainLevel = ExciterDsl.Param("envSustainLevel", envSustainLevel, "FM envelope sustain level."),
-    envReleaseSec = ExciterDsl.Param("envReleaseSec", envReleaseSec, "FM envelope release time in seconds."),
+    ratio = ExciterDsl.Constant(ratio),
+    depth = ExciterDsl.Constant(depth),
+    envAttackSec = ExciterDsl.Constant(envAttackSec),
+    envDecaySec = ExciterDsl.Constant(envDecaySec),
+    envSustainLevel = ExciterDsl.Constant(envSustainLevel),
+    envReleaseSec = ExciterDsl.Constant(envReleaseSec),
 )
 
 // Effects
 
 /** Applies waveshaping distortion with the given [amount] and clipping [shape]. */
-fun ExciterDsl.distort(amount: Double, shape: String = "soft") = ExciterDsl.Distort(
-    inner = this,
-    amount = ExciterDsl.Param(name = "amount", default = amount, description = "Distortion drive amount."), shape = shape
-)
+fun ExciterDsl.distort(amount: Double, shape: String = "soft") =
+    ExciterDsl.Clip(inner = ExciterDsl.Drive(inner = this, amount = ExciterDsl.Constant(amount)), shape = shape)
 
 /** Applies bit-crush quantization at the given bit [amount]. */
 fun ExciterDsl.crush(amount: Double) = ExciterDsl.Crush(
     inner = this,
-    amount = ExciterDsl.Param(name = "amount", default = amount, description = "Bit depth for quantization.")
+    amount = ExciterDsl.Constant(amount),
 )
 
 /** Applies sample-rate reduction by the given [amount] factor. */
 fun ExciterDsl.coarse(amount: Double) = ExciterDsl.Coarse(
     inner = this,
-    amount = ExciterDsl.Param(name = "amount", default = amount, description = "Sample rate reduction factor.")
+    amount = ExciterDsl.Constant(amount),
 )
 
 /** Applies a phaser effect with the given LFO [rate], [depth], [center] frequency, and [sweep] range. */
 fun ExciterDsl.phaser(rate: Double, depth: Double, center: Double = 1000.0, sweep: Double = 1000.0) = ExciterDsl.Phaser(
     inner = this,
-    rate = ExciterDsl.Param(name = "rate", default = rate, description = "LFO rate in Hz."),
-    depth = ExciterDsl.Param(name = "depth", default = depth, description = "Wet/dry mix depth."),
-    center = ExciterDsl.Param(name = "center", default = center, description = "Center frequency in Hz."),
-    sweep = ExciterDsl.Param(name = "sweep", default = sweep, description = "Frequency sweep range in Hz."),
+    rate = ExciterDsl.Constant(rate),
+    depth = ExciterDsl.Constant(depth),
+    center = ExciterDsl.Constant(center),
+    sweep = ExciterDsl.Constant(sweep),
 )
 
 /** Applies a tremolo (amplitude modulation) at the given LFO [rate] and [depth]. */
 fun ExciterDsl.tremolo(rate: Double, depth: Double) = ExciterDsl.Tremolo(
     inner = this,
-    rate = ExciterDsl.Param(name = "rate", default = rate, description = "LFO rate in Hz."),
-    depth = ExciterDsl.Param(name = "depth", default = depth, description = "Modulation depth 0.0..1.0."),
+    rate = ExciterDsl.Constant(rate),
+    depth = ExciterDsl.Constant(depth),
 )
 
 // Pitch modulation
@@ -753,14 +812,14 @@ fun ExciterDsl.tremolo(rate: Double, depth: Double) = ExciterDsl.Tremolo(
 /** Applies vibrato (pitch modulation) at the given LFO [rate] and [depth]. */
 fun ExciterDsl.vibrato(rate: Double, depth: Double) = ExciterDsl.Vibrato(
     inner = this,
-    rate = ExciterDsl.Param(name = "rate", default = rate, description = "LFO rate in Hz."),
-    depth = ExciterDsl.Param(name = "depth", default = depth, description = "Frequency deviation."),
+    rate = ExciterDsl.Constant(rate),
+    depth = ExciterDsl.Constant(depth),
 )
 
 /** Applies continuous pitch acceleration over the voice's duration. */
 fun ExciterDsl.accelerate(amount: Double) = ExciterDsl.Accelerate(
     inner = this,
-    amount = ExciterDsl.Param(name = "amount", default = amount, description = "Pitch change exponent over voice duration.")
+    amount = ExciterDsl.Constant(amount),
 )
 
 // ═════════════════════════════════════════════════════════════════════════════════

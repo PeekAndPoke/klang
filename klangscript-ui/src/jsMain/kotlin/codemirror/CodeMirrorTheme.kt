@@ -1,6 +1,11 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.klang.codemirror.ext.EditorView
+import io.peekandpoke.klang.codemirror.ext.Extension
+import io.peekandpoke.klang.codemirror.ext.HighlightStyle
+import io.peekandpoke.klang.codemirror.ext.TagStyle
+import io.peekandpoke.klang.codemirror.ext.syntaxHighlighting
+import io.peekandpoke.klang.codemirror.ext.tags
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.utils.jsObject
 

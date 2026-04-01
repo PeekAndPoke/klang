@@ -9,17 +9,17 @@ import io.peekandpoke.klang.audio_be.voices.Voice
  * Uses the fixed release calculation: decays from the actual level at gate end,
  * not from sustainLevel.
  *
- * Long-to-Int conversion happens at the boundary; all arithmetic uses Int/Double.
+ * All arithmetic uses Int/Double — no Long boxing on Kotlin/JS.
  */
 fun calculateControlRateEnvelope(
     env: Voice.Envelope,
-    blockStart: Long,
-    startFrame: Long,
-    gateEndFrame: Long,
+    blockStart: Int,
+    startFrame: Int,
+    gateEndFrame: Int,
 ): Double {
     val currentFrame = maxOf(blockStart, startFrame)
-    val absPos = (currentFrame - startFrame).toInt()
-    val gateEndPos = (gateEndFrame - startFrame).toInt()
+    val absPos = currentFrame - startFrame
+    val gateEndPos = gateEndFrame - startFrame
 
     val envValue = if (absPos >= gateEndPos) {
         val levelAtGateEnd = envelopeLevelAtPosition(env, gateEndPos)

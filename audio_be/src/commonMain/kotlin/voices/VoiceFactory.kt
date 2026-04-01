@@ -40,7 +40,7 @@ class VoiceFactory(
      */
     fun makeVoice(
         scheduled: ScheduledVoice,
-        nowFrame: Long,
+        nowFrame: Int,
         backendStartTimeSec: Double,
         playbackCtx: PlaybackCtx,
         getSample: (SampleRequest) -> VoiceScheduler.SampleEntry.Complete?,
@@ -51,13 +51,13 @@ class VoiceFactory(
         val relativeStartTime = scheduled.startTime - backendStartTimeSec
         val relativeGateEndTime = scheduled.gateEndTime - backendStartTimeSec
 
-        val startFrame = (relativeStartTime * sampleRate).toLong()
-        val gateEndFrameFromTime = (relativeGateEndTime * sampleRate).toLong()
+        val startFrame = (relativeStartTime * sampleRate).toInt()
+        val gateEndFrameFromTime = (relativeGateEndTime * sampleRate).toInt()
 
         // Handle legato (clip) logic
         val clip = data.legato
         val originalGateDuration = gateEndFrameFromTime - startFrame
-        val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toLong() else originalGateDuration
+        val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toInt() else originalGateDuration
         val gateEndFrame = startFrame + effectiveGateDuration
 
         // Create filters
@@ -175,13 +175,13 @@ class VoiceFactory(
         // Decision: oscillator vs sample
         val freqHz = data.freqHz
         val sound = data.sound
-        val isOsci = exciterRegistry.contains(sound) && (freqHz != null || !exciterRegistry.needsFreq(sound))
+        val isOsci = exciterRegistry.contains(sound)
         val isSample = !exciterRegistry.contains(sound) && sound != null
 
         return when {
             isOsci -> {
                 val resolvedAdsr = data.adsr.resolve(AdsrEnvelope.defaultSynth)
-                val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
+                val voiceDurationFrames = gateEndFrame - startFrame
                 val signal = playbackCtx.exciterRegistry.createExciter(sound, data, freqHz ?: 0.0)
                     ?: return null
 
@@ -245,7 +245,7 @@ class VoiceFactory(
                     sample.meta.anchor * sample.sampleRate
                 }
 
-                val voiceDurationFrames = (gateEndFrame - nowFrame).toInt()
+                val voiceDurationFrames = gateEndFrame - nowFrame
 
                 val signal = SampleExciter(
                     pcm = sample.pcm,
@@ -323,8 +323,8 @@ class VoiceFactory(
     private fun buildVoice(
         data: VoiceData,
         resolvedAdsr: AdsrEnvelope.Resolved,
-        startFrame: Long,
-        gateEndFrame: Long,
+        startFrame: Int,
+        gateEndFrame: Int,
         voiceDurationFrames: Int,
         orbit: Int,
         gain: Double,
@@ -349,7 +349,7 @@ class VoiceFactory(
         cut: Int? = null,
     ): Voice {
         val envelope = Voice.Envelope.of(resolvedAdsr, sampleRate)
-        val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toLong()
+        val endFrame = gateEndFrame + (resolvedAdsr.release * sampleRate).toInt()
         val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
         val voiceEndFrame = voiceDurationFrames + releaseFrames
 

@@ -126,4 +126,41 @@ class SequencePatternSpec : StringSpec({
             }
         }
     }
+
+    "SequencePattern: zero-weight patterns fall back to equal distribution" {
+        // All patterns with @0 weight — should not crash and should distribute equally
+        val p1 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "a")), weightOverride = 0.0)
+        val p2 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "b")), weightOverride = 0.0)
+        val p3 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "c")), weightOverride = 0.0)
+        val pattern = SequencePattern(listOf(p1, p2, p3))
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 3
+        events[0].data.note shouldBeEqualIgnoringCase "a"
+        events[1].data.note shouldBeEqualIgnoringCase "b"
+        events[2].data.note shouldBeEqualIgnoringCase "c"
+
+        // Equal distribution: each takes 1/3
+        events.forEach { event ->
+            event.part.duration.toDouble() shouldBe (1.0 / 3.0 plusOrMinus EPSILON)
+        }
+    }
+
+    "SequencePattern: mixed zero and non-zero weights" {
+        // a@0, b@2, c@0 — zero-weighted patterns get zero duration, all time goes to b
+        val p1 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "a")), weightOverride = 0.0)
+        val p2 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "b")), weightOverride = 2.0)
+        val p3 = PropertyOverridePattern(AtomicPattern(SprudelVoiceData.empty.copy(note = "c")), weightOverride = 0.0)
+        val pattern = SequencePattern(listOf(p1, p2, p3))
+
+        val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        // Only b has non-zero weight, so only b produces a visible event
+        // a and c have zero duration — they may or may not appear depending on query filtering
+        val nonZeroEvents = events.filter { it.part.duration.toDouble() > EPSILON }
+        nonZeroEvents.size shouldBe 1
+        nonZeroEvents[0].data.note shouldBeEqualIgnoringCase "b"
+        nonZeroEvents[0].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
+    }
 })

@@ -11,8 +11,10 @@ import io.peekandpoke.klang.script.runtime.ArrayValue
 import io.peekandpoke.klang.script.runtime.BooleanValue
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.StringValue
+import io.peekandpoke.klang.script.stdlib.KlangStdLib
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangCodeSampleType
+import io.peekandpoke.klang.script.types.KlangProperty
 
 class GeneratedRegistrationTest : StringSpec({
 
@@ -283,5 +285,46 @@ class GeneratedRegistrationTest : StringSpec({
         val callable = doc.variants[0] as KlangCallable
         callable.samples shouldHaveSize 1
         callable.samples[0].type shouldBe KlangCodeSampleType.EXECUTABLE
+    }
+
+    // ── Docs: Object-level symbols ──────────────────────────────────────
+
+    "generated docs contain object-level symbols for Osc, Math, Object" {
+        for (name in listOf("Osc", "Math", "Object")) {
+            generatedStdlibDocs[name] shouldNotBe null
+        }
+    }
+
+    "generated docs for Osc object has KlangProperty variant" {
+        val doc = generatedStdlibDocs["Osc"]!!
+        doc.name shouldBe "Osc"
+        doc.category shouldBe "object"
+        doc.library shouldBe "stdlib"
+        doc.variants shouldHaveSize 1
+        val prop = doc.variants[0] as KlangProperty
+        prop.name shouldBe "Osc"
+        prop.type.simpleName shouldBe "Osc"
+    }
+
+    "generated docs for Math object has KlangProperty variant" {
+        val doc = generatedStdlibDocs["Math"]!!
+        doc.name shouldBe "Math"
+        doc.category shouldBe "object"
+        doc.library shouldBe "stdlib"
+        doc.variants shouldHaveSize 1
+        val prop = doc.variants[0] as KlangProperty
+        prop.name shouldBe "Math"
+        prop.type.simpleName shouldBe "Math"
+    }
+
+    // ── Docs: Library docs auto-registration ────────────────────────────
+
+    "stdlib library docs contain object and method symbols" {
+        val lib = KlangStdLib.create()
+        lib.docs.symbols["Osc"] shouldNotBe null
+        lib.docs.symbols["Math"] shouldNotBe null
+        lib.docs.symbols["Object"] shouldNotBe null
+        lib.docs.symbols["sqrt"] shouldNotBe null
+        lib.docs.symbols["sine"] shouldNotBe null
     }
 })

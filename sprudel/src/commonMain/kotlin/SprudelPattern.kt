@@ -6,6 +6,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
@@ -13,7 +14,6 @@ import io.peekandpoke.klang.sprudel.lang.*
 import io.peekandpoke.klang.sprudel.pattern.*
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.ultra.datetime.Kronos
-import io.peekandpoke.ultra.datetime.MpInstant
 import kotlin.jvm.JvmName
 import kotlin.random.Random
 
@@ -29,70 +29,47 @@ interface SprudelPattern : KlangPattern {
         /** Small epsilon value for point queries (sampling control patterns at a specific time) */
         val QUERY_EPSILON = 1e-6.toRational()
 
+        /**
+         * Compile Sprudel code using a raw KlangScript engine (no pre-imported libraries).
+         * Used by tests and simple compilation scenarios.
+         */
         fun compileRaw(code: String): SprudelPattern? {
-            val beforeEngine = MpInstant.now()
-
-            val klangScriptEngine = klangScript {
+            val engine = klangScript {
                 registerLibrary(sprudelLib)
             }
 
-            println("Creating KlangScript engine took: ${MpInstant.now() - beforeEngine}")
-
-            val beforeCompile = MpInstant.now()
-
-            val result = klangScriptEngine.execute(code + "\n")
-
-            // println("Compilation result: $result")
-            // println("Result type: ${result::class.simpleName}")
-            // println("Result value type: ${result.value?.let { it::class.simpleName }}")
-            // println("Is SprudelPattern? ${result.value is SprudelPattern}")
-
-            return result.toObjectOrNull<SprudelPattern>().also {
-                println("Compiling pattern took: ${MpInstant.now() - beforeCompile}")
-            }
+            val result = engine.execute(code + "\n")
+            return result.toObjectOrNull<SprudelPattern>()
         }
 
         /**
          * Compile Sprudel code with pre-imported libraries, maintaining accurate source locations.
          *
-         * Unlike compile() which prepends import statements (shifting line numbers by 5),
-         * this method pre-executes imports in the engine environment, then executes the
-         * user code with accurate line/column numbers starting from line 1.
+         * Pre-executes import statements in the engine environment so user code
+         * starts at line 1 — essential for code highlighting during playback.
          *
-         * This is essential for code highlighting during playback, where highlight events
-         * reference source locations that must match the editor display.
-         *
+         * @param engine A pre-configured KlangScriptEngine (use [Player.createEngine] in the app)
          * @param code The Sprudel pattern code to compile (without import statements)
          * @return The compiled pattern, or null if compilation fails
          */
-        fun compile(code: String): SprudelPattern? {
-            val beforeEngine = MpInstant.now()
+        fun compile(engine: KlangScriptEngine, code: String): SprudelPattern? {
+            // Pre-execute import statements to populate the environment
+            engine.execute("""import * from "stdlib"""")
+            engine.execute("""import * from "sprudel"""")
 
-            // Create engine with native registrations
-            val klangScriptEngine = klangScript {
+            val result = engine.execute(code + "\n")
+            return result.toObjectOrNull<SprudelPattern>()
+        }
+
+        /**
+         * Compile Sprudel code without a pre-existing engine.
+         * Creates a default engine internally. Used by tests.
+         */
+        fun compile(code: String): SprudelPattern? {
+            val engine = klangScript {
                 registerLibrary(sprudelLib)
             }
-
-            println("Creating KlangScript engine took: ${MpInstant.now() - beforeEngine}")
-
-            // Pre-execute import statements to populate the environment
-            // These imports don't affect source locations of user code
-            klangScriptEngine.execute("""import * from "stdlib"""")
-            klangScriptEngine.execute("""import * from "sprudel"""")
-
-            val beforeCompile = MpInstant.now()
-
-            // Execute user code with accurate source locations (starting at line 1)
-            val result = klangScriptEngine.execute(code + "\n")
-
-            // println("Compilation result: $result")
-            // println("Result type: ${result::class.simpleName}")
-            // println("Result value type: ${result.value?.let { it::class.simpleName }}")
-            // println("Is SprudelPattern? ${result.value is SprudelPattern}")
-
-            return result.toObjectOrNull<SprudelPattern>().also {
-                println("Compiling pattern took: ${MpInstant.now() - beforeCompile}")
-            }
+            return compile(engine, code)
         }
     }
 
@@ -1045,8 +1022,8 @@ fun SprudelPattern._liftOrReinterpretNumericalField(
 ): SprudelPattern {
     if (args.isEmpty()) {
         return this.reinterpretVoice {
-        it.update(it.value?.asDouble)
-    }
+            it.update(it.value?.asDouble)
+        }
     }
 
     return this._liftNumericField(args, update)
@@ -1090,8 +1067,8 @@ fun SprudelPattern._liftOrReinterpretStringField(
 ): SprudelPattern {
     if (args.isEmpty()) {
         return this.reinterpretVoice {
-        it.update(it.value?.asString)
-    }
+            it.update(it.value?.asString)
+        }
     }
 
     return this._liftStringField(args, update)

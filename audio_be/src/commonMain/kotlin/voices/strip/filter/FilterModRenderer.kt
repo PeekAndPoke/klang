@@ -11,8 +11,8 @@ import io.peekandpoke.klang.audio_be.voices.strip.calculateControlRateEnvelope
  */
 class FilterModRenderer(
     private val modulators: List<Voice.FilterModulator>,
-    private val startFrame: Long,
-    private val gateEndFrame: Long,
+    private val startFrame: Int,
+    private val gateEndFrame: Int,
 ) : BlockRenderer {
 
     override fun render(ctx: BlockContext) {

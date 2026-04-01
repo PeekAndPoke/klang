@@ -36,12 +36,21 @@ if (condition) {
 }
 ```
 
-### 2. File Names Use PascalCase
+### 2. File Naming Conventions
 
-All `.kt` files must be named in PascalCase matching their primary declaration.
+- **Files containing a class/object/interface:** PascalCase matching the primary declaration.
+- **Files containing only utility/helper/extension functions:** `lower_case.kt`.
+  In folders that also contain class files, use a `_` prefix (e.g., `_staff_pos_helpers.kt`) to
+  group utility files at the top of the file tree. In folders with only utility files, skip the
+  prefix — when every file starts with `_`, it adds noise instead of value.
+- **Utility file names must be unique and descriptive.** Generic names like `_utils.kt` make it
+  impossible to tell what's inside without opening the file.
 
-**Wrong:** `clipping_functions.kt`, `index_common.kt`
-**Correct:** `ClippingFunctions.kt`, `IndexCommon.kt`
+**Wrong:** `ClippingFunctions.kt` (class inside is `ClippingFuncs` — name mismatch)
+**Wrong:** `_utils.kt` (not unique, not descriptive)
+**Correct:** `ClippingFuncs.kt` (matches class)
+**Correct:** `_staff_pos_helpers.kt` (utility file alongside class files — `_` groups it at top)
+**Correct:** `math.kt`, `chain_rendering.kt` (utility-only folder — no `_` prefix needed)
 
 ---
 
@@ -63,34 +72,63 @@ shape resolution), extract it to a shared file. Both callers import from the sam
 
 ## Kotlin/JS Performance Rules
 
-### 5. No `Long` in Per-Sample Audio Loops
+### 5. No Boxed Types Anywhere in the Project
 
-`Long` is boxed in Kotlin/JS, causing severe performance degradation (object allocation on every
-operation). In audio hot paths:
+This is a real-time audio engine — every CPU cycle counts, in DSP code **and** the UI layer.
+Several Kotlin types are boxed (heap-allocated wrapper objects) when compiled to JavaScript.
+**Never use them anywhere in the project.**
 
-- Use `Int` for frame counts (max ~2.1B frames = ~12.4 hours at 48kHz)
-- Use `Double` for time values
-- Convert `Long` to `Int` at the **block boundary** (once per block), not inside per-sample loops
-- `Long` is acceptable in per-block code (once per ~128 samples), just not per-sample
+#### Banned types and why
+
+| Type     | JS representation                                  | Problem                                      |
+|----------|----------------------------------------------------|----------------------------------------------|
+| `Long`   | Emulated `kotlin.Long` class (pair of 32-bit ints) | Always boxed, allocation on every operation  |
+| `ULong`  | Wraps `Long`                                       | Same boxing as `Long`                        |
+| `Byte`   | JS `number` + range checks                         | Coercion/masking overhead on every operation |
+| `Short`  | JS `number` + range checks                         | Coercion/masking overhead on every operation |
+| `UByte`  | Inline class wrapping `Byte`                       | Same overhead as `Byte`                      |
+| `UShort` | Inline class wrapping `Short`                      | Same overhead as `Short`                     |
+| `Char`   | Boxed `kotlin.Char` wrapper                        | Heap allocation                              |
+
+#### Safe alternatives
+
+| Instead of         | Use                                                |
+|--------------------|----------------------------------------------------|
+| `Long` / `ULong`   | `Int` for counts/indices, `Double` for time values |
+| `Byte` / `UByte`   | `Int` (mask with `and 0xFF` if needed)             |
+| `Short` / `UShort` | `Int` (mask with `and 0xFFFF` if needed)           |
+| `Char`             | `Int` (char code), or `String` for text            |
+
+#### Scope
+
+This applies **project-wide** — audio DSP, audio bridge, klangscript, sprudel, UI layer,
+everywhere. If a `Long` (or other banned type) arrives from an external API, convert it to
+`Int` or `Double` at the boundary immediately.
 
 **Wrong:**
 
 ```kotlin
-var absPos = ctx.blockStart - startFrame  // Long arithmetic per sample
+var absPos = ctx.blockStart - startFrame  // Long arithmetic
 for (i in 0 until ctx.length) {
     doWork(absPos)  // Long in hot loop
     absPos++
 }
+
+val midi: Byte = 60  // Byte with range-check overhead
+val char: Char = 'A'  // Boxed Char wrapper
 ```
 
 **Correct:**
 
 ```kotlin
-var absPos = ((ctx.blockStart + ctx.offset) - startFrame).toInt()  // Convert once
+var absPos = ((ctx.blockStart + ctx.offset) - startFrame).toInt()  // Convert at boundary
 for (i in 0 until ctx.length) {
     doWork(absPos)  // Int in hot loop
     absPos++
 }
+
+val midi: Int = 60   // Plain JS number
+val char: Int = 65   // Char code as Int, or use String for text
 ```
 
 ### 6. No Allocations in Audio Hot Paths

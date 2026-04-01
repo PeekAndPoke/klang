@@ -1,6 +1,9 @@
 package io.peekandpoke.klang.script.docs
 
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.script.types.KlangType
 
 /**
  * Registry for KlangScript symbol documentation.
@@ -23,10 +26,20 @@ class KlangDocsRegistry {
     /**
      * Register a single symbol.
      *
-     * @param doc The symbol to register (overwrites any existing entry with the same name)
+     * When a symbol with the same name already exists, variants are merged so that
+     * symbols from multiple libraries (e.g. stdlib and sprudel) coexist.
      */
     fun register(doc: KlangSymbol) {
-        _symbols[doc.name] = doc
+        val existing = _symbols[doc.name]
+        if (existing != null) {
+            _symbols[doc.name] = existing.copy(
+                variants = existing.variants + doc.variants,
+                tags = (existing.tags + doc.tags).distinct(),
+                aliases = (existing.aliases + doc.aliases).distinct(),
+            )
+        } else {
+            _symbols[doc.name] = doc
+        }
     }
 
     /**
@@ -50,6 +63,11 @@ class KlangDocsRegistry {
     /** Remove all registered symbols. */
     fun clear() {
         _symbols.clear()
+    }
+
+    /** Create a snapshot copy of this registry. Mutations to the original do not affect the copy. */
+    fun snapshot(): KlangDocsRegistry = KlangDocsRegistry().also { copy ->
+        copy._symbols.putAll(_symbols)
     }
 
     /**
@@ -108,5 +126,61 @@ class KlangDocsRegistry {
                     symbol.category.lowercase().contains(lowerQuery) ||
                     symbol.library.lowercase().contains(lowerQuery)
         }.sortedBy { it.name }
+    }
+
+    /**
+     * Find a [KlangCallable] variant matching the given receiver type.
+     *
+     * @param name Symbol name
+     * @param receiverType The receiver type to match, or null for top-level functions
+     * @return The matching callable, or null
+     */
+    fun getCallable(name: String, receiverType: KlangType?): KlangCallable? {
+        val symbol = _symbols[name] ?: return null
+        return symbol.variants
+            .filterIsInstance<KlangCallable>()
+            .firstOrNull { it.receiver?.simpleName == receiverType?.simpleName }
+    }
+
+    /**
+     * Get all symbols that have at least one variant with the given receiver type.
+     * Used for code completion after `.` — returns all methods available on a type.
+     *
+     * @param receiverType The receiver type to filter by
+     * @return Matching symbols sorted by name
+     */
+    fun getVariantsForReceiver(receiverType: KlangType): List<KlangSymbol> {
+        return _symbols.values.filter { symbol ->
+            symbol.variants.any { variant ->
+                when (variant) {
+                    is KlangCallable -> variant.receiver?.simpleName == receiverType.simpleName
+                    is KlangProperty -> variant.owner?.simpleName == receiverType.simpleName
+                }
+            }
+        }.sortedBy { it.name }
+    }
+
+    /**
+     * Look up a symbol and filter its variants to those matching the receiver type.
+     * Used for hover docs when the receiver context is known.
+     *
+     * Falls back to the full symbol (all variants) when no variants match.
+     *
+     * @param name Symbol name
+     * @param receiverType The receiver type to filter by, or null to return all variants
+     * @return The filtered symbol, or null if the name is not found
+     */
+    fun getSymbolWithReceiver(name: String, receiverType: KlangType?): KlangSymbol? {
+        val symbol = _symbols[name] ?: return null
+        if (receiverType == null) return symbol
+        val filtered = symbol.variants.filter { variant ->
+            when (variant) {
+                is KlangCallable -> variant.receiver?.simpleName == receiverType.simpleName
+                is KlangProperty -> variant.owner?.simpleName == receiverType.simpleName
+            }
+        }
+        if (filtered.isEmpty()) return symbol // fallback: show all
+        val variantLibrary = filtered.firstOrNull()?.library ?: symbol.library
+        return symbol.copy(variants = filtered, library = variantLibrary)
     }
 }

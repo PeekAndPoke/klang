@@ -1,6 +1,9 @@
 package io.peekandpoke.klang.ui.codemirror
 
 import io.peekandpoke.klang.script.ast.AstIndex
+import io.peekandpoke.klang.script.ast.MemberAccess
+import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.intel.ExpressionTypeInferrer
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -184,6 +187,7 @@ fun findCallArgAtAst(
     source: String,
     pos: Int,
     docProvider: (String) -> KlangSymbol?,
+    registry: KlangDocsRegistry? = null,
 ): CallArgInfo? {
     // Fall back to text scanner if no AST index available
     if (astIndex == null) return findCallArgAt(source, pos, docProvider)
@@ -192,7 +196,25 @@ fun findCallArgAtAst(
     if (result.argIndex < 0) return null
 
     val symbol = docProvider(result.functionName) ?: return null
-    val callable = symbol.variants.filterIsInstance<KlangCallable>().firstOrNull() ?: return null
+
+    // Try receiver-aware variant resolution
+    val callable = if (registry != null) {
+        val callee = result.call.callee
+        if (callee is MemberAccess) {
+            val inferrer = ExpressionTypeInferrer(registry)
+            val receiverType = inferrer.inferType(callee.obj)
+            if (receiverType != null) {
+                registry.getCallable(result.functionName, receiverType)
+            } else {
+                symbol.variants.filterIsInstance<KlangCallable>().firstOrNull()
+            }
+        } else {
+            registry.getCallable(result.functionName, receiverType = null)
+                ?: symbol.variants.filterIsInstance<KlangCallable>().firstOrNull()
+        }
+    } else {
+        symbol.variants.filterIsInstance<KlangCallable>().firstOrNull()
+    } ?: return null
     val param = resolveParam(callable, result.argIndex) ?: return null
     val tools = KlangUiToolRegistry.resolve(param.uitools)
     if (tools.isEmpty()) return null

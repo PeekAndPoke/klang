@@ -13,6 +13,9 @@ sealed interface KlangDecl {
 
     /** Rendered signature string (e.g., `note(pattern: String): Pattern`). */
     val signature: String
+
+    /** The library this declaration belongs to (empty string for unset). */
+    val library: String
 }
 
 /**
@@ -25,6 +28,7 @@ sealed interface KlangDecl {
  * @param description Human-readable description
  * @param returnDoc Documentation for the return value
  * @param samples Example code snippets
+ * @param library The library this declaration belongs to (empty string for unset)
  */
 data class KlangCallable(
     val name: String,
@@ -34,6 +38,7 @@ data class KlangCallable(
     override val description: String = "",
     override val returnDoc: String = "",
     override val samples: List<KlangCodeSample> = emptyList(),
+    override val library: String = "",
 ) : KlangDecl {
     override val signature: String
         get() = buildString {
@@ -59,6 +64,7 @@ enum class KlangMutability { READ_ONLY, READ_WRITE, WRITE_ONLY }
  * @param description Human-readable description
  * @param returnDoc Documentation for the value
  * @param samples Example code snippets
+ * @param library The library this declaration belongs to (empty string for unset)
  */
 data class KlangProperty(
     val name: String,
@@ -68,6 +74,7 @@ data class KlangProperty(
     override val description: String = "",
     override val returnDoc: String = "",
     override val samples: List<KlangCodeSample> = emptyList(),
+    override val library: String = "",
 ) : KlangDecl {
     override val signature: String
         get() = buildString {

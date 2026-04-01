@@ -21,7 +21,7 @@ import kotlinx.css.*
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlin.math.exp
+import kotlin.math.pow
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
@@ -237,14 +237,19 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
         val clampedRoom = room.coerceIn(0.0, 1.0)
         val clampedSize = size.coerceIn(0.1, 10.0)
-        val effectiveFade = (fade ?: (clampedSize * 0.5)).coerceIn(0.01, 20.0)
-        val decay = 3.0 / effectiveFade
+        // Mirror the backend: feedback = (effectiveFade * 0.28) + 0.7
+        // When fade is null, use size as fallback (same as backend: roomFade ?: roomSize)
+        val effectiveFade = fade ?: clampedSize
+        val feedback = (effectiveFade * 0.28) + 0.7
 
         val numPoints = 100
         val points = (0..numPoints).map { i ->
             val t = i.toDouble() / numPoints
             val x = padL + t * drawW
-            val y = padT + drawH - drawH * clampedRoom * exp(-t * numPoints / 10.0 * decay)
+            // feedback < 1.0: decaying tail. feedback >= 1.0: sustain/growing tail.
+            val envelope = feedback.pow(t * numPoints * 2.0)
+            val level = (clampedRoom * envelope).coerceIn(0.0, 1.0)
+            val y = padT + drawH - drawH * level
             x to y
         }
 

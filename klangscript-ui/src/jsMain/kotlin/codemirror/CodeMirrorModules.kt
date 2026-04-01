@@ -1,6 +1,11 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import io.peekandpoke.klang.codemirror.ext.*
+import io.peekandpoke.klang.codemirror.ext.BasicSetupModule
+import io.peekandpoke.klang.codemirror.ext.CommandsModule
+import io.peekandpoke.klang.codemirror.ext.JavaScriptModule
+import io.peekandpoke.klang.codemirror.ext.LanguageModule
+import io.peekandpoke.klang.codemirror.ext.StateModule
+import io.peekandpoke.klang.codemirror.ext.ViewModule
 import io.peekandpoke.kraft.utils.async
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.await

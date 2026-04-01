@@ -15,8 +15,8 @@ import kotlin.math.pow
  */
 class AccelerateRenderer(
     private val accelerate: Voice.Accelerate,
-    private val startFrame: Long,
-    private val endFrame: Long,
+    private val startFrame: Int,
+    private val endFrame: Int,
 ) : BlockRenderer {
 
     private val totalFrames = (endFrame - startFrame).toDouble()
@@ -28,7 +28,7 @@ class AccelerateRenderer(
         val buf = ctx.freqModBuffer
 
         // Seed with pow() once at the block start, then multiply per sample
-        val blockRelStart = ((ctx.blockStart + ctx.offset) - startFrame).toInt()
+        val blockRelStart = (ctx.blockStart + ctx.offset) - startFrame
         var ratio = 2.0.pow(accelerate.amount * blockRelStart.toDouble() / totalFrames)
 
         if (ctx.freqModBufferWritten) {

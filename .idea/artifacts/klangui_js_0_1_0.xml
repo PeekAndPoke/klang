@@ -1,8 +1,6 @@
 <component name="ArtifactManager">
   <artifact type="jar" name="klangui-js-0.1.0">
     <output-path>$PROJECT_DIR$/klangui/build/libs</output-path>
-    <root id="archive" name="klangui-js-0.1.0.jar">
-      <element id="module-output" name="klang-engine.klangui.jsMain" />
-    </root>
+    <root id="archive" name="klangui-js-0.1.0.jar" />
   </artifact>
 </component>

@@ -1,12 +1,21 @@
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.audio_bridge.ExciterDsl
+import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.script.KlangScriptEngine
+import io.peekandpoke.klang.script.stdlib.ConsoleLevel
+import io.peekandpoke.klang.script.stdlib.KlangScriptOsc
+import io.peekandpoke.klang.script.stdlib.KlangStdLib
+import io.peekandpoke.klang.script.stdlibLib
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.kraft.utils.async
 import io.peekandpoke.kraft.utils.launch
+import io.peekandpoke.ultra.common.MutableTypedAttributes
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.coroutines.CompletableDeferred
@@ -46,6 +55,43 @@ object Player {
     }
 
     fun get(): KlangPlayer? = player()
+
+    /**
+     * Creates a KlangScriptEngine with sprudel and stdlib registered.
+     *
+     * If a [player] is available, `Osc.register()` is wired to send commands to the audio backend.
+     * If [outputHandler] is provided, console/print output goes there (e.g. REPL capture).
+     */
+    fun createEngine(
+        player: KlangPlayer? = get(),
+        outputHandler: ((ConsoleLevel, List<String>) -> Unit)? = null,
+    ): KlangScriptEngine {
+        val attrs = MutableTypedAttributes {
+            if (player != null) {
+                add(KlangScriptOsc.REGISTRAR_KEY) { name: String, dsl: ExciterDsl ->
+                    player.sendControl(
+                        KlangCommLink.Cmd.RegisterExciter(
+                            playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID,
+                            name = name,
+                            dsl = dsl,
+                        )
+                    )
+                    name
+                }
+            }
+        }
+
+        val stdlib = if (outputHandler != null) {
+            KlangStdLib.create(outputHandler = outputHandler)
+        } else {
+            stdlibLib
+        }
+
+        val engineBuilder = KlangScriptEngine.Builder()
+        engineBuilder.registerLibrary(stdlib)
+        engineBuilder.registerLibrary(sprudelLib)
+        return engineBuilder.build(attrs)
+    }
 
     fun ensure(): Deferred<KlangPlayer> {
         deferred?.let { return it }

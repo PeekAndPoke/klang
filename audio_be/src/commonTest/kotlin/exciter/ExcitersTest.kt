@@ -898,13 +898,11 @@ class ExcitersTest : StringSpec({
     "supersaw DSL - multiple oscParams applied together" {
         val dsl = ExciterDsl.SuperSaw()
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
-        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "freqSpread" to 0.5, "gain" to 0.3)), freqHz = 440.0)
+        val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "freqSpread" to 0.5)), freqHz = 440.0)
         bufDefault.any { it != 0.0f } shouldBe true
         bufOverride.any { it != 0.0f } shouldBe true
-        // Output should differ due to different voices, spread, and gain
+        // Output should differ due to different voices and spread
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
-        // Gain override to 0.3 should reduce amplitude
-        bufOverride.peakAmplitude() shouldBeLessThan bufDefault.peakAmplitude()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -930,6 +928,180 @@ class ExcitersTest : StringSpec({
         val countOverride = bufOverride.count { it > 0.0f }
         val countDefault = bufDefault.count { it > 0.0f }
         countOverride shouldBeGreaterThanOrEqual countDefault
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Constant vs Param behavior
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Constant is not overridden by oscParams" {
+        val dsl = ExciterDsl.Sine(freq = ExciterDsl.Constant(880.0))
+        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // oscParam tries to override
+        val buf = generate(sig, freqHz = 220.0)  // voice freq is 220
+        // Should use 880 Hz (Constant), not 440 (oscParam) or 220 (voice)
+        val crossings = buf.zeroCrossings()
+        // 880Hz over 100ms ≈ 88 cycles, ~176 zero crossings
+        crossings shouldBeInRange 170..185
+    }
+
+    "Param is overridden by oscParams" {
+        val dsl = ExciterDsl.Sine(freq = ExciterDsl.Param("freq", 880.0))
+        val sig = dsl.toExciter(mapOf("freq" to 440.0))  // oscParam overrides
+        val buf = generate(sig, freqHz = 220.0)
+        // Should use 440 Hz (oscParam override), not 880 (default) or 220 (voice)
+        val crossings = buf.zeroCrossings()
+        // 440Hz over 100ms ≈ 44 cycles, ~88 zero crossings
+        crossings shouldBeInRange 84..92
+    }
+
+    "Param with freq=0 uses voice frequency" {
+        val dsl = ExciterDsl.Sine()  // default freq = Param("freq", 0.0)
+        val sig = dsl.toExciter()
+        val buf = generate(sig, freqHz = 440.0)
+        val crossings = buf.zeroCrossings()
+        crossings shouldBeInRange 84..92
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Freq override on oscillator
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "sine with fixed freq ignores voice freqHz" {
+        val sig = Exciters.sine(freq = ParamExciter("freq", 880.0))
+        val buf = generate(sig, freqHz = 220.0)  // voice is 220 but freq overrides to 880
+        val crossings = buf.zeroCrossings()
+        crossings shouldBeInRange 170..185
+    }
+
+    "sine with freq=0 uses voice freqHz" {
+        val sig = Exciters.sine()  // default freq=0
+        val buf = generate(sig, freqHz = 440.0)
+        val crossings = buf.zeroCrossings()
+        crossings shouldBeInRange 84..92
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Ramp oscillator
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "ramp - produces non-zero output" {
+        val buf = generate(Exciters.ramp(), freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "ramp - correct frequency" {
+        val buf = generate(Exciters.ramp(), freqHz = 440.0)
+        buf.zeroCrossings() shouldBeInRange 84..92
+    }
+
+    "ramp - bounded amplitude" {
+        val buf = generate(Exciters.ramp(), freqHz = 440.0)
+        buf.peakAmplitude() shouldBeLessThan 1.1
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Edge cases — zero/negative voices, division by zero
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "supersaw - zero voices produces silence" {
+        val buf = generate(Exciters.superSaw(voices = ParamExciter("voices", 0.0)), freqHz = 440.0)
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    "supersaw - negative voices produces silence" {
+        val buf = generate(Exciters.superSaw(voices = ParamExciter("voices", -5.0)), freqHz = 440.0)
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    "supersine - zero voices produces silence" {
+        val buf = generate(Exciters.superSine(voices = ParamExciter("voices", 0.0)), freqHz = 440.0)
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    "plus - two sines summed roughly double amplitude" {
+        val single = generate(Exciters.sine(), freqHz = 440.0)
+        val doubled = generate(Exciters.sine() + Exciters.sine(), freqHz = 440.0)
+        doubled.peakAmplitude() shouldBe (single.peakAmplitude() * 2.0 plusOrMinus 0.05)
+    }
+
+    "mul by 0.5 halves amplitude" {
+        val full = generate(Exciters.sine(), freqHz = 440.0)
+        val half = generate(Exciters.sine().mul(0.5), freqHz = 440.0)
+        (half.peakAmplitude() / full.peakAmplitude()) shouldBe (0.5 plusOrMinus 0.02)
+    }
+
+    "mul by 1.0 preserves signal (withGain short-circuit)" {
+        val original = generate(Exciters.sine(), freqHz = 440.0)
+        val unchanged = generate(Exciters.sine().withGain(ParamExciter("gain", 1.0)), freqHz = 440.0)
+        original.zip(unchanged).all { (a, b) -> a == b } shouldBe true
+    }
+
+    "div by 2.0 halves amplitude" {
+        val full = generate(Exciters.sine(), freqHz = 440.0)
+        val half = generate(Exciters.sine().div(2.0), freqHz = 440.0)
+        (half.peakAmplitude() / full.peakAmplitude()) shouldBe (0.5 plusOrMinus 0.02)
+    }
+
+    "times - signal times itself is squared (always positive)" {
+        val buf = generate(Exciters.sine() * Exciters.sine(), freqHz = 440.0)
+        // Squared sine is always >= 0
+        buf.all { it >= -0.001f } shouldBe true
+    }
+
+    "div by zero produces silence, not NaN" {
+        val sig = Exciters.sine() * Exciters.silence()  // silence = all zeros
+        val dividend = Exciters.sine()
+        val divResult = dividend.div(Exciters.silence())
+        val buf = generate(divResult, freqHz = 440.0)
+        // Should be all zeros (guarded), not NaN or Infinity
+        buf.none { it.isNaN() || it.isInfinite() } shouldBe true
+        buf.all { it == 0.0f } shouldBe true
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Drive, Clip, Bandpass, Notch
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "drive amplifies signal" {
+        val dry = generate(Exciters.sine(), freqHz = 440.0)
+        val driven = generate(Exciters.sine().drive(0.5), freqHz = 440.0)
+        driven.peakAmplitude() shouldBeGreaterThan dry.peakAmplitude()
+    }
+
+    "drive with amount=0 bypasses" {
+        val dry = generate(Exciters.sine(), freqHz = 440.0)
+        val driven = generate(Exciters.sine().drive(0.0), freqHz = 440.0)
+        dry.zip(driven).all { (a, b) -> a == b } shouldBe true
+    }
+
+    "clip soft limits output to approximately +-1" {
+        // Drive signal way above 1.0, then clip
+        val buf = generate(Exciters.sine().drive(1.0).clip("soft"), freqHz = 440.0)
+        buf.peakAmplitude() shouldBeLessThan 1.05
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "clip hard limits output to exactly +-1" {
+        val buf = generate(Exciters.sine().drive(1.0).clip("hard"), freqHz = 440.0)
+        buf.peakAmplitude() shouldBeLessThan 1.01
+    }
+
+    "clip fold produces non-zero output" {
+        val buf = generate(Exciters.sine().clip("fold"), freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+    }
+
+    "bandpass passes center frequency" {
+        val buf = generate(Exciters.sine().bandpass(440.0, 1.0), freqHz = 440.0)
+        buf.any { it != 0.0f } shouldBe true
+        buf.peakAmplitude() shouldBeGreaterThan 0.3
+    }
+
+    "notch attenuates center frequency" {
+        val dry = generate(Exciters.sine(), freqHz = 440.0)
+        val notched = generate(Exciters.sine().notch(440.0, 10.0), freqHz = 440.0)
+        // Notch at exactly the signal frequency should reduce amplitude
+        notched.peakAmplitude() shouldBeLessThan dry.peakAmplitude()
     }
 
 })

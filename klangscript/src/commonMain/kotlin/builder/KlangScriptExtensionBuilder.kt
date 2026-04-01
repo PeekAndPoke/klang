@@ -3,6 +3,7 @@
 package io.peekandpoke.klang.script.builder
 
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.getUniqueClassName
@@ -60,6 +61,13 @@ interface KlangScriptExtensionBuilder {
         receiver: KClass<T>,
         name: String,
         fn: (T, List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+    )
+
+    /** Register a native Kotlin extension method with engine access at call time. */
+    fun <T : Any> registerExtensionMethodWithEngine(
+        receiver: KClass<T>,
+        name: String,
+        fn: (T, List<RuntimeValue>, SourceLocation?, KlangScriptEngine) -> RuntimeValue,
     )
 }
 
@@ -138,9 +146,29 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
         val extensionMethod = NativeExtensionMethod(
             methodName = name,
             receiverClass = receiver,
-            invoker = { receiver, args, location ->
+            invoker = { receiver, args, location, _ ->
                 @Suppress("UNCHECKED_CAST")
                 val result = fn(receiver as T, args, location)
+                wrapAsRuntimeValue(result)
+            })
+
+        registerType(receiver)
+
+        nativeExtensionMethods.getOrPut(receiver) { mutableMapOf() }[name] = extensionMethod
+    }
+
+    /** Register a native Kotlin extension method with engine access at call time. */
+    override fun <T : Any> registerExtensionMethodWithEngine(
+        receiver: KClass<T>,
+        name: String,
+        fn: (T, List<RuntimeValue>, SourceLocation?, KlangScriptEngine) -> RuntimeValue,
+    ) {
+        val extensionMethod = NativeExtensionMethod(
+            methodName = name,
+            receiverClass = receiver,
+            invoker = { receiver, args, location, engine ->
+                @Suppress("UNCHECKED_CAST")
+                val result = fn(receiver as T, args, location, engine)
                 wrapAsRuntimeValue(result)
             })
 
@@ -337,6 +365,17 @@ inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.regist
         val result = fn(params)
         wrapAsRuntimeValue(result)
     }
+}
+
+/** Registers a native vararg function with inline documentation. */
+@Suppress("UNCHECKED_CAST")
+inline fun <reified P : Any, reified R : Any> KlangScriptLibrary.Builder.registerVarargFunction(
+    name: String,
+    docs: io.peekandpoke.klang.script.types.KlangCallable,
+    noinline fn: (List<P>) -> R,
+) {
+    (this as KlangScriptExtensionBuilder).registerVarargFunction<P, R>(name, fn)
+    registerDocs(docs)
 }
 
 /** Registers a native function as a top-level function with no parameters */

@@ -35,8 +35,16 @@ internal class SequencePattern(
     private val offsets = mutableListOf(Rational.ZERO)
 
     init {
-        weights.forEach { w ->
-            offsets.add(offsets.last() + (w / totalWeight))
+        if (totalWeight == Rational.ZERO) {
+            // All weights are zero — fall back to equal distribution
+            val equalStep = Rational.ONE / Rational(patterns.size)
+            patterns.indices.forEach { i ->
+                offsets.add(equalStep * Rational(i + 1))
+            }
+        } else {
+            weights.forEach { w ->
+                offsets.add(offsets.last() + (w / totalWeight))
+            }
         }
     }
 

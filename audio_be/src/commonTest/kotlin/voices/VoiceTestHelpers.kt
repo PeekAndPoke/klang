@@ -27,7 +27,7 @@ object VoiceTestHelpers {
      * All parameters have sensible defaults for most test cases.
      */
     fun createContext(
-        blockStart: Long = 0,
+        blockStart: Int = 0,
         blockFrames: Int = 100,
         sampleRate: Int = 44100,
     ): Voice.RenderContext {
@@ -48,9 +48,9 @@ object VoiceTestHelpers {
      * Only specify the parameters you want to test.
      */
     fun createVoice(
-        startFrame: Long = 0,
-        endFrame: Long = 1000,
-        gateEndFrame: Long = 1000,
+        startFrame: Int = 0,
+        endFrame: Int = 1000,
+        gateEndFrame: Int = 1000,
         orbitId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,
@@ -89,8 +89,8 @@ object VoiceTestHelpers {
         // Cut group
         cut: Int? = null,
     ): Voice {
-        val voiceDurationFrames = (gateEndFrame - startFrame).toInt()
-        val releaseFrames = (endFrame - gateEndFrame).toInt()
+        val voiceDurationFrames = gateEndFrame - startFrame
+        val releaseFrames = endFrame - gateEndFrame
 
         val signalCtx = ExciteContext(
             sampleRate = sampleRate,
@@ -166,9 +166,9 @@ object VoiceTestHelpers {
 
     /** Backward-compatible alias */
     fun createSynthVoice(
-        startFrame: Long = 0,
-        endFrame: Long = 1000,
-        gateEndFrame: Long = 1000,
+        startFrame: Int = 0,
+        endFrame: Int = 1000,
+        gateEndFrame: Int = 1000,
         orbitId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,
@@ -207,9 +207,9 @@ object VoiceTestHelpers {
     /** Create a voice with SampleExciter for sample playback tests. */
     fun createSampleVoice(
         sample: MonoSamplePcm,
-        startFrame: Long = 0,
-        endFrame: Long = 1000,
-        gateEndFrame: Long = 1000,
+        startFrame: Int = 0,
+        endFrame: Int = 1000,
+        gateEndFrame: Int = 1000,
         orbitId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,

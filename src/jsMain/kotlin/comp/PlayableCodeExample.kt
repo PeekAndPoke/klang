@@ -134,9 +134,9 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
             withEditorErrorHandling(editorRef) {
                 console.log("PlayableCodeExample: Compiling code:", currentCode)
 
-                // Use compile() to maintain accurate source locations
-                // This pre-executes imports without prepending lines, so highlighting line numbers match the editor
-                val pattern = SprudelPattern.compile(currentCode)
+                // Use Player.createEngine() so Osc.register() works, then compile with accurate source locations
+                val engine = Player.createEngine()
+                val pattern = SprudelPattern.compile(engine, currentCode)
 
                 if (pattern == null) {
                     console.error("PlayableCodeExample: Pattern compilation returned null for code:", currentCode)

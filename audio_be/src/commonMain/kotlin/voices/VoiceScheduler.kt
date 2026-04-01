@@ -7,7 +7,7 @@ import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
-import io.peekandpoke.klang.audio_bridge.infra.KlangMinHeap
+import io.peekandpoke.klang.common.infra.KlangMinHeap
 import io.peekandpoke.klang.common.math.ValueRamp
 import io.peekandpoke.ultra.maths.Ease
 
@@ -78,17 +78,27 @@ class VoiceScheduler(
     private class SoloSourceTracker(val rampDurationSec: Double, val sampleRate: Int) {
         private data class SourceState(
             val sourceId: String,
-            val cleanupFrame: Long?,
+            val cleanupFrame: Int?,
         )
 
         private val sources = mutableMapOf<String, SourceState>()
 
-        fun update(activeSoloSourceIds: Set<String>, currentFrame: Long): Set<String> {
-            for ((sourceId, state) in sources.toList()) {
+        // Pre-allocated list for deferred mutations — avoids toList() allocation on the audio thread.
+        // Entries are (sourceId, newState) pairs to apply after the read-only iteration.
+        private val pendingUpdates = mutableListOf<Pair<String, SourceState>>()
+
+        fun update(activeSoloSourceIds: Set<String>, currentFrame: Int): Set<String> {
+            // Pass 1: find sources that need a cleanup frame — collect updates without mutating
+            pendingUpdates.clear()
+            for ((sourceId, state) in sources) {
                 if (sourceId !in activeSoloSourceIds && state.cleanupFrame == null) {
-                    val cleanupFrame = currentFrame + (rampDurationSec * sampleRate).toLong()
-                    sources[sourceId] = state.copy(cleanupFrame = cleanupFrame)
+                    val cleanupFrame = currentFrame + (rampDurationSec * sampleRate).toInt()
+                    pendingUpdates.add(sourceId to state.copy(cleanupFrame = cleanupFrame))
                 }
+            }
+            // Apply deferred mutations
+            for ((sourceId, newState) in pendingUpdates) {
+                sources[sourceId] = newState
             }
 
             for (sourceId in activeSoloSourceIds) {
@@ -119,12 +129,13 @@ class VoiceScheduler(
     private val playbackContexts = mutableMapOf<String, PlaybackCtx>()
 
     // Track the last processed frame (for epoch recording)
-    private var lastProcessedFrame: Long = 0
+    private var lastProcessedFrame: Int = 0
 
-    // Scratch buffers
+    // Scratch buffers — pre-allocated to avoid per-block heap allocation on the audio thread
     private val voiceBuffer = FloatArray(options.blockFrames)
     private val freqModBuffer = DoubleArray(options.blockFrames)
     private val scratchBuffers = ScratchBuffers(options.blockFrames)
+    private val activeSoloSourceIds = mutableSetOf<String>()
 
     // Context reused per block
     private val ctx = Voice.RenderContext(
@@ -263,7 +274,7 @@ class VoiceScheduler(
         prefetchSampleSound(voice)
     }
 
-    fun process(cursorFrame: Long) {
+    fun process(cursorFrame: Int) {
         val startMs = options.performanceTimeMs()
 
         lastProcessedFrame = cursorFrame
@@ -276,7 +287,7 @@ class VoiceScheduler(
         ctx.blockStart = cursorFrame
 
         // 2.5. Calculate solo/mute gain multipliers
-        val activeSoloSourceIds = mutableSetOf<String>()
+        activeSoloSourceIds.clear()
         var maxSoloAmount = 0.0
         for (voice in active) {
             if (voice.soloAmount > 0.0 && voice.sourceId != null) {
@@ -379,14 +390,14 @@ class VoiceScheduler(
                 options.commLink.feedback.send(
                     KlangCommLink.Feedback.RequestSample(
                         playbackId = pid,
-                        req = voice.data.asSampleRequest(),
+                        req = req,
                     )
                 )
             }
         }
     }
 
-    private fun promoteScheduled(nowFrame: Long, blockEnd: Long) {
+    private fun promoteScheduled(nowFrame: Int, blockEnd: Int) {
         val blockEndSec = backendStartTimeSec + (blockEnd.toDouble() / options.sampleRate.toDouble())
         val nowSec = backendStartTimeSec + (nowFrame.toDouble() / options.sampleRate.toDouble())
         val blockSizeSec = options.blockFrames.toDouble() / options.sampleRate.toDouble()

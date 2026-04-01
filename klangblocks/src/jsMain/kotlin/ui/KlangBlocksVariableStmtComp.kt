@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.blocks.ui
 
 import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.common.math.formatAsIntOrDouble
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -61,10 +62,7 @@ class KlangBlocksVariableStmtComp(ctx: Ctx<Props>) : Component<KlangBlocksVariab
 
     private fun startEdit() {
         val currentText = when (val v = props.value) {
-            is KBNumberArg -> {
-                val l = v.value.toLong()
-                if (v.value == l.toDouble()) l.toString() else v.value.toString()
-            }
+            is KBNumberArg -> v.value.formatAsIntOrDouble()
 
             else -> ""
         }
