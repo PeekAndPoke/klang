@@ -1,11 +1,15 @@
 package io.peekandpoke.klang.audio_engine
 
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
-import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
-import io.peekandpoke.klang.audio_be.exciter.registerDefaults
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
-import io.peekandpoke.klang.audio_bridge.*
+import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.StreamSource
@@ -31,6 +35,7 @@ class KlangBenchmark(
         val maxSafeVoices: Int,
         val rtfAtLimit: Double,
         val details: String,
+        val rounds: Int,
     )
 
     private val _progress = StreamSource(
@@ -48,7 +53,7 @@ class KlangBenchmark(
     suspend fun run(
         targetRtf: Double = 0.9, // Stop when we use x % of CPU time
         maxVoicesCap: Int = 1000, // Don't go forever
-        iterations: Int = 5, // Number of iterations to average
+        iterations: Int = 3, // Number of iterations to average
         onProgress: ((Progress) -> Unit)? = null,
     ) {
         console.log("[Benchmark] Starting Voice Stress Test with $iterations iterations...")
@@ -124,7 +129,8 @@ class KlangBenchmark(
         val finalResult = Result(
             maxSafeVoices = avgMaxSafeVoices,
             rtfAtLimit = avgRtfAtLimit,
-            details = detailsText
+            details = detailsText,
+            rounds = iterations,
         )
 
         val finalProgress = Progress(
@@ -151,8 +157,8 @@ class KlangBenchmark(
     ): Result {
         // 1. Setup Headless Environment
         val commLink = KlangCommLink()
-        val orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate)
-        val exciterRegistry = ExciterRegistry().apply {
+        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
+        val ignitorRegistry = IgnitorRegistry().apply {
             registerDefaults()
         }
 
@@ -161,8 +167,8 @@ class KlangBenchmark(
                 commLink = commLink.backend,
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
-                exciterRegistry = exciterRegistry,
-                orbits = orbits
+                ignitorRegistry = ignitorRegistry,
+                cylinders = cylinders
             )
         )
         scheduler.setBackendStartTime(0.0)
@@ -171,7 +177,7 @@ class KlangBenchmark(
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voices = scheduler,
-            orbits = orbits
+            cylinders = cylinders
         )
 
         val outBuffer = ShortArray(blockFrames * 2)
@@ -259,7 +265,8 @@ class KlangBenchmark(
                     rtfAtLimit = currentRtf,
                     details = "Iteration $iteration: Hit limit at $finalActiveCount active voices (RTF: ${
                         currentRtf.asDynamic().toFixed(3)
-                    })"
+                    })",
+                    rounds = iteration,
                 )
             }
         }
@@ -269,7 +276,8 @@ class KlangBenchmark(
         return Result(
             maxSafeVoices = maxVoicesCap,
             rtfAtLimit = 0.0,
-            details = "Iteration $iteration: Maxed out cap of $maxVoicesCap voices!"
+            details = "Iteration $iteration: Maxed out cap of $maxVoicesCap voices!",
+            rounds = iteration,
         )
     }
 

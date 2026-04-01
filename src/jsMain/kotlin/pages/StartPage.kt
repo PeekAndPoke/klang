@@ -7,8 +7,17 @@ import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.playOnce
-import io.peekandpoke.klang.comp.*
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.comp.Oscilloscope
+import io.peekandpoke.klang.comp.PlayerMiniStats
+import io.peekandpoke.klang.comp.RoundButton
+import io.peekandpoke.klang.comp.RoundGauge
+import io.peekandpoke.klang.comp.Spectrumeter
+import io.peekandpoke.klang.sprudel.lang.adsr
+import io.peekandpoke.klang.sprudel.lang.delay
+import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.room
+import io.peekandpoke.klang.sprudel.lang.rsize
+import io.peekandpoke.klang.sprudel.lang.sound
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetect
 import io.peekandpoke.kraft.components.NoProps
@@ -28,10 +37,61 @@ import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.ops.ticker
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.FontWeight
+import kotlinx.css.JustifyContent
+import kotlinx.css.PointerEvents
+import kotlinx.css.Position
+import kotlinx.css.TextAlign
+import kotlinx.css.TextTransform
+import kotlinx.css.WhiteSpace
+import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
+import kotlinx.css.border
+import kotlinx.css.borderRadius
+import kotlinx.css.bottom
+import kotlinx.css.color
+import kotlinx.css.display
+import kotlinx.css.em
+import kotlinx.css.flexDirection
+import kotlinx.css.flexGrow
+import kotlinx.css.fontFamily
+import kotlinx.css.fontSize
+import kotlinx.css.fontWeight
+import kotlinx.css.height
+import kotlinx.css.justifyContent
+import kotlinx.css.left
+import kotlinx.css.letterSpacing
+import kotlinx.css.lineHeight
+import kotlinx.css.marginBottom
+import kotlinx.css.marginLeft
+import kotlinx.css.marginRight
+import kotlinx.css.marginTop
+import kotlinx.css.maxWidth
+import kotlinx.css.opacity
+import kotlinx.css.paddingBottom
+import kotlinx.css.paddingLeft
+import kotlinx.css.paddingRight
+import kotlinx.css.paddingTop
+import kotlinx.css.pct
+import kotlinx.css.pointerEvents
+import kotlinx.css.position
 import kotlinx.css.properties.LineHeight
 import kotlinx.css.properties.scaleX
 import kotlinx.css.properties.transform
+import kotlinx.css.px
+import kotlinx.css.right
+import kotlinx.css.textAlign
+import kotlinx.css.textTransform
+import kotlinx.css.top
+import kotlinx.css.vh
+import kotlinx.css.whiteSpace
+import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -810,7 +870,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                         color = Color("#888")
                         textAlign = TextAlign.center
                     }
-                    +"Average from 5 test runs"
+                    +"Average from ${result.rounds} test runs"
                 }
             }
 

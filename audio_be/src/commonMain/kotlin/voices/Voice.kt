@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
@@ -15,7 +15,7 @@ import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 /**
  * A voice in the audio engine.
  *
- * Runs a composable [BlockRenderer] pipeline: **Pitch → Excite → Filter → Send**
+ * Runs a composable [BlockRenderer] pipeline: **Pitch → Ignite → Filter → Send**
  */
 class Voice(
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -24,10 +24,10 @@ class Voice(
     val startFrame: Int,
     val endFrame: Int,
     private val gateEndFrame: Int,
-    val orbitId: Int,
+    val cylinderId: Int,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Dynamics & Routing (used by SendRenderer and Orbit configuration)
+    // Dynamics & Routing (used by SendRenderer and Cylinder configuration)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     val gain: Double,
     val pan: Double,
@@ -44,14 +44,14 @@ class Voice(
     val cut: Int? = null,
 
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
-    // Strip pipeline: Pitch → Excite → Filter (Send is appended in init)
+    // Strip pipeline: Pitch → Ignite → Filter (Send is appended in init)
     // ═════════════════════════════════════════════════════════════════════════════════════════════════════
     pipeline: List<BlockRenderer>,
 
     // Pre-built BlockContext (created by VoiceFactory, mutated per block)
     private val blockCtx: BlockContext,
 ) {
-    // Full pipeline: Pitch → Excite → Filter → Send
+    // Full pipeline: Pitch → Ignite → Filter → Send
     private val pipeline: List<BlockRenderer> = pipeline + SendRenderer(voice = this)
 
     // Dynamic gain multiplier (set by VoiceScheduler for smooth transitions, solo/mute, etc.)
@@ -66,7 +66,7 @@ class Voice(
     /**
      * Renders the voice into the context's buffers.
      *
-     * Runs the composable BlockRenderer pipeline: Pitch → Excite → Filter → Send.
+     * Runs the composable BlockRenderer pipeline: Pitch → Ignite → Filter → Send.
      *
      * @return true if the voice is still active, false if it has finished
      */
@@ -89,7 +89,7 @@ class Voice(
         blockCtx.renderContext = ctx
         blockCtx.freqModBufferWritten = false
 
-        // ── Pitch → Excite → Filter → Send ────────────────────────────────────────
+        // ── Pitch → Ignite → Filter → Send ────────────────────────────────────────
 
         for (renderer in pipeline) {
             renderer.render(blockCtx)
@@ -106,7 +106,7 @@ class Voice(
      * Rendering context shared across all voices during a processing block.
      */
     class RenderContext(
-        val orbits: Orbits,
+        val cylinders: Cylinders,
         val sampleRate: Int,
         val blockFrames: Int,
         val voiceBuffer: FloatArray,
@@ -183,7 +183,7 @@ class Voice(
     }
 
     class Ducking(
-        val orbitId: Int,
+        val cylinderId: Int,
         val attackSeconds: Double,
         val depth: Double,
     )

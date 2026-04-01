@@ -2,7 +2,7 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.exciter.Exciters
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import kotlin.math.sqrt
@@ -38,13 +38,13 @@ class FmSynthesisTest : StringSpec({
         val voiceWith = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 2.0, depth = 0.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voiceWithout = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -62,7 +62,7 @@ class FmSynthesisTest : StringSpec({
         val voice = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -80,13 +80,13 @@ class FmSynthesisTest : StringSpec({
         val voice1 = createSynthVoice(
             blockFrames = bf,
             freqHz = carrierFreq,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voice2 = createSynthVoice(
             blockFrames = bf,
             freqHz = carrierFreq,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 0.5, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
 
@@ -104,19 +104,19 @@ class FmSynthesisTest : StringSpec({
         val voiceHigh = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 1.0, depth = 200.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voiceLow = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 1.0, depth = 10.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voiceNone = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -139,7 +139,7 @@ class FmSynthesisTest : StringSpec({
         val voiceFmEnv = createSynthVoice(
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(
                 ratio = 2.0, depth = 200.0,
                 envelope = Voice.Envelope(attackFrames = 256.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)
@@ -149,7 +149,7 @@ class FmSynthesisTest : StringSpec({
         val voiceClean = createSynthVoice(
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -176,7 +176,7 @@ class FmSynthesisTest : StringSpec({
         val voiceFm = createSynthVoice(
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(
                 ratio = 1.5, depth = 200.0,
                 envelope = Voice.Envelope(attackFrames = 100.0, decayFrames = 100.0, sustainLevel = 0.5, releaseFrames = 0.0)
@@ -185,7 +185,7 @@ class FmSynthesisTest : StringSpec({
         val voiceClean = createSynthVoice(
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -252,13 +252,13 @@ class FmSynthesisTest : StringSpec({
         val voiceHigh = createSynthVoice(
             blockFrames = bf,
             freqHz = 100.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 10.0, depth = 500.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voiceClean = createSynthVoice(
             blockFrames = bf,
             freqHz = 100.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -276,13 +276,13 @@ class FmSynthesisTest : StringSpec({
         val voiceFm = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 0.25, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voiceClean = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -300,14 +300,14 @@ class FmSynthesisTest : StringSpec({
         val voiceBoth = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 1.5, depth = 50.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
             vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02)
         )
         val voiceFmOnly = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 1.5, depth = 50.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0)),
         )
 
@@ -327,7 +327,7 @@ class FmSynthesisTest : StringSpec({
         val voiceSustain = createSynthVoice(
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(
                 ratio = 2.0, depth = 100.0,
                 envelope = Voice.Envelope(attackFrames = 50.0, decayFrames = 50.0, sustainLevel = 0.3, releaseFrames = 0.0)
@@ -337,7 +337,7 @@ class FmSynthesisTest : StringSpec({
         val voiceFull = createSynthVoice(
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(
                 ratio = 2.0, depth = 100.0,
                 envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 1.0, releaseFrames = 0.0)
@@ -346,7 +346,7 @@ class FmSynthesisTest : StringSpec({
         val voiceClean = createSynthVoice(
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -373,7 +373,7 @@ class FmSynthesisTest : StringSpec({
             startFrame = 0, endFrame = 300, gateEndFrame = 100,
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             envelope = ampEnv,
             fm = Voice.Fm(
                 ratio = 2.0, depth = 200.0,
@@ -384,7 +384,7 @@ class FmSynthesisTest : StringSpec({
             startFrame = 0, endFrame = 300, gateEndFrame = 100,
             blockFrames = bfLocal,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             envelope = ampEnv,
             fm = null
         )
@@ -404,13 +404,13 @@ class FmSynthesisTest : StringSpec({
         val voiceNeg = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 2.0, depth = -100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voiceClean = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 
@@ -428,13 +428,13 @@ class FmSynthesisTest : StringSpec({
         val voiceFm = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = Voice.Fm(ratio = 1.0, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voiceClean = createSynthVoice(
             blockFrames = bf,
             freqHz = 440.0,
-            signal = Exciters.sine(),
+            signal = Ignitors.sine(),
             fm = null
         )
 

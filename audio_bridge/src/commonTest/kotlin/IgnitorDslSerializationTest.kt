@@ -1,0 +1,338 @@
+package io.peekandpoke.klang.audio_bridge
+
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import kotlinx.serialization.json.Json
+
+class IgnitorDslSerializationTest : StringSpec({
+
+    val json = Json {
+        prettyPrint = false
+    }
+
+    fun roundTrip(dsl: IgnitorDsl): IgnitorDsl {
+        val encoded = json.encodeToString(IgnitorDsl.serializer(), dsl)
+        return json.decodeFromString(IgnitorDsl.serializer(), encoded)
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Primitives
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Sine with custom freq round-trips" {
+        val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Param("freq", 440.0))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Sawtooth round-trips" {
+        val dsl = IgnitorDsl.Sawtooth()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Square with custom freq round-trips" {
+        val dsl = IgnitorDsl.Square(freq = IgnitorDsl.Param("freq", 220.0))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Triangle round-trips" {
+        val dsl = IgnitorDsl.Triangle()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "WhiteNoise round-trips" {
+        val dsl = IgnitorDsl.WhiteNoise
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Silence round-trips" {
+        val dsl = IgnitorDsl.Silence
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Composition
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Plus composition round-trips" {
+        val dsl = IgnitorDsl.Sine() + IgnitorDsl.Sawtooth()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Nested composition (Sine + Sawtooth.detune).div round-trips" {
+        val dsl = (IgnitorDsl.Sine() + IgnitorDsl.Sawtooth().detune(0.1)).div(IgnitorDsl.Param("divisor", 2.0))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Times composition round-trips" {
+        val dsl = IgnitorDsl.Sine() * IgnitorDsl.Triangle()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Mul round-trips" {
+        val dsl = IgnitorDsl.Sine().mul(IgnitorDsl.Param("factor", 0.5))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Filters & Effects
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Lowpass round-trips" {
+        val dsl = IgnitorDsl.Square().lowpass(2000.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Highpass with custom q round-trips" {
+        val dsl = IgnitorDsl.Sawtooth().highpass(500.0, 1.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "OnePoleLowpass round-trips" {
+        val dsl = IgnitorDsl.Sawtooth().onePoleLowpass(3000.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "ADSR round-trips" {
+        val dsl = IgnitorDsl.Sine().adsr(0.01, 0.3, 0.5, 0.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // FM
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "FM synthesis round-trips" {
+        val dsl = IgnitorDsl.Sine().fm(
+            modulator = IgnitorDsl.Sine(),
+            ratio = 1.4,
+            depth = 300.0,
+            envDecaySec = 0.5,
+            envSustainLevel = 0.0,
+        )
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "FM with ADSR round-trips" {
+        val dsl = IgnitorDsl.Sine()
+            .fm(IgnitorDsl.Sine(), ratio = 1.4, depth = 300.0)
+            .adsr(0.01, 0.3, 0.5, 0.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Complex compositions (matching the registry presets)
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "sgpad composition round-trips" {
+        val dsl = (IgnitorDsl.Sawtooth() + IgnitorDsl.Sawtooth().detune(0.1))
+            .div(IgnitorDsl.Param("divisor", 2.0))
+            .onePoleLowpass(3000.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "sgbell composition round-trips" {
+        val dsl = IgnitorDsl.Sine().fm(
+            modulator = IgnitorDsl.Sine(),
+            ratio = 1.4,
+            depth = 300.0,
+            envAttackSec = 0.001,
+            envDecaySec = 0.5,
+            envSustainLevel = 0.0,
+        )
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "sgbuzz composition round-trips" {
+        val dsl = IgnitorDsl.Square().lowpass(2000.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Parameter Slots
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Constant round-trips" {
+        val dsl = IgnitorDsl.Constant(42.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Param round-trips" {
+        val dsl = IgnitorDsl.Param("cutoff", 1000.0, "Filter cutoff")
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Noise Sources
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "PerlinNoise round-trips" {
+        val dsl = IgnitorDsl.PerlinNoise()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "BerlinNoise round-trips" {
+        val dsl = IgnitorDsl.BerlinNoise()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "BrownNoise round-trips" {
+        val dsl = IgnitorDsl.BrownNoise
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "PinkNoise round-trips" {
+        val dsl = IgnitorDsl.PinkNoise
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Additional Oscillator Primitives
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Ramp round-trips" {
+        val dsl = IgnitorDsl.Ramp()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Impulse round-trips" {
+        val dsl = IgnitorDsl.Impulse()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Pulze round-trips" {
+        val dsl = IgnitorDsl.Pulze()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Dust round-trips" {
+        val dsl = IgnitorDsl.Dust()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Crackle round-trips" {
+        val dsl = IgnitorDsl.Crackle()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Super Oscillators
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "SuperSine round-trips" {
+        val dsl = IgnitorDsl.SuperSine()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "SuperSquare round-trips" {
+        val dsl = IgnitorDsl.SuperSquare()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "SuperTri round-trips" {
+        val dsl = IgnitorDsl.SuperTri()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "SuperRamp round-trips" {
+        val dsl = IgnitorDsl.SuperRamp()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Physical Models
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Pluck round-trips" {
+        val dsl = IgnitorDsl.Pluck()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "SuperPluck round-trips" {
+        val dsl = IgnitorDsl.SuperPluck()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Effects
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Distort round-trips" {
+        val dsl = IgnitorDsl.Sine().distort(0.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Crush round-trips" {
+        val dsl = IgnitorDsl.Sine().crush(8.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Phaser round-trips" {
+        val dsl = IgnitorDsl.Sine().phaser(0.5, 0.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Tremolo round-trips" {
+        val dsl = IgnitorDsl.Sine().tremolo(5.0, 0.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Vibrato round-trips" {
+        val dsl = IgnitorDsl.Sine().vibrato(5.0, 0.02)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Detune round-trips" {
+        val dsl = IgnitorDsl.Sine().detune(7.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Complex Nested Trees
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Complex nested tree round-trips" {
+        val dsl = IgnitorDsl.SuperSaw(freq = IgnitorDsl.Constant(5.0))
+            .lowpass(2000.0)
+            .adsr(0.01, 0.3, 0.5, 0.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
+    // Drive, Clip, Bandpass, Notch, Coarse, Accelerate
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    "Drive round-trips" {
+        val dsl = IgnitorDsl.Sine().drive(0.5)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Clip round-trips" {
+        val dsl = IgnitorDsl.Sine().clip("hard")
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Bandpass round-trips" {
+        val dsl = IgnitorDsl.Sine().bandpass(1000.0, 2.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Notch round-trips" {
+        val dsl = IgnitorDsl.Sine().notch(1000.0, 2.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Drive + Clip chain round-trips" {
+        val dsl = IgnitorDsl.Sine().drive(0.5).clip("fold")
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Coarse round-trips" {
+        val dsl = IgnitorDsl.Sine().coarse(4.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Accelerate round-trips" {
+        val dsl = IgnitorDsl.Sine().accelerate(1.0)
+        roundTrip(dsl) shouldBe dsl
+    }
+})

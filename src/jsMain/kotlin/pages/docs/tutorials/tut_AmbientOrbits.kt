@@ -2,7 +2,7 @@ package io.peekandpoke.klang.pages.docs.tutorials
 
 val ambientOrbitsTutorial = Tutorial(
     slug = "ambient-orbits",
-    title = "Ambient Orbits",
+    title = "Ambient Cylinders",
     description = "Build a layered ambient soundscape using orbits for spatial separation and frequency carving with filters.",
     difficulty = TutorialDifficulty.Advanced,
     scope = TutorialScope.DeepDive,
@@ -10,7 +10,7 @@ val ambientOrbitsTutorial = Tutorial(
     sections = listOf(
         TutorialSection(
             heading = "Introduction",
-            text = "Ambient music is about layers breathing together in space. In this tutorial you will build a multi-layer soundscape where each voice lives in its own orbit with distinct frequency character. You will learn to carve out spectral space with filters and use orbits to keep effects separate between layers.",
+            text = "Ambient music is about layers breathing together in space. In this tutorial you will build a multi-layer soundscape where each voice lives in its own cylinder with distinct frequency character. You will learn to carve out spectral space with filters and use orbits to keep effects separate between layers.",
         ),
         TutorialSection(
             heading = "A Breathing Pad with legato()",
@@ -64,7 +64,7 @@ val ambientOrbitsTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Putting It All Together",
-            text = "Here is the complete ambient piece. Four layers, each in its own orbit with its own frequency range: a sub bass drone, a mid-range pad with phaser, a sparse delayed melody, and high-frequency noise texture. Each voice has space to breathe — this is ambient mixing.",
+            text = "Here is the complete ambient piece. Four layers, each in its own cylinder with its own frequency range: a sub bass drone, a mid-range pad with phaser, a sparse delayed melody, and high-frequency noise texture. Each voice has space to breathe — this is ambient mixing.",
             code = """stack(
   n("<0 0 0 0>").scale("C2:minor")
     .sound("sine").lpf(200).legato(2)

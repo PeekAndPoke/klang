@@ -3,11 +3,11 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.exciter.ExciteContext
-import io.peekandpoke.klang.audio_be.exciter.Exciter
-import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
@@ -19,7 +19,7 @@ class FilterModulationTest : StringSpec({
     val sampleRate = 44100
     val blockFrames = 100
 
-    val noopSignal = Exciter { buffer, _, ctx ->
+    val noopSignal = Ignitor { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) buffer[i] = 0.0f
     }
@@ -28,10 +28,10 @@ class FilterModulationTest : StringSpec({
         startFrame: Int = 0,
         gateEndFrame: Int = 1000,
         endFrame: Int = 1000,
-    ): ExciteContext {
+    ): IgniteContext {
         val voiceDurationFrames = gateEndFrame - startFrame
         val releaseFrames = endFrame - gateEndFrame
-        return ExciteContext(
+        return IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
@@ -44,7 +44,7 @@ class FilterModulationTest : StringSpec({
     // Helper to create a dummy context
     fun createCtx(blockStart: Int = 0): Voice.RenderContext {
         return Voice.RenderContext(
-            orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
+            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = FloatArray(blockFrames),
@@ -88,7 +88,7 @@ class FilterModulationTest : StringSpec({
     "filter without modulator is not modified" {
         val spyFilter = SpyFilter()
         val voice = createSynthVoice(
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 0,
             endFrame = 1000,
             gateEndFrame = 1000,
@@ -136,7 +136,7 @@ class FilterModulationTest : StringSpec({
         )
 
         val voice = createSynthVoice(
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 0,
             endFrame = 1000,
             gateEndFrame = 1000,
@@ -187,7 +187,7 @@ class FilterModulationTest : StringSpec({
         )
 
         val voice = createSynthVoice(
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 0,
             endFrame = 2000,
             gateEndFrame = 2000,
@@ -238,7 +238,7 @@ class FilterModulationTest : StringSpec({
         )
 
         val voice = createSynthVoice(
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 0,
             endFrame = 1000,
             gateEndFrame = 500,
@@ -302,7 +302,7 @@ class FilterModulationTest : StringSpec({
         )
 
         val voice = createSynthVoice(
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 0,
             endFrame = 1000,
             gateEndFrame = 1000,
@@ -358,7 +358,7 @@ class FilterModulationTest : StringSpec({
         val sample = createSample()
         val voice = createSampleVoice(
             sample = sample,
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 0,
             endFrame = 1000,
             gateEndFrame = 1000,
@@ -400,7 +400,7 @@ class FilterModulationTest : StringSpec({
         )
 
         val voice = createSynthVoice(
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 0,
             endFrame = 1000,
             gateEndFrame = 1000,
@@ -454,7 +454,7 @@ class FilterModulationTest : StringSpec({
 
         // Voice starts at frame 100
         val voice = createSynthVoice(
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 100,
             endFrame = 1000,
             gateEndFrame = 1000,
@@ -506,7 +506,7 @@ class FilterModulationTest : StringSpec({
         )
 
         val voice = createSynthVoice(
-            orbitId = 0,
+            cylinderId = 0,
             startFrame = 0,
             endFrame = 1000,
             gateEndFrame = 300,

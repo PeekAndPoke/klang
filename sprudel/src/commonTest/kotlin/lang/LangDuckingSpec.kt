@@ -193,7 +193,7 @@ class LangDuckingSpec : StringSpec({
         events.size shouldBe 1
         val voiceData = events[0].data.toVoiceData()
 
-        voiceData.duckOrbit shouldBe 0
+        voiceData.duckCylinder shouldBe 0
         voiceData.duckAttack shouldBe 0.15
         voiceData.duckDepth shouldBe 0.6
     }

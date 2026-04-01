@@ -22,8 +22,8 @@ All types in `audio_be/src/commonMain/kotlin/voices/`.
 11. Gain + Pan             — volume + stereo positioning
 12. PostGain               — final gain stage
 13. Tremolo / Phaser       — per-voice modulation effects
-14. Ducking                — sidechain signal written to target orbit
-15. Mix into Orbit         — voiceBuffer → orbits[orbitId]
+14. Ducking                — sidechain signal written to target cylinder
+15. Mix into Cylinder         — voiceBuffer → orbits[orbitId]
 ```
 
 ### Voice Properties (key fields)
@@ -34,7 +34,7 @@ sealed interface Voice {
     val startFrame: Int              // absolute frame when voice becomes active
     val endFrame: Int?               // absolute frame when voice finishes (null = until envelope done)
     val gateEndFrame: Int            // absolute frame when gate closes (ADSR release starts)
-    val orbitId: Int                 // target Orbit index
+  val orbitId: Int                 // target Cylinder index
 
     // Synthesis modulation
     val fm: Fm?                      // FM modulator (ratio + ADSR depth)
@@ -80,7 +80,7 @@ Passed to `Voice.render()` every block:
 class RenderContext(
     val voiceBuffer: FloatArray,     // write output here (length = blockFrames)
     val freqModBuffer: FloatArray,   // shared per-block frequency modulation accumulator
-    val orbits: Orbits,              // reference for mixing and ducking
+    val orbits: Cylinders,              // reference for mixing and ducking
     val sampleRate: Int,
     val blockFrames: Int,
 )

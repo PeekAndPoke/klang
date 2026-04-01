@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
-import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -18,8 +18,8 @@ class VoiceScheduler(
         val commLink: KlangCommLink.BackendEndpoint,
         val sampleRate: Int,
         val blockFrames: Int,
-        val exciterRegistry: ExciterRegistry,
-        val orbits: Orbits,
+        val ignitorRegistry: IgnitorRegistry,
+        val cylinders: Cylinders,
         /** Supplier for current backend time in milliseconds (from KlangTime) */
         val performanceTimeMs: () -> Double = { 0.0 },
     ) {
@@ -139,7 +139,7 @@ class VoiceScheduler(
 
     // Context reused per block
     private val ctx = Voice.RenderContext(
-        orbits = options.orbits,
+        cylinders = options.cylinders,
         sampleRate = options.sampleRate,
         blockFrames = options.blockFrames,
         voiceBuffer = voiceBuffer,
@@ -151,8 +151,8 @@ class VoiceScheduler(
     private val voiceFactory = VoiceFactory(
         sampleRate = options.sampleRate,
         sampleRateDouble = options.sampleRateDouble,
-        exciterRegistry = options.exciterRegistry,
-        orbits = options.orbits,
+        ignitorRegistry = options.ignitorRegistry,
+        cylinders = options.cylinders,
         voiceBuffer = voiceBuffer,
         freqModBuffer = freqModBuffer,
         scratchBuffers = scratchBuffers,
@@ -343,8 +343,8 @@ class VoiceScheduler(
         if (endMs - lastDiagnosticsTimeMs > 20.0) {
             lastDiagnosticsTimeMs = endMs
 
-            val orbitStates = options.orbits.orbits.map { orbit ->
-                KlangCommLink.Feedback.Diagnostics.OrbitState(id = orbit.id, active = orbit.isActive)
+            val cylinderStates = options.cylinders.cylinders.map { cylinder ->
+                KlangCommLink.Feedback.Diagnostics.CylinderState(id = cylinder.id, active = cylinder.isActive)
             }
 
             options.commLink.feedback.send(
@@ -353,7 +353,7 @@ class VoiceScheduler(
                     sampleRate = options.sampleRate,
                     renderHeadroom = avgHeadroom,
                     activeVoiceCount = active.size,
-                    orbits = orbitStates,
+                    cylinders = cylinderStates,
                     backendNowMs = endMs,
                 )
             )
@@ -374,7 +374,7 @@ class VoiceScheduler(
             val latency = maxOf(0.0, nowSec - voice.playbackStartTime)
             playbackContexts[pid] = PlaybackCtx(
                 playbackId = pid,
-                exciterRegistry = options.exciterRegistry.fork(),
+                ignitorRegistry = options.ignitorRegistry.fork(),
                 epoch = voice.playbackStartTime + latency,
             )
         }
@@ -383,7 +383,7 @@ class VoiceScheduler(
     private fun prefetchSampleSound(voice: ScheduledVoice) {
         val pid = voice.playbackId
 
-        if (!options.exciterRegistry.contains(voice.data.sound)) {
+        if (!options.ignitorRegistry.contains(voice.data.sound)) {
             val req = voice.data.asSampleRequest()
             if (!samples.containsKey(req)) {
                 samples[req] = SampleEntry.Requested(req)

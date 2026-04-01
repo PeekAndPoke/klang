@@ -105,7 +105,6 @@ stack(                                                                 //////// 
         """
 
     val strangerThingsNetflix = """
-
 import * from "stdlib"
 import * from "sprudel"
 
@@ -130,7 +129,7 @@ stack(
     .gain(0.225).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
     .pan(0.29).superimpose(pan(0.61))
     .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3).analog(1)
-    .filterWhen(x => x >= wait * 3 && x < (wait * 4 + keep))
+    .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.75).struct("x!8")
     .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.275)
@@ -172,7 +171,7 @@ import * from "stdlib"
 import * from "sprudel"
 
 let stay = 48
-let tp = "[0 -1 -2 -3 -5  -2  1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ...
+let tp = "[0 -1 -2 -3 -5  -2  1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("-3").scale("c4:chromatic").orbit(7).fast(2).transpose(tp)
@@ -211,7 +210,7 @@ stack( // Gitarre! -------------------------------------------------------------
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>")
     .orbit(6).adsr("0.01:0.2:0.8:1.5").gain("1.0".add(rand.range(-0.02, 0.02).segment(32))) // .solo()
-).room(0.02).rsize(3.0).compressor("-10:2:10:0.02:0.25").analog(0.5) /*
+).room(0.02).rsize(3.0).compressor("-10:2:10:0.02:0.25").analog(1.5) /*
 
  
  
@@ -464,7 +463,7 @@ stack( // Gitarre! -------------------------------------------------------------
           .delayfeedback(0.2) 
      """.trimIndent()
 
-    val twoOrbits = """
+    val twoCylinders = """
         stack(
           // Snare only delay on the drums
           sound("bd hh sd oh").gain(0.7).delay("0.0 0.0 0.5 0.0").delaytime(0.25).delayfeedback(0.5).orbit(0),

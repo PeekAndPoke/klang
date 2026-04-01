@@ -88,7 +88,7 @@ Remaining items from the quality review (2026-03-31). Completed items archived b
 | H6  | Division-by-zero guards in SequencePattern + ratioMutation, with tests                             | 1    |
 | M1  | Audio thread allocations fixed (pre-allocated set, deferred mutation pattern)                      | 5    |
 | M2  | Denormal flushing added in Karplus-Strong + Super Karplus-Strong                                   | 5    |
-| M3  | `error("unreachable")` → `return@Exciter` in ExciterFm + ExciterPitchMod                           | 5    |
+| M3  | `error("unreachable")` → `return@Ignitor` in IgnitorFm + IgnitorPitchMod                           | 5    |
 | M4  | ResolvedShape / resolveDistortionShape extracted to shared DistortionShape.kt                      | 6    |
 | M5  | Number-to-integer-string formatting → `Double.formatAsIntOrDouble()` in common (5 sites)           | 6    |
 | M6  | KBCodeGen Long cache key → String key `"$line:$col"`                                               | 6    |

@@ -10,7 +10,7 @@ The top-level render loop driver. Called once per audio block by the platform ba
 renderBlock(outputBuffer: ShortArray, blockFrames: Int)
   1. Clear mix buffers + orbits
   2. VoiceScheduler.processBlock()        → voices write to voiceBuffer + orbits
-  3. Orbits.processAndMix()               → orbit effects + mix to StereoBuffer
+  3. Cylinders.processAndMix()               → cylinder effects + mix to StereoBuffer
   4. Master limiter (−1 dB threshold)     → gain reduction applied to StereoBuffer
   5. Clip ±1.0, interleave L/R, scale     → ShortArray (16-bit PCM)
 ```
@@ -24,41 +24,41 @@ renderBlock(outputBuffer: ShortArray, blockFrames: Int)
 | Attack    | 1 ms   |
 | Release   | 100 ms |
 
-## Orbits
+## Cylinders
 
-`audio_be/src/commonMain/kotlin/orbits/Orbits.kt`
+`audio_be/src/commonMain/kotlin/cylinders/Cylinders.kt`
 
-Manages up to 16 effect buses (orbit IDs 0–15). Each voice is routed to one orbit.
+Manages up to 16 effect buses (cylinder IDs 0–15). Each voice is routed to one cylinder.
 
 ### processAndMix() order
 
 ```
-1. For each active orbit:
-     orbit.processEffects()           → delay, reverb, phaser applied in-place
-2. For each active orbit:
-     ducking.applySidechain(...)      → cross-orbit sidechain compression
-3. For each active orbit:
-     mix orbit stereo buffer → master StereoBuffer (with orbit gain)
-4. Round-robin: deactivate one stale orbit per block
+1. For each active cylinder:
+     cylinder.processEffects()           → delay, reverb, phaser applied in-place
+2. For each active cylinder:
+     ducking.applySidechain(...)      → cross-cylinder sidechain compression
+3. For each active cylinder:
+     mix cylinder stereo buffer → master StereoBuffer (with cylinder gain)
+4. Round-robin: deactivate one stale cylinder per block
 ```
 
 ### getOrInit(orbitId, voice)
 
-Returns the existing `Orbit` or creates a new one, copying effect parameters from the voice's `VoiceData`.
+Returns the existing `Cylinder` or creates a new one, copying effect parameters from the voice's `VoiceData`.
 
-## Orbit
+## Cylinder
 
-`audio_be/src/commonMain/kotlin/orbits/Orbit.kt`
+`audio_be/src/commonMain/kotlin/cylinders/Cylinder.kt`
 
 One effect bus. Holds its own stereo accumulation buffer and effect instances.
 
-| Effect       | Class        | Applied when                   |
-|--------------|--------------|--------------------------------|
-| `DelayLine`  | `DelayLine`  | `VoiceData.delay > 0`          |
-| `Reverb`     | `Reverb`     | `VoiceData.room > 0`           |
-| `Phaser`     | `Phaser`     | Orbit-level phaser LFO         |
-| `Compressor` | `Compressor` | Orbit-level dynamic range      |
-| `Ducking`    | `Ducking`    | Sidechain from duckOrbit voice |
+| Effect       | Class        | Applied when                      |
+|--------------|--------------|-----------------------------------|
+| `DelayLine`  | `DelayLine`  | `VoiceData.delay > 0`             |
+| `Reverb`     | `Reverb`     | `VoiceData.room > 0`              |
+| `Phaser`     | `Phaser`     | Cylinder-level phaser LFO         |
+| `Compressor` | `Compressor` | Cylinder-level dynamic range      |
+| `Ducking`    | `Ducking`    | Sidechain from duckCylinder voice |
 
 ## Effect Classes
 
@@ -66,7 +66,7 @@ All in `audio_be/src/commonMain/kotlin/effects/`.
 
 ### Compressor
 
-RMS-based compressor. Applied per-orbit or per-voice.
+RMS-based compressor. Applied per-cylinder or per-voice.
 
 | Parameter   | Meaning                                 |
 |-------------|-----------------------------------------|
@@ -80,8 +80,8 @@ RMS-based compressor. Applied per-orbit or per-voice.
 
 Sidechain-triggered gain reduction across orbits.
 
-- Triggered when a voice with `duckOrbit = N` is activated
-- Reduces gain of orbit N according to `duckAttack`/`duckDepth`
+- Triggered when a voice with `duckCylinder = N` is activated
+- Reduces gain of cylinder N according to `duckAttack`/`duckDepth`
 - Recovery is automatic after the triggering voice ends
 
 | Parameter    | Meaning                                    |
@@ -122,7 +122,7 @@ All-pass cascade with LFO modulation.
 | `center`  | Center frequency of the notch          |
 | `sweep`   | LFO sweep range                        |
 
-Phaser can be applied per-voice (from `VoiceData.phaser`) or per-orbit (orbit-level).
+Phaser can be applied per-voice (from `VoiceData.phaser`) or per-cylinder (cylinder-level).
 
 ## Filters
 
@@ -144,7 +144,7 @@ Constructed from `FilterDef` sealed types. Cutoff can be modulated by `FilterEnv
 `audio_be/src/commonMain/kotlin/StereoBuffer.kt`
 
 Holds two `FloatArray`s (left, right) of `blockFrames` length.
-Used at orbit level and at master mix level.
+Used at cylinder level and at master mix level.
 
 ```kotlin
 class StereoBuffer(val blockFrames: Int) {

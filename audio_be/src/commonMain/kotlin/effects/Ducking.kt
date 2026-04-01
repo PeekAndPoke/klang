@@ -83,7 +83,7 @@ class Ducking(
      * Processes mono audio with sidechain ducking.
      *
      * @param input The audio buffer to be ducked
-     * @param sidechain The trigger signal (e.g., kick drum on another orbit)
+     * @param sidechain The trigger signal (e.g., kick drum on another cylinder)
      * @param blockSize Number of samples to process
      */
     fun process(input: FloatArray, sidechain: FloatArray, blockSize: Int) {

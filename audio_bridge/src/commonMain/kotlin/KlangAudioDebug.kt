@@ -10,6 +10,6 @@ package io.peekandpoke.klang.audio_bridge
  * Future: when true, debug messages will be sent through the comm-link feedback channel
  * so they appear in the frontend UI without disrupting audio playback.
  */
-// TODO: Wire up in M3 step — replace error("unreachable") calls in ExciterFm.kt and
-//  ExciterPitchMod.kt with silent returns guarded by this flag.
+// TODO: Wire up in M3 step — replace error("unreachable") calls in IgnitorFm.kt and
+//  IgnitorPitchMod.kt with silent returns guarded by this flag.
 const val KLANG_AUDIO_DEBUG = false

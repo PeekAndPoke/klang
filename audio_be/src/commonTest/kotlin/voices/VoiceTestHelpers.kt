@@ -1,14 +1,14 @@
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.exciter.ExciteContext
-import io.peekandpoke.klang.audio_be.exciter.Exciter
-import io.peekandpoke.klang.audio_be.exciter.SampleExciter
-import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.excite.ExciteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
+import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
@@ -32,7 +32,7 @@ object VoiceTestHelpers {
         sampleRate: Int = 44100,
     ): Voice.RenderContext {
         return Voice.RenderContext(
-            orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
+            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voiceBuffer = FloatArray(blockFrames),
@@ -51,13 +51,13 @@ object VoiceTestHelpers {
         startFrame: Int = 0,
         endFrame: Int = 1000,
         gateEndFrame: Int = 1000,
-        orbitId: Int = 0,
+        cylinderId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,
 
         // Synthesis & Pitch
         freqHz: Double = 440.0,
-        signal: Exciter = TestExciters.constant,
+        signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
@@ -92,7 +92,7 @@ object VoiceTestHelpers {
         val voiceDurationFrames = gateEndFrame - startFrame
         val releaseFrames = endFrame - gateEndFrame
 
-        val signalCtx = ExciteContext(
+        val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
@@ -101,7 +101,7 @@ object VoiceTestHelpers {
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 
-        // Build strip pipeline: Pitch → Excite → Filter
+        // Build strip pipeline: Pitch → Ignite → Filter
         val pipeline = buildPitchPipeline(
             vibrato = vibrato,
             accelerate = accelerate,
@@ -112,7 +112,7 @@ object VoiceTestHelpers {
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,
-        ) + ExciteRenderer(
+        ) + IgniteRenderer(
             signal = signal,
             signalCtx = signalCtx,
             freqHz = freqHz,
@@ -142,14 +142,14 @@ object VoiceTestHelpers {
             freqHz = freqHz,
             signal = signal,
             signalCtx = signalCtx,
-            orbits = Orbits(blockFrames = blockFrames, sampleRate = sampleRate),
+            cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
         )
 
         return Voice(
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,
-            orbitId = orbitId,
+            cylinderId = cylinderId,
             gain = gain,
             pan = pan,
             postGain = postGain,
@@ -169,11 +169,11 @@ object VoiceTestHelpers {
         startFrame: Int = 0,
         endFrame: Int = 1000,
         gateEndFrame: Int = 1000,
-        orbitId: Int = 0,
+        cylinderId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,
         freqHz: Double = 440.0,
-        signal: Exciter = TestExciters.constant,
+        signal: Ignitor = TestIgnitors.constant,
         fm: Voice.Fm? = null,
         accelerate: Voice.Accelerate = Voice.Accelerate(0.0),
         vibrato: Voice.Vibrato = Voice.Vibrato(0.0, 0.0),
@@ -195,7 +195,7 @@ object VoiceTestHelpers {
         coarse: Voice.Coarse = Voice.Coarse(0.0),
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
-        orbitId = orbitId, sampleRate = sampleRate, blockFrames = blockFrames,
+        cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
         freqHz = freqHz, signal = signal, fm = fm, accelerate = accelerate,
         vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,
         postGain = postGain, envelope = envelope, compressor = compressor,
@@ -204,13 +204,13 @@ object VoiceTestHelpers {
         distort = distort, crush = crush, coarse = coarse,
     )
 
-    /** Create a voice with SampleExciter for sample playback tests. */
+    /** Create a voice with SampleIgnitor for sample playback tests. */
     fun createSampleVoice(
         sample: MonoSamplePcm,
         startFrame: Int = 0,
         endFrame: Int = 1000,
         gateEndFrame: Int = 1000,
-        orbitId: Int = 0,
+        cylinderId: Int = 0,
         sampleRate: Int = 44100,
         blockFrames: Int = 100,
         freqHz: Double = 440.0,
@@ -241,9 +241,9 @@ object VoiceTestHelpers {
         coarse: Voice.Coarse = Voice.Coarse(0.0),
     ) = createVoice(
         startFrame = startFrame, endFrame = endFrame, gateEndFrame = gateEndFrame,
-        orbitId = orbitId, sampleRate = sampleRate, blockFrames = blockFrames,
+        cylinderId = cylinderId, sampleRate = sampleRate, blockFrames = blockFrames,
         freqHz = freqHz,
-        signal = SampleExciter(
+        signal = SampleIgnitor(
             pcm = sample.pcm,
             rate = rate,
             playhead = playhead,
@@ -358,24 +358,24 @@ object TestSamples {
 }
 
 /**
- * Test signal generators (Exciter interface).
+ * Test signal generators (Ignitor interface).
  */
-object TestExciters {
-    val constant = Exciter { buffer, _, ctx ->
+object TestIgnitors {
+    val constant = Ignitor { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             buffer[i] = 1.0f
         }
     }
 
-    val ramp = Exciter { buffer, _, ctx ->
+    val ramp = Ignitor { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             buffer[i] = (i - ctx.offset).toFloat() / ctx.length
         }
     }
 
-    val silence = Exciter { buffer, _, ctx ->
+    val silence = Ignitor { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             buffer[i] = 0.0f

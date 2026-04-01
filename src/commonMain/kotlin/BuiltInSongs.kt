@@ -199,7 +199,7 @@ stack(
         Song(
             id = "$PREFIX-0003",
             title = "A Synth Worth Lying For",
-            cps = 0.53,
+            cps = 0.49,
             code = TestTextPatterns.aTruthWorthLyingFor,
             icon = "guitar",
         )
@@ -209,7 +209,7 @@ stack(
         Song(
             id = "$PREFIX-0004",
             title = "Stranger Synths",
-            cps = 0.60,
+            cps = 0.58,
             code = TestTextPatterns.strangerThingsNetflix,
             icon = "film",
         )

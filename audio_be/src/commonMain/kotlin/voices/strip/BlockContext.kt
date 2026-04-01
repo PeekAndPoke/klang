@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.audio_be.voices.strip
 
-import io.peekandpoke.klang.audio_be.exciter.ExciteContext
-import io.peekandpoke.klang.audio_be.exciter.Exciter
-import io.peekandpoke.klang.audio_be.exciter.ScratchBuffers
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.Voice
 
 /**
@@ -14,9 +14,9 @@ import io.peekandpoke.klang.audio_be.voices.Voice
  *
  * Stages read/write the shared buffers:
  * - **Pitch** stages write to [freqModBuffer] (frequency multipliers)
- * - **Excite** stages write to [audioBuffer] (raw waveform)
+ * - **Ignite** stages write to [audioBuffer] (raw waveform)
  * - **Filter** stages read/write [audioBuffer] (sculpt the waveform)
- * - **Send** stage reads [audioBuffer] and routes to orbit mixer
+ * - **Send** stage reads [audioBuffer] and routes to cylinder mixer
  *
  * **Threading assumption:** Voices render sequentially within a block.
  * The shared buffers ([audioBuffer], [freqModBuffer]) are not thread-safe.
@@ -26,11 +26,11 @@ class BlockContext(
     // Shared buffers
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /** Main audio signal buffer (Excite writes, Filter reads/writes). Updated per block. */
+    /** Main audio signal buffer (Ignite writes, Filter reads/writes). Updated per block. */
     var audioBuffer: FloatArray,
-    /** Pitch modulation multipliers (Pitch writes, Excite reads via ExciteContext.phaseMod) */
+    /** Pitch modulation multipliers (Pitch writes, Excite reads via IgniteContext.phaseMod) */
     val freqModBuffer: DoubleArray,
-    /** Shared scratch buffer pool for Exciter composition operators */
+    /** Shared scratch buffer pool for Ignitor composition operators */
     val scratchBuffers: ScratchBuffers,
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -49,20 +49,20 @@ class BlockContext(
     val freqHz: Double,
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Excite stage
+    // Ignite stage
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /** Exciter for waveform generation */
-    val signal: Exciter,
-    /** Per-voice ExciteContext (mutable per block) */
-    val signalCtx: ExciteContext,
+    /** Ignitor for waveform generation */
+    val signal: Ignitor,
+    /** Per-voice IgniteContext (mutable per block) */
+    val signalCtx: IgniteContext,
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Routing
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /** Orbit management for routing and effects */
-    val orbits: Orbits,
+    /** Cylinder management for routing and effects */
+    val cylinders: Cylinders,
 ) {
     // ═══════════════════════════════════════════════════════════════════════════
     // Mutable per block (updated before pipeline runs)
@@ -77,7 +77,7 @@ class BlockContext(
     /** Current block start frame (absolute) */
     var blockStart: Int = 0
 
-    /** Voice render context — set per block by Voice, read by SendRenderer for orbit routing */
+    /** Voice render context — set per block by Voice, read by SendRenderer for cylinder routing */
     lateinit var renderContext: Voice.RenderContext
 
     /** Pre-computed sample rate as Double */

@@ -41,38 +41,38 @@ class StdlibDocsInferenceTest : StringSpec({
 
     // ── Real stdlib: Osc method calls ───────────────────────────────────
 
-    "real stdlib: Osc.sine() returns ExciterDsl" {
+    "real stdlib: Osc.sine() returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.sine()"))?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(parseExpr("Osc.sine()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.saw() returns ExciterDsl" {
+    "real stdlib: Osc.saw() returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.saw()"))?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(parseExpr("Osc.saw()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.supersaw() returns ExciterDsl" {
+    "real stdlib: Osc.supersaw() returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.supersaw()"))?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(parseExpr("Osc.supersaw()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.whitenoise() returns ExciterDsl" {
+    "real stdlib: Osc.whitenoise() returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.whitenoise()"))?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(parseExpr("Osc.whitenoise()"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    // ── Real stdlib: ExciterDsl chains ──────────────────────────────────
+    // ── Real stdlib: IgnitorDsl chains ──────────────────────────────────
 
-    "real stdlib: Osc.sine().lowpass(1000) returns ExciterDsl" {
+    "real stdlib: Osc.sine().lowpass(1000) returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
-        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000)"))?.simpleName shouldBe "ExciterDsl"
+        inferrer.inferType(parseExpr("Osc.sine().lowpass(1000)"))?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5) returns ExciterDsl" {
+    "real stdlib: Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5) returns IgnitorDsl" {
         val inferrer = ExpressionTypeInferrer(stdlibRegistry())
         inferrer.inferType(
             parseExpr("Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5)")
-        )?.simpleName shouldBe "ExciterDsl"
+        )?.simpleName shouldBe "IgnitorDsl"
     }
 
     // ── Real stdlib: Math method calls ──────────────────────────────────
@@ -105,9 +105,9 @@ class StdlibDocsInferenceTest : StringSpec({
         } shouldBe true
     }
 
-    "real stdlib: getVariantsForReceiver(ExciterDsl) returns ExciterDsl methods" {
+    "real stdlib: getVariantsForReceiver(IgnitorDsl) returns IgnitorDsl methods" {
         val reg = stdlibRegistry()
-        val methods = reg.getVariantsForReceiver(KlangType("ExciterDsl"))
+        val methods = reg.getVariantsForReceiver(KlangType("IgnitorDsl"))
         methods shouldHaveAtLeastSize 3 // lowpass, adsr, mul, etc.
     }
 
@@ -121,14 +121,14 @@ class StdlibDocsInferenceTest : StringSpec({
         val reg = stdlibRegistry()
         val callable = reg.getCallable("sine", KlangType("Osc"))
         callable shouldNotBe null
-        callable!!.returnType?.simpleName shouldBe "ExciterDsl"
+        callable!!.returnType?.simpleName shouldBe "IgnitorDsl"
     }
 
-    "real stdlib: getCallable finds lowpass with receiver ExciterDsl" {
+    "real stdlib: getCallable finds lowpass with receiver IgnitorDsl" {
         val reg = stdlibRegistry()
-        val callable = reg.getCallable("lowpass", KlangType("ExciterDsl"))
+        val callable = reg.getCallable("lowpass", KlangType("IgnitorDsl"))
         callable shouldNotBe null
-        callable!!.returnType?.simpleName shouldBe "ExciterDsl"
+        callable!!.returnType?.simpleName shouldBe "IgnitorDsl"
     }
 
     "real stdlib: getCallable returns null for sine with wrong receiver" {

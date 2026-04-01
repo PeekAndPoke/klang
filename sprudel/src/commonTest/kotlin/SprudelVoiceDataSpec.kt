@@ -197,7 +197,7 @@ class SprudelVoiceDataSpec : StringSpec({
         voiceData.distort shouldBe 0.3
         voiceData.coarse shouldBe 1.0
         voiceData.crush shouldBe 4.0
-        voiceData.orbit shouldBe 1
+        voiceData.cylinder shouldBe 1
         voiceData.pan shouldBe 0.5
         voiceData.delay shouldBe 0.3
         voiceData.delayTime shouldBe 0.25

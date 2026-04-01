@@ -62,7 +62,7 @@ val yourFirstTrackTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Polish with Effects",
-            text = "The final step is adding space and depth. A touch of reverb on the pad makes it feel like a room. Delay on the melody adds movement. Each layer with different effects gets its own orbit so effects stay separate.",
+            text = "The final step is adding space and depth. A touch of reverb on the pad makes it feel like a room. Delay on the melody adds movement. Each layer with different effects gets its own cylinder so effects stay separate.",
             code = """stack(
   sound("bd ~ bd ~").orbit(0),
   sound("~ sd ~ sd").orbit(0),

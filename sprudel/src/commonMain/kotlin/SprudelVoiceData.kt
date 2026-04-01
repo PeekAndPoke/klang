@@ -1,6 +1,10 @@
 package io.peekandpoke.klang.sprudel
 
-import io.peekandpoke.klang.audio_bridge.*
+import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.FilterDefs
+import io.peekandpoke.klang.audio_bridge.FilterEnvelope
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import kotlinx.serialization.Serializable
 
 /**
@@ -606,14 +610,14 @@ data class SprudelVoiceData(
             tremoloSkew = tremoloSkew,
             tremoloPhase = tremoloPhase,
             tremoloShape = tremoloShape,
-            duckOrbit = duckOrbit,
+            duckCylinder = duckOrbit,
             duckAttack = duckAttack,
             duckDepth = duckDepth,
             cutoff = cutoff,
             hcutoff = hcutoff,
             bandf = bandf,
             resonance = resonance, // For backward compatibility, use LPF resonance as default
-            orbit = orbit,
+            cylinder = orbit,
             pan = pan,
             delay = delay,
             delayTime = delayTime,

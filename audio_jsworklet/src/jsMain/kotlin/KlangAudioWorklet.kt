@@ -1,9 +1,9 @@
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
 import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
-import io.peekandpoke.klang.audio_be.exciter.ExciterRegistry
-import io.peekandpoke.klang.audio_be.exciter.registerDefaults
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.AudioWorkletProcessor
 import io.peekandpoke.klang.audio_bridge.KlangTime
@@ -30,12 +30,12 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         val klangTime = KlangTime.create()  // Creates AudioWorklet-specific time source
 
         // Core DSP components
-        val orbits = Orbits(
+        val cylinders = Cylinders(
             blockFrames = blockFrames,
             sampleRate = sampleRate
         )
 
-        val exciterRegistry = ExciterRegistry().apply {
+        val ignitorRegistry = IgnitorRegistry().apply {
             registerDefaults()
         }
 
@@ -44,8 +44,8 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
                 commLink = commLink.backend,
                 sampleRate = sampleRate,
                 blockFrames = blockFrames,
-                exciterRegistry = exciterRegistry,
-                orbits = orbits,
+                ignitorRegistry = ignitorRegistry,
+                cylinders = cylinders,
                 // Used for performance measurement only
                 performanceTimeMs = { Date.now() },
             )
@@ -55,7 +55,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             sampleRate = sampleRate,
             blockFrames = blockFrames,
             voices = voices,
-            orbits = orbits
+            cylinders = cylinders
         )
 
         // Buffers
@@ -120,8 +120,8 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
                         is KlangCommLink.Cmd.Sample -> ctx.voices.addSample(msg = cmd)
 
-                        is KlangCommLink.Cmd.RegisterExciter -> {
-                            ctx.exciterRegistry.register(cmd.name, cmd.dsl)
+                        is KlangCommLink.Cmd.RegisterIgnitor -> {
+                            ctx.ignitorRegistry.register(cmd.name, cmd.dsl)
                         }
                     }
                 }

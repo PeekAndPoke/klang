@@ -39,11 +39,11 @@ AUDIO BACKEND (audio thread)
          │    (requests MonoSamplePcm from audio_fe if needed)
          ├─ Call voice.render(ctx) for each active voice
          │    └─ Voice writes into ctx.voiceBuffer (FloatArray)
-         └─ Mix voice output into its Orbit (ctx.orbits[orbitId])
+         └─ Mix voice output into its Cylinder (ctx.orbits[orbitId])
 
-       Orbits.processAndMix()
-         ├─ Apply per-orbit effects: Delay → Reverb → Phaser
-         ├─ Apply cross-orbit Ducking (sidechain)
+       Cylinders.processAndMix()
+         ├─ Apply per-cylinder effects: Delay → Reverb → Phaser
+         ├─ Apply cross-cylinder Ducking (sidechain)
          └─ Mix all orbits to master StereoBuffer
 
        KlangAudioRenderer
@@ -109,7 +109,7 @@ Two `KlangRingBuffer` channels: `frontend→backend` (Cmd) and `backend→fronte
 
 | Constant             | Value   | Location             |
 |----------------------|---------|----------------------|
-| Max orbits           | 16      | `Orbits`             |
+| Max orbits           | 16      | `Cylinders`          |
 | Limiter threshold    | −1 dB   | `KlangAudioRenderer` |
 | Limiter ratio        | 20:1    | `KlangAudioRenderer` |
 | Limiter attack       | 1 ms    | `KlangAudioRenderer` |

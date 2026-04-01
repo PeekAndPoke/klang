@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.script.stdlib
 
-import io.peekandpoke.klang.audio_bridge.ExciterDsl
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.builder.registerVarargFunction
 import io.peekandpoke.klang.script.generated.registerStdlibGenerated
@@ -83,7 +83,7 @@ object KlangStdLib {
             }
 
             // Osc.register() -- registered manually because it needs engine access to read
-            // the ExciterRegistrar from engine.attrs at call time.
+            // the IgnitorRegistrar from engine.attrs at call time.
             registerExtensionMethodWithEngine(
                 receiver = KlangScriptOsc::class,
                 name = "register",
@@ -97,12 +97,12 @@ object KlangStdLib {
                             description = "Name for the sound, used with .sound()"
                         ),
                         KlangParam(
-                            name = "dsl", type = KlangType(simpleName = "ExciterDsl"),
-                            description = "The ExciterDsl signal graph to register"
+                            name = "dsl", type = KlangType(simpleName = "IgnitorDsl"),
+                            description = "The IgnitorDsl signal graph to register"
                         ),
                     ),
                     returnType = KlangType(simpleName = "String"),
-                    description = "Registers an ExciterDsl signal graph as a named sound for use with .sound().",
+                    description = "Registers an IgnitorDsl signal graph as a named sound for use with .sound().",
                 ),
             ) { _, args, _, engine ->
                 val registrar = engine.attrs[KlangScriptOsc.REGISTRAR_KEY]
@@ -110,7 +110,7 @@ object KlangStdLib {
                 val name = (args[0] as StringValue).value
 
                 @Suppress("UNCHECKED_CAST")
-                val dsl = (args[1] as NativeObjectValue<ExciterDsl>).value
+                val dsl = (args[1] as NativeObjectValue<IgnitorDsl>).value
                 StringValue(registrar(name, dsl))
             }
         }

@@ -2,17 +2,25 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.ONE_OVER_TWELVE
 import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.exciter.*
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.FormantFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_be.orbits.Orbits
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
+import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
-import io.peekandpoke.klang.audio_be.voices.strip.excite.ExciteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
+import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
-import io.peekandpoke.klang.audio_bridge.*
+import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.SampleRequest
+import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.VoiceData
 
 /**
  * Creates [Voice] instances from [ScheduledVoice] data.
@@ -23,8 +31,8 @@ import io.peekandpoke.klang.audio_bridge.*
 class VoiceFactory(
     private val sampleRate: Int,
     private val sampleRateDouble: Double,
-    private val exciterRegistry: ExciterRegistry,
-    private val orbits: Orbits,
+    private val ignitorRegistry: IgnitorRegistry,
+    private val cylinders: Cylinders,
     private val voiceBuffer: FloatArray,
     private val freqModBuffer: DoubleArray,
     private val scratchBuffers: ScratchBuffers,
@@ -68,7 +76,7 @@ class VoiceFactory(
         val bakedFilters = filters.combine()
 
         // Routing
-        val orbit = data.orbit ?: 0
+        val cylinder = data.cylinder ?: 0
 
         // Pitch / Glissando
         val accelerate = Voice.Accelerate(amount = data.accelerate ?: 0.0)
@@ -131,11 +139,11 @@ class VoiceFactory(
         )
 
         // Ducking / Sidechain
-        val duckOrbitParam = data.duckOrbit
+        val duckCylinderParam = data.duckCylinder
         val duckDepthParam = data.duckDepth
-        val ducking = if (duckOrbitParam != null && duckDepthParam != null && duckDepthParam > 0.0) {
+        val ducking = if (duckCylinderParam != null && duckDepthParam != null && duckDepthParam > 0.0) {
             Voice.Ducking(
-                orbitId = duckOrbitParam,
+                cylinderId = duckCylinderParam,
                 attackSeconds = data.duckAttack ?: 0.1,
                 depth = duckDepthParam,
             )
@@ -175,18 +183,18 @@ class VoiceFactory(
         // Decision: oscillator vs sample
         val freqHz = data.freqHz
         val sound = data.sound
-        val isOsci = exciterRegistry.contains(sound)
-        val isSample = !exciterRegistry.contains(sound) && sound != null
+        val isOsci = ignitorRegistry.contains(sound)
+        val isSample = !ignitorRegistry.contains(sound) && sound != null
 
         return when {
             isOsci -> {
                 val resolvedAdsr = data.adsr.resolve(AdsrEnvelope.defaultSynth)
                 val voiceDurationFrames = gateEndFrame - startFrame
-                val signal = playbackCtx.exciterRegistry.createExciter(sound, data, freqHz ?: 0.0)
+                val signal = playbackCtx.ignitorRegistry.createExciter(sound, data, freqHz ?: 0.0)
                     ?: return null
 
                 buildVoice(
-                    data, resolvedAdsr, startFrame, gateEndFrame, voiceDurationFrames, orbit,
+                    data, resolvedAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, freqHz ?: 0.0,
@@ -247,7 +255,7 @@ class VoiceFactory(
 
                 val voiceDurationFrames = gateEndFrame - nowFrame
 
-                val signal = SampleExciter(
+                val signal = SampleIgnitor(
                     pcm = sample.pcm,
                     rate = rate,
                     playhead = playhead0,
@@ -259,7 +267,7 @@ class VoiceFactory(
                 )
 
                 buildVoice(
-                    data, resolvedAdsr, nowFrame, gateEndFrame, voiceDurationFrames, orbit,
+                    data, resolvedAdsr, nowFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, baseSamplePitchHz, data.cut,
@@ -326,7 +334,7 @@ class VoiceFactory(
         startFrame: Int,
         gateEndFrame: Int,
         voiceDurationFrames: Int,
-        orbit: Int,
+        cylinder: Int,
         gain: Double,
         postGain: Double,
         accelerate: Voice.Accelerate,
@@ -344,7 +352,7 @@ class VoiceFactory(
         crush: Voice.Crush,
         coarse: Voice.Coarse,
         fm: Voice.Fm?,
-        signal: Exciter,
+        signal: Ignitor,
         freqHz: Double,
         cut: Int? = null,
     ): Voice {
@@ -353,7 +361,7 @@ class VoiceFactory(
         val releaseFrames = (resolvedAdsr.release * sampleRate).toInt()
         val voiceEndFrame = voiceDurationFrames + releaseFrames
 
-        val signalCtx = ExciteContext(
+        val signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = voiceDurationFrames,
             gateEndFrame = voiceDurationFrames,
@@ -372,7 +380,7 @@ class VoiceFactory(
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,
-        ) + ExciteRenderer(
+        ) + IgniteRenderer(
             signal = signal,
             signalCtx = signalCtx,
             freqHz = freqHz,
@@ -402,11 +410,11 @@ class VoiceFactory(
             freqHz = freqHz,
             signal = signal,
             signalCtx = signalCtx,
-            orbits = orbits,
+            cylinders = cylinders,
         )
 
         return Voice(
-            orbitId = orbit,
+            cylinderId = cylinder,
             startFrame = startFrame,
             endFrame = endFrame,
             gateEndFrame = gateEndFrame,

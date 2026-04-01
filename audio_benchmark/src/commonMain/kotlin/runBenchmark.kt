@@ -5,8 +5,8 @@ package io.peekandpoke.klang.audio_benchmark
  * Called from platform-specific main() functions.
  */
 fun runBenchmark() {
-    val bench = ExciterBenchmark()
-    val cases = ExciterBenchmark.defaultCases()
+    val bench = IgnitorBenchmark()
+    val cases = IgnitorBenchmark.defaultCases()
     val platform = platformInfo()
 
     println("Platform: $platform")

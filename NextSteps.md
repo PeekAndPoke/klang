@@ -66,7 +66,7 @@ implementation is missing/TODO.
 ## Dynamics
 
 - compressor: Reduces the dynamic range (difference between loud and soft parts). Strudel has a global compressor or
-  per-orbit.
+  per-cylinder.
 - post-gain: You have this, but verify velocity aliases to it correctly if needed.
 
 ## Time-Based Effects (Spatial)
