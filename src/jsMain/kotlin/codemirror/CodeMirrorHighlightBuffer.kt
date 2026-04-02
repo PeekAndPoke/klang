@@ -59,13 +59,6 @@ class CodeMirrorHighlightBuffer(
     fun attachTo(editorView: EditorView) {
         view = editorView
         window.addEventListener("blur", { cancelAll() })
-
-        // Keep overlay aligned with content during horizontal scroll
-        editorView.scrollDOM.addEventListener("scroll", {
-            val el = overlay ?: return@addEventListener
-            val scrollLeft = editorView.scrollDOM.scrollLeft
-            el.style.transform = "translateX(${-scrollLeft}px)"
-        })
     }
 
     fun detach() {

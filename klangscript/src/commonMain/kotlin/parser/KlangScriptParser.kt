@@ -1,7 +1,42 @@
 package io.peekandpoke.klang.script.parser
 
 import io.peekandpoke.klang.common.SourceLocation
-import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.ast.ArrayLiteral
+import io.peekandpoke.klang.script.ast.ArrowFunction
+import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.ast.AssignmentExpression
+import io.peekandpoke.klang.script.ast.BinaryOperation
+import io.peekandpoke.klang.script.ast.BinaryOperator
+import io.peekandpoke.klang.script.ast.BooleanLiteral
+import io.peekandpoke.klang.script.ast.BreakStatement
+import io.peekandpoke.klang.script.ast.CallExpression
+import io.peekandpoke.klang.script.ast.ConstDeclaration
+import io.peekandpoke.klang.script.ast.ContinueStatement
+import io.peekandpoke.klang.script.ast.DoWhileStatement
+import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportStatement
+import io.peekandpoke.klang.script.ast.Expression
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.ast.ForStatement
+import io.peekandpoke.klang.script.ast.Identifier
+import io.peekandpoke.klang.script.ast.IfExpression
+import io.peekandpoke.klang.script.ast.ImportStatement
+import io.peekandpoke.klang.script.ast.IndexAccess
+import io.peekandpoke.klang.script.ast.LetDeclaration
+import io.peekandpoke.klang.script.ast.MemberAccess
+import io.peekandpoke.klang.script.ast.NullLiteral
+import io.peekandpoke.klang.script.ast.NumberLiteral
+import io.peekandpoke.klang.script.ast.ObjectLiteral
+import io.peekandpoke.klang.script.ast.Program
+import io.peekandpoke.klang.script.ast.ReturnStatement
+import io.peekandpoke.klang.script.ast.Statement
+import io.peekandpoke.klang.script.ast.StringLiteral
+import io.peekandpoke.klang.script.ast.TemplateLiteral
+import io.peekandpoke.klang.script.ast.TemplatePart
+import io.peekandpoke.klang.script.ast.TernaryExpression
+import io.peekandpoke.klang.script.ast.UnaryOperation
+import io.peekandpoke.klang.script.ast.UnaryOperator
+import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 
 /**
@@ -31,6 +66,7 @@ import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
  * - Comments: // and /* */
  * - Source location tracking
  */
+@Suppress("ConstPropertyName")
 class KlangScriptParser private constructor(
     private val currentSource: String? = null,
 ) {
@@ -72,24 +108,24 @@ class KlangScriptParser private constructor(
         private const val C_BACKSLASH = 92   // '\\'.code
         private const val C_UNDERSCORE = 95  // '_'.code
         private const val C_0 = 48           // '0'.code
-        private const val C_9 = 57           // '9'.code
-        private const val C_a = 97           // 'a'.code
-        private const val C_f = 102          // 'f'.code
-        private const val C_A = 65           // 'A'.code
-        private const val C_F = 70           // 'F'.code
-        private const val C_b = 98           // 'b'.code  (binary prefix)
-        private const val C_B = 66           // 'B'.code
-        private const val C_o = 111          // 'o'.code  (octal prefix)
-        private const val C_O = 79           // 'O'.code
-        private const val C_x = 120          // 'x'.code  (hex prefix)
-        private const val C_X = 88           // 'X'.code
-        private const val C_e = 101          // 'e'.code  (scientific notation)
-        private const val C_E = 69           // 'E'.code
-        private const val C_n = 110          // 'n'.code  (escape: \n)
-        private const val C_t = 116          // 't'.code  (escape: \t)
-        private const val C_r = 114          // 'r'.code  (escape: \r)
-        private const val C_7 = 55           // '7'.code  (octal max digit)
         private const val C_1 = 49           // '1'.code  (binary digit)
+        private const val C_7 = 55           // '7'.code  (octal max digit)
+        private const val C_9 = 57           // '9'.code
+        private const val C_A = 65           // 'A'.code
+        private const val C_B = 66           // 'B'.code
+        private const val C_E = 69           // 'E'.code
+        private const val C_F = 70           // 'F'.code
+        private const val C_O = 79           // 'O'.code
+        private const val C_X = 88           // 'X'.code
+        private const val C_a = 97           // 'a'.code
+        private const val C_b = 98           // 'b'.code  (binary prefix)
+        private const val C_e = 101          // 'e'.code  (scientific notation)
+        private const val C_f = 102          // 'f'.code
+        private const val C_n = 110          // 'n'.code  (escape: \n)
+        private const val C_o = 111          // 'o'.code  (octal prefix)
+        private const val C_r = 114          // 'r'.code  (escape: \r)
+        private const val C_t = 116          // 't'.code  (escape: \t)
+        private const val C_x = 120          // 'x'.code  (hex prefix)
 
         // ASCII-only identifier classification — avoids Char boxing on Kotlin/JS.
         // KlangScript intentionally supports ASCII identifiers only (a-z, A-Z, 0-9, _).

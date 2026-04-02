@@ -1,9 +1,7 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import io.peekandpoke.klang.script.ast.AstIndex
 import io.peekandpoke.klang.script.ast.MemberAccess
-import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.intel.ExpressionTypeInferrer
+import io.peekandpoke.klang.script.intel.AnalyzedAst
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangParam
 import io.peekandpoke.klang.script.types.KlangSymbol
@@ -183,26 +181,30 @@ fun findCallArgAt(
  * - O(log n) lookup after one-time O(n) index build
  */
 fun findCallArgAtAst(
-    astIndex: AstIndex?,
+    analysis: AnalyzedAst?,
     source: String,
     pos: Int,
     docProvider: (String) -> KlangSymbol?,
-    registry: KlangDocsRegistry? = null,
 ): CallArgInfo? {
-    // Fall back to text scanner if no AST index available
-    if (astIndex == null) return findCallArgAt(source, pos, docProvider)
+    // Fall back to text scanner if no analysis available
+    if (analysis == null) {
+        return findCallArgAt(source, pos, docProvider)
+    }
 
-    val result = astIndex.callArgAt(pos) ?: return null
-    if (result.argIndex < 0) return null
+    val result = analysis.astIndex.callArgAt(pos) ?: return null
+    if (result.argIndex < 0) {
+        return null
+    }
 
     val symbol = docProvider(result.functionName) ?: return null
 
-    // Try receiver-aware variant resolution
-    val callable = if (registry != null) {
+    // Try receiver-aware variant resolution using the cached type map
+    val registry = analysis.registry
+    val callable = run {
         val callee = result.call.callee
         if (callee is MemberAccess) {
-            val inferrer = ExpressionTypeInferrer(registry)
-            val receiverType = inferrer.inferType(callee.obj)
+            // O(1) lookup from the pre-computed type map
+            val receiverType = analysis.typeOf(callee.obj)
             if (receiverType != null) {
                 registry.getCallable(result.functionName, receiverType)
             } else {
@@ -212,8 +214,6 @@ fun findCallArgAtAst(
             registry.getCallable(result.functionName, receiverType = null)
                 ?: symbol.variants.filterIsInstance<KlangCallable>().firstOrNull()
         }
-    } else {
-        symbol.variants.filterIsInstance<KlangCallable>().firstOrNull()
     } ?: return null
     val param = resolveParam(callable, result.argIndex) ?: return null
     val tools = KlangUiToolRegistry.resolve(param.uitools)

@@ -301,7 +301,7 @@ stack(
         Song(
             id = "$PREFIX-0008",
             title = "Drunken Synthlor",
-            rpm = 39.0,
+            rpm = 45.0,
             code = """
 
 import * from "stdlib"

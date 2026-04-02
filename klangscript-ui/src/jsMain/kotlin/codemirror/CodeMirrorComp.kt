@@ -184,8 +184,7 @@ class KlangScriptEditorComp(ctx: Ctx<Props>) : Component<KlangScriptEditorComp.P
             extensions.add(
                 dslEditorExtension(
                     docProvider = { docContext.docProvider(it) },
-                    registryProvider = { docContext.registry },
-                    astIndexProvider = { docContext.lastAstIndex },
+                    analysisProvider = { docContext.lastAnalysis },
                     hoverPopup = hoverPopup,
                     hoverContent = hoverContent,
                     popups = popups,

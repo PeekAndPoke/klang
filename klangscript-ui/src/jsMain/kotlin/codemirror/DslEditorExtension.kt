@@ -1,11 +1,17 @@
 package io.peekandpoke.klang.ui.codemirror
 
-import io.peekandpoke.klang.codemirror.ext.*
-import io.peekandpoke.klang.script.ast.AstIndex
+import io.peekandpoke.klang.codemirror.ext.Coords
+import io.peekandpoke.klang.codemirror.ext.Decoration
+import io.peekandpoke.klang.codemirror.ext.DecorationSet
+import io.peekandpoke.klang.codemirror.ext.EditorView
+import io.peekandpoke.klang.codemirror.ext.Extension
+import io.peekandpoke.klang.codemirror.ext.SelectionRange
+import io.peekandpoke.klang.codemirror.ext.StateEffect
+import io.peekandpoke.klang.codemirror.ext.StateField
+import io.peekandpoke.klang.codemirror.ext.StateFieldConfig
 import io.peekandpoke.klang.script.ast.CallExpression
 import io.peekandpoke.klang.script.ast.MemberAccess
-import io.peekandpoke.klang.script.docs.KlangDocsRegistry
-import io.peekandpoke.klang.script.intel.ExpressionTypeInferrer
+import io.peekandpoke.klang.script.intel.AnalyzedAst
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
 import io.peekandpoke.klang.ui.KlangUiToolContext
@@ -40,8 +46,7 @@ import org.w3c.dom.Element
  */
 fun dslEditorExtension(
     docProvider: (String) -> KlangSymbol?,
-    registryProvider: () -> KlangDocsRegistry? = { null },
-    astIndexProvider: () -> AstIndex? = { null },
+    analysisProvider: () -> AnalyzedAst? = { null },
     hoverPopup: HoverPopupCtrl,
     hoverContent: FlowContent.(KlangSymbol) -> Unit,
     popups: PopupsManager,
@@ -109,10 +114,10 @@ fun dslEditorExtension(
             return null
         }
 
-        // Try receiver-aware lookup using AST
-        val registry = registryProvider()
-        val astIndex = astIndexProvider()
-        if (registry != null && astIndex != null) {
+        // Try receiver-aware lookup using the cached AnalyzedAst
+        val analysis = analysisProvider()
+        if (analysis != null) {
+            val astIndex = analysis.astIndex
             val node = astIndex.nodeAt(pos)
             if (node != null) {
                 val parent = astIndex.parentOf(node)
@@ -126,9 +131,10 @@ fun dslEditorExtension(
                     else -> null
                 }
                 if (memberAccess != null) {
-                    val inferrer = ExpressionTypeInferrer(registry)
-                    val receiverType = inferrer.inferType(memberAccess.obj)
+                    // O(1) lookup from the pre-computed type map
+                    val receiverType = analysis.typeOf(memberAccess.obj)
                     if (receiverType != null) {
+                        val registry = analysis.registry
                         val symbol = registry.getSymbolWithReceiver(name, receiverType)
                         if (symbol != null) {
                             return word to symbol
@@ -166,7 +172,7 @@ fun dslEditorExtension(
         val source = view.state.doc.toString()
         val coords = jsObject<dynamic> { this.x = event.clientX; this.y = event.clientY }.unsafeCast<Coords>()
         val pos = view.posAtCoords(coords) ?: return null
-        return findCallArgAtAst(astIndexProvider(), source, pos, docProvider, registryProvider())
+        return findCallArgAtAst(analysisProvider(), source, pos, docProvider)
     }
 
     fun makeToolContext(argInfo: CallArgInfo, view: EditorView): KlangUiToolContext {

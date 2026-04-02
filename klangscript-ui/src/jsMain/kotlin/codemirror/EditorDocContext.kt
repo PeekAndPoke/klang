@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.ui.codemirror
 
 import io.peekandpoke.klang.script.KlangScriptLibrary
-import io.peekandpoke.klang.script.ast.AstIndex
 import io.peekandpoke.klang.script.ast.ImportStatement
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.intel.AnalyzedAst
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.types.KlangSymbol
 import kotlinx.browser.window
@@ -12,8 +12,8 @@ import kotlinx.browser.window
  * Import-aware documentation context for the CodeMirror editor.
  *
  * Parses import statements from the editor code (debounced) and builds a merged
- * [KlangDocsRegistry] from the imported libraries. Both hover docs and code
- * completion query this context.
+ * [KlangDocsRegistry] from the imported libraries. Produces an [AnalyzedAst] on each
+ * successful parse — hover, completion, and diagnostics all query the cached analysis.
  */
 class EditorDocContext(
     availableLibraries: List<KlangScriptLibrary>,
@@ -33,8 +33,8 @@ class EditorDocContext(
         }
     }
 
-    /** Cached AST index from the last successful parse (stale on parse error, which is fine for hover). */
-    var lastAstIndex: AstIndex? = null
+    /** Cached [AnalyzedAst] from the last successful parse (stale on parse error, which is fine for hover). */
+    var lastAnalysis: AnalyzedAst? = null
         private set
 
     /** Look up a symbol by name in the active (import-based) registry. */
@@ -64,17 +64,14 @@ class EditorDocContext(
     }
 
     private fun processCode(code: String) {
-        // Always parse to keep the AST index up-to-date for hover/tool badges
+        // Always parse to keep the analysis up-to-date for hover/completion/tool badges
         val program = try {
             KlangScriptParser.parse(code)
         } catch (_: Throwable) {
-            null // Keep lastAstIndex as-is (stale AST is better than none for hover)
+            null // Keep lastAnalysis as-is (stale AST is better than none for hover)
         }
 
-        if (program != null) {
-            lastAstIndex = AstIndex.build(program, code)
-        }
-
+        // Extract imports (before rebuilding the registry, since analysis depends on the registry)
         val imports = if (program != null) {
             program.statements
                 .filterIsInstance<ImportStatement>()
@@ -87,6 +84,11 @@ class EditorDocContext(
         if (imports != lastImports) {
             lastImports = imports
             rebuildRegistry(imports)
+        }
+
+        // Build analyzed AST with the current registry (after potential registry rebuild)
+        if (program != null) {
+            lastAnalysis = AnalyzedAst.build(program, code, activeRegistry.snapshot())
         }
     }
 
