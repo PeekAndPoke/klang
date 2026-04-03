@@ -1,8 +1,8 @@
 /**
  * Motor Background — Industrial metallic grid with interactive lighting
  *
- * Procedural normal-mapped metal surface: rectangular machined panels,
- * bolt heads at grid intersections, cross-hatch machining marks.
+ * Procedural normal-mapped metal surface: mosaic of varied rectangular
+ * pieces (1x1 to 3x2) with void spaces, beveled edges, machining marks.
  * Point light tracks the mouse; cool fill light provides contrast.
  */
 import * as THREE from './three/three.module.min.js';
@@ -22,9 +22,11 @@ function hashCell(col, row) {
 }
 
 /**
- * Generate a procedural rectangular-grid normal map.
- * Each panel has beveled edges, per-cell tilt, and subtle machining marks.
- * Bolt heads appear at alternating grid intersections (checkerboard).
+ * Generate a procedural mosaic normal map.
+ *
+ * A grid of cells is merged into varied rectangular pieces (1x1, 2x1, 2x2,
+ * 3x2, etc.) with some void spaces. Grooves with beveled edges run between
+ * pieces. Each piece has its own tilt and machining marks.
  */
 function generateMotorNormalMap(width, height) {
   var cnv = document.createElement('canvas');
@@ -34,110 +36,150 @@ function generateMotorNormalMap(width, height) {
   var imageData = ctx.createImageData(width, height);
   var data = imageData.data;
 
-  // Rectangular grid parameters
-  var stride = 36;            // panel + groove period (px)
-  var grooveHalf = 1.5;       // half groove width (3px total)
-  var bevelW = 3.5;           // chamfer transition width
-  var bevelStrength = 0.75;   // max bevel normal deflection
+  // ── Grid layout ──
+  var cellSize = 45;
+  var gridCols = Math.ceil(width / cellSize) + 1;
+  var gridRows = Math.ceil(height / cellSize) + 1;
+  var pieceMap = new Int32Array(gridCols * gridRows);
+  // 0 = unassigned, -1 = void, positive = piece ID
 
-  // Bolt head parameters
-  var boltR = 4.5;            // bolt radius
-  var boltBevel = 0.65;       // inner flat ratio
-  var boltStrength = 0.55;    // bolt bevel normal strength
+  function cell(c, r) {
+    if (c < 0 || c >= gridCols || r < 0 || r >= gridRows) return -1;
+    return pieceMap[r * gridCols + c];
+  }
 
-  for (var y = 0; y < height; y++) {
-    for (var x = 0; x < width; x++) {
-      var idx = (y * width + x) * 4;
+  function canPlace(c, r, w, h) {
+    for (var dr = 0; dr < h; dr++)
+      for (var dc = 0; dc < w; dc++) {
+        if (c + dc >= gridCols || r + dr >= gridRows) return false;
+        if (pieceMap[(r + dr) * gridCols + (c + dc)] !== 0) return false;
+      }
+    return true;
+  }
 
-      // Position within grid period
-      var mx = ((x % stride) + stride) % stride;
-      var my = ((y % stride) + stride) % stride;
+  function place(c, r, w, h, id) {
+    for (var dr = 0; dr < h; dr++)
+      for (var dc = 0; dc < w; dc++)
+        pieceMap[(r + dr) * gridCols + (c + dc)] = id;
+  }
 
-      // Distance to nearest groove center line
-      var dxG = mx <= stride * 0.5 ? mx : stride - mx;
-      var dyG = my <= stride * 0.5 ? my : stride - my;
+  // ── Build mosaic — greedy placement with deterministic hash ──
+  var nextId = 1;
+  for (var row = 0; row < gridRows; row++) {
+    for (var col = 0; col < gridCols; col++) {
+      if (pieceMap[row * gridCols + col] !== 0) continue;
 
-      // Direction toward nearest groove (for bevel orientation)
-      var sgnX = mx <= stride * 0.5 ? -1 : 1;
-      var sgnY = my <= stride * 0.5 ? -1 : 1;
+      var h = hashCell(col * 3 + 1, row * 3 + 1);
 
-      // Nearest grid intersection for bolt check
-      var intX = Math.round(x / stride) * stride;
-      var intY = Math.round(y / stride) * stride;
-      var dxI = x - intX;
-      var dyI = y - intY;
-      var distI = Math.sqrt(dxI * dxI + dyI * dyI);
+      if (h < 0.06) {
+        pieceMap[row * gridCols + col] = -1;               // void
+      } else if (h < 0.12 && canPlace(col, row, 3, 2)) {
+        place(col, row, 3, 2, nextId++);
+      } else if (h < 0.18 && canPlace(col, row, 2, 3)) {
+        place(col, row, 2, 3, nextId++);
+      } else if (h < 0.30 && canPlace(col, row, 2, 2)) {
+        place(col, row, 2, 2, nextId++);
+      } else if (h < 0.37 && canPlace(col, row, 3, 1)) {
+        place(col, row, 3, 1, nextId++);
+      } else if (h < 0.44 && canPlace(col, row, 1, 3)) {
+        place(col, row, 1, 3, nextId++);
+      } else if (h < 0.60 && canPlace(col, row, 2, 1)) {
+        place(col, row, 2, 1, nextId++);
+      } else if (h < 0.74 && canPlace(col, row, 1, 2)) {
+        place(col, row, 1, 2, nextId++);
+      } else {
+        pieceMap[row * gridCols + col] = nextId++;          // 1x1
+      }
+    }
+  }
 
-      // Bolt at this intersection? Checkerboard pattern
-      var iCol = Math.round(x / stride);
-      var iRow = Math.round(y / stride);
-      var hasBolt = ((iCol + iRow) & 1) === 0;
+  // ── Rendering parameters ──
+  var grooveHalf = 2.0;       // half groove width
+  var bevelW = 4.0;           // chamfer transition
+  var bevelStrength = 0.70;
 
-      // Panel cell for per-panel tilt
-      var cCol = Math.floor(x / stride);
-      var cRow = Math.floor(y / stride);
-      var h1 = hashCell(cCol, cRow);
-      var h2 = hashCell(cCol + 997, cRow + 991);
-      var tiltX = (h1 - 0.5) * 0.10;
-      var tiltY = (h2 - 0.5) * 0.10;
+  // ── Render pixels ──
+  for (var py = 0; py < height; py++) {
+    for (var px = 0; px < width; px++) {
+      var idx = (py * width + px) * 4;
 
-      var nx, ny, nz;
+      var col = Math.floor(px / cellSize);
+      var row = Math.floor(py / cellSize);
+      var lx = px - col * cellSize;
+      var ly = py - row * cellSize;
+      var pid = cell(col, row);
 
-      if (hasBolt && distI < boltR) {
-        // ── Bolt head: flat center + beveled rim ──
-        var bInner = boltR * boltBevel;
-        if (distI <= bInner) {
-          var g = (Math.random() - 0.5) * 0.008;
-          nx = g;
-          ny = g;
-        } else {
-          var bt = (distI - bInner) / (boltR - bInner);
-          var bs = bt * bt * (3 - 2 * bt);
-          var bLen = distI || 1;
-          nx = (dxI / bLen) * boltStrength * bs;
-          ny = (dyI / bLen) * boltStrength * bs;
-        }
-        nz = Math.sqrt(Math.max(0.01, 1 - nx * nx - ny * ny));
+      var nx = 0, ny = 0, nz = 1;
 
-      } else if (dxG <= grooveHalf || dyG <= grooveHalf) {
-        // ── Groove channel: flat bottom ──
-        nx = 0;
-        ny = 0;
-        nz = 1;
+      if (pid <= 0) {
+        // ── Void: flat recessed surface ──
+        var g = (Math.random() - 0.5) * 0.004;
+        nx = g; ny = g;
 
       } else {
-        // ── Panel face + bevel zone ──
+        // ── Find distances to piece boundaries ──
+        var dxEdge = 9999, dyEdge = 9999;
+        var edgeDirX = 0, edgeDirY = 0;
 
-        // Bevel factors per axis (independent)
-        var bvX = 0, bvY = 0;
-        if (dxG < grooveHalf + bevelW) {
-          var tv = 1 - (dxG - grooveHalf) / bevelW;
-          bvX = tv * tv * (3 - 2 * tv) * bevelStrength;
+        // Left
+        if (cell(col - 1, row) !== pid && lx < dxEdge) {
+          dxEdge = lx; edgeDirX = -1;
         }
-        if (dyG < grooveHalf + bevelW) {
-          var th = 1 - (dyG - grooveHalf) / bevelW;
-          bvY = th * th * (3 - 2 * th) * bevelStrength;
+        // Right
+        var distR = cellSize - lx;
+        if (cell(col + 1, row) !== pid && distR < dxEdge) {
+          dxEdge = distR; edgeDirX = 1;
+        }
+        // Top
+        if (cell(col, row - 1) !== pid && ly < dyEdge) {
+          dyEdge = ly; edgeDirY = -1;
+        }
+        // Bottom
+        var distB = cellSize - ly;
+        if (cell(col, row + 1) !== pid && distB < dyEdge) {
+          dyEdge = distB; edgeDirY = 1;
         }
 
-        // Cap combined bevel magnitude at corners
-        var bMag = Math.sqrt(bvX * bvX + bvY * bvY);
-        if (bMag > bevelStrength) {
-          bvX *= bevelStrength / bMag;
-          bvY *= bevelStrength / bMag;
+        if (dxEdge <= grooveHalf || dyEdge <= grooveHalf) {
+          // ── In groove channel ──
+          nx = 0; ny = 0;
+
+        } else {
+          // ── Bevel + panel interior ──
+          var bvX = 0, bvY = 0;
+          if (dxEdge < grooveHalf + bevelW) {
+            var tv = 1 - (dxEdge - grooveHalf) / bevelW;
+            bvX = tv * tv * (3 - 2 * tv) * bevelStrength;
+          }
+          if (dyEdge < grooveHalf + bevelW) {
+            var th = 1 - (dyEdge - grooveHalf) / bevelW;
+            bvY = th * th * (3 - 2 * th) * bevelStrength;
+          }
+
+          // Cap corner bevel
+          var bMag = Math.sqrt(bvX * bvX + bvY * bvY);
+          if (bMag > bevelStrength) {
+            bvX *= bevelStrength / bMag;
+            bvY *= bevelStrength / bMag;
+          }
+
+          // Per-piece tilt (deterministic from piece ID)
+          var ph1 = hashCell(pid, pid * 3 + 7);
+          var ph2 = hashCell(pid * 5 + 11, pid);
+          var tiltX = (ph1 - 0.5) * 0.10;
+          var tiltY = (ph2 - 0.5) * 0.10;
+
+          // Cross-hatch machining marks
+          var scratch1 = Math.sin((px - py) * 0.45) * 0.012;
+          var scratch2 = Math.sin((px + py) * 0.45) * 0.008;
+          var grain = (Math.random() - 0.5) * 0.008;
+
+          // Bevel fades out face detail
+          var faceWeight = 1.0 - Math.min(1.0, bMag / bevelStrength);
+          nx = edgeDirX * bvX + (tiltX + scratch1 - scratch2 + grain) * faceWeight;
+          ny = edgeDirY * bvY + (tiltY - scratch1 - scratch2 + grain) * faceWeight;
         }
 
-        // Cross-hatch machining marks (+-45 deg)
-        var scratch1 = Math.sin((x - y) * 0.45) * 0.014;
-        var scratch2 = Math.sin((x + y) * 0.45) * 0.010;
-
-        // Micro grain
-        var grain = (Math.random() - 0.5) * 0.008;
-
-        // Face detail fades out near beveled edges
-        var faceWeight = 1.0 - Math.min(1.0, bMag / bevelStrength);
-
-        nx = sgnX * bvX + (tiltX + scratch1 - scratch2 + grain) * faceWeight;
-        ny = sgnY * bvY + (tiltY - scratch1 - scratch2 + grain) * faceWeight;
         nz = Math.sqrt(Math.max(0.01, 1 - nx * nx - ny * ny));
       }
 
@@ -197,26 +239,35 @@ function initMotorBackground() {
   var plane = new THREE.Mesh(geometry, material);
   scene.add(plane);
 
-  // ── Lighting (same as karsten-gerber.de) ──
+  // ── Lighting ──
 
   scene.add(new THREE.AmbientLight(0x191C22, 0.5));
 
-  var mainLight = new THREE.PointLight(0xffd4a8, 1.35, 0, 1.0);
+  // Start dark — light turns on when powerOn() is called
+  var mainLight = new THREE.PointLight(0x56b6c2, 0, 0, 1.0);
   mainLight.position.set(0, 0, 2.5);
   scene.add(mainLight);
 
-  var fillLight = new THREE.DirectionalLight(0x6677aa, 0.12);
+  var fillLight = new THREE.DirectionalLight(0x6677aa, 0);
   fillLight.position.set(-1, -0.5, 0.5);
   scene.add(fillLight);
 
+  var targetFillIntensity = 0;
+
   // ── Hover color transitions ──
 
-  var defaultColor    = new THREE.Color(0xffd4a8);
+  var defaultColor    = new THREE.Color(0x56b6c2);
   var hoverColor      = new THREE.Color(0x4a7fb5);
-  var targetColor     = new THREE.Color(0xffd4a8);
-  var defaultIntensity = 0.54;
+  var targetColor     = new THREE.Color(0x56b6c2);
+  var defaultIntensity = 1.35;
   var hoverIntensity   = 2.7;
-  var targetIntensity  = defaultIntensity;
+  var targetIntensity  = 0;
+
+  // Power on — called from Kraft when the start button is clicked
+  window.motorBackgroundPowerOn = function () {
+    targetIntensity = defaultIntensity;
+    targetFillIntensity = 0.12;
+  };
 
   var selector = 'a, button, .ui.button';
   document.addEventListener('pointerover', function (e) {
@@ -350,7 +401,8 @@ function initMotorBackground() {
 
     // Smooth color / intensity transition
     mainLight.color.lerp(targetColor, 0.05);
-    mainLight.intensity += (targetIntensity - mainLight.intensity) * 0.05;
+    mainLight.intensity += (targetIntensity - mainLight.intensity) * 0.02;
+    fillLight.intensity += (targetFillIntensity - fillLight.intensity) * 0.02;
 
     renderer.render(scene, camera);
   }

@@ -41,6 +41,7 @@ import kotlinx.css.Align
 import kotlinx.css.Border
 import kotlinx.css.BorderStyle
 import kotlinx.css.Color
+import kotlinx.css.CssBuilder
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FontWeight
@@ -317,6 +318,14 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private val currentOpacity get() = state.getOpacity()
 
+    /** Frosted glass card style — semi-transparent with backdrop blur */
+    private fun CssBuilder.frostedGlass() {
+        backgroundColor = Color("rgba(25, 28, 34, 0.75)")
+        put("backdrop-filter", "blur(12px)")
+        put("-webkit-backdrop-filter", "blur(12px)")
+        borderRadius = 8.px
+    }
+
     private val browserDetact = BrowserDetect.forCurrentBrowser()
 
     /** Needed for ui updates */
@@ -525,10 +534,16 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private fun DIV.renderOfflineState() {
         div {
+            css {
+                opacity = 0.0
+                put("animation", "fadeIn 2s ease forwards")
+            }
+
             RoundButton(
                 icon = { power_off },
                 color = KlangTheme.excellent,
                 onClick = {
+                    js("if (typeof window.motorBackgroundPowerOn === 'function') window.motorBackgroundPowerOn()")
                     state.gotoNext()
                 },
                 size = 75.px,
@@ -549,8 +564,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     paddingBottom = 20.px
                     paddingLeft = 20.px
                     paddingRight = 20.px
-                    backgroundColor = Color("#333")
-                    borderRadius = 8.px
+                    frostedGlass()
                 }
 
                 ui.icon.warning.large { css { color = Color.orange } }
@@ -751,7 +765,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     paddingBottom = 20.px
                     paddingLeft = 20.px
                     paddingRight = 20.px
-                    borderRadius = 8.px
+                    frostedGlass()
                     border = Border(
                         width = 1.px,
                         style = BorderStyle.dashed,
@@ -830,7 +844,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     paddingBottom = 20.px
                     paddingLeft = 20.px
                     paddingRight = 20.px
-                    borderRadius = 8.px
+                    frostedGlass()
                     border = Border(1.px, BorderStyle.dashed, Color.white)
                 }
 
