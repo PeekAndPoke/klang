@@ -184,7 +184,7 @@ function generateMotorNormalMap(width, height) {
       }
 
       data[idx]     = n2c(nx);
-      data[idx + 1] = n2c(ny);
+      data[idx + 1] = n2c(-ny);   // negate Y: canvas Y-down → WebGL Y-up
       data[idx + 2] = n2c(nz);
       data[idx + 3] = 255;
     }

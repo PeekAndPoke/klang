@@ -20,3 +20,5 @@
 - [Engine naming system](project_engine_naming.md) — Motor, Cylinders, Injection, Combustion, Katalyst vocabulary
 - [R42 Accelerator application](project_r42_application.md) — Strategy for R42 Games Accelerator, deadline Nov 30 2026,
   framing as game audio middleware
+- [Positioning analysis](project_positioning_analysis.md) — Four directions evaluated; Sound-as-Code recommended as
+  primary with three-layer model
