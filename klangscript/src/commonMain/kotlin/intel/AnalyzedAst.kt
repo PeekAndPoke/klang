@@ -94,6 +94,57 @@ class AnalyzedAst(
         }
     }
 
+    /**
+     * Find the inferred type of the expression ending at or just before [offset].
+     *
+     * Used for dot-completion: when the user types a dot after `Osc.sine()`, the cursor
+     * is right after `)` which may fall outside the CallExpression's exclusive end range.
+     *
+     * Strategy:
+     * 1. Try nodeAt(offset), then walk back up to 3 positions
+     * 2. For each position, find the deepest node
+     * 3. If that node is an Expression with a known type, return it
+     * 4. Otherwise, walk up through parents looking for a CallExpression or other
+     *    Expression with a known type — this handles the case where we land on an
+     *    inner node (e.g., an Identifier inside a MemberAccess inside a CallExpression)
+     */
+    fun getExpressionTypeEndingAt(offset: Int): KlangType? {
+        for (lookback in 0..3) {
+            val pos = offset - lookback
+            if (pos < 0) {
+                break
+            }
+            val node = astIndex.nodeAt(pos) ?: continue
+
+            // Try the node itself
+            if (node is Expression) {
+                val type = typeMap[node]
+                if (type != null) {
+                    return type
+                }
+            }
+
+            // Walk up through parents looking for an Expression with a known type
+            // that ends at or near our target offset
+            var current = node
+            while (true) {
+                val parent = astIndex.parentOf(current) ?: break
+                if (parent is Expression) {
+                    val type = typeMap[parent]
+                    if (type != null) {
+                        // Verify this parent actually ends near our offset
+                        val range = astIndex.offsetOf(parent)
+                        if (range != null && offset in range.first..(range.last + 2)) {
+                            return type
+                        }
+                    }
+                }
+                current = parent
+            }
+        }
+        return null
+    }
+
     companion object {
         /**
          * Parse source code and build an [AnalyzedAst].

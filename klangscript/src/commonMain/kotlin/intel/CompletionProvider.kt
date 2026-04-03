@@ -120,7 +120,7 @@ private fun KlangSymbol.toTopLevelSuggestion(): CompletionSuggestion {
     return CompletionSuggestion(
         name = name,
         kind = displayVariant.toKind(),
-        detail = buildDetail(displayVariant?.library ?: library, category),
+        detail = buildDetail(category, displayVariant?.library ?: library),
         description = displayVariant?.description?.take(MAX_DESCRIPTION_LENGTH) ?: "",
         isAlias = false,
         aliasFor = null,
@@ -133,7 +133,7 @@ private fun KlangSymbol.toAliasSuggestion(alias: String): CompletionSuggestion {
     return CompletionSuggestion(
         name = alias,
         kind = displayVariant.toKind(),
-        detail = buildDetail(displayVariant?.library ?: library, category, "(alias for $name)"),
+        detail = buildDetail(category, displayVariant?.library ?: library, "(alias for $name)"),
         description = displayVariant?.description?.take(MAX_DESCRIPTION_LENGTH) ?: "",
         isAlias = true,
         aliasFor = name,
@@ -151,7 +151,7 @@ private fun KlangSymbol.toMemberSuggestion(receiverType: KlangType): CompletionS
     return CompletionSuggestion(
         name = name,
         kind = matchingVariant.toKind(),
-        detail = buildDetail(matchingVariant?.library ?: library, receiverType.simpleName),
+        detail = buildDetail(receiverType.simpleName, matchingVariant?.library ?: library),
         description = matchingVariant?.description?.take(MAX_DESCRIPTION_LENGTH) ?: "",
         isAlias = false,
         aliasFor = null,
@@ -167,5 +167,5 @@ private fun KlangDecl?.toKind(): CompletionSuggestion.Kind {
 }
 
 private fun buildDetail(vararg parts: String): String {
-    return parts.filter { it.isNotEmpty() }.joinToString(" · ")
+    return parts.filter { it.isNotEmpty() }.joinToString(" . ")
 }

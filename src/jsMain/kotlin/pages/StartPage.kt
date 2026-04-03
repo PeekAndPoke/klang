@@ -337,7 +337,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 flexDirection = FlexDirection.column
                 alignItems = Align.center
                 justifyContent = JustifyContent.center
-                backgroundColor = Color(laf.appBackground)
+                backgroundColor = Color.transparent
                 color = Color.white
                 textAlign = TextAlign.center
             }
@@ -531,7 +531,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 onClick = {
                     state.gotoNext()
                 },
-                size = 75.px
+                size = 75.px,
+                backgroundColor = Color(laf.appBackground),
             )
         }
     }

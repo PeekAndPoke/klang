@@ -20,10 +20,46 @@ import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Border
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.JustifyContent
+import kotlinx.css.Margin
+import kotlinx.css.Overflow
+import kotlinx.css.Padding
+import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
+import kotlinx.css.border
+import kotlinx.css.borderBottomLeftRadius
+import kotlinx.css.borderBottomRightRadius
+import kotlinx.css.borderRadius
+import kotlinx.css.borderTopLeftRadius
+import kotlinx.css.borderTopRightRadius
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.flexDirection
+import kotlinx.css.flexGrow
+import kotlinx.css.fontSize
+import kotlinx.css.gap
+import kotlinx.css.height
+import kotlinx.css.justifyContent
+import kotlinx.css.margin
+import kotlinx.css.minHeight
+import kotlinx.css.overflowY
+import kotlinx.css.padding
+import kotlinx.css.paddingLeft
+import kotlinx.css.paddingTop
+import kotlinx.css.pct
+import kotlinx.css.px
+import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.title
 import org.w3c.dom.pointerevents.PointerEvent
 
 @Suppress("FunctionName")
@@ -128,16 +164,85 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         }
     }
 
-    private fun DIV.renderCategory(name: String) {
-        ui.big.basic.segment {
-            css { paddingBottom = 0.px }
-            ui.large.item {
-                onClick { evt ->
-                    evt.stopPropagation()
-                    state = State.Main
+    //  ICON BAR  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private data class IconBarEntry(
+        val targetState: State,
+        val iconFn: SemanticIconFn,
+        val title: String,
+        val navigate: () -> Unit,
+    )
+
+    private fun DIV.renderIconBar() {
+        val entries = listOf(
+            IconBarEntry(State.Songs, { music }, "Write Songs") {
+                state = State.Songs
+                router.navToUri(Nav.newSongCode())
+            },
+            IconBarEntry(State.Tutorials, { graduation_cap }, "Tutorials") {
+                state = State.Tutorials
+                router.navToUri(Nav.tutorials())
+            },
+            IconBarEntry(State.Docs, { code }, "Documentation") {
+                state = State.Docs
+                router.navToUri(Nav.manuals())
+            },
+            IconBarEntry(State.Main, { ellipsis_horizontal }, "Discover more") {
+                state = State.Main
+            },
+        )
+
+        div {
+            key = "icon-bar"
+            css {
+                display = Display.flex
+                justifyContent = JustifyContent.center
+                gap = 4.px
+                padding = Padding(12.px, 16.px, 0.px, 16.px)
+            }
+
+            for (entry in entries) {
+                val isSelected = when (entry.targetState) {
+                    // "More" is selected only when we're on Main, Samples, or Credits
+                    State.Main -> state in listOf(State.Main, State.Samples, State.Credits)
+                    else -> state == entry.targetState
                 }
-                icon.angle_left()
-                +name
+
+                div {
+                    key = "icon-bar-${entry.targetState}"
+                    css {
+                        width = 40.px
+                        height = 40.px
+                        display = Display.flex
+                        alignItems = Align.center
+                        justifyContent = JustifyContent.center
+                        borderRadius = 8.px
+                        cursor = Cursor.pointer
+
+                        if (isSelected) {
+                            backgroundColor = Color.white
+                        } else {
+                            backgroundColor = Color.transparent
+                        }
+                    }
+                    title = entry.title
+                    onClick { evt ->
+                        evt.stopPropagation()
+                        entry.navigate()
+                    }
+
+                    icon.(entry.iconFn)().then {
+                        css {
+                            margin = Margin(0.px)
+                            fontSize = 18.px
+                            if (isSelected) {
+                                put("color", "${laf.critical} !important")
+                            } else {
+                                put("color", "white !important")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -167,13 +272,31 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
             }
 
             div {
-                key = "menu-container-${state.hashCode()}"
-                when (state) {
-                    State.Main, State.Credits -> renderDefaultMenu()
-                    State.Songs -> renderSongsMenu()
-                    State.Samples -> renderSamplesMenu()
-                    State.Tutorials -> renderTutorialsMenu()
-                    State.Docs -> renderDocsMenu()
+                key = "menu-top"
+                css {
+                    display = Display.flex
+                    flexDirection = FlexDirection.column
+                    minHeight = 0.px
+                    flexGrow = 1.0
+                }
+
+                renderIconBar()
+
+                div {
+                    key = "menu-container-${state.hashCode()}"
+                    css {
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                        minHeight = 0.px
+                        flexGrow = 1.0
+                    }
+                    when (state) {
+                        State.Main, State.Credits -> renderDefaultMenu()
+                        State.Songs -> renderSongsMenu()
+                        State.Samples -> renderSamplesMenu()
+                        State.Tutorials -> renderTutorialsMenu()
+                        State.Docs -> renderDocsMenu()
+                    }
                 }
             }
 
@@ -186,21 +309,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     private fun DIV.renderDefaultMenu() {
         menuItemsList {
-            menuItem(state == State.Songs, "Songs", { music }) {
-                state = State.Songs
-                router.navToUri(Nav.newSongCode())
-            }
             menuItem(state == State.Samples, "Samples Library", { wave_square }) {
                 state = State.Samples
                 router.navToUri(Nav.samplesLibrary())
-            }
-            menuItem(state == State.Tutorials, "Tutorials", { graduation_cap }) {
-                state = State.Tutorials
-                router.navToUri(Nav.tutorials())
-            }
-            menuItem(state == State.Docs, "Motör Manuals", { book }) {
-                state = State.Docs
-                router.navToUri(Nav.manuals())
             }
             menuItem(state == State.Credits, "Credits", { bullhorn }) {
                 state = State.Credits
@@ -213,8 +324,6 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         val isNewSong = currentRoute.route == Nav.newSongCode
         val isEditSong = currentRoute.route == Nav.editSongCode
         val songId = currentRoute.matchedRoute["id"]
-
-        renderCategory("Songs")
 
         menuItemsList {
             menuItem(isNewSong, "New Song", { plus }) {
@@ -233,8 +342,6 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun DIV.renderSamplesMenu() {
-        renderCategory("Sound Samples Library")
-
         menuItemsList {
             menuItem(currentRoute.route == Nav.samplesLibrary, "Explore", { music }) {
                 router.navToUri(Nav.samplesLibrary())
@@ -243,8 +350,6 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun DIV.renderDocsMenu() {
-        renderCategory("Motör Manuals")
-
         menuItemsList {
             menuItem(currentRoute.route == Nav.manualsLibrary && currentRoute.matchedRoute["library"] == "sprudel", "Sprudel", { wind }) {
                 router.navToUri(Nav.manualsLibrary("sprudel"))
@@ -259,8 +364,6 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private fun DIV.renderTutorialsMenu() {
-        renderCategory("Tutorials")
-
         val activeDifficulty = currentDifficultyFilter()
         val activeScope = currentScopeFilter()
         val activeCompletion = currentCompletionFilter()

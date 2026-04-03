@@ -9,7 +9,24 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.JustifyContent
+import kotlinx.css.LinearDimension
+import kotlinx.css.Position
+import kotlinx.css.alignItems
+import kotlinx.css.borderWidth
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.fontSize
+import kotlinx.css.height
+import kotlinx.css.justifyContent
+import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.css.width
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.title
@@ -22,6 +39,7 @@ fun Tag.RoundButton(
     title: String? = null,
     disabled: Boolean = false,
     size: LinearDimension = 50.px,
+    backgroundColor: Color? = null,
 ) = comp(
     RoundButton.Props(
         icon = icon,
@@ -30,6 +48,7 @@ fun Tag.RoundButton(
         title = title,
         disabled = disabled,
         size = size,
+        backgroundColor = backgroundColor,
     )
 ) {
     RoundButton(it)
@@ -44,6 +63,7 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
         val title: String?,
         val disabled: Boolean,
         val size: LinearDimension,
+        val backgroundColor: Color?,
     )
 
     override fun VDom.render() {
@@ -68,6 +88,9 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                     borderWidth = 1.8.px
                     width = props.size
                     height = props.size
+                    props.backgroundColor?.let { bg ->
+                        put("background-color", "$bg !important")
+                    }
                     // Explicit centering for icon
                     display = Display.flex
                     alignItems = Align.center

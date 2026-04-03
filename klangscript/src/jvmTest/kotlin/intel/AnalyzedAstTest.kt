@@ -30,6 +30,10 @@ import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.generated.generatedStdlibDocs
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangParam
+import io.peekandpoke.klang.script.types.KlangSymbol
+import io.peekandpoke.klang.script.types.KlangType
 
 class AnalyzedAstTest : StringSpec({
 
@@ -491,5 +495,282 @@ class AnalyzedAstTest : StringSpec({
         val emptyReg = KlangDocsRegistry()
         val a = AnalyzedAst.build("42", emptyReg)
         a.typeOf(a.topExpr())?.simpleName shouldBe "Number"
+    }
+
+    // ── Completion simulation: stale AST + dot insertion ───────────────────
+
+    /**
+     * Simulates the completion scenario where:
+     * 1. The user has parseable code (stale AST is built from it)
+     * 2. The user types a dot after an expression
+     * 3. The new code doesn't parse, so the stale AST is used
+     * 4. We look up the type at the offset where the dot was inserted
+     *
+     * The lookup should find the expression BEFORE the dot in the stale AST
+     * and return its type for member completion.
+     */
+    /**
+     * Simulates what inferReceiverTypeBeforeDot does in the editor:
+     * uses getExpressionTypeEndingAt(dotPos - 1) on the stale AST.
+     */
+    fun simulateDotCompletion(staleCode: String, dotInsertionOffset: Int): String? {
+        val a = analyze(staleCode)
+        return a.getExpressionTypeEndingAt(dotInsertionOffset - 1)?.simpleName
+    }
+
+    "completion sim: Osc.sine().| — should infer IgnitorDsl" {
+        val staleCode = "Osc.sine()"
+        val dotOffset = staleCode.length
+        simulateDotCompletion(staleCode, dotOffset) shouldBe "IgnitorDsl"
+    }
+
+    "completion sim: Osc.sine().lowpass(1000).| — should infer IgnitorDsl" {
+        val staleCode = "Osc.sine().lowpass(1000)"
+        val dotOffset = staleCode.length
+        simulateDotCompletion(staleCode, dotOffset) shouldBe "IgnitorDsl"
+    }
+
+    "completion sim: Osc.register('aa', Osc.sine().| ) — dot inside arg list" {
+        // Stale code: let w = Osc.register("aa", Osc.sine())
+        // User inserts dot after Osc.sine(), BEFORE the closing ) of register
+        val staleCode = """let w = Osc.register("aa", Osc.sine())"""
+        val sineCloseIdx = staleCode.indexOf("Osc.sine()") + "Osc.sine()".length
+        simulateDotCompletion(staleCode, sineCloseIdx) shouldBe "IgnitorDsl"
+    }
+
+    "completion sim: Math.sqrt(16).| — should infer Number" {
+        val staleCode = "Math.sqrt(16)"
+        simulateDotCompletion(staleCode, staleCode.length) shouldBe "Number"
+    }
+
+    // ── Real-world completion: stdlib + sprudel, cursor inside register() ──
+
+    /**
+     * Creates a realistic multi-lib registry mimicking what happens when both
+     * `import * from "stdlib"` and `import * from "sprudel"` are active.
+     *
+     * Key: sprudel registers a RECEIVER-LESS `adsr` variant (top-level, returns PatternMapperFn).
+     * This is what caused the original bug: the top-level fallback matched `adsr` from sprudel
+     * instead of showing IgnitorDsl methods from stdlib.
+     */
+    fun multiLibRegistry(): KlangDocsRegistry = KlangDocsRegistry().apply {
+        registerAll(generatedStdlibDocs)
+        // Sprudel: top-level note(), top-level adsr (receiver-less!), and adsr on SprudelPattern
+        register(
+            KlangSymbol(
+                name = "note", category = "pattern", library = "sprudel",
+                variants = listOf(
+                    KlangCallable(
+                        name = "note",
+                        params = listOf(KlangParam(name = "p", type = KlangType("String"))),
+                        returnType = KlangType("SprudelPattern"), library = "sprudel",
+                    )
+                )
+            )
+        )
+        register(
+            KlangSymbol(
+                name = "adsr", category = "dynamics", library = "sprudel",
+                variants = listOf(
+                    // Extension method on SprudelPattern
+                    KlangCallable(
+                        name = "adsr", receiver = KlangType("SprudelPattern"),
+                        params = listOf(KlangParam(name = "params", type = KlangType("String"))),
+                        returnType = KlangType("SprudelPattern"), library = "sprudel",
+                    ),
+                    // TOP-LEVEL (receiver=null) — the one that caused the bug
+                    KlangCallable(
+                        name = "adsr",
+                        params = listOf(KlangParam(name = "params", type = KlangType("String"))),
+                        returnType = KlangType("PatternMapperFn"), library = "sprudel",
+                    ),
+                )
+            )
+        )
+        register(
+            KlangSymbol(
+                name = "gain", category = "dynamics", library = "sprudel",
+                variants = listOf(
+                    KlangCallable(
+                        name = "gain", receiver = KlangType("SprudelPattern"),
+                        params = listOf(KlangParam(name = "amount", type = KlangType("Number"))),
+                        returnType = KlangType("SprudelPattern"), library = "sprudel",
+                    )
+                )
+            )
+        )
+    }
+
+    /**
+     * Simulates the full editor completion flow:
+     * 1. Build AnalyzedAst from the code (or stale code)
+     * 2. Infer receiver type at the dot position (using getExpressionTypeEndingAt)
+     * 3. Get CompletionProvider suggestions for that receiver type + prefix
+     *
+     * Returns the list of suggestion names, or null if inference failed.
+     */
+    fun simulateFullCompletion(
+        code: String,
+        registry: KlangDocsRegistry,
+        dotOffset: Int,
+        prefix: String,
+    ): List<String>? {
+        val a = AnalyzedAst.build(code, registry)
+        val receiverType = a.getExpressionTypeEndingAt(dotOffset - 1) ?: return null
+        val provider = CompletionProvider(registry)
+        return provider.memberCompletions(receiverType, prefix).map { it.name }
+    }
+
+    // ── Test: Osc.sine().| inside register() — dot only, no prefix ────────
+
+    "real-world: Osc.register('aa', Osc.sine().| ) — stale AST, should infer IgnitorDsl" {
+        // When user types "." after Osc.sine(), the code doesn't parse.
+        // Stale AST is from the parseable version (without the dot).
+        val staleCode = """let a = Osc.register("aa", Osc.sine())"""
+        val registry = multiLibRegistry()
+        val a = AnalyzedAst.build(staleCode, registry)
+
+        // The dot is inserted after Osc.sine() in the editor.
+        // In stale text, that's right after the ')' of sine().
+        val sineEnd = staleCode.indexOf("Osc.sine()") + "Osc.sine()".length
+
+        // getExpressionTypeEndingAt should find Osc.sine() → IgnitorDsl
+        val receiverType = a.getExpressionTypeEndingAt(sineEnd - 1)
+        receiverType?.simpleName shouldBe "IgnitorDsl"
+
+        // CompletionProvider with IgnitorDsl receiver should show stdlib methods, NOT sprudel
+        val provider = CompletionProvider(registry)
+        val suggestions = provider.memberCompletions(receiverType!!, "")
+        val names = suggestions.map { it.name }
+        names.contains("lowpass") shouldBe true
+        names.contains("adsr") shouldBe true // stdlib's IgnitorDsl.adsr
+
+        // Must NOT contain sprudel top-level or SprudelPattern methods
+        names.contains("note") shouldBe false
+        names.contains("gain") shouldBe false
+    }
+
+    // ── Test: Osc.sine().ad| inside register() — parseable, prefix "ad" ──
+
+    "real-world: Osc.register('aa', Osc.sine().ad| ) — fresh parse, prefix 'ad'" {
+        // This code IS parseable: .ad is a valid MemberAccess
+        val code = """let a = Osc.register("aa", Osc.sine().ad)"""
+        val registry = multiLibRegistry()
+
+        val dotOffset = code.indexOf(".ad")
+        val suggestions = simulateFullCompletion(code, registry, dotOffset, "ad")
+
+        suggestions.shouldNotBeNull()
+        // Should show IgnitorDsl methods starting with "ad"
+        suggestions.contains("adsr") shouldBe true
+        // All suggestions should start with "ad"
+        suggestions.all { it.startsWith("ad", ignoreCase = true) } shouldBe true
+    }
+
+    "real-world: Osc.sine().ad| — CompletionProvider returns stdlib adsr, NOT sprudel" {
+        val code = """let a = Osc.register("aa", Osc.sine().ad)"""
+        val registry = multiLibRegistry()
+        val a = AnalyzedAst.build(code, registry)
+
+        // Navigate to the .ad MemberAccess
+        val decl = a.ast.statements.first() as LetDeclaration
+        val registerCall = decl.initializer as CallExpression
+        val secondArg = registerCall.arguments[1] as MemberAccess
+        secondArg.property shouldBe "ad"
+
+        // The receiver of .ad is Osc.sine() → IgnitorDsl
+        val receiver = secondArg.obj as CallExpression
+        a.typeOf(receiver)?.simpleName shouldBe "IgnitorDsl"
+
+        // CompletionProvider should return the IgnitorDsl adsr (stdlib), not sprudel's
+        val provider = CompletionProvider(registry)
+        val suggestions = provider.memberCompletions(KlangType("IgnitorDsl"), "ad")
+        val adsrSuggestion = suggestions.first { it.name == "adsr" }
+        adsrSuggestion.detail.contains("stdlib") shouldBe true
+        adsrSuggestion.detail.contains("sprudel") shouldBe false
+    }
+
+    "real-world: FULL code with imports — Osc.sine().ad| inside register" {
+        // EXACT code from the user's bug report, including import statements
+        val code = """import * from "stdlib"
+import * from "sprudel"
+
+let a = Osc.register("aa", Osc.sine().ad)"""
+
+        val registry = multiLibRegistry()
+        val a = AnalyzedAst.build(code, registry)
+
+        // Find .ad MemberAccess
+        val letDecl = a.ast.statements.filterIsInstance<LetDeclaration>().first()
+        val registerCall = letDecl.initializer as CallExpression
+        val secondArg = registerCall.arguments[1] as MemberAccess
+        secondArg.property shouldBe "ad"
+
+        // Receiver of .ad is Osc.sine() → must be IgnitorDsl
+        val receiver = secondArg.obj as CallExpression
+        a.typeOf(receiver)?.simpleName shouldBe "IgnitorDsl"
+
+        // Simulate completion: dot is at code.indexOf(".ad")
+        val dotIdx = code.indexOf(".ad")
+        val receiverType = a.getExpressionTypeEndingAt(dotIdx - 1)
+        receiverType?.simpleName shouldBe "IgnitorDsl"
+
+        // Completion suggestions should be IgnitorDsl methods, not sprudel
+        val provider = CompletionProvider(registry)
+        val suggestions = provider.memberCompletions(receiverType!!, "ad")
+        suggestions.any { it.name == "adsr" } shouldBe true
+        suggestions.first { it.name == "adsr" }.detail.contains("stdlib") shouldBe true
+    }
+
+    "real-world: FULL code with imports — Osc.sine().| stale AST" {
+        // The dot-only case: code doesn't parse, stale AST from version without the dot
+        val staleCode = """import * from "stdlib"
+import * from "sprudel"
+
+let a = Osc.register("aa", Osc.sine())"""
+
+        val registry = multiLibRegistry()
+        val a = AnalyzedAst.build(staleCode, registry)
+
+        val sineEnd = staleCode.indexOf("Osc.sine()") + "Osc.sine()".length
+        val receiverType = a.getExpressionTypeEndingAt(sineEnd - 1)
+        receiverType?.simpleName shouldBe "IgnitorDsl"
+    }
+
+    "parse check: which intermediate editor states parse?" {
+        val codes = mapOf(
+            """let a = Osc.register("aa", Osc.sine())""" to true,
+            """let a = Osc.register("aa", Osc.sine().)""" to false,
+            """let a = Osc.register("aa", Osc.sine().a)""" to true,
+            """let a = Osc.register("aa", Osc.sine().ad)""" to true,
+        )
+        for ((code, shouldParse) in codes) {
+            val parsed = try {
+                KlangScriptParser.parse(code)
+                true
+            } catch (_: Throwable) {
+                false
+            }
+            parsed shouldBe shouldParse
+        }
+    }
+
+    "real-world: top-level fallback must NOT show sprudel adsr in dot context" {
+        // This test documents the original bug:
+        // When inference fails and falls back to topLevelCompletions("ad"),
+        // sprudel's receiver-less adsr (top-level) matches the prefix.
+        // The fix: never fall back to top-level in member-access context.
+        val registry = multiLibRegistry()
+        val provider = CompletionProvider(registry)
+
+        // topLevelCompletions("ad") DOES include sprudel's receiver-less adsr
+        val topLevel = provider.topLevelCompletions("ad")
+        topLevel.any { it.name == "adsr" } shouldBe true
+
+        // But memberCompletions for IgnitorDsl("ad") returns stdlib's adsr
+        val member = provider.memberCompletions(KlangType("IgnitorDsl"), "ad")
+        member.any { it.name == "adsr" } shouldBe true
+
+        // These are DIFFERENT results — the bug was using topLevel when member was intended
     }
 })

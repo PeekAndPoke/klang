@@ -363,6 +363,13 @@ body {
     min-height: 100vh;
 }
 
+/* ── Motor Background stacking context ───────────────────────────────────── */
+#spa {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+}
+
 /* CodeMirror live code highlighting (overlay marks) */
 .cm-highlight-overlay .cm-highlight-playing {
     border-radius: 3px;

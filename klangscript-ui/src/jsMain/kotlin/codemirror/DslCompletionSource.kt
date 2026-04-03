@@ -3,7 +3,6 @@ package io.peekandpoke.klang.ui.codemirror
 import io.peekandpoke.klang.codemirror.ext.Completion
 import io.peekandpoke.klang.codemirror.ext.CompletionContext
 import io.peekandpoke.klang.codemirror.ext.CompletionResult
-import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.intel.CompletionProvider
 import io.peekandpoke.klang.script.intel.CompletionSuggestion
 import io.peekandpoke.klang.script.types.KlangType
@@ -36,6 +35,11 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
         return null
     }
 
+    // Force immediate re-parse so the analysis matches the current editor text.
+    // The debounced onCodeChanged may not have fired yet when completion triggers.
+    val currentCode = context.state.doc.toString()
+    docContext.processCodeImmediate(currentCode)
+
     val provider = CompletionProvider(docContext.registry)
     val options = mutableListOf<Completion>()
 
@@ -52,11 +56,9 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
         if (receiverType != null) {
             val suggestions = provider.memberCompletions(receiverType, typed)
             suggestions.mapTo(options) { it.toCodeMirrorCompletion() }
-        } else {
-            // Could not infer receiver type — show all top-level as fallback
-            val suggestions = provider.topLevelCompletions(typed)
-            suggestions.mapTo(options) { it.toCodeMirrorCompletion() }
         }
+        // If receiver type can't be inferred (stale AST, parse error), show nothing.
+        // Showing top-level symbols after a dot is always wrong.
     } else {
         val suggestions = provider.topLevelCompletions(typed)
         suggestions.mapTo(options) { it.toCodeMirrorCompletion() }
@@ -81,15 +83,7 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
 /** Try to infer the receiver type of the expression before a dot using the cached [AnalyzedAst]. */
 private fun inferReceiverTypeBeforeDot(docContext: EditorDocContext, dotPos: Int): KlangType? {
     val analysis = docContext.lastAnalysis ?: return null
-    // Look at dotPos - 1: the last character of the expression before the dot.
-    // The dot itself didn't exist in the stale AST, so nodeAt(dotPos) misses
-    // because the outermost node's exclusive end equals dotPos.
-    val node = analysis.astIndex.nodeAt(dotPos - 1) ?: return null
-    if (node !is Expression) {
-        return null
-    }
-    // O(1) lookup from the pre-computed type map
-    return analysis.typeOf(node)
+    return analysis.getExpressionTypeEndingAt(dotPos - 1)
 }
 
 /** Convert a [CompletionSuggestion] to a CodeMirror [Completion] JS object. */

@@ -2,7 +2,14 @@ package io.peekandpoke.klang
 
 import io.peekandpoke.klang.layouts.FullscreenLayout
 import io.peekandpoke.klang.layouts.MenuLayout
-import io.peekandpoke.klang.pages.*
+import io.peekandpoke.klang.layouts.MotorBackgroundLayout
+import io.peekandpoke.klang.pages.CodeSongPage
+import io.peekandpoke.klang.pages.CreditsPage
+import io.peekandpoke.klang.pages.DashboardPage
+import io.peekandpoke.klang.pages.NotFoundPage
+import io.peekandpoke.klang.pages.SamplesLibraryPage
+import io.peekandpoke.klang.pages.StartPage
+import io.peekandpoke.klang.pages.TourPage
 import io.peekandpoke.klang.pages.docs.DocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptDocsPage
 import io.peekandpoke.klang.pages.docs.KlangScriptLibraryDocsPage
@@ -48,10 +55,12 @@ object Nav {
 
 fun RootRouterBuilder.mountNav() {
 
-    layout({ FullscreenLayout { it() } }) {
+    layout({ MotorBackgroundLayout { it() } }) {
         mount(Nav.start) { StartPage() }
         mount(Nav.startSlash) { StartPage() }
+    }
 
+    layout({ FullscreenLayout { it() } }) {
         mount(Nav.tour) { TourPage() }
     }
 
