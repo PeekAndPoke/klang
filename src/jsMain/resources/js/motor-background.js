@@ -3,7 +3,7 @@
  *
  * Procedural normal-mapped metal surface: mosaic of varied rectangular
  * pieces (1x1 to 3x2) with void spaces, beveled edges, machining marks.
- * Point light tracks the mouse; cool fill light provides contrast.
+ * Point light wanders autonomously; cool fill light provides contrast.
  */
 import * as THREE from './three/three.module.min.js';
 
@@ -257,16 +257,25 @@ function initMotorBackground() {
   // ── Hover color transitions ──
 
   var defaultColor    = new THREE.Color(0x56b6c2);
-  var hoverColor      = new THREE.Color(0x4a7fb5);
+  var hoverColor      = new THREE.Color(0x2a5fff);
   var targetColor     = new THREE.Color(0x56b6c2);
-  var defaultIntensity = 1.35;
-  var hoverIntensity   = 2.7;
+  var defaultIntensity = 1.62;
+  var hoverIntensity   = 3.24;
   var targetIntensity  = 0;
+
+  var poweredOn = false;
+  var scanning = false;
 
   // Power on — called from Kraft when the start button is clicked
   window.motorBackgroundPowerOn = function () {
+    poweredOn = true;
     targetIntensity = defaultIntensity;
     targetFillIntensity = 0.12;
+  };
+
+  // Start scanning — called from Kraft when the benchmark begins
+  window.motorBackgroundStartScan = function () {
+    scanning = true;
   };
 
   var selector = 'a, button, .ui.button';
@@ -283,24 +292,10 @@ function initMotorBackground() {
     }
   });
 
-  // ── Mouse tracking ──
+  // ── Light position (autonomous wandering) ──
 
   var mouseX = 0, mouseY = 0;
   var targetX = 0, targetY = 0;
-
-  document.addEventListener('mousemove', function (e) {
-    targetX = (e.clientX / window.innerWidth) * 2 - 1;
-    targetY = -(e.clientY / window.innerHeight) * 2 + 1;
-  });
-
-  if (typeof DeviceOrientationEvent !== 'undefined') {
-    window.addEventListener('deviceorientation', function (e) {
-      if (e.gamma !== null && e.beta !== null) {
-        targetX = e.gamma / 45;
-        targetY = (e.beta - 45) / 45;
-      }
-    });
-  }
 
   // ── Resize ──
 
@@ -325,33 +320,27 @@ function initMotorBackground() {
   }
   window.addEventListener('resize', onResize);
 
-  // ── Idle wandering animation ──
+  // ── Autonomous wandering animation ──
 
-  var lastInteraction = 0;
-  var wasIdle = false;
   var velX = 0, velY = 0;
   var attractX = 0, attractY = 0;
-  var gravity = 0.3, maxSpeed = 0.4, damping = 0.98, nearThreshold = 0.2;
+  var gravity = 0.25, maxSpeed = 0.35, damping = 0.98, nearThreshold = 0.2;
 
   function pickAttractor() {
-    var angle  = Math.random() * Math.PI * 2;
-    var radius = 0.4 + Math.random() * 0.5;
-    attractX = Math.cos(angle) * radius;
-    attractY = Math.sin(angle) * radius * 0.7;
+    // Scanner: alternate left and right
+    attractX = attractX <= 0
+      ? 0.4 + Math.random() * 0.35
+      : -(0.4 + Math.random() * 0.35);
+    attractY = 0;
   }
 
-  document.addEventListener('mousemove', function () {
-    lastInteraction = performance.now();
-    wasIdle = false;
-  });
+  // First attractor picked on power-on, not at init
 
   // Tab visibility
   var lastFrameTime = performance.now();
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) {
       lastFrameTime = performance.now();
-      lastInteraction = 0;
-      wasIdle = false;
       renderer.render(scene, camera);
     }
   });
@@ -368,13 +357,9 @@ function initMotorBackground() {
     var delta = Math.min(now - lastFrameTime, 100);
     lastFrameTime = now;
 
-    // Idle wandering (physics-based attractor)
-    if (now - lastInteraction > 3000) {
-      if (!wasIdle) {
-        wasIdle = true;
-        velX = 0; velY = 0;
-        pickAttractor();
-      }
+    // Autonomous wandering (only after scan starts, light stays centered before)
+    if (scanning) {
+      if (attractX === 0 && attractY === 0) pickAttractor();
       var dt = delta / 1000;
       var dx = attractX - targetX;
       var dy = attractY - targetY;
@@ -393,7 +378,7 @@ function initMotorBackground() {
       if (dist < nearThreshold) pickAttractor();
     }
 
-    // Smooth mouse follow
+    // Smooth position follow
     mouseX += (targetX - mouseX) * 0.18;
     mouseY += (targetY - mouseY) * 0.18;
     mainLight.position.x = mouseX * aspect;
@@ -401,7 +386,7 @@ function initMotorBackground() {
 
     // Smooth color / intensity transition
     mainLight.color.lerp(targetColor, 0.05);
-    mainLight.intensity += (targetIntensity - mainLight.intensity) * 0.02;
+    mainLight.intensity += (targetIntensity - mainLight.intensity) * 0.01;
     fillLight.intensity += (targetFillIntensity - fillLight.intensity) * 0.02;
 
     renderer.render(scene, camera);

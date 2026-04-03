@@ -410,6 +410,17 @@ body {
     animation: fadeOut 300ms linear forwards;
 }
 
+@keyframes iconGlow {
+    0%, 100% {
+        opacity: 0.4;
+        text-shadow: 0 0 2px currentColor;
+    }
+    50% {
+        opacity: 1.0;
+        text-shadow: 0 0 8px currentColor;
+    }
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to   { opacity: 1; }

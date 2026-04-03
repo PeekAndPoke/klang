@@ -433,7 +433,12 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                         icon.black.loading.spinner()
                                         +"Loading"
                                     } else {
-                                        icon.black.play()
+                                        icon.play {
+                                            css {
+                                                color = Color(laf.critical)
+                                                put("animation", "iconGlow 1.2s ease-in-out infinite")
+                                            }
+                                        }
                                         +"Play"
                                     }
                                 }
@@ -441,7 +446,16 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 ui.circular.white
                                     .givenNot(isCodeModified) { disabled }.button {
                                         onClick { updatePlayback() }
-                                        icon.black.redo_alternate()
+                                        if (isCodeModified) {
+                                            icon.redo_alternate {
+                                                css {
+                                                    color = Color(laf.critical)
+                                                    put("animation", "iconGlow 1.2s ease-in-out infinite")
+                                                }
+                                            }
+                                        } else {
+                                            icon.black.redo_alternate()
+                                        }
                                         +"Update"
                                     }
                             }

@@ -96,9 +96,7 @@ import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlin.math.PI
 import kotlin.math.ceil
-import kotlin.math.sin
 import kotlin.time.Duration.Companion.milliseconds
 
 @Suppress("FunctionName")
@@ -256,8 +254,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private inner class StateBenchmarking : State {
         init {
+            js("if (typeof window.motorBackgroundStartScan === 'function') window.motorBackgroundStartScan()")
             launch {
-                benchmark.run()
+                benchmark.run(iterations = 5)
             }
         }
 
@@ -536,7 +535,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             css {
                 opacity = 0.0
-                put("animation", "fadeIn 2s ease forwards")
+                put("animation", "fadeIn 5s ease forwards")
             }
 
             RoundButton(
@@ -899,10 +898,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
                 icon.music {
                     css {
-                        val glow = 0.6 + 0.4 * sin(Kronos.systemUtc.millisNow() * PI / 610.0)
-
-                        color = Color(laf.critical).darken((100 - glow * 100).toInt())
-                        put("text-shadow", "0 0 ${glow * 3}px")
+                        color = Color(laf.critical)
+                        put("animation", "iconGlow 1.2s ease-in-out infinite")
                     }
                 }
 
