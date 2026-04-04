@@ -24,73 +24,6 @@ object BuiltInSongs {
         )
     )
 
-    val smallTownBoy = add(
-        Song(
-            id = "$PREFIX-0002",
-            title = "Synthtown Boy",
-            rpm = 37.2,
-            code = TestTextPatterns.smallTownBoy,
-            icon = "record vinyl",
-        )
-    )
-
-    val soundOfTheSea = add(
-        Song(
-            id = "$PREFIX-0006",
-            title = "Sound of the sea",
-            rpm = 30.0,
-            code = """
-
-
-
-
-
-
-
-             import * from  "stdlib"
-              import * from "sprudel"
-               let wind       = 0.025
-                let water      = 0.035
-                 let waves      = 0.105
-                  let windSpiel  = 1.750
-           
-                    stack( //   Lean back and relax... let the waves carry you away
-                // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-             note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
-               .gain(wind).pan(sine.range(0.3, 0.7).slow(21))
-               .hpf(1000).bandf(perlin.range(110, 110 * 20).slow(64)).bandq(berlin.range(0.0, 2.0).slow(39))
-                     
-           , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            note("c").fast(5).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
-              .gain(water)
-              .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
-           , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            note("<c@4 ~!15>").fast(2).sound("pink").adsr("0.75:0.5:1.0:10.0").warmth(0.2) // . solo()
-             .gain(waves).pan(0.3).hpf(120).lpf(4000).bandf(perlin.range(100, 500).slow(22)).bandq(rand.range(0.5, 1.5))
-                 .superimpose(x => x.pan(0.7))
-              , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                n(randrun(16)).fast(4).sound("glockenspiel").scale("d2:pentatonic").pan(0.3)
-                  .gain(0.25).distort(0.2).postgain(windSpiel).adsr("0.1:1.0:1.0:5.0").hpf(300).degradeBy(0.995)
-                      .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.5) // . solo()
-                           ).room(0.25).rsize(10.0)              
-      
-
-
-
-
-
-
-
-
-
-
-
-            """,
-            icon = "umbrella beach",
-        )
-    )
-
     val sakura = add(
         Song(
             id = "$PREFIX-0009",
@@ -98,6 +31,7 @@ object BuiltInSongs {
             rpm = 36.0,
             icon = "globe asia",
             code = """
+
 
 import * from "stdlib"
 import * from "sprudel"
@@ -112,10 +46,10 @@ let koto = Osc.register("koto", Osc.pluck()
 
 let shaku = Osc.register("shaku", Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
-      .plus(Osc.perlin(15).mul(0.15))
-      .plus(Osc.perlin(20).mul(0.25).highpass(1000).adsr(0.03, 0.2, 0.03, 0.02))
+      .plus(Osc.perlin(15).mul(0.05))
+      .plus(Osc.perlin(20).mul(0.15).highpass(1000).adsr(0.03, 0.2, 0.03, 0.02))
       .lowpass(2500).highpass(300)
-      .analog(0.2).vibrato(4, 0.02)
+      .analog(0.2).vibrato(8, 0.02)
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.1, 0.15, 0.8, 0.3)
 )
@@ -164,9 +98,9 @@ stack(
     e4@2  ~  ~  ~  ~  a4 ~
     e5@2  ~  ~  c5@2  b4 a4
     c5@2  ~  ~  ~  ~  a4 ~
-    e5@2  ~  ~  c5@2  b4@2 
-    a4@2  ~  ~  ~  ~  ~  ~
-  `).sound(shaku).legato(1.0).slow(14).gain(0.175).adsr("0.05:0.1:1:0.5")
+    a5@2  ~  ~  e5@2  d4@2 
+    <[e4@2 e4@2 e4@2 e4@2] [e4 f4 [b4 a4] f4 e4@4] [a4@2 a3@2 a4@2 a3@2] [e5 f5 [b5 a5] f5 e5@4]>@8
+  `).sound(shaku).legato(1.0).slow(14).gain(0.175).adsr("0.05:0.1:1:0.2")
     .filterWhen(x => x >= wait * 2)
 
   // Drums
@@ -180,17 +114,17 @@ stack(
   
   ,stack(
     // Root
-    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.05).gain(0.25)
+    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.25)
     // Third (minor/major character)
-    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.05).gain(0.25)
+    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.03).gain(0.25)
     // Fifth
     ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.05).gain(0.25)
     // Octave
-    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.25)
+    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.08).gain(0.25)
     // High third
-    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.25)
+    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.13).gain(0.25)
     // High fifth
-    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.25)    
+    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.21).gain(0.25)    
   ).filterWhen(x => x >= wait * 3)
 ).room("0.25:10:0.75").delay(0.2).delaytime(pure(1/8).div(cps))
 
@@ -199,6 +133,64 @@ stack(
             
             
             """    // END: Sakura
+        )
+    )
+
+    val soundOfTheSea = add(
+        Song(
+            id = "$PREFIX-0006",
+            title = "Sound of the sea",
+            rpm = 30.0,
+            code = """
+
+
+
+
+
+
+
+
+             import * from  "stdlib"
+              import * from "sprudel"
+               let wind       = 0.050
+                let water      = 0.070
+                 let waves      = 0.210
+                  let windSpiel  = 3.500
+           
+                    stack( //   Lean back and relax... let the waves carry you away
+                // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+             note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
+               .gain(wind).pan(sine.range(0.3, 0.7).slow(21))
+               .hpf(1000).bandf(perlin.range(110, 110 * 20).slow(64)).bandq(berlin.range(0.0, 2.0).slow(39))
+                     
+           , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            note("c").fast(5).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
+              .gain(water)
+              .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
+           , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            note("<c@4 ~!15>").fast(2).sound("pink").adsr("0.75:0.5:1.0:10.0").warmth(0.2) // . solo()
+             .gain(waves).pan(0.3).hpf(120).lpf(4000).bandf(perlin.range(100, 500).slow(22)).bandq(rand.range(0.5, 1.5))
+                 .superimpose(x => x.pan(0.7))
+              , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                n(randrun(16)).fast(4).sound("glockenspiel").scale("d2:pentatonic").pan(0.3)
+                  .gain(0.25).distort(0.2).postgain(windSpiel).adsr("0.1:1.0:1.0:5.0").hpf(300).degradeBy(0.995)
+                      .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.5) // . solo()
+                           ).room(0.25).rsize(10.0)              
+      
+
+
+
+
+
+
+
+
+
+
+
+            """,
+            icon = "umbrella beach",
         )
     )
 
@@ -294,6 +286,16 @@ stack(
   
           """.trimIndent(),
             icon = "guitar",
+        )
+    )
+
+    val smallTownBoy = add(
+        Song(
+            id = "$PREFIX-0002",
+            title = "Synthtown Boy",
+            rpm = 37.2,
+            code = TestTextPatterns.smallTownBoy,
+            icon = "record vinyl",
         )
     )
 
