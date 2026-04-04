@@ -435,8 +435,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                     } else {
                                         icon.play {
                                             css {
-                                                color = Color(laf.critical)
-                                                put("animation", "iconGlow 1.2s ease-in-out infinite")
+                                                put("--icon-glow-color", laf.critical)
+                                                put("animation", "iconGlow 2.5s ease-in-out infinite")
                                             }
                                         }
                                         +"Play"
@@ -449,8 +449,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                         if (isCodeModified) {
                                             icon.redo_alternate {
                                                 css {
-                                                    color = Color(laf.critical)
-                                                    put("animation", "iconGlow 1.2s ease-in-out infinite")
+                                                    put("--icon-glow-color", laf.critical)
+                                                    put("animation", "iconGlow 2.5s ease-in-out infinite")
                                                 }
                                             }
                                         } else {

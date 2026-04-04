@@ -272,6 +272,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private inner class StateBenchmarkComplete(val result: KlangBenchmark.Result) : State {
+        init {
+            js("if (typeof window.motorBackgroundStopScan === 'function') window.motorBackgroundStopScan()")
+        }
+
         override fun update() {
             // noop
         }
@@ -898,8 +902,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
                 icon.music {
                     css {
-                        color = Color(laf.critical)
-                        put("animation", "iconGlow 1.2s ease-in-out infinite")
+                        put("--icon-glow-color", laf.critical)
+                        put("animation", "iconGlow 2.5s ease-in-out infinite")
                     }
                 }
 

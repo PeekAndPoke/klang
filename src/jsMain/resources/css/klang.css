@@ -412,12 +412,12 @@ body {
 
 @keyframes iconGlow {
     0%, 100% {
-        opacity: 0.4;
-        text-shadow: 0 0 2px currentColor;
+        color: color-mix(in srgb, var(--icon-glow-color) 10%, black);
+        text-shadow: none;
     }
     50% {
-        opacity: 1.0;
-        text-shadow: 0 0 8px currentColor;
+        color: var(--icon-glow-color);
+        text-shadow: 0 0 3px var(--icon-glow-color);
     }
 }
 

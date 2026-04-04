@@ -85,6 +85,11 @@ object MnRenderer {
             mods.divisor?.let { append("/${renderNumber(it)}") }
             mods.probability?.let { append("?${renderNumber(it)}") }
             mods.weight?.let { append("@${renderNumber(it)}") }
+            if (!mods.attrs.isEmpty) {
+                append("{")
+                append(mods.attrs.entries.entries.joinToString(" ") { (k, v) -> "$k=$v" })
+                append("}")
+            }
         }
     }
 

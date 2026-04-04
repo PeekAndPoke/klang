@@ -257,10 +257,10 @@ function initMotorBackground() {
   // ── Hover color transitions ──
 
   var defaultColor    = new THREE.Color(0x56b6c2);
-  var hoverColor      = new THREE.Color(0x2a5fff);
+  var hoverColor      = new THREE.Color(0x56b6c2);
   var targetColor     = new THREE.Color(0x56b6c2);
   var defaultIntensity = 1.62;
-  var hoverIntensity   = 3.24;
+  var hoverIntensity   = 5.0;
   var targetIntensity  = 0;
 
   var poweredOn = false;
@@ -276,6 +276,16 @@ function initMotorBackground() {
   // Start scanning — called from Kraft when the benchmark begins
   window.motorBackgroundStartScan = function () {
     scanning = true;
+  };
+
+  var returning = false;
+
+  // Stop scanning — called from Kraft when the benchmark completes
+  // Light glides back to center using the existing physics
+  window.motorBackgroundStopScan = function () {
+    returning = true;
+    attractX = 0;
+    attractY = 0;
   };
 
   var selector = 'a, button, .ui.button';
@@ -359,7 +369,7 @@ function initMotorBackground() {
 
     // Autonomous wandering (only after scan starts, light stays centered before)
     if (scanning) {
-      if (attractX === 0 && attractY === 0) pickAttractor();
+      if (!returning && attractX === 0 && attractY === 0) pickAttractor();
       var dt = delta / 1000;
       var dx = attractX - targetX;
       var dy = attractY - targetY;
@@ -375,7 +385,16 @@ function initMotorBackground() {
       }
       targetX += velX * dt;
       targetY += velY * dt;
-      if (dist < nearThreshold) pickAttractor();
+      if (returning) {
+        if (dist < 0.02 && speed < 0.01) {
+          scanning = false;
+          returning = false;
+          targetX = 0;
+          targetY = 0;
+        }
+      } else {
+        if (dist < nearThreshold) pickAttractor();
+      }
     }
 
     // Smooth position follow
