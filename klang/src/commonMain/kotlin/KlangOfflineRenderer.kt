@@ -5,6 +5,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -40,6 +41,7 @@ class KlangOfflineRenderer(
         cycles: Int,
         cyclesPerSecond: Double,
         tailSec: Double = 2.0,
+        customIgnitors: List<Pair<String, IgnitorDsl>> = emptyList(),
         onBlock: (samples: ShortArray, count: Int) -> Unit,
     ): Result {
         val klangTime = KlangTime.create()
@@ -48,7 +50,15 @@ class KlangOfflineRenderer(
         // 1. Create DSP graph
         val commLink = KlangCommLink()
         val cylinders = Cylinders(maxCylinders = 16, blockFrames = blockFrames, sampleRate = sampleRate)
-        val ignitorRegistry = IgnitorRegistry().apply { registerDefaults() }
+        val ignitorRegistry = IgnitorRegistry().apply {
+            registerDefaults()
+            for ((name, dsl) in customIgnitors) {
+                if (contains(name)) {
+                    println("[KlangOfflineRenderer] Custom ignitor '$name' overrides built-in sound")
+                }
+                register(name, dsl)
+            }
+        }
 
         val voiceScheduler = VoiceScheduler(
             VoiceScheduler.Options(

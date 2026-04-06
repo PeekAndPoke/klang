@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.int
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
 import java.io.File
@@ -15,8 +16,13 @@ import java.io.File
  * Takes a [compilePattern] function to decouple from the sprudel module.
  */
 class RenderWavCommand(
-    private val compilePattern: (code: String) -> KlangPattern?,
+    private val compilePattern: (code: String) -> CompileResult?,
 ) : CliktCommand(name = "klang:record:wav") {
+
+    data class CompileResult(
+        val pattern: KlangPattern,
+        val customIgnitors: List<Pair<String, IgnitorDsl>> = emptyList(),
+    )
 
     override fun help(context: com.github.ajalt.clikt.core.Context) =
         "Render sprudel code to a WAV file at full CPU speed (offline, no real-time playback)"
@@ -51,8 +57,8 @@ class RenderWavCommand(
 
         // Compile
         echo("Compiling pattern...")
-        val pattern = compilePattern(sprudelCode)
-        if (pattern == null) {
+        val compileResult = compilePattern(sprudelCode)
+        if (compileResult == null) {
             echo("Error: Failed to compile pattern", err = true)
             return
         }
@@ -60,22 +66,28 @@ class RenderWavCommand(
         val cps = rpm / 60.0
         echo("Rendering $cycles cycles at $rpm RPM (cps=${"%.3f".format(cps)}) to $output")
         echo("  sample rate: $sampleRate, block size: $blockSize, tail: ${tail}s")
+        if (compileResult.customIgnitors.isNotEmpty()) {
+            echo("  custom sounds: ${compileResult.customIgnitors.joinToString(", ") { it.first }}")
+        }
 
         // Render to WAV
         val wav = WavFileWriter(output, sampleRate)
         wav.open()
 
-        val renderer = KlangOfflineRenderer(sampleRate = sampleRate, blockFrames = blockSize)
+        val result = try {
+            val renderer = KlangOfflineRenderer(sampleRate = sampleRate, blockFrames = blockSize)
 
-        val result = renderer.render(
-            pattern = pattern,
-            cycles = cycles,
-            cyclesPerSecond = cps,
-            tailSec = tail,
-            onBlock = { samples, count -> wav.writeBlock(samples, count) },
-        )
-
-        wav.close()
+            renderer.render(
+                pattern = compileResult.pattern,
+                cycles = cycles,
+                cyclesPerSecond = cps,
+                tailSec = tail,
+                customIgnitors = compileResult.customIgnitors,
+                onBlock = { samples, count -> wav.writeBlock(samples, count) },
+            )
+        } finally {
+            wav.close()
+        }
 
         val durationStr = "%.2f".format(result.durationSec)
         val fileSize = File(output).length()
