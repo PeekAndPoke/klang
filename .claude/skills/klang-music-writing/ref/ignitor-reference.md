@@ -86,15 +86,33 @@ All accept optional `freq` param. Omit for voice note frequency, pass Hz for fix
 
 ### Super Oscillators (Unison/Detuned)
 
-Multiple detuned copies for thick, lush sounds. Default: 8 voices, 0.2 freq spread.
+Multiple detuned copies for thick, lush sounds.
 
-| Method                   | Description             |
-|--------------------------|-------------------------|
-| `Osc.supersaw(freq?)`    | Detuned sawtooth chorus |
-| `Osc.supersine(freq?)`   | Detuned sine chorus     |
-| `Osc.supersquare(freq?)` | Detuned square chorus   |
-| `Osc.supertri(freq?)`    | Detuned triangle chorus |
-| `Osc.superramp(freq?)`   | Detuned ramp chorus     |
+| Method                                                  | Description             |
+|---------------------------------------------------------|-------------------------|
+| `Osc.supersaw(freq?, voices?, freqSpread?, analog?)`    | Detuned sawtooth chorus |
+| `Osc.supersine(freq?, voices?, freqSpread?, analog?)`   | Detuned sine chorus     |
+| `Osc.supersquare(freq?, voices?, freqSpread?, analog?)` | Detuned square chorus   |
+| `Osc.supertri(freq?, voices?, freqSpread?, analog?)`    | Detuned triangle chorus |
+| `Osc.superramp(freq?, voices?, freqSpread?, analog?)`   | Detuned ramp chorus     |
+
+**Parameters** (all optional, apply to every super oscillator):
+
+| Param        | Default | Description                             |
+|--------------|---------|-----------------------------------------|
+| `voices`     | 8       | Number of detuned voices                |
+| `freqSpread` | 0.2     | Frequency spread between voices         |
+| `analog`     | 0.0     | Random per-voice pitch drift (0 = none) |
+
+```javascript
+// Args order: supersaw(freq, voices, freqSpread, analog)
+
+// Thin 3-voice supersaw
+Osc.supersaw(Osc.freq(), /* voices */ 3, /* freqSpread */ 0.1)
+
+// Wide 12-voice pad with analog drift
+Osc.supersaw(Osc.freq(), /* voices */ 12, /* freqSpread */ 0.3, /* analog */ 0.2)
+```
 
 ### Noise Sources
 
@@ -110,10 +128,10 @@ Multiple detuned copies for thick, lush sounds. Default: 8 voices, 0.2 freq spre
 
 ### Physical Models
 
-| Method                  | Description                     |
-|-------------------------|---------------------------------|
-| `Osc.pluck(freq?)`      | Karplus-Strong plucked string   |
-| `Osc.superpluck(freq?)` | Unison plucked strings (chorus) |
+| Method                                                 | Description                     |
+|--------------------------------------------------------|---------------------------------|
+| `Osc.pluck(freq?)`                                     | Karplus-Strong plucked string   |
+| `Osc.superpluck(freq?, voices?, freqSpread?, analog?)` | Unison plucked strings (chorus) |
 
 ### Utility
 

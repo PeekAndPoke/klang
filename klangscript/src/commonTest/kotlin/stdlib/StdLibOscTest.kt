@@ -73,6 +73,85 @@ class StdLibOscTest : StringSpec({
         (dsl.freq as IgnitorDsl.Constant).value shouldBe 10.0
     }
 
+    "Osc.supersaw() has correct defaults" {
+        val dsl = evalIgnitorDsl("Osc.supersaw()")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
+        dsl.freq shouldBe IgnitorDsl.Freq
+        dsl.voices shouldBe IgnitorDsl.Constant(8.0)
+        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.2)
+        dsl.analog shouldBe IgnitorDsl.Constant(0.0)
+    }
+
+    "Osc.supersaw(440) backward compat — freq only" {
+        val dsl = evalIgnitorDsl("Osc.supersaw(440)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
+        dsl.freq shouldBe IgnitorDsl.Constant(440.0)
+        dsl.voices shouldBe IgnitorDsl.Constant(8.0)
+        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.2)
+        dsl.analog shouldBe IgnitorDsl.Constant(0.0)
+    }
+
+    "Osc.supersaw with voices=1 — degenerate single voice" {
+        val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), 1)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
+        dsl.voices shouldBe IgnitorDsl.Constant(1.0)
+    }
+
+    // Positional args: supersaw(freq, voices, freqSpread, analog)
+    "Osc.supersaw with all params" {
+        val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), 4, 0.1, 0.3)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
+        dsl.voices shouldBe IgnitorDsl.Constant(4.0)
+        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.1)
+        dsl.analog shouldBe IgnitorDsl.Constant(0.3)
+    }
+
+    "Osc.supersaw voices accepts IgnitorDsl" {
+        val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), Osc.sine(0.5))")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
+        dsl.voices.shouldBeInstanceOf<IgnitorDsl.Sine>()
+    }
+
+    // Positional args: supersine(freq, voices, freqSpread, analog)
+    "Osc.supersine with voices and freqSpread" {
+        val dsl = evalIgnitorDsl("Osc.supersine(Osc.freq(), 6, 0.15)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperSine>()
+        dsl.voices shouldBe IgnitorDsl.Constant(6.0)
+        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.15)
+    }
+
+    // Positional args: supersquare(freq, voices, freqSpread, analog)
+    "Osc.supersquare with voices and analog" {
+        val dsl = evalIgnitorDsl("Osc.supersquare(Osc.freq(), 3, 0.2, 0.2)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperSquare>()
+        dsl.voices shouldBe IgnitorDsl.Constant(3.0)
+        dsl.analog shouldBe IgnitorDsl.Constant(0.2)
+    }
+
+    // Positional args: supertri(freq, voices, freqSpread, analog)
+    "Osc.supertri with voices" {
+        val dsl = evalIgnitorDsl("Osc.supertri(Osc.freq(), 12)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperTri>()
+        dsl.voices shouldBe IgnitorDsl.Constant(12.0)
+    }
+
+    // Positional args: superramp(freq, voices, freqSpread, analog)
+    "Osc.superramp with all params" {
+        val dsl = evalIgnitorDsl("Osc.superramp(Osc.freq(), 5, 0.4, 0.1)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperRamp>()
+        dsl.voices shouldBe IgnitorDsl.Constant(5.0)
+        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.4)
+        dsl.analog shouldBe IgnitorDsl.Constant(0.1)
+    }
+
+    // Positional args: superpluck(freq, voices, freqSpread, analog)
+    "Osc.superpluck with voices and freqSpread" {
+        val dsl = evalIgnitorDsl("Osc.superpluck(Osc.freq(), 4, 0.05)")
+        dsl.shouldBeInstanceOf<IgnitorDsl.SuperPluck>()
+        dsl.voices shouldBe IgnitorDsl.Constant(4.0)
+        dsl.freqSpread shouldBe IgnitorDsl.Constant(0.05)
+    }
+
     "Osc.whitenoise() returns WhiteNoise" {
         evalIgnitorDsl("Osc.whitenoise()") shouldBe IgnitorDsl.WhiteNoise
     }
