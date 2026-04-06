@@ -842,3 +842,73 @@ fun IgnitorDsl.getParamSlots(): List<IgnitorDsl.Param> {
     collectParams(result)
     return result
 }
+
+/**
+ * Walks the DSL tree and returns the maximum ADSR release time (in seconds)
+ * found in any [IgnitorDsl.Adsr] node.
+ *
+ * Returns 0.0 if no Adsr nodes exist in the tree.
+ * Only reads [IgnitorDsl.Constant] values and [IgnitorDsl.Param] defaults —
+ * dynamically modulated release times use the static default.
+ */
+fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
+    // Adsr: extract this node's release and recurse into inner
+    is IgnitorDsl.Adsr -> {
+        val thisRelease = when (releaseSec) {
+            is IgnitorDsl.Constant -> releaseSec.value
+            is IgnitorDsl.Param -> releaseSec.default
+            else -> 0.3
+        }
+        maxOf(thisRelease, inner.maxReleaseSec())
+    }
+    // Wrapper nodes with `inner`
+    is IgnitorDsl.Lowpass -> inner.maxReleaseSec()
+    is IgnitorDsl.Highpass -> inner.maxReleaseSec()
+    is IgnitorDsl.Bandpass -> inner.maxReleaseSec()
+    is IgnitorDsl.Notch -> inner.maxReleaseSec()
+    is IgnitorDsl.OnePoleLowpass -> inner.maxReleaseSec()
+    is IgnitorDsl.Distort -> inner.maxReleaseSec()
+    is IgnitorDsl.Drive -> inner.maxReleaseSec()
+    is IgnitorDsl.Clip -> inner.maxReleaseSec()
+    is IgnitorDsl.Crush -> inner.maxReleaseSec()
+    is IgnitorDsl.Coarse -> inner.maxReleaseSec()
+    is IgnitorDsl.Phaser -> inner.maxReleaseSec()
+    is IgnitorDsl.Tremolo -> inner.maxReleaseSec()
+    is IgnitorDsl.Vibrato -> inner.maxReleaseSec()
+    is IgnitorDsl.Accelerate -> inner.maxReleaseSec()
+    is IgnitorDsl.PitchEnvelope -> inner.maxReleaseSec()
+    is IgnitorDsl.Detune -> inner.maxReleaseSec()
+    // Binary nodes
+    is IgnitorDsl.Plus -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Times -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Mul -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Div -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Fm -> maxOf(carrier.maxReleaseSec(), modulator.maxReleaseSec())
+    // Leaf nodes — no release info
+    is IgnitorDsl.Freq -> 0.0
+    is IgnitorDsl.Param -> 0.0
+    is IgnitorDsl.Constant -> 0.0
+    is IgnitorDsl.Silence -> 0.0
+    is IgnitorDsl.WhiteNoise -> 0.0
+    is IgnitorDsl.BrownNoise -> 0.0
+    is IgnitorDsl.PinkNoise -> 0.0
+    is IgnitorDsl.PerlinNoise -> 0.0
+    is IgnitorDsl.BerlinNoise -> 0.0
+    is IgnitorDsl.Dust -> 0.0
+    is IgnitorDsl.Crackle -> 0.0
+    is IgnitorDsl.Sine -> 0.0
+    is IgnitorDsl.Sawtooth -> 0.0
+    is IgnitorDsl.Square -> 0.0
+    is IgnitorDsl.Triangle -> 0.0
+    is IgnitorDsl.Ramp -> 0.0
+    is IgnitorDsl.Zawtooth -> 0.0
+    is IgnitorDsl.Impulse -> 0.0
+    is IgnitorDsl.Pulze -> 0.0
+    is IgnitorDsl.SuperSaw -> 0.0
+    is IgnitorDsl.SuperSine -> 0.0
+    is IgnitorDsl.SuperSquare -> 0.0
+    is IgnitorDsl.SuperTri -> 0.0
+    is IgnitorDsl.SuperRamp -> 0.0
+    is IgnitorDsl.Pluck -> 0.0
+    is IgnitorDsl.SuperPluck -> 0.0
+}

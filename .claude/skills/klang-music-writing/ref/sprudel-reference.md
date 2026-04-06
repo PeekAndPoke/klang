@@ -99,6 +99,60 @@ Patterns are written as strings using mini-notation:
 
 Nesting is unlimited: `"[[bd bd] sd] [hh [oh hh]]"`
 
+### Cycle Timing — How Space-Separated Values Work
+
+**Critical rule:** All space-separated values in a sequence share ONE cycle equally. More values = each gets less time.
+
+```javascript
+// 4 values → each gets 1/4 of the cycle (natural quarter notes)
+note("c3 d3 e3 f3")
+
+// 16 values → each gets 1/16 of the cycle (very fast!)
+note("0 0 0 0 1 1 1 1 0 0 0 0 1 1 1 1")  // BAD: all crammed into one cycle
+```
+
+**Use groups `[...]` to keep 4 events per cycle while writing longer sequences:**
+
+```javascript
+// Each [...] group occupies one cycle position
+// With .slow(4), 4 groups = 4 cycles of 4 notes each
+note("[0 0 0 0] [1 1 1 1] [0 0 0 0] [1 1 1 1]").slow(4)
+
+// Or use cat() to sequence across cycles explicitly
+cat(
+  note("0 0 0 0"),  // cycle 1
+  note("1 1 1 1"),  // cycle 2
+  note("0 0 0 0"),  // cycle 3
+  note("1 1 1 1"),  // cycle 4
+)
+```
+
+**Rule of thumb:** If you want N events per cycle, put exactly N space-separated values (or use `*N`). For longer
+sequences spanning multiple cycles, use groups + `.slow()`, `cat()`, or alternation `<...>`.
+
+**Use `<...>` alternation with groups to sequence across cycles (like `cat()`):**
+
+```javascript
+// Plays [1 2 3 4] in cycle 1, [5 6 7 8] in cycle 2, [1 2 3 4] in cycle 3, ...
+n("<[1 2 3 4] [5 6 7 8] [1 2 3 4]>")
+
+// Equivalent using cat():
+cat(n("1 2 3 4"), n("5 6 7 8"), n("1 2 3 4"))
+```
+
+The `<...>` picks ONE item per cycle and rotates. Each `[...]` group inside is treated as a single item containing
+multiple events. This is the most compact way to write multi-cycle sequences in a single string.
+
+| Pattern                         | Events per cycle | Total cycles                   |
+|---------------------------------|------------------|--------------------------------|
+| `"a b c d"`                     | 4                | 1                              |
+| `"a b c d e f g h"`             | 8                | 1                              |
+| `"[a b c d] [e f g h]"`         | 4                | 1 (2 groups of 4 in one cycle) |
+| `"[a b c d] [e f g h]".slow(2)` | 4                | 2                              |
+| `"<[a b c d] [e f g h]>"`       | 4 (alternating)  | 2 to hear all                  |
+| `"a*4"`                         | 4 (repeated)     | 1                              |
+| `"<a b c d>"`                   | 1 (alternating)  | 4 to hear all                  |
+
 ---
 
 ## Entry Points

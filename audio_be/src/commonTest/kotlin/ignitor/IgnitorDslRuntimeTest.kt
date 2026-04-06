@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.detune
@@ -120,6 +121,51 @@ class IgnitorDslRuntimeTest : StringSpec({
         val dsl = IgnitorDsl.Square().lowpass(2000.0)
         val sig = dsl.toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
+    }
+
+    "Sine with Freq.div(2) as freq produces half the frequency" {
+        val blockFrames = 4410 // 100ms at 44100
+        val sr = 44100
+
+        fun ctx() = IgniteContext(
+            sampleRate = sr,
+            voiceDurationFrames = sr,
+            gateEndFrame = sr,
+            releaseFrames = (0.1 * sr).toInt(),
+            voiceEndFrame = sr + (0.1 * sr).toInt(),
+            scratchBuffers = ScratchBuffers(blockFrames),
+        ).apply {
+            offset = 0
+            length = blockFrames
+            voiceElapsedFrames = 0
+        }
+
+        fun FloatArray.zeroCrossings(): Int {
+            var count = 0
+            for (i in 1 until size) {
+                if ((this[i - 1] >= 0f && this[i] < 0f) || (this[i - 1] < 0f && this[i] >= 0f)) count++
+            }
+            return count
+        }
+
+        // Normal sine at voice frequency
+        val normalDsl = IgnitorDsl.Sine()
+        val normalSig = normalDsl.toExciter()
+        val normalBuf = FloatArray(blockFrames)
+        normalSig.generate(normalBuf, 440.0, ctx())
+
+        // Sine with freq = Freq / 2 (should be 220 Hz)
+        val halfFreqDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0)))
+        val halfFreqSig = halfFreqDsl.toExciter()
+        val halfBuf = FloatArray(blockFrames)
+        halfFreqSig.generate(halfBuf, 440.0, ctx())
+
+        val normalCrossings = normalBuf.zeroCrossings()
+        val halfCrossings = halfBuf.zeroCrossings()
+
+        // Half-frequency signal should have roughly half the zero crossings
+        val ratio = normalCrossings.toDouble() / halfCrossings.toDouble()
+        ratio shouldBe (2.0 plusOrMinus 0.1)
     }
 
     "toExciter creates independent instances" {

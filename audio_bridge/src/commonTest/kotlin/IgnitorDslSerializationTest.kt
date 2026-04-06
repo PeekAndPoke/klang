@@ -40,6 +40,25 @@ class IgnitorDslSerializationTest : StringSpec({
         roundTrip(dsl) shouldBe dsl
     }
 
+    "Sine with Freq.div(2) round-trips" {
+        val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0)))
+        val result = roundTrip(dsl)
+        result shouldBe dsl
+        (result as IgnitorDsl.Sine).freq shouldBe IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
+    }
+
+    "Sine with Freq.div(2) round-trips with WorkletContract codec settings" {
+        val workletCodec = Json {
+            ignoreUnknownKeys = true
+            explicitNulls = false
+        }
+        val dsl = IgnitorDsl.Sine(freq = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0)))
+        val encoded = workletCodec.encodeToString(IgnitorDsl.serializer(), dsl)
+        val result = workletCodec.decodeFromString(IgnitorDsl.serializer(), encoded)
+        result shouldBe dsl
+        (result as IgnitorDsl.Sine).freq shouldBe IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
+    }
+
     "Sawtooth round-trips" {
         val dsl = IgnitorDsl.Sawtooth()
         roundTrip(dsl) shouldBe dsl

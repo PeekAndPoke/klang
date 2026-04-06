@@ -38,7 +38,8 @@ fun Ignitor.adsr(
 
         val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
         val decRate = if (decayFrames > 0) (1.0 - sustainLevelVal) / decayFrames else 0.0
-        val relDenom = if (ctx.releaseFrames > 0) ctx.releaseFrames.toDouble() else 1.0
+        val releaseFrames = (releaseSecVal * ctx.sampleRate).toInt()
+        val relDenom = if (releaseFrames > 0) releaseFrames.toDouble() else 1.0
 
         var absPos = ctx.voiceElapsedFrames
 

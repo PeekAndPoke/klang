@@ -54,6 +54,18 @@ class StdLibOscTest : StringSpec({
         dsl shouldBe IgnitorDsl.Freq
     }
 
+    "Osc.sine(Osc.freq().div(2)) produces Sine with halved Freq" {
+        val dsl = evalIgnitorDsl("Osc.sine(Osc.freq().div(2))")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
+        dsl.freq shouldBe IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
+    }
+
+    "Osc.sine(Osc.freq().mul(2)) produces Sine with doubled Freq" {
+        val dsl = evalIgnitorDsl("Osc.sine(Osc.freq().mul(2))")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
+        dsl.freq shouldBe IgnitorDsl.Mul(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
+    }
+
     "Osc.saw() returns Sawtooth" {
         evalIgnitorDsl("Osc.saw()").shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
     }

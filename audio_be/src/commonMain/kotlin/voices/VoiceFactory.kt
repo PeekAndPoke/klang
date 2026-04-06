@@ -21,6 +21,7 @@ import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.maxReleaseSec
 
 /**
  * Creates [Voice] instances from [ScheduledVoice] data.
@@ -189,12 +190,22 @@ class VoiceFactory(
         return when {
             isOsci -> {
                 val resolvedAdsr = data.adsr.resolve(AdsrEnvelope.defaultSynth)
+
+                // Extend voice lifetime to accommodate ignitor-level ADSR release if needed
+                val ignitorDsl = ignitorRegistry.get(sound ?: IgnitorRegistry.DEFAULT_SOUND)
+                val ignitorMaxRelease = ignitorDsl?.maxReleaseSec() ?: 0.0
+                val effectiveAdsr = if (ignitorMaxRelease > resolvedAdsr.release) {
+                    resolvedAdsr.copy(release = ignitorMaxRelease)
+                } else {
+                    resolvedAdsr
+                }
+
                 val voiceDurationFrames = gateEndFrame - startFrame
                 val signal = playbackCtx.ignitorRegistry.createExciter(sound, data, freqHz ?: 0.0)
                     ?: return null
 
                 buildVoice(
-                    data, resolvedAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
+                    data, effectiveAdsr, startFrame, gateEndFrame, voiceDurationFrames, cylinder,
                     gain, postGain, accelerate, vibrato, pitchEnvelope, bakedFilters, modulators,
                     delay, reverb, phaser, tremolo, ducking, compressor, distort, crush, coarse,
                     fm, signal, freqHz ?: 0.0,
