@@ -4,12 +4,20 @@ import io.peekandpoke.klang.sprudel.lang.initSprudelDsl
 import io.peekandpoke.klang.sprudel.ui.registerSprudelUiTools
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.utils.FullscreenController
+import io.peekandpoke.kraft.addons.browserdetect.browserDetect
+import io.peekandpoke.kraft.addons.marked.marked
+import io.peekandpoke.kraft.addons.registry.addons
 import io.peekandpoke.kraft.kraftApp
 import io.peekandpoke.kraft.semanticui.semanticUI
 import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
 
 val kraft = kraftApp {
     semanticUI()
+
+    addons {
+        browserDetect()
+        marked()
+    }
 
     routing {
         usePathStrategy()

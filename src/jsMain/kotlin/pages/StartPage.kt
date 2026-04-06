@@ -20,6 +20,9 @@ import io.peekandpoke.klang.sprudel.lang.rsize
 import io.peekandpoke.klang.sprudel.lang.sound
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.addons.browserdetect.BrowserDetect
+import io.peekandpoke.kraft.addons.browserdetect.BrowserDetectAddon
+import io.peekandpoke.kraft.addons.browserdetect.browserDetect
+import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.components.NoProps
 import io.peekandpoke.kraft.components.PureComponent
 import io.peekandpoke.kraft.components.comp
@@ -194,14 +197,19 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override fun getOpacity(): Double = 0.07
 
         override fun gotoNext() {
+            val addon = browserDetectAddon
+            if (addon == null) {
+                console.log("Browser detect addon still loading, please wait...")
+                return
+            }
             console.log("Starting flow: browser check")
-            state = StateBrowserCheck()
+            state = StateBrowserCheck(addon.forCurrentBrowser())
         }
     }
 
-    private inner class StateBrowserCheck : State {
-        private val platform = browserDetact.getPlatform()
-        private val browser = browserDetact.getBrowser()
+    private inner class StateBrowserCheck(detect: BrowserDetect) : State {
+        private val platform = detect.getPlatform()
+        private val browser = detect.getBrowser()
         private val isMobileDevice = platform.type == "mobile" || platform.type == "tablet"
         private val isChrome = browser.name.lowercase().contains("chrome") && !browser.name.lowercase().contains("edg")
         private var hasChecked = false
@@ -329,7 +337,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         borderRadius = 8.px
     }
 
-    private val browserDetact = BrowserDetect.forCurrentBrowser()
+    private val browserDetectAddon: BrowserDetectAddon? by subscribingTo(addons.browserDetect)
 
     /** Needed for ui updates */
     @Suppress("unused")

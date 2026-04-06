@@ -43,6 +43,10 @@ allprojects {
 
 kotlin {
     js {
+        compilerOptions {
+            target.set("es2015")
+        }
+
         browser {
             commonWebpackConfig {
                 devtool = "source-map"
@@ -104,11 +108,14 @@ kotlin {
 
         jvmMain {
             dependencies {
-                // GraalVM
+                // GraalVM (for playground / GraalSprudelCompiler)
                 implementation(Deps.JavaLibs.GraalVM.polyglot)
                 implementation(Deps.JavaLibs.GraalVM.js)
 
                 implementation(Deps.JavaLibs.logback_classic)
+
+                // CLI framework (needed by Cli.kt entry point)
+                implementation(Deps.KotlinLibs.clikt)
             }
         }
 
@@ -151,5 +158,16 @@ tasks {
     // This leaves the development server completely untouched!
     named<org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack>("jsBrowserProductionWebpack") {
         mainOutputFileName.set("klang-engine.[contenthash].js")
+    }
+
+    // CLI entry point (separate from the playground runJvm)
+    register<JavaExec>("runCli") {
+        group = "application"
+        description = "Run the Klang CLI"
+        mainClass.set("io.peekandpoke.klang.CliKt")
+
+        val jvmMain = kotlin.jvm().compilations["main"]
+        classpath = jvmMain.runtimeDependencyFiles + jvmMain.output.allOutputs
+        dependsOn("jvmMainClasses")
     }
 }

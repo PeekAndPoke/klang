@@ -25,15 +25,34 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.routing.Router.Companion.router
-import io.peekandpoke.kraft.utils.documentCtrl
 import io.peekandpoke.kraft.utils.launch
+import io.peekandpoke.kraft.utils.windowCtrl
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.ops.map
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Border
+import kotlinx.css.BorderStyle
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.Overflow
+import kotlinx.css.Padding
+import kotlinx.css.alignSelf
+import kotlinx.css.border
+import kotlinx.css.borderBottom
+import kotlinx.css.borderRadius
+import kotlinx.css.color
+import kotlinx.css.display
+import kotlinx.css.gap
+import kotlinx.css.marginBottom
+import kotlinx.css.marginTop
+import kotlinx.css.overflow
+import kotlinx.css.padding
+import kotlinx.css.px
+import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -102,7 +121,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     }
 
     @Suppress("unused")
-    private val hasFocus by subscribingTo(documentCtrl.hasFocus) {
+    private val hasFocus by subscribingTo(windowCtrl.hasFocus) {
         if (it) playback?.reemitVoiceSignals()
     }
 

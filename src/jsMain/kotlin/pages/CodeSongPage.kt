@@ -34,8 +34,8 @@ import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
-import io.peekandpoke.kraft.utils.documentCtrl
 import io.peekandpoke.kraft.utils.launch
+import io.peekandpoke.kraft.utils.windowCtrl
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -237,7 +237,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     }
 
     @Suppress("unused")
-    private val hasFocus by subscribingTo(documentCtrl.hasFocus) {
+    private val hasFocus by subscribingTo(windowCtrl.hasFocus) {
         if (it) playback?.reemitVoiceSignals()
     }
 

@@ -74,6 +74,7 @@ kotlin {
 
         jvmMain {
             dependencies {
+                implementation(Deps.KotlinLibs.clikt)
             }
         }
 

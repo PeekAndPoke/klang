@@ -35,9 +35,9 @@ val chordsAndHarmonyTutorial = Tutorial(
             code = """chord("<Am C F G>").voicing()
   .sound("supersaw").lpf(600)
   .adsr("0.1:0.3:0.7:0.5").gain(0.25)
+  .pan(0.15)
   // Now fold in some stereo width — superimpose + pan spreads the layers wide
-  .superimpose(transpose("12").pan(0.85))
-  .pan(0.15)""",
+  .superimpose(transpose("12").pan(0.85))""",
         ),
         TutorialSection(
             heading = "Putting It All Together",

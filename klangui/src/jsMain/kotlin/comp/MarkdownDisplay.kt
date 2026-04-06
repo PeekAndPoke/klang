@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.ui.comp
 
-import io.peekandpoke.kraft.addons.marked.markdown2html
+import io.peekandpoke.kraft.addons.marked.marked
+import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.utils.SimpleAsyncQueue
-import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.key
 import kotlinx.coroutines.delay
@@ -37,22 +37,22 @@ class MarkdownDisplay(ctx: Ctx<Props>) : Component<MarkdownDisplay.Props>(ctx) {
         val key: String,
     )
 
+
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private var md: String? by value(null)
+    private val marked by subscribingTo(addons.marked) {
+        q.add {
+            delay(1)
+            updateMd(props.markdown)
+        }
+    }
 
+    private var md: String? by value(null)
     private val q: SimpleAsyncQueue = SimpleAsyncQueue()
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     init {
-        launch {
-            q.add {
-                delay(1.milliseconds)
-                updateMd(props.markdown)
-            }
-        }
-
         lifecycle {
             onNextProps { new, _ ->
                 q.add {
@@ -64,9 +64,11 @@ class MarkdownDisplay(ctx: Ctx<Props>) : Component<MarkdownDisplay.Props>(ctx) {
     }
 
     private fun updateMd(markdown: String) {
+        val m = marked ?: return
+
         md = try {
             cache.getOrPut(markdown) {
-                markdown2html(markdown)
+                m.markdown2html(markdown)
             }
         } catch (e: Exception) {
             console.warn("Error rendering markdown:", e)

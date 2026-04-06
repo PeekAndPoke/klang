@@ -175,29 +175,31 @@ let tp = "[0 -1 -2 -3 -5  -2  1  3]/8".slow(stay) // <---- transposition ... wai
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("-3").scale("c4:chromatic").orbit(7).fast(2).transpose(tp)
-    .gain(1.0).distort(0.5).warmth(0.5).postgain("1.0 0.5!2".slow(stay)).hpf(4350).lpf(4450).pan(0.6) //.solo()
+    .gain(1.0).distort(0.5).warmth(0.5).postgain("0.8 0.1!2".slow(stay)).hpf(4350).lpf(4450).pan(0.6) //.solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(1).fast(4).scale("C3:chromatic").clip(0.90).hpf(500).lpf(4000).pan(0.4).notchf(800).transpose(tp).warmth(0.3)
-    .s("supersaw").unison(6).detune(0.02).gain(0.25).distort(saw.range(0.5, 0.8).slow(stay)).postgain(0.825) // .solo()
+    .s("supersaw").unison(6).detune(0.02).gain(0.25).distort(saw.range(0.5, 0.8).slow(stay)).postgain(0.8) // .solo()
     .adsr("0.01:0.2:0.66:0.03").filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(2).fast(4).scale("C4:chromatic").clip(0.90).hpf(800).lpf(5000).pan(0.6).notchf(1000).transpose(tp).warmth(0.3)
-    .s("supersaw").unison(6).detune(0.02).gain(0.25).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.65) // .solo()
+    .s("supersaw").unison(12).detune(0.02).gain(0.25).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.7) // .solo()
     .adsr("0.01:0.2:0.66:0.03").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").pan(0.3).hpf(120).lpf(2000).warmth(0.1)
+  ).orbit(3).fast(1).scale("C2:chromatic").pan(0.3).hpf(80).lpf(2000).warmth(0.1)
     .s("supersaw").unison(6).detune(0.07).gain("0.6 0.525 0.55 0.525")
-    .adsr("0.01:0.1:0.66:0.01").clip(1.01).distort("5").postgain(0.125)
-    .superimpose(x => x.orbit(4).pan(0.7).bandf("300 400 [300|400|600|800]*128".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.125))
-    .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
+    .adsr("0.01:0.1:0.5:0.01").clip(1.01).distort("5").postgain(0.125)
+    .superimpose(
+      x => x.orbit(4).pan(0.7).bandf("4000]*128".slow(stay)).bandq(saw.range(0.5, 1.5).slow(stay)).postgain(0.075).pan(0.4),
+      x => x.orbit(4).pan(0.7).bandf("220 330 [220|330|550|880|1100]*256".slow(stay)).bandq(saw.range(0.25, 1.0).slow(stay)).postgain(0.075).pan(0.6),
+    ).filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.075") // .solo()
   ,note("a").sound("brown").gain(0.05).crush(6) //.solo()
@@ -206,7 +208,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).orbit(5).adsr("0.01:0.8:0.7:1.5 0.015:0.125:0.4:1.5".slow(16)).gain(0.8).hpf(80).filterWhen(t => t % stay >= 4) // .solo()
+  ).orbit(5).adsr("0.01:0.8:0.7:1.5 0.015:0.125:0.4:1.5".slow(16)).gain(0.75).hpf(80).filterWhen(t => t % stay >= 4) // .solo()
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>")
     .orbit(6).adsr("0.01:0.2:0.8:1.5").gain("1.0".add(rand.range(-0.02, 0.02).segment(32))) // .solo()
@@ -242,7 +244,7 @@ stack( // Gitarre! -------------------------------------------------------------
 
 
 */
-    """ // A truth END
+        """ // A truth END
 
     val tetrisOriginal = """
                 stack(

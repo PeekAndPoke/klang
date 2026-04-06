@@ -31,8 +31,6 @@ object BuiltInSongs {
             rpm = 36.0,
             icon = "globe asia",
             code = """
-
-
 import * from "stdlib"
 import * from "sprudel"
 
@@ -49,7 +47,7 @@ let shaku = Osc.register("shaku", Osc.sine().mul(0.6)
       .plus(Osc.perlin(15).mul(0.05))
       .plus(Osc.perlin(20).mul(0.15).highpass(1000).adsr(0.03, 0.2, 0.03, 0.02))
       .lowpass(2500).highpass(300)
-      .analog(0.2).vibrato(8, 0.02)
+      .analog(0.2).vibrato(6, 0.02)
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.1, 0.15, 0.8, 0.3)
 )
@@ -98,8 +96,8 @@ stack(
     e4@2  ~  ~  ~  ~  a4 ~
     e5@2  ~  ~  c5@2  b4 a4
     c5@2  ~  ~  ~  ~  a4 ~
-    a5@2  ~  ~  e5@2  d4@2 
-    <[e4@2 e4@2 e4@2 e4@2] [e4 f4 [b4 a4] f4 e4@4] [a4@2 a3@2 a4@2 a3@2] [e5 f5 [b5 a5] f5 e5@4]>@8
+    a5@2  ~  ~  e5@2  d5@2 
+    <[e4@2 ~ ~ e4@2 ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@2 ~ ~ a4@2 ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
   `).sound(shaku).legato(1.0).slow(14).gain(0.175).adsr("0.05:0.1:1:0.2")
     .filterWhen(x => x >= wait * 2)
 
@@ -132,6 +130,7 @@ stack(
             
             
             
+            
             """    // END: Sakura
         )
     )
@@ -142,9 +141,6 @@ stack(
             title = "Sound of the sea",
             rpm = 30.0,
             code = """
-
-
-
 
 
 
