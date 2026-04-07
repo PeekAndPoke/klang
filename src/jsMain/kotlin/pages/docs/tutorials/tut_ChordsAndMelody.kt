@@ -22,7 +22,7 @@ val chordsAndMelodyTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Add a Melody on Top",
-            text = "A melody works best when it uses notes from the same key as your chords. Am, F, C, G all live in the key of A minor. A pentatonic melody in A minor will always sound good over these chords — it is the chef's secret: ingredients that match.",
+            text = "A melody works best when it uses notes from the same key as your chords. Am, F, C, G all live in the key of A minor. A pentatonic melody in A minor will always sound good over these chords — it is the sculptor's secret: shapes that fit together.",
             code = """stack(
   chord("<Am F C G>").voicing()
     .sound("supersaw").lpf(400)
@@ -37,7 +37,7 @@ val chordsAndMelodyTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Give Them Space",
-            text = "When chords and melody fight for the same frequency range, things get muddy. Keep chords low and filtered, melody higher and brighter. Pan them apart slightly. Think of it like plating a dish — each element needs its own space on the plate.",
+            text = "When chords and melody fight for the same frequency range, things get muddy. Keep chords low and filtered, melody higher and brighter. Pan them apart slightly. Think of it like arranging a sculpture — each element needs its own space to breathe.",
             code = """stack(
   chord("<Am F C G>").voicing()
     .sound("supersaw").lpf(350)
@@ -54,7 +54,7 @@ val chordsAndMelodyTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Putting It All Together",
-            text = "Here is the full dish: warm chords on the left with reverb, a bright melody on the right with a touch of delay, and drums holding everything together in the center. Each ingredient has its place — that is arrangement.",
+            text = "Here is the finished piece: warm chords on the left with reverb, a bright melody on the right with a touch of delay, and drums holding everything together in the center. Every element has its place — that is arrangement.",
             code = """stack(
   chord("<Am F C G>").voicing()
     .sound("supersaw").lpf(350)

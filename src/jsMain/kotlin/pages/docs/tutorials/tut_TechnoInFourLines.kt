@@ -9,8 +9,8 @@ val technoInFourLinesTutorial = Tutorial(
     tags = listOf(TutorialTag.Genre, TutorialTag.Rhythm),
     sections = listOf(
         TutorialSection(
-            heading = "The Recipe",
-            text = "Techno is about relentless forward motion from minimal ingredients. A four-on-the-floor kick, sizzling hi-hats, a rumbling bass, and one hypnotic element on top. Four lines. No filler. Every sound earns its place.",
+            heading = "The Blueprint",
+            text = "Techno is about relentless forward motion from minimal material. A four-on-the-floor kick, sizzling hi-hats, a rumbling bass, and one hypnotic element on top. Four lines. No filler. Every sound earns its place.",
             code = """stack(
   // The heartbeat: four kicks, no mercy
   sound("[bd bd bd bd]").gain(0.9),

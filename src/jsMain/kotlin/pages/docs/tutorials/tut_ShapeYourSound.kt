@@ -25,7 +25,7 @@ val shapeYourSoundTutorial = Tutorial(
             text = "Every note has a shape over time: how fast it fades in (attack), drops to a sustain level (decay and sustain), and fades out (release). The adsr() function controls all four as a string — \"attack:decay:sustain:release\" in seconds. A slow attack creates a pad feel. A short attack with quick decay creates a pluck.",
             code = """n("0 2 4 6 7 6 4 2").scale("C3:minor")
   .sound("saw").lpf(800)
-  // Taste this: attack, decay, sustain, release — the recipe for every note's texture
+  // Feel this: attack, decay, sustain, release — the mold for every note's texture
   .adsr("0.3:0.2:0.6:0.5").gain(0.4)""",
         ),
         TutorialSection(
@@ -34,7 +34,7 @@ val shapeYourSoundTutorial = Tutorial(
             code = """n("0 2 4 6 7 6 4 2").scale("C3:minor")
   .sound("saw").lpf(800)
   .adsr("0.3:0.2:0.6:0.5")
-  // Chef's kiss: a pinch of reverb for warmth, rsize sets the dining room
+  // Final polish: a pinch of reverb for warmth, rsize sets the gallery size
   .room(0.3).rsize(5.0).gain(0.4)""",
         ),
         TutorialSection(

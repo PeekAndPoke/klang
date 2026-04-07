@@ -44,7 +44,7 @@ val ambientOrbitsTutorial = Tutorial(
     .sound("supersaw").lpf(400).legato(2)
     .adsr("0.5:0.5:0.8:1.0")
     .room(0.3).rsize(8.0)
-    // Voila: orbit(1) keeps the reverb sauce separate from the dry sub
+    // Notice: orbit(1) keeps the wet reverb separate from the dry sub
     .orbit(1).gain(0.2)
 )""",
         ),

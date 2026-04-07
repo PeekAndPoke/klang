@@ -27,7 +27,7 @@ val livePerformanceTutorial = Tutorial(
             code = """n("0 2 4 7 6 4 2 0").scale("C3:minor")
   .sound("saw").lpf(800)
   .adsr("0.01:0.1:0.5:0.2").gain(0.3)
-  // Voila: superimpose plates the melody with an octave garnish on top
+  // Watch: superimpose layers the melody with an octave relief on top
   .superimpose(transpose("12").pan(0.8))
   .pan(0.2).orbit(0)""",
         ),

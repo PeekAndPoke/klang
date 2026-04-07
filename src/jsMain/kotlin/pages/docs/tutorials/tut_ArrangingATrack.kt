@@ -14,7 +14,7 @@ val arrangingATrackTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Arrange Basics",
-            text = "The arrange() function takes pairs: a number of cycles and a pattern. Each pair plays for that many cycles before moving to the next. When it reaches the end, it loops back. Think of it as a recipe card: play this for 4 cycles, then that for 4 cycles.",
+            text = "The arrange() function takes pairs: a number of cycles and a pattern. Each pair plays for that many cycles before moving to the next. When it reaches the end, it loops back. Think of it as a blueprint: play this for 4 cycles, then that for 4 cycles.",
             code = """// Watch: 4 cycles kick only, then 4 cycles full beat
 arrange(
   4, sound("bd ~ bd ~"),
@@ -32,7 +32,7 @@ arrange(
     sound("bd ~ bd ~"),
     sound("hh hh hh hh").gain(0.5)
   ),
-  // Main dish: the full beat arrives
+  // The full form emerges: the complete beat arrives
   4, stack(
     sound("bd ~ bd ~"),
     sound("~ sd ~ sd"),

@@ -10,7 +10,7 @@ val filterPlaygroundTutorial = Tutorial(
     sections = listOf(
         TutorialSection(
             heading = "Introduction",
-            text = "Filters are the salt and pepper of sound design. They do not add anything new — they remove frequencies to reveal the character hiding inside a sound. You already know lpf() from earlier tutorials. Now meet its siblings: hpf() and bandf(). Together these three filters can transform any sound from raw ingredient to finished dish.",
+            text = "Filters are the sculptor's chisels. They do not add anything new — they remove frequencies to reveal the character hiding inside a sound. You already know lpf() from earlier tutorials. Now meet its siblings: hpf() and bandf(). Together these three filters can transform any sound from rough stone to polished form.",
         ),
         TutorialSection(
             heading = "Low-Pass: Keep the Warmth",
@@ -38,7 +38,7 @@ val filterPlaygroundTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Filter Per Layer",
-            text = "The real power comes from giving each layer its own filter. Bass gets lpf to stay warm, melody gets hpf to stay bright, pads get bandf for a mid-range bed. Like assigning each ingredient its own cooking method — each one brings out a different flavor.",
+            text = "The real power comes from giving each layer its own filter. Bass gets lpf to stay warm, melody gets hpf to stay bright, pads get bandf for a mid-range bed. Like a sculptor using different chisels for different surfaces — each tool reveals a different texture.",
             code = """stack(
   // The foundation: warm and deep
   n("0 ~ 0 ~").scale("C2:minor")

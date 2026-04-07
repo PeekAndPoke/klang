@@ -10,7 +10,7 @@ val noiseAsInstrumentTutorial = Tutorial(
     sections = listOf(
         TutorialSection(
             heading = "Introduction",
-            text = "Most people think of noise as something to avoid. But in sound design, noise is a secret weapon. Brown noise is deep and rumbly like ocean waves. Pink noise is balanced and warm like rain on a window. With the right filters and envelopes, noise becomes percussion, atmosphere, and even melody. Time to cook with raw ingredients.",
+            text = "Most people think of noise as something to avoid. But in sound design, noise is a secret weapon. Brown noise is deep and rumbly like ocean waves. Pink noise is balanced and warm like rain on a window. With the right filters and envelopes, noise becomes percussion, atmosphere, and even melody. Time to sculpt with raw material.",
         ),
         TutorialSection(
             heading = "Brown Noise — Deep and Warm",
@@ -28,7 +28,7 @@ sound("pink")
         ),
         TutorialSection(
             heading = "Noise as Percussion",
-            text = "Noise with a short adsr becomes percussion. A sharp attack with quick decay turns pink noise into a snare-like hit. Band-pass it at different frequencies to create different timbres — low for toms, mid for snares, high for hats. All from the same ingredient.",
+            text = "Noise with a short adsr becomes percussion. A sharp attack with quick decay turns pink noise into a snare-like hit. Band-pass it at different frequencies to create different timbres — low for toms, mid for snares, high for hats. All carved from the same raw material.",
             code = """stack(
   // Low thump — like a hand drum
   sound("brown")

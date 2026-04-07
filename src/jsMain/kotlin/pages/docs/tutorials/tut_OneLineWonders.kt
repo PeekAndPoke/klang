@@ -25,7 +25,7 @@ n("<[0 2 4 7] [7 4 2 0]>")
         TutorialSection(
             heading = "Self-Accompanying Chords",
             text = "One chord() line with the right combination of voicing, jux, and every creates a full harmonic landscape — rhythm, width, and variation from a single expression. The line plays itself.",
-            code = """// One ingredient, five flavors
+            code = """// One block of stone, five faces
 chord("<Am7 Fmaj7 Cmaj7 G7>").voicing()
   .sound("supersaw").lpf(400)
   .adsr("0.15:0.3:0.7:0.5")

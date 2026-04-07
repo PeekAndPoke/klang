@@ -30,7 +30,7 @@ val patternsInMotionTutorial = Tutorial(
             text = "The jux() function is pure stereo magic. It takes your pattern, applies a transformation to a copy, and plays the original in one ear and the transformed version in the other. Put on headphones and hit play — you will hear the melody moving between left and right.",
             code = """n("0 2 4 6 7 6 4 2").scale("C4:minor")
   .sound("saw").lpf(800).gain(0.3)
-  // Try: jux splits the dish — original on the left, slow-roasted copy on the right
+  // Try: jux splits the piece — original on the left, stretched copy on the right
   .jux(slow(2))""",
         ),
         TutorialSection(

@@ -10,9 +10,22 @@ import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
-import io.peekandpoke.klang.sprudel.lang.*
-import io.peekandpoke.klang.sprudel.pattern.*
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
+import io.peekandpoke.klang.sprudel.lang.VoiceMergerFn
+import io.peekandpoke.klang.sprudel.lang.VoiceModifierFn
+import io.peekandpoke.klang.sprudel.lang.applyControl
+import io.peekandpoke.klang.sprudel.lang.silence
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
+import io.peekandpoke.klang.sprudel.lang.toPattern
+import io.peekandpoke.klang.sprudel.pattern.BindPattern
+import io.peekandpoke.klang.sprudel.pattern.ContextRangeMapPattern
+import io.peekandpoke.klang.sprudel.pattern.FastGapPattern
+import io.peekandpoke.klang.sprudel.pattern.MapPattern
+import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
+import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.klang.sprudel.pattern.StackPattern
+import io.peekandpoke.klang.sprudel.pattern.StaticSprudelPattern
 import io.peekandpoke.ultra.datetime.Kronos
 import kotlin.jvm.JvmName
 import kotlin.random.Random
@@ -27,7 +40,7 @@ import kotlin.random.Random
 interface SprudelPattern : KlangPattern {
     companion object {
         /** Small epsilon value for point queries (sampling control patterns at a specific time) */
-        val QUERY_EPSILON = 1e-6.toRational()
+        val QUERY_EPSILON = 1e-7.toRational()
 
         /**
          * Compile Sprudel code using a raw KlangScript engine (no pre-imported libraries).

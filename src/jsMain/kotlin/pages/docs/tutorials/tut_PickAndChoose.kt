@@ -14,8 +14,8 @@ val pickAndChooseTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Rapid Sequencing with fastcat()",
-            text = "You know cat() squeezes patterns into one cycle. fastcat() does the same thing — it plays each pattern back to back, dividing the cycle equally. Think of it as a tasting flight: every flavor in quick succession.",
-            code = """// A tasting flight of four drum patterns
+            text = "You know cat() squeezes patterns into one cycle. fastcat() does the same thing — it plays each pattern back to back, dividing the cycle equally. Think of it as a quick sketch: every shape in rapid succession.",
+            code = """// A quick sketch of four drum patterns
 fastcat(
   sound("bd hh"),
   sound("sd cp"),
@@ -25,7 +25,7 @@ fastcat(
         ),
         TutorialSection(
             heading = "Select with pick()",
-            text = "The pick() function chooses from a list of options based on an index. Give it a number pattern and a list of sounds — it picks the matching one each time. Like a chef's tasting menu where the number card tells the kitchen which dish to serve.",
+            text = "The pick() function chooses from a list of options based on an index. Give it a number pattern and a list of sounds — it picks the matching one each time. Like a sculptor's toolbelt where the number tells you which chisel to grab next.",
             code = """// Watch: each number picks a different sample
 sound("bd hh sd cp").pick(0, 1, 2, 3)""",
         ),
@@ -42,7 +42,7 @@ sound("bd hh sd cp").pick(0, 1, 2, 3)""",
             heading = "Putting It All Together",
             text = "Here is a generative groove that uses fastcat() to rapidly cycle through drum variations while the melody alternates between phrases. The bass holds steady underneath. Every element is curated but the combination creates something that feels alive and unpredictable.",
             code = """stack(
-  // Rapid-fire drum variations — a new flavor every half-cycle
+  // Rapid-fire drum variations — a new face every half-cycle
   fastcat(
     sound("bd hh sd hh"),
     sound("bd [hh hh] sd cp"),

@@ -12,7 +12,7 @@ val everyTrickTutorial = Tutorial(
             heading = "Layer the Rules",
             text = "You already know every() applies a change on every Nth cycle. But you can chain multiple every() calls on the same pattern. Each rule fires on its own cycle count. The result is a pattern that shifts in multiple ways at different intervals — it sounds composed, but you only wrote rules.",
             code = """sound("bd hh sd hh")
-  // Watch: two cooks in the kitchen — each stirs on their own beat
+  // Watch: two sculptors sharing the same block — each carves on their own beat
   .every(4, fast(2))
   .every(3, crush(4))""",
         ),
@@ -39,7 +39,7 @@ val everyTrickTutorial = Tutorial(
   n("0 2 4 7 6 4 2 0").scale("C3:minor")
     .sound("saw").lpf(700)
     .adsr("0.01:0.1:0.5:0.2").gain(0.3)
-    // Slow-roast: the melody stretches every 4th cycle
+    // Stretch: the melody unfolds every 4th cycle
     .every(4, slow(2)).orbit(1)
 )""",
         ),

@@ -44,7 +44,7 @@ val generativeMachineTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Controlled Chaos with every()",
-            text = "Pure randomness gets tiring. The trick is mixing order and chaos. Use every() to apply scramble only on certain cycles — the pattern plays normally most of the time, then surprise. Like a disciplined chef who occasionally throws in a wild ingredient.",
+            text = "Pure randomness gets tiring. The trick is mixing order and chaos. Use every() to apply scramble only on certain cycles — the pattern plays normally most of the time, then surprise. Like a disciplined sculptor who occasionally lets the chisel slip — on purpose.",
             code = """n("0 2 4 7 6 4 2 0").scale("C3:dorian")
   .sound("saw").lpf(700)
   .adsr("0.01:0.1:0.5:0.2")

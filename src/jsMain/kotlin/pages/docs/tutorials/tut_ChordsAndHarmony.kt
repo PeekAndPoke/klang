@@ -16,7 +16,7 @@ val chordsAndHarmonyTutorial = Tutorial(
             heading = "Your First Chord Progression",
             text = "The chord() function takes chord names like Am, C, D, F. But chord() alone just defines the harmony — you need voicing() to turn it into actual notes. The voicing function picks the right pitches and spreads them across the keyboard. Try changing the chord names.",
             code = """chord("<Am C F G>")
-  // Voila: voicing turns the names into real notes — from recipe to plate
+  // Watch: voicing turns the names into real notes — from sketch to sculpture
   .voicing().sound("supersaw").lpf(600)
   .adsr("0.1:0.3:0.7:0.5").gain(0.3)""",
         ),
@@ -26,7 +26,7 @@ val chordsAndHarmonyTutorial = Tutorial(
             code = """chord("<Am C F G>").voicing()
   .sound("supersaw").lpf(600)
   .adsr("0.1:0.3:0.7:0.5").gain(0.25)
-  // Watch: superimpose layers a transposed copy on top, like stacking flavors
+  // Watch: superimpose layers a transposed copy on top, like adding a relief
   .superimpose(transpose("12"))""",
         ),
         TutorialSection(

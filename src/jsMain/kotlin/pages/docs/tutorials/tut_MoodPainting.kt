@@ -12,7 +12,7 @@ val moodPaintingTutorial = Tutorial(
             heading = "One Pattern, Many Moods",
             text = "The same sequence of numbers sounds completely different depending on the scale. Hit play, then change \"minor\" to \"dorian\", \"blues\", \"pentatonic\", or \"mixolydian\". Same numbers, totally different vibe. Scales are emotional palettes — pick the mood, and the notes follow.",
             code = """n("0 2 4 5 7 5 4 2")
-  // Try: swap the scale like swapping spices — same dish, whole new flavor
+  // Try: swap the scale like changing the grain — same block, whole new figure
   .scale("C3:minor")
   .sound("saw").lpf(800).gain(0.4)""",
         ),

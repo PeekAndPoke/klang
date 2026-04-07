@@ -22,7 +22,7 @@ val soundDesignPlaygroundTutorial = Tutorial(
             text = "Combine crush() with a filter to tame the harshness. Low crush values create that classic chiptune sound. The lpf() after crush smooths out the digital edges while keeping the grit.",
             code = """n("0 2 4 7").scale("C3:minor")
   .sound("square")
-  // Try: crush for raw grit, then lpf to smooth the edges — rustic plating
+  // Try: crush for raw grit, then lpf to smooth the edges — rough-hewn then sanded
   .crush(4).lpf(1200).gain(0.4)""",
         ),
         TutorialSection(

@@ -16,11 +16,11 @@ sound("bd sd bd sd").fast(2)""",
         ),
         TutorialSection(
             heading = "Half Time with slow()",
-            text = "The slow() function does the opposite — it stretches a pattern across more cycles. slow(2) means the pattern takes two full cycles to complete. It is like slow-cooking: same ingredients, more time, deeper flavor.",
+            text = "The slow() function does the opposite — it stretches a pattern across more cycles. slow(2) means the pattern takes two full cycles to complete. It is like working in clay: same material, more time, finer detail.",
             code = """// Let it breathe: the melody unfolds across two cycles
 n("0 2 4 7 6 4 2 0").scale("C3:minor")
   .sound("saw").lpf(800)
-  // Slow-roasted: stretched across 2 cycles
+  // Smoothed out: stretched across 2 cycles
   .slow(2).gain(0.4)""",
         ),
         TutorialSection(

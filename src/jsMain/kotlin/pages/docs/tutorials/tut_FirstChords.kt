@@ -14,9 +14,9 @@ val firstChordsTutorial = Tutorial(
         ),
         TutorialSection(
             heading = "Name It and Play It",
-            text = "The chord() function takes chord names you might recognize — Am, C, F, G. But chord() alone is just a label. You need voicing() to turn those names into actual notes the engine can play. Think of it like ordering from a menu: chord() is the name, voicing() is the chef preparing it.",
+            text = "The chord() function takes chord names you might recognize — Am, C, F, G. But chord() alone is just a label. You need voicing() to turn those names into actual notes the engine can play. Think of it like ordering from a menu: chord() is the blueprint, voicing() is the sculptor shaping it from the block.",
             code = """chord("<Am C F G>")
-  // Voila: voicing turns the names into real notes
+  // Watch: voicing turns the names into real notes
   .voicing()
   .sound("supersaw").lpf(500)
   .gain(0.25)""",

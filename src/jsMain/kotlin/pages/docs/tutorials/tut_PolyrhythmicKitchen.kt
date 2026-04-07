@@ -1,8 +1,8 @@
 package io.peekandpoke.klang.pages.docs.tutorials
 
-val polyrhythmicKitchenTutorial = Tutorial(
-    slug = "polyrhythmic-kitchen",
-    title = "Polyrhythmic Kitchen",
+val polyrhythmicWorkshopTutorial = Tutorial(
+    slug = "polyrhythmic-workshop",
+    title = "Polyrhythmic Workshop",
     description = "Layer competing rhythms using subdivisions, spread, and pick to build grooves that phase and evolve.",
     difficulty = TutorialDifficulty.Pro,
     scope = TutorialScope.Standard,
@@ -29,7 +29,7 @@ val polyrhythmicKitchenTutorial = Tutorial(
             heading = "Spread Values Across Events",
             text = "The spread() function distributes a range of values across events in your pattern. Here it fans gain values from soft to loud across four hi-hats, creating a dynamic accent pattern that cycles. Each hit gets a different volume, making the rhythm feel human.",
             code = """sound("hh hh hh hh")
-  // Watch: spread portions out the values — each hit gets its own serving
+  // Watch: spread distributes the values — each hit gets its own weight
   .gain(spread(0.3, 0.5, 0.7, 1.0))""",
         ),
         TutorialSection(

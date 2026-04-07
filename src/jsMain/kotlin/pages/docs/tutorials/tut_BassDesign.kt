@@ -10,12 +10,12 @@ val bassDesignTutorial = Tutorial(
     sections = listOf(
         TutorialSection(
             heading = "Introduction",
-            text = "Bass is the foundation of any track. But not all bass is the same — a sub bass feels different from an acid line, which feels different from a wobble. In this tutorial you design four classic bass sounds from scratch using the same building blocks: waveforms, filters, and envelopes. Same kitchen, different recipes.",
+            text = "Bass is the foundation of any track. But not all bass is the same — a sub bass feels different from an acid line, which feels different from a wobble. In this tutorial you design four classic bass sounds from scratch using the same building blocks: waveforms, filters, and envelopes. Same block of wood, different sculptures.",
         ),
         TutorialSection(
             heading = "Sub Bass — Pure and Deep",
             text = "The sub bass is the simplest: a sine wave in a low octave. No filter needed because sine has no harmonics to filter. Keep it clean, keep it low. You feel it more than you hear it. This is the bedrock everything else sits on.",
-            code = """// The deepest ingredient: pure sine, felt in the chest
+            code = """// The deepest layer: pure sine, felt in the chest
 n("0 ~ 0 ~").scale("C2:minor")
   .sound("sine")
   .adsr("0.01:0.1:0.9:0.1")
@@ -24,7 +24,7 @@ n("0 ~ 0 ~").scale("C2:minor")
         TutorialSection(
             heading = "Acid Bass — Squelchy and Alive",
             text = "The acid bass is a square wave with a tight low-pass filter and short decay. The magic is in the envelope — a fast attack with quick decay creates that classic squelchy, bubbling sound. Lower the filter for more mumble, raise it for more bite.",
-            code = """// The acid recipe: square + tight filter + fast envelope
+            code = """// The acid formula: square + tight filter + fast envelope
 n("0 0 [0 3] 0").scale("C2:minor")
   .sound("square")
   .lpf(400)
@@ -42,8 +42,8 @@ n("0 3 5 0").scale("C2:minor")
         ),
         TutorialSection(
             heading = "Dirty Bass — Warm Distortion",
-            text = "Take any bass sound and add distort() for warmth and grit. Low distortion values add subtle harmonics that help bass cut through a mix on small speakers. Higher values create aggressive, growling tones. A dash of distortion is like toasting bread — it brings out the flavor.",
-            code = """// Toast it: distortion adds warmth and presence
+            text = "Take any bass sound and add distort() for warmth and grit. Low distortion values add subtle harmonics that help bass cut through a mix on small speakers. Higher values create aggressive, growling tones. A dash of distortion is like roughing up the surface — it brings out the character.",
+            code = """// Rough it up: distortion adds warmth and presence
 n("0 ~ 0 3").scale("C2:minor")
   .sound("saw").lpf(500)
   .adsr("0.01:0.15:0.7:0.1")

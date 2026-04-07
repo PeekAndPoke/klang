@@ -43,7 +43,7 @@ sound("bd ~ bd ~")""",
             code = """stack(
   sound("bd ~ bd ~"),
   sound("~ sd ~ sd"),
-  // A pinch of rim for spice
+  // A sliver of rim for detail
   sound("~ rim ~ rim").gain(0.3),
   sound("hh hh hh hh").gain(0.5)
 )""",

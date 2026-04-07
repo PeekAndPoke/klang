@@ -24,7 +24,7 @@ val rhythmicDelaysTutorial = Tutorial(
             heading = "Dotted Delays",
             text = "Straight delay times line up with the beat — predictable. Dotted delays use slightly off-grid timing, creating a bouncing, syncopated feel. Try 0.33 (roughly a dotted eighth) instead of 0.25. The echoes weave between the beats instead of landing on them.",
             code = """sound("cp ~ ~ ~")
-  // Feel: 0.33 is a dotted delay — off-grid, like a chef who plates slightly askew on purpose
+  // Feel: 0.33 is a dotted delay — off-grid, like a sculptor who tilts the piece slightly off-center
   .delay(1).delaytime(0.33).delayfeedback(0.5)
   .gain(0.6)""",
         ),
@@ -33,7 +33,7 @@ val rhythmicDelaysTutorial = Tutorial(
             text = "Delay on a melody creates cascading echoes — each note trails behind the next. With the right feedback, a simple four-note phrase becomes a shimmering cloud of overlapping pitches. Lower the feedback for subtle trails, raise it for dense textures.",
             code = """n("0 ~ 4 ~").scale("C4:minor")
   .sound("sine")
-  // Watch: the delay spices up every note into cascading echo trails
+  // Watch: the delay extends every note into cascading echo trails
   .delay(1).delaytime(0.33).delayfeedback(0.5)
   .room(0.15).rsize(4.0).gain(0.4)""",
         ),
@@ -49,7 +49,7 @@ val rhythmicDelaysTutorial = Tutorial(
             heading = "Delay as a Rhythm Generator",
             text = "Here is the real trick: use a very sparse pattern with high feedback. The delay creates the rhythm for you. One hit per cycle becomes a complex repeating figure. Change the delaytime to reshape the entire groove without touching the pattern.",
             code = """stack(
-  // Look: one sparse hit + generous feedback = the delay cooks up the whole rhythm
+  // Look: one sparse hit + generous feedback = the delay carves out the whole rhythm
   sound("rim ~ ~ ~")
     .delay(1).delaytime(0.166).delayfeedback(0.7)
     .gain(0.5).orbit(0),

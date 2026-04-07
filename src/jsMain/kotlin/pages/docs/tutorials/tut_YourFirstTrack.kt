@@ -79,7 +79,7 @@ val yourFirstTrackTutorial = Tutorial(
   n("<0 3 5 3>").scale("C3:minor")
     .sound("supersaw").lpf(400)
     .adsr("0.3:0.3:0.7:0.5")
-    // Chef's kiss: a drizzle of reverb warms this pad right up
+    // Final polish: a touch of reverb warms this pad right up
     .room(0.2).rsize(5.0)
     .gain(0.15).orbit(3)
 )""",

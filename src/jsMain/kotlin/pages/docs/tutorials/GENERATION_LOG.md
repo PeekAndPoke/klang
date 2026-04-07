@@ -12,7 +12,7 @@
 | build-a-song            | Build a Song              | Intermediate | Standard | arrangement, song-structure, sequencing                     |
 | mood-painting           | Mood Painting with Scales | Advanced     | Quick    | scales, mood, music-theory                                  |
 | ambient-orbits          | Ambient Orbits            | Advanced     | DeepDive | ambient, orbits, mixing, frequency                          |
-| polyrhythmic-kitchen    | Polyrhythmic Kitchen      | Pro          | Standard | polyrhythm, subdivision, groove, advanced-rhythm            |
+| polyrhythmic-workshop   | Polyrhythmic Workshop     | Pro          | Standard | polyrhythm, subdivision, groove, advanced-rhythm            |
 | left-right-center       | Left, Right, Center       | Intermediate | Quick    | panning, stereo, spatial                                    |
 | rhythmic-delays         | Rhythmic Delays           | Intermediate | DeepDive | delay, rhythm, creative-effects, echo                       |
 | waveform-explorer       | Waveform Explorer         | Beginner     | Standard | waveforms, synthesis, sound-palette                         |

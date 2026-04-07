@@ -13,7 +13,7 @@ val transposeItTutorial = Tutorial(
             text = "The transpose() function moves every note up or down by a number of semitones. Transpose by 12 to go up one octave, by -12 to go down. Transpose by 7 for a fifth. Try different numbers to hear how the same melody sounds at different pitches.",
             code = """n("0 2 4 7").scale("C4:minor")
   .sound("saw").lpf(800).gain(0.3)
-  // Look: transpose lifts the whole melody — like raising a dish to the top shelf
+  // Look: transpose lifts the whole melody — like placing the sculpture on a higher pedestal
   .transpose("12")""",
         ),
         TutorialSection(

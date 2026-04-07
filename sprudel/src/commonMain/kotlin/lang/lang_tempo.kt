@@ -4,12 +4,27 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel.TimeSpan
+import io.peekandpoke.klang.sprudel._bind
+import io.peekandpoke.klang.sprudel._bindSqueeze
+import io.peekandpoke.klang.sprudel._innerJoin
+import io.peekandpoke.klang.sprudel._liftNumericField
+import io.peekandpoke.klang.sprudel._withHapSpan
+import io.peekandpoke.klang.sprudel._withHapTime
+import io.peekandpoke.klang.sprudel._withQuerySpan
+import io.peekandpoke.klang.sprudel._withQueryTime
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.lang.addons.lateInCycle
-import io.peekandpoke.klang.sprudel.lang.addons.stretchBy
-import io.peekandpoke.klang.sprudel.pattern.*
+import io.peekandpoke.klang.sprudel.mapEvents
+import io.peekandpoke.klang.sprudel.pattern.AtomicInfinitePattern
+import io.peekandpoke.klang.sprudel.pattern.ControlValueProvider
+import io.peekandpoke.klang.sprudel.pattern.FastGapPattern
+import io.peekandpoke.klang.sprudel.pattern.ReversePattern
+import io.peekandpoke.klang.sprudel.pattern.SequencePattern
+import io.peekandpoke.klang.sprudel.pattern.SwingPattern
+import io.peekandpoke.klang.sprudel.pattern.TimeShiftPattern
+import io.peekandpoke.klang.sprudel.withSteps
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -1325,18 +1340,7 @@ fun applySwingBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): Spru
         val swingValue = swing?.asRational ?: return@_innerJoin silence
         val nVal = n?.asRational ?: Rational.ONE
 
-        val timing = seq(Rational.ZERO, swingValue / 2)
-        val stretch = seq(Rational.ONE + swingValue, Rational.ONE - swingValue)
-
-        val transform: PatternMapperFn = { innerPat ->
-            if (swingValue >= Rational.ZERO) {
-                innerPat.lateInCycle(timing).stretchBy(stretch)
-            } else {
-                innerPat.stretchBy(stretch).lateInCycle(timing)
-            }
-        }
-
-        source.inside(nVal, transform)
+        SwingPattern(source = source, swing = swingValue, n = nVal)
     }
 }
 
