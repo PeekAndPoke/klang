@@ -16,7 +16,7 @@ val patternsInMotionTutorial = Tutorial(
         TutorialSection(
             heading = "Flip It with rev()",
             text = "The simplest trick: play your pattern backwards. rev() reverses the order of events. A melody that goes up now goes down. A drum pattern that leads with a kick now leads with a snare. Hit play, then remove rev() to hear the difference.",
-            code = """// Flip — same notes, completely different feel
+            code = """// Turn the sculpture around — same shape, new perspective
 n("0 2 4 7 6 4 2 0").scale("C4:minor")
   .sound("saw").lpf(1000).gain(0.3)
   .rev()""",
@@ -24,7 +24,7 @@ n("0 2 4 7 6 4 2 0").scale("C4:minor")
         TutorialSection(
             heading = "Surprise Fills with every()",
             text = "Here is where live coding gets magical. every(n, fn) applies a change only on every Nth cycle. The pattern plays normally most of the time, then BAM — a fill, a speed-up, a reversal. You design the rule, the pattern plays itself.",
-            code = """// Every 4th cycle the hats go double speed — an automatic fill
+            code = """// Chisel a surprise into every 4th cycle — the hats go wild
 stack(
   sound("bd sd bd sd").gain(0.7),
   sound("hh hh hh hh")
@@ -34,13 +34,13 @@ stack(
         TutorialSection(
             heading = "Rotating Rhythms with iter()",
             text = "iter(n) rotates where the pattern starts. On cycle 1 it plays normally, cycle 2 starts from the second note, cycle 3 from the third. The same four sounds create four different grooves. Listen for how the kick moves around.",
-            code = """// Same four sounds, four different grooves — iter rotates the start
+            code = """// Watch the groove shift — same four sounds, four different angles
 sound("bd sd ~ cp").iter(4).gain(0.7)""",
         ),
         TutorialSection(
             heading = "Instant Harmony with off()",
             text = "off(time, fn) takes your pattern, shifts a copy in time, and transforms it. In this example, a copy of the melody is offset by an eighth note and transposed up by 7 scale degrees. One line of code gives you a two-voice harmony that plays itself.",
-            code = """// One melody becomes two — the copy arrives a moment later, transposed
+            code = """// Carve a second voice from the first — offset and transposed
 n("0 -3 2 0 4 0 2 4").slow(4)
   .scale("C4:minor").sound("saw")
   .lpf(1000).gain(0.3)
@@ -49,7 +49,7 @@ n("0 -3 2 0 4 0 2 4").slow(4)
         TutorialSection(
             heading = "Stereo Split with jux()",
             text = "jux(fn) is pure stereo magic. It plays the original in one ear and a transformed copy in the other. Put on headphones — you will hear the melody forward on the left and reversed on the right. Two performances from one pattern.",
-            code = """// Left ear: forward. Right ear: reversed. One line of code.
+            code = """// Split the stone in two — forward on the left, reversed on the right
 n("0 -3 2 0 4 0 2 4").slow(4)
   .scale("C4:minor").sound("saw")
   .lpf(1000).gain(0.3)
@@ -57,12 +57,12 @@ n("0 -3 2 0 4 0 2 4").slow(4)
         ),
         TutorialSection(
             heading = "Putting It Together",
-            text = "Here is the full track where every layer has its own motion. The drums rotate with iter(). The hi-hats fill every 4th cycle with alternating crashes. The bass doubles speed every 3rd cycle. The melody has an off() harmony AND a jux() stereo split — forward on the left, reversed on the right. Nothing is static. This is live coding.",
-            code = """// Every voice moves — this is patterns in motion
+            text = "Here is the finished piece where every layer has its own motion. The drums rotate with iter(). The hi-hats fill every 4th cycle with alternating crashes. The bass doubles speed every 3rd cycle. The melody has an off() harmony AND a jux() stereo split — forward on the left, reversed on the right. Nothing is static. This is live coding.",
+            code = """// The sculpture breathes — every voice moves on its own
 stack(
-  // Drums — iter rotates the start each cycle
+  // Drums — iter rotates the groove each cycle
   sound("bd sd ~ cp").iter(4).gain(1.0),
-  // Hi-hats — fills every 4th cycle
+  // Hi-hats — fills carve in every 4th cycle
   sound("hh hh hh <hh oh cr>")
     .every(4, fast(2)).gain(0.8),
   // Bass — doubles speed every 3rd cycle
