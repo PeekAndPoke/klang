@@ -90,7 +90,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private val isPlaying get() = playback != null
 
     private var rpm: Double by value(props.rpm) {
-        playback?.updateRpm(it)
+        if (it > 0.0) playback?.updateRpm(it)
     }
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()

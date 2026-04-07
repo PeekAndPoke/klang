@@ -41,9 +41,6 @@ fun Ignitor.vibrato(rate: Ignitor, depth: Ignitor): Ignitor {
             return@Ignitor
         }
 
-        // Convert semitones to frequency ratio (matches VoiceFactory: vibratoMod * ONE_OVER_TWELVE)
-        val depthRatio = depthSemitones / 12.0
-
         val bufSize = ctx.offset + ctx.length
         val existing0 = modBuf
         if (existing0 == null || existing0.size < bufSize) {
@@ -55,7 +52,9 @@ fun Ignitor.vibrato(rate: Ignitor, depth: Ignitor): Ignitor {
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            mb[i] = 1.0 + sin(lfoPhase) * depthRatio
+            // Equal temperament: 2^(semitones/12) gives the correct frequency ratio.
+            // This is symmetric (up and down are multiplicative inverses) and never goes negative.
+            mb[i] = 2.0.pow(sin(lfoPhase) * depthSemitones / 12.0)
             lfoPhase += lfoInc
             if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
         }

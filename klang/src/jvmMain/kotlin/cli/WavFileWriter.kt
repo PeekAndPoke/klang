@@ -18,6 +18,7 @@ class WavFileWriter(
 ) {
     private var file: RandomAccessFile? = null
     private var dataBytes = 0
+    private var blockBuf: ByteBuffer? = null
 
     fun open() {
         val f = RandomAccessFile(filePath, "rw")
@@ -59,13 +60,20 @@ class WavFileWriter(
      */
     fun writeBlock(samples: ShortArray, count: Int) {
         val f = file ?: return
+        val needed = count * 2
 
-        val buf = ByteBuffer.allocate(count * 2).order(ByteOrder.LITTLE_ENDIAN)
+        // Reuse buffer across blocks to avoid per-block allocation
+        var buf = blockBuf
+        if (buf == null || buf.capacity() < needed) {
+            buf = ByteBuffer.allocate(needed).order(ByteOrder.LITTLE_ENDIAN)
+            blockBuf = buf
+        }
+        buf.clear()
         for (i in 0 until count) {
             buf.putShort(samples[i])
         }
-        f.write(buf.array())
-        dataBytes += count * 2
+        f.write(buf.array(), 0, needed)
+        dataBytes += needed
     }
 
     /**

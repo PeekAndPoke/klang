@@ -3,7 +3,6 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.audio_be.ONE_OVER_TWELVE
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
@@ -30,18 +29,15 @@ class VibratoConsistencyTest : StringSpec({
     }
 
     /**
-     * Render through the Sprudel path: VoiceFactory converts vibratoMod (semitones) to
-     * Voice.Vibrato(depth = semitones / 12.0), then VibratoRenderer applies it.
+     * Render through the Sprudel path: VoiceFactory passes vibratoMod (semitones) directly
+     * to Voice.Vibrato(depth), and VibratoRenderer applies the ET conversion.
      */
     fun renderSprudelPath(depthSemitones: Double): FloatArray {
-        // This is what VoiceFactory does: convert semitones to frequency ratio
-        val depthRatio = depthSemitones * ONE_OVER_TWELVE
-
         val voice = createSynthVoice(
             blockFrames = bf,
             sampleRate = sr,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = rate, depth = depthRatio),
+            vibrato = Voice.Vibrato(rate = rate, depth = depthSemitones),
         )
 
         val ctx = createContext(blockFrames = bf, sampleRate = sr)

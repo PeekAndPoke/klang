@@ -9,6 +9,7 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_fe.samples.Samples
 
@@ -81,36 +82,46 @@ class KlangOfflineRenderer(
             cylinders = cylinders,
         )
 
-        // 2. Query all events from the pattern
+        // 2. Query all events and cache voice data (toVoiceData() creates new objects)
+        data class CachedEvent(
+            val startCycles: Double,
+            val durationCycles: Double,
+            val voiceData: VoiceData,
+        )
+
         val events = pattern.queryEvents(
             fromCycles = 0.0,
             toCycles = cycles.toDouble(),
             cps = cyclesPerSecond,
-        )
+        ).map { CachedEvent(it.startCycles, it.durationCycles, it.toVoiceData()) }
 
         // 3. Preload samples
         if (samples != null) {
             val sampleRequests = events
-                .map { it.toVoiceData().asSampleRequest() }
+                .map { it.voiceData.asSampleRequest() }
                 .filter { !ignitorRegistry.contains(it.sound ?: "") }
                 .toSet()
 
             for (req in sampleRequests) {
-                val loaded = samples.get(req) ?: continue
-                val pcm = loaded.pcm ?: continue
+                try {
+                    val loaded = samples.get(req) ?: continue
+                    val pcm = loaded.pcm ?: continue
 
-                voiceScheduler.addSample(
-                    KlangCommLink.Cmd.Sample.Complete(
-                        req = req,
-                        note = loaded.sample.note,
-                        pitchHz = loaded.sample.pitchHz,
-                        sample = pcm,
+                    voiceScheduler.addSample(
+                        KlangCommLink.Cmd.Sample.Complete(
+                            req = req,
+                            note = loaded.sample.note,
+                            pitchHz = loaded.sample.pitchHz,
+                            sample = pcm,
+                        )
                     )
-                )
+                } catch (e: Exception) {
+                    println("[KlangOfflineRenderer] Failed to load sample ${req.sound}: ${e.message}")
+                }
             }
         }
 
-        // 4. Convert to ScheduledVoice and schedule all
+        // 4. Schedule all voices
         val secPerCycle = 1.0 / cyclesPerSecond
         val playbackId = "offline"
 
@@ -121,7 +132,7 @@ class KlangOfflineRenderer(
             voiceScheduler.scheduleVoice(
                 ScheduledVoice(
                     playbackId = playbackId,
-                    data = event.toVoiceData(),
+                    data = event.voiceData,
                     startTime = relativeStart,
                     gateEndTime = relativeStart + duration,
                     playbackStartTime = 0.0,

@@ -19,7 +19,7 @@ class BerlinNoise(random: Random) {
         h = (h xor (h ushr 16)) * 0x85EBCA6B.toInt()
         h = (h xor (h ushr 13)) * 0xC2B2AE35.toInt()
         h = h xor (h ushr 16)
-        return (h.toDouble() / Int.MAX_VALUE.toDouble() + 1.0) * 0.5 // map to [0, 1)
+        return (h.toDouble() / Int.MAX_VALUE.toDouble() + 1.0) * 0.5 // map to ~[0, 1]
     }
 
     fun noise(t: Double): Double {

@@ -61,7 +61,7 @@ class PitchModulationTest : StringSpec({
         val voiceWith = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02)
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25)
         )
         val voiceWithout = createSynthVoice(
             blockFrames = bf,
@@ -83,12 +83,12 @@ class PitchModulationTest : StringSpec({
         val voiceFast = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 20.0, depth = 0.05)
+            vibrato = Voice.Vibrato(rate = 20.0, depth = 0.5)
         )
         val voiceSlow = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 2.0, depth = 0.05)
+            vibrato = Voice.Vibrato(rate = 2.0, depth = 0.5)
         )
 
         val ctxFast = createContext(blockFrames = bf)
@@ -332,13 +332,13 @@ class PitchModulationTest : StringSpec({
         val voiceBoth = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02),
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
             accelerate = Voice.Accelerate(amount = 1.0)
         )
         val voiceVibratoOnly = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02),
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
         )
         val voiceAccelOnly = createSynthVoice(
             blockFrames = bf,
@@ -364,7 +364,7 @@ class PitchModulationTest : StringSpec({
         val voiceBoth = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02),
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
             pitchEnvelope = Voice.PitchEnvelope(
                 attackFrames = 100.0, decayFrames = 0.0, releaseFrames = 0.0,
                 amount = 2.0, curve = 0.0, anchor = 0.0
@@ -373,7 +373,7 @@ class PitchModulationTest : StringSpec({
         val voiceVibratoOnly = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02),
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
         )
 
         val ctxBoth = createContext(blockFrames = bf)
@@ -416,7 +416,7 @@ class PitchModulationTest : StringSpec({
         val voiceAll = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.02),
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
             accelerate = Voice.Accelerate(amount = 0.5),
             pitchEnvelope = Voice.PitchEnvelope(
                 attackFrames = 50.0, decayFrames = 0.0, releaseFrames = 0.0,
@@ -445,7 +445,7 @@ class PitchModulationTest : StringSpec({
         val voiceWith = createSampleVoice(
             sample = sample,
             blockFrames = bfLocal,
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.05)
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.5)
         )
         val voiceWithout = createSampleVoice(
             sample = sample,
@@ -467,7 +467,7 @@ class PitchModulationTest : StringSpec({
         val voiceWithVib = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.05),
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.5),
             fm = Voice.Fm(ratio = 2.0, depth = 100.0, envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0))
         )
         val voiceNoVib = createSynthVoice(
@@ -491,12 +491,12 @@ class PitchModulationTest : StringSpec({
         val voiceSubtle = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.001)
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.01)
         )
         val voiceLarge = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = 0.1)
+            vibrato = Voice.Vibrato(rate = 5.0, depth = 1.0)
         )
         val voiceNone = createSynthVoice(
             blockFrames = bf,
@@ -572,7 +572,7 @@ class PitchModulationTest : StringSpec({
         val voiceNeg = createSynthVoice(
             blockFrames = bf,
             signal = Ignitors.sine(),
-            vibrato = Voice.Vibrato(rate = 5.0, depth = -0.02)
+            vibrato = Voice.Vibrato(rate = 5.0, depth = -0.25)
         )
         val voiceNone = createSynthVoice(
             blockFrames = bf,

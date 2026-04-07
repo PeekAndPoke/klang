@@ -1,6 +1,5 @@
 package io.peekandpoke.klang.audio_be.voices
 
-import io.peekandpoke.klang.audio_be.ONE_OVER_TWELVE
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
@@ -82,11 +81,11 @@ class VoiceFactory(
         // Pitch / Glissando
         val accelerate = Voice.Accelerate(amount = data.accelerate ?: 0.0)
 
-        // Vibrato
-        val vibratoDepth = (data.vibratoMod ?: 0.0) * ONE_OVER_TWELVE
+        // Vibrato (depth in semitones — VibratoRenderer converts to ET frequency ratio)
+        val vibratoDepthSemitones = data.vibratoMod ?: 0.0
         val vibrato = Voice.Vibrato(
-            depth = vibratoDepth,
-            rate = if (vibratoDepth > 0.0) data.vibrato ?: 5.0 else 0.0,
+            depth = vibratoDepthSemitones,
+            rate = if (vibratoDepthSemitones > 0.0) data.vibrato ?: 5.0 else 0.0,
         )
 
         // Pitch Envelope

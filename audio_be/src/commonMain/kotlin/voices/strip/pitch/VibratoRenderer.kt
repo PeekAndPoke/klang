@@ -4,6 +4,7 @@ import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
+import kotlin.math.pow
 import kotlin.math.sin
 
 /**
@@ -18,20 +19,22 @@ class VibratoRenderer(
     override fun render(ctx: BlockContext) {
         val buf = ctx.freqModBuffer
         val phaseInc = (TWO_PI * vibrato.rate) / sampleRate
+        val depthSemitones = vibrato.depth
         var phase = vibrato.phase
 
         if (ctx.freqModBufferWritten) {
             // Multiply into existing modulation
             for (i in 0 until ctx.length) {
                 val idx = ctx.offset + i
-                buf[idx] *= 1.0 + (sin(phase) * vibrato.depth)
+                // Equal temperament: symmetric, never negative
+                buf[idx] *= 2.0.pow(sin(phase) * depthSemitones / 12.0)
                 phase += phaseInc
             }
         } else {
             // First pitch renderer — write directly
             for (i in 0 until ctx.length) {
                 val idx = ctx.offset + i
-                buf[idx] = 1.0 + (sin(phase) * vibrato.depth)
+                buf[idx] = 2.0.pow(sin(phase) * depthSemitones / 12.0)
                 phase += phaseInc
             }
             ctx.freqModBufferWritten = true

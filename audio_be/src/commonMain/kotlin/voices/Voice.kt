@@ -125,6 +125,7 @@ class Voice(
 
     class Accelerate(val amount: Double)
 
+    /** @param rate LFO frequency in Hz. @param depth modulation depth in semitones. */
     class Vibrato(
         val rate: Double,
         val depth: Double,
