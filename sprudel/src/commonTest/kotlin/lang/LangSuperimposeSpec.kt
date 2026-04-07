@@ -70,4 +70,29 @@ class LangSuperimposeSpec : StringSpec({
         events.any { it.data.note?.lowercase() == "a" } shouldBe true
         events.any { it.data.note?.lowercase() == "b" } shouldBe true
     }
+
+    "superimpose(rev()) and superimpose(x => x.rev()) produce the same events" {
+        val pMapper = note("a b c d").superimpose(rev())
+        val pLambda = note("a b c d").superimpose({ it.rev() })
+        val pScript = SprudelPattern.compile("""note("a b c d").superimpose(x => x.rev())""")
+        val pScriptMapper = SprudelPattern.compile("""note("a b c d").superimpose(rev())""")
+
+        val expected = pMapper.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+        expected.size shouldBe 8
+
+        for ((label, p) in listOf("lambda" to pLambda, "script-lambda" to pScript, "script-mapper" to pScriptMapper)) {
+            val events = (p ?: error("$label: compile failed")).queryArc(0.0, 1.0).sortedBy { it.part.begin }
+            events.map { it.data.note } shouldBe expected.map { it.data.note }
+        }
+    }
+
+    "superimpose(x => x.rev()) with slow() works correctly in script" {
+        val pDirect = SprudelPattern.compile("""note("a b c d e f g a").slow(4).superimpose(rev())""")
+        val pLambda = SprudelPattern.compile("""note("a b c d e f g a").slow(4).superimpose(x => x.rev())""")
+
+        val expected = pDirect!!.queryArc(0.0, 4.0).sortedBy { it.part.begin }
+        val actual = pLambda!!.queryArc(0.0, 4.0).sortedBy { it.part.begin }
+
+        actual.map { "${it.data.note}@${it.part.begin}" } shouldBe expected.map { "${it.data.note}@${it.part.begin}" }
+    }
 })

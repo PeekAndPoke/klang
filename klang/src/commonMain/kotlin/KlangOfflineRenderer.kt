@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_fe.samples.Samples
 
 /**
  * Offline renderer that drives the DSP graph directly at full CPU speed.
@@ -36,12 +37,13 @@ class KlangOfflineRenderer(
      * @param tailSec extra seconds after last note for reverb/delay tails
      * @param onBlock called for each rendered block with interleaved stereo 16-bit PCM
      */
-    fun render(
+    suspend fun render(
         pattern: KlangPattern,
         cycles: Int,
         cyclesPerSecond: Double,
         tailSec: Double = 2.0,
         customIgnitors: List<Pair<String, IgnitorDsl>> = emptyList(),
+        samples: Samples? = null,
         onBlock: (samples: ShortArray, count: Int) -> Unit,
     ): Result {
         val klangTime = KlangTime.create()
@@ -86,7 +88,29 @@ class KlangOfflineRenderer(
             cps = cyclesPerSecond,
         )
 
-        // 3. Convert to ScheduledVoice and schedule all
+        // 3. Preload samples
+        if (samples != null) {
+            val sampleRequests = events
+                .map { it.toVoiceData().asSampleRequest() }
+                .filter { !ignitorRegistry.contains(it.sound ?: "") }
+                .toSet()
+
+            for (req in sampleRequests) {
+                val loaded = samples.get(req) ?: continue
+                val pcm = loaded.pcm ?: continue
+
+                voiceScheduler.addSample(
+                    KlangCommLink.Cmd.Sample.Complete(
+                        req = req,
+                        note = loaded.sample.note,
+                        pitchHz = loaded.sample.pitchHz,
+                        sample = pcm,
+                    )
+                )
+            }
+        }
+
+        // 4. Convert to ScheduledVoice and schedule all
         val secPerCycle = 1.0 / cyclesPerSecond
         val playbackId = "offline"
 
@@ -105,12 +129,12 @@ class KlangOfflineRenderer(
             )
         }
 
-        // 4. Calculate total frames
+        // 5. Calculate total frames
         val musicalDurationSec = cycles.toDouble() * secPerCycle
         val totalDurationSec = musicalDurationSec + tailSec
         val totalFrames = (totalDurationSec * sampleRate).toInt()
 
-        // 5. Render loop
+        // 6. Render loop
         val outShorts = ShortArray(blockFrames * 2)
         var currentFrame = 0
 

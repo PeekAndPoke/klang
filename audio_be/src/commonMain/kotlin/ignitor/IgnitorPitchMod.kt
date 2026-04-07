@@ -23,8 +23,10 @@ import kotlin.math.sin
 /**
  * Sinusoidal pitch modulation (vibrato).
  *
- * @param rate LFO frequency in Hz
- * @param depth modulation depth (e.g. 0.02 = ±2% frequency deviation)
+ * @param rate LFO frequency in Hz (e.g. 5.0 = 5 Hz oscillation)
+ * @param depth modulation depth in semitones (e.g. 0.5 = ±0.5 semitone pitch deviation).
+ *   Internally converted to a frequency ratio via `depth / 12.0` so that both the Ignitor DSL
+ *   and the Sprudel DSL use the same unit.
  */
 fun Ignitor.vibrato(rate: Ignitor, depth: Ignitor): Ignitor {
     var lfoPhase = 0.0
@@ -32,12 +34,15 @@ fun Ignitor.vibrato(rate: Ignitor, depth: Ignitor): Ignitor {
 
     return Ignitor { buffer, freqHz, ctx ->
         val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-        val depthVal = Ignitors.readParam(depth, freqHz, ctx)
+        val depthSemitones = Ignitors.readParam(depth, freqHz, ctx)
 
-        if (depthVal <= 0.0) {
+        if (depthSemitones <= 0.0) {
             this.generate(buffer, freqHz, ctx)
             return@Ignitor
         }
+
+        // Convert semitones to frequency ratio (matches VoiceFactory: vibratoMod * ONE_OVER_TWELVE)
+        val depthRatio = depthSemitones / 12.0
 
         val bufSize = ctx.offset + ctx.length
         val existing0 = modBuf
@@ -50,7 +55,7 @@ fun Ignitor.vibrato(rate: Ignitor, depth: Ignitor): Ignitor {
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            mb[i] = 1.0 + sin(lfoPhase) * depthVal
+            mb[i] = 1.0 + sin(lfoPhase) * depthRatio
             lfoPhase += lfoInc
             if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
         }

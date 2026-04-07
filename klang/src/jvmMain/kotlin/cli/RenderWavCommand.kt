@@ -8,6 +8,8 @@ import com.github.ajalt.clikt.parameters.types.int
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_engine.KlangOfflineRenderer
+import io.peekandpoke.klang.audio_fe.samples.Samples
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -17,6 +19,7 @@ import java.io.File
  */
 class RenderWavCommand(
     private val compilePattern: (code: String) -> CompileResult?,
+    private val samples: Samples? = null,
 ) : CliktCommand(name = "klang:record:wav") {
 
     data class CompileResult(
@@ -77,14 +80,17 @@ class RenderWavCommand(
         val result = try {
             val renderer = KlangOfflineRenderer(sampleRate = sampleRate, blockFrames = blockSize)
 
-            renderer.render(
-                pattern = compileResult.pattern,
-                cycles = cycles,
-                cyclesPerSecond = cps,
-                tailSec = tail,
-                customIgnitors = compileResult.customIgnitors,
-                onBlock = { samples, count -> wav.writeBlock(samples, count) },
-            )
+            runBlocking {
+                renderer.render(
+                    pattern = compileResult.pattern,
+                    cycles = cycles,
+                    cyclesPerSecond = cps,
+                    tailSec = tail,
+                    customIgnitors = compileResult.customIgnitors,
+                    samples = samples,
+                    onBlock = { samples, count -> wav.writeBlock(samples, count) },
+                )
+            }
         } finally {
             wav.close()
         }

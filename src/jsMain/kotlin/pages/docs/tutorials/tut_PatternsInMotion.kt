@@ -50,10 +50,10 @@ n("0 -3 2 0 4 0 2 4").slow(4)
             heading = "Stereo Split with jux()",
             text = "jux(fn) is pure stereo magic. It plays the original in one ear and a transformed copy in the other. Put on headphones — you will hear the melody forward on the left and reversed on the right. Two performances from one pattern.",
             code = """// Split the stone in two — forward on the left, reversed on the right
-n("0 -3 2 0 4 0 2 4").slow(4)
+n("0 -3 2 0 4 0 2 4")
+  .jux(rev()).slow(4)
   .scale("C4:minor").sound("saw")
-  .lpf(1000).gain(0.3)
-  .jux(rev())""",
+  .lpf(800).gain(0.3)""",
         ),
         TutorialSection(
             heading = "Putting It Together",
@@ -70,17 +70,16 @@ stack(
     .lpf(400).hpf(100).gain(0.6)
     .every(3, fast(2)),
   // Melody — off() harmony + jux() stereo split
-  n("0 -3 2 0 4 0 2 4").slow(4)
+  n("0 -3 2 0 4 0 2 4")
     .scale("C4:minor").sound("saw")
-    .lpf(1000).hpf(200)
+    .jux(rev().slow(2)).slow(4)
+    .lpf(800).hpf(200)
     .distort(0.5)
     .vibratoMod(0.01)
     .vibrato(perlin.add(5).slow(8))
-    .adsr("0.1:0.15:0.3:0.1")
-    .gain(0.8)
+    .adsr("0.1:0.15:0.3:0.1").gain(0.8)
     .off(0.125, x => x.scaleTranspose(7))
-    .jux(rev())
-    .postgain(0.15)
+    .postgain(0.1)
 ).room(0.2).rsize(4)""",
         ),
     ),

@@ -6,11 +6,15 @@ import com.github.ajalt.clikt.core.subcommands
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_engine.cli.RenderWavCommand
+import io.peekandpoke.klang.audio_fe.create
+import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
+import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.script.stdlib.KlangScriptOsc
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.ultra.common.MutableTypedAttributes
+import kotlinx.coroutines.runBlocking
 
 class KlangCli : CliktCommand(name = "klang") {
     override fun run() = Unit
@@ -48,9 +52,11 @@ private fun compilePattern(code: String): RenderWavCommand.CompileResult? {
 }
 
 fun main(args: Array<String>) {
+    val samples = runBlocking { Samples.create(catalogue = SampleCatalogue.default) }
+
     KlangCli()
         .subcommands(
-            RenderWavCommand(compilePattern = ::compilePattern),
+            RenderWavCommand(compilePattern = ::compilePattern, samples = samples),
         )
         .main(args)
 }

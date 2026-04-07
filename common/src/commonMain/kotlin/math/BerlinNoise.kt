@@ -5,30 +5,32 @@ import kotlin.random.Random
 
 /**
  * 1D Berlin Noise implementation.
+ *
+ * Smooth random noise via linear interpolation between deterministic hash values.
+ * Uses Int-only hashing (no Long) — safe for Kotlin/JS where Long is boxed.
  */
-class BerlinNoise(private val random: Random) {
-    // Use a stable seed for hashing to ensure different noise instances
-    // produce different results even for the same indices.
-    private val seed = random.nextLong()
+class BerlinNoise(random: Random) {
+    private val seed = random.nextInt()
 
-    /** Generates a deterministic random Double for a specific integer index */
+    /** Deterministic hash for an integer index — zero allocations, Int-only. */
     private fun getValAt(index: Int): Double {
-        // Combine the instance seed with the index to get a stable unique seed
-        val stableSeed = (seed * 2862933555777941757L) + (index.toLong() * 3037000493L)
-        return Random(stableSeed).nextDouble()
+        // MurmurHash3-style 32-bit finalizer: fast, good distribution, no Long
+        var h = seed xor (index * 0x9E3779B1.toInt())
+        h = (h xor (h ushr 16)) * 0x85EBCA6B.toInt()
+        h = (h xor (h ushr 13)) * 0xC2B2AE35.toInt()
+        h = h xor (h ushr 16)
+        return (h.toDouble() / Int.MAX_VALUE.toDouble() + 1.0) * 0.5 // map to [0, 1)
     }
 
     fun noise(t: Double): Double {
         val currentIndex = floor(t).toInt()
         val nextIndex = currentIndex + 1
 
-        // Always fetch the values for the boundaries of the current segment
         val v0 = getValAt(currentIndex)
         val v1 = getValAt(nextIndex)
 
         val currentPercent = t - currentIndex
 
-        // Linearly interpolate between the two stable points
         return v0 + currentPercent * (v1 - v0)
     }
 }

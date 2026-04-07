@@ -3,7 +3,12 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
+import io.peekandpoke.klang.sprudel._applyControlFromParams
+import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
+import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.BindPattern
@@ -614,14 +619,17 @@ internal val PatternMapperFn._vib by dslPatternMapperExtension { m, args, callIn
 // ===== USER-FACING OVERLOADS =====
 
 /**
- * Sets the vibrato frequency (oscillation speed) in Hz.
+ * Sets the vibrato rate (oscillation speed) in Hz.
  *
  * Vibrato is a periodic pitch modulation applied to a note. Higher values create faster
- * vibrato; lower values create a slower, wider wobble. Use [vibratoMod] to set the depth.
- * When called with no argument, reinterprets the current event value as a vibrato rate.
+ * vibrato; lower values create a slower wobble. Use [vibratoMod] to set the depth in semitones.
+ * Default rate is 5 Hz when [vibratoMod] is set but [vibrato] is not.
+ *
+ * Both the sprudel DSL and the Ignitor DSL use the same units:
+ * rate in Hz, depth in semitones.
  *
  * ```KlangScript(Playable)
- * note("c4 e4 g4").vibrato(5)      // 5 Hz vibrato (moderate speed)
+ * note("c4 e4 g4").vibrato(5).vibratoMod(0.5)  // 5 Hz, ±0.5 semitone
  * ```
  *
  * ```KlangScript(Playable)
@@ -718,11 +726,13 @@ internal val PatternMapperFn._vibmod by dslPatternMapperExtension { m, args, cal
  * Sets the vibrato depth (amplitude of pitch oscillation) in semitones.
  *
  * Controls how many semitones the vibrato deviates from the base pitch. Higher values
- * create wider, more pronounced pitch wobble. Use [vibrato] to set the speed.
- * When called with no argument, reinterprets the current event value as a vibrato depth.
+ * create wider, more pronounced pitch wobble. Use [vibrato] to set the rate in Hz.
+ *
+ * Both the sprudel DSL and the Ignitor DSL use semitones for depth.
+ * Internally converted to a frequency ratio via `depth / 12.0`.
  *
  * ```KlangScript(Playable)
- * note("c4 e4").vibratoMod(0.5)       // half-semitone vibrato depth
+ * note("c4 e4").vibratoMod(0.5)       // ±0.5 semitone pitch deviation
  * ```
  *
  * ```KlangScript(Playable)

@@ -642,13 +642,19 @@ sealed interface IgnitorDsl {
     // Pitch Modulation
     // ═════════════════════════════════════════════════════════════════════════════
 
-    /** Vibrato effect. Modulates pitch with an LFO for a wavering frequency change. */
+    /**
+     * Vibrato effect. Modulates pitch with a sinusoidal LFO.
+     *
+     * @param rate LFO frequency in Hz (default 5.0)
+     * @param depth modulation depth in semitones (default 0.25 ≈ quarter-semitone wobble).
+     *   Matches the sprudel `vibratoMod()` unit: both specify depth in semitones.
+     */
     @Serializable
     @SerialName("vibrato")
     data class Vibrato(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(5.0),
-        val depth: IgnitorDsl = Constant(0.02),
+        val depth: IgnitorDsl = Constant(0.25),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
