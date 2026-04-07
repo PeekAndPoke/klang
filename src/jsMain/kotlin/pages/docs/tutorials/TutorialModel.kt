@@ -42,4 +42,5 @@ data class Tutorial(
     val scope: TutorialScope,
     val tags: List<TutorialTag>,
     val sections: List<TutorialSection>,
+    val rpm: Double = 30.0,
 )

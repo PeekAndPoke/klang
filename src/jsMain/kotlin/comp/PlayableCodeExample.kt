@@ -25,34 +25,34 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.modals.ModalsManager.Companion.modals
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.routing.Router.Companion.router
+import io.peekandpoke.kraft.semanticui.forms.UiInputField
 import io.peekandpoke.kraft.utils.launch
 import io.peekandpoke.kraft.utils.windowCtrl
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
+import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.css.Align
 import kotlinx.css.Border
 import kotlinx.css.BorderStyle
 import kotlinx.css.Color
-import kotlinx.css.Display
 import kotlinx.css.Overflow
-import kotlinx.css.Padding
 import kotlinx.css.alignSelf
 import kotlinx.css.border
 import kotlinx.css.borderBottom
 import kotlinx.css.borderRadius
 import kotlinx.css.color
-import kotlinx.css.display
-import kotlinx.css.gap
 import kotlinx.css.marginBottom
 import kotlinx.css.marginTop
 import kotlinx.css.overflow
-import kotlinx.css.padding
+import kotlinx.css.paddingLeft
 import kotlinx.css.px
 import kotlinx.css.rem
+import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -60,8 +60,9 @@ import kotlinx.html.div
 @Suppress("FunctionName")
 fun Tag.PlayableCodeExample(
     code: String,
+    rpm: Double = 30.0,
 ) = comp(
-    PlayableCodeExample.Props(code = code)
+    PlayableCodeExample.Props(code = code, rpm = rpm)
 ) {
     PlayableCodeExample(it)
 }
@@ -80,12 +81,17 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
     data class Props(
         val code: String,
+        val rpm: Double = 30.0,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var playback: KlangCyclicPlayback? by value(null)
     private val isPlaying get() = playback != null
+
+    private var rpm: Double by value(props.rpm) {
+        playback?.updateRpm(it)
+    }
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
     private val highlightBuffer = CodeMirrorHighlightBuffer()
@@ -172,7 +178,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         console.log("PlayableCodeExample: Starting new playback...")
 
                         playback = player.play(pattern)
-                        playback?.start()
+                        playback?.start(KlangCyclicPlayback.Options(rpm = rpm))
 
                         // Mark code as playing
                         playingCode = currentCode
@@ -257,6 +263,8 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
 
     override fun VDom.render() {
         div(classes = laf.styles.darken10()) {
+            key = "container"
+
             css {
                 border = Border(1.px, BorderStyle.solid, Color(laf.textTertiary))
                 borderRadius = 4.px
@@ -266,84 +274,110 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
             }
 
             // Control bar
-            div {
+            ui.mini.form {
+                key = "controlBar"
+
                 css {
-//                    backgroundColor = Color(laf.cardBackground)
                     borderBottom = Border(1.px, BorderStyle.solid, Color(laf.textTertiary))
-                    padding = Padding(0.5.rem)
-                    display = Display.flex
-                    gap = 0.5.rem
+                    paddingLeft = 0.5.rem
                 }
 
-                // Play / Update button
-                if (!isPlaying) {
-                    ui.mini.circular.white.button {
-                        onClick { play() }
-                        if (loading) {
-                            icon.loading.spinner()
-                            +"Loading"
+                ui.horizontal.list {
+                    key = "controlBarItems"
+
+                    // Play / Update button
+                    noui.item {
+                        if (!isPlaying) {
+                            ui.small.circular.white.button {
+                                onClick { play() }
+                                if (loading) {
+                                    icon.loading.spinner()
+                                    +"Loading"
+                                } else {
+                                    icon.play()
+                                    +"Play"
+                                }
+                            }
                         } else {
-                            icon.play()
-                            +"Play"
+                            ui.small.circular.white.givenNot(isModified) { disabled }.button {
+                                onClick { play() }
+                                icon.black.redo_alternate()
+                                +"Update"
+                            }
                         }
                     }
-                } else {
-                    ui.mini.circular.white.givenNot(isModified) { disabled }.button {
-                        onClick { play() }
-                        icon.black.redo_alternate()
-                        +"Update"
-                    }
-                }
 
-                // Stop button
-                ui.mini.circular.icon.givenNot(isPlaying) { disabled }.button {
-                    onClick { stopPlayback() }
-                    icon.black.stop()
-                }
-
-                // Reset button (only show if modified from original)
-                ui.mini.circular.givenNot(isModifiedFromOriginal) { disabled }.button {
-                    onClick {
-                        stopPlayback()
-                        currentCode = props.code
-                        editorRef { it.setCode(props.code) }
+                    // Stop button
+                    noui.item {
+                        ui.small.circular.icon.givenNot(isPlaying) { disabled }.button {
+                            onClick { stopPlayback() }
+                            icon.black.stop()
+                        }
                     }
-                    icon.undo()
-                    +"Reset"
-                }
 
-                // Info text
-                div {
-                    css {
-                        alignSelf = Align.center
-                        color = Color.grey
+                    // Reset button (only show if modified from original)
+                    noui.item {
+                        ui.small.circular.givenNot(isModifiedFromOriginal) { disabled }.button {
+                            onClick {
+                                stopPlayback()
+                                currentCode = props.code
+                                editorRef { it.setCode(props.code) }
+                            }
+                            icon.undo()
+                            +"Reset"
+                        }
                     }
-                    if (isPlaying) {
-                        icon.music()
-                        +" Playing - Cycle $currentCycle"
-                    } else {
-                        +"Try this example"
+
+                    // RPM field
+                    noui.item {
+                        css { width = 150.px }
+                        UiInputField(rpm, { rpm = it }) {
+                            step(0.5)
+                            wrapFieldWith { fluid }
+                            leftLabel {
+                                ui.grey.label { +"RPM" }
+                            }
+                        }
+                    }
+
+                    // Info text
+                    noui.item {
+                        css {
+                            alignSelf = Align.center
+                            color = Color.grey
+                        }
+                        if (isPlaying) {
+                            icon.music()
+                            +" Playing - Cycle $currentCycle"
+                        } else {
+                            +"Try this example"
+                        }
                     }
                 }
             }
 
+
             // Code editor
-            KlangScriptEditorComp(
-                code = currentCode,
-                onCodeChanged = { newCode ->
-                    currentCode = newCode
-                    editorRef { it.setErrors(emptyList()) }
-                },
-                availableLibraries = listOf(stdlibLib, sprudelLib),
-                autoImportedLibraries = listOf(stdlibLib, sprudelLib),
-                hoverPopup = hoverPopup,
-                hoverContent = hoverContent,
-                popups = popups,
-                onNavigate = ::navToDoc,
-                onOpenTool = { toolName, ctx, argFrom, _ ->
-                    openTool(toolName = toolName, ctx = ctx, argFrom = argFrom)
-                },
-            ).track(editorRef)
+            div {
+                key = "editor"
+
+                KlangScriptEditorComp(
+                    code = currentCode,
+                    onCodeChanged = { newCode ->
+                        currentCode = newCode
+                        editorRef { it.setErrors(emptyList()) }
+                    },
+                    availableLibraries = listOf(stdlibLib, sprudelLib),
+                    autoImportedLibraries = listOf(stdlibLib, sprudelLib),
+                    hoverPopup = hoverPopup,
+                    hoverContent = hoverContent,
+                    popups = popups,
+                    onNavigate = ::navToDoc,
+                    onOpenTool = { toolName, ctx, argFrom, _ ->
+                        openTool(toolName = toolName, ctx = ctx, argFrom = argFrom)
+                    },
+                ).track(editorRef)
+            }
         }
     }
 }

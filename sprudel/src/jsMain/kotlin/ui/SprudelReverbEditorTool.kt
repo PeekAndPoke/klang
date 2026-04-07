@@ -1,8 +1,15 @@
 package io.peekandpoke.klang.sprudel.ui
 
-import io.peekandpoke.klang.ui.*
+import io.peekandpoke.klang.ui.HoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.svgLine
+import io.peekandpoke.klang.ui.svgPath
+import io.peekandpoke.klang.ui.svgRect
+import io.peekandpoke.klang.ui.svgRoot
+import io.peekandpoke.klang.ui.svgText
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -17,11 +24,16 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
+import kotlinx.css.Cursor
+import kotlinx.css.cursor
+import kotlinx.css.marginBottom
+import kotlinx.css.minWidth
+import kotlinx.css.px
+import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlin.math.pow
+import kotlin.math.exp
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
@@ -237,17 +249,21 @@ private class SprudelReverbEditorComp(ctx: Ctx<Props>) : Component<SprudelReverb
 
         val clampedRoom = room.coerceIn(0.0, 1.0)
         val clampedSize = size.coerceIn(0.1, 10.0)
-        // Mirror the backend: feedback = (effectiveFade * 0.28) + 0.7
-        // When fade is null, use size as fallback (same as backend: roomFade ?: roomSize)
+        // Room (wet/dry) controls the starting level.
+        // Size controls the tail length: higher size = longer, softer decay.
+        // Fade overrides size for the decay rate when set.
         val effectiveFade = fade ?: clampedSize
-        val feedback = (effectiveFade * 0.28) + 0.7
+        // Normalize to 0..1 for the decay curve (size is 0..10)
+        val normalizedFade = (effectiveFade / 10.0).coerceIn(0.01, 1.0)
+        // Decay rate: higher normalizedFade = slower decay (longer tail)
+        val decayRate = 1.0 + normalizedFade * 9.0 // 1..10: stretch factor for the tail
 
         val numPoints = 100
         val points = (0..numPoints).map { i ->
             val t = i.toDouble() / numPoints
             val x = padL + t * drawW
-            // feedback < 1.0: decaying tail. feedback >= 1.0: sustain/growing tail.
-            val envelope = feedback.pow(t * numPoints * 2.0)
+            // Exponential decay shaped by size — bigger room = gentler slope
+            val envelope = exp(-t * 10.0 / decayRate)
             val level = (clampedRoom * envelope).coerceIn(0.0, 1.0)
             val y = padT + drawH - drawH * level
             x to y

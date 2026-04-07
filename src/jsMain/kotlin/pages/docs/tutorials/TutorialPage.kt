@@ -12,8 +12,28 @@ import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.JustifyContent
+import kotlinx.css.Padding
+import kotlinx.css.Position
+import kotlinx.css.alignItems
+import kotlinx.css.color
+import kotlinx.css.display
+import kotlinx.css.justifyContent
+import kotlinx.css.marginTop
+import kotlinx.css.padding
+import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.css.right
+import kotlinx.css.top
+import kotlinx.html.FlowContent
+import kotlinx.html.Tag
+import kotlinx.html.div
+import kotlinx.html.p
+import kotlinx.html.span
 
 @Suppress("FunctionName")
 fun Tag.TutorialPage() = comp {
@@ -114,7 +134,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
                     }
 
                     if (section.code != null) {
-                        PlayableCodeExample(code = section.code)
+                        PlayableCodeExample(code = section.code, rpm = tutorial.rpm)
                     }
                 }
             }
