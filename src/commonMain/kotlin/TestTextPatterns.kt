@@ -119,16 +119,16 @@ stack(
     .filterWhen(x => x >= wait * 8 && x < (wait * 12 + keep))
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
-    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(2.0).hpf(1000).analog(5)
-    .sound("pulse").warmth(0.95).crush(3).gain(0.225).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
+    .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(5.0).hpf(1000).analog(3)
+    .sound("pulse").warmth(0.75).crush(3).gain(0.075).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.1).slow(256))
-    .gain(0.275).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
+    .gain(0.325).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
     .pan(0.29).superimpose(pan(0.61))
-    .hpf(160).lpf(1000).lpenv(perlin.slow(4).range(0, 3)).coarse(3).analog(1)
+    .hpf(160).lpf(2000).lpenv(perlin.slow(8).range(0, 225)).coarse(3).analog(1)
     .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.75).struct("x!8")
@@ -163,7 +163,7 @@ stack(
    
    
  
-       """ // Stranger Things END
+        """ // Stranger Things END
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
     val aTruthWorthLyingFor = """
@@ -204,7 +204,7 @@ let guitar = Osc.register("guitar",
         //.lowpass(, 0.75)
         .highpass(75)
         // Tight rhythm envelope
-        .adsr(Osc.param("attack", 0.01, "Attack time in seconds"), 0.15, Osc.param("sustain", 0.75, "Sustain level"), 0.05)
+        .adsr(Osc.param("attack", 0.004, "Attack time in seconds"), 0.2, Osc.param("sustain", 0.75, "Sustain level"), 0.05)
 )
 
 stack( // Gitarre! ----------------------------------------------------------------------------
@@ -227,7 +227,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").gain(0.15).clip(1.03)
+  ).orbit(3).fast(1).scale("C2:chromatic").gain(0.15).clip(1.03).release(0.1)
     .s(guitar).oscparam("drive", 3.0).oscparam("brightness", 5000).oscp("spread", 0.07)
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
