@@ -84,31 +84,33 @@ stack(
   // Lead — distorted saw with vibrato expression
   n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")
     .scale("E4:minor").sound("supersaw").unison(2).detune(0.1)
-    .lpf(2500).hpf(200)
+    .lpf(4000).hpf(200)
     .vibrato(5).vibratoMod(perlin.mul(0.02).add(0.05))
-    .gain(0.3).distort("0.5:gentle").postgain(0.65)
-    .adsr("0.01:0.1:0.6:0.15").clip(0.85)
-    .release("<0.15!16 0.5!16>")
+    .gain(0.25).distort("0.5:gentle").postgain(0.65)
+    .adsr("0.03:0.1:0.6:0.1").clip(0.85)
+    .release("<0.125!16 0.5!16>")
+    .superimpose(transpose(12).detune(0.125).velocity("<0!32 0.2!32>").lpf(5000))
+    .superimpose(transpose(24).detune(0.25).velocity("<0!96 0.1!32>").lpf(6000))
     .orbit(0).pan(0.6),
   // Pad — struct stamps the rhythm, phaser + tremolo shimmer
-  n("<0 4 0 [-2 -4]>").struct("x!16")
+  n("<[0 2 0 [-2 -4]]!2 [0 6 0 [2 4]] [0 4 0 [-2 2]]>/4").struct("x!16")
     .scale("e3:minor").sound("supersquare")
-    .lpf(1200).hpf(600)
-    .phaser(0.125).phaserdepth(1.0)
+    .lpf(2000).hpf(400)
+    .phaser(0.25).phaserdepth(1.0).phasersweep(sine.range(0, 4000).slow(8))
     .tremolo(3).tremolodepth(0.2)
-    .adsr("0.01:0.1:0.5:0.5").clip(0.85)
-    .gain(0.2).orbit(1).pan(0.4),
+    .adsr("0.01:0.1:0.5:0.5").clip(0.85).crush(saw.range(6, 2).slow(32))
+    .gain(0.15).orbit(1).pan(0.4),
   // Bass — warm distorted saw, struct for steady pulse
   n("<0 0 2 4 0 0 -2 -1>").struct("x!8").fast(2)
     .scale("e2:minor").sound("saw")
-    .lpf(500).hpf(80).distort(0.3)
-    .adsr("0.01:0.125:0.3:0.1").clip(0.9)
-    .gain(0.95).orbit(2),
+    .lpf(500).hpf(100).distort(sine.range(0.2, 0.8).slow(64))
+    .adsr("0.01:0.1:0.3:0.1").clip(0.9)
+    .gain(0.9).orbit(2),
   // Drums — crushed, building from sparse to dense
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!8 [bd [bd,sd] bd [bd,sd]]!8>")
     .crush(9).gain(1.2).orbit(3),
-  sound("<[hh hh oh hh]!8 [cr hh cr hh]!16>").fast(2).crush(8)
-    .gain(0.6).orbit(3)
+  sound("<[hh hh oh hh]!8 [cr hh cr hh]!16>").fast(2).crush(8).hpf(3000)
+    .gain(0.7).orbit(3)
 // Compressor glues it, analog adds organic drift
 ).compressor("-10:2:10:0.02:0.25").analog(1)
 
