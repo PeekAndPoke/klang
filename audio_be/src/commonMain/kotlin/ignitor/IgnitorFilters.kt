@@ -412,10 +412,37 @@ fun Ignitor.withWarmth(warmthFactor: Double): Ignitor {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
+ * Computes the ADSR envelope level at a given position (attack/decay/sustain — no release).
+ *
+ * Used to determine the actual level at any point during the gate-on phase,
+ * including at gate-end for correct release-start calculation.
+ */
+private fun envelopeLevelAtPosition(
+    absPos: Int,
+    attackFrames: Int,
+    decayFrames: Int,
+    sustainLevel: Double,
+): Double = when {
+    absPos < attackFrames -> {
+        val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
+        absPos * attRate
+    }
+
+    absPos < attackFrames + decayFrames -> {
+        val decPos = absPos - attackFrames
+        val decRate = if (decayFrames > 0) (1.0 - sustainLevel) / decayFrames else 0.0
+        1.0 - (decPos * decRate)
+    }
+
+    else -> sustainLevel
+}
+
+/**
  * Computes a simple ADSR envelope value at the current block position.
  * Called once per block (control rate), not per sample.
  *
- * Ported from: calculateFilterEnvelope() in voices/common.kt
+ * Release phase decays from the **actual level at gate-end**, not from sustainLevel.
+ * This prevents discontinuous jumps (clicks) when gate-off occurs during attack or decay.
  */
 internal fun computeFilterEnvelope(
     ctx: IgniteContext,
@@ -424,32 +451,21 @@ internal fun computeFilterEnvelope(
     sustainLevel: Double,
     releaseSec: Double,
 ): Double {
-    val attackFrames = (attackSec * ctx.sampleRate).toInt()
-    val decayFrames = (decaySec * ctx.sampleRate).toInt()
-    val releaseFrames = (releaseSec * ctx.sampleRate).toInt()
+    val attackFrames = (attackSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
+    val decayFrames = (decaySec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
+    val releaseFrames = (releaseSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
+    val clampedSustain = sustainLevel.coerceIn(0.0, 1.0)
 
     val absPos = ctx.voiceElapsedFrames
     val gateEndPos = ctx.gateEndFrame
 
     val envValue = if (absPos >= gateEndPos) {
+        val levelAtGateEnd = envelopeLevelAtPosition(gateEndPos, attackFrames, decayFrames, clampedSustain)
         val relPos = absPos - gateEndPos
-        val relRate = if (releaseFrames > 0) sustainLevel / releaseFrames else 1.0
-        sustainLevel - (relPos * relRate)
+        val relRate = if (releaseFrames > 0) levelAtGateEnd / releaseFrames else 1.0
+        levelAtGateEnd - (relPos * relRate)
     } else {
-        when {
-            absPos < attackFrames -> {
-                val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-                absPos * attRate
-            }
-
-            absPos < attackFrames + decayFrames -> {
-                val decPos = absPos - attackFrames
-                val decRate = if (decayFrames > 0) (1.0 - sustainLevel) / decayFrames else 0.0
-                1.0 - (decPos * decRate)
-            }
-
-            else -> sustainLevel
-        }
+        envelopeLevelAtPosition(absPos, attackFrames, decayFrames, clampedSustain)
     }
 
     return envValue.coerceIn(0.0, 1.0)

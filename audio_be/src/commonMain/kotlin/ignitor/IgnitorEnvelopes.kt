@@ -27,10 +27,10 @@ fun Ignitor.adsr(
     return Ignitor { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
-        val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx)
-        val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx)
-        val sustainLevelVal = Ignitors.readParam(sustainLevel, freqHz, ctx)
-        val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx)
+        val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx).coerceAtLeast(0.0)
+        val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx).coerceAtLeast(0.0)
+        val sustainLevelVal = Ignitors.readParam(sustainLevel, freqHz, ctx).coerceIn(0.0, 1.0)
+        val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx).coerceAtLeast(0.0)
 
         val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
         val decayFrames = (decaySecVal * ctx.sampleRate).toInt()

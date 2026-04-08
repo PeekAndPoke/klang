@@ -174,16 +174,16 @@ stack(
     .superimpose(transpose(24).detune(0.25).velocity("<0!96 0.075!32>").lpf(6000).pan(0.66))
     .orbit(0),
   // Pad — struct stamps the rhythm, phaser + tremolo shimmer
-  n("<[0 2 0 [-2 -4]] [0 2 0 [2 -1]] [0 6 0 [5 6]] [4 2 0 [2 -1]]>/4").struct("x!16")
+  n("<[0 2 0 [-2 -4]] [0 2 0 [2 -1]] [0 [6 8] 0 [5 6]] [4 2 0 [2 -1]]>/4").struct("x!16")
     .scale("e2:minor").sound("supersquare").unison(4)
-    .lpf("2000:0.8").hpf(200)
+    .lpf("1600:0.8").hpf(200)
     .phaser(0.125).phaserdepth(0.2).phasercenter(1200)
     .adsr("0.01:0.15:0.7:0.1").clip(0.85).crush(saw.range(6, 2).slow(32))
-    .gain(0.4).orbit(1).pan(0.45),
+    .gain(0.35).orbit(1).pan(0.45),
   // Bass — warm distorted saw, struct for steady pulse
   n("<0 0 2 4 0 0 -2 -1>").struct("x!8").fast(2).velocity("1 0.9!3".fast(4))
     .scale("e2:minor").sound("saw")
-    .lpf("2000").hpf(120).distort(sine.range(0.2, 0.8).slow(64))
+    .lpf("1200").hpf(80).distort(sine.range(0.2, 0.8).slow(64))
     .adsr("0.001:0.1:0.5:0.1").clip(0.9)
     .gain(0.45).orbit(2).pan(0.55),
   // Drums — crushed, building from sparse to dense
