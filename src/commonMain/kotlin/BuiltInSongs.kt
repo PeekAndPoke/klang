@@ -98,7 +98,7 @@ stack(
     c5@2  ~  ~  ~  ~  a4 ~
     a5@2  ~  ~  e5@2  d5@2 
     <[e4@2 ~ ~ e4@2 ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@2 ~ ~ a4@2 ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
-  `).sound(shaku).legato(1.0).slow(14).gain(0.175).adsr("0.05:0.1:1:0.2")
+  `).sound(shaku).slow(14).gain(0.2).adsr("0.05:0.1:1:0.2")
     .filterWhen(x => x >= wait * 2)
 
   // Drums
@@ -237,8 +237,7 @@ stack(
             id = "$PREFIX-osynthris",
             title = "Osynthris",
             rpm = 33.0,
-            code = """
-import * from "stdlib"
+            code = """import * from "stdlib"
 import * from "sprudel"
 
 stack(
@@ -248,13 +247,13 @@ stack(
         [12,19,24] [[6,13,18] [6,13,18]] [[6,13,18] [5,12,17]@2 [6,13,18]]>`).repeat(4),
     n(`<[[0,7]!4 [0,7]@4]!8 [[0,6]!4 [0,6]@4]!4 [[0,7]!4 [0,7]@4]!4 [[0,7]!4 [0,7]@4]!9 [[0,7]!4 [0,8]@4]!7>`)
   )
-  .fast(4).scale("e2:chromatic").clip(0.975).hpf(60).lpf(2500).pan(0.5).adsr("0.02:0.3:0.5:0.05")
+  .fast(4).scale("e2:chromatic").clip(0.975).hpf(60).lpf(4500).pan(0.5).adsr("0.02:0.3:0.5:0.05")
   .notchf("1440:2:60")
-  .s("[superpluck pulse]/16").unison(6).detune(0.025).gain(1.0).distort(3).postgain(0.125).warmth(0.3)
+  .s("[superpluck pulse]/16").unison(6).detune(0.02).gain(1.0).distort(4).postgain(0.35).warmth(0.2)
   .superimpose(
-    x => x.bandf(360).bandq(1.0).adsr("0.01:0.2:0.1:0.05"),
+    x => x.bandf(300).bandq(1.0).adsr("0.01:0.2:0.1:0.05"),
     x => x.bandf(880).bandq(sine.range(0.5, 1*1.5).slow(50)).sound("pulse").adsr("0.01:0.3:0.5:0.05"),
-    // x => x.bandf(1080).bandq(sine.range(0.5, 2*1.25).slow(40)).sound("pulse").adsr("0.01:0.1:0.2:0.05"),
+    x => x.bandf(1080).bandq(sine.range(0.5, 2*1.25).slow(40)).sound("pulse").adsr("0.01:0.1:0.2:0.05"),
   ).orbit(1) // .solo()
 
   , // Guitar 2
