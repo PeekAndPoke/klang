@@ -6,3 +6,5 @@
   tutorials, saved 2026-04-07
 - [Tutorial master plan with genres](project_tutorial_master_plan.md) — 36 tutorials x 36 unique genres, 55+ total
   genres across 73-tutorial library, saved 2026-04-07
+- [Doc-block quality standard](project_docblock_quality_standard.md) — Every DSL param needs description, default, and
+  range for live docs; backlog cleanup needed, saved 2026-04-07

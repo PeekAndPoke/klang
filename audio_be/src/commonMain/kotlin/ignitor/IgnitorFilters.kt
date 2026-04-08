@@ -48,12 +48,16 @@ data class FilterEnvelope(
 /**
  * State Variable Filter (SVF) combinator.
  *
- * Ported from: LowPassHighPassFilters.kt (BaseSvf, SvfLPF, SvfHPF, SvfBPF, SvfNotch)
+ * The SVF topology computes lowpass, highpass, bandpass, and notch simultaneously;
+ * [mode] selects which output is used. Each instance creates per-voice filter state
+ * in its closure. Optional [env] modulates cutoff at control rate (once per block).
  *
- * The SVF topology computes all four outputs simultaneously; [mode] selects which one is used.
- * Each instance creates per-voice filter state (ic1eq, ic2eq) in its closure.
- *
- * Optional [env] modulates cutoff at control rate (once per block).
+ * @param mode Filter type: [SvfMode.LOWPASS], [SvfMode.HIGHPASS], [SvfMode.BANDPASS], or [SvfMode.NOTCH].
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
+ *   Typical: 200–8000 for LP, 100–2000 for HP, 300–5000 for BP/Notch.
+ * @param q Resonance / Q factor. 0.707 = flat (Butterworth), higher = sharper peak.
+ *   Clamped to [0.1, 50.0]. Default: 0.707. Typical range: 0.5–10.0.
+ * @param env Optional ADSR envelope to modulate cutoff over time. Default: none.
  */
 fun Ignitor.svf(
     mode: SvfMode,
@@ -115,7 +119,14 @@ fun Ignitor.svf(
     }
 }
 
-/** SVF filter with constant cutoff and Q. Convenience for the Ignitor-param overload. */
+/**
+ * SVF filter with constant cutoff and Q (convenience overload).
+ *
+ * @param mode Filter type: LOWPASS, HIGHPASS, BANDPASS, or NOTCH.
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
+ * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 50.0].
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.svf(
     mode: SvfMode,
     cutoffHz: Double,
@@ -127,35 +138,83 @@ fun Ignitor.svf(
 // Convenience wrappers — delegates to svf() with the appropriate mode
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** SVF lowpass filter. Cutoff and Q are audio-rate modulatable. Processes per-sample. */
+/**
+ * Lowpass filter — lets low frequencies through, dulls the highs.
+ *
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 200–8000.
+ * @param q Resonance. 0.707 = flat (Butterworth), higher = peak at cutoff. Default: 0.707.
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.lowpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
     svf(SvfMode.LOWPASS, cutoffHz, q, env)
 
-/** SVF lowpass filter with constant cutoff and Q. Convenience for the Ignitor-param overload. */
+/**
+ * Lowpass filter (convenience overload with fixed values).
+ *
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 200–8000.
+ * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 50.0].
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
     svf(SvfMode.LOWPASS, cutoffHz, q, env)
 
-/** SVF highpass filter. Cutoff and Q are audio-rate modulatable. Processes per-sample. */
+/**
+ * Highpass filter — lets high frequencies through, removes the bottom.
+ *
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 80–2000.
+ * @param q Resonance. 0.707 = flat, higher = peak at cutoff. Default: 0.707.
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.highpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
     svf(SvfMode.HIGHPASS, cutoffHz, q, env)
 
-/** SVF highpass filter with constant cutoff and Q. Convenience for the Ignitor-param overload. */
+/**
+ * Highpass filter (convenience overload with fixed values).
+ *
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 80–2000.
+ * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 50.0].
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
     svf(SvfMode.HIGHPASS, cutoffHz, q, env)
 
-/** SVF bandpass filter. Cutoff and Q are audio-rate modulatable. Processes per-sample. */
+/**
+ * Bandpass filter — keeps only a frequency band, removes everything above and below.
+ *
+ * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
+ * @param q Width of the pass band. 1.0 = moderate, higher = narrower band. Default: 1.0.
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.bandpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
     svf(SvfMode.BANDPASS, cutoffHz, q, env)
 
-/** SVF bandpass filter with constant cutoff and Q. Convenience for the Ignitor-param overload. */
+/**
+ * Bandpass filter (convenience overload with fixed values).
+ *
+ * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
+ * @param q Width of the pass band. Default: 1.0. Clamped to [0.1, 50.0].
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
     svf(SvfMode.BANDPASS, cutoffHz, q, env)
 
-/** SVF notch (band-reject) filter. Cutoff and Q are audio-rate modulatable. Processes per-sample. */
+/**
+ * Notch (band-reject) filter — removes one frequency band, keeps everything else.
+ *
+ * @param cutoffHz Center frequency of the notch in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
+ * @param q Width of the notch. 1.0 = moderate, higher = narrower cut. Default: 1.0.
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.notch(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
     svf(SvfMode.NOTCH, cutoffHz, q, env)
 
-/** SVF notch (band-reject) filter with constant cutoff and Q. Convenience for the Ignitor-param overload. */
+/**
+ * Notch (band-reject) filter (convenience overload with fixed values).
+ *
+ * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
+ * @param q Width of the notch. Default: 1.0. Clamped to [0.1, 50.0].
+ * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ */
 fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
     svf(SvfMode.NOTCH, cutoffHz, q, env)
 
@@ -165,7 +224,12 @@ fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = Filte
 
 /**
  * Simple one-pole lowpass filter for warmth or smoothing. Processes per-sample.
+ *
+ * Gentler slope than the SVF (6 dB/oct vs 12 dB/oct). Good for subtle tone shaping.
  * Cutoff is read once per block (control rate).
+ *
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
+ *   Lower = darker/warmer, higher = more transparent. Typical: 1000–8000.
  */
 fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor {
     var y = 0.0
@@ -186,7 +250,11 @@ fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor {
     }
 }
 
-/** One-pole lowpass with constant cutoff. Convenience for the Ignitor-param overload. */
+/**
+ * One-pole lowpass with constant cutoff (convenience overload).
+ *
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 1000–8000.
+ */
 fun Ignitor.onePoleLowpass(cutoffHz: Double): Ignitor = onePoleLowpass(ParamIgnitor("cutoffHz", cutoffHz))
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -195,7 +263,12 @@ fun Ignitor.onePoleLowpass(cutoffHz: Double): Ignitor = onePoleLowpass(ParamIgni
 
 /**
  * Simple one-pole highpass filter. Processes per-sample.
+ *
+ * Gentler slope than the SVF (6 dB/oct). Good for removing low-end rumble.
  * Cutoff is read once per block (control rate).
+ *
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
+ *   Frequencies below this are attenuated. Typical: 30–500.
  */
 fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor {
     var y = 0.0
@@ -219,7 +292,11 @@ fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor {
     }
 }
 
-/** One-pole highpass with constant cutoff. Convenience for the Ignitor-param overload. */
+/**
+ * One-pole highpass with constant cutoff (convenience overload).
+ *
+ * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 30–500.
+ */
 fun Ignitor.onePoleHighpass(cutoffHz: Double): Ignitor = onePoleHighpass(ParamIgnitor("cutoffHz", cutoffHz))
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -227,10 +304,13 @@ fun Ignitor.onePoleHighpass(cutoffHz: Double): Ignitor = onePoleHighpass(ParamIg
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Formant filter: parallel SVF bandpass filters summed together.
- * Each band has a center frequency, Q, and gain in dB.
- *
  * Formant filter — parallel bandpass filter bank for vowel synthesis.
+ *
+ * Sums multiple SVF bandpass filters, each at a different frequency with its own Q and gain.
+ * Use to create vowel sounds ("ah", "ee", "oo") or instrument body resonances.
+ *
+ * @param bands List of [FormantBand] specifications, each with freq (Hz), q, and db (gain).
+ *   Typical vowel: 3–5 bands between 300–3500 Hz with Q of 5–15.
  */
 fun Ignitor.formant(bands: List<FormantBand>): Ignitor {
     class BandState(val freq: Double, val q: Double, val linearGain: Double) {
@@ -285,7 +365,13 @@ fun Ignitor.formant(bands: List<FormantBand>): Ignitor {
     }
 }
 
-/** A single formant band specification. */
+/**
+ * A single formant band specification.
+ *
+ * @property freq Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–3500.
+ * @property q Bandwidth (resonance). Higher = narrower peak. Typical: 5–15.
+ * @property db Gain in decibels. 0 = unity, negative = attenuated, positive = boosted.
+ */
 data class FormantBand(
     val freq: Double,
     val q: Double,

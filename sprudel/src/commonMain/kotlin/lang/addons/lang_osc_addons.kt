@@ -4,8 +4,18 @@ package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.PatternLike
+import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
+import io.peekandpoke.klang.sprudel.lang.SprudelDsl
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.asDoubleOrNull
+import io.peekandpoke.klang.sprudel.lang.chain
+import io.peekandpoke.klang.sprudel.lang.dslPatternExtension
+import io.peekandpoke.klang.sprudel.lang.dslPatternMapper
+import io.peekandpoke.klang.sprudel.lang.dslPatternMapperExtension
+import io.peekandpoke.klang.sprudel.lang.dslStringExtension
+import io.peekandpoke.klang.sprudel.lang.voiceModifier
 import io.peekandpoke.klang.sprudel.withOscParam
 
 /**
@@ -13,6 +23,92 @@ import io.peekandpoke.klang.sprudel.withOscParam
  * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
  */
 var sprudelLangOscAddonsInit = false
+
+// -- oscparam() / oscp() ----------------------------------------------------------------------------------------------
+
+private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    if (args.size < 2) return source
+    val key = args[0].value?.toString() ?: return source
+    val valueArgs = args.drop(1)
+    val mutation = voiceModifier { withOscParam(key, it?.asDoubleOrNull()) }
+    return source._liftOrReinterpretStringField(valueArgs, mutation)
+}
+
+internal val SprudelPattern._oscparam by dslPatternExtension { p, args, _ -> applyOscparam(p, args) }
+internal val String._oscparam by dslStringExtension { p, args, callInfo -> p._oscparam(args, callInfo) }
+internal val _oscparam by dslPatternMapper { args, callInfo -> { p -> p._oscparam(args, callInfo) } }
+internal val PatternMapperFn._oscparam by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_oscparam(args, callInfo))
+}
+
+// Alias: oscp
+internal val SprudelPattern._oscp by dslPatternExtension { p, args, _ -> applyOscparam(p, args) }
+internal val String._oscp by dslStringExtension { p, args, callInfo -> p._oscp(args, callInfo) }
+internal val _oscp by dslPatternMapper { args, callInfo -> { p -> p._oscp(args, callInfo) } }
+internal val PatternMapperFn._oscp by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_oscp(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets an arbitrary oscillator parameter by key.
+ *
+ * Provides direct access to the `oscParams` map for custom oscillator parameters
+ * that don't have dedicated DSL functions.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").s("supersaw").oscparam("analog", 0.2)
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3").oscparam("warmth", "<0.2 0.8>")    // pattern-cycle the value
+ * ```
+ *
+ * @param key The oscillator parameter name (e.g. "analog", "warmth", "density").
+ * @param value The parameter value.
+ * @return A new pattern with the oscillator parameter set.
+ * @category tonal
+ * @tags oscillator, parameter, osc, addon
+ */
+@SprudelDsl
+fun SprudelPattern.oscparam(key: String, value: PatternLike): SprudelPattern =
+    this._oscparam(listOf(key, value).asSprudelDslArgs())
+
+/** Parses this string as a pattern and sets an oscillator parameter. */
+@SprudelDsl
+fun String.oscparam(key: String, value: PatternLike): SprudelPattern =
+    this._oscparam(listOf(key, value).asSprudelDslArgs())
+
+/** Creates a [PatternMapperFn] that sets an oscillator parameter. */
+@SprudelDsl
+fun oscparam(key: String, value: PatternLike): PatternMapperFn =
+    _oscparam(listOf(key, value).asSprudelDslArgs())
+
+/** Chains an oscillator-parameter-set onto this [PatternMapperFn]. */
+@SprudelDsl
+fun PatternMapperFn.oscparam(key: String, value: PatternLike): PatternMapperFn =
+    this._oscparam(listOf(key, value).asSprudelDslArgs())
+
+/** Alias for [oscparam]. */
+@SprudelDsl
+fun SprudelPattern.oscp(key: String, value: PatternLike): SprudelPattern =
+    this._oscp(listOf(key, value).asSprudelDslArgs())
+
+/** Alias for [oscparam]. Parses this string as a pattern and sets an oscillator parameter. */
+@SprudelDsl
+fun String.oscp(key: String, value: PatternLike): SprudelPattern =
+    this._oscp(listOf(key, value).asSprudelDslArgs())
+
+/** Alias for [oscparam]. Creates a [PatternMapperFn] that sets an oscillator parameter. */
+@SprudelDsl
+fun oscp(key: String, value: PatternLike): PatternMapperFn =
+    _oscp(listOf(key, value).asSprudelDslArgs())
+
+/** Alias for [oscparam]. Chains an oscillator-parameter-set onto this [PatternMapperFn]. */
+@SprudelDsl
+fun PatternMapperFn.oscp(key: String, value: PatternLike): PatternMapperFn =
+    this._oscp(listOf(key, value).asSprudelDslArgs())
 
 // -- analog() ---------------------------------------------------------------------------------------------------------
 

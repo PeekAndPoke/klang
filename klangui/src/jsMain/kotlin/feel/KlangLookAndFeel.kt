@@ -40,6 +40,10 @@ data class KlangLookAndFeel(
 
     val gold: String = "#e8b84b",
 
+    // ── Bronze — warm-tinted popup / overlay backgrounds ─────────────────────
+
+    val bronze: String = "#362820",
+
     // ── Status scale (5 levels) ───────────────────────────────────────────────
 
     val excellent: String = "#56b6c2",
@@ -66,6 +70,7 @@ data class KlangLookAndFeel(
                 textTertiary = v("--klang-text-tertiary"),
                 accent = v("--klang-accent"),
                 gold = v("--klang-gold"),
+                bronze = v("--klang-bronze"),
                 excellent = v("--klang-excellent"),
                 good = v("--klang-good"),
                 moderate = v("--klang-moderate"),
@@ -100,6 +105,41 @@ data class KlangLookAndFeel(
         val goldButton by rule {
             put("background-color", "$gold !important")
             put("color", "#222 !important")
+        }
+
+        /** Bronze-tinted background — use on popups and overlays that need to stand out. */
+        val bronzeBg by rule {
+            put("background-color", "$bronze !important")
+        }
+
+        /** Popup panel — bronze bg, warm border, subtle glow. Use on hover popups and context menus. */
+        val popup by rule {
+            put("background-color", "$bronze !important")
+            put("color", "$textPrimary !important")
+            put("border", "1px solid $warning !important")
+            put("box-shadow", "0 0 8px ${warning}44 !important")
+            // Override Semantic UI .ui.segment background via self-referencing specificity bump
+            rule("&.ui.segment") {
+                put("background-color", "$bronze !important")
+            }
+            rule("&.ui.menu") {
+                put("background-color", "$bronze !important")
+                put("border", "1px solid $warning !important")
+                put("box-shadow", "0 0 8px ${warning}44 !important")
+            }
+        }
+
+        /** Context menu — extends popup style for compact vertical menus. */
+        val contextMenu by rule {
+            put("background-color", "$bronze !important")
+            put("color", "$textPrimary !important")
+            put("border", "1px solid $warning !important")
+            put("box-shadow", "0 0 8px ${warning}44 !important")
+            rule("&.ui.menu") {
+                put("background-color", "$bronze !important")
+                put("border", "1px solid $warning !important")
+                put("box-shadow", "0 0 8px ${warning}44 !important")
+            }
         }
 
         /** Overlays a 10 % dark tint — use on subtle inset panels. */
@@ -230,7 +270,7 @@ data class KlangLookAndFeel(
             put("transition", "border-color var(--klang-transition), box-shadow var(--klang-transition)")
             put("-moz-appearance", "textfield")
             rule(":focus") {
-                put("border-color", "$gold")
+                put("border-color", gold)
                 put("box-shadow", "0 0 0 1px $gold")
                 put("outline", "none")
             }

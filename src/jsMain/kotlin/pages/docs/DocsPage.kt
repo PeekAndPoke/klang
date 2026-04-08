@@ -43,6 +43,19 @@ class DocsPage(ctx: NoProps) : PureComponent(ctx) {
             ui.four.stackable.link.cards {
 
                 ui.horizontal.card {
+                    onClick { router.navToUri(Nav.manualsLexikon()) }
+
+                    noui.image {
+                        ui.basic.segment {
+                            icon.big.book()
+                        }
+                    }
+                    noui.middle.aligned.content {
+                        ui.large.header { +"Lexikon" }
+                    }
+                }
+
+                ui.horizontal.card {
                     onClick { router.navToUri(Nav.manualsLibrary("sprudel")) }
 
                     noui.image {

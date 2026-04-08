@@ -354,7 +354,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private fun switchToBlocks(event: PointerEvent) {
         if (codeHasComments()) {
             popups.showContextMenu(event = event, positioning = PopupsManager.Positioning.BottomCenter) { handle ->
-                ui.compact.segment {
+                ui.compact.segment.with(laf.styles.popup()) {
                     css {
                         width = LinearDimension.maxContent
                     }

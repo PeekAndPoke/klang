@@ -88,7 +88,7 @@ class CodeMirrorTheme {
             this[".cm-gutters"] = jsObject {
                 backgroundColor = background
                 color = KlangTheme.Hex.textTertiary
-                border = "none"
+                borderRight = "1px solid ${KlangTheme.Hex.textTertiary}40"
             }
             this[".cm-activeLineGutter"] = jsObject {
                 backgroundColor = highlightBackground

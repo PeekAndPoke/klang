@@ -95,6 +95,7 @@ internal val PatternMapperFn._slow by dslPatternMapperExtension { m, args, callI
  *
  * `slow(2)` stretches the pattern so it takes 2 cycles to complete. Accepts control patterns for the factor.
  *
+ * @param factor Slowdown multiplier. 2 = half speed. Default: 1 (no change). Typical range: 0.25–16. Inverse of fast().
  * @return A pattern slowed by `factor`.
  *
  * ```KlangScript(Playable)
@@ -117,6 +118,8 @@ fun String.slow(factor: PatternLike): SprudelPattern = this._slow(listOf(factor)
 
 /**
  * Returns a [PatternMapperFn] that slows down a pattern by the given factor.
+ *
+ * @param factor Slowdown multiplier. 2 = half speed. Default: 1 (no change). Typical range: 0.25–16.
  *
  * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(slow(2))       // mapper form
@@ -196,6 +199,8 @@ fun String.fast(factor: PatternLike): SprudelPattern = this._fast(listOf(factor)
 /**
  * Returns a [PatternMapperFn] that speeds up a pattern by the given factor.
  *
+ * @param factor Speed-up multiplier. 2 = double speed (twice as many events per cycle). Default: 1 (no change). Typical range: 0.25–16.
+ *
  * ```KlangScript(Playable)
  * s("bd sd hh").apply(fast(2))      // mapper form
  * ```
@@ -235,6 +240,7 @@ internal val PatternMapperFn._rev by dslPatternMapperExtension { m, args, callIn
  * the reversal is applied across every `n`-cycle span — useful for longer retrograde effects.
  * Accepts control patterns for the cycle count.
  *
+ * @param n Number of cycles to reverse across. Default: 1 (reverse within each cycle). Typical range: 1–8.
  * @return A pattern with events reversed per cycle (or per `n`-cycle group).
  *
  * ```KlangScript(Playable)
@@ -257,6 +263,8 @@ fun String.rev(n: PatternLike = 1): SprudelPattern = this._rev(listOf(n).asSprud
 
 /**
  * Returns a [PatternMapperFn] that reverses the order of events across every `n`-cycle span.
+ *
+ * @param n Number of cycles to reverse across. Default: 1. Typical range: 1–8.
  *
  * ```KlangScript(Playable)
  * s("bd hh sd cp").apply(rev())             // mapper form
@@ -422,6 +430,7 @@ internal val PatternMapperFn._early by dslPatternMapperExtension { m, args, call
  * every event half a cycle earlier so that what was at position 0.5 now appears at position 0.
  * Useful for creating syncopation or aligning patterns that are slightly off-beat.
  *
+ * @param amount Time shift in cycles. 0.5 = shift half a cycle earlier. Default: 0 (no shift). Typical range: 0–1.
  * @return A pattern shifted earlier by the given number of cycles.
  *
  * ```KlangScript(Playable)
@@ -444,6 +453,8 @@ fun String.early(amount: PatternLike): SprudelPattern = this._early(listOf(amoun
 
 /**
  * Returns a [PatternMapperFn] that nudges a pattern earlier by the given number of cycles.
+ *
+ * @param amount Time shift in cycles. Default: 0. Typical range: 0–1.
  *
  * ```KlangScript(Playable)
  * s("hh*4").apply(early(0.125))       // mapper form
@@ -479,6 +490,7 @@ internal val PatternMapperFn._late by dslPatternMapperExtension { m, args, callI
  * every event half a cycle later so that what was at position 0 now appears at position 0.5.
  * Useful for creating delay effects or adjusting phase relationships between patterns.
  *
+ * @param amount Time shift in cycles. 0.5 = shift half a cycle later. Default: 0 (no shift). Typical range: 0–1.
  * @return A pattern shifted later by the given number of cycles.
  *
  * ```KlangScript(Playable)
@@ -501,6 +513,8 @@ fun String.late(amount: PatternLike): SprudelPattern = this._late(listOf(amount)
 
 /**
  * Returns a [PatternMapperFn] that nudges a pattern later by the given number of cycles.
+ *
+ * @param amount Time shift in cycles. Default: 0. Typical range: 0–1.
  *
  * ```KlangScript(Playable)
  * s("hh*4").apply(late(0.125))        // mapper form
@@ -572,6 +586,8 @@ internal val PatternMapperFn._compress by dslPatternMapperExtension { m, args, c
  * `compress(start, end)` squeezes the full pattern into the window `[start, end]` within
  * each cycle and leaves a gap everywhere else. Both values are in the range 0–1.
  *
+ * @param start Beginning of the time window as a cycle fraction. Default: 0. Range: 0–1.
+ * @param end End of the time window as a cycle fraction. Default: 1. Range: 0–1. Must be greater than start.
  * @return A pattern compressed into `[start, end]` with silence elsewhere.
  *
  * ```KlangScript(Playable)
@@ -596,6 +612,9 @@ fun String.compress(start: PatternLike, end: PatternLike): SprudelPattern =
 
 /**
  * Returns a [PatternMapperFn] that compresses a pattern into `[start, end]` per cycle.
+ *
+ * @param start Beginning of the time window as a cycle fraction. Range: 0–1.
+ * @param end End of the time window as a cycle fraction. Range: 0–1.
  *
  * ```KlangScript(Playable)
  * note("c d e f").apply(compress(0, 0.5))  // mapper form
@@ -658,6 +677,8 @@ internal val PatternMapperFn._focus by dslPatternMapperExtension { m, args, call
  * `focus(start, end)` is like the inverse of `compress`: it takes the slice `[start, end]`
  * of the original pattern and stretches it to fill a full cycle.
  *
+ * @param start Beginning of the section to zoom into, as a cycle fraction. Default: 0. Range: 0–1.
+ * @param end End of the section to zoom into, as a cycle fraction. Default: 1. Range: 0–1. Must be greater than start.
  * @return A pattern that zooms into `[start, end]`, stretching it to fill each cycle.
  *
  * ```KlangScript(Playable)
@@ -682,6 +703,9 @@ fun String.focus(start: PatternLike, end: PatternLike): SprudelPattern =
 
 /**
  * Returns a [PatternMapperFn] that zooms in on `[start, end]` and stretches it to fill each cycle.
+ *
+ * @param start Beginning of the section as a cycle fraction. Range: 0–1.
+ * @param end End of the section as a cycle fraction. Range: 0–1.
  *
  * ```KlangScript(Playable)
  * note("c d e f").apply(focus(0, 0.5))  // mapper form
@@ -752,6 +776,7 @@ internal val PatternMapperFn._ply by dslPatternMapperExtension { m, args, callIn
  * duration. For example, `ply(3)` on a 2-event pattern produces 6 events: 3 copies of the
  * first event followed by 3 copies of the second. Accepts control patterns for `n`.
  *
+ * @param n Number of repetitions per event. Default: 1 (no repetition). Typical range: 1–16. Accepts control patterns.
  * @return A pattern with each event repeated `n` times within its timespan.
  *
  * ```KlangScript(Playable)
@@ -774,6 +799,8 @@ fun String.ply(n: PatternLike): SprudelPattern = this._ply(listOf(n).asSprudelDs
 
 /**
  * Returns a [PatternMapperFn] that repeats each event `n` times within its timespan.
+ *
+ * @param n Number of repetitions per event. Default: 1. Typical range: 1–16.
  *
  * ```KlangScript(Playable)
  * note("c d").apply(ply(3))           // mapper form
@@ -866,6 +893,8 @@ internal val PatternMapperFn._plywith by dslPatternMapperExtension { m, args, ca
  * time: copy 0 is unmodified, copy 1 has `transform` applied once, copy 2 twice, and so on.
  * This creates escalating variations within each event's slot.
  *
+ * @param factor Number of repetitions per event slot. Typical range: 1–16.
+ * @param transform Pattern transformation applied cumulatively — copy 0 is unmodified, copy 1 has it applied once, etc.
  * @return A pattern with `n` progressively transformed copies of each event per slot.
  *
  * ```KlangScript(Playable)
@@ -892,6 +921,9 @@ fun String.plyWith(factor: Int, transform: PatternMapperFn): SprudelPattern =
 /**
  * Returns a [PatternMapperFn] that repeats each event `n` times, applying `transform` cumulatively.
  *
+ * @param factor Number of repetitions per event slot.
+ * @param transform Pattern transformation applied cumulatively per copy.
+ *
  * ```KlangScript(Playable)
  * note("c").apply(plyWith(4) { it.add(7) })   // mapper form
  * ```
@@ -911,6 +943,9 @@ fun PatternMapperFn.plyWith(factor: Int, transform: PatternMapperFn): PatternMap
 
 /**
  * Alias for `plyWith`.
+ *
+ * @param factor Number of repetitions per event slot.
+ * @param transform Pattern transformation applied cumulatively per copy.
  *
  * @alias plyWith
  * @category tempo
@@ -1009,6 +1044,8 @@ internal val PatternMapperFn._plyforeach by dslPatternMapperExtension { m, args,
  * transform can produce index-specific variations. As a top-level function the third argument
  * is the source pattern.
  *
+ * @param factor Number of repetitions per event slot. Typical range: 1–16.
+ * @param transform Function receiving (pattern, index) where index is 0-based; copy 0 is always unmodified.
  * @return A pattern with `n` index-specific copies of each event per slot.
  *
  * ```KlangScript(Playable)
@@ -1023,7 +1060,6 @@ internal val PatternMapperFn._plyforeach by dslPatternMapperExtension { m, args,
  * @category tempo
  * @tags plyForEach, repeat, transform, index, subdivide
  */
-/** Repeats each event `n` times, passing the iteration index to `transform`. */
 @SprudelDsl
 fun SprudelPattern.plyForEach(factor: Int, transform: (SprudelPattern, Int) -> SprudelPattern): SprudelPattern =
     this._plyForEach(listOf(factor, transform).asSprudelDslArgs())
@@ -1046,11 +1082,13 @@ fun PatternMapperFn.plyForEach(factor: Int, transform: (SprudelPattern, Int) -> 
 /**
  * Alias for `plyForEach`.
  *
+ * @param factor Number of repetitions per event slot.
+ * @param transform Function receiving (pattern, index) where index is 0-based.
+ *
  * @alias plyForEach
  * @category tempo
  * @tags plyforeach, plyForEach, repeat, transform, index
  */
-/** Alias for [plyForEach] on this pattern. */
 @SprudelDsl
 fun SprudelPattern.plyforeach(factor: Int, transform: (SprudelPattern, Int) -> SprudelPattern): SprudelPattern =
     this._plyforeach(listOf(factor, transform).asSprudelDslArgs())
@@ -1098,6 +1136,7 @@ internal val PatternMapperFn._hurry by dslPatternMapperExtension { m, args, call
  * `speed` field (sample playback rate) so samples sound proportionally higher-pitched. This
  * mimics tape-speed acceleration. As a top-level function the second argument is the source pattern.
  *
+ * @param factor Speed and pitch multiplier. 2 = double speed with pitch up one octave. Default: 1 (no change). Typical range: 0.25–16.
  * @return A pattern sped up in both timing and sample playback rate.
  *
  * ```KlangScript(Playable)
@@ -1111,7 +1150,6 @@ internal val PatternMapperFn._hurry by dslPatternMapperExtension { m, args, call
  * @category tempo
  * @tags hurry, fast, speed, pitch, accelerate
  */
-/** Speeds up pattern and multiplies the `speed` audio parameter by the same factor. */
 @SprudelDsl
 fun SprudelPattern.hurry(factor: PatternLike): SprudelPattern = this._hurry(listOf(factor).asSprudelDslArgs())
 
@@ -1161,6 +1199,7 @@ internal val PatternMapperFn._densityGap by dslPatternMapperExtension { m, args,
  * the pattern into the first `1/n` of the cycle and leaves silence in the remaining space. As a
  * top-level function the second argument is the source pattern.
  *
+ * @param factor Compression factor. 2 = play in first half, silence in second. Default: 1 (full cycle). Typical range: 1–8.
  * @return A pattern compressed into the first `1/factor` of each cycle with silence after.
  *
  * ```KlangScript(Playable)
@@ -1175,7 +1214,6 @@ internal val PatternMapperFn._densityGap by dslPatternMapperExtension { m, args,
  * @category tempo
  * @tags fastGap, fast, gap, silence, compress, density
  */
-/** Speeds up the pattern but plays it only once per cycle, leaving a gap. */
 @SprudelDsl
 fun SprudelPattern.fastGap(factor: PatternLike): SprudelPattern = this._fastGap(listOf(factor).asSprudelDslArgs())
 
@@ -1238,6 +1276,9 @@ internal val PatternMapperFn._inside by dslPatternMapperExtension { m, args, cal
  * tempo. The net effect is that `transform` sees a pattern spread over `factor` cycles,
  * allowing operations like `rev()` to work across a larger musical phrase while the result
  * still fits in one cycle.
+ *
+ * @param factor The zoom-in amount. The pattern is slowed by this factor before the transform, then sped back up.
+ * @param transform Transformation to apply while the pattern is spread over `factor` cycles.
  *
  * ```KlangScript(Playable)
  * note("0 1 2 3").inside(4) { it.rev() }       // reverse across 4-cycle span, then compress back
@@ -1302,6 +1343,9 @@ internal val PatternMapperFn._outside by dslPatternMapperExtension { m, args, ca
  * Speeds the pattern by `factor`, applies `transform`, then slows it back down. The net effect
  * is that `transform` sees only `1/factor` of the original pattern per cycle, allowing
  * operations like `rev()` to work on a globally coarser time scale.
+ *
+ * @param factor The zoom-out amount. The pattern is sped up by this factor before the transform, then slowed back down.
+ * @param transform Transformation to apply while the pattern covers only `1/factor` of the original cycle.
  *
  * ```KlangScript(Playable)
  * note("0 1 2 3").outside(4) { it.rev() }      // reverse on 1/4 speed, then speed back up

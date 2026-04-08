@@ -450,6 +450,7 @@ fun PatternMapperFn.loopBegin(pos: PatternLike): PatternMapperFn = this._loopBeg
 /**
  * Alias for [loopBegin]. Sets the loop start position.
  *
+ * @param pos Loop start position as a ratio of sample length. Default: same as begin(). Range: 0.0–1.0.
  * @alias loopBegin
  * @category sampling
  * @tags loopb, loopBegin, loop, start, sample, position
@@ -554,6 +555,7 @@ fun PatternMapperFn.loopEnd(pos: PatternLike): PatternMapperFn = this._loopEnd(l
 /**
  * Alias for [loopEnd]. Sets the loop end position.
  *
+ * @param pos Loop end position as a ratio of sample length. Default: same as end(). Range: 0.0–1.0.
  * @alias loopEnd
  * @category sampling
  * @tags loope, loopEnd, loop, end, sample, position
@@ -697,11 +699,12 @@ internal val PatternMapperFn._loopatcps by dslPatternMapperExtension { m, args, 
  * s("breaks").loopAtCps(2, 0.75)   // fit to 2 cycles at 0.75 cps
  * ```
  *
+ * @param factor Number of cycles to fit the sample into. Default: 1.
+ * @param cps Cycles per second used for speed calculation. Default: 0.5.
  * @alias loopatcps
  * @category sampling
  * @tags loopAtCps, loopatcps, loop, fit, cycles, cps, tempo, stretch
  */
-/** Fits the sample to the given number of cycles and cps value on this pattern. */
 @SprudelDsl
 fun SprudelPattern.loopAtCps(factor: PatternLike, cps: PatternLike): SprudelPattern =
     this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
@@ -748,6 +751,8 @@ fun PatternMapperFn.loopAtCps(factor: PatternLike, cps: PatternLike): PatternMap
 /**
  * Alias for [loopAtCps]. Fits the sample to the given number of cycles and cps.
  *
+ * @param factor Number of cycles to fit the sample into. Default: 1.
+ * @param cps Cycles per second used for speed calculation. Default: 0.5.
  * @alias loopAtCps
  * @category sampling
  * @tags loopatcps, loopAtCps, loop, fit, cycles, cps, tempo, stretch
@@ -892,6 +897,8 @@ internal val PatternMapperFn._slice by dslPatternMapperExtension { m, args, call
  * s("breaks").slice(8, "0 1 2 3 4 5 6 7".i)  // sequence through all 8 slices
  * ```
  *
+ * @param n Number of equal slices to divide the sample into. Integer.
+ * @param index Zero-based index of the slice to play. Integer.
  * @category sampling
  * @tags slice, segment, chop, sample, begin, end
  */
@@ -962,6 +969,8 @@ internal val PatternMapperFn._splice by dslPatternMapperExtension { m, args, cal
  * s("breaks").splice(8, "0 2 4 6".i)    // every other slice, original tempo
  * ```
  *
+ * @param n Number of equal slices to divide the sample into; also used as speed multiplier. Integer.
+ * @param index Zero-based index of the slice to play. Integer.
  * @category sampling
  * @tags splice, slice, chop, sample, speed, tempo
  */

@@ -351,6 +351,9 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
 
     private fun DIV.renderDocsMenu() {
         menuItemsList {
+            menuItem(currentRoute.route == Nav.manualsLexikon, "Lexikon", { book }) {
+                router.navToUri(Nav.manualsLexikon())
+            }
             menuItem(currentRoute.route == Nav.manualsLibrary && currentRoute.matchedRoute["library"] == "sprudel", "Sprudel", { wind }) {
                 router.navToUri(Nav.manualsLibrary("sprudel"))
             }

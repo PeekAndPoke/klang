@@ -12,6 +12,7 @@
 
     --klang-accent:         #528bff;
     --klang-gold:           #EBC773;
+    --klang-bronze:         #362820;
 
     --klang-border-radius:  4px;
     --klang-transition:     200ms ease;
@@ -54,7 +55,7 @@ textarea::selection,
 
 /* ── Fomantic UI dark overrides ───────────────────────────────────────────── */
 .ui.basic.popup {
-    background: var(--klang-bg-overlay) !important;
+    background: var(--klang-bronze) !important;
     border-color: var(--klang-text-tertiary) !important;
     border-radius: var(--klang-border-radius) !important;
     box-shadow: 0 0 3px var(--klang-text-tertiary) !important;

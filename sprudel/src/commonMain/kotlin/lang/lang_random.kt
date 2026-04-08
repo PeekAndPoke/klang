@@ -2,12 +2,24 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel._innerJoin
+import io.peekandpoke.klang.sprudel._lift
+import io.peekandpoke.klang.sprudel.appLeft
+import io.peekandpoke.klang.sprudel.filterValues
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.pattern.*
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.pattern.ChoicePattern
+import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern
+import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
+import io.peekandpoke.klang.sprudel.pattern.ControlPattern
+import io.peekandpoke.klang.sprudel.pattern.RandLPattern
+import io.peekandpoke.klang.sprudel.pattern.RandrunPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
+import io.peekandpoke.klang.sprudel.pattern.SequencePattern
+import io.peekandpoke.klang.sprudel.pattern.StructurePattern
 import kotlin.math.floor
 
 /**
@@ -258,6 +270,7 @@ internal val _brandBy by dslPatternFunction { args, /* callInfo */ _ ->
  * note("c d e f").gain(brandBy(0.5))  // random full/zero gain on each event
  * ```
  *
+ * @param prob Probability of returning 1 (vs 0). Range: 0.0–1.0. Default: 0.5.
  * @category random
  * @tags brandBy, binary, random, gate, probability
  */
@@ -349,6 +362,7 @@ internal val _irand by dslPatternFunction { args, /* callInfo */ _ ->
  * s("bd*8").n(irand(6))                       // random sample variant 0–5 per hit
  * ```
  *
+ * @param n Upper bound (exclusive) — random integers are produced in the range 0 to n-1. Any positive integer.
  * @category random
  * @tags irand, random, integer, continuous
  */
@@ -1288,6 +1302,7 @@ internal val _randL by dslPatternFunction { args, /* callInfo */ _ ->
  * s("saw").n(irand(12)).scale("F1:minor").partials(randL(8))   // 8 random partials
  * ```
  *
+ * @param n Number of random values to produce in each list. Any positive integer.
  * @category random
  * @tags randL, random, list, array, partials
  */
@@ -1345,6 +1360,7 @@ internal val _randrun by dslPatternFunction { args, /* callInfo */ _ ->
  * s("bd sd hh cp").bite(4, randrun(4))         // random order of 4 slices each cycle
  * ```
  *
+ * @param n Number of integers in the random permutation (produces values 0 to n-1). Any positive integer.
  * @category random
  * @tags randrun, random, permutation, shuffle, sequence
  */
@@ -1506,6 +1522,7 @@ internal val String._chooseWith by dslStringExtension { p, args, callInfo -> p._
  * s(chooseWith(rand, "bd", "sd", "hh"))    // random instrument selection per event
  * ```
  *
+ * @param args First argument is the selector pattern (values 0–1); remaining arguments are the values to choose from.
  * @category random
  * @tags chooseWith, choose, selector, random, values
  */
@@ -1550,6 +1567,7 @@ internal val String._chooseInWith by dslStringExtension { p, args, callInfo -> p
  * chooseInWith(sine, "c d", "e f g", "a b c d")   // selector picks pattern; its timing wins
  * ```
  *
+ * @param args First argument is the selector pattern (values 0–1); remaining arguments are the values to choose from.
  * @category random
  * @tags chooseInWith, chooseWith, selector, random, structure
  */
@@ -1599,6 +1617,7 @@ internal val String._choose by dslStringExtension { p, args, callInfo -> p._choo
  * s(choose("bd", "sd", "hh")).fast(8)    // random drum sound every eighth-note
  * ```
  *
+ * @param args Values or patterns to randomly choose from at each event.
  * @alias chooseOut
  * @category random
  * @tags choose, random, selection, values, chooseOut
@@ -1616,6 +1635,7 @@ fun choose(vararg args: PatternLike): SprudelPattern = _choose(args.toList().asS
  * sine.choose("c", "e", "g", "b")     // sine wave selects among chord tones
  * ```
  *
+ * @param args Values or patterns to choose from using the receiver as selector.
  * @alias chooseOut
  * @category random
  * @tags choose, selector, random, chooseOut
@@ -1636,6 +1656,7 @@ internal val String._chooseOut by dslStringExtension { p, args, callInfo -> p._c
 /**
  * Alias for [choose].
  *
+ * @param args Values or patterns to randomly choose from at each event.
  * @alias choose
  * @category random
  * @tags chooseOut, choose, random, selection
@@ -1681,6 +1702,7 @@ internal val String._chooseIn by dslStringExtension { p, args, callInfo -> p._ch
  * chooseIn("c d", "e f g", "a b c d")   // random pattern; its timing determines structure
  * ```
  *
+ * @param args Values or patterns to randomly choose from; structure comes from the chosen value.
  * @category random
  * @tags chooseIn, random, selection, structure
  */
@@ -1716,6 +1738,7 @@ internal val String._choose2 by dslStringExtension { p, args, callInfo -> p._cho
  * rand2.choose2("c", "e", "g", "b")    // bipolar rand selects among chord tones
  * ```
  *
+ * @param args Values or patterns to choose from using the bipolar receiver (-1 to 1) as selector.
  * @category random
  * @tags choose2, bipolar, selector, random
  */
@@ -1761,6 +1784,7 @@ internal val String._chooseCycles by dslStringExtension { p, args, /* callInfo *
  * s("bd | hh | sd").fast(8)                    // mini-notation equivalent using |
  * ```
  *
+ * @param args Values or patterns to randomly pick from; one is chosen per cycle.
  * @alias randcat
  * @category random
  * @tags chooseCycles, random, cycle, randcat, selection
@@ -1787,6 +1811,7 @@ internal val String._randcat by dslStringExtension { p, args, callInfo -> p._ran
 /**
  * Alias for [chooseCycles].
  *
+ * @param args Values or patterns to randomly pick from; one is chosen per cycle.
  * @alias chooseCycles
  * @category random
  * @tags randcat, chooseCycles, random, cycle
@@ -1840,6 +1865,7 @@ internal val String._wchoose by dslStringExtension { p, args, callInfo -> p._wch
  * s(wchoose(listOf("bd", 8), listOf("sd", 2), listOf("hh", 5))).fast(8)
  * ```
  *
+ * @param args `[value, weight]` pairs — higher weight means more likely selection.
  * @category random
  * @tags wchoose, weighted, random, probability, selection
  */
@@ -1890,6 +1916,7 @@ internal val String._wchooseCycles by dslStringExtension { p, args, callInfo -> 
  * wchooseCycles(listOf("bd", 10), listOf("hh", 1)).s().fast(8)   // bd much more likely
  * ```
  *
+ * @param args `[value, weight]` pairs — higher weight means more likely selection. One is chosen per cycle.
  * @alias wrandcat
  * @category random
  * @tags wchooseCycles, weighted, random, cycle, wrandcat
@@ -1916,6 +1943,7 @@ internal val String._wrandcat by dslStringExtension { p, args, callInfo -> p._wr
 /**
  * Alias for [wchooseCycles].
  *
+ * @param args `[value, weight]` pairs — higher weight means more likely selection. One is chosen per cycle.
  * @alias wchooseCycles
  * @category random
  * @tags wrandcat, wchooseCycles, weighted, random, cycle

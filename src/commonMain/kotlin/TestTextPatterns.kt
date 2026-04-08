@@ -173,33 +173,59 @@ import * from "sprudel"
 let stay = 48
 let tp = "[0 -1 -2 -3 -5  -2  1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
 
+// Let's build a custom guitar, shall we!
+let guitar = Osc.register("guitar",
+    // Core: thick detuned supersaw - wall of sound
+    Osc.supersaw(Osc.freq(), 4, Osc.param("spread", 0.05, "Supersaw voice detuning"), 0.1).mul(0.5)
+        // Zawtooth for raw grit
+        .plus(Osc.zawtooth().mul(0.5))
+        // Square for aggressive mid bite
+        .plus(Osc.square().mul(0.15))
+        // Saw for extra edge
+        .plus(Osc.saw().mul(0.1))
+        // Pick noise burst
+        .plus(Osc.pinknoise().highpass(3000).adsr(0.001, 0.05, 0.0, 0.005).mul(0.1))
+        // Tighten low end
+        .highpass(110)
+        // Gentle mid-focus before distortion
+        .bandpass(1200, 0.8)        
+        // Re-add low end after bandpass
+        .plus(Osc.supersaw(Osc.freq(), 2, 0.15, 0.1).highpass(110).lowpass(300).mul(0.2))
+        // Pre-distortion: sweeping lowpass adds dynamic character
+        .lowpass(Osc.sine(0.25).plus(1).times(500).plus(3000), 1.0)
+        // HEAVY drive into hard clip - cranked amp
+        .distort(Osc.param("drive", 1.0, "Primary distortion drive level"), "exp")
+        // Post-distortion: control fizz + warmth roll-off
+        .lowpass(Osc.param("brightness", 5000, "Post-distortion lowpass cutoff in Hz"), 0.9)
+        //.lowpass(, 0.75)
+        .highpass(75)
+        // Tight rhythm envelope
+        .adsr(Osc.param("attack", 0.01, "Attack time in seconds"), 0.15, Osc.param("sustain", 0.75, "Sustain level"), 0.05)
+)
+
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("-3").scale("c4:chromatic").orbit(7).fast(2).transpose(tp)
-    .gain(1.0).distort(0.5).warmth(0.5).postgain("0.8 0.1!2".slow(stay)).hpf(4350).lpf(4450).pan(0.6) //.solo()
+    .gain(1.0).distort(2.0).warmth(0.5).postgain("0.1 0.01!2".slow(stay)).hpf(1200).lpf(5450).pan(0.6) // .solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").clip(0.90).hpf(500).lpf(4000).pan(0.4).notchf(800).transpose(tp).warmth(0.3)
-    .s("supersaw").unison(6).detune(0.02).gain(0.25).distort(saw.range(0.5, 0.8).slow(stay)).postgain(0.8) // .solo()
-    .adsr("0.01:0.2:0.66:0.03").filterWhen(t => t % stay > 16)
+    .orbit(1).fast(4).scale("C3:chromatic").pan(0.33)
+    .s(guitar).oscp("drive", 3).oscp("brightnes", 5000).oscp("spread", 0.03).hpf(200).gain(0.15)
+    .transpose(tp).filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").clip(0.90).hpf(800).lpf(5000).pan(0.6).notchf(1000).transpose(tp).warmth(0.3)
-    .s("supersaw").unison(12).detune(0.02).gain(0.25).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.75) // .solo()
-    .adsr("0.01:0.1:0.66:0.03").filterWhen(t => t % stay > 32)
+    .orbit(2).fast(4).scale("C4:chromatic").pan(0.66)
+    .s(guitar).oscp("drive", 3).oscp("brightnes", 6000).oscp("spread", 0.01).hpf(200).gain(0.15)
+    .transpose(tp).filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").hpf(80).lpf(2000).warmth(0.1)
-    .s("supersaw").unison(6).detune(0.07).gain("0.6 0.525 0.55 0.525")
-    .adsr("0.01:0.075:0.5:0.01").clip(1.01).distort("5").postgain(0.125)
-    .superimpose(
-      x => x.orbit(4).pan(0.7).bandf("2550*128".slow(stay)).bandq(2.5).postgain(0.1),
-      x => x.orbit(4).pan(0.7).bandf("220 330 [220|330|550|880]*128".slow(stay)).bandq(0.5).postgain(0.1),
-    ).filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
+  ).orbit(3).fast(1).scale("C2:chromatic")
+    .s(guitar).oscparam("drive", 5.0).oscparam("brightness", 4000).gain(0.2).clip(1.02)
+    .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.075") // .solo()
   ,note("a").sound("brown").gain(0.05).crush(6) //.solo()
@@ -215,7 +241,7 @@ stack( // Gitarre! -------------------------------------------------------------
 ).room(0.02).rsize(3.0).compressor("-10:2:10:0.02:0.25").analog(1.5) /*
 
  
- 
+
  
  
  
@@ -243,7 +269,7 @@ stack( // Gitarre! -------------------------------------------------------------
 
 
 
-*/
+*/        
         """ // A truth END
 
     val tetrisOriginal = """

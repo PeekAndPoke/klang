@@ -80,7 +80,7 @@ class TutorialPage(ctx: NoProps) : PureComponent(ctx) {
             if (tutorial == null) {
                 ui.placeholder.segment {
                     ui.icon.header {
-                        icon.exclamation_triangle()
+                        icon.dragon()
                         +"Tutorial not found"
                     }
                     ui.button {

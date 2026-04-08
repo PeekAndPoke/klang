@@ -219,7 +219,7 @@ fun dslEditorExtension(
                 }
             }
 
-            ui.compact.vertical.menu {
+            ui.compact.vertical.menu.with(KlangTheme().styles.contextMenu()) {
                 css {
                     minWidth = 200.px
                 }

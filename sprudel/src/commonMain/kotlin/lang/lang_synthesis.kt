@@ -110,6 +110,9 @@ internal val PatternMapperFn._fmh by dslPatternMapperExtension { m, args, callIn
  * note("c3").s("sine").fmh(1.4).fmenv(500)  // non-integer ratio — FM bell tones
  * ```
  *
+ * @param ratio Carrier-to-modulator frequency ratio. Integer values (1, 2, 3) = harmonic (clean);
+ *   non-integer (1.4, 2.7) = inharmonic (metallic/bells). Typical range: 0.5–10.0.
+ *   Default: none (FM inactive until both fmh and fmenv are set).
  * @category synthesis
  * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
  */
@@ -129,6 +132,7 @@ fun String.fmh(ratio: PatternLike? = null): SprudelPattern =
  * note("c3").s("sine").apply(fmh(2))  // via mapper
  * ```
  *
+ * @param ratio Carrier-to-modulator frequency ratio. See [SprudelPattern.fmh].
  * @category synthesis
  * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
  */
@@ -180,6 +184,8 @@ internal val PatternMapperFn._fmatt by dslPatternMapperExtension { m, args, call
  * note("c3").s("sine").fmenv(300).fmattack(0.5)    // slow FM attack — timbre sweep
  * ```
  *
+ * @param seconds FM envelope attack time in seconds. 0.01 = instant (percussive),
+ *   0.1 = snappy, 0.5+ = slow timbre sweep. Default: 0.0. Typical range: 0.001–2.0.
  * @alias fmatt
  * @category synthesis
  * @tags fmattack, fmatt, FM, attack, envelope, synthesis
@@ -200,6 +206,7 @@ fun String.fmattack(seconds: PatternLike? = null): SprudelPattern =
  * note("c3").s("sine").apply(fmattack(0.01))  // via mapper
  * ```
  *
+ * @param seconds FM envelope attack time in seconds. See [SprudelPattern.fmattack].
  * @alias fmatt
  * @category synthesis
  * @tags fmattack, fmatt, FM, attack, envelope, synthesis
@@ -288,6 +295,8 @@ internal val PatternMapperFn._fmdec by dslPatternMapperExtension { m, args, call
  * note("c3").s("sine").fmenv(300).fmdecay("<0.1 1.0>")          // short vs long decay
  * ```
  *
+ * @param seconds FM envelope decay time in seconds. 0.05 = snappy, 0.3 = moderate,
+ *   1.0+ = long, evolving FM tail. Default: 0.0. Typical range: 0.01–5.0.
  * @alias fmdec
  * @category synthesis
  * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
@@ -308,6 +317,7 @@ fun String.fmdecay(seconds: PatternLike? = null): SprudelPattern =
  * note("c3").s("sine").apply(fmdecay(0.1))  // via mapper
  * ```
  *
+ * @param seconds FM envelope decay time in seconds. See [SprudelPattern.fmdecay].
  * @alias fmdec
  * @category synthesis
  * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
@@ -396,6 +406,9 @@ internal val PatternMapperFn._fmsus by dslPatternMapperExtension { m, args, call
  * note("c3").s("sine").fmenv(400).fmsustain(0.7)  // sustained FM — held brightness
  * ```
  *
+ * @param level FM envelope sustain level. 0.0 = no sustained modulation (percussive bell),
+ *   0.5 = half modulation held, 1.0 = full peak modulation held. Default: 1.0.
+ *   Range: 0.0–1.0.
  * @alias fmsus
  * @category synthesis
  * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
@@ -416,6 +429,7 @@ fun String.fmsustain(level: PatternLike? = null): SprudelPattern =
  * note("c3").s("sine").apply(fmsustain(0.0))  // via mapper
  * ```
  *
+ * @param level FM envelope sustain level. See [SprudelPattern.fmsustain].
  * @alias fmsus
  * @category synthesis
  * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
@@ -496,6 +510,9 @@ internal val String._fmmod by dslStringExtension { p, args, callInfo -> p._fmmod
  * note("c3").s("sine").fmh(1.4).fmenv(500)             // heavy FM — complex timbre
  * ```
  *
+ * @param depth FM modulation amount in Hz. 10–100 = subtle harmonic richness,
+ *   200–500 = bright/brassy, 500+ = complex/metallic/noisy. Default: 0.0 (FM inactive).
+ *   Typical range: 50–1000. FM is active when both fmh and fmenv are set.
  * @alias fmmod
  * @category synthesis
  * @tags fmenv, fmmod, FM, modulation, depth, amount, synthesis

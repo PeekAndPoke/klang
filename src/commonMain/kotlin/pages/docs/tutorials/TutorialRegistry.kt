@@ -6,7 +6,7 @@ val allTutorials: List<Tutorial> = listOf(
     shapeYourSoundTutorial,
     patternsInMotionTutorial,
     chordsAndHarmonyTutorial,
-    soundDesignPlaygroundTutorial,
+    derSchmetterlingSoundDesignPlaygroundTutorial,
     remixYourselfTutorial,
     buildASongTutorial,
     moodPaintingTutorial,

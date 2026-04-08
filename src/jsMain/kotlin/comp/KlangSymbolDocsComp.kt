@@ -30,9 +30,7 @@ import kotlinx.css.Margin
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
 import kotlinx.css.alignItems
-import kotlinx.css.backgroundColor
 import kotlinx.css.border
-import kotlinx.css.borderColor
 import kotlinx.css.color
 import kotlinx.css.cursor
 import kotlinx.css.display
@@ -100,15 +98,11 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             ?.samples?.firstOrNull()
             ?.takeIf { it.code.isNotBlank() }
 
-        (ui.segment + laf.styles.docsPopup()) {
+        ui.segment.with(laf.styles.popup()).with(laf.styles.docsPopup()) {
             css {
                 width = LinearDimension.fitContent
                 minWidth = 20.vw
                 maxWidth = 50.vw
-                backgroundColor = Color(laf.overlayBackground)
-                color = Color(laf.textPrimary)
-                borderColor = Color(laf.textTertiary)
-                put("box-shadow", "none")
             }
 
             onClick { event -> event.stopPropagation() }

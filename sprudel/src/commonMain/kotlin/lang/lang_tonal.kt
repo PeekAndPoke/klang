@@ -462,6 +462,7 @@ internal val PatternMapperFn._bank by dslPatternMapperExtension { m, args, callI
  * s("bd sd").bank("<TR808 TR909>")      // alternate sample banks each cycle
  * ```
  *
+ * @param name The sample bank name, e.g. `"RolandTR808"`. Default: none (uses default bank).
  * @category tonal
  * @tags bank, sample bank, instrument
  */
@@ -532,6 +533,8 @@ internal val PatternMapperFn._clip by dslPatternMapperExtension { m, args, callI
  * note("c3 e3 g3").legato(0.5)   // notes are shorter (staccato)
  * ```
  *
+ * @param amount Duration scaling factor. 1.0 = fill event slot exactly, 0.5 = staccato (half length),
+ *   1.5 = overlapping (legato), 2.0 = double length. Default: 1.0. Typical range: 0.1–2.0.
  * @alias clip
  * @category tonal
  * @tags legato, clip, duration, sustain, staccato
@@ -636,6 +639,8 @@ internal val PatternMapperFn._vib by dslPatternMapperExtension { m, args, callIn
  * note("c4").vibrato("<2 8>")       // alternating slow/fast vibrato per cycle
  * ```
  *
+ * @param hz Vibrato LFO rate in Hz. 0.0 = no vibrato, 3.0 = gentle, 5.0 = standard,
+ *   8.0+ = fast. Default: 5.0 Hz (when vibratoMod is set). Typical range: 1.0–10.0.
  * @alias vib
  * @category tonal
  * @tags vibrato, vib, pitch modulation, oscillation, LFO
@@ -739,6 +744,8 @@ internal val PatternMapperFn._vibmod by dslPatternMapperExtension { m, args, cal
  * note("c4").vibratoMod("<0.2 1>")    // alternating subtle/wide vibrato depth
  * ```
  *
+ * @param depth Vibrato depth in semitones. 0.0 = no vibrato, 0.2 = subtle,
+ *   0.5 = standard, 1.0+ = wide wobble. Default: 0.0. Typical range: 0.1–2.0.
  * @alias vibmod
  * @category tonal
  * @tags vibratoMod, vibmod, vibrato depth, pitch modulation
@@ -839,6 +846,8 @@ internal val PatternMapperFn._patt by dslPatternMapperExtension { m, args, callI
  * note("c4").pattack("<0.01 0.5>")       // fast vs slow pitch attack per cycle
  * ```
  *
+ * @param seconds Pitch envelope attack time in seconds. 0.01 = instant, 0.1 = snappy,
+ *   0.5+ = slow sweep. Default: 0.0. Typical range: 0.001–2.0.
  * @alias patt
  * @category tonal
  * @tags pattack, patt, pitch envelope, attack, envelope
@@ -928,6 +937,8 @@ internal val PatternMapperFn._pdec by dslPatternMapperExtension { m, args, callI
  * note("c4").pdecay("<0.05 0.5>")       // short vs long decay per cycle
  * ```
  *
+ * @param seconds Pitch envelope decay time in seconds. 0.05 = snappy, 0.2 = moderate,
+ *   1.0+ = long sweep. Default: 0.0. Typical range: 0.01–5.0.
  * @alias pdec
  * @category tonal
  * @tags pdecay, pdec, pitch envelope, decay, envelope
@@ -1015,6 +1026,8 @@ internal val PatternMapperFn._prel by dslPatternMapperExtension { m, args, callI
  * ```KlangScript(Playable)
  * note("c4").prelease("<0.1 1.0>")       // short vs long release per cycle
  * ```
+ *
+ * @param seconds Pitch envelope release time in seconds. How quickly pitch returns after note-off. 0.01 = instant, 0.3 = gradual. Default: 0.0. Typical range: 0.001–5.0.
  *
  * @alias prel
  * @category tonal
@@ -1105,6 +1118,8 @@ internal val PatternMapperFn._pamt by dslPatternMapperExtension { m, args, callI
  * note("c4").penv(-7).pdecay(0.2)    // pitch falls a perfect fifth then decays
  * ```
  *
+ * @param semitones Pitch envelope depth in semitones. How far pitch deviates. 12 = one octave up, -12 = one octave down, 0 = no pitch envelope. Default: 0.0. Range: -24 to 24.
+ *
  * @alias pamt
  * @category tonal
  * @tags penv, pamt, pitch envelope, depth, semitones, envelope
@@ -1192,6 +1207,8 @@ internal val PatternMapperFn._pcrv by dslPatternMapperExtension { m, args, callI
  * ```KlangScript(Playable)
  * note("c4").pcurve(-2).penv(12).pattack(0.2)  // exponential pitch rise
  * ```
+ *
+ * @param curve Envelope curve shape. 1.0 = linear, <1.0 = concave (fast start, slow end), >1.0 = convex (slow start, fast end). Default: 1.0. Typical range: 0.5–2.0.
  *
  * @alias pcrv
  * @category tonal
@@ -1281,6 +1298,8 @@ internal val PatternMapperFn._panc by dslPatternMapperExtension { m, args, callI
  * note("c4").panchor(1).penv(12)   // pitch peaks at note end
  * ```
  *
+ * @param offset Sustain pitch offset. -1.0 to 1.0. 0.0 = pitch returns to original note, other values offset the sustain pitch. Default: 0.0.
+ *
  * @alias panc
  * @category tonal
  * @tags panchor, panc, pitch envelope, anchor, envelope
@@ -1364,6 +1383,8 @@ internal val PatternMapperFn._accelerate by dslPatternMapperExtension { m, args,
  * ```KlangScript(Playable)
  * s("hh").accelerate("<0 -2 2>")     // alternate: no ramp, down, up per cycle
  * ```
+ *
+ * @param amount Pitch bend over the voice's duration. 0.0 = no bend, positive = pitch rises, negative = pitch falls. Default: 0.0. Typical range: -1.0 to 1.0.
  *
  * @category tonal
  * @tags accelerate, pitch ramp, pitch bend, playback speed
@@ -1583,6 +1604,8 @@ internal val PatternMapperFn._freq by dslPatternMapperExtension { m, args, callI
  * note("c4 e4").freq(432)      // force all events to 432 Hz
  * ```
  *
+ * @param hz Frequency in Hz. Directly sets the pitch, bypassing note name resolution. 440 = A4, 261.63 = C4. Default: determined by note(). Range: 20–20000.
+ *
  * @category tonal
  * @tags freq, frequency, Hz, pitch, tuning
  */
@@ -1715,6 +1738,8 @@ internal val PatternMapperFn._scaleTranspose by dslPatternMapperExtension { m, a
  * note("c4 e4 g4").scale("c4:major").scaleTranspose(-2)  // shift down 2 scale degrees
  * ```
  *
+ * @param steps Number of scale steps to transpose. 1 = next scale note up, -1 = previous. Integer values. Default: 0. Range: any integer.
+ *
  * @category tonal
  * @tags scaleTranspose, scale degrees, pitch, transpose
  */
@@ -1784,6 +1809,8 @@ internal val String._chord by dslStringExtension { p, args, callInfo -> p._chord
  * ```KlangScript(Playable)
  * chord("<Cmaj7 Am7>").voicing()        // jazzy chord alternation per cycle
  * ```
+ *
+ * @param name Chord type name, e.g. "major", "minor", "7", "m7", "dim", "aug". 112 types available. Default: none.
  *
  * @category tonal
  * @tags chord, harmony, chords, voicing, progression
@@ -1876,41 +1903,27 @@ internal val PatternMapperFn._rootNotes by dslPatternMapperExtension { m, args, 
  * chord("Cmaj7 Am7 Fmaj7").rootNotes(3)           // roots forced to octave 3
  * ```
  *
+ * @param octave Root note extraction mode or offset. Default: extracts the root note from the current chord.
+ *
  * @category tonal
  * @tags rootNotes, chord root, bass, harmony
  */
 @SprudelDsl
-fun SprudelPattern.rootNotes(): SprudelPattern = this._rootNotes(emptyList())
-
-/** Extracts root notes from chord events in this pattern, forcing to the given octave. */
-@SprudelDsl
-fun SprudelPattern.rootNotes(octave: PatternLike): SprudelPattern =
-    this._rootNotes(listOf(octave).asSprudelDslArgs())
-
-/** Extracts root notes from chord events in a string pattern. */
-@SprudelDsl
-fun String.rootNotes(): SprudelPattern = this._rootNotes(emptyList())
+fun SprudelPattern.rootNotes(octave: PatternLike? = null): SprudelPattern =
+    this._rootNotes(listOfNotNull(octave).asSprudelDslArgs())
 
 /** Extracts root notes from chord events in a string pattern, forcing to the given octave. */
 @SprudelDsl
-fun String.rootNotes(octave: PatternLike): SprudelPattern = this._rootNotes(listOf(octave).asSprudelDslArgs())
-
-/** Returns a [PatternMapperFn] that extracts root notes from chord events. */
-@SprudelDsl
-fun rootNotes(): PatternMapperFn = _rootNotes(emptyList())
+fun String.rootNotes(octave: PatternLike? = null): SprudelPattern = this._rootNotes(listOfNotNull(octave).asSprudelDslArgs())
 
 /** Returns a [PatternMapperFn] that extracts root notes from chord events, forcing to the given octave. */
 @SprudelDsl
-fun rootNotes(octave: PatternLike): PatternMapperFn = _rootNotes(listOf(octave).asSprudelDslArgs())
-
-/** Chains a rootNotes step onto this [PatternMapperFn]. */
-@SprudelDsl
-fun PatternMapperFn.rootNotes(): PatternMapperFn = this._rootNotes(emptyList())
+fun rootNotes(octave: PatternLike? = null): PatternMapperFn = _rootNotes(listOfNotNull(octave).asSprudelDslArgs())
 
 /** Chains a rootNotes step (with forced octave) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.rootNotes(octave: PatternLike): PatternMapperFn =
-    this._rootNotes(listOf(octave).asSprudelDslArgs())
+fun PatternMapperFn.rootNotes(octave: PatternLike? = null): PatternMapperFn =
+    this._rootNotes(listOfNotNull(octave).asSprudelDslArgs())
 
 // -- voicing() --------------------------------------------------------------------------------------------------------
 
@@ -2052,6 +2065,8 @@ internal val PatternMapperFn._voicing by dslPatternMapperExtension { m, args, ca
  * ```KlangScript(Playable)
  * chord("Cmaj7 Am7 Fmaj7").voicing("C3", "C5")  // voiced within C3–C5 range
  * ```
+ *
+ * @param range Voicing range or strategy name. Controls how chord notes are distributed across octaves. Default: uses close voicing.
  *
  * @category tonal
  * @tags voicing, voice leading, chord, harmony

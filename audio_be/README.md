@@ -157,10 +157,10 @@ Effects are implemented as separate `AudioFilter` classes:
 
 The pipeline follows professional audio standards:
 
-- **Source → Sculpt → Dynamics → Color**
-- Destructive effects before filtering (allows cleanup)
-- Distortion after envelope (reacts to dynamics)
-- Phaser after distortion (needs harmonic content)
+- **Source → Shape → Sculpt → Dynamics → Color**
+- All waveshaping (crush, coarse, distortion) before filters
+- Filters have final say over frequency spectrum
+- Phaser after envelope (needs harmonic content)
 - Tremolo last (clean volume modulation)
 
 ### 4. Efficiency

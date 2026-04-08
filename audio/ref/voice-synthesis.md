@@ -14,16 +14,15 @@ All types in `audio_be/src/commonMain/kotlin/voices/`.
 3.  Vibrato                — LFO pitch modulation (post-signal)
 4.  PitchEnvelope          — one-shot pitch curve
 5.  FM                     — frequency modulation (applied to pitch)
-6.  Envelope (ADSR)        — amplitude envelope → gain
-7.  preFilters             — filter chain (pre-effects)
-8.  Distort / Crush / Coarse — waveshaping effects
-9.  postFilters            — filter chain (post-effects)
-10. Compressor             — per-voice dynamic range
-11. Gain + Pan             — volume + stereo positioning
-12. PostGain               — final gain stage
-13. Tremolo / Phaser       — per-voice modulation effects
-14. Ducking                — sidechain signal written to target cylinder
-15. Mix into Cylinder         — voiceBuffer → orbits[orbitId]
+6.  Envelope (ADSR)        — amplitude envelope (before waveshaping = dynamic distortion)
+7.  Crush / Coarse / Distort — waveshaping effects (responds to envelope dynamics)
+8.  Filters (LP/HP/BP/Notch) — subtractive filtering (final say on spectrum)
+9.  Compressor             — per-voice dynamic range
+10. Gain + Pan             — volume + stereo positioning
+11. PostGain               — final gain stage
+12. Tremolo / Phaser       — per-voice modulation effects
+13. Ducking                — sidechain signal written to target cylinder
+14. Mix into Cylinder      — voiceBuffer → orbits[orbitId]
 ```
 
 ### Voice Properties (key fields)

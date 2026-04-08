@@ -1017,6 +1017,8 @@ fun PatternMapperFn.density(amount: PatternLike? = null): PatternMapperFn =
  * note("c3").s("supersaw").unison(7).d(0.5)   // tight supersaw
  * ```
  *
+ * @param amount The oscillator density. Integer, typically 1-16. Higher values produce denser sound.
+ *
  * @alias density
  * @category dynamics
  * @tags d, density, supersaw, dust, noise
