@@ -186,8 +186,8 @@ stack( // Gitarre! -------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(2).fast(4).scale("C4:chromatic").clip(0.90).hpf(800).lpf(5000).pan(0.6).notchf(1000).transpose(tp).warmth(0.3)
-    .s("supersaw").unison(12).detune(0.02).gain(0.25).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.7) // .solo()
-    .adsr("0.01:0.2:0.66:0.03").filterWhen(t => t % stay > 32)
+    .s("supersaw").unison(12).detune(0.02).gain(0.25).distort(saw.range(0.5, 1.0).slow(32)).postgain(0.75) // .solo()
+    .adsr("0.01:0.1:0.66:0.03").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
@@ -195,9 +195,10 @@ stack( // Gitarre! -------------------------------------------------------------
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
   ).orbit(3).fast(1).scale("C2:chromatic").hpf(80).lpf(2000).warmth(0.1)
     .s("supersaw").unison(6).detune(0.07).gain("0.6 0.525 0.55 0.525")
-    .adsr("0.01:0.1:0.5:0.01").clip(1.01).distort("5").postgain(0.15)
+    .adsr("0.01:0.075:0.5:0.01").clip(1.01).distort("5").postgain(0.125)
     .superimpose(
-      x => x.orbit(4).pan(0.7).bandf("220 330 [220|330|550|880]*128".slow(stay)).bandq(saw.range(0.25, 1.0).slow(stay)).postgain(0.1),
+      x => x.orbit(4).pan(0.7).bandf("2550*128".slow(stay)).bandq(2.5).postgain(0.1),
+      x => x.orbit(4).pan(0.7).bandf("220 330 [220|330|550|880]*128".slow(stay)).bandq(0.5).postgain(0.1),
     ).filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.075") // .solo()
@@ -242,7 +243,7 @@ stack( // Gitarre! -------------------------------------------------------------
 
 
 
-*/        
+*/
         """ // A truth END
 
     val tetrisOriginal = """

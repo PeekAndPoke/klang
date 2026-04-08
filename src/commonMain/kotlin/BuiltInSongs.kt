@@ -401,9 +401,9 @@ let bass2 = note("<[a2@2 ~ ~] [d2@2 ~ ~] [bb2@2 ~ ~] [c2@2 ~ ~] [a2@2 ~ ~] [d2@2
     .sound(contrabass).gain(0.25).adsr("0.005:0.5:0.0:0.15").legato(0.9).orbit(2).room(0.08).rsize(2)
 
 // ── Part 3: Emotional peak ──────────────────────────────────────────
-let melody3a = note("<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5 f5 e5] [d5 a4 d5 f5] [c5 g4 bb4 a4] [d5 c5 a4 g4] [d5 ~ ~ ~]>")
+let melody3a = note("<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5 f5 e5] [d5 a4 d5 f5] [c5 g4 bb4 a4] [d5 c5 a4 g4] [d4@2 ~ ~]>")
     .sound(blockfloete).gain(0.28).orbit(0).room(0.1).rsize(3)
-let melody3b = note("<[f5 d6 e6 d6] [c6 a5 f5 e5] [f5 e5 f5 a5] [f5 e5 d5 c5] [f4 f4 f4 d5] [a4 e4 g4 f4] [f4 e4 f4 e4] [f4 ~ ~ ~]>")
+let melody3b = note("<[f5 d6 e6 d6] [c6 a5 f5 e5] [f5 e5 f5 a5] [f5 e5 d5 c5] [f4 f4 f4 d5] [a4 e4 g4 f4] [f4 e4 f4 e4] [f4@2 ~ ~]>")
     .sound(blockfloete).gain(0.18).orbit(0).room(0.1).rsize(3)
 let melody3 = stack(melody3a, melody3b)
 // Guitar: half-speed arpeggios
@@ -421,8 +421,9 @@ let part1 = stack(melody1, guitar1, bass1)
 let part2 = stack(melody2, guitar2, bass2)
 let part3 = stack(melody3, guitar3, bass3)
 
-arrange([8, part1], [8, part2], [8, part3], [8, part2], [8, part3], [8, part2])
-  .room("0.15:10")
+arrange([8, part1], [8, part2], [8, part3], [8, part2], [8, part3], [8, part2]).room("0.15:10")
+
+// Composed by: Claude, Gemini, Motör, peekandpoke
             """
         )
     )
