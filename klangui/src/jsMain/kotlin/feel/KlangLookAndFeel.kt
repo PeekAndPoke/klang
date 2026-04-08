@@ -112,33 +112,33 @@ data class KlangLookAndFeel(
             put("background-color", "$bronze !important")
         }
 
-        /** Popup panel — bronze bg, warm border, subtle glow. Use on hover popups and context menus. */
+        /** Popup panel — dark metallic blue bg, teal border, subtle glow. Use on hover popups and context menus. */
         val popup by rule {
-            put("background-color", "$bronze !important")
+            put("background-color", "#1a2a30 !important")
             put("color", "$textPrimary !important")
-            put("border", "1px solid $warning !important")
-            put("box-shadow", "0 0 8px ${warning}44 !important")
+            put("border", "1px solid $excellent !important")
+            put("box-shadow", "0 0 8px ${excellent}44 !important")
             // Override Semantic UI .ui.segment background via self-referencing specificity bump
             rule("&.ui.segment") {
-                put("background-color", "$bronze !important")
+                put("background-color", "#1a2a30 !important")
             }
             rule("&.ui.menu") {
-                put("background-color", "$bronze !important")
-                put("border", "1px solid $warning !important")
-                put("box-shadow", "0 0 8px ${warning}44 !important")
+                put("background-color", "#1a2a30 !important")
+                put("border", "1px solid $excellent !important")
+                put("box-shadow", "0 0 8px ${excellent}44 !important")
             }
         }
 
         /** Context menu — extends popup style for compact vertical menus. */
         val contextMenu by rule {
-            put("background-color", "$bronze !important")
+            put("background-color", "#1a2a30 !important")
             put("color", "$textPrimary !important")
-            put("border", "1px solid $warning !important")
-            put("box-shadow", "0 0 8px ${warning}44 !important")
+            put("border", "1px solid $excellent !important")
+            put("box-shadow", "0 0 8px ${excellent}44 !important")
             rule("&.ui.menu") {
-                put("background-color", "$bronze !important")
-                put("border", "1px solid $warning !important")
-                put("box-shadow", "0 0 8px ${warning}44 !important")
+                put("background-color", "#1a2a30 !important")
+                put("border", "1px solid $excellent !important")
+                put("box-shadow", "0 0 8px ${excellent}44 !important")
             }
         }
 
