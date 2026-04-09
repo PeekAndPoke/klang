@@ -205,7 +205,7 @@ let guitar = Osc.register("guitar",
         .lowpass(Osc.param("brightness", 5000, "Post-distortion lowpass cutoff in Hz"), 0.9)
         .highpass(100)
         // Tight rhythm envelope
-        .adsr(Osc.param("attack", 0.004, "Attack time in seconds"), 0.2, Osc.param("sustain", 0.75, "Sustain level"), 0.05)
+        .adsr(Osc.param("attack", 0.01, "Attack time in seconds"), 0.3, Osc.param("sustain", 0.75, "Sustain level"), 0.1)
 )
 
 stack( // Gitarre! ----------------------------------------------------------------------------
@@ -239,10 +239,10 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).orbit(5).adsr("0.01:0.8:0.7:1.5 0.015:0.125:0.4:1.5".slow(16)).gain(0.75).hpf(80).filterWhen(t => t % stay >= 4) // .solo()
+  ).orbit(5).adsr("0.01:0.2:0.5:1.5 0.01:0.125:0.3:0.5".slow(16)).gain(0.75).hpf(100).filterWhen(t => t % stay >= 4) // .solo()
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>")
-    .orbit(6).adsr("0.01:0.2:0.8:1.5").gain("1.0".add(rand.range(-0.02, 0.02).segment(32))) // .solo()
+    .orbit(6).adsr("0.01:0.2:0.8:1.5").gain("0.8".add(rand.range(-0.02, 0.02).segment(32))) // .solo()
 ).room(0.02).rsize(3.0).compressor("-15:2:6:0.01:0.2").analog(1.0) /*
 
  
