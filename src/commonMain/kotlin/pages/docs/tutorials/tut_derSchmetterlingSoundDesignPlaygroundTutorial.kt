@@ -177,8 +177,8 @@ stack(
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>")
     .scale("<e2:minor!48 e3:minor!16>").sound("supersquare").unison(3)
     .lpf("1200").hpf(400).notchf(440).warmth(0.5)
-    .adsr("0.01:0.15:0.7:0.05").clip(0.8).crush(saw.range(4, 2).slow(32)) //  . solo()
-    .gain(0.45).orbit(1).pan(0.3),
+    .adsr("0.01:0.15:0.7:0.05").clip(0.8).crush(saw.range(10, 4).slow(32)) //  . solo()
+    .gain(0.425).orbit(1).pan(0.3),
   // Bass — warm distorted saw, struct for steady pulse
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1 0.95!3".fast(4))
     .scale("e2:minor").sound("saw")

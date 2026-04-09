@@ -46,6 +46,7 @@ import kotlinx.css.border
 import kotlinx.css.borderBottom
 import kotlinx.css.borderRadius
 import kotlinx.css.color
+import kotlinx.css.height
 import kotlinx.css.marginBottom
 import kotlinx.css.marginTop
 import kotlinx.css.overflow
@@ -367,6 +368,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         css {
                             alignSelf = Align.center
                             color = Color.grey
+                            height = 32.px
                         }
                         if (isPlaying) {
                             LcdDisplay(

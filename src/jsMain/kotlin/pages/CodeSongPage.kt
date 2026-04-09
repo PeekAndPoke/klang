@@ -47,7 +47,6 @@ import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
-import kotlinx.css.Align
 import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.Flex
@@ -56,7 +55,6 @@ import kotlinx.css.FlexDirection
 import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
-import kotlinx.css.alignSelf
 import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flex
@@ -469,14 +467,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         }
 
                         if (isPlaying) {
-                            noui.item {
-                                css {
-                                    alignSelf = Align.center
-                                }
-                                LcdDisplay(
-                                    value = currentCycle,
-                                    digits = 4,
-                                )
+                            noui.middle.aligned.item {
+                                LcdDisplay(value = currentCycle, digits = 4)
                             }
                         }
 
