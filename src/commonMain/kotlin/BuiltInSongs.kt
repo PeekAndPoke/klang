@@ -236,10 +236,11 @@ stack(
   sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>").fast(2).crush(9).hpf(3000)
     .gain(0.4).orbit(3)
 // Compressor glues it, analog adds organic drift
-).compressor("-15:2:6:0.01:0.2").analog(0.5)
+).compressor("-10:2:10:0.02:0.25").analog(0.5)
 
 // Inspired by: Editors - Papillon
 // https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW                
+            
             
             
             
@@ -286,58 +287,6 @@ stack(
   
 ).room(0.2).rsize(5.0).analog(1)
             """,
-        )
-    )
-
-    val osiris = add(
-        Song(
-            id = "$PREFIX-osynthris",
-            title = "Osynthris",
-            rpm = 33.0,
-            code = """import * from "stdlib"
-import * from "sprudel"
-
-stack(
-  // Guitar 1
-  cat(
-    n(`<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13] [3,10,15]@2 [5,12,17]] [0,7,12]
-        [12,19,24] [[6,13,18] [6,13,18]] [[6,13,18] [5,12,17]@2 [6,13,18]]>`).repeat(4),
-    n(`<[[0,7]!4 [0,7]@4]!8 [[0,6]!4 [0,6]@4]!4 [[0,7]!4 [0,7]@4]!4 [[0,7]!4 [0,7]@4]!9 [[0,7]!4 [0,8]@4]!7>`)
-  )
-  .fast(4).scale("e2:chromatic").clip(0.975).hpf(60).lpf(4500).pan(0.5).adsr("0.02:0.3:0.5:0.05")
-  .notchf("1440:2:60")
-  .s("[superpluck pulse]/16").unison(6).detune(0.02).gain(1.0).distort(4).postgain(0.35).warmth(0.2)
-  .superimpose(
-    x => x.bandf(300).bandq(1.0).adsr("0.01:0.2:0.1:0.05"),
-    x => x.bandf(880).bandq(sine.range(0.5, 1*1.5).slow(50)).sound("pulse").adsr("0.01:0.3:0.5:0.05"),
-    x => x.bandf(1080).bandq(sine.range(0.5, 2*1.25).slow(40)).sound("pulse").adsr("0.01:0.1:0.2:0.05"),
-  ).orbit(1) // .solo()
-
-  , // Guitar 2
-  cat(
-    n("<~!8>").repeat(4),
-    n(`<[36!8]!4 [35!8]!4 [24!8]!4 [25!8] [25!4 28!4] [28!4 29!4] [29!4 31!4]
-        [32!8] [32!4 36!4] [36!8]!2 [31!8]!4 [30!8]!4 [27!8] [27!4 26!4] [26!4 25!4] [25!4 24!4]
-    >`).delay("<~!24 0.5::0.5!8>").delaytime(pure(1).div(cps)),
-  ).orbit(2).pan(0.5).scale("e2:chromatic")
-  .fast(4).clip(0.5).hpf(200).lpf("1800:1:100").lpadsr("0.05:0.05:0.1:0.02").adsr("0.118:0.1:0.1:0.025")
-  .s("[[supersqr supersaw]!16]").gain(0.8).distort(3).postgain(0.1).warmth(0.5)
-  .superimpose(x => x.notchf("720:1:50").notchq(1)) // . solo()
-   // .mute()
-
-  // Drums 1
-  , s("<hh!8!8 [oh rd!5 cr hh]!2!8>").adsr("0.00:0.1:0.5:0.1").hpf(200).postgain(1.25) // .solo()
-  // Drums 2
-  , s(`<[[bd sd]!2]!4 [bd [bd,sd] bd [bd,sd]]!3 [bd bd [bd,sd] bd  [sd]!4]!1
-        [[bd sd]!16]!8>`).n("<7!8 0!8>").adsr("0.00:0.3:0.5:0.1").gain(1.0).hpf(30)  // . solo()
-)
-  .room(0.3).rsize(5)
-  .compressor("-15:2:6:0.01:0.2")
-  .accelerate(saw.seg(8).pow(10).mul(0.05).add(0.0).slow(16))
-  
-  
-          """.trimIndent(),
-            icon = "guitar",
         )
     )
 
@@ -481,6 +430,61 @@ arrange([8, part1], [8, part2], [8, part3], [8, part2], [8, part3], [8, part2]).
 
 // Composed by: Claude, Gemini, Motör, peekandpoke
             """
+        )
+    )
+
+    val osiris = add(
+        Song(
+            id = "$PREFIX-osynthris",
+            title = "Osynthris",
+            rpm = 33.0,
+            code = """
+import * from "stdlib"
+import * from "sprudel"
+
+// Only press play, when you would go to a heavy metal live concert ...
+
+stack(
+  // Guitar 1
+  cat(
+    n(`<[0,7,12] [12,19,24] [[1,8,13] [1,8,13]] [[1,8,13] [3,10,15]@2 [5,12,17]] [0,7,12]
+        [12,19,24] [[6,13,18] [6,13,18]] [[6,13,18] [5,12,17]@2 [6,13,18]]>`).repeat(4),
+    n(`<[[0,7]!4 [0,7]@4]!8 [[0,6]!4 [0,6]@4]!4 [[0,7]!4 [0,7]@4]!4 [[0,7]!4 [0,7]@4]!9 [[0,7]!4 [0,8]@4]!7>`)
+  )
+  .fast(4).scale("e2:chromatic").clip(0.975).hpf(60).lpf(3500).pan(0.5).adsr("0.01:0.3:0.5:0.1")
+  .notchf("1440:2:60")
+  .s("[superpluck pulse]/16").unison(6).detune(0.02).gain(1.0).distort(4).postgain(0.1).warmth(0.1)
+  .superimpose(
+    x => x.bandf(300).bandq(1.0),
+    x => x.bandf(880).bandq(sine.range(0.5, 1*1.5).slow(50)).sound("pulse"),
+    x => x.bandf(1080).bandq(sine.range(0.5, 2*1.25).slow(40)).sound("pulse"),
+  ).orbit(1) // .solo()
+
+  , // Guitar 2
+  cat(
+    n("<~!8>").repeat(4),
+    n(`<[36!8]!4 [35!8]!4 [24!8]!4 [25!8] [25!4 28!4] [28!4 29!4] [29!4 31!4]
+        [32!8] [32!4 36!4] [36!8]!2 [31!8]!4 [30!8]!4 [27!8] [27!4 26!4] [26!4 25!4] [25!4 24!4]
+    >`).delay("<~!24 0.5::0.5!8>").delaytime(pure(1).div(cps)),
+  ).orbit(2).pan(0.5).scale("e2:chromatic")
+  .fast(4).clip(0.5).hpf(200).lpf("1800").lpadsr("0.05:0.5:0.1:0.02").adsr("0.1:0.3:0.1:0.025")
+  .s("[[supersqr supersaw]!16]").gain(0.9).distort(3).postgain(0.1).warmth(0.2)
+  .superimpose(x => x.notchf("720")) // . solo()
+   // .mute()
+
+  // Drums 1
+  , s("<hh!8!8 [oh rd!5 cr hh]!2!8>").adsr("0.00:0.1:0.5:0.1").hpf(200).postgain(1.25) // .solo()
+  // Drums 2
+  , s(`<[[bd sd]!2]!4 [bd [bd,sd] bd [bd,sd]]!3 [bd bd [bd,sd] bd  [sd]!4]!1
+        [[bd sd]!16]!8>`).n("<7!8 0!8>").adsr("0.00:0.3:0.5:0.1").gain(1.0).hpf(30)  // . solo()
+)
+  .room(0.3).rsize(5)
+  .compressor("-10:2:10:0.02:0.25")
+  .accelerate(saw.seg(8).pow(10).mul(0.05).add(0.0).slow(16))
+  
+  
+          """.trimIndent(),
+            icon = "guitar",
         )
     )
 }
