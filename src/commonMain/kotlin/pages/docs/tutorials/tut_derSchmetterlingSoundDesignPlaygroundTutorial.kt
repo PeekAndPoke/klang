@@ -210,19 +210,20 @@ stack(
             heading = "Putting It All Together",
             text = "Here is the finished sculpture, inspired by Editors — Papillon. Every layer has its own sonic identity. The lead uses supersaw with unison(2) for width, distortion for grit, and clip() for tight note lengths — two superimposed octave copies fade in over time for growing intensity. The pad uses struct() for rhythmic pulsing, unison(3) for thickness, warmth and notchf to shape the tone, and scale alternation to lift an octave in the final section. The bass is warm with distortion and a steady struct pulse. The hi-hat pattern is deliberately 40 cycles against the 64-cycle structure — it rotates so no two passes sound identical. Each instrument lives on its own orbit for clean separation. The compressor on the master bus glues everything together, and analog() adds random pitch drift for an organic, imperfect feel.",
             code = """// The finished sculpture — every texture carved with purpose
+
 stack(
-  // Lead — distorted supersaw with unison width
+  // Lead — distorted saw with vibrato expression
   n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")
     .scale("E4:minor").sound("supersaw").unison(2).detune(0.04)
-    .lpf(4300).hpf(600)
+    .lpf(4300).hpf(800)
     .gain(0.3).distort("0.5:gentle").postgain(0.5) // . solo()
-    .adsr("0.02:0.2:0.6:0.1").clip(0.85)
+    .adsr("0.01:0.5:0.6:0.1").clip(0.85)
     .release("<0.1!16 0.3!16 0.1!16 0.4!16 0.1!16 0.6!16>")
     .superimpose(transpose(12).detune(0.08).velocity("<0!32 0.2!32>").lpf(4500).pan(0.2))
     .superimpose(transpose(24).detune(0.12).velocity("<0!96 0.075!32>").lpf(5000).pan(0.8))
     .orbit(0),
-  // Pad — struct stamps the rhythm, warmth + notch shape the tone
-  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 -1]]!2 [0 [6 4] 0 [6 2]] [4 [2 4] 4 [-2 -1]]>/4")
+  // Pad — struct stamps the rhythm, phaser + tremolo shimmer
+  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 -1]]!2 [0 [6 4] 0 [3 2]] [4 [2 4] 4 [-2 -1]]>/4")
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>")
     .scale("<e2:minor!48 e3:minor!16>").sound("supersquare").unison(3)
     .lpf("1200").hpf(400).notchf(440).warmth(0.5)
@@ -243,7 +244,8 @@ stack(
 ).compressor("-15:2:6:0.01:0.2").analog(0.5)
 
 // Inspired by: Editors - Papillon
-// https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW""",
+// https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW                
+            """,
         ),
     ),
 )
