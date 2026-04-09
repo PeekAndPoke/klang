@@ -7,7 +7,7 @@ import io.peekandpoke.klang.audio_be.voices.Voice
  * Mixing Channels / Effect Buses
  */
 class Cylinders(
-    maxCylinders: Int = 16,
+    maxCylinders: Int = 64,
     private val blockFrames: Int,
     private val sampleRate: Int,
     private val silentBlocksBeforeTailCheck: Int = 10,
