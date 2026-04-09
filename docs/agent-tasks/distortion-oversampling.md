@@ -115,24 +115,46 @@ multiply-accumulates + center tap per output sample (5 MACs vs 15 for naive FIR)
 **HalfBandState:** Circular delay buffer of 15 doubles + write position. Persists across blocks
 (no reset between `process()` calls) for filter continuity.
 
-**Buffer management — ScratchBuffers.oversample():**
+**Buffer management — ScratchBuffers extensions:**
 
-Minimal change: add a cached factory method that returns a full ScratchBuffers instance with
-larger blockFrames. Existing pool logic is untouched.
+Two additions to ScratchBuffers. Existing FloatArray pool logic is untouched.
+
+**1. `oversample(factor)` — cached factory for oversampled buffers:**
 
 ```kotlin
-class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
-    // ... existing code completely unchanged ...
+private val oversampleCache = mutableMapOf<Int, ScratchBuffers>()
 
-    // Cached oversampled ScratchBuffers instances
-    private val oversampleCache = mutableMapOf<Int, ScratchBuffers>()
+fun oversample(factor: Int): ScratchBuffers {
+    if (factor <= 1) return this
+    return oversampleCache.getOrPut(factor) { ScratchBuffers(blockFrames * factor) }
+}
+```
 
-    fun oversample(factor: Int): ScratchBuffers {
-        if (factor <= 1) return this
-        return oversampleCache.getOrPut(factor) { ScratchBuffers(blockFrames * factor) }
+**2. `useDouble()` — DoubleArray pool (same stack discipline as `use()`):**
+
+```kotlin
+private val doublePool = ArrayList<DoubleArray>(2)
+private var doubleNextFree = 0
+
+inline fun <R> useDouble(block: (DoubleArray) -> R): R {
+    val buf = acquireDouble()
+    try {
+        return block(buf)
+    } finally {
+        releaseDouble()
     }
 }
 ```
+
+This replaces the lazy `var modBuf: DoubleArray? = null` pattern in 5 places:
+
+| File                 | Line | Current                      | Migrates to                       |
+|----------------------|------|------------------------------|-----------------------------------|
+| `IgnitorPitchMod.kt` | 33   | vibrato `DoubleArray?`       | `ctx.scratchBuffers.useDouble {}` |
+| `IgnitorPitchMod.kt` | 96   | accelerate `DoubleArray?`    | `ctx.scratchBuffers.useDouble {}` |
+| `IgnitorPitchMod.kt` | 174  | pitchEnvelope `DoubleArray?` | `ctx.scratchBuffers.useDouble {}` |
+| `IgnitorFm.kt`       | 27   | FM mod `FloatArray?`         | `ctx.scratchBuffers.use {}`       |
+| `IgnitorFm.kt`       | 28   | FM phaseMod `DoubleArray?`   | `ctx.scratchBuffers.useDouble {}` |
 
 Usage in Oversampler:
 
@@ -255,4 +277,14 @@ if (distort.amount > 0.0) {
 - Block boundary: two consecutive blocks → no discontinuity
 
 **Manual listening test:** DISCO FOREVER lead — change `distort("0.8:exp")` to
-`distort("0.8:exp:1")` or `.distort("0.8:exp").distos(1)` and compare.
+`distort("0.8:exp:2")` or `.distort("0.8:exp").distos(2)` and compare.
+
+### Migrating existing lazy buffers (Step 6)
+
+Before changing FM/pitch mod to use ScratchBuffers, pin down existing behavior with tests
+(if not already covered). Then migrate:
+
+- `IgnitorPitchMod.kt` — vibrato, accelerate, pitchEnvelope: replace `var modBuf: DoubleArray?`
+  with `ctx.scratchBuffers.useDouble {}`
+- `IgnitorFm.kt` — FM: replace `var modBuf: FloatArray?` with `ctx.scratchBuffers.use {}`,
+  replace `var phaseModBuf: DoubleArray?` with `ctx.scratchBuffers.useDouble {}`
