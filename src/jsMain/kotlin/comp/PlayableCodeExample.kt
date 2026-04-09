@@ -96,7 +96,7 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     }
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
-    private val highlightBuffer = CodeMirrorHighlightBuffer(maxHighlightsPerEvent = 5)
+    private val highlightBuffer = CodeMirrorHighlightBuffer(maxHighlightsPerEvent = 10)
 
     private var highlightPerEvent by value(5) {
         highlightBuffer.maxHighlightsPerEvent = it
