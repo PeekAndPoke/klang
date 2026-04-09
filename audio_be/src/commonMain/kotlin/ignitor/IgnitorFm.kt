@@ -24,9 +24,6 @@ fun Ignitor.fm(
     envSustainLevel: Ignitor = ParamIgnitor("envSustainLevel", 1.0),
     envReleaseSec: Ignitor = ParamIgnitor("envReleaseSec", 0.0),
 ): Ignitor {
-    var modBuf: FloatArray? = null
-    var phaseModBuf: DoubleArray? = null
-
     return Ignitor { buffer, freqHz, ctx ->
         if (freqHz <= 0.0) {
             this.generate(buffer, freqHz, ctx)
@@ -46,19 +43,6 @@ fun Ignitor.fm(
         val envSustainLevelVal = Ignitors.readParam(envSustainLevel, freqHz, ctx)
         val envReleaseSecVal = Ignitors.readParam(envReleaseSec, freqHz, ctx)
 
-        val bufSize = ctx.offset + ctx.length
-        val existing0 = modBuf
-        if (existing0 == null || existing0.size < bufSize) {
-            modBuf = FloatArray(bufSize)
-        }
-        val existingPm = phaseModBuf
-        if (existingPm == null || existingPm.size < bufSize) {
-            phaseModBuf = DoubleArray(bufSize)
-        }
-        // Audio renderer must never throw — silently skip if buffers are unexpectedly null
-        val mb = modBuf ?: return@Ignitor
-        val pmb = phaseModBuf ?: return@Ignitor
-
         // Compute FM envelope level (control rate — once per block)
         val envLevel = if (envAttackSecVal > 0.0 || envDecaySecVal > 0.0 || envSustainLevelVal < 1.0) {
             computeFilterEnvelope(ctx, envAttackSecVal, envDecaySecVal, envSustainLevelVal, envReleaseSecVal)
@@ -67,28 +51,32 @@ fun Ignitor.fm(
         }
         val effectiveDepth = depthVal * envLevel
 
-        // Generate modulator signal into FloatArray
-        val modFreq = freqHz * ratioVal
-        modulator.generate(mb, modFreq, ctx)
+        ctx.scratchBuffers.use { mb ->
+            // Generate modulator signal into FloatArray
+            val modFreq = freqHz * ratioVal
+            modulator.generate(mb, modFreq, ctx)
 
-        // Convert modulator output to frequency multipliers in DoubleArray
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            pmb[i] = 1.0 + (mb[i].toDouble() * effectiveDepth / freqHz)
-        }
+            ctx.scratchBuffers.useDouble { pmb ->
+                // Convert modulator output to frequency multipliers
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    pmb[i] = 1.0 + (mb[i].toDouble() * effectiveDepth / freqHz)
+                }
 
-        // Chain with existing phaseMod
-        val existing = ctx.phaseMod
-        if (existing != null) {
-            for (i in ctx.offset until end) {
-                pmb[i] *= existing[i]
+                // Chain with existing phaseMod
+                val existing = ctx.phaseMod
+                if (existing != null) {
+                    for (i in ctx.offset until end) {
+                        pmb[i] *= existing[i]
+                    }
+                }
+
+                val savedMod = ctx.phaseMod
+                ctx.phaseMod = pmb
+                this.generate(buffer, freqHz, ctx)
+                ctx.phaseMod = savedMod
             }
         }
-
-        val savedMod = ctx.phaseMod
-        ctx.phaseMod = pmb
-        this.generate(buffer, freqHz, ctx)
-        ctx.phaseMod = savedMod
     }
 }
 

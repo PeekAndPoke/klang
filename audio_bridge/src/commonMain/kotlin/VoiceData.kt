@@ -62,6 +62,8 @@ data class VoiceData(
     val distort: Double?,
     /** Distortion shape: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp */
     val distortShape: String?,
+    /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val distortOversample: Int? = null,
     val coarse: Double?,
     val crush: Double?,
 

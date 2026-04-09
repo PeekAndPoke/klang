@@ -51,7 +51,7 @@ fun buildFilterPipeline(
         add(CoarseRenderer(coarse.amount))
     }
     if (distort.amount > 0.0) {
-        add(DistortionRenderer(distort.amount, distort.shape))
+        add(DistortionRenderer(distort.amount, distort.shape, distort.oversample))
     }
 
     // Main filter (subtractive: LP/HP/BP/Notch — final say on frequency spectrum)

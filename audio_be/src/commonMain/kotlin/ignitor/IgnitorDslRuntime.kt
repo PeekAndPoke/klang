@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.random.Random
 
@@ -137,9 +138,10 @@ fun IgnitorDsl.toExciter(oscParams: Map<String, Double>? = null): Ignitor {
         )
 
         // Effects
-        is IgnitorDsl.Distort -> inner.toExciter(oscParams).distort(this.amount.toExciter(oscParams), shape)
+        is IgnitorDsl.Distort -> inner.toExciter(oscParams)
+            .distort(this.amount.toExciter(oscParams), shape, Oversampler.factorToStages(oversample))
         is IgnitorDsl.Drive -> inner.toExciter(oscParams).drive(this.amount.toExciter(oscParams), driveType)
-        is IgnitorDsl.Clip -> inner.toExciter(oscParams).clip(shape)
+        is IgnitorDsl.Clip -> inner.toExciter(oscParams).clip(shape, Oversampler.factorToStages(oversample))
         is IgnitorDsl.Crush -> inner.toExciter(oscParams).crush(this.amount.toExciter(oscParams))
         is IgnitorDsl.Coarse -> inner.toExciter(oscParams).coarse(this.amount.toExciter(oscParams))
         is IgnitorDsl.Phaser -> inner.toExciter(oscParams).phaser(

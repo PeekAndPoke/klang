@@ -23,6 +23,7 @@ private val distortMutation = voiceModifier {
         copy(
             distort = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: distort,
             distortShape = parts.getOrNull(1)?.trim()?.takeIf { s -> s.isNotEmpty() } ?: distortShape,
+            distortOversample = parts.getOrNull(2)?.trim()?.toIntOrNull() ?: distortOversample,
         )
     } else {
         copy(distort = str.toDoubleOrNull() ?: distort)
@@ -36,6 +37,7 @@ fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprud
             src.copy(
                 distort = ctrl.distort ?: src.distort,
                 distortShape = ctrl.distortShape ?: src.distortShape,
+                distortOversample = ctrl.distortOversample ?: src.distortOversample,
             )
         }
     } else {
@@ -283,6 +285,80 @@ fun dist(amount: PatternLike? = null): PatternMapperFn = _dist(listOfNotNull(amo
 @SprudelDsl
 fun PatternMapperFn.dist(amount: PatternLike? = null): PatternMapperFn =
     _dist(listOfNotNull(amount).asSprudelDslArgs())
+
+// -- distos() / distortoversampling() ---------------------------------------------------------------------------------
+
+private val distortOversampleMutation = voiceModifier { copy(distortOversample = it?.toString()?.toIntOrNull()) }
+
+fun applyDistortOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, distortOversampleMutation)
+}
+
+internal val _distos by dslPatternMapper { args, callInfo -> { p -> p._distos(args, callInfo) } }
+internal val SprudelPattern._distos by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistortOversample(p, args) }
+internal val String._distos by dslStringExtension { p, args, callInfo -> p._distos(args, callInfo) }
+internal val PatternMapperFn._distos by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_distos(args, callInfo))
+}
+
+internal val _distortOversampling by dslPatternMapper { args, callInfo -> { p -> p._distortOversampling(args, callInfo) } }
+internal val SprudelPattern._distortOversampling by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistortOversample(p, args) }
+internal val String._distortOversampling by dslStringExtension { p, args, callInfo -> p._distortOversampling(args, callInfo) }
+internal val PatternMapperFn._distortOversampling by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_distortOversampling(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the distortion oversampling factor.
+ *
+ * Higher values reduce aliasing from distortion at the cost of more CPU.
+ * The factor is floored to the nearest power of 2. Values <= 1 disable oversampling.
+ *
+ * @param factor The oversampling factor (2=2x, 4=4x, 8=8x). Non-power-of-2 floored.
+ * @return A new pattern with distortion oversampling applied.
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort(0.8).distos(2)   // 2x oversampled distortion
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").distort("0.8:exp").distos(4)                 // 4x oversampled exp distortion
+ * ```
+ * @alias distortOversampling
+ * @category effects
+ * @tags distos, distort, oversampling, aliasing, quality
+ */
+@SprudelDsl
+fun SprudelPattern.distos(factor: PatternLike? = null): SprudelPattern =
+    this._distos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun String.distos(factor: PatternLike? = null): SprudelPattern =
+    this._distos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun distos(factor: PatternLike? = null): PatternMapperFn = _distos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun PatternMapperFn.distos(factor: PatternLike? = null): PatternMapperFn =
+    _distos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun SprudelPattern.distortOversampling(factor: PatternLike? = null): SprudelPattern =
+    this._distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun String.distortOversampling(factor: PatternLike? = null): SprudelPattern =
+    this._distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun distortOversampling(factor: PatternLike? = null): PatternMapperFn = _distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun PatternMapperFn.distortOversampling(factor: PatternLike? = null): PatternMapperFn =
+    _distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
 
 // -- distortshape() / distshape() / dshape() --------------------------------------------------------------------------
 

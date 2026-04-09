@@ -562,6 +562,7 @@ sealed interface IgnitorDsl {
     data class Clip(
         val inner: IgnitorDsl,
         val shape: String = "soft",
+        val oversample: Int = 0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out)
@@ -579,6 +580,7 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val amount: IgnitorDsl = Constant(0.5),
         val shape: String = "soft",
+        val oversample: Int = 0,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); amount.collectParams(out)
@@ -754,7 +756,7 @@ fun IgnitorDsl.notch(cutoffHz: Double, q: Double = 1.0) = IgnitorDsl.Notch(
 fun IgnitorDsl.drive(amount: Double, driveType: String = "linear") =
     IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount), driveType)
 
-fun IgnitorDsl.clip(shape: String = "soft") = IgnitorDsl.Clip(this, shape)
+fun IgnitorDsl.clip(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Clip(this, shape, oversample)
 
 // Envelope
 
@@ -792,8 +794,8 @@ fun IgnitorDsl.fm(
 // Effects
 
 /** Applies waveshaping distortion with the given [amount] and clipping [shape]. */
-fun IgnitorDsl.distort(amount: Double, shape: String = "soft") =
-    IgnitorDsl.Clip(inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)), shape = shape)
+fun IgnitorDsl.distort(amount: Double, shape: String = "soft", oversample: Int = 0) =
+    IgnitorDsl.Clip(inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)), shape = shape, oversample = oversample)
 
 /** Applies bit-crush quantization at the given bit [amount]. */
 fun IgnitorDsl.crush(amount: Double) = IgnitorDsl.Crush(

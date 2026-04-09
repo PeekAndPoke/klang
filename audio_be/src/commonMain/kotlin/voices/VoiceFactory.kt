@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
@@ -161,7 +162,11 @@ class VoiceFactory(
         val compressor = Voice.Compressor.fromStringConfig(data.compressor)
 
         // Effects
-        val distort = Voice.Distort(amount = data.distort ?: 0.0, shape = data.distortShape ?: "soft")
+        val distort = Voice.Distort(
+            amount = data.distort ?: 0.0,
+            shape = data.distortShape ?: "soft",
+            oversample = Oversampler.factorToStages(data.distortOversample ?: 0),
+        )
         val crush = Voice.Crush(amount = data.crush ?: 0.0)
         val coarse = Voice.Coarse(amount = data.coarse ?: 0.0)
 

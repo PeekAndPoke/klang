@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.resolveDistortionShape
@@ -27,11 +28,12 @@ import kotlin.math.tan
  *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
  *   "diode" (asymmetric), "fold" (wave folding), "chebyshev", "rectify", "exp".
  */
-fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor {
+fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     val resolved = resolveDistortionShape(shape)
     val waveshaper = resolved.fn
     val outputGain = resolved.outputGain
     val needsDcBlock = resolved.needsDcBlock
+    val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     // DC blocker state
     val dcBlockCoeff = 0.995
@@ -45,20 +47,38 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor {
         if (amt <= 0.0) return@Ignitor
 
         val drive = 10.0.pow(amt * 1.2)
+        val os = oversampler
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val x = buffer[i].toDouble() * drive
-            var y = waveshaper(x) * outputGain
-
-            if (needsDcBlock) {
-                val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                dcBlockX1 = y
-                dcBlockY1 = flushDenormal(dcOut)
-                y = dcOut
+        if (os != null) {
+            os.process(buffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                (waveshaper(sample.toDouble() * drive) * outputGain).toFloat()
             }
+            // DC blocker at original rate after decimation
+            if (needsDcBlock) {
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    val y = buffer[i].toDouble()
+                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                    dcBlockX1 = y
+                    dcBlockY1 = flushDenormal(dcOut)
+                    buffer[i] = dcOut.toFloat()
+                }
+            }
+        } else {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val x = buffer[i].toDouble() * drive
+                var y = waveshaper(x) * outputGain
 
-            buffer[i] = y.toFloat()
+                if (needsDcBlock) {
+                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                    dcBlockX1 = y
+                    dcBlockY1 = flushDenormal(dcOut)
+                    y = dcOut
+                }
+
+                buffer[i] = y.toFloat()
+            }
         }
     }
 }
@@ -68,10 +88,11 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor {
  *
  * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm, 1.0 = heavy, 2.0+ = extreme. Default: 0.0.
  * @param shape Waveshaper function. Default: "soft". See [distort] for all options.
+ * @param oversampleStages Number of 2x oversampling stages. 0 = off, 1 = 2x, 2 = 4x, etc.
  */
-fun Ignitor.distort(amount: Double, shape: String = "soft"): Ignitor {
+fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     if (amount <= 0.0) return this
-    return distort(ParamIgnitor("amount", amount), shape)
+    return distort(ParamIgnitor("amount", amount), shape, oversampleStages)
 }
 
 /**
@@ -125,11 +146,12 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
  *   "diode" (asymmetric), "fold" (wave folding), "chebyshev", "rectify", "exp".
  */
-fun Ignitor.clip(shape: String = "soft"): Ignitor {
+fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     val resolved = resolveDistortionShape(shape)
     val clipFn = resolved.fn
     val outputGain = resolved.outputGain
     val needsDcBlock = resolved.needsDcBlock
+    val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     val dcBlockCoeff = 0.995
     var dcBlockX1 = 0.0
@@ -138,18 +160,36 @@ fun Ignitor.clip(shape: String = "soft"): Ignitor {
     return Ignitor { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            var y = clipFn(buffer[i].toDouble()) * outputGain
+        val os = oversampler
 
-            if (needsDcBlock) {
-                val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                dcBlockX1 = y
-                dcBlockY1 = flushDenormal(dcOut)
-                y = dcOut
+        if (os != null) {
+            os.process(buffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                (clipFn(sample.toDouble()) * outputGain).toFloat()
             }
+            if (needsDcBlock) {
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    val y = buffer[i].toDouble()
+                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                    dcBlockX1 = y
+                    dcBlockY1 = flushDenormal(dcOut)
+                    buffer[i] = dcOut.toFloat()
+                }
+            }
+        } else {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                var y = clipFn(buffer[i].toDouble()) * outputGain
 
-            buffer[i] = y.toFloat()
+                if (needsDcBlock) {
+                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                    dcBlockX1 = y
+                    dcBlockY1 = flushDenormal(dcOut)
+                    y = dcOut
+                }
+
+                buffer[i] = y.toFloat()
+            }
         }
     }
 }

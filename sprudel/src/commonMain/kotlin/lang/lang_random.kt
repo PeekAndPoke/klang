@@ -1371,9 +1371,8 @@ fun randrun(n: PatternLike): SprudelPattern = _randrun(listOf(n).asSprudelDslArg
 
 internal val _shuffle by dslPatternMapper { args, callInfo -> { p -> p._shuffle(args, callInfo) } }
 internal val SprudelPattern._shuffle by dslPatternExtension { p, args, /* callInfo */ _ ->
-    val nArg: Any = args.getOrNull(0) ?: 4
-    val newArgs = listOf(nArg)
-    val indices = _randrun(newArgs)
+    val nArg: SprudelDslArg<Any?> = args.getOrNull(0) ?: SprudelDslArg.of(4)
+    val indices = _randrun(listOf(nArg))
     p.bite(nArg, indices)
 }
 internal val String._shuffle by dslStringExtension { p, args, callInfo -> p._shuffle(args, callInfo) }

@@ -37,4 +37,43 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     fun reset() {
         nextFree = 0
     }
+
+    // ── DoubleArray pool (same stack discipline) ────────────────────────────────
+
+    private val doublePool = ArrayList<DoubleArray>(2)
+    private var doubleNextFree = 0
+
+    @PublishedApi
+    internal fun acquireDouble(): DoubleArray {
+        if (doubleNextFree >= doublePool.size) doublePool.add(DoubleArray(blockFrames))
+        return doublePool[doubleNextFree++]
+    }
+
+    @PublishedApi
+    internal fun releaseDouble() {
+        doubleNextFree--
+    }
+
+    /** Scoped access for DoubleArray buffers — same guarantees as [use]. */
+    inline fun <R> useDouble(block: (DoubleArray) -> R): R {
+        val buf = acquireDouble()
+        try {
+            return block(buf)
+        } finally {
+            releaseDouble()
+        }
+    }
+
+    // ── Oversampled ScratchBuffers (cached by factor) ───────────────────────────
+
+    private val oversampleCache = mutableMapOf<Int, ScratchBuffers>()
+
+    /**
+     * Returns a [ScratchBuffers] with buffer size = blockFrames * [factor].
+     * Cached per factor. If [factor] <= 1, returns this instance as-is.
+     */
+    fun oversample(factor: Int): ScratchBuffers {
+        if (factor <= 1) return this
+        return oversampleCache.getOrPut(factor) { ScratchBuffers(blockFrames * factor) }
+    }
 }

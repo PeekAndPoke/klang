@@ -100,10 +100,10 @@ applies FIR, writes every 2nd output to `work[0..currentLen/2)`. Read index alwa
 ```kotlin
 // Non-zero taps (one side, symmetric). Offsets +/-1, +/-3, +/-5, +/-7 from center.
 private val KERNEL = doubleArrayOf(
-    0.29028467725446233,   // +/-1
-    -0.10082903357273678,   // +/-3
-    0.04020109949498927,   // +/-5
-    -0.01147518582890975,   // +/-7
+    0.33261825699561426,   // +/-1
+    -0.11553340575436945,  // +/-3
+    0.046063814906802995,  // +/-5
+    -0.013148666148047813, // +/-7
 )
 private const val CENTER_TAP = 0.5
 private const val TAPS = 15
@@ -288,3 +288,51 @@ Before changing FM/pitch mod to use ScratchBuffers, pin down existing behavior w
   with `ctx.scratchBuffers.useDouble {}`
 - `IgnitorFm.kt` — FM: replace `var modBuf: FloatArray?` with `ctx.scratchBuffers.use {}`,
   replace `var phaseModBuf: DoubleArray?` with `ctx.scratchBuffers.useDouble {}`
+
+## Code Review Findings (2026-04-09)
+
+Post-implementation review by software engineer + audio/DSP engineer.
+
+### CRITICAL — DSP Quality
+
+| #  | Finding                                                                                                                                                                                                                                                           | Impact                                                                               |
+|----|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
+| A1 | **Half-band FIR stopband rejection is ~20 dB, not ~60 dB.** 15-tap with 4 free parameters can't exceed ~30-35 dB equiripple. Current coefficients do worse.                                                                                                       | Aliased images only suppressed ~20 dB in worst case — audible as metallic harshness. |
+| A2 | **Linear interpolation images intermodulate through the nonlinearity.** At 20 kHz the image is only -11 dB down. Waveshaper creates in-band intermod products (e.g., 8 kHz difference tone from 20k + 28k image) that cannot be removed by the decimation filter. | In-band artifacts on bright material.                                                |
+| A5 | **No anti-imaging filter between upsample and nonlinearity.** Half-band FIR only runs on decimation side. Images from upsampling pass through the waveshaper unfiltered.                                                                                          | Compounds with A2 — the root cause of image intermodulation.                         |
+
+**Recommended fix for A1+A2+A5:** Replace linear interpolation with **zero-stuffing + half-band FIR** (reuse same filter
+for both upsample and downsample paths). Upgrade to **31-43 tap** half-band for genuine 50-60 dB rejection (~8-11
+symmetric MACs per output sample vs current 5).
+
+### MEDIUM — Software Engineering
+
+| #  | Finding                                                                                                                                                                                 | File                      | Impact                                                                                            |
+|----|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|---------------------------------------------------------------------------------------------------|
+| S1 | `upsample()` never writes `curr` itself — systematic half-sample bias. Writes `prev + step*j` for `j in 0..f-1`, so the current sample value is missing from the output.                | `Oversampler.kt:66-73`    | Slight lowpass + phase shift beyond what the FIR introduces. Moot if we switch to zero-stuff+FIR. |
+| S2 | `ScratchBuffers.reset()` doesn't reset `doubleNextFree` or `oversampleCache` sub-pools.                                                                                                 | `ScratchBuffers.kt:37-39` | Asymmetry could cause stale pointers if reset() usage patterns change.                            |
+| S3 | `Oversampler.process()` crashes on `length == 0` — reads `buffer[offset - 1]` in `upsample()`.                                                                                          | `Oversampler.kt:76`       | ArrayIndexOutOfBounds on zero-length blocks.                                                      |
+| S4 | `oversampleCache` uses `mutableMapOf<Int, ScratchBuffers>()` — `getOrPut()` boxes Int key in Kotlin/JS on every call.                                                                   | `ScratchBuffers.kt:69`    | Hot path boxing overhead.                                                                         |
+| S5 | Shared `Oversampler` state in Ignitor closures — if same Ignitor tree shared across voices, filter state corrupts. Matches existing DC blocker pattern but oversampler state is larger. | `IgnitorEffects.kt:31-84` | Needs verification: are Ignitor closures per-voice or shared?                                     |
+
+### MEDIUM — Audio Quality
+
+| #  | Finding                                                                                                                                           | Impact                                                                |
+|----|---------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+| A3 | +0.8 dB passband ripple at 16 kHz. Compounds with chained oversampled effects.                                                                    | Bright/harsh coloration in upper midrange.                            |
+| A4 | No latency compensation for FIR group delay (3.5 samples at 2x). If mixed with dry path → comb filter null at ~6.9 kHz.                           | Relevant for dry/wet mix scenarios.                                   |
+| A6 | `sineFold` with high drive generates harmonics at every integer multiple — even 4x oversampling can't suppress them all with this filter quality. | Fold shape benefits most from oversampling but also demands the most. |
+
+### LOW / NIT
+
+| #   | Finding                                                                                               | File                      |
+|-----|-------------------------------------------------------------------------------------------------------|---------------------------|
+| S6  | `Voice.Distort.oversample` stores stages but name implies factor. Should be `oversampleStages`.       | `Voice.kt:199`            |
+| S7  | No `reset()` on Oversampler for voice recycling — stale filter state may bleed into new note attack.  | `Oversampler.kt`          |
+| S8  | Transform lambda `(Float) -> Float` boxes per sample in Kotlin/JS. `inline` on `process()` would fix. | `Oversampler.kt:31-57`    |
+| S9  | No validation on `stages` param — negative values cause `1 shl stages` → 0 or undefined.              | `Oversampler.kt:16`       |
+| S10 | DC blocker logic duplicated in 4 places.                                                              | Multiple files            |
+| S11 | Test constant `HALF_LEN_WARMUP = 15` disconnected from `Oversampler.TAPS`.                            | `OversamplerSpec.kt:168`  |
+| A7  | No denormal flush on FIR output path. Fine for JS (hardware FTZ), JVM risk.                           | `Oversampler.kt:110-124`  |
+| A8  | Oversample buffer pools never shrink — slow memory creep in long sessions.                            | `ScratchBuffers.kt:67-78` |
+| A9  | DC blocker coefficient `0.995` hardcoded, not sample-rate-adaptive.                                   | Multiple files            |

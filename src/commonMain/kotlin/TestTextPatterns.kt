@@ -170,7 +170,7 @@ stack(
 import * from "stdlib"
 import * from "sprudel"
 
-let drive = 7
+let drive = 5
 
 let stay = 48
 let tp = "[0 -1 -2 -3 -5  -2  1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
@@ -194,7 +194,7 @@ let guitar = Osc.register("guitar",
         // Tighten low end
         .highpass(110)
         // Gentle mid-focus before distortion
-        .bandpass(1000, 0.25)        
+        .bandpass(1000, 0.5)        
         // Re-add low end after bandpass
         .plus(Osc.supersaw(Osc.freq(), 2, 0.15, 0.1).mul(0.05).highpass(110).lowpass(300))
         // Pre-distortion: sweeping lowpass adds dynamic character
@@ -205,31 +205,31 @@ let guitar = Osc.register("guitar",
         .lowpass(Osc.param("brightness", 5000, "Post-distortion lowpass cutoff in Hz"), 0.9)
         .highpass(100)
         // Tight rhythm envelope
-        .adsr(Osc.param("attack", 0.01, "Attack time in seconds"), 0.3, Osc.param("sustain", 0.75, "Sustain level"), 0.1)
+        .adsr(Osc.param("attack", 0.01, "Attack time in seconds"), 0.3, Osc.param("sustain", 0.75, "Sustain level"), 0.15)
 )
 
 stack( // Gitarre! ----------------------------------------------------------------------------
   morse("Gitarre!").n("-3").scale("c4:chromatic").orbit(7).fast(2).transpose(tp)
-    .gain(1.0).distort(1.0).warmth(0.5).postgain("0.1 0.01!2".slow(stay)).hpf(1200).lpf(5450).pan(0.6) // .solo()
+    .gain(1.0).distort(1.0).warmth(0.25).postgain("0.1 0.01!2".slow(stay)).hpf(1200).lpf(5450).pan(0.6) // .solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").pan(0.33)
-    .s(guitar).oscp("drive", drive).oscp("brightnes", 4000).oscp("spread", 0.01).hpf(300).gain(0.11)
+    .orbit(1).fast(4).scale("C3:chromatic").pan(0.33).gain(1.0)
+    .s(guitar).oscp("drive", drive).oscp("brightness", 4000).oscp("spread", 0.02).hpf(300).postgain(0.12)
     .transpose(tp).filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").pan(0.66)
-    .s(guitar).oscp("drive", drive).oscp("brightnes", 4000).oscp("spread", 0.01).hpf(300).gain(0.09)
+    .orbit(2).fast(4).scale("C4:chromatic").pan(0.66).gain(1.0)
+    .s(guitar).oscp("drive", drive).oscp("brightness", 4000).oscp("spread", 0.02).hpf(300).postgain(0.08)
     .transpose(tp).filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").gain(0.15).clip(1.0).release(0.15).hpf(120)
-    .s(guitar).oscparam("drive", drive).oscparam("brightness", 5000).oscp("spread", 0.07)
+  ).orbit(3).fast(1).scale("C2:chromatic").gain(1).clip(1.0).hpf(200).notchf("2000:1:4")
+    .s(guitar).oscparam("drive", drive).oscparam("brightness", 3500).oscp("spread", 0.02).postgain(0.2)
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.075") // .solo()
@@ -239,7 +239,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).orbit(5).adsr("0.01:0.2:0.5:1.5 0.01:0.125:0.3:0.5".slow(16)).gain(0.75).hpf(100).filterWhen(t => t % stay >= 4) // .solo()
+  ).orbit(5).adsr("0.01:0.2:0.5:1.5 0.02:0.125:0.3:0.5".slow(16)).gain(0.85).hpf(100).filterWhen(t => t % stay >= 4) // .solo()
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>")
     .orbit(6).adsr("0.01:0.2:0.8:1.5").gain("0.8".add(rand.range(-0.02, 0.02).segment(32))) // .solo()
@@ -274,7 +274,7 @@ stack( // Gitarre! -------------------------------------------------------------
 
 
 
-*/        
+*/          
         """ // A truth END
 
     val tetrisOriginal = """
