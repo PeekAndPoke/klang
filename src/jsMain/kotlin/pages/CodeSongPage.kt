@@ -13,6 +13,7 @@ import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.comp.FullscreenToggleButton
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
+import io.peekandpoke.klang.comp.LcdDisplay
 import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.stdlibLib
@@ -47,7 +48,6 @@ import io.peekandpoke.ultra.streams.StreamSource
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import kotlinx.css.Align
-import kotlinx.css.Color
 import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.Flex
@@ -57,7 +57,6 @@ import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.Padding
 import kotlinx.css.alignSelf
-import kotlinx.css.color
 import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flex
@@ -473,10 +472,11 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             noui.item {
                                 css {
                                     alignSelf = Align.center
-                                    color = Color.grey
                                 }
-                                icon.music()
-                                +" Cycle $currentCycle"
+                                LcdDisplay(
+                                    value = currentCycle,
+                                    digits = 4,
+                                )
                             }
                         }
 

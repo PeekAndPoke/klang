@@ -40,9 +40,13 @@ data class KlangLookAndFeel(
 
     val gold: String = "#e8b84b",
 
-    // ── Bronze — warm-tinted popup / overlay backgrounds ─────────────────────
+    // ── Bronze — warm-tinted overlay backgrounds ──────────────────────────────
 
     val bronze: String = "#362820",
+
+    // ── Popup background — dark metallic blue (derived from excellent teal) ──
+
+    val popupBackground: String = "#1a2a30",
 
     // ── Status scale (5 levels) ───────────────────────────────────────────────
 
@@ -71,6 +75,7 @@ data class KlangLookAndFeel(
                 accent = v("--klang-accent"),
                 gold = v("--klang-gold"),
                 bronze = v("--klang-bronze"),
+                popupBackground = v("--klang-bg-popup"),
                 excellent = v("--klang-excellent"),
                 good = v("--klang-good"),
                 moderate = v("--klang-moderate"),
@@ -114,16 +119,16 @@ data class KlangLookAndFeel(
 
         /** Popup panel — dark metallic blue bg, teal border, subtle glow. Use on hover popups and context menus. */
         val popup by rule {
-            put("background-color", "#1a2a30 !important")
+            put("background-color", "$popupBackground !important")
             put("color", "$textPrimary !important")
             put("border", "1px solid $excellent !important")
             put("box-shadow", "0 0 8px ${excellent}44 !important")
             // Override Semantic UI .ui.segment background via self-referencing specificity bump
             rule("&.ui.segment") {
-                put("background-color", "#1a2a30 !important")
+                put("background-color", "$popupBackground !important")
             }
             rule("&.ui.menu") {
-                put("background-color", "#1a2a30 !important")
+                put("background-color", "$popupBackground !important")
                 put("border", "1px solid $excellent !important")
                 put("box-shadow", "0 0 8px ${excellent}44 !important")
             }
@@ -131,12 +136,12 @@ data class KlangLookAndFeel(
 
         /** Context menu — extends popup style for compact vertical menus. */
         val contextMenu by rule {
-            put("background-color", "#1a2a30 !important")
+            put("background-color", "$popupBackground !important")
             put("color", "$textPrimary !important")
             put("border", "1px solid $excellent !important")
             put("box-shadow", "0 0 8px ${excellent}44 !important")
             rule("&.ui.menu") {
-                put("background-color", "#1a2a30 !important")
+                put("background-color", "$popupBackground !important")
                 put("border", "1px solid $excellent !important")
                 put("box-shadow", "0 0 8px ${excellent}44 !important")
             }

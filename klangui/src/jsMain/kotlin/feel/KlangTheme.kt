@@ -68,6 +68,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
     val accent: Color get() = Color(invoke().accent)
     val gold: Color get() = Color(invoke().gold)
     val bronze: Color get() = Color(invoke().bronze)
+    val popupBackground: Color get() = Color(invoke().popupBackground)
 
     val excellent: Color get() = Color(invoke().excellent)
     val good: Color get() = Color(invoke().good)
@@ -105,6 +106,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         val accent: String get() = KlangTheme().accent
         val gold: String get() = KlangTheme().gold
         val bronze: String get() = KlangTheme().bronze
+        val popupBackground: String get() = KlangTheme().popupBackground
 
         val excellent: String get() = KlangTheme().excellent
         val good: String get() = KlangTheme().good
@@ -134,6 +136,7 @@ object KlangTheme : Stream<KlangLookAndFeel> {
         style.setProperty("--klang-accent", laf.accent)
         style.setProperty("--klang-gold", laf.gold)
         style.setProperty("--klang-bronze", laf.bronze)
+        style.setProperty("--klang-bg-popup", laf.popupBackground)
         style.setProperty("--klang-excellent", laf.excellent)
         style.setProperty("--klang-good", laf.good)
         style.setProperty("--klang-moderate", laf.moderate)

@@ -32,7 +32,7 @@ n("0 2 4 7").scale("E4:minor")
 n("0 0 4 0").scale("E2:minor")
   .sound("saw").lpf(800)
   // sine sweeps distort amount from 0.2 to 0.8 over 64 cycles
-  .distort(sine.range(0.2, 0.8).slow(64))
+  .distort(sine.range(0.2, 1.8).slow(8))
   .adsr("0.01:0.1:0.5:0.1").gain(0.5)""",
         ),
 
@@ -53,7 +53,7 @@ stack(
 n("<0 3 5 7>").scale("E3:minor")
   .sound("supersquare").lpf(1200)
   // saw sweeps crush from 6 bits (mild) to 1 bit (extreme)
-  .crush(saw.range(6, 1).slow(32))
+  .crush(saw.range(6, 1).slow(8))
   .adsr("0.03:0.1:0.5:0.2").gain(0.3)""",
         ),
 
@@ -164,35 +164,34 @@ stack(
 stack(
   // Lead — distorted saw with vibrato expression
   n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")
-    .scale("E4:minor").sound("supersaw").unison(2).detune(0.05)
-    .lpf(4000).hpf(600)
-    .vibrato(10).vibratoMod(perlin.mul(0.05).add(0.05))
-    .gain(0.3).distort("0.5:gentle").postgain(0.65)
-    .adsr("0.05:0.2:0.6:0.1").clip(0.85)
-    .release("<0.1!16 0.5!16>")
-    .superimpose(transpose(12).detune(0.125).velocity("<0!32 0.25!32>").lpf(5000).pan(0.3))
-    .superimpose(transpose(24).detune(0.25).velocity("<0!96 0.10!32>").lpf(6000).pan(0.7))
+    .scale("E4:minor").sound("supersaw").unison(2).detune(0.04)
+    .lpf(4300).hpf(600)
+    .gain(0.3).distort("0.5:gentle").postgain(0.5) // . solo()
+    .adsr("0.02:0.2:0.6:0.1").clip(0.85)
+    .release("<0.1!16 0.3!16 0.1!16 0.4!16 0.1!16 0.6!16>")
+    .superimpose(transpose(12).detune(0.08).velocity("<0!32 0.2!32>").lpf(4500).pan(0.2))
+    .superimpose(transpose(24).detune(0.12).velocity("<0!96 0.075!32>").lpf(5000).pan(0.8))
     .orbit(0),
   // Pad — struct stamps the rhythm, phaser + tremolo shimmer
-  n("<[0 [2 4] 0 [-2 -4]] [0 [2 4] 0 [2 -1]] [0 [6 4] 0 [5 6]] [4 [2 0] 0 [-2 -3]]>/4").struct("x!16")
-    .scale("e2:minor").sound("supersquare").unison(4)
-    .lpf("1600").hpf(240)
-    .phaser(0.125).phaserdepth(0.2).phasercenter(1200)
-    .adsr("0.01:0.15:0.7:0.1").clip(0.85).crush(saw.range(6, 2).slow(32))
-    .gain(0.3).orbit(1).pan(0.45),
+  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 -1]]!2 [0 [6 4] 0 [6 2]] [4 [2 4] 4 [-2 -1]]>/4")
+    .struct("<[x!16]!7 [x!24]!1 [x!16]!16>")
+    .scale("<e2:minor!48 e3:minor!16>").sound("supersquare").unison(3)
+    .lpf("1200").hpf(400).notchf(440).warmth(0.5)
+    .adsr("0.01:0.15:0.7:0.05").clip(0.8).crush(saw.range(4, 2).slow(32)) //  . solo()
+    .gain(0.45).orbit(1).pan(0.3),
   // Bass — warm distorted saw, struct for steady pulse
-  n("<0 0 2 4 0 0 -2 -1>").struct("x!8").fast(2).velocity("1 0.9!3".fast(4))
+  n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1 0.95!3".fast(4))
     .scale("e2:minor").sound("saw")
-    .lpf("1200").hpf(120).distort(sine.range(0.2, 0.8).slow(64))
-    .adsr("0.001:0.1:0.5:0.1").clip(0.9)
-    .gain(0.45).orbit(2).pan(0.55),
+    .lpf("600").hpf(120).distort(0.3).warmth(0.95)
+    .adsr("0.01:0.15:0.5:0.05").clip(0.8) // . solo()
+    .gain(0.325).orbit(2).pan(0.7),
   // Drums — crushed, building from sparse to dense
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!8 [bd [bd,sd] bd [bd,sd]]!8>")
-    .crush(9).gain(1.2).orbit(3),
+    .crush(9).gain(0.8).orbit(3).hpf(80),
   sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>").fast(2).crush(8).hpf(3000)
     .gain(0.6).orbit(3)
 // Compressor glues it, analog adds organic drift
-).compressor("-10:2:10:0.02:0.25").analog(1)
+).compressor("-15:2:6:0.01:0.2").analog(0.5)
 
 // Inspired by: Editors - Papillon
 // https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW""",

@@ -56,6 +56,7 @@ import kotlinx.css.width
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
+import kotlinx.html.title
 
 @Suppress("FunctionName")
 fun Tag.PlayableCodeExample(
@@ -94,7 +95,13 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     }
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
-    private val highlightBuffer = CodeMirrorHighlightBuffer(maxHighlightsPerEvent = 100)
+    private val highlightBuffer = CodeMirrorHighlightBuffer(maxHighlightsPerEvent = 5)
+
+    private var highlightPerEvent by value(5) {
+        highlightBuffer.maxHighlightsPerEvent = it
+        highlightBuffer.cancelAll()
+        playback?.reemitVoiceSignals()
+    }
 
     private var currentCode: String by value(props.code)
     private var playingCode: String? by value(null)
@@ -340,6 +347,21 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         }
                     }
 
+                    // Highlight-per-event field
+                    noui.item {
+                        css { width = 120.px }
+                        UiInputField(highlightPerEvent, { highlightPerEvent = it }) {
+                            step(1)
+                            wrapFieldWith { fluid }
+                            leftLabel {
+                                ui.grey.label {
+                                    title = "Max highlights per audio event"
+                                    +"EVT"
+                                }
+                            }
+                        }
+                    }
+
                     // Info text
                     noui.item {
                         css {
@@ -347,8 +369,10 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                             color = Color.grey
                         }
                         if (isPlaying) {
-                            icon.music()
-                            +" Playing - Cycle $currentCycle"
+                            LcdDisplay(
+                                value = currentCycle,
+                                digits = 3,
+                            )
                         } else {
                             +"Try this example"
                         }
