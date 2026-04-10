@@ -150,30 +150,33 @@ stack(
              import * from  "stdlib"
               import * from "sprudel"
                let wind       = 0.050
-                let water      = 0.070
-                 let waves      = 0.210
-                  let windSpiel  = 3.500
+                let water      = 0.100
+                 let waves      = 0.120
+                  let windSpiel  = 1.500
            
                     stack( //   Lean back and relax... let the waves carry you away
-                // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                 // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-             note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
-               .gain(wind).pan(sine.range(0.3, 0.7).slow(21))
-               .hpf(1000).bandf(perlin.range(110, 110 * 20).slow(64)).bandq(berlin.range(0.0, 2.0).slow(39))
+               note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1)  // . solo()
+             .gain(wind).pan(berlin.range(0.2, 0.8).slow(21)).lpf(1500)
+            .hpf(120).bandf(perlin.range(110, 110 * 10).slow(16)).bandq(berlin.range(0.2, 5.0).slow(8))
                      
            , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            note("c").fast(5).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
-              .gain(water)
-              .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
+            sound("pink pink pink pink").legato(2).degrade(0.5).adsr("1.5:3.0:0.5:5.0") //  . solo()
+            .gain(water).hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
+              
            , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            note("<c@4 ~!15>").fast(2).sound("pink").adsr("0.75:0.5:1.0:10.0").warmth(0.2) // . solo()
-             .gain(waves).pan(0.3).hpf(120).lpf(4000).bandf(perlin.range(100, 500).slow(22)).bandq(rand.range(0.5, 1.5))
-                 .superimpose(x => x.pan(0.7))
+            note("c c c c").legato(4).degrade(95/100).sound("pink").adsr("1.5:5.0:0.6:10.0").warmth(0.1) // . solo()
+             .gain(waves).hpf(120).lpf(5000).lpadsr("1.0:3.0:0.4:10.0").lpenv(10)
+             .bandf(perlin.range(120, 500).slow(22)).bandq(rand.range(0.5, 1.5))
+              .pan(sine.range(0.1, 0.4).slow(4)).superimpose(x => x.pan(sine.range(0.9, 0.6).slow(5)))
+               .superimpose(x => x.sound("pink").adsr("0.3:0.8:0.2:1.5").valocity(0.2).hpf(2500).lpf(8000))
+              
               , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                n(randrun(16)).fast(4).sound("glockenspiel").scale("d2:pentatonic").pan(0.3)
-                  .gain(0.25).distort(0.2).postgain(windSpiel).adsr("0.1:1.0:1.0:5.0").hpf(300).degradeBy(0.995)
+                n(randrun(16)).fast(4).sound("glockenspiel").scale("f2:pentatonic").pan(0.3)
+                  .gain(0.25).distort(0.05).postgain(windSpiel).adsr("0.05:1.0:0.7:5.0").hpf(400).degradeBy(0.995)
                       .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.5) // . solo()
-                           ).room(0.25).rsize(10.0)              
+                           ).room(0.25).rsize(10.0).seed(sinOfDay.add(1).mul(100000))              
       
 
 
@@ -197,45 +200,44 @@ stack(
             title = "Der Schmetterling",
             rpm = 32.5,
             icon = "bug",
-            code = """
-import * from "stdlib"                                                                                                      //
-import * from "sprudel"                                                                                                    ////
-                                                                                                                          //  //
-                                                                                                                         //    //
-stack(                                                                                                                  //      //
-  // Lead — distorted saw with vibrato expression                                                                      //        //
-  n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")                                                  //////////////          //////////////
-    .scale("E4:minor").sound("supersaw").unison(2).detune(0.04)                                             //                              //
-    .lpf(4500).hpf(600)                                                                                       //          DISCO!          //
-    .gain(0.25).distort("0.8:exp").postgain(0.3) // . solo()                                                    //       FOREVER!       //
-    .adsr("0.01:0.3:0.6:0.1").clip(0.8)                                                                           //                  //
-    .release("<0.1!16 0.3!16 0.1!16 0.35!16 0.1!16 0.425!16>")                                                     //       //      //
-    .apply(                                                                                                       //     //    //     //
-      x => x.velocity(0.6),                                                                                      //   //          //   //
-      x => x.shuffle("<1!64 0!16 1!1 4/8!14 1!33>").seed(sinOfNight.add(1).mul(24 * 60 * 15))                   // //                // //
-        .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.2!32>").lpf(5000).pan(0.8))                  //                        //
-        .superimpose(transpose(24).detune(0.10).velocity("<0!96 0.075!32>").lpf(5500).pan(0.2))  
+            code = """import * from "stdlib"
+import * from "sprudel"                                                                                               ////
+                                                                                                                     //  //
+                                                                                                                    //    //
+stack(                                                                                                             //      //
+  // Lead                                                                                                         //        //
+  n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")                                             //////////////          //////////////
+    .scale("E4:minor").sound("supersaw").unison(2).detune(0.04)                                        //                              //
+    .lpf(4500).hpf(600)                                                                                  //          DISCO!          //
+    .gain(0.275).distort("0.8:exp").postgain(0.3) // . solo()                                              //       FOREVER!       //
+    .adsr("0.01:0.3:0.6:0.1").clip(0.8)                                                                      //                  //
+    .release("<0.1!16 0.3!16 0.1!16 0.35!16 0.1!16 0.41!16>")                                                 //       //      //
+    .apply(                                                                                                  //     //    //     //
+      x => x.velocity(0.65),                                                                                //   //          //   //
+      x => x.shuffle("<1!64 0!16 1!1 4!14 1!33>").seed(sinOfNight.add(1).mul(24 * 60 * 15))                // //                // //
+        .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.2!32>").lpf(5000).pan(0.8))             //                        //
+        .superimpose(transpose(24).detune(0.09).velocity("<0!96 0.08!32>").lpf(5000).pan(0.2))  
     ).orbit(0),
-  // Pad — struct stamps the rhythm, phaser + tremolo shimmer
-  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6.05 4] 0 <[2 3] [-2.95 -0.025]>] [4 [2 1] 0 [-2 <-1 -4>]]>/4")
+  // Pad
+  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6 4] 0 <[2 3] [-3 0]>] [4 [2 1] 0 [-2 <-1 -4>]]>/4")
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>").velocity("1 0.95!3 0.98 0.95!3".fast(2))
     .scale("<e2:minor!48 e3:minor!16>").sound("supersaw").unison(3).detune(0.05)
     .lpf("2000").hpf(240).notchf(440).warmth(0.5).distort(0.2)
     .phaser(1/8).phaserdepth(0.15).phasersweep(500).phasercenter(2000)
     .adsr("0.01:0.25:0.5:0.05").clip(0.75).crush(saw.range(8, 4).slow(32)) //   . solo()
     .gain(0.375).orbit(1).pan(0.2),
-  // Bass — warm distorted saw, struct for steady pulse
+  // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1 0.95!3 0.98 0.95!3".fast(2))
     .scale("e2:minor").sound("saw")
-    .lpf("800").hpf(120).distort(0.2).warmth(0.95).notchf(440)
+    .lpf("800").hpf(150).distort(0.2).warmth(0.95).notchf(440)
     .adsr("0.01:0.2:0.5:0.05").clip(0.75)  // . solo()
     .gain(0.45).orbit(2).pan(0.8),
-  // Drums — crushed, building from sparse to dense
+  // Drums
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!8 [bd [bd,sd] bd [bd,sd]]!8>")
-    .crush(9).gain(0.8).orbit(3).hpf(100),
+    .crush(9).gain(0.85).orbit(3).hpf(120),
   sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>").fast(2).crush(10).hpf(3000)
-    .gain(0.4).orbit(3)
-  // Compressor glues it, analog adds organic drift
+    .gain(0.45).orbit(3)
+  // Master
 ).compressor("-15:2:6:0.01:0.2").analog(0.5)
 
 

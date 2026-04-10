@@ -1,7 +1,11 @@
 package io.peekandpoke.klang.sprudel.lang.addons.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.TimeSpan
+import io.peekandpoke.klang.sprudel.sampleAt
 
 /**
  * Pattern that applies solo to each event and fills silent gaps so the backend
@@ -59,7 +63,7 @@ class SoloPattern(
                 whole = span, // whole == part → isOnset = true, so the backend picks it up
                 data = SprudelVoiceData.empty.copy(
                     note = "a",
-                    freqHz = 440.0,
+                    freqHz = 0.0,
                     sound = "sine",
                     gain = 0.000001,
                     solo = evt?.data?.value?.asDouble?.coerceIn(0.0, 1.0),

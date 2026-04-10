@@ -242,9 +242,18 @@ class StdLibOscTest : StringSpec({
     "distort chaining produces Clip(Drive(...))" {
         val dsl = evalIgnitorDsl("Osc.saw().distort(0.5)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        dsl.oversample shouldBe 0
         val drive = dsl.inner
         drive.shouldBeInstanceOf<IgnitorDsl.Drive>()
         drive.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
+    }
+
+    "distort with oversample factor" {
+        val dsl = evalIgnitorDsl("""Osc.saw().distort(0.8, "exp", 4)""")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        dsl.shape shouldBe "exp"
+        dsl.oversample shouldBe 4
+        dsl.inner.shouldBeInstanceOf<IgnitorDsl.Drive>()
     }
 
     "detune chaining" {
@@ -409,6 +418,14 @@ class StdLibOscTest : StringSpec({
         val dsl = evalIgnitorDsl("Osc.sine().clip()")
         dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
         dsl.shape shouldBe "soft"
+        dsl.oversample shouldBe 0
+    }
+
+    "clip with oversample factor" {
+        val dsl = evalIgnitorDsl("""Osc.sine().clip("hard", 2)""")
+        dsl.shouldBeInstanceOf<IgnitorDsl.Clip>()
+        dsl.shape shouldBe "hard"
+        dsl.oversample shouldBe 2
     }
 
     "bandpass chaining" {

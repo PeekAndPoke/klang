@@ -15,7 +15,7 @@ class JsAudioAnalyzer(
     private val history = AnalyzerBufferHistory(fftSize, HISTORY_CAPACITY)
 
     companion object {
-        private const val HISTORY_CAPACITY = 60
+        private const val HISTORY_CAPACITY = 50
     }
 
     override val waveform: Stream<AnalyzerBufferHistory> = animTicker().map {
