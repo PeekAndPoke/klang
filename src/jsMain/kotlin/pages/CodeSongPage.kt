@@ -466,10 +466,8 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                         }
 
-                        if (isPlaying) {
-                            noui.middle.aligned.item {
-                                LcdDisplay(value = currentCycle, digits = 4)
-                            }
+                        noui.middle.aligned.item {
+                            LcdDisplay(value = currentCycle, digits = 4, dim = !isPlaying)
                         }
 
                         if (isBuiltInModified) {

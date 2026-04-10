@@ -39,6 +39,7 @@ fun Tag.LcdDisplay(
     color: Color = KlangTheme.good,
     size: LinearDimension = 16.px,
     backgroundColor: Color = Color("#111111"),
+    dim: Boolean = false,
 ) = comp(
     LcdDisplay.Props(
         value = value,
@@ -46,6 +47,7 @@ fun Tag.LcdDisplay(
         color = color,
         size = size,
         backgroundColor = backgroundColor,
+        dim = dim,
     )
 ) {
     LcdDisplay(it)
@@ -59,6 +61,7 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
         val color: Color,
         val size: LinearDimension,
         val backgroundColor: Color,
+        val dim: Boolean,
     )
 
     //  Strip layout: 0-9 repeated 3 times (30 entries).
@@ -144,6 +147,9 @@ class LcdDisplay(ctx: Ctx<Props>) : Component<LcdDisplay.Props>(ctx) {
                 put("font-family", "'Courier New', 'Consolas', monospace")
                 fontWeight = FontWeight.bold
                 fontSize = props.size
+                if (props.dim) {
+                    put("filter", "brightness(0.7)")
+                }
             }
 
             for (i in 0 until props.digits) {
