@@ -212,12 +212,10 @@ stack(                                                                          
     .release("<0.1!16 0.3!16 0.1!16 0.35!16 0.1!16 0.425!16>")                                                     //       //      //
     .apply(                                                                                                       //     //    //     //
       x => x.velocity(0.6),                                                                                      //   //          //   //
-      x => x.shuffle("<1!64 0!16 1!1 4/8!14 1!33>").seed(sinOfNight.add(1).mul(24 * 60 * 60))                   // //                // //
+      x => x.shuffle("<1!64 0!16 1!1 4/8!14 1!33>").seed(sinOfNight.add(1).mul(24 * 60 * 15))                   // //                // //
         .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.2!32>").lpf(5000).pan(0.8))                  //                        //
         .superimpose(transpose(24).detune(0.10).velocity("<0!96 0.075!32>").lpf(5500).pan(0.2))  
-    )    
-    .orbit(0)
-  ,
+    ).orbit(0),
   // Pad — struct stamps the rhythm, phaser + tremolo shimmer
   n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6.05 4] 0 <[2 3] [-2.95 -0.025]>] [4 [2 1] 0 [-2 <-1 -4>]]>/4")
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>").velocity("1 0.95!3 0.98 0.95!3".fast(2))
@@ -237,7 +235,7 @@ stack(                                                                          
     .crush(9).gain(0.8).orbit(3).hpf(100),
   sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>").fast(2).crush(10).hpf(3000)
     .gain(0.4).orbit(3)
-// Compressor glues it, analog adds organic drift
+  // Compressor glues it, analog adds organic drift
 ).compressor("-15:2:6:0.01:0.2").analog(0.5)
 
 
