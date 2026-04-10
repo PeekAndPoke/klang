@@ -89,8 +89,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     private var overlayCtx2d: CanvasRenderingContext2D? = null
     private var overlayContainer: HTMLDivElement? = null
 
-    // Two-level deflection cache: strength → (width → values)
-    private val deflectionCaches = mutableMapOf<Double, Pair<Double, DoubleArray>>()
+    // Deflection cache keyed by (strength, halfCurve) → (width → values)
+    private val deflectionCaches = mutableMapOf<Pair<Double, Boolean>, Pair<Double, DoubleArray>>()
 
     @Suppress("unused")
     private val laf by subscribingTo(KlangTheme)
@@ -234,18 +234,80 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 }
             }
 
+            // Expanded mode: draw the waveform twice — right half normal,
+            // left half mirrored — so sound appears to emanate from the middle.
+            val fullWidth = canvasElement.width.toDouble()
+            val fullHeight = canvasElement.height.toDouble()
+            val halfWidth = fullWidth / 2.0
+            val centerY = fullHeight / 2.0
+
+            // Clear the whole canvas and draw the center line across both halves
+            ctx.clearRect(0.0, 0.0, fullWidth, fullHeight)
+            props.centerLineColor?.let { clc ->
+                ctx.strokeStyle = clc.toString()
+                ctx.lineWidth = props.centerLineWidth
+                ctx.beginPath()
+                ctx.moveTo(0.0, centerY)
+                ctx.lineTo(fullWidth, centerY)
+                ctx.stroke()
+            }
+
+            // Both halves are offset by pixelSkip from the centre so the first
+            // drawn pixel of each half sits at ±pixelSkip, giving a symmetric
+            // pattern: …, −3·step, −step, +step, +3·step, … This prevents the
+            // visible shift caused by one half drawing exactly at the centre
+            // while the other starts 1 pixel away.
+            val seamOffset = props.pixelSkip.toDouble()
+
+            // Right half — origin shifted to the centre, draws outward to the right.
+            // Strong time warp starting right from the middle (no linear region).
+            ctx.save()
+            ctx.translate(halfWidth, 0.0)
             drawWaveformSlice(
                 ctx = ctx,
-                canvasWidth = canvasElement.width.toDouble(),
-                canvasHeight = canvasElement.height.toDouble(),
+                canvasWidth = halfWidth,
+                canvasHeight = fullHeight,
                 strokeColor = props.strokeColor,
                 strokeWidth = props.strokeWidth,
                 centerLineColor = props.centerLineColor,
                 centerLineWidth = props.centerLineWidth,
                 buffer = storage,
                 bufferLength = offset,
-                deflectionStrength = 2.0,
+                deflectionStrength = 6.0,
+                drawBackground = false,
+                reverseBuffer = true,
+                halfCurve = true,
+                timeWarpEnabled = true,
+                timeWarpUnwarpedFraction = 0.0,
+                pixelOffset = seamOffset,
             )
+            ctx.restore()
+
+            // Left half — origin at the centre, x axis flipped so the waveform
+            // mirrors outward to the left. Same pixelOffset as the right half
+            // so the drawn pattern is symmetric around the centre.
+            ctx.save()
+            ctx.translate(halfWidth, 0.0)
+            ctx.scale(-1.0, 1.0)
+            drawWaveformSlice(
+                ctx = ctx,
+                canvasWidth = halfWidth,
+                canvasHeight = fullHeight,
+                strokeColor = props.strokeColor,
+                strokeWidth = props.strokeWidth,
+                centerLineColor = props.centerLineColor,
+                centerLineWidth = props.centerLineWidth,
+                buffer = storage,
+                bufferLength = offset,
+                deflectionStrength = 6.0,
+                drawBackground = false,
+                reverseBuffer = true,
+                halfCurve = true,
+                timeWarpEnabled = true,
+                timeWarpUnwarpedFraction = 0.0,
+                pixelOffset = seamOffset,
+            )
+            ctx.restore()
         }
     }
 
@@ -260,15 +322,25 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         return 0.02 + 0.98 * curveValue
     }
 
-    private fun getOrBuildDeflectionCache(totalWidth: Double, strength: Double): DoubleArray {
-        val cached = deflectionCaches[strength]
+    private fun getOrBuildDeflectionCache(
+        totalWidth: Double,
+        strength: Double,
+        halfCurve: Boolean,
+    ): DoubleArray {
+        val key = strength to halfCurve
+        val cached = deflectionCaches[key]
         if (cached != null && cached.first == totalWidth) return cached.second
 
         val resolution = totalWidth.toInt().coerceAtLeast(1)
         val values = DoubleArray(resolution) { pixelX ->
-            calculateStringDeflection(pixelX.toDouble() / totalWidth, strength)
+            val normalized = pixelX.toDouble() / totalWidth
+            // In half-curve mode the left edge of the cache (local x=0) is the
+            // screen centre — map it onto the peak of the underlying curve so
+            // no counter force is applied there, and only the outer edge dampens.
+            val input = if (halfCurve) 0.5 + normalized / 2.0 else normalized
+            calculateStringDeflection(input, strength)
         }
-        deflectionCaches[strength] = totalWidth to values
+        deflectionCaches[key] = totalWidth to values
         return values
     }
 
@@ -283,19 +355,27 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         buffer: Float32Array,
         bufferLength: Int,
         deflectionStrength: Double = 0.0,
+        drawBackground: Boolean = true,
+        reverseBuffer: Boolean = false,
+        halfCurve: Boolean = false,
+        timeWarpEnabled: Boolean = false,
+        timeWarpUnwarpedFraction: Double = 0.0,
+        pixelOffset: Double = 0.0,
     ) {
         val centerY = canvasHeight / 2.0
 
-        ctx.clearRect(0.0, 0.0, canvasWidth, canvasHeight)
+        if (drawBackground) {
+            ctx.clearRect(0.0, 0.0, canvasWidth, canvasHeight)
 
-        // Draw center line
-        centerLineColor?.let { clc ->
-            ctx.strokeStyle = clc.toString()
-            ctx.lineWidth = centerLineWidth
-            ctx.beginPath()
-            ctx.moveTo(0.0, centerY)
-            ctx.lineTo(canvasWidth, centerY)
-            ctx.stroke()
+            // Draw center line
+            centerLineColor?.let { clc ->
+                ctx.strokeStyle = clc.toString()
+                ctx.lineWidth = centerLineWidth
+                ctx.beginPath()
+                ctx.moveTo(0.0, centerY)
+                ctx.lineTo(canvasWidth, centerY)
+                ctx.stroke()
+            }
         }
 
         if (bufferLength <= 0) return
@@ -305,19 +385,119 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
         val widthInt = canvasWidth.toInt()
         val deflectionCache = if (deflectionStrength > 0.0) {
-            getOrBuildDeflectionCache(canvasWidth, deflectionStrength)
+            getOrBuildDeflectionCache(canvasWidth, deflectionStrength, halfCurve)
         } else {
             null
         }
         val step = props.pixelSkip.coerceAtLeast(1)
 
-        if (widthInt >= bufferLength) {
+        // Piecewise time warp with a strong concave curve.
+        //
+        //   Linear region u ∈ [0, a]:   f(u) = k·u
+        //   Curve  region u ∈ [a, 1]:   f(u) = k·a + (1 − k·a) · (1 − (1 − v)^p)
+        //                               where v = (u − a) / (1 − a)
+        //
+        // The linear slope k is picked so the two pieces meet with matching
+        // slopes (C1 continuous):
+        //      k = p / (1 + a · (p − 1))
+        //
+        // With a = 0 there is no linear region and the curve spans the whole
+        // half-width, giving slope = p at the centre and 0 at the outer edge —
+        // waves start fast at the centre and slow down toward the sides.
+        val warpA = timeWarpUnwarpedFraction.coerceIn(0.0, 1.0)
+        val warpP = 2.75  // warp strength
+        val warpK = warpP / (1.0 + warpA * (warpP - 1.0))
+        val warpLinearEnd = warpK * warpA
+        val middleEnd = (warpLinearEnd * bufferLength).toInt()
+
+        // Base sample lookup that respects reverseBuffer.
+        fun rawSample(i: Int): Float =
+            if (reverseBuffer) buffer[bufferLength - 1 - i] else buffer[i]
+
+        // Sample reader used by the drawing loops. In the unwarped middle region
+        // (indices [0, middleEnd)) we average each sample with its reverse — the
+        // region becomes palindromic, so the mirrored halves blend without a
+        // visible seam at the centre.
+        fun sampleAt(i: Int): Float {
+            return if (middleEnd > 1 && i in 0 until middleEnd) {
+                val mirrored = middleEnd - 1 - i
+                (rawSample(i) + rawSample(mirrored)) * 0.5f
+            } else {
+                rawSample(i)
+            }
+        }
+
+        val startPixel = pixelOffset.toInt().coerceAtLeast(0)
+
+        if (timeWarpEnabled) {
+            val oneMinusA = (1.0 - warpA).coerceAtLeast(1e-9)
+            val curveSpan = 1.0 - warpLinearEnd
+
+            fun warpedSample(u: Double): Double {
+                val uc = u.coerceIn(0.0, 1.0)
+                return if (uc <= warpA) {
+                    warpK * uc
+                } else {
+                    val v = (uc - warpA) / oneMinusA
+                    warpLinearEnd + curveSpan * (1.0 - (1.0 - v).pow(warpP))
+                }
+            }
+
+            var isFirstPoint = true
+            val lastPixel = widthInt - 1
+            // Strong warp crams a lot of samples into the centre pixels, so
+            // draw at twice the configured min pixel distance to avoid dense
+            // overdraw.
+            val warpStep = step * 2
+
+            for (pixelX in startPixel..lastPixel step warpStep) {
+                // Compute min/max for ONLY this single drawn pixel — the samples
+                // belonging to the skipped pixels are intentionally excluded,
+                // matching the non-warped downsample path. This keeps the
+                // output from looking too dense at high warp strengths.
+                val u1 = pixelX.toDouble() / widthInt.toDouble()
+                val u2 = (pixelX + 1).toDouble() / widthInt.toDouble()
+
+                val s1 = (bufferLength * warpedSample(u1)).toInt().coerceIn(0, bufferLength - 1)
+                val s2Raw = (bufferLength * warpedSample(u2)).toInt().coerceAtMost(bufferLength)
+                val s2 = maxOf(s1 + 1, s2Raw)
+
+                var minVal = sampleAt(s1)
+                var maxVal = minVal
+                for (i in s1 + 1 until s2) {
+                    val value = sampleAt(i)
+                    if (value < minVal) minVal = value
+                    if (value > maxVal) maxVal = value
+                }
+
+                val x = pixelX.toDouble()
+
+                // The string mechanic must NOT be affected by the time warp —
+                // look up the deflection using the pure pixel position.
+                deflectionCache?.let { cache ->
+                    val cacheIdx = x.toInt().coerceIn(0, cache.size - 1)
+                    minVal *= cache[cacheIdx].toFloat()
+                    maxVal *= cache[cacheIdx].toFloat()
+                }
+
+                val yMin = centerY - (minVal * centerY)
+                val yMax = centerY - (maxVal * centerY)
+
+                if (isFirstPoint) {
+                    ctx.moveTo(x, yMax)
+                    isFirstPoint = false
+                }
+                ctx.lineTo(x, yMax)
+                ctx.lineTo(x, yMin)
+            }
+        } else if (widthInt >= bufferLength) {
             // More pixels than samples
             val sliceWidth = canvasWidth / bufferLength.toDouble()
             var isFirstPoint = true
+            val firstSample = ((startPixel / sliceWidth).toInt()).coerceIn(0, bufferLength - 1)
 
-            for (i in 0 until bufferLength step step) {
-                var value = buffer[i]
+            for (i in firstSample until bufferLength step step) {
+                var value = sampleAt(i)
                 val x = i * sliceWidth
 
                 deflectionCache?.let { cache ->
@@ -339,15 +519,15 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
             val samplesPerPixel = bufferLength / widthInt
             var isFirstPoint = true
 
-            for (pixelX in 0 until widthInt step step) {
+            for (pixelX in startPixel until widthInt step step) {
                 val localStartIdx = pixelX * samplesPerPixel
                 val localEndIdx = minOf(localStartIdx + samplesPerPixel, bufferLength)
 
-                var minVal = buffer[localStartIdx]
-                var maxVal = buffer[localStartIdx]
+                var minVal = sampleAt(localStartIdx)
+                var maxVal = minVal
 
                 for (i in localStartIdx + 1 until localEndIdx) {
-                    val value = buffer[i]
+                    val value = sampleAt(i)
                     if (value < minVal) minVal = value
                     if (value > maxVal) maxVal = value
                 }

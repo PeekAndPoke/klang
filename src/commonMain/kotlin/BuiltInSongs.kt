@@ -195,7 +195,7 @@ stack(
         Song(
             id = "$PREFIX-der-schmetterling",
             title = "Der Schmetterling",
-            rpm = 33.0,
+            rpm = 32.0,
             icon = "bug",
             code = """
 import * from "stdlib"
@@ -212,25 +212,25 @@ stack(
   n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")
     .scale("E4:minor").sound("supersaw").unison(2).detune(0.04)
     .lpf(4500).hpf(600)
-    .gain(0.3).distort("0.8:exp").postgain(0.3) // . solo()
+    .gain(0.25).distort("0.8:exp").postgain(0.3) // . solo()
     .adsr("0.01:0.3:0.6:0.1").clip(0.8)
     .release("<0.1!16 0.3!16 0.1!16 0.35!16 0.1!16 0.425!16>")
     .apply(
       x => x.velocity(0.6),
-      x => x.shuffle("<1!64 0!16 1!1 4!6 1!41>").seed(sinOfNight.add(1).mul(24 * 60))
+      x => x.shuffle("<1!64 0!16 1!1 4/8!14 1!33>").seed(sinOfNight.add(1).mul(24 * 60))
         .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.2!32>").lpf(5000).pan(0.8))
         .superimpose(transpose(24).detune(0.10).velocity("<0!96 0.075!32>").lpf(5500).pan(0.2))
     )    
     .orbit(0)
   ,
   // Pad — struct stamps the rhythm, phaser + tremolo shimmer
-  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6 4] 0 <[2 3] [-3 0]>] [4 [2 1] 0 [-2 -4]]>/4")
+  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6 4] 0 <[2 3] [-3 0]>] [4 [2 1] 0 [-2 <-1 -4>]]>/4")
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>").velocity("1 0.95!3 0.98 0.95!3".fast(2))
     .scale("<e2:minor!48 e3:minor!16>").sound("supersaw").unison(3).detune(0.05)
     .lpf("2000").hpf(240).notchf(440).warmth(0.5).distort(0.2)
     .phaser(1/8).phaserdepth(0.15).phasersweep(500).phasercenter(2000)
     .adsr("0.01:0.25:0.5:0.05").clip(0.75).crush(saw.range(8, 4).slow(32)) //   . solo()
-    .gain(0.35).orbit(1).pan(0.2),
+    .gain(0.375).orbit(1).pan(0.2),
   // Bass — warm distorted saw, struct for steady pulse
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1 0.95!3 0.98 0.95!3".fast(2))
     .scale("e2:minor").sound("saw")
@@ -247,9 +247,12 @@ stack(
 
 // Inspired by: Editors - Papillon
 // https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW
+
                
-            
-            
+           
+           
+           
+           
             
             """
         )
