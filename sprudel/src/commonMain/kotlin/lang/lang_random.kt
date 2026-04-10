@@ -12,12 +12,12 @@ import io.peekandpoke.klang.sprudel.filterValues
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.ChoicePattern
-import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.sprudel.pattern.ControlPattern
 import io.peekandpoke.klang.sprudel.pattern.RandLPattern
 import io.peekandpoke.klang.sprudel.pattern.RandrunPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
+import io.peekandpoke.klang.sprudel.pattern.SeedPattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 import io.peekandpoke.klang.sprudel.pattern.ShufflePattern
 import io.peekandpoke.klang.sprudel.pattern.StructurePattern
@@ -32,15 +32,9 @@ var sprudelLangRandomInit = false
 // -- Helpers ----------------------------------------------------------------------------------------------------------
 
 fun applyRandomSeed(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val seed = args.getOrNull(0)?.value?.asIntOrNull()
-
-    return ContextModifierPattern(source = pattern) {
-        if (seed != null) {
-            set(QueryContext.randomSeedKey, seed)
-        } else {
-            remove(QueryContext.randomSeedKey)
-        }
-    }
+    val seedArg = args.getOrNull(0) ?: return pattern
+    val seedPattern = seedArg.toPattern()
+    return SeedPattern(source = pattern, seedPattern = seedPattern)
 }
 
 // -- seed() -----------------------------------------------------------------------------------------------------------
