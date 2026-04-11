@@ -197,8 +197,8 @@ class Voice(
     )
 
     class Distort(val amount: Double, val shape: String = "soft", val oversample: Int = 0)
-    class Crush(val amount: Double)
-    class Coarse(val amount: Double, var lastCoarseValue: Double = 0.0, var coarseCounter: Double = 0.0)
+    class Crush(val amount: Double, val oversample: Int = 0)
+    class Coarse(val amount: Double, val oversample: Int = 0, var lastCoarseValue: Double = 0.0, var coarseCounter: Double = 0.0)
     class Phaser(val rate: Double, val depth: Double, val center: Double, val sweep: Double)
     class Tremolo(
         val rate: Double, val depth: Double, val skew: Double, val phase: Double,

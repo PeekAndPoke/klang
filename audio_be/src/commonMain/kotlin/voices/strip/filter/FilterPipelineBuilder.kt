@@ -45,10 +45,10 @@ fun buildFilterPipeline(
 
     // Waveshaping (destructive: crush, coarse, distortion — before filters so filters have final say)
     if (crush.amount > 0.0) {
-        add(CrushRenderer(crush.amount))
+        add(CrushRenderer(crush.amount, crush.oversample))
     }
     if (coarse.amount > 1.0) {
-        add(CoarseRenderer(coarse.amount))
+        add(CoarseRenderer(coarse.amount, coarse.oversample))
     }
     if (distort.amount > 0.0) {
         add(DistortionRenderer(distort.amount, distort.shape, distort.oversample))

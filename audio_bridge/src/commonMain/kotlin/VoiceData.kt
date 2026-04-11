@@ -65,7 +65,11 @@ data class VoiceData(
     /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
     val distortOversample: Int? = null,
     val coarse: Double?,
+    /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val coarseOversample: Int? = null,
     val crush: Double?,
+    /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val crushOversample: Int? = null,
 
     // Phaser
     val phaser: Double?,

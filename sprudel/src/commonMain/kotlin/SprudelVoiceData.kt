@@ -84,7 +84,11 @@ data class SprudelVoiceData(
     /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
     val distortOversample: Int? = null,
     val coarse: Double?,
+    /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val coarseOversample: Int? = null,
     val crush: Double?,
+    /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val crushOversample: Int? = null,
 
     // Phaser
     /** Phaser modulation speed */
@@ -373,7 +377,9 @@ data class SprudelVoiceData(
             distortShape = other.distortShape ?: distortShape,
             distortOversample = other.distortOversample ?: distortOversample,
             coarse = other.coarse ?: coarse,
+            coarseOversample = other.coarseOversample ?: coarseOversample,
             crush = other.crush ?: crush,
+            crushOversample = other.crushOversample ?: crushOversample,
             phaserRate = other.phaserRate ?: phaserRate,
             phaserDepth = other.phaserDepth ?: phaserDepth,
             phaserCenter = other.phaserCenter ?: phaserCenter,
@@ -605,7 +611,9 @@ data class SprudelVoiceData(
             distortShape = distortShape,
             distortOversample = distortOversample,
             coarse = coarse,
+            coarseOversample = coarseOversample,
             crush = crush,
+            crushOversample = crushOversample,
             phaser = phaserRate,
             phaserDepth = phaserDepth,
             phaserCenter = phaserCenter,

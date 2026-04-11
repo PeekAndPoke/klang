@@ -167,8 +167,14 @@ class VoiceFactory(
             shape = data.distortShape ?: "soft",
             oversample = Oversampler.factorToStages(data.distortOversample ?: 0),
         )
-        val crush = Voice.Crush(amount = data.crush ?: 0.0)
-        val coarse = Voice.Coarse(amount = data.coarse ?: 0.0)
+        val crush = Voice.Crush(
+            amount = data.crush ?: 0.0,
+            oversample = Oversampler.factorToStages(data.crushOversample ?: 0),
+        )
+        val coarse = Voice.Coarse(
+            amount = data.coarse ?: 0.0,
+            oversample = Oversampler.factorToStages(data.coarseOversample ?: 0),
+        )
 
         // FM Synthesis
         val fm = if (data.fmh != null || (data.fmEnv ?: 0.0) != 0.0) {

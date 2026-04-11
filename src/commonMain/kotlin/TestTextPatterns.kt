@@ -56,28 +56,28 @@ stack(                                                                 //////// 
     [[~ d5] [~ f5] a5 [g5 f5]] [e5 [~ c5] e5 [d5 c5]]               //////// //////// ////////          ////////                  ////////
     [b4 [b4 c5] d5 e5]         [c5 a4 a4 ~]
   >`)                                                                                                     ////////          //////// ////////
-    .sound("tri").clip(0.33).hpf(600).warmth(0.5)                                                          ////////          //////// ////////
-    .superimpose(x => x.transpose("<0 12 0 -12>/8"))                                                        ////////          //////// ////////
-    .orbit(0).gain("0.2").pan(cosine2.range(0.3, 0.7).oneMinusValue().slow(32))                              ////////          //////// ////////
-    .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.5)      
+    .sound("tri").clip(0.33).hpf(400).lpf("4000").warmth(0.4)                                              ////////          //////// ////////
+    .adsr("0.05:0.2:0.8:0.12").superimpose(x => x.transpose("<0 12 0 -12>/8"))                              ////////          //////// ////////
+    .orbit(0).gain(0.125).pan(0.2).superimpose(pan(0.8))                                                     ////////          //////// ////////
+    .delay(0.2).delaytime(pure(1/8).div(cps)).delayfeedback(0.25)      
     .filterWhen(x => x >= 16) // .solo()                                                                       ////////          ////////
   ,                                                                                                             ////////          ////////
   note(`<                                                                                                        ////////          ////////
     [[e2 e3]*4]                   [[a2 a3]*4]                                                                     ////////          ////////
     [[g#2 g#3]*2 [e2 e3]*2]       [a3 a2 a2 a1 a1 a2 [a2 a3] [a4 a5|a5|a5|e5]]                                          
-                                                                                                                                            
+                                                                                                                                           
     [[d2 d3]*4]                   [[c2 c3]*4]                                                                        //////// //////// ////////
     [[b1 b2 b1 b2] [e2 e3 e2 e3]] [a3 a2 a2 a1 a1 [a2 e2] [a5|a5|a5|e5 a4] [a2 a3]]                                   //////// //////// ////////
   >`)                                                                                                                  //////// //////// ////////
-    .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.5)                                       //////// //////// //////// 
-    .orbit(1).gain(0.85).pan(cosine2.slow(32).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.25")                                              
-    .superimpose(x => x.transpose("<0 12 0 -12>/8").bandf(sine.range(2000, 6000).slow(24)).bandq(1.2).gain(0.75))                          ////////
-    .detune(sine.range(0.05, 0.3).early(1.5).slow(12))                                                                                      ////////
+    .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.5)                                       //////// //////// ////////
+    .orbit(1).gain(0.7).pan(cosine2.slow(32).range(0.3, 0.7)).adsr("0.01:0.25:0.5:0.15").pan(0.3)                                              
+    .superimpose(transpose("<0 12 0 -12>/8").phaser(1/32).phaserdepth(0.2).phasercenter(4000).phasersweep(2000).pan(0.7))                  ////////
+    .detune(sine.range(0.05, 0.3).early(1.5).slow(12)).hpf(200).lpf("4500:0.25:2")                                                         ////////
     .filterWhen(x => x > 31.4 && x % 64 > 15.4) // .solo()                                                                                   ////////
   ,                                                                                                                                           ////////
   note("<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1 e1] [a1 g#1 b1 c2]] [[d2 d2]!4 [c2 c2]!4] [[b1]!q [g#1]!2 [a1]!3 ~]>")
-   .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.5).warmth(0.8).distort(0.5).postgain(0.375)
-    .adsr("0.01:0.2:0.5:0.1").tremolo("0.1:8::0:0").hpf("80").lpf(2000) // .solo()
+   .slow(2).orbit(2).clip(0.5).sound("sine").gain(0.5).warmth(0.8).distort("0.4:gentle").postgain(0.45)
+    .adsr("0.005:0.2:0.5:0.075").tremolo("0.1:8::0:0").hpf("80:0.5:1").lpf(2000).pan(0.4) // .solo()
     .filterWhen(x => x > 31.4 && x % 128 > 15.4)    
   , sound(`<
     [[bd:2,cr,cr] hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
@@ -90,11 +90,10 @@ stack(                                                                 //////// 
     [[bd:2,cr]    hh sd      [sd,hh]]  [bd      hh sd:8    oh]  [bd      hh sd hh]       [bd hh      sd            [bd,oh]   ]
     [[bd,cr]      hh [sd,hh] cr     ]  [[bd,cr] hh [bd,cr] hh]  [[sd,oh] bd sd [bd,hh]]  [sd [bd,hh] [bd bd]       [bd bd,hh]]
   >`)
-    .orbit(3).gain("0.8".add(berlin.range(-0.1, 0.0).fast(16))).adsr("0.01:0.2:0.8:0.5")
+    .orbit(3).gain("0.85").pan(0.6).adsr("0.01:0.2:0.8:2.0").hpf(120).lpf("3000:0.5:3").lpadsr("0.01:0.3:0.5:1.0")
     .fast(2) // .solo()
   ,
-).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25")
-
+).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25")//.analog(0.5)
 
 
 
@@ -120,27 +119,27 @@ stack(
   , // Lyrics ---------------------------------------------------------------------------------------------------------------------------
   n("0").morse("Schön ist es auf der Welt zu sein!").orbit(0)
     .scale("C5:major").scaleTranspose("0 -2 2 2".slow(32)).bandf(1800).bandq(5.0).hpf(1000).analog(3)
-    .sound("pulse").warmth(0.75).crush(3).gain(0.075).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
+    .sound("pulse").warmth(0.75).crush(3).gain(0.05).clip(0.35).pan(berlin.slow(2)).adsr("0.02:0.08:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
   , // Melody -----------------------------------------------------------------------------------------------------------------
   n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
-    .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.1).slow(256))
+    .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.3).slow(16)).spread(1.0).tremolo("0.1:8").tremolodepth(saw.range(0,0.05).slow(256))
     .gain(0.325).distort(2).warmth(0.5).postgain(0.15).adsr("0.07:0.2:0.1:0.05")
     .pan(0.29).superimpose(pan(0.61))
-    .hpf(160).lpf(2000).lpenv(perlin.slow(8).range(0, 225)).coarse(3).analog(1)
+    .hpf(160).lpf(800).lpenv(perlin.range(2, 5).slow(4)).analog(1)
     .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.75).struct("x!8")
-    .orbit(2).gain(2.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.275)
-    .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").gain(1.9).legato(1.05).orbit(3))
+    .orbit(2).gain(1.0).pan(sine.range(0.4, 0.6).slow(16)).adsr("0.02:0.5:0.5:0.3").postgain(0.5).pan(0.3)
+    .superimpose(x => x.scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").pan(0.7).gain(1.9).legato(1.05).orbit(3))
     .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
-    .lpf(5 * 440).hpf(180).notchf(notch).notchq(1.25).crush(saw.range(4.0, 1.5).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
-    .velocity(cat(saw.pow(2).slow(16), pure(1).slow(256))).analog(1) // . solo()
+    .lpf(5 * 440).hpf(180).notchf(notch).notchq(1.25).crush(saw.range(4.0, 1.52).add(berlin2.mul(0.1).seg(8).fast(4)).slow(128))
+    .velocity(cat(saw.pow(2).slow(32), pure(1).slow(240))).analog(1.5) // . solo()
     .filterWhen(x => x < (wait * 4 + keep))
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-    .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1)
+    .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1).lpf(5000)
     .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
   , // Perc 1 -----------------------------------------------------------------------------------------------------------------------
   sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
@@ -151,7 +150,7 @@ stack(
     .orbit(0).gain(0.10).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(64)).bandq(sine.range(0.05, 5.0).slow(32).early(16))
   ,
-).delay("0.1::0.5").delaytime(pure(1/8).div(cps)).room("0.05:10.0").compressor("-10:2:10:0.02:0.25")
+).delay("0.1::0.5").delaytime(pure(1/8).div(cps)).room("0.05:10.0").compressor("-15:2:6:0.01:0.2")
 
 
 
@@ -163,6 +162,7 @@ stack(
    
    
  
+    
         """ // Stranger Things END
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
@@ -170,10 +170,10 @@ stack(
 import * from "stdlib"
 import * from "sprudel"
 
-let drive = 5
+let drive = 7  // <--- Do not put 11
 
 let stay = 48
-let tp = "[0 -1 -2 -3 -5  -2  1  3]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
+let tp = "[-7 -1 -2 -3 -7  -4  1  2]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
 
 // Let's build a custom guitar, shall we!
 let guitar = Osc.register("guitar",
@@ -181,7 +181,7 @@ let guitar = Osc.register("guitar",
     Osc.supersaw(
       Osc.freq(), 4, 
       Osc.param("spread", 0.05, "Supersaw voice detuning"),
-      Osc.param("analog", 0.1, "Analog pitch drift"),
+      Osc.param("analog", 0.5, "Analog pitch drift"),
     ).mul(0.35)
         // Zawtooth for raw grit
         .plus(Osc.zawtooth().mul(0.5))
@@ -194,42 +194,42 @@ let guitar = Osc.register("guitar",
         // Tighten low end
         .highpass(110)
         // Gentle mid-focus before distortion
-        .bandpass(1000, 0.5)        
+        .bandpass(1000, 0.25)        
         // Re-add low end after bandpass
-        .plus(Osc.supersaw(Osc.freq(), 2, 0.15, 0.1).mul(0.05).highpass(110).lowpass(300))
+        //.plus(Osc.supersaw(Osc.freq(), 2, 0.15, 0.1).mul(0.05).highpass(110).lowpass(300))
         // Pre-distortion: sweeping lowpass adds dynamic character
-        .lowpass(Osc.sine(0.25).plus(1).times(200).plus(3000), 1.0)
+        .lowpass(Osc.sine(1.25).plus(1).times(1000).plus(3000), 1.0)
         // HEAVY drive into hard clip - cranked amp
-        .distort(Osc.param("drive", 1.0, "Primary distortion drive level"), "exp")
+        .distort(Osc.param("drive", 1.0, "Primary distortion drive level"), "exp", 4)
         // Post-distortion: control fizz + warmth roll-off
         .lowpass(Osc.param("brightness", 5000, "Post-distortion lowpass cutoff in Hz"), 0.9)
         .highpass(100)
         // Tight rhythm envelope
-        .adsr(Osc.param("attack", 0.01, "Attack time in seconds"), 0.3, Osc.param("sustain", 0.75, "Sustain level"), 0.15)
+        .adsr(Osc.param("attack", 0.004, "Attack time in seconds"), 0.2, Osc.param("sustain", 0.6, "Sustain level"), 0.1)
 )
 
 stack( // Gitarre! ----------------------------------------------------------------------------
-  morse("Gitarre!").n("-3").scale("c4:chromatic").orbit(7).fast(2).transpose(tp)
-    .gain(1.0).distort(1.0).warmth(0.25).postgain("0.1 0.01!2".slow(stay)).hpf(1200).lpf(5450).pan(0.6) // .solo()
+  morse("Gitarre!").n("-3").scale("c4:chromatic").sound("saw").clip(0.5).orbit(7).fast(2).transpose(tp)
+    .gain(1.0).distort(1).warmth(0.5).postgain("0.15 0.01!2".slow(stay)).hpf(1600).lpf(5450).pan(0.5) // .solo()
   ,// Melody 1 ---------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(1).fast(4).scale("C3:chromatic").pan(0.33).gain(1.0)
-    .s(guitar).oscp("drive", drive).oscp("brightness", 4000).oscp("spread", 0.02).hpf(300).postgain(0.12)
+    .orbit(1).fast(4).scale("C3:chromatic").pan(0.3).notchf(600).lpf(3000) // .solo()
+    .s(guitar).oscp("drive", drive).oscp("brightnes", 2500).oscp("spread", 0.02).hpf(300).gain(0.5).postgain(0.35)
     .transpose(tp).filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
-    .orbit(2).fast(4).scale("C4:chromatic").pan(0.66).gain(1.0)
-    .s(guitar).oscp("drive", drive).oscp("brightness", 4000).oscp("spread", 0.02).hpf(300).postgain(0.08)
+    .orbit(2).fast(4).scale("C4:chromatic").pan(0.7).notchf(600).lpf(3000)
+    .s(guitar).oscp("drive", drive).oscp("brightnes", 2500).oscp("spread", 0.02).hpf(600).gain(0.5).postgain(0.32)
     .transpose(tp).filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 0 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").gain(1).clip(1.0).hpf(200).notchf("2000:1:4")
-    .s(guitar).oscparam("drive", drive).oscparam("brightness", 3500).oscp("spread", 0.02).postgain(0.2)
+  ).orbit(3).fast(1).scale("C2:chromatic").gain(1.0).clip(1.0).release(0.15).hpf(160).postgain(0.2)
+    .s(guitar).oscparam("drive", drive).oscparam("brightness", 4250).oscp("spread", 0.1)
     .filterWhen(t => t % stay >= 4).transpose(tp) // .solo()
   , // Noise --------------------------------------------------------------------------------------------------------------
   s("cp cp cp cp").bandf("1800 600 1200 600").gain("0.075") // .solo()
@@ -239,11 +239,11 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).orbit(5).adsr("0.01:0.2:0.5:1.5 0.02:0.125:0.3:0.5".slow(16)).gain(0.85).hpf(100).filterWhen(t => t % stay >= 4) // .solo()
+  ).orbit(5).adsr("0.01:0.8:0.7:1.5 0.01:0.2:0.8:1.5".slow(16)).gain(0.75).hpf(120).filterWhen(t => t % stay >= 4) // .solo()
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!3 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>")
     .orbit(6).adsr("0.01:0.2:0.8:1.5").gain("0.8".add(rand.range(-0.02, 0.02).segment(32))) // .solo()
-).room(0.02).rsize(3.0).compressor("-15:2:6:0.01:0.2").analog(1.0) /*
+).room(0.02).rsize(3.0).compressor("-15:2:6:0.01:0.2") /*
 
  
 
@@ -274,7 +274,7 @@ stack( // Gitarre! -------------------------------------------------------------
 
 
 
-*/          
+*/           
         """ // A truth END
 
     val tetrisOriginal = """
