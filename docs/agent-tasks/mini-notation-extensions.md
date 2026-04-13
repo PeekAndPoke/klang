@@ -1,5 +1,11 @@
 # Mini-Notation Extensions: Attribute Blocks and MIDI Recording
 
+> **Status (2026-04-13)**: Phase 1 (`{key=value}` parser + AST + renderer + resolver) is DONE.
+> `MnNode.Attrs` in `MnNode.kt`, `applyAttrs()` in `MnPatternToSprudelPattern.kt`,
+> tests in `MiniNotationAttrsSpec.kt`.
+> **Remaining work:** Phase 2 (tutorial docs — tracked in `tutorial-master-plan.md`) and
+> Phase 3 (MIDI recording, still future).
+
 ## Context
 
 MIDI keyboard integration for Klang requires a new mini-notation feature:
@@ -47,9 +53,9 @@ the resolver table — no parser changes needed.
 
 ## Overarching Work Plan
 
-### Phase 1: Attribute Block `{key=value}` (no dependencies on other tasks)
+### Phase 1: Attribute Block `{key=value}` — DONE (2026-04-13)
 
-**Can start immediately. No blockers.**
+Landed in commit `b609e6af` ("mini-notation parser additions").
 
 | Step | What                                                                            | Files                                                 |
 |------|---------------------------------------------------------------------------------|-------------------------------------------------------|

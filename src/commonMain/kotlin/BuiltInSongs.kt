@@ -28,7 +28,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-synthkura",
             title = "Synthkura",
-            rpm = 35.0,
+            rpm = 34.0,
             icon = "globe asia",
             code = """
 import * from "stdlib"
