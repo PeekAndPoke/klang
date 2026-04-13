@@ -210,7 +210,7 @@ let feel = 5.0   // 0.0 .. mechanical | 10.0 .. old vinyl                       
 stack(                                                                                                                 //        //
   // Lead                                                                                                 //////////////          //////////////
   n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")                                                    //                              //
-    .scale("E4:minor").sound("supersaw").unison(2).detune(0.05)                                               //          DISCO!          //
+    .scale("d#4:minor").sound("supersaw").unison(2).detune(0.05)                                               //          DISCO!          //
     .lpf(3800).hpf(600)                                                                                         //       FOREVER!       //
     .gain(0.255).distort("0.8:exp").postgain(0.3) // . solo()                                                     //                  //
     .adsr("0.01:0.3:0.6:0.1").clip(0.8)                                                                            //       //      //
@@ -224,24 +224,24 @@ stack(                                                                          
   // Pad
   n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6 4] 0 <[2 3] [-3 -0]>] [4 [2 1] 0 [-2 <-1 -4>]]>/4")
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>").velocity("1.02 0.95!3 0.98 0.95!3".fast(2))
-    .scale("<e2:minor!48 e3:minor!16>").sound("supersaw").unison(3).detune(0.1)
-    .phaser(1/19).phaserdepth(0.1).phasersweep(100).phasercenter(2000)
-    .lpf("2200").hpf(200).notchf(600).warmth(saw.range(0.3, 0.1).slow(5*32)).distort("0.3:gentle:4")
+    .scale("<d#2:minor!48 d#3:minor!16>").sound("supersaw").unison(3).detune(0.1)
+    .phaser(1/8).phaserdepth(0.1).phasersweep(1000).phasercenter(3000)
+    .notchf(600).lpf("<1900!48 2400!16>").hpf(200).warmth(saw.range(0.3, 0.1).slow(5*32)).distort("0.3:gentle:4")
     .adsr("0.01:0.25:0.5:0.045").clip(0.75).crush(saw.range(8, 4).slow(32)) //   . solo()
     .gain(0.25).orbit(1).pan(0.2),
   // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1.02 0.95!3 0.98 0.95!3".fast(2))
-    .scale("e2:minor").sound("saw")
-    .notchf(600).lpf("900").hpf(150).distort("0.3:soft:4").warmth(saw.range(0.5, 0.1).slow(5*32))
+    .scale("d#2:minor").sound("saw")
+    .notchf(600).lpf("1300").hpf(150).distort("0.3:soft:4").warmth(saw.range(0.5, 0.1).slow(5*32))
     .adsr("0.01:0.2:0.5:0.05").clip(0.75)  // . solo()
     .gain(0.29).orbit(2).pan(0.8),
   // Drums
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!24 [bd [bd,sd] bd [bd,sd]]!8>")
-    .crush(9).gain(0.8).orbit(3).hpf(100),
-  sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>").fast(2).crush(10).hpf(3000)
-    .gain(0.4).orbit(3)
+    .crush(13).crushos(2).gain(0.8).orbit(3).hpf(100),
+  sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>").fast(2).crush(13).crushos(2).hpf(3000)
+    .gain(0.375).orbit(3)
   // Master
-).compressor("-15:2:6:0.01:0.2").analog(feel).engine("pedal").room("0.1:5")
+).compressor("-10:2:10:0.02:0.25").analog(feel).engine("pedal").room("0.1:5")
 
 
 // Inspired by: Editors - Papillon

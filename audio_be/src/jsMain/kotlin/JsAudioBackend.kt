@@ -170,6 +170,7 @@ class JsAudioBackend(
                         is KlangCommLink.Cmd.RegisterIgnitor,
                         is KlangCommLink.Cmd.ReplaceVoices,
                         is KlangCommLink.Cmd.ScheduleVoice,
+                        is KlangCommLink.Cmd.ScheduleVoices,
                             -> node.port.sendCmd(cmd)
                     }
                 }

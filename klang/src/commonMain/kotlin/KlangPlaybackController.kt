@@ -251,11 +251,13 @@ internal class KlangPlaybackController(
         startTimeMs = klangTime.internalMsNow()
 
         // ===== SCHEDULE FIRST CYCLE IMMEDIATELY =====
-        // This prevents the first events from arriving too late at the backend
+        // Sent as a single batched command so all voices share one nowSec snapshot at the
+        // backend; per-voice sends would otherwise interleave with audio blocks and let later
+        // voices in the batch slip into the past.
         try {
             val firstCycleEvents = queryEvents(from = 0.0, to = fetchChunk, sendSignals = true)
-            for (voice in firstCycleEvents) {
-                sendControl(KlangCommLink.Cmd.ScheduleVoice(playbackId = playbackId, voice = voice))
+            if (firstCycleEvents.isNotEmpty()) {
+                sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = firstCycleEvents))
             }
             queryCursorCycles = fetchChunk
         } catch (e: Exception) {
@@ -428,9 +430,8 @@ internal class KlangPlaybackController(
             try {
                 val events = queryEvents(from = from, to = to, sendSignals = true)
 
-                // Schedule voices
-                for (voice in events) {
-                    sendControl(KlangCommLink.Cmd.ScheduleVoice(playbackId = playbackId, voice = voice))
+                if (events.isNotEmpty()) {
+                    sendControl(KlangCommLink.Cmd.ScheduleVoices(playbackId = playbackId, voices = events))
                 }
 
                 queryCursorCycles = to
