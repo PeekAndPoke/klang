@@ -12,7 +12,11 @@ class JsAudioAnalyzer(
     private val node: () -> AnalyserNode?,
 ) : AudioAnalyzer {
 
-    private val history = AnalyzerBufferHistory(fftSize, 10)
+    private val history = AnalyzerBufferHistory(fftSize, HISTORY_CAPACITY)
+
+    companion object {
+        private const val HISTORY_CAPACITY = 50
+    }
 
     override val waveform: Stream<AnalyzerBufferHistory> = animTicker().map {
         node()?.getFloatTimeDomainData(history.nextBuffer())

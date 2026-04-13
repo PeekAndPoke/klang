@@ -1,8 +1,15 @@
 package io.peekandpoke.klang.sprudel.ui
 
-import io.peekandpoke.klang.ui.*
+import io.peekandpoke.klang.ui.HoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.svgLine
+import io.peekandpoke.klang.ui.svgPolyline
+import io.peekandpoke.klang.ui.svgRect
+import io.peekandpoke.klang.ui.svgRoot
+import io.peekandpoke.klang.ui.svgText
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -17,12 +24,25 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
+import kotlinx.css.Display
+import kotlinx.css.FlexWrap
+import kotlinx.css.display
+import kotlinx.css.flexWrap
+import kotlinx.css.gap
+import kotlinx.css.marginBottom
+import kotlinx.css.marginTop
+import kotlinx.css.minWidth
+import kotlinx.css.px
+import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
 import kotlinx.html.label
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.sign
+import kotlin.math.sin
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
@@ -77,6 +97,7 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
 
     private var amount by value(parsedParts.getOrNull(0)?.toDoubleOrNull() ?: 0.5)
     private var shape by value(parsedParts.getOrNull(1)?.takeIf { it in shapes })
+    private var oversample by value(parsedParts.getOrNull(2)?.toIntOrNull())
 
     private var resetCounter by value(0)
 
@@ -87,8 +108,11 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
 
     private fun buildValue(): String {
         val parts = mutableListOf(amount.fmt())
-        if (shape != null) {
-            parts.add(shape!!)
+        if (shape != null || oversample != null) {
+            parts.add(shape ?: "soft")
+        }
+        if (oversample != null && oversample!! > 1) {
+            parts.add(oversample.toString())
         }
         return "\"${parts.joinToString(":")}\""
     }
@@ -113,6 +137,7 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
         val p = parseInput()
         amount = p.getOrNull(0)?.toDoubleOrNull() ?: 0.5
         shape = p.getOrNull(1)?.takeIf { it in shapes }
+        oversample = p.getOrNull(2)?.toIntOrNull()
         formCtrl.resetAllFields()
         props.toolCtx.onCommit(initialValue)
         resetCounter++
@@ -196,6 +221,30 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
                 }
             }
 
+
+            // Oversampling buttons
+            ui.form {
+                noui.field {
+                    label { +"Oversampling" }
+                    div {
+                        css {
+                            display = Display.flex
+                            flexWrap = FlexWrap.wrap
+                            gap = 6.px
+                            marginTop = 6.px
+                        }
+                        for ((label, factor) in listOf("Off" to null, "2x" to 2, "4x" to 4, "8x" to 8)) {
+                            val isSelected = oversample == factor
+                            ui.small.givenNot(isSelected) { basic }
+                                .given(isSelected) { with(laf.styles.goldButton()) }.button {
+                                    key = "os-${factor ?: "off"}"
+                                    onClick { oversample = factor; liveUpdate() }
+                                    +label
+                                }
+                        }
+                    }
+                }
+            }
 
             ui.divider {}
             div {

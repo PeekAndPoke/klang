@@ -23,6 +23,7 @@ private val distortMutation = voiceModifier {
         copy(
             distort = parts.getOrNull(0)?.trim()?.toDoubleOrNull() ?: distort,
             distortShape = parts.getOrNull(1)?.trim()?.takeIf { s -> s.isNotEmpty() } ?: distortShape,
+            distortOversample = parts.getOrNull(2)?.trim()?.toIntOrNull() ?: distortOversample,
         )
     } else {
         copy(distort = str.toDoubleOrNull() ?: distort)
@@ -36,6 +37,7 @@ fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprud
             src.copy(
                 distort = ctrl.distort ?: src.distort,
                 distortShape = ctrl.distortShape ?: src.distortShape,
+                distortOversample = ctrl.distortOversample ?: src.distortOversample,
             )
         }
     } else {
@@ -283,6 +285,80 @@ fun dist(amount: PatternLike? = null): PatternMapperFn = _dist(listOfNotNull(amo
 @SprudelDsl
 fun PatternMapperFn.dist(amount: PatternLike? = null): PatternMapperFn =
     _dist(listOfNotNull(amount).asSprudelDslArgs())
+
+// -- distos() / distortoversampling() ---------------------------------------------------------------------------------
+
+private val distortOversampleMutation = voiceModifier { copy(distortOversample = it?.toString()?.toIntOrNull()) }
+
+fun applyDistortOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, distortOversampleMutation)
+}
+
+internal val _distos by dslPatternMapper { args, callInfo -> { p -> p._distos(args, callInfo) } }
+internal val SprudelPattern._distos by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistortOversample(p, args) }
+internal val String._distos by dslStringExtension { p, args, callInfo -> p._distos(args, callInfo) }
+internal val PatternMapperFn._distos by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_distos(args, callInfo))
+}
+
+internal val _distortOversampling by dslPatternMapper { args, callInfo -> { p -> p._distortOversampling(args, callInfo) } }
+internal val SprudelPattern._distortOversampling by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistortOversample(p, args) }
+internal val String._distortOversampling by dslStringExtension { p, args, callInfo -> p._distortOversampling(args, callInfo) }
+internal val PatternMapperFn._distortOversampling by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_distortOversampling(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the distortion oversampling factor.
+ *
+ * Higher values reduce aliasing from distortion at the cost of more CPU.
+ * The factor is floored to the nearest power of 2. Values <= 1 disable oversampling.
+ *
+ * @param factor The oversampling factor (2=2x, 4=4x, 8=8x). Non-power-of-2 floored.
+ * @return A new pattern with distortion oversampling applied.
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort(0.8).distos(2)   // 2x oversampled distortion
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").distort("0.8:exp").distos(4)                 // 4x oversampled exp distortion
+ * ```
+ * @alias distortOversampling
+ * @category effects
+ * @tags distos, distort, oversampling, aliasing, quality
+ */
+@SprudelDsl
+fun SprudelPattern.distos(factor: PatternLike? = null): SprudelPattern =
+    this._distos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun String.distos(factor: PatternLike? = null): SprudelPattern =
+    this._distos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun distos(factor: PatternLike? = null): PatternMapperFn = _distos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun PatternMapperFn.distos(factor: PatternLike? = null): PatternMapperFn =
+    _distos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun SprudelPattern.distortOversampling(factor: PatternLike? = null): SprudelPattern =
+    this._distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun String.distortOversampling(factor: PatternLike? = null): SprudelPattern =
+    this._distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun distortOversampling(factor: PatternLike? = null): PatternMapperFn = _distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun PatternMapperFn.distortOversampling(factor: PatternLike? = null): PatternMapperFn =
+    _distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
 
 // -- distortshape() / distshape() / dshape() --------------------------------------------------------------------------
 
@@ -631,6 +707,78 @@ fun crush(amount: PatternLike? = null): PatternMapperFn = _crush(listOfNotNull(a
 fun PatternMapperFn.crush(amount: PatternLike? = null): PatternMapperFn =
     _crush(listOfNotNull(amount).asSprudelDslArgs())
 
+// -- crushos() / crushoversampling() ----------------------------------------------------------------------------------
+
+private val crushOversampleMutation = voiceModifier { copy(crushOversample = it?.toString()?.toIntOrNull()) }
+
+fun applyCrushOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, crushOversampleMutation)
+}
+
+internal val _crushos by dslPatternMapper { args, callInfo -> { p -> p._crushos(args, callInfo) } }
+internal val SprudelPattern._crushos by dslPatternExtension { p, args, /* callInfo */ _ -> applyCrushOversample(p, args) }
+internal val String._crushos by dslStringExtension { p, args, callInfo -> p._crushos(args, callInfo) }
+internal val PatternMapperFn._crushos by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_crushos(args, callInfo))
+}
+
+internal val _crushOversampling by dslPatternMapper { args, callInfo -> { p -> p._crushOversampling(args, callInfo) } }
+internal val SprudelPattern._crushOversampling by dslPatternExtension { p, args, /* callInfo */ _ -> applyCrushOversample(p, args) }
+internal val String._crushOversampling by dslStringExtension { p, args, callInfo -> p._crushOversampling(args, callInfo) }
+internal val PatternMapperFn._crushOversampling by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_crushOversampling(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the bit-crush oversampling factor.
+ *
+ * Higher values reduce aliasing from the staircase quantization at the cost of more CPU.
+ * The factor is floored to the nearest power of 2. Values <= 1 disable oversampling.
+ *
+ * @param factor The oversampling factor (2=2x, 4=4x, 8=8x). Non-power-of-2 floored.
+ * @return A new pattern with crush oversampling applied.
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("supersaw").crush(2).crushos(4)   // 4x oversampled bit-crush
+ * ```
+ *
+ * @alias crushOversampling
+ * @category effects
+ * @tags crushos, crush, oversampling, aliasing, quality
+ */
+@SprudelDsl
+fun SprudelPattern.crushos(factor: PatternLike? = null): SprudelPattern =
+    this._crushos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun String.crushos(factor: PatternLike? = null): SprudelPattern =
+    this._crushos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun crushos(factor: PatternLike? = null): PatternMapperFn = _crushos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun PatternMapperFn.crushos(factor: PatternLike? = null): PatternMapperFn =
+    _crushos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun SprudelPattern.crushOversampling(factor: PatternLike? = null): SprudelPattern =
+    this._crushOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun String.crushOversampling(factor: PatternLike? = null): SprudelPattern =
+    this._crushOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun crushOversampling(factor: PatternLike? = null): PatternMapperFn =
+    _crushOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun PatternMapperFn.crushOversampling(factor: PatternLike? = null): PatternMapperFn =
+    _crushOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
 // -- coarse() ---------------------------------------------------------------------------------------------------------
 
 private val coarseMutation = voiceModifier { copy(coarse = it?.asDoubleOrNull()) }
@@ -737,6 +885,81 @@ fun coarse(amount: PatternLike? = null): PatternMapperFn = _coarse(listOfNotNull
 @SprudelDsl
 fun PatternMapperFn.coarse(amount: PatternLike? = null): PatternMapperFn =
     _coarse(listOfNotNull(amount).asSprudelDslArgs())
+
+// -- coarseos() / coarseoversampling() --------------------------------------------------------------------------------
+
+private val coarseOversampleMutation = voiceModifier { copy(coarseOversample = it?.toString()?.toIntOrNull()) }
+
+fun applyCoarseOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretNumericalField(args, coarseOversampleMutation)
+}
+
+internal val _coarseos by dslPatternMapper { args, callInfo -> { p -> p._coarseos(args, callInfo) } }
+internal val SprudelPattern._coarseos by dslPatternExtension { p, args, /* callInfo */ _ -> applyCoarseOversample(p, args) }
+internal val String._coarseos by dslStringExtension { p, args, callInfo -> p._coarseos(args, callInfo) }
+internal val PatternMapperFn._coarseos by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_coarseos(args, callInfo))
+}
+
+internal val _coarseOversampling by dslPatternMapper { args, callInfo -> { p -> p._coarseOversampling(args, callInfo) } }
+internal val SprudelPattern._coarseOversampling by dslPatternExtension { p, args, /* callInfo */ _ -> applyCoarseOversample(p, args) }
+internal val String._coarseOversampling by dslStringExtension { p, args, callInfo -> p._coarseOversampling(args, callInfo) }
+internal val PatternMapperFn._coarseOversampling by dslPatternMapperExtension { m, args, callInfo ->
+    m.chain(_coarseOversampling(args, callInfo))
+}
+
+// ===== USER-FACING OVERLOADS =====
+
+/**
+ * Sets the coarse (sample-rate reducer) oversampling factor.
+ *
+ * Higher values reduce aliasing from the sample-hold step edges at the cost of more CPU.
+ * The factor is floored to the nearest power of 2. Values <= 1 disable oversampling.
+ *
+ * Note: coarse is often used to *produce* aliased metallic character intentionally —
+ * only reach for `coarseos` when you want the downsampling feel without the aliasing hash.
+ *
+ * @param factor The oversampling factor (2=2x, 4=4x, 8=8x). Non-power-of-2 floored.
+ * @return A new pattern with coarse oversampling applied.
+ *
+ * ```KlangScript(Playable)
+ * note("c3*4").s("sawtooth").coarse(4).coarseos(4)   // 4x oversampled downsample
+ * ```
+ *
+ * @alias coarseOversampling
+ * @category effects
+ * @tags coarseos, coarse, oversampling, aliasing, quality
+ */
+@SprudelDsl
+fun SprudelPattern.coarseos(factor: PatternLike? = null): SprudelPattern =
+    this._coarseos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun String.coarseos(factor: PatternLike? = null): SprudelPattern =
+    this._coarseos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun coarseos(factor: PatternLike? = null): PatternMapperFn = _coarseos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun PatternMapperFn.coarseos(factor: PatternLike? = null): PatternMapperFn =
+    _coarseos(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun SprudelPattern.coarseOversampling(factor: PatternLike? = null): SprudelPattern =
+    this._coarseOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun String.coarseOversampling(factor: PatternLike? = null): SprudelPattern =
+    this._coarseOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun coarseOversampling(factor: PatternLike? = null): PatternMapperFn =
+    _coarseOversampling(listOfNotNull(factor).asSprudelDslArgs())
+
+@SprudelDsl
+fun PatternMapperFn.coarseOversampling(factor: PatternLike? = null): PatternMapperFn =
+    _coarseOversampling(listOfNotNull(factor).asSprudelDslArgs())
 
 // -- room() -----------------------------------------------------------------------------------------------------------
 

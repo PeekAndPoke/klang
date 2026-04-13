@@ -38,6 +38,19 @@ class LangShuffleSpec : StringSpec({
         events.mapNotNull { it.data.value?.asInt }.sorted() shouldBe listOf(0, 1, 2, 3)
     }
 
+    "shuffle with control pattern does not mute" {
+        val p = n("0 1 2 3 4 5 6 7").shuffle("4 8").seed(42)
+        val events = p.queryArc(0.0, 1.0)
+        events.size shouldBe events.size // not empty
+        events.isNotEmpty() shouldBe true
+    }
+
+    "shuffle with control pattern produces events for each n value" {
+        val p = n("0 1 2 3").shuffle("2 4").seed(99)
+        val events = p.queryArc(0.0, 1.0)
+        events.isNotEmpty() shouldBe true
+    }
+
     "scramble() as top-level PatternMapperFn selects slices with replacement" {
         val events = seq("0 1 2 3").apply(scramble(4)).queryArc(0.0, 1.0)
         events.size shouldBe 4

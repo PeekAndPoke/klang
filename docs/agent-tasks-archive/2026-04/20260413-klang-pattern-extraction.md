@@ -1,5 +1,12 @@
 # Extract KlangPattern / KlangPlaybackController from Strudel
 
+> **Status: RESOLVED** (archived 2026-04-13).
+> `KlangPlaybackController`, `ContinuousPlayback`, and `OneShotPlayback` live in the `klang`
+> module. `SourceLocation` / `SourceLocationChain` moved to `common/`. The strudel module has
+> since been renamed to sprudel; the remaining pattern-specific classes live in sprudel and
+> compose through the generic controller. Remaining follow-ups (if any) are captured in
+> their own topic-specific docs.
+
 ## Problem
 
 All playback scheduling logic currently lives inside the `strudel` module (`StrudelPlaybackController`,

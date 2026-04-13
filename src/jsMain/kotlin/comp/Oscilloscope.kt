@@ -10,6 +10,7 @@ import io.peekandpoke.kraft.utils.onResize
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.maths.Ease
 import io.peekandpoke.ultra.streams.Stream
 import io.peekandpoke.ultra.streams.Unsubscribe
 import kotlinx.browser.document
@@ -35,11 +36,10 @@ import kotlin.math.pow
 fun Tag.Oscilloscope(
     player: Stream<KlangPlayer?>,
     strokeColor: Color = Color.white,
-    strokeWidth: Double = 1.1,
+    strokeWidth: Double = 1.2,
     centerLineColor: Color? = Color.white.withAlpha(0.07),
     centerLineWidth: Double = 1.0,
     pixelSkip: Int = 3,
-    expandedFrameCount: Int = 4,
 ) = comp(
     Oscilloscope.Props(
         player = player,
@@ -48,7 +48,6 @@ fun Tag.Oscilloscope(
         centerLineColor = centerLineColor,
         centerLineWidth = centerLineWidth,
         pixelSkip = pixelSkip,
-        expandedFrameCount = expandedFrameCount,
     )
 ) {
     Oscilloscope(it)
@@ -65,12 +64,30 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val centerLineColor: Color?,
         val centerLineWidth: Double,
         val pixelSkip: Int,
-        val expandedFrameCount: Int,
     )
 
     companion object {
         private const val FRAME_SIZE = 2048
-        private const val CROSSFADE_SAMPLES = 128
+        private const val CROSSFADE_SAMPLES = 512
+        private const val EXPANDED_WARP_STRENGTH = 6.0
+
+        // Skip the flattest portion of the ease-in curve by starting at
+        // t = EXPANDED_WARP_T_START instead of t = 0. The remaining range
+        // [EXPANDED_WARP_T_START, 1.0] is stretched over the full half-width
+        // so the centre already has a visible slope.
+        private const val EXPANDED_WARP_T_START = 0.45
+
+        // Oversample window grows from MIN at the centre (preserves signal
+        // amplitude) to MAX at the edge (smooths the flicker caused by each
+        // outer pixel covering thousands of warped samples).
+        private const val EXPANDED_OVERSAMPLE_MIN = 16
+        private const val EXPANDED_OVERSAMPLE_MAX = 64
+        private const val EXPANDED_DEFLECTION_STRENGTH = 2.0
+        private const val NORMAL_DEFLECTION_STRENGTH = 4.0
+
+        // Extra vertical padding added above & below the expanded-mode overlay
+        // so the waveform can bleed a bit outside the oscilloscope's own box.
+        private const val OVERLAY_EXTRA_HEIGHT = 50.0
         private val idleBuffer = Float32Array(FRAME_SIZE)
     }
 
@@ -81,6 +98,13 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     private var lastHistory: AnalyzerBufferHistory? = null
     private var expandedStorage: Float32Array? = null
 
+    // Integral image (prefix sum) over the flattened storage, ordered by
+    // sample index (0 = newest). Used for O(1) moving-average queries:
+    //     avg([s1, s2)) = (integral[s2] - integral[s1]) / (s2 - s1)
+    // Double precision because a cumulative sum over 1M+ samples loses too
+    // many bits in Float32.
+    private var expandedIntegral: DoubleArray? = null
+
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
 
@@ -89,8 +113,14 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     private var overlayCtx2d: CanvasRenderingContext2D? = null
     private var overlayContainer: HTMLDivElement? = null
 
-    // Two-level deflection cache: strength → (width → values)
-    private val deflectionCaches = mutableMapOf<Double, Pair<Double, DoubleArray>>()
+    // Deflection cache keyed by (strength, halfCurve) → (width → values)
+    private val deflectionCaches = mutableMapOf<Pair<Double, Boolean>, Pair<Double, DoubleArray>>()
+
+    // Pre-computed ease-in curve values for the warp — keyed by half-width.
+    // Each entry maps pixelX → a normalised value in [0, 1] that, when
+    // multiplied by maxSampleIdx, yields the sample index for that pixel.
+    // Avoids repeating a `.pow(EXPANDED_WARP_STRENGTH)` call every frame.
+    private var warpSampleCurveCache: Pair<Double, DoubleArray>? = null
 
     @Suppress("unused")
     private val laf by subscribingTo(KlangTheme)
@@ -145,14 +175,10 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     }
 
     private fun subscribeToWaveform(player: KlangPlayer?) {
-        console.log("New player", player)
-
         waveformUnsubscribe?.invoke()
         waveformUnsubscribe = null
 
         val analyzer = player?.getAnalyzer() ?: return
-
-        console.log("Subscribing to waveform ++++++++++++++++++++++++++++++++++++++++++++++")
 
         waveformUnsubscribe = analyzer.waveform.subscribeToStream { history ->
             lastHistory = history
@@ -195,58 +221,134 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 centerLineWidth = props.centerLineWidth,
                 buffer = history[0],
                 bufferLength = history.bufferSize,
-                deflectionStrength = 4.0,
+                deflectionStrength = NORMAL_DEFLECTION_STRENGTH,
             )
         } else {
-            // Expanded mode — flatten history frames oldest-to-newest into expandedStorage
             canvas?.style?.visibility = "hidden"
             val ctx = overlayCtx2d ?: return
             val canvasElement = overlayCanvas ?: return
-            val storage = expandedStorage ?: return
 
-            val numFrames = minOf(history.size, props.expandedFrameCount)
-            val bufSize = history.bufferSize
-            val fadeLen = minOf(CROSSFADE_SAMPLES, bufSize / 2)
-            var offset = 0
+            // Flatten all history frames into contiguous storage and build
+            // the prefix-sum integral image for O(1) moving-average queries.
+            val (storage, offset) = flattenHistory(history)
+            buildIntegralImage(storage, offset)
 
-            for (frameIdx in 0 until numFrames) {
-                val age = numFrames - 1 - frameIdx
-                val frame = history[age]
+            val fullWidth = canvasElement.width.toDouble()
+            val fullHeight = canvasElement.height.toDouble()
+            val halfWidth = fullWidth / 2.0
 
-                if (frameIdx == 0) {
-                    // First frame — copy entirely
-                    for (i in 0 until bufSize) {
-                        storage[offset++] = frame[i]
-                    }
-                } else {
-                    // Crossfade: blend end of previous frame with start of this frame
-                    // Rewind into the already-written tail
-                    offset -= fadeLen
-                    for (i in 0 until fadeLen) {
-                        val t = (i + 1).toFloat() / (fadeLen + 1).toFloat()
-                        storage[offset] = storage[offset] * (1f - t) + frame[i] * t
-                        offset++
-                    }
-                    // Copy remainder of frame
-                    for (i in fadeLen until bufSize) {
-                        storage[offset++] = frame[i]
-                    }
-                }
-            }
+            drawExpandedBackground(ctx, fullWidth, fullHeight)
 
-            drawWaveformSlice(
-                ctx = ctx,
-                canvasWidth = canvasElement.width.toDouble(),
-                canvasHeight = canvasElement.height.toDouble(),
-                strokeColor = props.strokeColor,
-                strokeWidth = props.strokeWidth,
-                centerLineColor = props.centerLineColor,
-                centerLineWidth = props.centerLineWidth,
-                buffer = storage,
-                bufferLength = offset,
-                deflectionStrength = 2.0,
-            )
+            // Both halves share the exact centre pixel. Sample 0 is drawn
+            // there by both halves with the same value, so the paths meet
+            // cleanly at halfWidth — no visible gap.
+            drawExpandedHalf(ctx, halfWidth, fullHeight, storage, offset, mirror = false)
+            drawExpandedHalf(ctx, halfWidth, fullHeight, storage, offset, mirror = true)
         }
+    }
+
+    /**
+     * Flattens all frames of [history] into [expandedStorage] (newest frame
+     * last), crossfading adjacent frames to smooth out buffer seams.
+     * Returns the storage and the number of valid samples written to it.
+     */
+    private fun flattenHistory(history: AnalyzerBufferHistory): Pair<Float32Array, Int> {
+        val numFrames = history.size
+        val bufSize = history.bufferSize
+        val fadeLen = minOf(CROSSFADE_SAMPLES, bufSize / 2)
+        val neededSamples = numFrames * bufSize - maxOf(0, numFrames - 1) * fadeLen
+
+        val existing = expandedStorage
+        val storage = if (existing == null || existing.length < neededSamples) {
+            Float32Array(neededSamples).also { expandedStorage = it }
+        } else {
+            existing
+        }
+
+        var offset = 0
+        for (frameIdx in 0 until numFrames) {
+            val frame = history[numFrames - 1 - frameIdx]
+            if (frameIdx == 0) {
+                for (i in 0 until bufSize) storage[offset++] = frame[i]
+            } else {
+                // Crossfade: rewind into the already-written tail and blend.
+                offset -= fadeLen
+                for (i in 0 until fadeLen) {
+                    val t = (i + 1).toFloat() / (fadeLen + 1).toFloat()
+                    storage[offset] = storage[offset] * (1f - t) + frame[i] * t
+                    offset++
+                }
+                for (i in fadeLen until bufSize) storage[offset++] = frame[i]
+            }
+        }
+        return storage to offset
+    }
+
+    /**
+     * Builds [expandedIntegral] as a prefix sum indexed by sample index
+     * (0 = newest, [length] − 1 = oldest), enabling O(1) moving-average
+     * queries: `avg([s1, s2)) = (integral[ s2 ] − integral[ s1 ]) / (s2 − s1)`.
+     * Double precision to avoid losing bits over large cumulative sums.
+     */
+    private fun buildIntegralImage(storage: Float32Array, length: Int) {
+        val size = length + 1
+        val existing = expandedIntegral
+        val integral = if (existing == null || existing.size < size) {
+            DoubleArray(size).also { expandedIntegral = it }
+        } else {
+            existing
+        }
+        integral[0] = 0.0
+        var running = 0.0
+        for (i in 0 until length) {
+            running += storage[length - 1 - i]
+            integral[i + 1] = running
+        }
+    }
+
+    private fun drawExpandedBackground(
+        ctx: CanvasRenderingContext2D,
+        fullWidth: Double,
+        fullHeight: Double,
+    ) {
+        ctx.clearRect(0.0, 0.0, fullWidth, fullHeight)
+        props.centerLineColor?.let { clc ->
+            val centerY = fullHeight / 2.0
+            ctx.strokeStyle = clc.toString()
+            ctx.lineWidth = props.centerLineWidth
+            ctx.beginPath()
+            ctx.moveTo(0.0, centerY)
+            ctx.lineTo(fullWidth, centerY)
+            ctx.stroke()
+        }
+    }
+
+    private fun drawExpandedHalf(
+        ctx: CanvasRenderingContext2D,
+        halfWidth: Double,
+        fullHeight: Double,
+        buffer: Float32Array,
+        bufferLength: Int,
+        mirror: Boolean,
+    ) {
+        ctx.save()
+        ctx.translate(halfWidth, 0.0)
+        if (mirror) ctx.scale(-1.0, 1.0)
+        drawWaveformSlice(
+            ctx = ctx,
+            canvasWidth = halfWidth,
+            canvasHeight = fullHeight,
+            strokeColor = props.strokeColor,
+            strokeWidth = props.strokeWidth,
+            centerLineColor = props.centerLineColor,
+            centerLineWidth = props.centerLineWidth,
+            buffer = buffer,
+            bufferLength = bufferLength,
+            deflectionStrength = EXPANDED_DEFLECTION_STRENGTH,
+            drawBackground = false,
+            expandedMode = true,
+        )
+        ctx.restore()
     }
 
     /**
@@ -260,15 +362,46 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         return 0.02 + 0.98 * curveValue
     }
 
-    private fun getOrBuildDeflectionCache(totalWidth: Double, strength: Double): DoubleArray {
-        val cached = deflectionCaches[strength]
+    private fun getOrBuildDeflectionCache(
+        totalWidth: Double,
+        strength: Double,
+        halfCurve: Boolean,
+    ): DoubleArray {
+        val key = strength to halfCurve
+        val cached = deflectionCaches[key]
         if (cached != null && cached.first == totalWidth) return cached.second
 
         val resolution = totalWidth.toInt().coerceAtLeast(1)
         val values = DoubleArray(resolution) { pixelX ->
-            calculateStringDeflection(pixelX.toDouble() / totalWidth, strength)
+            val normalized = pixelX.toDouble() / totalWidth
+            // In half-curve mode the left edge of the cache (local x=0) is the
+            // screen centre — map it onto the peak of the underlying curve so
+            // no counter force is applied there, and only the outer edge dampens.
+            val input = if (halfCurve) 0.5 + normalized / 2.0 else normalized
+            calculateStringDeflection(input, strength)
         }
-        deflectionCaches[strength] = totalWidth to values
+        deflectionCaches[key] = totalWidth to values
+        return values
+    }
+
+    /**
+     * Returns a pre-computed ease-in curve for the expanded-mode time warp.
+     * Each entry maps `pixelX → normalised [0, 1]` value that, when multiplied
+     * by `maxSampleIdx`, yields the sample index for that pixel.
+     */
+    private fun getOrBuildWarpSampleCurve(halfScreen: Double, widthInt: Int): DoubleArray {
+        val cached = warpSampleCurveCache
+        if (cached != null && cached.first == halfScreen) return cached.second
+
+        val size = widthInt.coerceAtLeast(1)
+        val curve = Ease.In.pow(EXPANDED_WARP_STRENGTH)
+        val tSpan = 1.0 - EXPANDED_WARP_T_START
+        val values = DoubleArray(size) { px ->
+            val screenX = px.toDouble() / halfScreen
+            val t = (EXPANDED_WARP_T_START + screenX * tSpan).coerceIn(0.0, 1.0)
+            curve(t)
+        }
+        warpSampleCurveCache = halfScreen to values
         return values
     }
 
@@ -283,19 +416,25 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         buffer: Float32Array,
         bufferLength: Int,
         deflectionStrength: Double = 0.0,
+        drawBackground: Boolean = true,
+        // Expanded-mode flag: enables buffer reversal (newest → centre),
+        // half-curve deflection (peak at centre), and the time-warp curve.
+        expandedMode: Boolean = false,
     ) {
         val centerY = canvasHeight / 2.0
 
-        ctx.clearRect(0.0, 0.0, canvasWidth, canvasHeight)
+        if (drawBackground) {
+            ctx.clearRect(0.0, 0.0, canvasWidth, canvasHeight)
 
-        // Draw center line
-        centerLineColor?.let { clc ->
-            ctx.strokeStyle = clc.toString()
-            ctx.lineWidth = centerLineWidth
-            ctx.beginPath()
-            ctx.moveTo(0.0, centerY)
-            ctx.lineTo(canvasWidth, centerY)
-            ctx.stroke()
+            // Draw center line
+            centerLineColor?.let { clc ->
+                ctx.strokeStyle = clc.toString()
+                ctx.lineWidth = centerLineWidth
+                ctx.beginPath()
+                ctx.moveTo(0.0, centerY)
+                ctx.lineTo(canvasWidth, centerY)
+                ctx.stroke()
+            }
         }
 
         if (bufferLength <= 0) return
@@ -305,19 +444,86 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
 
         val widthInt = canvasWidth.toInt()
         val deflectionCache = if (deflectionStrength > 0.0) {
-            getOrBuildDeflectionCache(canvasWidth, deflectionStrength)
+            getOrBuildDeflectionCache(canvasWidth, deflectionStrength, expandedMode)
         } else {
             null
         }
         val step = props.pixelSkip.coerceAtLeast(1)
 
-        if (widthInt >= bufferLength) {
+        // In expanded mode, sample index 0 is the newest sample (drawn at the
+        // centre), so we read the buffer in reverse.
+        fun sampleAt(i: Int): Float =
+            if (expandedMode) buffer[bufferLength - 1 - i] else buffer[i]
+
+        if (expandedMode) {
+            // Time-warped drawing: the centre shows the newest samples with a
+            // gentle slope, the outer edges compress the oldest samples via an
+            // ease-in curve. See getOrBuildWarpSampleCurve.
+            val lastPixel = widthInt - 1
+            val maxSampleIdx = bufferLength - 1
+            val halfScreen = lastPixel.toDouble().coerceAtLeast(1.0)
+            val curveCache = getOrBuildWarpSampleCurve(halfScreen, widthInt)
+
+            fun sampleIdxAt(pixelX: Int): Int {
+                val idx = pixelX.coerceIn(0, curveCache.size - 1)
+                return (curveCache[idx] * maxSampleIdx).toInt().coerceIn(0, maxSampleIdx)
+            }
+
+            // Adaptive pixel step — 1× pixelSkip at the centre, growing to
+            // 2× pixelSkip at the edge. Now that we draw a single polyline
+            // (no min/max bars), we can afford a much denser step.
+            val minWarpStep = 3
+            val maxWarpStep = step
+            val warpStepSpan = (maxWarpStep - minWarpStep).toDouble()
+
+            var isFirstPoint = true
+            var pixelX = 0
+            while (pixelX <= lastPixel) {
+                val progress = pixelX.toDouble() / halfScreen
+                val warpStep = minWarpStep + (progress * warpStepSpan).toInt()
+
+                // Oversample via moving average — O(1) lookup into the
+                // pre-built integral image. Window scales linearly from MIN
+                // at the centre to MAX at the edge.
+                val s1 = sampleIdxAt(pixelX)
+                val s2 = sampleIdxAt(pixelX + warpStep).coerceAtMost(bufferLength)
+                val oversampleSize = (EXPANDED_OVERSAMPLE_MIN +
+                        progress * (EXPANDED_OVERSAMPLE_MAX - EXPANDED_OVERSAMPLE_MIN)).toInt()
+                val oversampleEnd = minOf(s1 + oversampleSize, s2, bufferLength)
+                val integral = expandedIntegral
+                var value = if (integral != null && oversampleEnd > s1) {
+                    ((integral[oversampleEnd] - integral[s1]) / (oversampleEnd - s1)).toFloat()
+                } else {
+                    sampleAt(s1)
+                }
+
+                val x = pixelX.toDouble()
+
+                // Deflection is applied by pure pixel position — independent
+                // of the time warp.
+                deflectionCache?.let { cache ->
+                    val cacheIdx = x.toInt().coerceIn(0, cache.size - 1)
+                    value *= cache[cacheIdx].toFloat()
+                }
+
+                val y = centerY - (value * centerY)
+
+                if (isFirstPoint) {
+                    ctx.moveTo(x, y)
+                    isFirstPoint = false
+                } else {
+                    ctx.lineTo(x, y)
+                }
+
+                pixelX += warpStep
+            }
+        } else if (widthInt >= bufferLength) {
             // More pixels than samples
             val sliceWidth = canvasWidth / bufferLength.toDouble()
             var isFirstPoint = true
 
             for (i in 0 until bufferLength step step) {
-                var value = buffer[i]
+                var value = sampleAt(i)
                 val x = i * sliceWidth
 
                 deflectionCache?.let { cache ->
@@ -343,11 +549,11 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
                 val localStartIdx = pixelX * samplesPerPixel
                 val localEndIdx = minOf(localStartIdx + samplesPerPixel, bufferLength)
 
-                var minVal = buffer[localStartIdx]
-                var maxVal = buffer[localStartIdx]
+                var minVal = sampleAt(localStartIdx)
+                var maxVal = minVal
 
                 for (i in localStartIdx + 1 until localEndIdx) {
-                    val value = buffer[i]
+                    val value = sampleAt(i)
                     if (value < minVal) minVal = value
                     if (value > maxVal) maxVal = value
                 }
@@ -401,16 +607,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     }
 
     private fun createOverlay() {
-        val oscilloscopeRect = dom?.getBoundingClientRect() ?: return
-
-        // Single overlay covering from oscilloscope left edge to viewport right edge
-        val extraHeight = 20.0
         val container = document.createElement("div") as HTMLDivElement
         container.style.position = "fixed"
-        container.style.top = "${oscilloscopeRect.top - extraHeight / 2}px"
-        container.style.left = "${oscilloscopeRect.left}px"
-        container.style.width = "calc(100vw - ${oscilloscopeRect.left}px)"
-        container.style.height = "${oscilloscopeRect.height + extraHeight}px"
         container.style.asDynamic().pointerEvents = "none"
         container.style.zIndex = "9999"
         container.style.background = "transparent"
@@ -422,27 +620,24 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         container.appendChild(canvas)
         document.body?.appendChild(container)
 
-        canvas.width = container.clientWidth
-        canvas.height = container.clientHeight
-
         overlayContainer = container
         overlayCanvas = canvas
         overlayCtx2d = canvas.getContext("2d") as? CanvasRenderingContext2D
+        // expandedStorage is allocated lazily in drawWaveform based on the
+        // actual history size so we use ALL of it regardless of source capacity.
 
-        expandedStorage = Float32Array(FRAME_SIZE * props.expandedFrameCount)
+        updateOverlaySize()
     }
 
     private fun updateOverlaySize() {
         val oscilloscopeRect = dom?.getBoundingClientRect() ?: return
-        val extraHeight = 20.0
-        overlayContainer?.let { container ->
-            container.style.top = "${oscilloscopeRect.top - extraHeight / 2}px"
-            container.style.left = "${oscilloscopeRect.left}px"
-            container.style.width = "calc(100vw - ${oscilloscopeRect.left}px)"
-            container.style.height = "${oscilloscopeRect.height + extraHeight}px"
-            overlayCanvas?.width = (window.innerWidth - oscilloscopeRect.left).toInt()
-            overlayCanvas?.height = (oscilloscopeRect.height + extraHeight).toInt()
-        }
+        val container = overlayContainer ?: return
+        container.style.top = "${oscilloscopeRect.top - OVERLAY_EXTRA_HEIGHT / 2}px"
+        container.style.left = "${oscilloscopeRect.left}px"
+        container.style.width = "calc(100vw - ${oscilloscopeRect.left}px)"
+        container.style.height = "${oscilloscopeRect.height + OVERLAY_EXTRA_HEIGHT}px"
+        overlayCanvas?.width = (window.innerWidth - oscilloscopeRect.left).toInt()
+        overlayCanvas?.height = (oscilloscopeRect.height + OVERLAY_EXTRA_HEIGHT).toInt()
     }
 
     private fun cleanupOverlay() {
@@ -451,7 +646,9 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         overlayCanvas = null
         overlayCtx2d = null
         expandedStorage = null
+        expandedIntegral = null
         deflectionCaches.clear()
+        warpSampleCurveCache = null
     }
 
     override fun VDom.render() {

@@ -258,9 +258,7 @@ class VoiceScheduler(
             clearScheduled(playbackId)
         }
 
-        voices.forEach { voice ->
-            scheduleVoice(voice)
-        }
+        scheduleVoices(voices)
     }
 
     fun scheduleVoice(voice: ScheduledVoice, clearScheduled: Boolean = false) {
@@ -272,6 +270,21 @@ class VoiceScheduler(
         scheduled.push(voice)
         promoteScheduled(lastProcessedFrame, lastProcessedFrame + options.blockFrames)
         prefetchSampleSound(voice)
+    }
+
+    /**
+     * Batched schedule. All voices share a single nowSec snapshot for [ensureEpoch] / [promoteScheduled],
+     * which prevents later voices in a tight cluster from sliding into the past while earlier voices
+     * are being delivered (the per-voice send path would otherwise interleave with audio blocks).
+     */
+    fun scheduleVoices(voices: List<ScheduledVoice>) {
+        if (voices.isEmpty()) return
+        for (voice in voices) {
+            ensureEpoch(voice)
+            scheduled.push(voice)
+            prefetchSampleSound(voice)
+        }
+        promoteScheduled(lastProcessedFrame, lastProcessedFrame + options.blockFrames)
     }
 
     fun process(cursorFrame: Int) {
@@ -420,6 +433,10 @@ class VoiceScheduler(
             scheduled.pop()
 
             if (absoluteStartSec < oldestAllowedSec) {
+                println(
+                    "VoiceScheduler: dropped voice pid=${head.playbackId} " +
+                            "late=${((nowSec - absoluteStartSec) * 1000.0).toInt()}ms"
+                )
                 continue
             }
 

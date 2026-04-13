@@ -1,7 +1,9 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.AudioEngine
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.FormantFilter
@@ -161,9 +163,19 @@ class VoiceFactory(
         val compressor = Voice.Compressor.fromStringConfig(data.compressor)
 
         // Effects
-        val distort = Voice.Distort(amount = data.distort ?: 0.0, shape = data.distortShape ?: "soft")
-        val crush = Voice.Crush(amount = data.crush ?: 0.0)
-        val coarse = Voice.Coarse(amount = data.coarse ?: 0.0)
+        val distort = Voice.Distort(
+            amount = data.distort ?: 0.0,
+            shape = data.distortShape ?: "soft",
+            oversample = Oversampler.factorToStages(data.distortOversample ?: 0),
+        )
+        val crush = Voice.Crush(
+            amount = data.crush ?: 0.0,
+            oversample = Oversampler.factorToStages(data.crushOversample ?: 0),
+        )
+        val coarse = Voice.Coarse(
+            amount = data.coarse ?: 0.0,
+            oversample = Oversampler.factorToStages(data.coarseOversample ?: 0),
+        )
 
         // FM Synthesis
         val fm = if (data.fmh != null || (data.fmEnv ?: 0.0) != 0.0) {
@@ -396,6 +408,7 @@ class VoiceFactory(
             freqHz = freqHz,
             startFrame = startFrame,
         ) + buildFilterPipeline(
+            engine = AudioEngine.fromName(data.engine),
             modulators = modulators,
             startFrame = startFrame,
             gateEndFrame = gateEndFrame,

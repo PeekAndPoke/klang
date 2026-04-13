@@ -62,8 +62,14 @@ data class VoiceData(
     val distort: Double?,
     /** Distortion shape: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp */
     val distortShape: String?,
+    /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val distortOversample: Int? = null,
     val coarse: Double?,
+    /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val coarseOversample: Int? = null,
     val crush: Double?,
+    /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val crushOversample: Int? = null,
 
     // Phaser
     val phaser: Double?,
@@ -130,6 +136,15 @@ data class VoiceData(
 
     /** Unique source ID for tracking which audio source this voice came from (e.g., pattern, track, instrument) */
     val sourceId: String?,
+
+    /**
+     * Voice pipeline engine name — selects the topology of the Filter stage.
+     *
+     * Known values (case-insensitive): `"modern"` (default, ADSR last — classic subtractive VCF→VCA),
+     * `"pedal"` (ADSR first — guitar-pedal feel, waveshapers respond to dynamics).
+     * Unknown or null values fall back to modern.
+     */
+    val engine: String? = null,
 ) {
     companion object {
         val empty = VoiceData(

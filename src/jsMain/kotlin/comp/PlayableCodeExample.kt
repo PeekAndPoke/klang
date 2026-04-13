@@ -363,21 +363,18 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
                         }
                     }
 
-                    // Info text
+                    // Cycle counter
                     noui.item {
                         css {
                             alignSelf = Align.center
                             color = Color.grey
                             height = 32.px
                         }
-                        if (isPlaying) {
-                            LcdDisplay(
-                                value = currentCycle,
-                                digits = 3,
-                            )
-                        } else {
-                            +"Try this example"
-                        }
+                        LcdDisplay(
+                            value = currentCycle,
+                            digits = 3,
+                            dim = !isPlaying,
+                        )
                     }
                 }
             }

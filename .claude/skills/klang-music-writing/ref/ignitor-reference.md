@@ -171,8 +171,8 @@ modulation.
 | Method                                  | Description                                |
 |-----------------------------------------|--------------------------------------------|
 | `.drive(amount, driveType?)`            | Pre-amplification (type: "linear")         |
-| `.clip(shape?)`                         | Pure waveshaping without drive             |
-| `.distort(amount, shape?)`              | Drive + clip combined                      |
+| `.clip(shape?, oversample?)`            | Pure waveshaping without drive             |
+| `.distort(amount, shape?, oversample?)` | Drive + clip combined                      |
 | `.crush(amount)`                        | Bit-depth reduction                        |
 | `.coarse(amount)`                       | Sample-rate reduction                      |
 | `.phaser(rate, depth, center?, sweep?)` | Allpass phaser (center/sweep default 1000) |
@@ -180,6 +180,10 @@ modulation.
 
 Distortion/clip shapes: `"soft"` (tanh, default), `"hard"`, `"gentle"`, `"cubic"`, `"diode"`, `"fold"`, `"chebyshev"`,
 `"rectify"`, `"exp"`
+
+Oversample factor (on `.distort` / `.clip`): user-facing factor, floored to power of 2. `0` or `1` = off,
+`2` = 2x, `4` = 4x, `8` = 8x. Suppresses aliasing for heavy / bright distortion (e.g. `"exp"`, `"fold"`,
+`"hard"`). Example: `Osc.saw().distort(0.8, "exp", 4)`.
 
 ### FM Synthesis
 

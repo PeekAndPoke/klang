@@ -58,6 +58,20 @@ class KlangCommLink(capacity: Int = 8192) {
             }
         }
 
+        /**
+         * Batch variant of [ScheduleVoice]. All voices in the list share a single nowSec snapshot
+         * on the backend, so per-batch jitter (postMessage interleaving with audio blocks) cannot
+         * push later voices into the past relative to earlier ones.
+         */
+        data class ScheduleVoices(
+            override val playbackId: String,
+            val voices: List<ScheduledVoice>,
+        ) : Cmd {
+            companion object {
+                const val SERIAL_NAME = "schedule-voices"
+            }
+        }
+
         /** Registers a custom IgnitorDsl in the backend's exciter registry. */
         data class RegisterIgnitor(
             override val playbackId: String,

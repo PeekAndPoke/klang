@@ -43,7 +43,7 @@ object Deps {
 
     object KotlinLibs {
         // https://central.sonatype.com/artifact/io.peekandpoke.ultra/common
-        private const val ultra_version = "0.105.0"
+        private const val ultra_version = "0.106.0"
 
         object Ultra {
             const val cache = "io.peekandpoke.ultra:cache:$ultra_version"
@@ -80,6 +80,7 @@ object Deps {
             const val addons_signaturepad = "io.peekandpoke.kraft:addons-signaturepad:$ultra_version"
             const val addons_sourcemappedstacktrace =
                 "io.peekandpoke.kraft:addons-sourcemappedstacktrace:$ultra_version"
+            const val addons_threejs = "io.peekandpoke.kraft:threejs:$ultra_version"
         }
 
         object Funktor {

@@ -81,8 +81,14 @@ data class SprudelVoiceData(
     val distort: Double?,
     /** Distortion shape: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp */
     val distortShape: String?,
+    /** Distortion oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val distortOversample: Int? = null,
     val coarse: Double?,
+    /** Coarse (sample-rate reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val coarseOversample: Int? = null,
     val crush: Double?,
+    /** Crush (bit-depth reducer) oversampling factor (2=2x, 4=4x, 8=8x; non-power-of-2 floored; <=1 = off) */
+    val crushOversample: Int? = null,
 
     // Phaser
     /** Phaser modulation speed */
@@ -229,6 +235,12 @@ data class SprudelVoiceData(
     /** Unique pattern ID for tracking solo state across pattern changes */
     val patternId: String? = null,
 
+    /**
+     * Voice pipeline engine name — selects the topology of the Filter stage.
+     * Known values: `"modern"` (default), `"pedal"`. Unknown/null → modern.
+     */
+    val engine: String? = null,
+
     // Custom value
     val value: SprudelVoiceValue? = null,
 ) {
@@ -369,8 +381,11 @@ data class SprudelVoiceData(
             fmEnv = other.fmEnv ?: fmEnv,
             distort = other.distort ?: distort,
             distortShape = other.distortShape ?: distortShape,
+            distortOversample = other.distortOversample ?: distortOversample,
             coarse = other.coarse ?: coarse,
+            coarseOversample = other.coarseOversample ?: coarseOversample,
             crush = other.crush ?: crush,
+            crushOversample = other.crushOversample ?: crushOversample,
             phaserRate = other.phaserRate ?: phaserRate,
             phaserDepth = other.phaserDepth ?: phaserDepth,
             phaserCenter = other.phaserCenter ?: phaserCenter,
@@ -434,6 +449,7 @@ data class SprudelVoiceData(
             compressor = other.compressor ?: compressor,
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
+            engine = other.engine ?: engine,
             value = other.value ?: value
         )
     }
@@ -600,8 +616,11 @@ data class SprudelVoiceData(
             fmEnv = fmEnv,
             distort = distort,
             distortShape = distortShape,
+            distortOversample = distortOversample,
             coarse = coarse,
+            coarseOversample = coarseOversample,
             crush = crush,
+            crushOversample = crushOversample,
             phaser = phaserRate,
             phaserDepth = phaserDepth,
             phaserCenter = phaserCenter,
@@ -639,6 +658,7 @@ data class SprudelVoiceData(
             compressor = compressor,
             solo = solo,
             sourceId = patternId,
+            engine = engine,
         )
     }
 

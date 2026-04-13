@@ -12,13 +12,14 @@ import io.peekandpoke.klang.sprudel.filterValues
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.ChoicePattern
-import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.sprudel.pattern.ControlPattern
 import io.peekandpoke.klang.sprudel.pattern.RandLPattern
 import io.peekandpoke.klang.sprudel.pattern.RandrunPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
+import io.peekandpoke.klang.sprudel.pattern.SeedPattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
+import io.peekandpoke.klang.sprudel.pattern.ShufflePattern
 import io.peekandpoke.klang.sprudel.pattern.StructurePattern
 import kotlin.math.floor
 
@@ -31,15 +32,9 @@ var sprudelLangRandomInit = false
 // -- Helpers ----------------------------------------------------------------------------------------------------------
 
 fun applyRandomSeed(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val seed = args.getOrNull(0)?.value?.asIntOrNull()
-
-    return ContextModifierPattern(source = pattern) {
-        if (seed != null) {
-            set(QueryContext.randomSeedKey, seed)
-        } else {
-            remove(QueryContext.randomSeedKey)
-        }
-    }
+    val seedArg = args.getOrNull(0) ?: return pattern
+    val seedPattern = seedArg.toPattern()
+    return SeedPattern(source = pattern, seedPattern = seedPattern)
 }
 
 // -- seed() -----------------------------------------------------------------------------------------------------------
@@ -1371,10 +1366,8 @@ fun randrun(n: PatternLike): SprudelPattern = _randrun(listOf(n).asSprudelDslArg
 
 internal val _shuffle by dslPatternMapper { args, callInfo -> { p -> p._shuffle(args, callInfo) } }
 internal val SprudelPattern._shuffle by dslPatternExtension { p, args, /* callInfo */ _ ->
-    val nArg: Any = args.getOrNull(0) ?: 4
-    val newArgs = listOf(nArg)
-    val indices = _randrun(newArgs)
-    p.bite(nArg, indices)
+    val nPattern = (args.getOrNull(0) ?: SprudelDslArg.of(4)).toPattern()
+    ShufflePattern(source = p, nPattern = nPattern)
 }
 internal val String._shuffle by dslStringExtension { p, args, callInfo -> p._shuffle(args, callInfo) }
 internal val PatternMapperFn._shuffle by dslPatternMapperExtension { m, args, callInfo ->

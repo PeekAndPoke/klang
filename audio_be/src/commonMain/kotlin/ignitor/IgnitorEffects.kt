@@ -1,11 +1,12 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.resolveDistortionShape
 import kotlin.math.PI
-import kotlin.math.floor
 import kotlin.math.pow
+import kotlin.math.round
 import kotlin.math.sin
 import kotlin.math.tan
 
@@ -27,11 +28,12 @@ import kotlin.math.tan
  *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
  *   "diode" (asymmetric), "fold" (wave folding), "chebyshev", "rectify", "exp".
  */
-fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor {
+fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     val resolved = resolveDistortionShape(shape)
     val waveshaper = resolved.fn
     val outputGain = resolved.outputGain
     val needsDcBlock = resolved.needsDcBlock
+    val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     // DC blocker state
     val dcBlockCoeff = 0.995
@@ -45,20 +47,38 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor {
         if (amt <= 0.0) return@Ignitor
 
         val drive = 10.0.pow(amt * 1.2)
+        val os = oversampler
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val x = buffer[i].toDouble() * drive
-            var y = waveshaper(x) * outputGain
-
-            if (needsDcBlock) {
-                val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                dcBlockX1 = y
-                dcBlockY1 = flushDenormal(dcOut)
-                y = dcOut
+        if (os != null) {
+            os.process(buffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                (waveshaper(sample.toDouble() * drive) * outputGain).toFloat()
             }
+            // DC blocker at original rate after decimation
+            if (needsDcBlock) {
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    val y = buffer[i].toDouble()
+                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                    dcBlockX1 = y
+                    dcBlockY1 = flushDenormal(dcOut)
+                    buffer[i] = dcOut.toFloat()
+                }
+            }
+        } else {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val x = buffer[i].toDouble() * drive
+                var y = waveshaper(x) * outputGain
 
-            buffer[i] = y.toFloat()
+                if (needsDcBlock) {
+                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                    dcBlockX1 = y
+                    dcBlockY1 = flushDenormal(dcOut)
+                    y = dcOut
+                }
+
+                buffer[i] = y.toFloat()
+            }
         }
     }
 }
@@ -68,10 +88,11 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft"): Ignitor {
  *
  * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm, 1.0 = heavy, 2.0+ = extreme. Default: 0.0.
  * @param shape Waveshaper function. Default: "soft". See [distort] for all options.
+ * @param oversampleStages Number of 2x oversampling stages. 0 = off, 1 = 2x, 2 = 4x, etc.
  */
-fun Ignitor.distort(amount: Double, shape: String = "soft"): Ignitor {
+fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     if (amount <= 0.0) return this
-    return distort(ParamIgnitor("amount", amount), shape)
+    return distort(ParamIgnitor("amount", amount), shape, oversampleStages)
 }
 
 /**
@@ -125,11 +146,12 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
  *   "diode" (asymmetric), "fold" (wave folding), "chebyshev", "rectify", "exp".
  */
-fun Ignitor.clip(shape: String = "soft"): Ignitor {
+fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     val resolved = resolveDistortionShape(shape)
     val clipFn = resolved.fn
     val outputGain = resolved.outputGain
     val needsDcBlock = resolved.needsDcBlock
+    val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     val dcBlockCoeff = 0.995
     var dcBlockX1 = 0.0
@@ -138,18 +160,36 @@ fun Ignitor.clip(shape: String = "soft"): Ignitor {
     return Ignitor { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            var y = clipFn(buffer[i].toDouble()) * outputGain
+        val os = oversampler
 
-            if (needsDcBlock) {
-                val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                dcBlockX1 = y
-                dcBlockY1 = flushDenormal(dcOut)
-                y = dcOut
+        if (os != null) {
+            os.process(buffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                (clipFn(sample.toDouble()) * outputGain).toFloat()
             }
+            if (needsDcBlock) {
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    val y = buffer[i].toDouble()
+                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                    dcBlockX1 = y
+                    dcBlockY1 = flushDenormal(dcOut)
+                    buffer[i] = dcOut.toFloat()
+                }
+            }
+        } else {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                var y = clipFn(buffer[i].toDouble()) * outputGain
 
-            buffer[i] = y.toFloat()
+                if (needsDcBlock) {
+                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                    dcBlockX1 = y
+                    dcBlockY1 = flushDenormal(dcOut)
+                    y = dcOut
+                }
+
+                buffer[i] = y.toFloat()
+            }
         }
     }
 }
@@ -163,28 +203,40 @@ fun Ignitor.clip(shape: String = "soft"): Ignitor {
 /**
  * Bit-depth reduction (bitcrush) for lo-fi digital sound. Processes per-sample.
  *
- * Quantizes the signal to a reduced number of amplitude levels.
- * Amount is read once per block (control rate). Bypasses when amount <= 0 or levels <= 1.
+ * Symmetric midtread quantizer: `round(x * halfLevels) / halfLevels`, output
+ * clamped to `[-1, 1]`. No DC bias, no amplitude inflation. The clamp catches
+ * the non-integer `halfLevels` case where a unit input would otherwise map to
+ * a grid point outside the input range (e.g. `amount = 1.5` → `hl ≈ 1.414` →
+ * raw output `2/1.414 ≈ 1.414`, clamped to `1.0`).
  *
- * @param amount Bit depth. 0.0 = bypass, 1.0 = 2 levels (extreme lo-fi), 4.0 = 16 levels,
- *   8.0 = 256 levels, 16.0 = 65536 levels (subtle). Internally: levels = 2^amount.
- *   Typical range: 2.0–8.0. Default: 0.0 (bypass).
+ * Amount is read once per block (control rate). **Bypasses when amount < 1.0** —
+ * fewer than 2 levels means the grid step exceeds the input range entirely.
+ *
+ * @param amount Bit depth. Below 1.0 = bypass. 1.0 = 2 levels (extreme lo-fi),
+ *   4.0 = 16 levels, 8.0 = 256 levels, 16.0 = 65536 levels (subtle).
+ *   Internally: `levels = 2^amount`. Typical range: 2.0–8.0.
  */
 fun Ignitor.crush(amount: Ignitor): Ignitor {
     return Ignitor { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
 
         val amt = Ignitors.readParam(amount, freqHz, ctx)
-        if (amt <= 0.0) return@Ignitor
 
-        val levels = 2.0.pow(amt).toInt().toDouble()
-        if (levels <= 1.0) return@Ignitor
+        // Continuous levels — no toInt() so modulating `amt` sweeps the grid smoothly.
+        val levels = 2.0.pow(amt)
+        // Bypass: need at least 2 levels (amt >= 1) for the quantizer to be
+        // remotely bounded by the input range. Sub-1.0 amounts would inflate by
+        // factor `1/halfLevels`, which can exceed 2×.
+        if (levels < 2.0) return@Ignitor
 
         val halfLevels = levels / 2.0
 
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = (floor(buffer[i].toDouble() * halfLevels) / halfLevels).toFloat()
+            // Midtread symmetric quantizer (round, not floor) — no DC bias.
+            // Clamp output to [-1, 1] to catch non-integer halfLevels inflation.
+            val q = round(buffer[i].toDouble() * halfLevels) / halfLevels
+            buffer[i] = q.coerceIn(-1.0, 1.0).toFloat()
         }
     }
 }
@@ -192,12 +244,11 @@ fun Ignitor.crush(amount: Ignitor): Ignitor {
 /**
  * Bit-depth reduction (convenience overload with fixed amount).
  *
- * @param amount Bit depth. 0.0 = bypass, 4.0 = 16 levels (lo-fi), 8.0 = 256 levels. Default: 0.0.
+ * @param amount Bit depth. Below 1.0 = bypass. 4.0 = 16 levels (lo-fi),
+ *   8.0 = 256 levels. Default: 0.0.
  */
 fun Ignitor.crush(amount: Double): Ignitor {
-    if (amount <= 0.0) return this
-    val levels = 2.0.pow(amount).toInt().toDouble()
-    if (levels <= 1.0) return this
+    if (amount < 1.0) return this
     return crush(ParamIgnitor("amount", amount))
 }
 

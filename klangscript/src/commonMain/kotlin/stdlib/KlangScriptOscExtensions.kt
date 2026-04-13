@@ -90,18 +90,24 @@ object KlangScriptOscExtensions {
     /**
      * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
      * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     * Oversample: user-facing factor (2 = 2x, 4 = 4x, 8 = 8x). 0/1 = off. Non-power-of-2 floored.
      */
     @KlangScript.Method
-    fun clip(self: IgnitorDsl, shape: String = "soft"): IgnitorDsl =
-        IgnitorDsl.Clip(inner = self, shape = shape)
+    fun clip(self: IgnitorDsl, shape: String = "soft", oversample: Int = 0): IgnitorDsl =
+        IgnitorDsl.Clip(inner = self, shape = shape, oversample = oversample)
 
     /**
      * Waveshaping distortion. Convenience for drive(amount) + clip(shape).
      * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     * Oversample: user-facing factor (2 = 2x, 4 = 4x, 8 = 8x). 0/1 = off. Non-power-of-2 floored.
      */
     @KlangScript.Method
-    fun distort(self: IgnitorDsl, amount: IgnitorDslLike, shape: String = "soft"): IgnitorDsl =
-        IgnitorDsl.Clip(inner = IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl()), shape = shape)
+    fun distort(self: IgnitorDsl, amount: IgnitorDslLike, shape: String = "soft", oversample: Int = 0): IgnitorDsl =
+        IgnitorDsl.Clip(
+            inner = IgnitorDsl.Drive(inner = self, amount = amount.toIgnitorDsl()),
+            shape = shape,
+            oversample = oversample,
+        )
 
     /** Applies bit-depth reduction (bitcrusher). */
     @KlangScript.Method

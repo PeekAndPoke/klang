@@ -6,24 +6,43 @@ All types in `audio_be/src/commonMain/kotlin/voices/`.
 
 `Voice.kt` — defines the full contract for all voice types.
 
-### Processing Order (from `Voice.render()` docs)
+### Processing Order
+
+Voice strip runs four stages in sequence: **Pitch → Ignite → Filter → Send**.
+Each stage is a list of `BlockRenderer`s; `Voice.render()` just iterates the
+composed pipeline.
 
 ```
-1.  generateSignal()       — oscillator / sample playback → voiceBuffer
-2.  Accelerate             — pitch ramp modulation
-3.  Vibrato                — LFO pitch modulation (post-signal)
-4.  PitchEnvelope          — one-shot pitch curve
-5.  FM                     — frequency modulation (applied to pitch)
-6.  Envelope (ADSR)        — amplitude envelope (before waveshaping = dynamic distortion)
-7.  Crush / Coarse / Distort — waveshaping effects (responds to envelope dynamics)
-8.  Filters (LP/HP/BP/Notch) — subtractive filtering (final say on spectrum)
-9.  Compressor             — per-voice dynamic range
-10. Gain + Pan             — volume + stereo positioning
-11. PostGain               — final gain stage
-12. Tremolo / Phaser       — per-voice modulation effects
-13. Ducking                — sidechain signal written to target cylinder
-14. Mix into Cylinder      — voiceBuffer → orbits[orbitId]
+Pitch stage     (PitchPipelineBuilder → writes freqModBuffer)
+  1. Accelerate         — pitch ramp modulation
+  2. Vibrato            — LFO pitch modulation
+  3. PitchEnvelope      — one-shot pitch curve
+  4. FM                 — frequency modulation
+
+Ignite stage    (IgniteRenderer → writes audioBuffer)
+  5. Ignitor            — oscillator / sample playback
+
+Filter stage    (FilterPipelineBuilder → reads/writes audioBuffer)
+  6. FilterMod          — control-rate cutoff modulation
+  7. Crush              — waveshaper (bit-depth reduce)
+  8. Coarse             — waveshaper (sample-rate reduce)
+  9. Distort            — waveshaper (various shapes)
+  10. AudioFilter       — subtractive LP/HP/BP/Notch
+  11. Tremolo           — amplitude LFO
+  12. StripPhaser       — 4-stage allpass + LFO
+  13. Envelope (ADSR)   — VCA, last in the tonal stage
+
+Send stage      (SendRenderer → mixes to cylinder)
+  14. postGain → pan → gain → cylinder mix + delay/reverb sends
 ```
+
+**Classic subtractive ordering**: `osc → waveshaper → VCF → VCA`. The ADSR
+sits at the end of the tonal stage so the filter, phaser and waveshapers all
+see steady-state amplitude and don't smear the attack.
+
+Compressor and ducking are **cylinder-level** (katalyst) effects, not per-voice
+— applied in `Cylinder.processBusEffects()` after all voices mix into the
+cylinder (`Delay → Reverb → Phaser → Compressor`).
 
 ### Voice Properties (key fields)
 

@@ -740,7 +740,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     fontSize = 1.2.em
                     marginBottom = 24.px
                 }
-                +"Performance Benchmark"
+                +"Dynamometer Test"
             }
 
             renderBenchmarkGauges(progress)
@@ -880,12 +880,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
                     div {
                         css {
-                            fontSize = 1.1.em
+                            fontSize = 3.em
                             color = Color.white
                             textAlign = TextAlign.left
                         }
-                        div { +"simultaneous" }
-                        div { +"supersaw voices" }
+                        div { +"PS" }
                     }
                 }
 

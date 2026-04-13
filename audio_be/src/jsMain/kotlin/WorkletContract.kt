@@ -93,6 +93,12 @@ object WorkletContract {
                 it[PROP_CLEAR_SCHEDULED] = clearScheduled
             }
 
+            is KlangCommLink.Cmd.ScheduleVoices -> jsObject {
+                it[PROP_TYPE] = KlangCommLink.Cmd.ScheduleVoices.SERIAL_NAME
+                it[PROP_PLAYBACK_ID] = playbackId
+                it[PROP_VOICES] = voices.map { v -> v.encode() }.toTypedArray()
+            }
+
             is KlangCommLink.Cmd.Sample.NotFound -> jsObject {
                 it[PROP_TYPE] = KlangCommLink.Cmd.Sample.NotFound.SERIAL_NAME
                 it[PROP_REQ] = req.encode()
@@ -148,6 +154,11 @@ object WorkletContract {
                 playbackId = msg[PROP_PLAYBACK_ID],
                 voice = decodeScheduledVoice(msg[PROP_VOICE]),
                 clearScheduled = msg[PROP_CLEAR_SCHEDULED] as? Boolean ?: false
+            )
+
+            KlangCommLink.Cmd.ScheduleVoices.SERIAL_NAME -> KlangCommLink.Cmd.ScheduleVoices(
+                playbackId = msg[PROP_PLAYBACK_ID],
+                voices = (msg[PROP_VOICES] as Array<*>).map { decodeScheduledVoice(it!!) },
             )
 
             KlangCommLink.Cmd.Sample.NotFound.SERIAL_NAME -> KlangCommLink.Cmd.Sample.NotFound(

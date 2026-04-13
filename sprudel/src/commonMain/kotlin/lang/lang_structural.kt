@@ -5,15 +5,42 @@ package io.peekandpoke.klang.sprudel.lang
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.common.math.lcm
-import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
+import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
+import io.peekandpoke.klang.sprudel._bind
+import io.peekandpoke.klang.sprudel._bindRestart
+import io.peekandpoke.klang.sprudel._fmap
+import io.peekandpoke.klang.sprudel._innerJoin
+import io.peekandpoke.klang.sprudel._splitQueries
+import io.peekandpoke.klang.sprudel._squeezeJoin
+import io.peekandpoke.klang.sprudel._stepJoin
+import io.peekandpoke.klang.sprudel._withHapSpan
+import io.peekandpoke.klang.sprudel._withHapTime
+import io.peekandpoke.klang.sprudel._withQuerySpan
+import io.peekandpoke.klang.sprudel._withQueryTime
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.addons.not
 import io.peekandpoke.klang.sprudel.lang.addons.timeLoop
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.sprudel.pattern.*
+import io.peekandpoke.klang.sprudel.map
+import io.peekandpoke.klang.sprudel.mapEvents
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.pattern.ControlValueProvider
+import io.peekandpoke.klang.sprudel.pattern.EmptyPattern
+import io.peekandpoke.klang.sprudel.pattern.GapPattern
+import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import io.peekandpoke.klang.sprudel.pattern.RepeatCyclesPattern
+import io.peekandpoke.klang.sprudel.pattern.SegmentPattern
+import io.peekandpoke.klang.sprudel.pattern.SequencePattern
+import io.peekandpoke.klang.sprudel.pattern.StackPattern
+import io.peekandpoke.klang.sprudel.pattern.StructurePattern
+import io.peekandpoke.klang.sprudel.withSteps
+import io.peekandpoke.klang.sprudel.withWeight
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.log2
@@ -3418,7 +3445,7 @@ fun applyBite(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelP
 
     val nPattern = args.take(1).toPattern()
     val indicesPattern = args.drop(1).toPattern()
-    val indicesSteps: Rational = indicesPattern.numSteps ?: return silence
+    val indicesSteps: Rational = indicesPattern.numSteps ?: Rational.ONE
 
     return source._innerJoin(nPattern, indicesPattern) { src, nValue, indexValue ->
         val steps: Rational =

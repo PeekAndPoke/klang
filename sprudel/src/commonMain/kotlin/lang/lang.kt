@@ -36,6 +36,7 @@ fun initSprudelDsl() {
     sprudelLangContinuousInit = true
     sprudelLangDynamicsInit = true
     sprudelLangEffectsInit = true
+    sprudelLangEngineInit = true
     sprudelLangEuclidInit = true
     sprudelLangFiltersInit = true
     sprudelLangHelpersInit = true

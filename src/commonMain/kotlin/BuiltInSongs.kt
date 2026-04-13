@@ -18,7 +18,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-synthirs",
             title = "Synthris",
-            rpm = 40.2,
+            rpm = 39.5,
             code = TestTextPatterns.tetris,
             icon = "gamepad",
         )
@@ -28,7 +28,7 @@ object BuiltInSongs {
         Song(
             id = "$PREFIX-synthkura",
             title = "Synthkura",
-            rpm = 36.0,
+            rpm = 34.0,
             icon = "globe asia",
             code = """
 import * from "stdlib"
@@ -44,12 +44,12 @@ let koto = Osc.register("koto", Osc.pluck()
 
 let shaku = Osc.register("shaku", Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
-      .plus(Osc.perlin(15).mul(0.05))
-      .plus(Osc.perlin(20).mul(0.15).highpass(1000).adsr(0.03, 0.2, 0.03, 0.02))
+      .plus(Osc.perlin(13).mul(0.05))
+      .plus(Osc.perlin(21).mul(0.10).highpass(2000).adsr(0.02, 0.2, 0.03, 0.02))
       .lowpass(3500).highpass(300)
-      .analog(0.2).vibrato(6, 0.2)
+      .analog(0.2).vibrato(6, Osc.perlin(1).mul(0.1).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
-      .adsr(0.1, 0.15, 0.8, 0.3)
+      .adsr(0.07, 0.15, 0.8, 0.3)
 )
 
 let kick = Osc.register("kick", Osc.sine()
@@ -86,8 +86,8 @@ stack(
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 b4 c5 b4 a4 [b4 a4] f4@2]
     [e4 c4 e4 f4 e4 [e4 d4] c4@2] [a4 a4 b4 ~ a4 a4 b4 ~]
     [e4 f4 [b4 a4] f4 e4@4]
-  `).sound(koto).legato(0.8).slow(14).gain(0.9)
-    .superimpose(fast(2).gain(0.125).pan(0.33))
+  `).sound(koto).legato(0.8).slow(14).gain(0.7)
+    .superimpose(fast(2).gain(0.1).pan(0.2))
 
   // Shakuhachi
   ,note(`
@@ -96,10 +96,10 @@ stack(
     e4@2  ~  ~  ~  ~  a4 ~
     e5@2  ~  ~  c5@2  b4 a4
     c5@2  ~  ~  ~  ~  a4 ~
-    a5@2  ~  ~  e5@2  d5@2 
-    <[e4@2 ~ ~ e4@2 ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@2 ~ ~ a4@2 ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
+    a5@2  ~  ~  e5@2  d5@2
+    <[e4@4 e4@1 ~ ~ ~] [e4 f4 [b4 a4] f4 e4@4] [a4@4 a4@1 ~ ~ ~] [e5 f5 [b5 a5] f5 e5@4]>@8
   `).sound(shaku).slow(14).gain(0.225).adsr("0.05:0.1:1:0.2").pan(0.66)
-    .filterWhen(x => x >= wait * 2)
+    .filterWhen(x => x >= wait * 2) // . solo()
 
   // Drums
   ,note("a1 ~  ~  ~  ~  ~  ~  ~  a1 ~  ~  ~  ~  ~  ~  ~").sound(kick).gain(0.8).hpf(100)
@@ -107,30 +107,32 @@ stack(
   ,note("~  ~  ~  ~  ~  ~  ~  ~  x  ~  ~  ~  ~  ~  ~  ~").sound(brush).gain(0.3)
 
   // Sub-Bass
-  ,note("a1 d2 a1 f1 c2 e1 a1").sound(sub).slow(14).legato(1.5).gain(0.75).hpf(40)
+  ,note("a1 d2 a1 f1 c2 e1 a1").sound(sub).slow(14).legato(1.5).gain(0.5).hpf(40)
     .filterWhen(x => x >= wait * 1)
-  
+ 
   ,stack(
     // Root
-    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.25)
+    note("a2  d2  a2  f2  c2  e2  a2").sound(pad).slow(14).legato(1.02).gain(0.2).pan(0.4)
     // Third (minor/major character)
-    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.25)
+    ,note("c3  f2  c3  a2  e2  gs2 c3").sound(pad).slow(14).legato(1.02).gain(0.2).pan(0.3)
     // Fifth
-    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.25)
+    ,note("e3  a2  e3  c3  g2  b2  e3").sound(pad).slow(14).legato(1.02).gain(0.2).pan(0.2)
     // Octave
-    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.25)
+    ,note("a3  d3  a3  f3  c3  e3  a3").sound(pad).slow(14).legato(1.05).gain(0.2).pan(0.8)
     // High third
-    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.25)
+    ,note("c4  f3  c4  a3  e3  gs3 c4").sound(pad).slow(14).legato(1.05).gain(0.2).pan(0.7)
     // High fifth
-    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.25)    
-  ).filterWhen(x => x >= wait * 3)
-).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps))
+    ,note("e4  a3  e4  c4  g3  b3  e4").sound(pad).slow(14).legato(1.05).gain(0.2).pan(0.6)    
+  ).hpf(160).filterWhen(x => x >= wait * 3)
+).room("0.25:7:0.75").delay(0.2).delaytime(pure(1/8).div(cps)).compressor("-15:2:6:0.01:0.2")
 
 
-            
-            
-            
-            
+
+           
+           
+           
+           
+           
             """    // END: Sakura
         )
     )
@@ -149,30 +151,33 @@ stack(
              import * from  "stdlib"
               import * from "sprudel"
                let wind       = 0.050
-                let water      = 0.070
-                 let waves      = 0.210
-                  let windSpiel  = 3.500
+                let water      = 0.100
+                 let waves      = 0.140
+                  let windSpiel  = 2.500
            
                     stack( //   Lean back and relax... let the waves carry you away
-                // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                 // Wind ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-             note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1) // . solo()
-               .gain(wind).pan(sine.range(0.3, 0.7).slow(21))
-               .hpf(1000).bandf(perlin.range(110, 110 * 20).slow(64)).bandq(berlin.range(0.0, 2.0).slow(39))
+               note("c").fast(4).sound("brown").adsr("0.5:1.0:1.0:3.5").warmth(0.1)  // . solo()
+             .gain(wind).pan(berlin.range(0.2, 0.8).slow(21)).lpf(1500)
+            .hpf(120).bandf(perlin.range(110, 110 * 10).slow(16)).bandq(berlin.range(0.5, 5.0).slow(8))
                      
            , // Water ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            note("c").fast(5).sound("pink").adsr("0.7:0.5:1.0:3.0") // . solo()
-              .gain(water)
-              .hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
+            sound("pink pink pink pink").legato(2).degrade(0.5).adsr("1.5:3.0:0.5:5.0") //  . solo()
+            .gain(water).hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
+              
            , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            note("<c@4 ~!15>").fast(2).sound("pink").adsr("0.75:0.5:1.0:10.0").warmth(0.2) // . solo()
-             .gain(waves).pan(0.3).hpf(120).lpf(4000).bandf(perlin.range(100, 500).slow(22)).bandq(rand.range(0.5, 1.5))
-                 .superimpose(x => x.pan(0.7))
+            note("c c c c").legato(4).degrade(95/100).sound("pink").adsr("1.0:5.0:0.6:15.0").warmth(0.1) // . solo()
+             .gain(waves).hpf(120).lpf(5000).lpadsr("1.0:3.0:0.4:15.0").lpenv(10)
+             .bandf(perlin.range(120, 500).slow(22)).bandq(rand.range(0.5, 1.5))
+              .pan(sine.range(0.1, 0.4).slow(4)).superimpose(x => x.pan(sine.range(0.9, 0.6).slow(5)))
+               .superimpose(x => x.sound("pink").adsr("0.3:0.8:0.2:1.5").valocity(0.2).hpf(2500).lpf(8000))
+              
               , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                n(randrun(16)).fast(4).sound("glockenspiel").scale("d2:pentatonic").pan(0.3)
-                  .gain(0.25).distort(0.2).postgain(windSpiel).adsr("0.1:1.0:1.0:5.0").hpf(300).degradeBy(0.995)
+                n(randrun(16)).fast(4).sound("glockenspiel").scale("f2:pentatonic").pan(0.3)
+                  .gain(0.25).distort(0.05).postgain(windSpiel).adsr("0.05:1.0:0.7:5.0").hpf(400).degradeBy(0.995)
                       .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.5) // . solo()
-                           ).room(0.25).rsize(10.0)              
+                           ).room(0.25).rsize(10.0).seed(sinOfDay.add(1).mul(24 * 60 * 60 * 100))              
       
 
 
@@ -194,56 +199,68 @@ stack(
         Song(
             id = "$PREFIX-der-schmetterling",
             title = "Der Schmetterling",
-            rpm = 33.0,
+            rpm = 32.5,
             icon = "bug",
             code = """
-import * from "stdlib"
-import * from "sprudel"
-
-///////////////////////////////////////////////////////
-//                                                   //
-//                  DISCO FOREVER !                  //
-//                                                   //
-///////////////////////////////////////////////////////
-
-stack(
-  // Lead — distorted saw with vibrato expression
-  n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")
-    .scale("E4:minor").sound("supersaw").unison(2).detune(0.04)
-    .lpf(4500).hpf(600)
-    .gain(0.3).distort("0.8:exp").postgain(0.375) // . solo()
-    .adsr("0.01:0.3:0.6:0.1").clip(0.8)
-    .release("<0.1!16 0.3!16 0.1!16 0.4!16 0.1!16 0.55!16>")
-    .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.2!32>").lpf(5000).pan(0.8))
-    .superimpose(transpose(24).detune(0.10).velocity("<0!96 0.075!32>").lpf(5500).pan(0.2))
-    .orbit(0),
-  // Pad — struct stamps the rhythm, phaser + tremolo shimmer
-  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 -1]]!2 [0 [6 4] 0 [3 2]] [4 [2 1] 0 [-2 -1]]>/4")
-    .struct("<[x!16]!7 [x!24]!1 [x!16]!16>")
-    .scale("<e2:minor!48 e3:minor!16>").sound("supersaw").unison(3).detune(0.05)
-    .lpf("2000").hpf(240).notchf(440).warmth(0.5).distort(0.2)
-    .adsr("0.01:0.25:0.5:0.05").clip(0.75).crush(saw.range(8, 5).slow(32)) //   . solo()
-    .gain(0.3).orbit(1).pan(0.2),
-  // Bass — warm distorted saw, struct for steady pulse
-  n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1 0.95!3".fast(4))
-    .scale("e2:minor").sound("saw")
-    .lpf("800").hpf(120).distort(0.2).warmth(0.95).notchf(440)
+import * from "stdlib"                                                                                                      //
+import * from "sprudel"                                                                                                    ////
+                                                                                                                          //  //
+let feel = 5.0   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                //    //
+                                                                                                                        //      //
+stack(                                                                                                                 //        //
+  // Lead                                                                                                 //////////////          //////////////
+  n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")                                                    //                              //
+    .orbit(0).scale("d#4:minor").sound("supersaw").unison(2).detune(0.05)                                     //          DISCO!          //
+    .lpf(3800).hpf(600)                                                                                         //       FOREVER!       //
+    .gain(0.255).distort("0.8:exp").postgain(0.3) // . solo()                                                     //                  //
+    .adsr("0.01:0.3:0.6:0.1").clip(0.8)                                                                            //       //      //
+    .release("<0.105!16 0.275!16 0.110!16 0.3!16 0.06!16 0.25!16 0.09!16 0.4!16 0.075!16 0.5!16>")                //     //    //    //
+    .apply(                                                                                                      //   //          //  //
+      x => x.velocity(0.6).detune(0.1),                                                                         // //               // //
+      x => x.shuffle("<1!64 0!16 1!1 4/8!14 1!33>").seed(sinOfNight.add(1).mul(24 * 60 * 15))                  //                       //
+        .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.2!32>").lpf(4200).pan(0.8))          
+        .superimpose(transpose(24).detune(0.10).velocity("<0!96 0.075!32>").lpf(5000).pan(0.2))  
+    ).phaser(1/8).phaserdepth("<0.0!64 0.5!16 0.0!48>").phasersweep(1000).phasercenter(1500),
+  // Pad
+  n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6 4] 0 <[2 3] [-3 -0]>] [4 [2 1] 0 [-2 <-1 -4>]]>/4")
+    .struct("<[x!16]!7 [x!24]!1 [x!16]!16>").velocity("1.02 0.95!3 0.98 0.95!3".fast(2))
+    .scale("<d#2:minor!48 d#3:minor!16>").sound("supersaw").unison(3).detune(0.1)
+    .notchf("550:0.5:0").lpf("<1900!48 2400!16>").hpf(200).warmth(saw.range(0.3, 0.1).slow(5*32)).distort("0.3:gentle:4")
+    .adsr("0.01:0.25:0.5:0.045").clip(0.75).crush(saw.range(8, 4).slow(32)) //   . solo()
+    .gain(0.27).orbit(1).pan(0.2),
+  // Bass
+  n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1.02 0.95!3 0.98 0.95!3".fast(2))
+    .scale("d#2:minor").sound("saw")
+    .notchf("550:0.5:0").lpf("1300").hpf(150).distort("0.3:soft:4").warmth(saw.range(0.5, 0.1).slow(5*32))
     .adsr("0.01:0.2:0.5:0.05").clip(0.75)  // . solo()
-    .gain(0.45).orbit(2).pan(0.8),
-  // Drums — crushed, building from sparse to dense
-  sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!8 [bd [bd,sd] bd [bd,sd]]!8>")
-    .crush(9).gain(0.8).orbit(3).hpf(100),
-  sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>").fast(2).crush(9).hpf(3000)
-    .gain(0.4).orbit(3)
-// Compressor glues it, analog adds organic drift
-).compressor("-10:2:10:0.02:0.25").analog(0.5)
+    .gain(0.31).orbit(2).pan(0.8),
+  // Drums
+  sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!24 [bd [bd,sd] bd [bd,sd]]!8>")
+    .orbit(3).gain(0.8).crush(6).crushos(2).hpf(100).lpf("4000:1:2"),
+  sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>") // . solo()
+    .orbit(4).gain(0.375).fast(2).crush(7).crushos(2).hpf(500).lpf("4000:1:2")
+  // Master
+).compressor("-10:2:10:0.02:0.25").analog(feel).engine("pedal").room("0.1:5")
+
 
 // Inspired by: Editors - Papillon
-// https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW                
-            
-            
-            
-            
+// https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW
+
+
+
+
+// Written by: peekandpoke
+
+// Epilspsy Warning: Do not click the oscilloscope!
+
+
+           
+           
+           
+           
+           
+           
+           
             """
         )
     )
@@ -252,7 +269,7 @@ stack(
         Song(
             id = "$PREFIX-a-synth-worth-lying-for",
             title = "A Synth Worth Lying For",
-            rpm = 31.0,
+            rpm = 30.0,
             code = TestTextPatterns.aTruthWorthLyingFor,
             icon = "guitar",
         )

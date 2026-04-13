@@ -10,8 +10,8 @@ import kotlin.math.sin
  * These modify the frequency reaching inner Ignitors by writing
  * per-sample multipliers into ctx.phaseMod.
  *
- * Each combinator owns its own DoubleArray buffer (not from ScratchBuffers)
- * because the buffer must stay alive while the inner generate() runs.
+ * Buffers are borrowed from [ScratchBuffers.useDouble] — the buffer stays alive
+ * within the scope while the inner generate() runs.
  *
  * Ported from: fillPitchModulation() in voices/common.kt
  */
@@ -30,7 +30,6 @@ import kotlin.math.sin
  */
 fun Ignitor.vibrato(rate: Ignitor, depth: Ignitor): Ignitor {
     var lfoPhase = 0.0
-    var modBuf: DoubleArray? = null
 
     return Ignitor { buffer, freqHz, ctx ->
         val rateVal = Ignitors.readParam(rate, freqHz, ctx)
@@ -41,36 +40,27 @@ fun Ignitor.vibrato(rate: Ignitor, depth: Ignitor): Ignitor {
             return@Ignitor
         }
 
-        val bufSize = ctx.offset + ctx.length
-        val existing0 = modBuf
-        if (existing0 == null || existing0.size < bufSize) {
-            modBuf = DoubleArray(bufSize)
-        }
-        // Audio renderer must never throw — silently skip if buffer is unexpectedly null
-        val mb = modBuf ?: return@Ignitor
-
-        val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            // Equal temperament: 2^(semitones/12) gives the correct frequency ratio.
-            // This is symmetric (up and down are multiplicative inverses) and never goes negative.
-            mb[i] = 2.0.pow(sin(lfoPhase) * depthSemitones / 12.0)
-            lfoPhase += lfoInc
-            if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
-        }
-
-        // Chain with existing phaseMod
-        val existing = ctx.phaseMod
-        if (existing != null) {
+        ctx.scratchBuffers.useDouble { mb ->
+            val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
+            val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                mb[i] *= existing[i]
+                mb[i] = 2.0.pow(sin(lfoPhase) * depthSemitones / 12.0)
+                lfoPhase += lfoInc
+                if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
             }
-        }
 
-        val savedMod = ctx.phaseMod
-        ctx.phaseMod = mb
-        this.generate(buffer, freqHz, ctx)
-        ctx.phaseMod = savedMod
+            val existing = ctx.phaseMod
+            if (existing != null) {
+                for (i in ctx.offset until end) {
+                    mb[i] *= existing[i]
+                }
+            }
+
+            val savedMod = ctx.phaseMod
+            ctx.phaseMod = mb
+            this.generate(buffer, freqHz, ctx)
+            ctx.phaseMod = savedMod
+        }
     }
 }
 
@@ -93,8 +83,6 @@ fun Ignitor.vibrato(rate: Double, depth: Double): Ignitor {
  *   Positive = pitch rises, negative = pitch falls.
  */
 fun Ignitor.accelerate(amount: Ignitor): Ignitor {
-    var modBuf: DoubleArray? = null
-
     return Ignitor { buffer, freqHz, ctx ->
         val amountVal = Ignitors.readParam(amount, freqHz, ctx)
 
@@ -103,41 +91,34 @@ fun Ignitor.accelerate(amount: Ignitor): Ignitor {
             return@Ignitor
         }
 
-        val bufSize = ctx.offset + ctx.length
-        val existing0 = modBuf
-        if (existing0 == null || existing0.size < bufSize) {
-            modBuf = DoubleArray(bufSize)
-        }
-        // Audio renderer must never throw — silently skip if buffer is unexpectedly null
-        val mb = modBuf ?: return@Ignitor
-
         val totalFrames = ctx.voiceDurationFrames.toDouble()
         if (totalFrames <= 0.0) {
             this.generate(buffer, freqHz, ctx); return@Ignitor
         }
-        // Multiplicative stepping: one pow() per block instead of per sample
-        val startProgress = ctx.voiceElapsedFrames.toDouble() / totalFrames
-        val step = 2.0.pow(amountVal / totalFrames)
-        var ratio = 2.0.pow(amountVal * startProgress)
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            mb[i] = ratio
-            ratio *= step
-        }
+        ctx.scratchBuffers.useDouble { mb ->
+            val startProgress = ctx.voiceElapsedFrames.toDouble() / totalFrames
+            val step = 2.0.pow(amountVal / totalFrames)
+            var ratio = 2.0.pow(amountVal * startProgress)
 
-        // Chain with existing phaseMod
-        val existing = ctx.phaseMod
-        if (existing != null) {
+            val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                mb[i] *= existing[i]
+                mb[i] = ratio
+                ratio *= step
             }
-        }
 
-        val savedMod = ctx.phaseMod
-        ctx.phaseMod = mb
-        this.generate(buffer, freqHz, ctx)
-        ctx.phaseMod = savedMod
+            val existing = ctx.phaseMod
+            if (existing != null) {
+                for (i in ctx.offset until end) {
+                    mb[i] *= existing[i]
+                }
+            }
+
+            val savedMod = ctx.phaseMod
+            ctx.phaseMod = mb
+            this.generate(buffer, freqHz, ctx)
+            ctx.phaseMod = savedMod
+        }
     }
 }
 
@@ -171,8 +152,6 @@ fun Ignitor.pitchEnvelope(
     curve: Ignitor = ParamIgnitor("curve", 0.0),
     anchor: Ignitor = ParamIgnitor("anchor", 0.0),
 ): Ignitor {
-    var modBuf: DoubleArray? = null
-
     return Ignitor { buffer, freqHz, ctx ->
         val amountVal = Ignitors.readParam(amount, freqHz, ctx)
 
@@ -191,47 +170,39 @@ fun Ignitor.pitchEnvelope(
         val curveVal = Ignitors.readParam(curve, freqHz, ctx)
         val anchorVal = Ignitors.readParam(anchor, freqHz, ctx)
 
-        val bufSize = ctx.offset + ctx.length
-        val existing0 = modBuf
-        if (existing0 == null || existing0.size < bufSize) {
-            modBuf = DoubleArray(bufSize)
-        }
-        // Audio renderer must never throw — silently skip if buffer is unexpectedly null
-        val mb = modBuf ?: return@Ignitor
+        ctx.scratchBuffers.useDouble { mb ->
+            val attackFrames = attackSecVal * ctx.sampleRate
+            val decayFrames = decaySecVal * ctx.sampleRate
 
-        val attackFrames = attackSecVal * ctx.sampleRate
-        val decayFrames = decaySecVal * ctx.sampleRate
-
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val sampleOffset = i - ctx.offset
-            val relPos = (ctx.voiceElapsedFrames + sampleOffset).toDouble()
-
-            var envLevel = anchorVal
-            if (relPos < attackFrames) {
-                val progress = if (attackFrames > 0) relPos / attackFrames else 1.0
-                envLevel = anchorVal + (1.0 - anchorVal) * progress
-            } else if (relPos < (attackFrames + decayFrames)) {
-                val decayProgress = if (decayFrames > 0) (relPos - attackFrames) / decayFrames else 1.0
-                envLevel = 1.0 - (1.0 - anchorVal) * decayProgress
-            }
-
-            // Convert semitones to frequency ratio
-            mb[i] = 2.0.pow((amountVal * envLevel) / 12.0)
-        }
-
-        // Chain with existing phaseMod
-        val existing = ctx.phaseMod
-        if (existing != null) {
+            val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                mb[i] *= existing[i]
-            }
-        }
+                val sampleOffset = i - ctx.offset
+                val relPos = (ctx.voiceElapsedFrames + sampleOffset).toDouble()
 
-        val savedMod = ctx.phaseMod
-        ctx.phaseMod = mb
-        this.generate(buffer, freqHz, ctx)
-        ctx.phaseMod = savedMod
+                var envLevel = anchorVal
+                if (relPos < attackFrames) {
+                    val progress = if (attackFrames > 0) relPos / attackFrames else 1.0
+                    envLevel = anchorVal + (1.0 - anchorVal) * progress
+                } else if (relPos < (attackFrames + decayFrames)) {
+                    val decayProgress = if (decayFrames > 0) (relPos - attackFrames) / decayFrames else 1.0
+                    envLevel = 1.0 - (1.0 - anchorVal) * decayProgress
+                }
+
+                mb[i] = 2.0.pow((amountVal * envLevel) / 12.0)
+            }
+
+            val existing = ctx.phaseMod
+            if (existing != null) {
+                for (i in ctx.offset until end) {
+                    mb[i] *= existing[i]
+                }
+            }
+
+            val savedMod = ctx.phaseMod
+            ctx.phaseMod = mb
+            this.generate(buffer, freqHz, ctx)
+            ctx.phaseMod = savedMod
+        }
     }
 }
 

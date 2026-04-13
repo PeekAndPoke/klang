@@ -1,5 +1,12 @@
 # Fix: Completion shows wrong library in member-access context
 
+> **Status: RESOLVED** (archived 2026-04-13).
+> `DslCompletionSource` now detects member access via `EditorDocContext.lastAnalysis`
+> + `AnalyzedAst.getExpressionTypeEndingAt(dotPos - 1)` — an AST-based approach equivalent in
+    > spirit to the proposal below. When the receiver type cannot be inferred, completion returns
+    > nothing rather than falling back to top-level suggestions.
+    > See `klangscript-ui/.../DslCompletionSource.kt` and the 2026-04-02 analyzed-ast archive.
+
 ## Bug
 
 When typing `Osc.sine().ad|` inside a register() call with both stdlib and sprudel imported,
