@@ -10,6 +10,7 @@ import io.peekandpoke.kraft.utils.onResize
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.maths.Ease
 import kotlinx.browser.window
 import kotlinx.css.Color
 import kotlinx.css.Display
@@ -163,14 +164,20 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         glowHeat = ((glowHeat + effectiveEnergy * heatRate) * cooling).coerceIn(0.0, heatCeiling)
         val glowEnergy = glowHeat
 
-        // Dark-red glow, intensity scaled by accumulated heat.
-        // Heat can climb above 1.0, so at full blast the alphas exceed the old ceiling.
-        val aBottom = 0.45 * glowEnergy
-        val aMid = 0.12 * glowEnergy
+        // Gradient matches the bar palette from bottom to top, intensity scaled by heat.
+        // Ease-in on heat keeps early buildup subtle before the glow really lights up.
+        val heatNorm = glowEnergy / heatCeiling
+        val heatCurve = Ease.In.pow(1.15).invoke(heatNorm)
         val glow = ctx.createLinearGradient(0.0, height, 0.0, 0.0)
-        glow.addColorStop(0.0, "rgba(150, 20, 20, $aBottom)")
-        glow.addColorStop(0.35, "rgba(150, 20, 20, $aMid)")
-        glow.addColorStop(1.0, "rgba(150, 20, 20, 0.0)")
+        val palette = props.colors
+        val n = palette.size.coerceAtLeast(1)
+        for (i in 0 until n) {
+            val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
+            // Ease-out falloff — 0.45 at bottom, reaches 0 by ~77% up (faster than full-height).
+            val aMax = 0.45 * Ease.Out.quad((1.0 - t * 1.3).coerceAtLeast(0.0))
+            val alpha = aMax * heatCurve
+            glow.addColorStop(t, palette[i].withAlpha(alpha).toString())
+        }
         ctx.fillStyle = glow
         ctx.fillRect(0.0, 0.0, width, height)
 

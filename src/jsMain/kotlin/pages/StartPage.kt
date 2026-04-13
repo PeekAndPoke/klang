@@ -97,6 +97,7 @@ import kotlinx.css.top
 import kotlinx.css.vh
 import kotlinx.css.whiteSpace
 import kotlinx.css.width
+import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -293,7 +294,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         override fun gotoNext() {
             val song = sound("[bd bd bd bd  [ds, cr] ~ ~ ~]").fast(1)
-                .adsr("0.001:1.0:1.0:3.0").room(0.1).rsize(10.0)
+                .adsr("0.001:1.0:1.0:3.0").room(0.05).rsize(8.0)
 
             val playback = Player.get()?.playOnce(song)
 
@@ -420,6 +421,9 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 css {
                     marginBottom = 6.px
                     opacity = currentOpacity
+                    // Stack above the absolutely-positioned spectrum visualizer
+                    position = Position.relative
+                    zIndex = 1
                 }
                 PlayerMiniStats()
             }
@@ -429,6 +433,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 css {
                     height = 60.px
                     opacity = currentOpacity
+                    position = Position.relative
+                    zIndex = 1
                 }
                 Oscilloscope(player = Player.player)
             }
@@ -449,6 +455,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     width = 100.pct
 
                     opacity = 0.66
+                    zIndex = 0
                 }
 
                 Spectrumeter { Player.get() }
@@ -500,7 +507,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             div {
                 css {
                     whiteSpace = WhiteSpace.nowrap
-                    opacity = currentOpacity
+                    opacity = currentOpacity * 0.7
                 }
 
                 icon.music {
