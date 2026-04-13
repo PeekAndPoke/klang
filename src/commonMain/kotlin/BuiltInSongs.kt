@@ -205,7 +205,7 @@ stack(
 import * from "stdlib"                                                                                                      //
 import * from "sprudel"                                                                                                    ////
                                                                                                                           //  //
-let feel = 5.0   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                //    //
+let feel = 3.0   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                //    //
 let snd  = 431  // 100 .. 2000                                                                                          //      //
                                                                                                                        //        //
 stack(                                                                                                    //////////////          //////////////
@@ -213,7 +213,7 @@ stack(                                                                          
   n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")                                                      //          DISCO!          //
     .orbit(0).scale("d#4:minor").sound("supersaw").unison(2).detune(0.05)                                       //       FOREVER!       //
     .hpf(431).lpf(3800)                                                                                           //                  //
-    .gain(0.285).distort("0.8:exp").postgain(0.3) // . solo()                                                      //       //      //
+    .gain(0.295).distort("0.8:exp").postgain(0.3) // . solo()                                                      //       //      //
     .adsr("0.01:0.3:0.6:0.1").clip(0.8)                                                                           //     //    //    //
     .release("<0.105!16 0.275!16 0.110!16 0.3!16 0.06!16 0.25!16 0.09!16 0.4!16 0.075!16 0.5!16>")               //   //          //  //
     .apply(                                                                                                     // //               // //

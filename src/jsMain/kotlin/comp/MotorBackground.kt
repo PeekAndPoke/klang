@@ -73,6 +73,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var camera: Camera? = null
     private var plane: Mesh? = null
     private var material: MeshStandardMaterial? = null
+    private var baseMap: CanvasTexture? = null
     private var mainLight: PointLight? = null
     private var fillLight: DirectionalLight? = null
 
@@ -190,21 +191,24 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         renderer?.setPixelRatio(min(window.devicePixelRatio, 2.0))
         renderer?.setSize(w, h)
 
-        ctx.scene.asDynamic().background = createColor(addon, 0x191C22)
+        ctx.scene.asDynamic().background = createColor(addon, 0x000000)
 
         // Normal map matching viewport aspect so panels stay square
         val texW = ceil(texHeight * aspect).toInt()
         val normalMap = generateMotorNormalMap(addon, texW, texHeight)
+        val titleMap = buildTitleBaseMap(addon, texW, texHeight)
 
         val geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
         val mat = addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
-            color = 0x252830
-            roughness = 0.32
-            metalness = 0.92
+            color = 0xffffff            // let the map provide the base color
+            roughness = 0.28
+            metalness = 0.97
             val d = this.asDynamic()
+            d.map = titleMap
             d.normalMap = normalMap
             d.normalScale = addon.createVector2(0.9, 0.9)
         })
+        baseMap = titleMap
         val pl = addon.createMesh(geometry, mat)
         ctx.scene.add(pl)
 
@@ -288,15 +292,19 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             resizeTimer?.let { window.clearTimeout(it) }
             resizeTimer = window.setTimeout({
                 val newTexW = ceil(texHeight * aspect).toInt()
-                val newMap = generateMotorNormalMap(addon, newTexW, texHeight)
+                val newNormal = generateMotorNormalMap(addon, newTexW, texHeight)
+                val newBase = buildTitleBaseMap(addon, newTexW, texHeight)
                 material?.let { mat ->
                     val mDyn = mat.asDynamic()
-                    val existing = mDyn.normalMap
-                    if (existing != null && existing != undefined) existing.dispose()
-                    mDyn.normalMap = newMap
+                    val existingNormal = mDyn.normalMap
+                    if (existingNormal != null && existingNormal != undefined) existingNormal.dispose()
+                    mDyn.normalMap = newNormal
+                    val existingBase = mDyn.map
+                    if (existingBase != null && existingBase != undefined) existingBase.dispose()
+                    mDyn.map = newBase
                     mDyn.needsUpdate = true
                 }
-                Unit
+                baseMap = newBase
             }, 300)
         }
         window.addEventListener("resize", handler)
@@ -387,6 +395,86 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     private fun n2c(n: Double): Int = max(0.0, min(255.0, (n + 1.0) * 127.5)).toInt()
 
+    /** Configures font, alignment and letter-spacing consistently for both text canvases. */
+    private fun applyTitleTextStyle(tctx: CanvasRenderingContext2D, height: Int) {
+        val fontSize = (height * 0.135).coerceAtLeast(48.0)
+        tctx.font = "bold ${fontSize}px monospace"
+        tctx.asDynamic().textAlign = "center"
+        tctx.asDynamic().textBaseline = "middle"
+        tctx.asDynamic().letterSpacing = "-0.08em"
+    }
+
+    /**
+     * Albedo map for the plane — uniform dark metal grey with a dim teal title stamped in.
+     * The title inherits the material's metalness so it reads as the same metal as the plate,
+     * tinted just enough to be legible under the scene's cyan-leaning lighting.
+     */
+    private fun buildTitleBaseMap(addon: ThreeJsAddon, width: Int, height: Int): CanvasTexture {
+        val cnv = document.createElement("canvas") as HTMLCanvasElement
+        cnv.width = width
+        cnv.height = height
+        val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
+        tctx.fillStyle = "#13151a"
+        tctx.fillRect(0.0, 0.0, width.toDouble(), height.toDouble())
+        // Clip so the blur halo doesn't bleed below the letter baseline — the
+        // bottom edge of the engraving stays sharp.
+        val fontSize = (height * 0.135).coerceAtLeast(48.0)
+        val textCy = height * 0.18
+        val textBottomY = textCy + fontSize / 2.0
+        tctx.save()
+        tctx.beginPath()
+        tctx.rect(0.0, 0.0, width.toDouble(), textBottomY)
+        tctx.clip()
+        tctx.asDynamic().filter = "blur(1px)"
+        // Very dim critical-red — tints the metallic specular just enough to read as text.
+        tctx.fillStyle = "#4b2427"
+        applyTitleTextStyle(tctx, height)
+        tctx.fillText("KLANG AUDIO MOTÖR", width / 2.0, textCy)
+        tctx.restore()
+
+        val tex = addon.createCanvasTexture(cnv)
+        tex.wrapS = TextureWrapping.ClampToEdgeWrapping
+        tex.wrapT = TextureWrapping.ClampToEdgeWrapping
+        return tex
+    }
+
+    /**
+     * Pre-renders "KLANG AUDIO MOTÖR" into a soft-edged alpha mask the size of the
+     * normal map. Returns a DoubleArray where 1.0 = deep inside text, 0.0 = plain metal.
+     * The gradient of this field is used to carve engraving bevels into the plate.
+     */
+    private fun buildEngraveMask(width: Int, height: Int): DoubleArray {
+        val cnv = document.createElement("canvas") as HTMLCanvasElement
+        cnv.width = width
+        cnv.height = height
+        val tctx = cnv.getContext("2d") as CanvasRenderingContext2D
+        tctx.clearRect(0.0, 0.0, width.toDouble(), height.toDouble())
+        // Narrow blur → sharp bevel walls → raised lettering with crisp edges.
+        // Clip so the blur doesn't bleed below the letter baseline — the bottom
+        // edge of the relief stays crisp instead of fading into the plate.
+        val fontSize = (height * 0.135).coerceAtLeast(48.0)
+        val textCy = height * 0.18
+        val textBottomY = textCy + fontSize / 2.0
+        tctx.save()
+        tctx.beginPath()
+        tctx.rect(0.0, 0.0, width.toDouble(), textBottomY)
+        tctx.clip()
+        tctx.asDynamic().filter = "blur(3px)"
+        tctx.fillStyle = "white"
+        applyTitleTextStyle(tctx, height)
+        tctx.fillText("KLANG AUDIO MOTÖR", width / 2.0, textCy)
+        tctx.restore()
+
+        val img = tctx.getImageData(0.0, 0.0, width.toDouble(), height.toDouble())
+        val rgba = img.data.asDynamic()
+        val size = width * height
+        val mask = DoubleArray(size)
+        for (i in 0 until size) {
+            mask[i] = rgba[i * 4 + 3].unsafeCast<Int>() / 255.0
+        }
+        return mask
+    }
+
     /**
      * Generates the procedural mosaic normal map — varied rectangular pieces
      * (1x1 to 3x2) with grooves, bevels, and machining marks.
@@ -449,6 +537,10 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val bevelStrength = 0.70
 
         val d = data.asDynamic()
+
+        // Pre-render text as a soft-edged alpha mask — gradient gives engraving normals.
+        val engraveMask = buildEngraveMask(width, height)
+        val engraveStrength = 1.6
 
         for (py in 0 until height) {
             for (px in 0 until width) {
@@ -526,6 +618,47 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                     }
 
                     nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
+                }
+
+                // Engrave "KLANG AUDIO MOTÖR" into the plate using the text alpha gradient.
+                // Inside the text body, keep a small fraction of the mosaic micro-variation
+                // so light still plays across the letters; at the edge apron (blurred
+                // transition band) push normals INTO the letter so the edges read as a
+                // recessed wall catching light.
+                val i1D = py * width + px
+                val maskVal = engraveMask[i1D]
+                if (maskVal > 0.5) {
+                    // Two-octave stepped surface: fine per-pixel grain + coarser patches.
+                    // Combined they give a finely granulated, high-variation metal texture.
+                    val fineBlock = 1
+                    val coarseBlock = 8
+                    val fbc = px / fineBlock
+                    val fbr = py / fineBlock
+                    val cbc = px / coarseBlock
+                    val cbr = py / coarseBlock
+                    val f1 = hashCell(fbc + 17, fbr * 3 + 5)
+                    val f2 = hashCell(fbr * 5 + 11, fbc + 23)
+                    val c1 = hashCell(cbc + 97, cbr * 7 + 41)
+                    val c2 = hashCell(cbr * 11 + 53, cbc + 79)
+                    nx = (f1 - 0.5) * 0.13 + (c1 - 0.5) * 0.07
+                    ny = (f2 - 0.5) * 0.13 + (c2 - 0.5) * 0.07
+                    nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
+                } else {
+                    val left = engraveMask[if (px > 0) i1D - 1 else i1D]
+                    val right = engraveMask[if (px < width - 1) i1D + 1 else i1D]
+                    val up = engraveMask[if (py > 0) i1D - width else i1D]
+                    val down = engraveMask[if (py < height - 1) i1D + width else i1D]
+                    val gx = (right - left) * 0.5
+                    val gy = (down - up) * 0.5
+                    val gMag = sqrt(gx * gx + gy * gy)
+                    if (gMag > 0.001) {
+                        // Gradient points INTO the letter (mask goes 0→1 from plate→text).
+                        // For a raised (embossed) letter, the bevel normal tilts OUTWARD —
+                        // opposite to the gradient — so light catches the outer walls.
+                        nx += -gx * engraveStrength
+                        ny += -gy * engraveStrength
+                        nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
+                    }
                 }
 
                 d[idx] = n2c(nx)

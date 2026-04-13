@@ -16,6 +16,7 @@ import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.delay
 import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.lpf
 import io.peekandpoke.klang.sprudel.lang.room
 import io.peekandpoke.klang.sprudel.lang.rsize
 import io.peekandpoke.klang.sprudel.lang.sound
@@ -54,7 +55,6 @@ import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
 import kotlinx.css.TextTransform
-import kotlinx.css.WhiteSpace
 import kotlinx.css.alignItems
 import kotlinx.css.backgroundColor
 import kotlinx.css.border
@@ -65,7 +65,6 @@ import kotlinx.css.display
 import kotlinx.css.em
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
-import kotlinx.css.fontFamily
 import kotlinx.css.fontSize
 import kotlinx.css.fontWeight
 import kotlinx.css.height
@@ -87,15 +86,12 @@ import kotlinx.css.pct
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.properties.LineHeight
-import kotlinx.css.properties.scaleX
-import kotlinx.css.properties.transform
 import kotlinx.css.px
 import kotlinx.css.right
 import kotlinx.css.textAlign
 import kotlinx.css.textTransform
 import kotlinx.css.top
 import kotlinx.css.vh
-import kotlinx.css.whiteSpace
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.DIV
@@ -293,8 +289,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override fun getOpacity(): Double = 1.0
 
         override fun gotoNext() {
-            val song = sound("[bd bd bd bd  [ds, cr] ~ ~ ~]").fast(1)
-                .adsr("0.001:1.0:1.0:3.0").room(0.05).rsize(8.0)
+            val song = sound("[sd sd sd sd  [bd, cr] ~ ~ ~]").fast(1)
+                .adsr("0.001:1.0:1.0:3.0").room(0.05).rsize(8.0).lpf("4500")
 
             val playback = Player.get()?.playOnce(song)
 
@@ -420,7 +416,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 key = "stats"
                 css {
                     marginBottom = 6.px
-                    opacity = currentOpacity
+                    opacity = 1.0
                     // Stack above the absolutely-positioned spectrum visualizer
                     position = Position.relative
                     zIndex = 1
@@ -504,39 +500,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 marginBottom = 32.px
             }
 
-            div {
-                css {
-                    whiteSpace = WhiteSpace.nowrap
-                    opacity = currentOpacity * 0.7
-                }
-
-                icon.music {
-                    css {
-                        marginRight = 16.px
-                        fontSize = 3.em
-                    }
-                }
-
-                ui.text {
-                    css {
-                        fontFamily = "monospace"
-                        fontSize = 3.em
-//                        lineHeight = LineHeight("2.0em")
-                        color = Color.white
-                        display = Display.inlineBlock
-                        fontWeight = FontWeight.bold
-                    }
-                    +"KLANG AUDIO MOTÖR"
-                }
-
-                icon.music {
-                    css {
-                        transform { scaleX(-1.0) }
-                        marginLeft = 16.px
-                        fontSize = 3.em
-                    }
-                }
-            }
+            // Title "KLANG AUDIO MOTÖR" is engraved into the MotorBackground plate
+            // itself — rendered via the normal map, not as DOM text.
 
             // Pre-alpha sub-headline
             div {
