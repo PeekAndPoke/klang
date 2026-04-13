@@ -240,7 +240,7 @@ stack(
   sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>").fast(2).crush(9).hpf(3000)
     .gain(0.4).orbit(3)
 // Compressor glues it, analog adds organic drift
-).compressor("-15:2:6:0.01:0.2").analog(0.5)
+).compressor("-15:2:6:0.01:0.2").analog(0.5).engine("pedal")   // <<< "pedal" engine
 
 // Inspired by: Editors - Papillon
 // https://open.spotify.com/intl-de/track/7hYiX6LMP8w8d0kEc4KWuW

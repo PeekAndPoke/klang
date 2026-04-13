@@ -287,7 +287,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     /**
      * Builds [expandedIntegral] as a prefix sum indexed by sample index
      * (0 = newest, [length] − 1 = oldest), enabling O(1) moving-average
-     * queries: `avg([s1, s2)) = (integral[s2] − integral[s1]) / (s2 − s1)`.
+     * queries: `avg([s1, s2)) = (integral[ s2 ] − integral[ s1 ]) / (s2 − s1)`.
      * Double precision to avoid losing bits over large cumulative sums.
      */
     private fun buildIntegralImage(storage: Float32Array, length: Int) {

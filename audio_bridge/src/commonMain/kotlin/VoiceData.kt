@@ -136,6 +136,15 @@ data class VoiceData(
 
     /** Unique source ID for tracking which audio source this voice came from (e.g., pattern, track, instrument) */
     val sourceId: String?,
+
+    /**
+     * Voice pipeline engine name — selects the topology of the Filter stage.
+     *
+     * Known values (case-insensitive): `"modern"` (default, ADSR last — classic subtractive VCF→VCA),
+     * `"pedal"` (ADSR first — guitar-pedal feel, waveshapers respond to dynamics).
+     * Unknown or null values fall back to modern.
+     */
+    val engine: String? = null,
 ) {
     companion object {
         val empty = VoiceData(

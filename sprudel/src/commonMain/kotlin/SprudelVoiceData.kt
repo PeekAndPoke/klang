@@ -235,6 +235,12 @@ data class SprudelVoiceData(
     /** Unique pattern ID for tracking solo state across pattern changes */
     val patternId: String? = null,
 
+    /**
+     * Voice pipeline engine name — selects the topology of the Filter stage.
+     * Known values: `"modern"` (default), `"pedal"`. Unknown/null → modern.
+     */
+    val engine: String? = null,
+
     // Custom value
     val value: SprudelVoiceValue? = null,
 ) {
@@ -443,6 +449,7 @@ data class SprudelVoiceData(
             compressor = other.compressor ?: compressor,
             solo = other.solo ?: solo,
             patternId = patternId,  // Never merge - preserve original source ID
+            engine = other.engine ?: engine,
             value = other.value ?: value
         )
     }
@@ -651,6 +658,7 @@ data class SprudelVoiceData(
             compressor = compressor,
             solo = solo,
             sourceId = patternId,
+            engine = engine,
         )
     }
 

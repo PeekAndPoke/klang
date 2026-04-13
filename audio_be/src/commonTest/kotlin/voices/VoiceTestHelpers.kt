@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.AudioEngine
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
@@ -118,6 +119,7 @@ object VoiceTestHelpers {
             freqHz = freqHz,
             startFrame = startFrame,
         ) + buildFilterPipeline(
+            engine = AudioEngine.Modern,
             modulators = filterModulators,
             startFrame = startFrame,
             gateEndFrame = gateEndFrame,

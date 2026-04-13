@@ -8,3 +8,5 @@
   genres across 73-tutorial library, saved 2026-04-07
 - [Doc-block quality standard](project_docblock_quality_standard.md) — Every DSL param needs description, default, and
   range for live docs; backlog cleanup needed, saved 2026-04-07
+- [Motör slogan thinking](project_motor_slogans.md) — "Sound First!" + "Come closer." leading pair; "Be closer" ruled
+  out as state-verb half-measure, updated 2026-04-11

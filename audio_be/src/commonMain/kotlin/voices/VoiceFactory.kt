@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.voices
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
+import io.peekandpoke.klang.audio_be.engines.AudioEngine
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.FormantFilter
@@ -407,6 +408,7 @@ class VoiceFactory(
             freqHz = freqHz,
             startFrame = startFrame,
         ) + buildFilterPipeline(
+            engine = AudioEngine.fromName(data.engine),
             modulators = modulators,
             startFrame = startFrame,
             gateEndFrame = gateEndFrame,
