@@ -1,4 +1,5 @@
 import io.peekandpoke.klang.audio_be.KlangAudioRenderer
+import io.peekandpoke.klang.audio_be.WarmupRunner
 import io.peekandpoke.klang.audio_be.WorkletContract
 import io.peekandpoke.klang.audio_be.WorkletContract.sendFeed
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
@@ -58,6 +59,13 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
             cylinders = cylinders
         )
 
+        val warmup = WarmupRunner(
+            sampleRate = sampleRate,
+            blockFrames = blockFrames,
+            sharedIgnitorRegistry = ignitorRegistry,
+            realCommLink = commLink.backend,
+        )
+
         // Buffers
         val renderBuffer = ShortArray(blockFrames * 2) // 16-bit Stereo PCM (2 shorts per frame)
 
@@ -95,6 +103,9 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
             // Set backend start time
             ctx.voices.setBackendStartTime(ctx.klangTime.internalMsNow() / 1000.0)
+
+            // Kick off JIT / cache warmup — real playback is gated on BackendReady feedback.
+            ctx.warmup.start()
 
             // Listening (Receiving from Main Thread)
             port.onmessage = { message ->
@@ -160,26 +171,37 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         val numChannels = output.size
         if (numChannels == 0) return@init true
 
-        // 1. Render the block into our intermediate ShortArray
-        renderer.renderBlock(cursorFrame, renderBuffer)
-
         val output0 = output[0]
         val output1 = output.getOrNull(1)
 
-        // 2. Convert PCM 16-bit back to Float32 for Web Audio
-        // renderer.renderBlock interleaves L/R: [L, R, L, R, ...]
-        for (i in 0 until blockFrames) {
-            val idx = i * 2
+        if (warmup.isWarming) {
+            // Drive the isolated warmup graph and output silence — the real renderer stays idle
+            // so no warmup state can leak into its voice/cylinder/limiter buffers.
+            warmup.runBlock()
 
-            // Read Short and normalize to -1.0..1.0
-            val lSample = renderBuffer[idx].toFloat() / Short.MAX_VALUE
-            val rSample = renderBuffer[idx + 1].toFloat() / Short.MAX_VALUE
+            for (i in 0 until blockFrames) {
+                output0[i] = 0f
+                if (output1 != null) output1[i] = 0f
+            }
+        } else {
+            // 1. Render the block into our intermediate ShortArray
+            renderer.renderBlock(cursorFrame, renderBuffer)
 
-            // Write to output channels
-            output0[i] = lSample
+            // 2. Convert PCM 16-bit back to Float32 for Web Audio.
+            // renderer.renderBlock interleaves L/R: [L, R, L, R, ...]
+            for (i in 0 until blockFrames) {
+                val idx = i * 2
 
-            if (output1 != null) {
-                output1[i] = rSample
+                // Read Short and normalize to -1.0..1.0
+                val lSample = renderBuffer[idx].toFloat() / Short.MAX_VALUE
+                val rSample = renderBuffer[idx + 1].toFloat() / Short.MAX_VALUE
+
+                // Write to output channels
+                output0[i] = lSample
+
+                if (output1 != null) {
+                    output1[i] = rSample
+                }
             }
         }
 

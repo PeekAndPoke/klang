@@ -13,6 +13,7 @@ import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -43,6 +44,7 @@ internal class KlangPlaybackController(
     private val scope = context.scope
     private val fetcherDispatcher = context.fetcherDispatcher
     private val callbackDispatcher = context.callbackDispatcher
+    private val backendReady = context.backendReady
 
     // ===== State Management =====
     private val running = KlangAtomicBool(false)
@@ -186,6 +188,10 @@ internal class KlangPlaybackController(
             is KlangCommLink.Feedback.SampleReceived -> {
                 // Ignore - sample acknowledgements are handled at player level
             }
+
+            is KlangCommLink.Feedback.BackendReady -> {
+                // Handled at player level
+            }
         }
     }
 
@@ -242,6 +248,16 @@ internal class KlangPlaybackController(
         queryCursorCycles = 0.0
         sampleSoundLookAheadPointer = 0.0
         lastEmittedCycle = -1
+
+        // ===== WAIT FOR BACKEND WARMUP =====
+        // Ensures the audio thread's hot path is JIT'd before the first real voice hits.
+        // Completes immediately if the backend already signalled ready earlier in the session.
+        try {
+            withTimeout(2000) { backendReady.await() }
+        } catch (e: TimeoutCancellationException) {
+            // Proceed anyway — warmup never arrived, but we'd rather play late than not at all.
+            println("KlangPlaybackController: backendReady timed out after 2s — proceeding cold")
+        }
 
         // ===== PRELOAD PHASE =====
         preloadSamples(prefetchCycles)

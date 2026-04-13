@@ -12,6 +12,7 @@ import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.RoundButton
 import io.peekandpoke.klang.comp.RoundGauge
 import io.peekandpoke.klang.comp.Spectrumeter
+import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.delay
 import io.peekandpoke.klang.sprudel.lang.fast
@@ -262,7 +263,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private inner class StateBenchmarking : State {
         init {
-            js("if (typeof window.motorBackgroundStartScan === 'function') window.motorBackgroundStartScan()")
+            motorBackgroundRef { it.startScan() }
             launch {
                 benchmark.run(iterations = 5)
             }
@@ -281,7 +282,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private inner class StateBenchmarkComplete(val result: KlangBenchmark.Result) : State {
         init {
-            js("if (typeof window.motorBackgroundStopScan === 'function') window.motorBackgroundStopScan()")
+            motorBackgroundRef { it.stopScan() }
         }
 
         override fun update() {
@@ -292,7 +293,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
         override fun gotoNext() {
             val song = sound("[bd bd bd bd  [ds, cr] ~ ~ ~]").fast(1)
-                .adsr("0.01:1.0:1.0:2.0").room(0.1).rsize(5.0)
+                .adsr("0.001:1.0:1.0:3.0").room(0.1).rsize(10.0)
 
             val playback = Player.get()?.playOnce(song)
 
@@ -554,7 +555,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { power_off },
                 color = KlangTheme.excellent,
                 onClick = {
-                    js("if (typeof window.motorBackgroundPowerOn === 'function') window.motorBackgroundPowerOn()")
+                    motorBackgroundRef { it.powerOn() }
                     state.gotoNext()
                 },
                 size = 75.px,

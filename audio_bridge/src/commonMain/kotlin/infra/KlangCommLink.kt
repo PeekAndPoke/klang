@@ -156,6 +156,17 @@ class KlangCommLink(capacity: Int = 8192) {
     sealed interface Feedback {
         val playbackId: String
 
+        /**
+         * Emitted once after the backend has completed its warmup pass (JIT + cache priming).
+         * The frontend awaits this before starting the first playback so the first voice
+         * never hits an un-JITed audio render path.
+         */
+        @Serializable
+        @SerialName("backend-ready")
+        data class BackendReady(
+            override val playbackId: String = SYSTEM_PLAYBACK_ID,
+        ) : Feedback
+
         @Serializable
         @SerialName("request-sample")
         data class RequestSample(
