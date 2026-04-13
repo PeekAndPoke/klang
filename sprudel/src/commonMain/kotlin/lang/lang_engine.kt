@@ -14,6 +14,8 @@ var sprudelLangEngineInit = false
 
 // -- engine() ---------------------------------------------------------------------------------------------------------
 
+// Lowercased on storage for consistency. AudioEngine.fromName also lowercases defensively
+// so non-sprudel callers (e.g. raw VoiceData) are still case-insensitive.
 private val engineMutation = voiceModifier { name -> copy(engine = name?.toString()?.lowercase()) }
 
 fun applyEngine(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {

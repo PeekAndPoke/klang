@@ -61,7 +61,44 @@ class AudioEngineSpec : StringSpec({
         val pipeline = activePipeline(AudioEngine.Pedal)
         (pipeline.last() is EnvelopeRenderer) shouldBe false
     }
+
+    // ── Minimal pipeline tests (all waveshapers inactive) ─────────────────────
+
+    "Modern minimal: with all effects off, envelope is still last" {
+        val pipeline = minimalPipeline(AudioEngine.Modern)
+        // Pipeline should be: AudioFilterRenderer + EnvelopeRenderer (at minimum)
+        pipeline.size shouldBe 2
+        (pipeline.last() is EnvelopeRenderer) shouldBe true
+    }
+
+    "Pedal minimal: with all effects off, envelope is still first" {
+        val pipeline = minimalPipeline(AudioEngine.Pedal)
+        // Pipeline should be: EnvelopeRenderer + AudioFilterRenderer (at minimum)
+        pipeline.size shouldBe 2
+        (pipeline.first() is EnvelopeRenderer) shouldBe true
+    }
 })
+
+/** Builds a pipeline with everything OFF (no crush, no distort, no tremolo, no phaser). */
+private fun minimalPipeline(engine: AudioEngine) = buildFilterPipeline(
+    engine = engine,
+    modulators = emptyList(),
+    startFrame = 0,
+    gateEndFrame = 1000,
+    crush = Voice.Crush(amount = 0.0),
+    coarse = Voice.Coarse(amount = 0.0),
+    mainFilter = NoOpAudioFilter,
+    envelope = Voice.Envelope(
+        attackFrames = 100.0,
+        decayFrames = 100.0,
+        sustainLevel = 0.7,
+        releaseFrames = 100.0,
+    ),
+    distort = Voice.Distort(amount = 0.0, shape = "soft"),
+    tremolo = Voice.Tremolo(rate = 0.0, depth = 0.0, skew = 0.0, phase = 0.0, shape = null),
+    phaser = Voice.Phaser(rate = 0.0, depth = 0.0, center = 1000.0, sweep = 1000.0),
+    sampleRate = 48000,
+)
 
 /**
  * Builds a pipeline with crush + distort active so we can locate the
