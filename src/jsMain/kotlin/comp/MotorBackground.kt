@@ -31,9 +31,9 @@ import kotlinx.html.style
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
+import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.cos
-import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -407,7 +407,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         tctx.font = "bold ${fontSize}px monospace"
         tctx.asDynamic().textAlign = "center"
         tctx.asDynamic().textBaseline = "middle"
-        tctx.asDynamic().letterSpacing = "-0.08em"
+        tctx.asDynamic().letterSpacing = "-0.03em"
     }
 
     /**
@@ -483,8 +483,15 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
-     * Generates the procedural mosaic normal map — varied rectangular pieces
-     * (1x1 to 3x2) with grooves, bevels, and machining marks.
+     * Generates a flat brushed-metal normal map.
+     *
+     * Horizontal brush lines come from a per-row tilt (shared across a whole scanline,
+     * so lighting reveals long horizontal scratches), combined with per-pixel grain
+     * and a slow lateral wobble so the brush isn't perfectly straight.
+     *
+     * The "KLANG AUDIO MOTÖR" text engraving still lives in this same normal map —
+     * its alpha mask's gradient perturbs normals at the letter edges, and inside the
+     * letter body the brushed pattern is replaced by a stepped hammered-grain noise.
      */
     private fun generateMotorNormalMap(addon: ThreeJsAddon, width: Int, height: Int): CanvasTexture {
         val cnv = document.createElement("canvas") as HTMLCanvasElement
@@ -494,138 +501,52 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val imageData = g2d.createImageData(width.toDouble(), height.toDouble())
         val data = imageData.data
 
-        // ── Grid layout ──
-        val cellSize = 115
-        val gridCols = ceil(width.toDouble() / cellSize).toInt() + 1
-        val gridRows = ceil(height.toDouble() / cellSize).toInt() + 1
-        val pieceMap = IntArray(gridCols * gridRows) // 0 = unassigned, -1 = void, >0 = id
-
-        fun cell(c: Int, r: Int): Int =
-            if (c < 0 || c >= gridCols || r < 0 || r >= gridRows) -1
-            else pieceMap[r * gridCols + c]
-
-        fun canPlace(c: Int, r: Int, w: Int, hh: Int): Boolean {
-            for (dr in 0 until hh) for (dc in 0 until w) {
-                if (c + dc >= gridCols || r + dr >= gridRows) return false
-                if (pieceMap[(r + dr) * gridCols + (c + dc)] != 0) return false
-            }
-            return true
-        }
-
-        fun place(c: Int, r: Int, w: Int, hh: Int, id: Int) {
-            for (dr in 0 until hh) for (dc in 0 until w) {
-                pieceMap[(r + dr) * gridCols + (c + dc)] = id
-            }
-        }
-
-        var nextId = 1
-        for (row in 0 until gridRows) {
-            for (col in 0 until gridCols) {
-                if (pieceMap[row * gridCols + col] != 0) continue
-                val hh = hashCell(col * 3 + 1, row * 3 + 1)
-
-                when {
-                    hh < 0.06 -> pieceMap[row * gridCols + col] = -1
-                    hh < 0.12 && canPlace(col, row, 3, 2) -> place(col, row, 3, 2, nextId++)
-                    hh < 0.18 && canPlace(col, row, 2, 3) -> place(col, row, 2, 3, nextId++)
-                    hh < 0.30 && canPlace(col, row, 2, 2) -> place(col, row, 2, 2, nextId++)
-                    hh < 0.37 && canPlace(col, row, 3, 1) -> place(col, row, 3, 1, nextId++)
-                    hh < 0.44 && canPlace(col, row, 1, 3) -> place(col, row, 1, 3, nextId++)
-                    hh < 0.60 && canPlace(col, row, 2, 1) -> place(col, row, 2, 1, nextId++)
-                    hh < 0.74 && canPlace(col, row, 1, 2) -> place(col, row, 1, 2, nextId++)
-                    else -> pieceMap[row * gridCols + col] = nextId++
-                }
-            }
-        }
-
-        // ── Rendering parameters ──
-        val grooveHalf = 2.0
-        val bevelW = 4.0
-        val bevelStrength = 0.70
-
         val d = data.asDynamic()
 
         // Pre-render text as a soft-edged alpha mask — gradient gives engraving normals.
         val engraveMask = buildEngraveMask(width, height)
         val engraveStrength = 1.6
 
+        // Curtain-fold brushed metal — scratches radiate from a focal point far
+        // above the canvas. At x = centre they're perfectly vertical, toward the
+        // sides they fan out smoothly, giving a hanging-curtain look.
+        val cx = width / 2.0
+        val focalDist = height.toDouble() * 0.9   // focal point ~1× height above top → strong fan at bottom
+        val scratchDensity = 400.0                 // angular density of scratches
+
         for (py in 0 until height) {
+            val dy = py + focalDist
             for (px in 0 until width) {
                 val idx = (py * width + px) * 4
 
-                val col = floor(px.toDouble() / cellSize).toInt()
-                val row = floor(py.toDouble() / cellSize).toInt()
-                val lx = (px - col * cellSize).toDouble()
-                val ly = (py - row * cellSize).toDouble()
-                val pid = cell(col, row)
+                val dx = px - cx
+                // Angle from focal point → identical for all pixels on the same scratch.
+                val angle = atan2(dx, dy)
+                val scratchIdx = (angle * scratchDensity).toInt()
+                val h1 = hashCell(31, scratchIdx)
+                val h2 = hashCell(67, scratchIdx * 2 + 7)
+                val brushTilt = (h1 - 0.5) * 0.13 + (h2 - 0.5) * 0.06
 
-                var nx: Double
-                var ny: Double
-                var nz: Double = 1.0
+                // Scratch direction = radial from focal point (unit vector).
+                val len = sqrt(dx * dx + dy * dy)
+                val dirX = dx / len
+                val dirY = dy / len
+                // Perpendicular to scratch = rotate 90° → (-dirY, dirX).
+                val perpX = -dirY
+                val perpY = dirX
 
-                if (pid <= 0) {
-                    // Void: flat recessed surface with subtle grain
-                    val gr = (Random.nextDouble() - 0.5) * 0.004
-                    nx = gr
-                    ny = gr
-                } else {
-                    var dxEdge = 9999.0
-                    var dyEdge = 9999.0
-                    var edgeDirX = 0.0
-                    var edgeDirY = 0.0
+                // Patchy grain — a low-frequency hash modulates the noise amplitude so
+                // the surface has calm and busier regions instead of uniform static.
+                val patchAmp = hashCell(px / 24 + 101, py / 24 + 53)
+                val grainScale = 0.006 + patchAmp * 0.045
+                val grainX = (Random.nextDouble() - 0.5) * grainScale
+                val grainY = (Random.nextDouble() - 0.5) * grainScale
+                val wobble = sin(px * 0.004 + py * 0.3) * 0.02
 
-                    if (cell(col - 1, row) != pid && lx < dxEdge) {
-                        dxEdge = lx; edgeDirX = -1.0
-                    }
-                    val distR = cellSize - lx
-                    if (cell(col + 1, row) != pid && distR < dxEdge) {
-                        dxEdge = distR; edgeDirX = 1.0
-                    }
-                    if (cell(col, row - 1) != pid && ly < dyEdge) {
-                        dyEdge = ly; edgeDirY = -1.0
-                    }
-                    val distB = cellSize - ly
-                    if (cell(col, row + 1) != pid && distB < dyEdge) {
-                        dyEdge = distB; edgeDirY = 1.0
-                    }
-
-                    if (dxEdge <= grooveHalf || dyEdge <= grooveHalf) {
-                        // In groove channel
-                        nx = 0.0; ny = 0.0
-                    } else {
-                        var bvX = 0.0
-                        var bvY = 0.0
-                        if (dxEdge < grooveHalf + bevelW) {
-                            val tv = 1.0 - (dxEdge - grooveHalf) / bevelW
-                            bvX = tv * tv * (3.0 - 2.0 * tv) * bevelStrength
-                        }
-                        if (dyEdge < grooveHalf + bevelW) {
-                            val th = 1.0 - (dyEdge - grooveHalf) / bevelW
-                            bvY = th * th * (3.0 - 2.0 * th) * bevelStrength
-                        }
-
-                        val bMag = sqrt(bvX * bvX + bvY * bvY)
-                        if (bMag > bevelStrength) {
-                            bvX *= bevelStrength / bMag
-                            bvY *= bevelStrength / bMag
-                        }
-
-                        val ph1 = hashCell(pid, pid * 3 + 7)
-                        val ph2 = hashCell(pid * 5 + 11, pid)
-                        val tiltX = (ph1 - 0.5) * 0.10
-                        val tiltY = (ph2 - 0.5) * 0.10
-
-                        val scratch1 = sin((px - py) * 0.45) * 0.012
-                        val scratch2 = sin((px + py) * 0.45) * 0.008
-                        val grain = (Random.nextDouble() - 0.5) * 0.008
-
-                        val faceWeight = 1.0 - min(1.0, bMag / bevelStrength)
-                        nx = edgeDirX * bvX + (tiltX + scratch1 - scratch2 + grain) * faceWeight
-                        ny = edgeDirY * bvY + (tiltY - scratch1 - scratch2 + grain) * faceWeight
-                    }
-
-                    nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
-                }
+                // Tilt the normal perpendicular to the local scratch direction.
+                var nx = perpX * brushTilt + grainX + wobble * 0.3
+                var ny = perpY * brushTilt + grainY
+                var nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
 
                 // Engrave "KLANG AUDIO MOTÖR" into the plate using the text alpha gradient.
                 // Inside the text body, keep a small fraction of the mosaic micro-variation

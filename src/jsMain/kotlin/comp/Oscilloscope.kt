@@ -311,7 +311,8 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         fullWidth: Double,
         fullHeight: Double,
     ) {
-        ctx.clearRect(0.0, 0.0, fullWidth, fullHeight)
+        ctx.fadeout(0.66)
+
         props.centerLineColor?.let { clc ->
             val centerY = fullHeight / 2.0
             ctx.strokeStyle = clc.toString()
@@ -424,7 +425,7 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         val centerY = canvasHeight / 2.0
 
         if (drawBackground) {
-            ctx.clearRect(0.0, 0.0, canvasWidth, canvasHeight)
+            ctx.fadeout(0.66)
 
             // Draw center line
             centerLineColor?.let { clc ->
@@ -596,6 +597,17 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private fun CanvasRenderingContext2D.fadeout(amount: Double) {
+        save()
+
+        globalCompositeOperation = "destination-in"
+        fillStyle = Color.black.withAlpha(1.0 - amount).toString()
+        fillRect(0.0, 0.0, canvas.width.toDouble(), canvas.height.toDouble())
+
+        restore()
+    }
+
 
     private fun toggleExpanded() {
         if (!expanded) {

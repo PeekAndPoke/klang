@@ -45,8 +45,6 @@ import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.ops.ticker
 import kotlinx.css.Align
-import kotlinx.css.Border
-import kotlinx.css.BorderStyle
 import kotlinx.css.Color
 import kotlinx.css.CssBuilder
 import kotlinx.css.Display
@@ -59,7 +57,6 @@ import kotlinx.css.TextAlign
 import kotlinx.css.TextTransform
 import kotlinx.css.alignItems
 import kotlinx.css.backgroundColor
-import kotlinx.css.border
 import kotlinx.css.borderRadius
 import kotlinx.css.bottom
 import kotlinx.css.color
@@ -261,18 +258,39 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
     }
 
     private inner class StateBenchmarking : State {
+        // Sequencing: 1) background light fades in, 2) dyno-test UI fades in,
+        // 3) the benchmark actually starts running.
+        val startMs = Kronos.systemUtc.millisNow()
+        val bgFadeDurationMs = 1800.0
+        val uiFadeDurationMs = 300.0
+        val uiFadeEase = Ease.In.quad
+        var benchmarkStarted = false
+
         init {
-            motorBackgroundRef { it.startScan() }
-            launch {
-                benchmark.run(iterations = 5)
+            // Kick background light fade-in immediately; scan + tests are deferred.
+            motorBackgroundRef { it.powerOn() }
+        }
+
+        private fun elapsedMs() = Kronos.systemUtc.millisNow() - startMs
+
+        override fun update() {
+            if (!benchmarkStarted && elapsedMs() >= bgFadeDurationMs + uiFadeDurationMs) {
+                benchmarkStarted = true
+                motorBackgroundRef { it.startScan() }
+                launch { benchmark.run(iterations = 5) }
             }
         }
 
-        override fun update() {
-            // noop - progress is handled by stream subscription
+        override fun getOpacity(): Double {
+            val t = elapsedMs()
+            return when {
+                t < bgFadeDurationMs -> 0.0
+                else -> {
+                    val progress = ((t - bgFadeDurationMs) / uiFadeDurationMs).coerceIn(0.0, 1.0)
+                    uiFadeEase(progress)
+                }
+            }
         }
-
-        override fun getOpacity(): Double = 1.0
 
         override fun gotoNext() {
             // noop - automatic transition on benchmark completion
@@ -529,7 +547,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { power_off },
                 color = KlangTheme.excellent,
                 onClick = {
-                    motorBackgroundRef { it.powerOn() }
+                    // Background light fade-in is deferred until after "Starting Motör"
+                    // finishes — triggered from StateBenchmarking.init instead.
                     state.gotoNext()
                 },
                 size = 75.px,
@@ -706,6 +725,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 paddingBottom = 20.px
                 paddingLeft = 20.px
                 paddingRight = 20.px
+                opacity = currentOpacity
+                frostedGlass()
             }
 
             val progress = benchmarkProgress
@@ -762,11 +783,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                         paddingLeft = 20.px
                         paddingRight = 20.px
                         frostedGlass()
-                        border = Border(
-                            width = 1.px,
-                            style = BorderStyle.dashed,
-                            color = if (rating.showWarning) Color(laf.critical) else Color.white
-                        )
                     }
 
                     // Top-left corner icon
@@ -845,7 +861,6 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                         paddingLeft = 20.px
                         paddingRight = 20.px
                         frostedGlass()
-                        border = Border(1.px, BorderStyle.dashed, Color.white)
                     }
 
                     // Main stat
