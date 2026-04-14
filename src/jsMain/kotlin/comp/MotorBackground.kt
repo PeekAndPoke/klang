@@ -33,6 +33,7 @@ import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.events.Event
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -85,10 +86,18 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var poweredOn = false
     private var scanning = false
     private var returning = false
+    private var hoverWandering = false
+    private var hoverEnvelope = 0.0
 
     private val defaultIntensity = 1.62
-    private val hoverIntensity = 5.0
+    private val hoverIntensity = 3.0
     private var targetIntensity = 0.0
+
+    // Light "radius" — pulling the light further from the plate widens the
+    // illuminated area, so hover reads as the light growing bigger.
+    private val defaultLightZ = 2.5
+    private val hoverLightZ = 3.25
+    private var targetLightZ = defaultLightZ
     private var targetFillIntensity = 0.0
 
     ////  WANDER PHYSICS  /////////////////////////////////////////////////////////////////////////////////////////
@@ -252,6 +261,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             if (target != null && target.closest != undefined && target.closest(selector) != null) {
                 targetColorHover = true
                 targetIntensity = hoverIntensity
+                targetLightZ = hoverLightZ
+                hoverWandering = true
             }
             Unit
         }
@@ -260,6 +271,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             if (target != null && target.closest != undefined && target.closest(selector) != null) {
                 targetColorHover = false
                 targetIntensity = if (poweredOn) defaultIntensity else 0.0
+                targetLightZ = defaultLightZ
+                hoverWandering = false
             }
             Unit
         }
@@ -357,6 +370,18 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             } else {
                 if (dist < nearThreshold) pickAttractor()
             }
+        } else if (hoverWandering) {
+            // Slow lissajous-like wander while any button is hovered.
+            // Envelope ramps up from 0 so the first move eases in instead of snapping.
+            hoverEnvelope += (1.0 - hoverEnvelope) * 0.015
+            val t = frame.elapsedMs * 0.001
+            targetX = sin(t * 0.4) * 0.35 * hoverEnvelope
+            targetY = cos(t * 0.33) * 0.15 * hoverEnvelope
+        } else {
+            // Not scanning, not hovering — envelope and target decay to center.
+            hoverEnvelope *= 0.97
+            targetX *= 0.97
+            targetY *= 0.97
         }
 
         // Smooth position follow
@@ -364,6 +389,11 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         mouseY += (targetY - mouseY) * 0.18
         mainLight?.position?.x = mouseX * aspect
         mainLight?.position?.y = mouseY
+        // Lerp the light's Z toward the current target — pulling it farther on
+        // hover widens the illuminated area, so hover reads as a bigger light.
+        mainLight?.position?.let { pos ->
+            pos.z += (targetLightZ - pos.z) * 0.04
+        }
 
         // Smooth intensity transitions
         mainLight?.let { it.intensity += (targetIntensity - it.intensity) * 0.01 }
@@ -488,7 +518,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val data = imageData.data
 
         // ── Grid layout ──
-        val cellSize = 45
+        val cellSize = 115
         val gridCols = ceil(width.toDouble() / cellSize).toInt() + 1
         val gridRows = ceil(height.toDouble() / cellSize).toInt() + 1
         val pieceMap = IntArray(gridCols * gridRows) // 0 = unassigned, -1 = void, >0 = id
@@ -640,8 +670,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                     val f2 = hashCell(fbr * 5 + 11, fbc + 23)
                     val c1 = hashCell(cbc + 97, cbr * 7 + 41)
                     val c2 = hashCell(cbr * 11 + 53, cbc + 79)
-                    nx = (f1 - 0.5) * 0.13 + (c1 - 0.5) * 0.07
-                    ny = (f2 - 0.5) * 0.13 + (c2 - 0.5) * 0.07
+                    nx = (f1 - 0.5) * 0.22 + (c1 - 0.5) * 0.14
+                    ny = (f2 - 0.5) * 0.22 + (c2 - 0.5) * 0.14
                     nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
                 } else {
                     val left = engraveMask[if (px > 0) i1D - 1 else i1D]
