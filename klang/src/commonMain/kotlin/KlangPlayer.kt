@@ -132,9 +132,7 @@ class KlangPlayer(
                 when (feedback) {
                     // One-shot backend warmup handshake
                     is KlangCommLink.Feedback.BackendReady -> {
-                        if (backendReady.complete(Unit)) {
-                            println("[KlangPlayer] Backend ready — warmup complete")
-                        }
+                        backendReady.complete(Unit)
                     }
 
                     // Sample received acknowledgements go to preloader (shared across all playbacks)

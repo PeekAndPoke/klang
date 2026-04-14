@@ -1,7 +1,5 @@
 package io.peekandpoke.klang.audio_be
 
-import io.peekandpoke.klang.audio_be.cylinders.Cylinders
-import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
@@ -14,23 +12,23 @@ import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 /**
  * Primes the audio render hot path before the first real voice arrives.
  *
- * Runs a few blocks of rendering through a fully isolated private DSP graph — its own
- * [KlangCommLink], [Cylinders], [VoiceScheduler], and [KlangAudioRenderer]. JIT sees the
- * same classes the real path uses, so it compiles the shared method shapes exactly once.
- * Because the work lives on a throwaway graph, stateful effect tails, limiter gain
- * reduction, and cylinder buffers cannot leak into the real render path when warmup ends
- * — the whole graph is dropped for GC.
+ * Scheduling work runs on the **real** [VoiceScheduler] / [KlangAudioRenderer] so that V8
+ * inline caches, hidden-class bindings, and any lazy allocations inside those instances
+ * are warm when the user's first kick hits. The caller silences the output buffer for the
+ * duration of the warmup, so users do not hear the synthetic voices.
  *
- * The caller is responsible for silencing the real output during [isWarming] since the
- * real renderer is not driven at all in this window.
+ * At the end of the warmup window the runner cleans up its own voices (via
+ * [VoiceScheduler.cleanup]) and resets the renderer's post chain (limiter envelope etc.)
+ * so no warmup residue leaks into real playback.
  */
 class WarmupRunner(
     private val sampleRate: Int,
-    private val blockFrames: Int,
-    /** Shared ignitor registry — forked so warmup's synthetic sample doesn't leak into it. */
-    sharedIgnitorRegistry: IgnitorRegistry,
-    /** Real comm link — only used to emit [KlangCommLink.Feedback.BackendReady] once warmup ends. */
-    private val realCommLink: KlangCommLink.BackendEndpoint,
+    /** Real scheduler — warmup voices run through it. */
+    private val voices: VoiceScheduler,
+    /** Real renderer — its limiter state is reset at the end of warmup. */
+    private val renderer: KlangAudioRenderer,
+    /** Comm link used only to emit [KlangCommLink.Feedback.BackendReady]. */
+    private val feedback: KlangCommLink.BackendEndpoint,
     /** Number of audio blocks to warm up for. 8 blocks ≈ 85 ms at 48 kHz / 512 frames. */
     private val warmupBlocks: Int = 8,
 ) {
@@ -46,65 +44,42 @@ class WarmupRunner(
     private var finished = false
     private var blocksRun = 0
 
-    /** Shared-registry fork kept until warmup finishes, then released alongside [graph]. */
-    private val warmupIgnitorRegistry = sharedIgnitorRegistry.fork()
-
-    /** The isolated warmup DSP graph. Set in [start], nulled in [runBlock] when warmup finishes. */
-    private var graph: Graph? = null
-
-    private class Graph(
-        val commLink: KlangCommLink,
-        val cylinders: Cylinders,
-        val voices: VoiceScheduler,
-        val renderer: KlangAudioRenderer,
-        val outBuffer: ShortArray,
-    )
-
-    /** True while the runner is still priming the audio path. */
+    /** True while the runner is still priming the audio path. Callers should zero output in this window. */
     val isWarming: Boolean get() = started && !finished
 
-    /** Build the private graph and schedule the warmup voices. Idempotent. */
+    /**
+     * Register the synthetic warmup sample on the real scheduler and schedule the warmup voices.
+     * Idempotent.
+     */
     fun start() {
         if (started) return
         started = true
 
-        val graphCommLink = KlangCommLink(capacity = 64)
-        val graphCylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
-        val graphVoices = VoiceScheduler(
-            VoiceScheduler.Options(
-                commLink = graphCommLink.backend,
-                sampleRate = sampleRate,
-                blockFrames = blockFrames,
-                ignitorRegistry = warmupIgnitorRegistry,
-                cylinders = graphCylinders,
-            )
-        )
-        graphVoices.setBackendStartTime(0.0)
-        val graphRenderer = KlangAudioRenderer(
-            sampleRate = sampleRate,
-            blockFrames = blockFrames,
-            voices = graphVoices,
-            cylinders = graphCylinders,
-        )
+        // Force-allocate every cylinder up front. Songs that first-touch a new orbit
+        // would otherwise pay the Cylinder construction cost (delay/reverb/phaser/compressor
+        // buffer allocations) inside the audio block — enough to blow the deadline and
+        // swallow the first kick. Papillon hit this at ~5 new orbits on its first note.
+        renderer.preallocateCylinders()
 
-        // Pre-register the synthetic sample so the sample voice has something to read.
-        graphVoices.addSample(
+        // Pre-register the all-zeros warmup sample on the real scheduler. Reserved name — no
+        // real song references it, so the entry is harmless left in the samples map.
+        voices.addSample(
             KlangCommLink.Cmd.Sample.Complete(
                 req = SampleRequest(bank = null, sound = WARMUP_SAMPLE_NAME, index = null, note = null),
                 note = null,
                 pitchHz = 440.0,
                 sample = MonoSamplePcm(
                     sampleRate = sampleRate,
-                    pcm = FloatArray(64),
+                    pcm = FloatArray(256),
                     meta = SampleMetadata.default,
                 ),
             )
         )
 
-        // Schedule warmup voices. Full gain is safe — output goes into the isolated graph only.
-        graphVoices.scheduleVoices(
+        // Synth voice + sample voice go through the same render path a real voice will take.
+        voices.scheduleVoices(
             listOf(
-                // Synth path — Voice.render + IgnitorSine + filter + cylinder mix + limiter.
+                // Exercises Voice.render → IgnitorSine → filter → cylinder mix → limiter.
                 ScheduledVoice(
                     playbackId = WARMUP_PLAYBACK_ID,
                     data = VoiceData.empty.copy(
@@ -116,7 +91,7 @@ class WarmupRunner(
                     gateEndTime = 0.1,
                     playbackStartTime = 0.0,
                 ),
-                // Sample path — SampleIgnitor lookup + playback.
+                // Exercises SampleIgnitor lookup + playback of the synthetic all-zeros sample.
                 ScheduledVoice(
                     playbackId = WARMUP_PLAYBACK_ID,
                     data = VoiceData.empty.copy(
@@ -129,30 +104,25 @@ class WarmupRunner(
                 ),
             )
         )
-
-        graph = Graph(
-            commLink = graphCommLink,
-            cylinders = graphCylinders,
-            voices = graphVoices,
-            renderer = graphRenderer,
-            outBuffer = ShortArray(blockFrames * 2),
-        )
     }
 
     /**
-     * Runs one warmup block on the isolated graph. Returns true while still warming, false once
-     * the handshake has been emitted and the graph released.
+     * Should be called once per audio block while warming. Counts progress toward [warmupBlocks]
+     * and, on the final tick, cleans up warmup voices, resets the limiter, and emits
+     * [KlangCommLink.Feedback.BackendReady]. Returns true while still warming, false once done.
      */
-    fun runBlock(): Boolean {
-        val g = graph ?: return false
+    fun tick(): Boolean {
+        if (!started || finished) return false
 
-        g.renderer.renderBlock(cursorFrame = blocksRun * blockFrames, out = g.outBuffer)
         blocksRun++
 
         if (blocksRun >= warmupBlocks) {
             finished = true
-            graph = null // Release the whole graph for GC — nothing from warmup survives.
-            realCommLink.feedback.send(KlangCommLink.Feedback.BackendReady())
+            // Hard-remove all warmup voices from the real scheduler (scheduled + active + pending).
+            voices.cleanupHard(WARMUP_PLAYBACK_ID)
+            // Wipe limiter state so the first real kick sees unity gain.
+            renderer.resetPostChain()
+            feedback.feedback.send(KlangCommLink.Feedback.BackendReady())
             return false
         }
 

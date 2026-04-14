@@ -14,6 +14,7 @@ import io.peekandpoke.ultra.maths.Ease
 class VoiceScheduler(
     val options: Options,
 ) {
+
     class Options(
         val commLink: KlangCommLink.BackendEndpoint,
         val sampleRate: Int,
@@ -240,6 +241,16 @@ class VoiceScheduler(
         clearScheduled(playbackId)
     }
 
+    /**
+     * Hard-removes every trace of [playbackId]: scheduled, pending-sample, active, context.
+     * Unlike [cleanup] this does not let currently-playing voices ring out — use it when the
+     * caller needs a clean slate (e.g. the end of the warmup handshake).
+     */
+    fun cleanupHard(playbackId: String) {
+        cleanup(playbackId)
+        active.removeAll { it.playbackId == playbackId }
+    }
+
     fun clearScheduled(playbackId: String) {
         scheduled.removeWhen { it.playbackId == playbackId }
     }
@@ -433,10 +444,6 @@ class VoiceScheduler(
             scheduled.pop()
 
             if (absoluteStartSec < oldestAllowedSec) {
-                println(
-                    "VoiceScheduler: dropped voice pid=${head.playbackId} " +
-                            "late=${((nowSec - absoluteStartSec) * 1000.0).toInt()}ms"
-                )
                 continue
             }
 

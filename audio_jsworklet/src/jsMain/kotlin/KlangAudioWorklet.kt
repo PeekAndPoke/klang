@@ -61,9 +61,9 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
 
         val warmup = WarmupRunner(
             sampleRate = sampleRate,
-            blockFrames = blockFrames,
-            sharedIgnitorRegistry = ignitorRegistry,
-            realCommLink = commLink.backend,
+            voices = voices,
+            renderer = renderer,
+            feedback = commLink.backend,
         )
 
         // Buffers
@@ -174,19 +174,20 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         val output0 = output[0]
         val output1 = output.getOrNull(1)
 
-        if (warmup.isWarming) {
-            // Drive the isolated warmup graph and output silence — the real renderer stays idle
-            // so no warmup state can leak into its voice/cylinder/limiter buffers.
-            warmup.runBlock()
+        // 1. Render the block into our intermediate ShortArray — always, so the warmup voices
+        // running on the real scheduler exercise the actual render path (V8 inline caches,
+        // lazy allocations inside VoiceScheduler / KlangAudioRenderer).
+        renderer.renderBlock(cursorFrame, renderBuffer)
 
+        if (warmup.isWarming) {
+            // Silence output + advance warmup state. At the final tick warmup voices are
+            // removed and the limiter is reset so no residue reaches real playback.
             for (i in 0 until blockFrames) {
                 output0[i] = 0f
                 if (output1 != null) output1[i] = 0f
             }
+            warmup.tick()
         } else {
-            // 1. Render the block into our intermediate ShortArray
-            renderer.renderBlock(cursorFrame, renderBuffer)
-
             // 2. Convert PCM 16-bit back to Float32 for Web Audio.
             // renderer.renderBlock interleaves L/R: [L, R, L, R, ...]
             for (i in 0 until blockFrames) {

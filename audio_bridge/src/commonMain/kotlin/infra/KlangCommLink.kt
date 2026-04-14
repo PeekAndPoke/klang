@@ -157,9 +157,10 @@ class KlangCommLink(capacity: Int = 8192) {
         val playbackId: String
 
         /**
-         * Emitted once after the backend has completed its warmup pass (JIT + cache priming).
-         * The frontend awaits this before starting the first playback so the first voice
-         * never hits an un-JITed audio render path.
+         * Emitted once after the backend has completed its warmup pass (JIT + cache priming
+         * + cylinder pre-allocation). The frontend awaits this before starting the first
+         * playback so the first voice never hits an un-JITed audio render path or lazy
+         * cylinder allocation inside a block.
          */
         @Serializable
         @SerialName("backend-ready")

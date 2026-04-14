@@ -26,6 +26,24 @@ class KlangAudioRenderer(
         releaseSeconds = 0.1,
     )
 
+    /**
+     * Clears stateful post-chain elements (currently just the limiter envelope).
+     * Used at the end of the warmup handshake so the limiter's gain-reduction state
+     * does not survive into the first real playback block.
+     */
+    fun resetPostChain() {
+        limiter.reset()
+    }
+
+    /**
+     * Pre-allocates every cylinder up to the configured `maxCylinders`, so the first
+     * note of a song that touches a new orbit doesn't pay the allocation cost during
+     * its audio block. Called from the warmup handshake.
+     */
+    fun preallocateCylinders() {
+        cylinders.preallocateAll()
+    }
+
     fun renderBlock(
         cursorFrame: Int,
         out: ShortArray,

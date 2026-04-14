@@ -28,7 +28,7 @@ class JvmAudioBackend(
 
     // 1. Setup DSP Graph
     val cylinders = Cylinders(
-        maxCylinders = 16,
+        maxCylinders = 64,
         blockFrames = blockSize,
         sampleRate = sampleRate
     )
@@ -62,12 +62,13 @@ class JvmAudioBackend(
 
         // Kick off JIT / cache warmup. JVM JIT is warmer than Kotlin/JS but running the same
         // path keeps behavior consistent across targets (and costs ~85 ms of silence at start).
-        // The runner owns an isolated DSP graph that is dropped for GC when warmup ends.
+        // Warmup voices run through the real scheduler/renderer; the limiter + scheduler are
+        // reset at the end of the handshake so nothing leaks into real playback.
         val warmup = WarmupRunner(
             sampleRate = sampleRate,
-            blockFrames = blockSize,
-            sharedIgnitorRegistry = ignitorRegistry,
-            realCommLink = commLink,
+            voices = voices,
+            renderer = renderer,
+            feedback = commLink,
         )
         warmup.start()
 
@@ -134,14 +135,13 @@ class JvmAudioBackend(
                 }
 
                 // rendering ///////////////////////////////////////////////////////////////////////////////////////
+                // Always render — warmup voices live on the real scheduler so this exercises
+                // the actual render path for JIT / cache priming.
+                renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)
+
                 if (warmup.isWarming) {
-                    // Drive the isolated warmup graph; real renderer stays idle so no warmup
-                    // state can leak into its voice/cylinder/limiter buffers.
-                    warmup.runBlock()
                     outShorts.fill(0)
-                } else {
-                    // Render into buffer (State Read)
-                    renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)
+                    warmup.tick()
                 }
 
                 // Convert ShortArray to ByteArray efficiently via ByteBuffer
