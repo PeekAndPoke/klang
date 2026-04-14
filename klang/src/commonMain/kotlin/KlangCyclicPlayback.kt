@@ -17,6 +17,8 @@ interface KlangCyclicPlayback : KlangPlayback {
     /**
      * Update the RPM (revolutions per minute = tempo).
      * RPM = CPS * 60, e.g. RPM 30 = 0.5 cycles per second.
+     *
+     * Values below 1.0 are clamped by the implementation.
      */
     fun updateRpm(rpm: Double)
 
@@ -37,7 +39,7 @@ interface KlangCyclicPlayback : KlangPlayback {
     data class Options(
         /** Number of cycles to look ahead when scheduling events */
         val lookaheadCycles: Double = 2.0,
-        /** RPM (revolutions per minute = tempo). RPM 30 = 0.5 CPS. */
+        /** RPM (revolutions per minute = tempo). RPM 30 = 0.5 CPS. Values below 1.0 are clamped. */
         val rpm: Double = 30.0,
         /** Initial cycles prefetch, so that the audio starts flawlessly. Auto-calculated if null. */
         val prefetchCycles: Int? = null,

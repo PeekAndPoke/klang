@@ -10,7 +10,6 @@ import io.peekandpoke.kraft.addons.threejs.createVector2
 import io.peekandpoke.kraft.addons.threejs.js.Camera
 import io.peekandpoke.kraft.addons.threejs.js.CanvasTexture
 import io.peekandpoke.kraft.addons.threejs.js.DirectionalLight
-import io.peekandpoke.kraft.addons.threejs.js.MaterialParameters
 import io.peekandpoke.kraft.addons.threejs.js.Mesh
 import io.peekandpoke.kraft.addons.threejs.js.MeshStandardMaterial
 import io.peekandpoke.kraft.addons.threejs.js.PointLight
@@ -96,7 +95,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     // Light "radius" — pulling the light further from the plate widens the
     // illuminated area, so hover reads as the light growing bigger.
     private val defaultLightZ = 2.5
-    private val hoverLightZ = 3.25
+    private val hoverLightZ = 2.8
     private var targetLightZ = defaultLightZ
     private var targetFillIntensity = 0.0
 
@@ -114,11 +113,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     ////  LISTENERS (for cleanup)  ////////////////////////////////////////////////////////////////////////////////
 
     private var resizeListener: ((Event) -> Unit)? = null
-    private var pointerOverListener: ((Event) -> Unit)? = null
-    private var pointerOutListener: ((Event) -> Unit)? = null
     private var resizeTimer: Int? = null
 
-    ////  PUBLIC API  /////////////////////////////////////////////////////////////////////////////////////////////
+    ////  PUBLIC API (call via motorBackgroundRef)  ///////////////////////////////////////////////////////////////
 
     fun powerOn() {
         poweredOn = true
@@ -134,6 +131,20 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         returning = true
         attractX = 0.0
         attractY = 0.0
+    }
+
+    /** Pulls the light up and starts a slow wander. Call from an element's mouse-enter. */
+    fun hoverStart() {
+        targetIntensity = hoverIntensity
+        targetLightZ = hoverLightZ
+        hoverWandering = true
+    }
+
+    /** Reverts the hover effect. Call from the element's mouse-leave. */
+    fun hoverEnd() {
+        targetIntensity = if (poweredOn) defaultIntensity else 0.0
+        targetLightZ = defaultLightZ
+        hoverWandering = false
     }
 
     ////  LIFECYCLE  //////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,7 +219,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         val titleMap = buildTitleBaseMap(addon, texW, texHeight)
 
         val geometry = addon.createPlaneGeometry(2.0 * aspect, 2.0)
-        val mat = addon.createMeshStandardMaterial(jsObject<MaterialParameters> {
+        val mat = addon.createMeshStandardMaterial(jsObject {
             color = 0xffffff            // let the map provide the base color
             roughness = 0.28
             metalness = 0.97
@@ -239,52 +250,21 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         ctx.scene.add(fill)
         fillLight = fill
 
-        // ── Hover reactivity ──
-        registerHoverListeners()
+        // Hover reactivity is driven externally via hoverStart() / hoverEnd()
+        // — call them from the hosting component's mouse-enter / mouse-leave.
 
         // ── Resize ──
         registerResizeListener(addon)
     }
 
+    @Suppress("unused")
     private fun createColor(addon: ThreeJsAddon, hex: Int): dynamic {
-        @Suppress("UnusedVariable", "unused", "UNUSED_VARIABLE")
+        @Suppress("unused", "UNUSED_VARIABLE")
         val ctor = addon.raw.Color
         return js("new ctor(hex)")
     }
 
     ////  LISTENERS  //////////////////////////////////////////////////////////////////////////////////////////////
-
-    private fun registerHoverListeners() {
-        val selector = "a, button, .ui.button"
-        val over = { e: Event ->
-            val target = e.target.asDynamic()
-            if (target != null && target.closest != undefined && target.closest(selector) != null) {
-                targetColorHover = true
-                targetIntensity = hoverIntensity
-                targetLightZ = hoverLightZ
-                hoverWandering = true
-            }
-            Unit
-        }
-        val out = { e: Event ->
-            val target = e.target.asDynamic()
-            if (target != null && target.closest != undefined && target.closest(selector) != null) {
-                targetColorHover = false
-                targetIntensity = if (poweredOn) defaultIntensity else 0.0
-                targetLightZ = defaultLightZ
-                hoverWandering = false
-            }
-            Unit
-        }
-        document.addEventListener("pointerover", over)
-        document.addEventListener("pointerout", out)
-        pointerOverListener = over
-        pointerOutListener = out
-    }
-
-    // Color stays the same hex whether idle/hover, so we only track the boolean
-    // for future-proofing (the original JS kept two Color objects to lerp towards).
-    private var targetColorHover: Boolean = false
 
     private fun registerResizeListener(addon: ThreeJsAddon) {
         val handler: (Event) -> Unit = { _ ->
@@ -404,12 +384,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
     private fun teardown() {
         resizeListener?.let { window.removeEventListener("resize", it) }
-        pointerOverListener?.let { document.removeEventListener("pointerover", it) }
-        pointerOutListener?.let { document.removeEventListener("pointerout", it) }
         resizeTimer?.let { window.clearTimeout(it) }
         resizeListener = null
-        pointerOverListener = null
-        pointerOutListener = null
         resizeTimer = null
     }
 
@@ -456,8 +432,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         tctx.rect(0.0, 0.0, width.toDouble(), textBottomY)
         tctx.clip()
         tctx.asDynamic().filter = "blur(1px)"
-        // Very dim critical-red — tints the metallic specular just enough to read as text.
-        tctx.fillStyle = "#4b2427"
+        // Off-white text — with the noise normals and metallic reflection this reads
+        // as a faceted glass/crystal inlay; slightly dimmed so highlights don't blow out.
+        tctx.fillStyle = "#b8b8b8"
         applyTitleTextStyle(tctx, height)
         tctx.fillText("KLANG AUDIO MOTÖR", width / 2.0, textCy)
         tctx.restore()
@@ -582,9 +559,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 val ly = (py - row * cellSize).toDouble()
                 val pid = cell(col, row)
 
-                var nx = 0.0
-                var ny = 0.0
-                var nz = 1.0
+                var nx: Double
+                var ny: Double
+                var nz: Double = 1.0
 
                 if (pid <= 0) {
                     // Void: flat recessed surface with subtle grain
@@ -670,8 +647,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                     val f2 = hashCell(fbr * 5 + 11, fbc + 23)
                     val c1 = hashCell(cbc + 97, cbr * 7 + 41)
                     val c2 = hashCell(cbr * 11 + 53, cbc + 79)
-                    nx = (f1 - 0.5) * 0.22 + (c1 - 0.5) * 0.14
-                    ny = (f2 - 0.5) * 0.22 + (c2 - 0.5) * 0.14
+                    nx = (f1 - 0.5) * 0.34 + (c1 - 0.5) * 0.22
+                    ny = (f2 - 0.5) * 0.34 + (c2 - 0.5) * 0.22
                     nz = sqrt(max(0.01, 1.0 - nx * nx - ny * ny))
                 } else {
                     val left = engraveMask[if (px > 0) i1D - 1 else i1D]

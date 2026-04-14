@@ -36,6 +36,8 @@ import io.peekandpoke.ultra.datetime.Kronos
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onMouseEnter
+import io.peekandpoke.ultra.html.onMouseLeave
 import io.peekandpoke.ultra.maths.Ease
 import io.peekandpoke.ultra.maths.Ease.timed
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
@@ -724,7 +726,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             css {
                 display = Display.inlineBlock
-                maxWidth = 600.px
+                maxWidth = 800.px
                 marginTop = 20.px
                 marginBottom = 20.px
                 paddingTop = 20.px
@@ -741,134 +743,149 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // Performance rating
             val rating = getPerformanceRating(result.maxSafeVoices)
 
+            // Tier box + PS box, side by side
             div {
                 css {
-                    position = Position.relative
+                    display = Display.flex
+                    put("gap", "16px")
+                    alignItems = Align.stretch
                     marginTop = 24.px
-                    paddingTop = 20.px
-                    paddingBottom = 20.px
-                    paddingLeft = 20.px
-                    paddingRight = 20.px
-                    frostedGlass()
-                    border = Border(
-                        width = 1.px,
-                        style = BorderStyle.dashed,
-                        color = if (rating.showWarning) Color(laf.critical) else Color.white
-                    )
                 }
 
-                // Top-left corner icon
-                icon.(rating.icon)().then {
-                    css {
-                        position = Position.absolute
-                        top = 8.px
-                        left = 8.px
-                        color = rating.color
-                        fontSize = 1.2.em
-                    }
-                }
-
-                // Top-right corner icon
-                icon.(rating.icon)().then {
-                    css {
-                        position = Position.absolute
-                        top = 8.px
-                        right = 8.px
-                        color = rating.color
-                        fontSize = 1.2.em
-                    }
-                }
-
-                // Tier badge
                 div {
                     css {
-                        fontSize = 0.9.em
-                        fontWeight = FontWeight.bold
-                        color = Color.white
-                        marginBottom = 12.px
-                        textTransform = TextTransform.uppercase
-                        letterSpacing = 1.px
+                        position = Position.relative
+                        flexGrow = 1.0
+                        put("flex-basis", "0")
+                        paddingTop = 20.px
+                        paddingBottom = 20.px
+                        paddingLeft = 20.px
+                        paddingRight = 20.px
+                        frostedGlass()
+                        border = Border(
+                            width = 1.px,
+                            style = BorderStyle.dashed,
+                            color = if (rating.showWarning) Color(laf.critical) else Color.white
+                        )
                     }
-                    +rating.tier
-                }
 
-                // Message
-                div {
-                    css {
-                        fontSize = 1.1.em
-                        color = Color.white
-                        lineHeight = LineHeight("1.5")
-                    }
-                    +rating.message
-                }
-
-                // Warning icon for low performance
-                if (rating.showWarning) {
-                    div {
+                    // Top-left corner icon
+                    icon.(rating.icon)().then {
                         css {
-                            marginTop = 12.px
-                            fontSize = 0.9.em
+                            position = Position.absolute
+                            top = 8.px
+                            left = 8.px
                             color = rating.color
+                            fontSize = 1.2.em
                         }
-                        ui.icon.warning {
-                            css {
-                                color = rating.color
-                            }
-                        }
-                        +" Performance may be limited"
-                    }
-                }
-            }
-
-            // Results summary
-            div {
-                css {
-                    marginTop = 24.px
-                    paddingTop = 20.px
-                    paddingBottom = 20.px
-                    paddingLeft = 20.px
-                    paddingRight = 20.px
-                    frostedGlass()
-                    border = Border(1.px, BorderStyle.dashed, Color.white)
-                }
-
-                // Main stat
-                div {
-                    css {
-                        display = Display.flex
-                        alignItems = Align.center
-                        justifyContent = JustifyContent.center
-                        marginBottom = 16.px
                     }
 
+                    // Top-right corner icon
+                    icon.(rating.icon)().then {
+                        css {
+                            position = Position.absolute
+                            top = 8.px
+                            right = 8.px
+                            color = rating.color
+                            fontSize = 1.2.em
+                        }
+                    }
+
+                    // Tier badge
                     div {
                         css {
-                            fontSize = 3.em
+                            fontSize = 0.9.em
                             fontWeight = FontWeight.bold
                             color = Color.white
-                            marginRight = 12.px
+                            marginBottom = 12.px
+                            textTransform = TextTransform.uppercase
+                            letterSpacing = 1.px
                         }
-                        +"${result.maxSafeVoices}"
+                        +rating.tier
                     }
 
+                    // Message
                     div {
                         css {
-                            fontSize = 3.em
+                            fontSize = 1.1.em
                             color = Color.white
-                            textAlign = TextAlign.left
+                            lineHeight = LineHeight("1.5")
                         }
-                        div { +"PS" }
+                        +rating.message
+                    }
+
+                    // Warning icon for low performance
+                    if (rating.showWarning) {
+                        div {
+                            css {
+                                marginTop = 12.px
+                                fontSize = 0.9.em
+                                color = rating.color
+                            }
+                            ui.icon.warning {
+                                css {
+                                    color = rating.color
+                                }
+                            }
+                            +" Performance may be limited"
+                        }
                     }
                 }
 
-                // Subtext
+                // Results summary
                 div {
                     css {
-                        fontSize = 0.9.em
-                        color = Color("#888")
-                        textAlign = TextAlign.center
+                        flexGrow = 1.0
+                        put("flex-basis", "0")
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                        justifyContent = JustifyContent.center
+                        paddingTop = 20.px
+                        paddingBottom = 20.px
+                        paddingLeft = 20.px
+                        paddingRight = 20.px
+                        frostedGlass()
+                        border = Border(1.px, BorderStyle.dashed, Color.white)
                     }
-                    +"Average from ${result.rounds} test runs"
+
+                    // Main stat
+                    div {
+                        css {
+                            display = Display.flex
+                            alignItems = Align.center
+                            justifyContent = JustifyContent.center
+                            marginBottom = 16.px
+                        }
+
+                        div {
+                            css {
+                                fontSize = 3.em
+                                fontWeight = FontWeight.bold
+                                color = Color.white
+                                marginRight = 12.px
+                            }
+                            +"${result.maxSafeVoices}"
+                        }
+
+                        div {
+                            css {
+                                fontSize = 3.em
+                                color = Color.white
+                                textAlign = TextAlign.left
+                            }
+                            div { +"PS" }
+                        }
+                    }
+
+                    // Subtext
+                    div {
+                        css {
+                            fontSize = 0.9.em
+                            color = Color("#888")
+                            textAlign = TextAlign.center
+                        }
+                        +"Average from ${result.rounds} test runs"
+                    }
                 }
             }
 
@@ -890,6 +907,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 +"Make Music Now"
 
                 onClick { completeState.gotoNext() }
+                onMouseEnter { motorBackgroundRef { it.hoverStart() } }
+                onMouseLeave { motorBackgroundRef { it.hoverEnd() } }
             }
         }
     }

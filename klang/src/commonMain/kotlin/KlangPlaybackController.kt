@@ -6,6 +6,7 @@ import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_engine.KlangPlaybackController.Companion.MIN_RPM
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
@@ -45,6 +46,14 @@ internal class KlangPlaybackController(
     private val fetcherDispatcher = context.fetcherDispatcher
     private val callbackDispatcher = context.callbackDispatcher
     private val backendReady = context.backendReady
+
+    companion object {
+        /**
+         * Minimum allowed RPM. Values below this are clamped — a near-zero cps would make
+         * `secPerCycle` explode and time effectively stand still (or compute NaN anchors).
+         */
+        const val MIN_RPM: Double = 1.0
+    }
 
     // ===== State Management =====
     private val running = KlangAtomicBool(false)
@@ -100,9 +109,13 @@ internal class KlangPlaybackController(
     /**
      * Update the RPM (revolutions per minute = tempo).
      * Internally converts to CPS for cycle-based math.
+     *
+     * Values below [MIN_RPM] are clamped — a zero or negative cps would make time stand
+     * still (or run backwards), causing the scheduler to spin or produce NaN anchors.
      */
     fun updateRpm(rpm: Double) {
-        val cps = rpm / 60.0
+        val safeRpm = rpm.coerceAtLeast(MIN_RPM)
+        val cps = safeRpm / 60.0
         // The grace window (same as in resyncCurrentCycle) defines the switchover point:
         // voices before it keep the old tempo, voices after it use the new tempo.
         val nowMs = klangTime.internalMsNow()
@@ -128,7 +141,7 @@ internal class KlangPlaybackController(
         onStarted()
 
         // Update playback parameters
-        this.cyclesPerSecond = options.rpm / 60.0
+        this.cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0
         this.lookaheadCycles = options.lookaheadCycles
 
         // Start the fetcher job

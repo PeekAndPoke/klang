@@ -35,6 +35,8 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
+import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.ops.debounce
 import io.peekandpoke.ultra.streams.ops.map
 import kotlinx.css.Align
 import kotlinx.css.Border
@@ -91,8 +93,17 @@ class PlayableCodeExample(ctx: Ctx<Props>) : Component<PlayableCodeExample.Props
     private var playback: KlangCyclicPlayback? by value(null)
     private val isPlaying get() = playback != null
 
+    private val rpmStream = StreamSource(props.rpm)
+
     private var rpm: Double by value(props.rpm) {
-        if (it > 0.0) playback?.updateRpm(it)
+        rpmStream(it)
+        // Backend tempo sync is driven by the debounced rpmStream subscription below —
+        // each updateRpm call resyncs the current cycle, so we coalesce rapid input.
+    }
+
+    @Suppress("unused")
+    private val rpmBackendSync = rpmStream.debounce(150).subscribeToStream { newRpm ->
+        if (newRpm > 0.0) playback?.updateRpm(newRpm)
     }
 
     private val editorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
