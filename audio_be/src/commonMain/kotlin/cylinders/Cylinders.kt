@@ -32,6 +32,28 @@ class Cylinders(
     }
 
     /**
+     * Force-allocate every cylinder `0..maxCylinders-1`.
+     *
+     * Used by the backend warmup handshake to avoid lazy-allocation hitches on the first
+     * note of a song that references an orbit we haven't seen before. The cylinder
+     * constructor allocates delay / reverb / phaser / compressor buffers — doing 5+ of
+     * them in one audio block on first play was blowing the block deadline and
+     * swallowing the first kick.
+     */
+    fun preallocateAll() {
+        for (id in 0 until maxCylinders) {
+            id2cylinder.getOrPut(id) {
+                Cylinder(
+                    id = id,
+                    blockFrames = blockFrames,
+                    sampleRate = sampleRate,
+                    silentBlocksBeforeTailCheck = silentBlocksBeforeTailCheck,
+                )
+            }
+        }
+    }
+
+    /**
      * Processes all cylinders and mixes the results into the given buffer.
      *
      * Processing order:

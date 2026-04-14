@@ -10,8 +10,13 @@ import io.peekandpoke.kraft.utils.onResize
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.maths.Ease
 import kotlinx.browser.window
-import kotlinx.css.*
+import kotlinx.css.Color
+import kotlinx.css.Display
+import kotlinx.css.display
+import kotlinx.css.height
+import kotlinx.css.pct
 import kotlinx.html.Tag
 import kotlinx.html.canvas
 import kotlinx.html.div
@@ -72,6 +77,9 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
 
     private val bucketValues = DoubleArray(props.numBuckets)
 
+    /** Accumulated "heat" driving the gold glow. Energy pumps heat in, cooling bleeds it out. */
+    private var glowHeat: Double = 0.0
+
     private var canvas: HTMLCanvasElement? = null
     private var ctx2d: CanvasRenderingContext2D? = null
 
@@ -130,12 +138,48 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
         // Clear canvas with fade trail effect
         ctx.save()
         ctx.globalCompositeOperation = "destination-out"
-        ctx.fillStyle = "rgba(0, 0, 0, 0.25)"
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
         ctx.fillRect(0.0, 0.0, width, height)
         ctx.restore()
 
         // Process FFT data through perceptually balanced binning
         props.binning.process(fftBuffer = visualizerBuffer, out = bucketValues)
+
+        // Total energy this frame drives a slow "heating iron" model:
+        //   heat += instantEnergy * heatRate   (energy pumps heat in)
+        //   heat *= cooling                    (radiative cooling)
+        //   heat is clamped to [0, 1]          (saturates at peak glow)
+        // heatRate=0.006, cooling=0.995 → sustained-loud signal ramps to the 1.0
+        // ceiling in ~5 s at 60 fps; decay half-life ≈ 2.3 s when the music stops.
+        var frameSum = 0.0
+        for (v in bucketValues) frameSum += v
+        val instantEnergy = (frameSum / bucketValues.size.coerceAtLeast(1)).coerceIn(0.0, 1.0)
+        // Ignition threshold — background noise / quiet passages below this contribute
+        // no heat, so the iron only glows under real audio energy.
+        val heatThreshold = 0.12
+        val effectiveEnergy = ((instantEnergy - heatThreshold) / (1.0 - heatThreshold)).coerceAtLeast(0.0)
+        val heatRate = 0.005
+        val cooling = 0.997
+        val heatCeiling = 1.8
+        glowHeat = ((glowHeat + effectiveEnergy * heatRate) * cooling).coerceIn(0.0, heatCeiling)
+        val glowEnergy = glowHeat
+
+        // Gradient matches the bar palette from bottom to top, intensity scaled by heat.
+        // Ease-in on heat keeps early buildup subtle before the glow really lights up.
+        val heatNorm = glowEnergy / heatCeiling
+        val heatCurve = Ease.In.pow(1.15).invoke(heatNorm)
+        val glow = ctx.createLinearGradient(0.0, height, 0.0, 0.0)
+        val palette = props.colors
+        val n = palette.size.coerceAtLeast(1)
+        for (i in 0 until n) {
+            val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
+            // Ease-out falloff — 0.45 at bottom, reaches 0 by ~77% up (faster than full-height).
+            val aMax = 0.45 * Ease.Out.quad((1.0 - t * 1.3).coerceAtLeast(0.0))
+            val alpha = aMax * heatCurve
+            glow.addColorStop(t, palette[i].withAlpha(alpha).toString())
+        }
+        ctx.fillStyle = glow
+        ctx.fillRect(0.0, 0.0, width, height)
 
         val numBuckets = props.numBuckets
         val colors = props.colors

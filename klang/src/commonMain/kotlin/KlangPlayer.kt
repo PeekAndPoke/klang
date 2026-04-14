@@ -9,7 +9,16 @@ import io.peekandpoke.klang.common.infra.KlangAtomicInt
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
 import io.peekandpoke.ultra.streams.StreamSource
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class KlangPlayer(
     /** The player config */
@@ -66,6 +75,9 @@ class KlangPlayer(
         dispatcher = fetcherDispatcher,
     )
 
+    // Completes once the backend has emitted Feedback.BackendReady (post-warmup).
+    val backendReady = CompletableDeferred<Unit>()
+
     // Context bundle for playback implementations (reduces constructor parameter lists)
     val playbackContext = KlangPlaybackContext(
         playerOptions = options,
@@ -74,6 +86,7 @@ class KlangPlayer(
         scope = scope,
         fetcherDispatcher = fetcherDispatcher,
         callbackDispatcher = callbackDispatcher,
+        backendReady = backendReady,
     )
 
     /**
@@ -117,6 +130,11 @@ class KlangPlayer(
 
                 // Handle feedback by type
                 when (feedback) {
+                    // One-shot backend warmup handshake
+                    is KlangCommLink.Feedback.BackendReady -> {
+                        backendReady.complete(Unit)
+                    }
+
                     // Sample received acknowledgements go to preloader (shared across all playbacks)
                     is KlangCommLink.Feedback.SampleReceived -> {
                         samplePreloader.handleSampleReceived(feedback.req)

@@ -80,7 +80,7 @@ object Deps {
             const val addons_signaturepad = "io.peekandpoke.kraft:addons-signaturepad:$ultra_version"
             const val addons_sourcemappedstacktrace =
                 "io.peekandpoke.kraft:addons-sourcemappedstacktrace:$ultra_version"
-            const val addons_threejs = "io.peekandpoke.kraft:threejs:$ultra_version"
+            const val addons_threejs = "io.peekandpoke.kraft:addons-threejs:$ultra_version"
         }
 
         object Funktor {

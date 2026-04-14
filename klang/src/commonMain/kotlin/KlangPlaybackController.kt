@@ -6,6 +6,7 @@ import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_engine.KlangPlaybackController.Companion.MIN_RPM
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
 import io.peekandpoke.klang.common.infra.KlangLock
 import io.peekandpoke.klang.common.infra.withLock
@@ -13,6 +14,7 @@ import io.peekandpoke.ultra.streams.StreamSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -43,6 +45,15 @@ internal class KlangPlaybackController(
     private val scope = context.scope
     private val fetcherDispatcher = context.fetcherDispatcher
     private val callbackDispatcher = context.callbackDispatcher
+    private val backendReady = context.backendReady
+
+    companion object {
+        /**
+         * Minimum allowed RPM. Values below this are clamped — a near-zero cps would make
+         * `secPerCycle` explode and time effectively stand still (or compute NaN anchors).
+         */
+        const val MIN_RPM: Double = 1.0
+    }
 
     // ===== State Management =====
     private val running = KlangAtomicBool(false)
@@ -98,9 +109,13 @@ internal class KlangPlaybackController(
     /**
      * Update the RPM (revolutions per minute = tempo).
      * Internally converts to CPS for cycle-based math.
+     *
+     * Values below [MIN_RPM] are clamped — a zero or negative cps would make time stand
+     * still (or run backwards), causing the scheduler to spin or produce NaN anchors.
      */
     fun updateRpm(rpm: Double) {
-        val cps = rpm / 60.0
+        val safeRpm = rpm.coerceAtLeast(MIN_RPM)
+        val cps = safeRpm / 60.0
         // The grace window (same as in resyncCurrentCycle) defines the switchover point:
         // voices before it keep the old tempo, voices after it use the new tempo.
         val nowMs = klangTime.internalMsNow()
@@ -126,7 +141,7 @@ internal class KlangPlaybackController(
         onStarted()
 
         // Update playback parameters
-        this.cyclesPerSecond = options.rpm / 60.0
+        this.cyclesPerSecond = options.rpm.coerceAtLeast(MIN_RPM) / 60.0
         this.lookaheadCycles = options.lookaheadCycles
 
         // Start the fetcher job
@@ -186,6 +201,10 @@ internal class KlangPlaybackController(
             is KlangCommLink.Feedback.SampleReceived -> {
                 // Ignore - sample acknowledgements are handled at player level
             }
+
+            is KlangCommLink.Feedback.BackendReady -> {
+                // Handled at player level
+            }
         }
     }
 
@@ -242,6 +261,16 @@ internal class KlangPlaybackController(
         queryCursorCycles = 0.0
         sampleSoundLookAheadPointer = 0.0
         lastEmittedCycle = -1
+
+        // ===== WAIT FOR BACKEND WARMUP =====
+        // Ensures the audio thread's hot path is JIT'd before the first real voice hits.
+        // Completes immediately if the backend already signalled ready earlier in the session.
+        try {
+            withTimeout(2000) { backendReady.await() }
+        } catch (e: TimeoutCancellationException) {
+            // Proceed anyway — warmup never arrived, but we'd rather play late than not at all.
+            println("KlangPlaybackController: backendReady timed out after 2s — proceeding cold")
+        }
 
         // ===== PRELOAD PHASE =====
         preloadSamples(prefetchCycles)

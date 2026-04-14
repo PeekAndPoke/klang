@@ -28,7 +28,7 @@ class JvmAudioBackend(
 
     // 1. Setup DSP Graph
     val cylinders = Cylinders(
-        maxCylinders = 16,
+        maxCylinders = 64,
         blockFrames = blockSize,
         sampleRate = sampleRate
     )
@@ -59,6 +59,18 @@ class JvmAudioBackend(
     override suspend fun run(scope: CoroutineScope) {
         // Set backend start time from KlangTime relative clock
         voices.setBackendStartTime(klangTime.internalMsNow() / 1000.0)
+
+        // Kick off JIT / cache warmup. JVM JIT is warmer than Kotlin/JS but running the same
+        // path keeps behavior consistent across targets (and costs ~85 ms of silence at start).
+        // Warmup voices run through the real scheduler/renderer; the limiter + scheduler are
+        // reset at the end of the handshake so nothing leaks into real playback.
+        val warmup = WarmupRunner(
+            sampleRate = sampleRate,
+            voices = voices,
+            renderer = renderer,
+            feedback = commLink,
+        )
+        warmup.start()
 
         // Int instead of Long: keeps JVM backend consistent with JS (where Long is boxed).
         // At 48kHz, Int overflows after ~12.4 hours — sufficient for any session.
@@ -123,8 +135,14 @@ class JvmAudioBackend(
                 }
 
                 // rendering ///////////////////////////////////////////////////////////////////////////////////////
-                // Render into buffer (State Read)
+                // Always render — warmup voices live on the real scheduler so this exercises
+                // the actual render path for JIT / cache priming.
                 renderer.renderBlock(cursorFrame = currentFrame, out = outShorts)
+
+                if (warmup.isWarming) {
+                    outShorts.fill(0)
+                    warmup.tick()
+                }
 
                 // Convert ShortArray to ByteArray efficiently via ByteBuffer
                 shortBuffer.clear()

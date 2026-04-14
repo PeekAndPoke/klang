@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_engine
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 
 /**
  * Context object bundling all dependencies needed by playback implementations.
@@ -29,4 +30,11 @@ data class KlangPlaybackContext(
 
     /** Dispatcher for frontend callbacks and signals */
     val callbackDispatcher: CoroutineDispatcher,
+
+    /**
+     * Completes when the backend emits [KlangCommLink.Feedback.BackendReady].
+     * Playback should await this before scheduling the first voice so that
+     * cold-start JIT/cache warmup is already done.
+     */
+    val backendReady: Deferred<Unit>,
 )

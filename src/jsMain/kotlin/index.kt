@@ -7,6 +7,7 @@ import io.peekandpoke.klang.utils.FullscreenController
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
 import io.peekandpoke.kraft.addons.marked.marked
 import io.peekandpoke.kraft.addons.registry.addons
+import io.peekandpoke.kraft.addons.threejs.threeJs
 import io.peekandpoke.kraft.kraftApp
 import io.peekandpoke.kraft.semanticui.semanticUI
 import io.peekandpoke.kraft.vdom.preact.PreactVDomEngine
@@ -17,6 +18,7 @@ val kraft = kraftApp {
     addons {
         browserDetect()
         marked()
+        threeJs(lazy = true)
     }
 
     routing {

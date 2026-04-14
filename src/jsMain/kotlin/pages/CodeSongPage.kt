@@ -45,6 +45,7 @@ import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.StreamSource
+import io.peekandpoke.ultra.streams.ops.debounce
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import kotlinx.css.Cursor
@@ -152,7 +153,13 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
     private var rpm: Double by value(rpmStream()) {
         rpmStream(it)
         cancelHighlights()
-        playback?.updateRpm(it)
+        // Backend tempo sync is driven by the debounced rpmStream subscription below —
+        // each updateRpm call resyncs the current cycle, so we coalesce rapid input.
+    }
+
+    @Suppress("unused")
+    private val rpmBackendSync = rpmStream.debounce(150).subscribeToStream { newRpm ->
+        playback?.updateRpm(newRpm)
     }
 
     private var code: String by value(codeStream()) {

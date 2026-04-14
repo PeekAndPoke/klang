@@ -12,9 +12,11 @@ import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.RoundButton
 import io.peekandpoke.klang.comp.RoundGauge
 import io.peekandpoke.klang.comp.Spectrumeter
+import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.sprudel.lang.adsr
 import io.peekandpoke.klang.sprudel.lang.delay
 import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.lpf
 import io.peekandpoke.klang.sprudel.lang.room
 import io.peekandpoke.klang.sprudel.lang.rsize
 import io.peekandpoke.klang.sprudel.lang.sound
@@ -34,6 +36,8 @@ import io.peekandpoke.ultra.datetime.Kronos
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onMouseEnter
+import io.peekandpoke.ultra.html.onMouseLeave
 import io.peekandpoke.ultra.maths.Ease
 import io.peekandpoke.ultra.maths.Ease.timed
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
@@ -53,7 +57,6 @@ import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
 import kotlinx.css.TextTransform
-import kotlinx.css.WhiteSpace
 import kotlinx.css.alignItems
 import kotlinx.css.backgroundColor
 import kotlinx.css.border
@@ -64,7 +67,6 @@ import kotlinx.css.display
 import kotlinx.css.em
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
-import kotlinx.css.fontFamily
 import kotlinx.css.fontSize
 import kotlinx.css.fontWeight
 import kotlinx.css.height
@@ -86,16 +88,14 @@ import kotlinx.css.pct
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.properties.LineHeight
-import kotlinx.css.properties.scaleX
-import kotlinx.css.properties.transform
 import kotlinx.css.px
 import kotlinx.css.right
 import kotlinx.css.textAlign
 import kotlinx.css.textTransform
 import kotlinx.css.top
 import kotlinx.css.vh
-import kotlinx.css.whiteSpace
 import kotlinx.css.width
+import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -262,7 +262,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private inner class StateBenchmarking : State {
         init {
-            js("if (typeof window.motorBackgroundStartScan === 'function') window.motorBackgroundStartScan()")
+            motorBackgroundRef { it.startScan() }
             launch {
                 benchmark.run(iterations = 5)
             }
@@ -281,7 +281,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
     private inner class StateBenchmarkComplete(val result: KlangBenchmark.Result) : State {
         init {
-            js("if (typeof window.motorBackgroundStopScan === 'function') window.motorBackgroundStopScan()")
+            motorBackgroundRef { it.stopScan() }
         }
 
         override fun update() {
@@ -291,8 +291,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override fun getOpacity(): Double = 1.0
 
         override fun gotoNext() {
-            val song = sound("[bd bd bd bd  [ds, cr] ~ ~ ~]").fast(1)
-                .adsr("0.01:1.0:1.0:2.0").room(0.1).rsize(5.0)
+            val song = sound("[sd sd sd sd  [bd, cr] ~ ~ ~]").fast(1)
+                .adsr("0.001:1.0:1.0:3.0").room(0.05).rsize(8.0).lpf("4500")
 
             val playback = Player.get()?.playOnce(song)
 
@@ -418,7 +418,10 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 key = "stats"
                 css {
                     marginBottom = 6.px
-                    opacity = currentOpacity
+                    opacity = 1.0
+                    // Stack above the absolutely-positioned spectrum visualizer
+                    position = Position.relative
+                    zIndex = 1
                 }
                 PlayerMiniStats()
             }
@@ -428,6 +431,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 css {
                     height = 60.px
                     opacity = currentOpacity
+                    position = Position.relative
+                    zIndex = 1
                 }
                 Oscilloscope(player = Player.player)
             }
@@ -447,7 +452,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     height = spectHeight.px
                     width = 100.pct
 
-                    opacity = 0.66
+                    opacity = 0.45
+                    zIndex = 0
                 }
 
                 Spectrumeter { Player.get() }
@@ -496,39 +502,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 marginBottom = 32.px
             }
 
-            div {
-                css {
-                    whiteSpace = WhiteSpace.nowrap
-                    opacity = currentOpacity
-                }
-
-                icon.music {
-                    css {
-                        marginRight = 16.px
-                        fontSize = 3.em
-                    }
-                }
-
-                ui.text {
-                    css {
-                        fontFamily = "monospace"
-                        fontSize = 3.em
-//                        lineHeight = LineHeight("2.0em")
-                        color = Color.white
-                        display = Display.inlineBlock
-                        fontWeight = FontWeight.bold
-                    }
-                    +"KLANG AUDIO MOTÖR"
-                }
-
-                icon.music {
-                    css {
-                        transform { scaleX(-1.0) }
-                        marginLeft = 16.px
-                        fontSize = 3.em
-                    }
-                }
-            }
+            // Title "KLANG AUDIO MOTÖR" is engraved into the MotorBackground plate
+            // itself — rendered via the normal map, not as DOM text.
 
             // Pre-alpha sub-headline
             div {
@@ -554,7 +529,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 icon = { power_off },
                 color = KlangTheme.excellent,
                 onClick = {
-                    js("if (typeof window.motorBackgroundPowerOn === 'function') window.motorBackgroundPowerOn()")
+                    motorBackgroundRef { it.powerOn() }
                     state.gotoNext()
                 },
                 size = 75.px,
@@ -751,7 +726,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         div {
             css {
                 display = Display.inlineBlock
-                maxWidth = 600.px
+                maxWidth = 800.px
                 marginTop = 20.px
                 marginBottom = 20.px
                 paddingTop = 20.px
@@ -768,134 +743,149 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
             // Performance rating
             val rating = getPerformanceRating(result.maxSafeVoices)
 
+            // Tier box + PS box, side by side
             div {
                 css {
-                    position = Position.relative
+                    display = Display.flex
+                    put("gap", "16px")
+                    alignItems = Align.stretch
                     marginTop = 24.px
-                    paddingTop = 20.px
-                    paddingBottom = 20.px
-                    paddingLeft = 20.px
-                    paddingRight = 20.px
-                    frostedGlass()
-                    border = Border(
-                        width = 1.px,
-                        style = BorderStyle.dashed,
-                        color = if (rating.showWarning) Color(laf.critical) else Color.white
-                    )
                 }
 
-                // Top-left corner icon
-                icon.(rating.icon)().then {
-                    css {
-                        position = Position.absolute
-                        top = 8.px
-                        left = 8.px
-                        color = rating.color
-                        fontSize = 1.2.em
-                    }
-                }
-
-                // Top-right corner icon
-                icon.(rating.icon)().then {
-                    css {
-                        position = Position.absolute
-                        top = 8.px
-                        right = 8.px
-                        color = rating.color
-                        fontSize = 1.2.em
-                    }
-                }
-
-                // Tier badge
                 div {
                     css {
-                        fontSize = 0.9.em
-                        fontWeight = FontWeight.bold
-                        color = Color.white
-                        marginBottom = 12.px
-                        textTransform = TextTransform.uppercase
-                        letterSpacing = 1.px
+                        position = Position.relative
+                        flexGrow = 1.0
+                        put("flex-basis", "0")
+                        paddingTop = 20.px
+                        paddingBottom = 20.px
+                        paddingLeft = 20.px
+                        paddingRight = 20.px
+                        frostedGlass()
+                        border = Border(
+                            width = 1.px,
+                            style = BorderStyle.dashed,
+                            color = if (rating.showWarning) Color(laf.critical) else Color.white
+                        )
                     }
-                    +rating.tier
-                }
 
-                // Message
-                div {
-                    css {
-                        fontSize = 1.1.em
-                        color = Color.white
-                        lineHeight = LineHeight("1.5")
-                    }
-                    +rating.message
-                }
-
-                // Warning icon for low performance
-                if (rating.showWarning) {
-                    div {
+                    // Top-left corner icon
+                    icon.(rating.icon)().then {
                         css {
-                            marginTop = 12.px
-                            fontSize = 0.9.em
+                            position = Position.absolute
+                            top = 8.px
+                            left = 8.px
                             color = rating.color
+                            fontSize = 1.2.em
                         }
-                        ui.icon.warning {
-                            css {
-                                color = rating.color
-                            }
-                        }
-                        +" Performance may be limited"
-                    }
-                }
-            }
-
-            // Results summary
-            div {
-                css {
-                    marginTop = 24.px
-                    paddingTop = 20.px
-                    paddingBottom = 20.px
-                    paddingLeft = 20.px
-                    paddingRight = 20.px
-                    frostedGlass()
-                    border = Border(1.px, BorderStyle.dashed, Color.white)
-                }
-
-                // Main stat
-                div {
-                    css {
-                        display = Display.flex
-                        alignItems = Align.center
-                        justifyContent = JustifyContent.center
-                        marginBottom = 16.px
                     }
 
+                    // Top-right corner icon
+                    icon.(rating.icon)().then {
+                        css {
+                            position = Position.absolute
+                            top = 8.px
+                            right = 8.px
+                            color = rating.color
+                            fontSize = 1.2.em
+                        }
+                    }
+
+                    // Tier badge
                     div {
                         css {
-                            fontSize = 3.em
+                            fontSize = 0.9.em
                             fontWeight = FontWeight.bold
                             color = Color.white
-                            marginRight = 12.px
+                            marginBottom = 12.px
+                            textTransform = TextTransform.uppercase
+                            letterSpacing = 1.px
                         }
-                        +"${result.maxSafeVoices}"
+                        +rating.tier
                     }
 
+                    // Message
                     div {
                         css {
-                            fontSize = 3.em
+                            fontSize = 1.1.em
                             color = Color.white
-                            textAlign = TextAlign.left
+                            lineHeight = LineHeight("1.5")
                         }
-                        div { +"PS" }
+                        +rating.message
+                    }
+
+                    // Warning icon for low performance
+                    if (rating.showWarning) {
+                        div {
+                            css {
+                                marginTop = 12.px
+                                fontSize = 0.9.em
+                                color = rating.color
+                            }
+                            ui.icon.warning {
+                                css {
+                                    color = rating.color
+                                }
+                            }
+                            +" Performance may be limited"
+                        }
                     }
                 }
 
-                // Subtext
+                // Results summary
                 div {
                     css {
-                        fontSize = 0.9.em
-                        color = Color("#888")
-                        textAlign = TextAlign.center
+                        flexGrow = 1.0
+                        put("flex-basis", "0")
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                        justifyContent = JustifyContent.center
+                        paddingTop = 20.px
+                        paddingBottom = 20.px
+                        paddingLeft = 20.px
+                        paddingRight = 20.px
+                        frostedGlass()
+                        border = Border(1.px, BorderStyle.dashed, Color.white)
                     }
-                    +"Average from ${result.rounds} test runs"
+
+                    // Main stat
+                    div {
+                        css {
+                            display = Display.flex
+                            alignItems = Align.center
+                            justifyContent = JustifyContent.center
+                            marginBottom = 16.px
+                        }
+
+                        div {
+                            css {
+                                fontSize = 3.em
+                                fontWeight = FontWeight.bold
+                                color = Color.white
+                                marginRight = 12.px
+                            }
+                            +"${result.maxSafeVoices}"
+                        }
+
+                        div {
+                            css {
+                                fontSize = 3.em
+                                color = Color.white
+                                textAlign = TextAlign.left
+                            }
+                            div { +"PS" }
+                        }
+                    }
+
+                    // Subtext
+                    div {
+                        css {
+                            fontSize = 0.9.em
+                            color = Color("#888")
+                            textAlign = TextAlign.center
+                        }
+                        +"Average from ${result.rounds} test runs"
+                    }
                 }
             }
 
@@ -917,6 +907,8 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                 +"Make Music Now"
 
                 onClick { completeState.gotoNext() }
+                onMouseEnter { motorBackgroundRef { it.hoverStart() } }
+                onMouseLeave { motorBackgroundRef { it.hoverEnd() } }
             }
         }
     }

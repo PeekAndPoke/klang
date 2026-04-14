@@ -90,7 +90,7 @@ stack(                                                                 //////// 
     [[bd:2,cr]    hh sd      [sd,hh]]  [bd      hh sd:8    oh]  [bd      hh sd hh]       [bd hh      sd            [bd,oh]   ]
     [[bd,cr]      hh [sd,hh] cr     ]  [[bd,cr] hh [bd,cr] hh]  [[sd,oh] bd sd [bd,hh]]  [sd [bd,hh] [bd bd]       [bd bd,hh]]
   >`)
-    .orbit(3).gain(0.85).pan(0.6).adsr("0.01:0.2:0.8:1.0").hpf(120).lpf(4000)
+    .orbit(3).gain(0.85).pan(0.6).adsr("0.01:0.0:1.0:1.25").hpf(100).lpf("4500:0.5:2")
     .fast(2) // .solo()
   ,
 ).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25").analog(0.5)
