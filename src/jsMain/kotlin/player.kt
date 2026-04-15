@@ -1,7 +1,9 @@
 package io.peekandpoke.klang
 
+import io.peekandpoke.klang.Player.nowPlaying
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_fe.create
@@ -38,7 +40,49 @@ object Player {
     private val _samples = StreamSource<Samples?>(null)
     val samples: Stream<Samples?> = _samples.readonly
 
-//    private var _playerInstance: KlangPlayer? = null
+    /**
+     * Snapshot of whatever is considered the "primary" playback across the app.
+     *
+     * Controllers created via [io.peekandpoke.klang.comp.KlangCodePlaybackCtrl] publish into this
+     * when they start/stop so that other UI (sidebar badges, headers, the song list, ...) can
+     * reactively observe what's currently on stage without subscribing to every controller.
+     */
+    data class NowPlaying(
+        val title: String?,
+        val code: String,
+        val rpm: Double,
+        val playback: KlangCyclicPlayback,
+    )
+
+    private val _nowPlaying = StreamSource<NowPlaying?>(null)
+    val nowPlaying: Stream<NowPlaying?> = _nowPlaying.readonly
+
+    private var nowPlayingOwner: Any? = null
+
+    /**
+     * Publishes (or clears) the "now playing" snapshot. A clear is only honored when [handle]
+     * matches the current owner, so a stale controller can't wipe someone else's state.
+     */
+    fun publishNowPlaying(handle: Any, value: NowPlaying?) {
+        if (value == null) {
+            if (nowPlayingOwner === handle) {
+                nowPlayingOwner = null
+                _nowPlaying(null)
+            }
+        } else {
+            nowPlayingOwner = handle
+            _nowPlaying(value)
+        }
+    }
+
+    /**
+     * Opt-in "only one at a time" coordination. If any other handle is the current [nowPlaying]
+     * owner, [stopOther] is invoked with it so the caller can shut it down before taking the stage.
+     */
+    fun requestExclusivePlayback(self: Any, stopOther: (Any) -> Unit) {
+        val other = nowPlayingOwner
+        if (other != null && other !== self) stopOther(other)
+    }
 
     private var deferred: CompletableDeferred<KlangPlayer>? = null
 

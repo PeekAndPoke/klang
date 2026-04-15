@@ -64,18 +64,19 @@ class CrushRendererSpec : StringSpec({
         }
     }
 
-    "CrushRenderer midtread rounding: zero input → zero output" {
-        // With symmetric round the quantizer must have a grid point at zero.
+    "CrushRenderer zero input → zero output" {
+        // floor(0 * hl) / hl == 0, so the quantizer has a grid point at zero.
         val renderer = CrushRenderer(amount = 2.0)
         val buffer = FloatArray(16) { 0.0f }
         renderer.renderInPlace(buffer)
         for (s in buffer) s shouldBe 0.0f
     }
 
-    "CrushRenderer no DC bias on a symmetric sine" {
-        // A symmetric input must produce a symmetric output (no DC offset).
-        // The floor-based quantizer produced ~-0.5 DC at amount=1; round must produce ~0.
-        // Use an integer number of sine cycles so window-truncation doesn't pollute the mean.
+    "CrushRenderer has an asymmetric DC bias on a symmetric sine (crunch character)" {
+        // Floor-based quantization biases every sample DOWN to the next grid step.
+        // For a symmetric sine this produces an amplitude-modulated DC offset of
+        // roughly −0.5 / halfLevels — this IS the audible character of the crusher.
+        // (A symmetric round would produce mean ≈ 0, which we explicitly don't want.)
         val blockFrames = 4800
         val sampleRate = 48000.0
         val cyclesInBlock = 10
@@ -83,32 +84,12 @@ class CrushRendererSpec : StringSpec({
         val buffer = FloatArray(blockFrames) { i ->
             (sin(2.0 * PI * freq * i / sampleRate) * 0.8).toFloat()
         }
-        // amount=1 is the extreme setting where the old implementation biased heavily.
-        val renderer = CrushRenderer(amount = 1.0)
+        val renderer = CrushRenderer(amount = 1.0) // halfLevels = 1, expected bias ≈ −0.5
         renderer.renderInPlace(buffer)
 
         val mean = buffer.map { it.toDouble() }.average()
-        abs(mean) shouldBeLessThan 1e-3
-    }
-
-    "CrushRenderer envelope ramp produces no step at voice start" {
-        // Reproduce the per-note click scenario: envelope ramps 0 → 1, crusher is after.
-        // With symmetric round, the first nonzero envelope sample must stay near zero,
-        // not jump to a DC offset.
-        val blockFrames = 1024
-        val attackFrames = 480 // ~10ms at 48kHz
-        val sampleRate = 48000.0
-        val freq = 440.0
-        val buffer = FloatArray(blockFrames) { i ->
-            val env = if (i < attackFrames) i.toDouble() / attackFrames else 1.0
-            (sin(2.0 * PI * freq * i / sampleRate) * env).toFloat()
-        }
-        val renderer = CrushRenderer(amount = 1.0)
-        renderer.renderInPlace(buffer)
-
-        // The first ~20 samples (env small) should be near zero, not pegged at -0.5.
-        val earlyMax = (0 until 20).maxOf { abs(buffer[it].toDouble()) }
-        earlyMax shouldBeLessThan 0.2
+        // Must be clearly non-zero — mean ≈ −0.5 with room for envelope/phase variation.
+        (abs(mean) > 0.3) shouldBe true
     }
 
     "CrushRenderer oversampled path preserves bypass for amount=0" {
@@ -168,23 +149,24 @@ class CrushRendererSpec : StringSpec({
         os.renderInPlace(buffer)
 
         // amount=4 → levels=16, halfLevels=8, grid step=0.125
-        // round(0.6 * 8)/8 = round(4.8)/8 = 5/8 = 0.625
-        // After filter warmup the steady-state value should be near 0.625.
+        // floor(0.6 * 8)/8 = floor(4.8)/8 = 4/8 = 0.5
+        // After filter warmup the steady-state value should be near 0.5.
         val steady = buffer.takeLast(64).map { it.toDouble() }.average()
-        abs(steady - 0.625) shouldBeLessThan 0.05
+        abs(steady - 0.5) shouldBeLessThan 0.05
     }
 
     "CrushRenderer continuous `levels`: fractional amount differs from integer amount" {
         // Drop of toInt() means amount=2.5 produces a different grid than amount=2.0.
-        // The old implementation floored both to levels=4, giving identical output.
-        val a = FloatArray(32) { 0.35f }
-        val b = FloatArray(32) { 0.35f }
+        // The old implementation floored levels itself to 4 for both, giving identical output.
+        val a = FloatArray(32) { 0.8f }
+        val b = FloatArray(32) { 0.8f }
 
         CrushRenderer(amount = 2.0).renderInPlace(a)
         CrushRenderer(amount = 2.5).renderInPlace(b)
 
-        // At amount=2.0 (halfLevels=2): round(0.35*2)/2 = round(0.7)/2 = 1/2 = 0.5.
-        // At amount=2.5 (halfLevels=2.828): round(0.35*2.828)/2.828 = round(0.99)/2.828 ≈ 0.354.
+        // At amount=2.0 (halfLevels=2):    floor(0.8*2)/2 = floor(1.6)/2 = 1/2 = 0.5.
+        // At amount=2.5 (halfLevels≈2.828): floor(0.8*2.828)/2.828 = floor(2.26)/2.828
+        //                                   = 2/2.828 ≈ 0.707.
         // Outputs must differ — proving the amount axis is continuous, not step-quantized.
         (abs(a[0] - b[0]) > 0.05) shouldBe true
     }

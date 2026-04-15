@@ -205,18 +205,18 @@ import * from "stdlib"                                                          
 import * from "sprudel"                                                                                                    ////
                                                                                                                           //  //
 let feel = 5.0   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                //    //
-let snd  = 500   // 100 .. 2000                                                                                         //      //
+let snd  = 550   // 100 .. 2000                                                                                         //      //
                                                                                                                        //        //
 stack(                                                                                                    //////////////          //////////////
   // Lead                                                                                                   //                              //
   n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")                                                      //          DISCO!          //
     .orbit(0).scale("d#4:minor").sound("supersaw").unison(2).detune(0.05)                                       //       FOREVER!       //
-    .hpf(431).lpf(4200)                                                                                           //                  //
+    .hpf(431).lpf(4100)                                                                                           //                  //
     .gain(0.285).distort("0.8:exp").postgain(0.3) // . solo()                                                      //       //      //
     .adsr("0.01:0.3:0.6:0.1").clip(0.8)                                                                           //     //    //    //
     .release("<0.105!16 0.275!16 0.110!16 0.3!16 0.06!16 0.25!16 0.09!16 0.4!16 0.075!16 0.5!16>")               //   //          //  //
     .apply(                                                                                                     // //               // //
-      x => x.velocity(0.7).detune(0.05),                                                                       //                       //
+      x => x.velocity(0.7).detune(0.07),                                                                       //                       //
       x => x.shuffle("<1!64 0!16 1!1 4/8!14 1!33>").seed(sinOfNight.add(1).mul(24 * 60 * 15))            
         .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.25!32>").lpf(4500).pan(0.8))          
         .superimpose(transpose(24).detune(0.10).velocity("<0!96 0.095!32>").lpf(5000).pan(0.33))  
@@ -225,9 +225,9 @@ stack(                                                                          
   n("<[0 0 2 4 0 0 -2 -1]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6 4] 0 <[2 3] [-2 -0]>] [4 [2 1] 0 [-2 <-1 -4>]]>/4")
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>").velocity("1.02 0.95!3 0.98 0.95!3".fast(2))
     .scale("<d#2:minor!48 d#3:minor!16>").sound("supersaw").unison(3).detune(0.1)
-    .notchf(snd).notchq(0.5).lpf("<1800!48 2400!16>").hpf(200).warmth(saw.range(0.3, 0.1).slow(5*32))
+    .notchf(snd).notchq(0.5).lpf("<1800!48 2300!16>").hpf(200).warmth(saw.range(0.3, 0.1).slow(5*32))
     .distort("0.3:gentle:4").distort(sine.range(0.15, 0.3).slow(10*32))
-    .adsr("0.01:0.25:0.5:0.045").clip(0.75).crush(saw.range(8, 4).slow(32)) //   . solo()
+    .adsr("0.01:0.25:0.5:0.045").clip(0.75).crush(saw.range(8, 4).slow(32))  // . solo()
     .gain(0.36).orbit(1).pan(0.275),
   // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1.02 0.95!3 0.98 0.95!3".fast(2))

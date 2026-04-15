@@ -90,7 +90,7 @@ stack(                                                                 //////// 
     [[bd:2,cr]    hh sd      [sd,hh]]  [bd      hh sd:8    oh]  [bd      hh sd hh]       [bd hh      sd            [bd,oh]   ]
     [[bd,cr]      hh [sd,hh] cr     ]  [[bd,cr] hh [bd,cr] hh]  [[sd,oh] bd sd [bd,hh]]  [sd [bd,hh] [bd bd]       [bd bd,hh]]
   >`)
-    .orbit(3).gain(0.85).pan(0.6).adsr("0.01:0.0:1.0:1.25").hpf(100).lpf("4500:0.5:2")
+    .orbit(3).gain(0.85).pan(0.6).adsr("0.01:0.0:1.0:1.25").hpf(100).lpf("4200:0.5:1")
     .fast(2) // .solo()
   ,
 ).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25").analog(0.5)
@@ -109,7 +109,7 @@ import * from "sprudel"
 
 let wait = 16
 let keep = 32 * 6
-let notch = sine.range(0.5 * 440, 2 * 440).slow(16) // 440, 880, 1560 ?
+let notch = sine.range(1 * 440, 3 * 440).slow(16) // 440, 880, 1560 ?
 
 stack(
   // Claps --------------------------------------------------------------------------------------------------------------------
@@ -125,33 +125,33 @@ stack(
   n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.35).slow(16)).spread(1.0 ).tremolo("0.1:8").tremolodepth(saw.range(0,0.1).slow(256))
-    .gain(0.9).distort(0.25).warmth(0.5).postgain(0.2).adsr("0.01:0.2:0.8:0.15")
+    .gain(0.9).distort(0.25).warmth(0.5).postgain(0.2).adsr("0.01:0.2:0.8:0.155")
     .pan(sine.range(0.3, 0.7).slow(8)) // . solo()
-    .hpf(320).lpf(800).lpenv(perlin.range(3.0, 4.0).slow(8)).analog(2)
+    .hpf(300).lpf(800).lpenv(perlin.range(3.0, 4.0).slow(8)).analog(2)
     .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.8).struct("x!8")
-    .orbit(2).gain(1.0).adsr("0.005:0.5:0.5:0.3").postgain(0.5).pan(saw.range(0.4, 0.1).slow(keep * 2))
-    .superimpose(x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").pan(saw.range(0.6, 0.9).slow(keep * 2)).legato(1.05))
-    .superimpose(x => x.crush(saw.range(8, 1.52).add(berlin2.mul(0.1).seg(8).fast(4)).round().slow(128)).crushos(2))
-    .s("supersaw").unison(6).detune(saw.range(0.1, 0.55).slow(32)).warmth(0.3)
-    .lpf(6 * 440).hpf(180).notchf(notch).notchq(1.25)
+    .orbit(2).s("supersaw").unison(4).detune(saw.range(0.05, 0.45).slow(64)).warmth(0.3)
+    .gain(1.0).adsr("0.005:0.5:0.5:0.4").postgain(0.5).pan(saw.range(0.5, 0.3).slow(keep * 2))
+    .superimpose(x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").pan(saw.range(0.5, 0.7).slow(keep * 2)).legato(1.05))    
+    .lpf(4 * 440).hpf(150).notchf(notch).notchq(0.75)
+    .superimpose(x => x.gain(saw.slow(64).pow(1.3).mul(2)).crush("2.0".add(berlin2.mul(0.25).slow(4))).lpf(4 * 440).hpf(200).postgain(0.5))
     .velocity(cat(saw.pow(2).slow(32), pure(1).slow(256))).analog(1.5)  // . solo()
     .filterWhen(x => x < (wait * 4 + keep)) // . mute()
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
   sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-    .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1).lpf(5000)
+    .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1).lpf(4800)
     .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
   , // Perc 1 -----------------------------------------------------------------------------------------------------------------------
   sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-    .orbit(5).gain(0.75).pan(0.5).adsr("0.02:0.2:0.5:1").degrade(0.01).hpf(140)        
+    .orbit(5).gain(0.75).pan(0.5).adsr("0.02:0.2:0.5:1").degrade(0.01).hpf(120).lpf(5500)        
     .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
   , // Shore ---------------------------------------------------------------------------------------------------------
   note("c").fast(8).sound("brown")
     .orbit(0).gain(0.10).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
     .bandf(perlin.range(440, 440 * 4).segment(16).slow(64)).bandq(sine.range(0.05, 5.0).slow(32).early(16))
   ,
-).delay("0.1::0.5").delaytime(pure(1/8).div(cps)).room("0.02:10.0").compressor("-15:2:6:0.01:0.2")
+).delay("0.1::0.5").delaytime(pure(1/8).div(cps)).room("0.05:10.0").compressor("-15:2:6:0.01:0.2").analog(1)
 
 
 
@@ -163,7 +163,6 @@ stack(
    
    
  
-        
         """ // Stranger Things END
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false
