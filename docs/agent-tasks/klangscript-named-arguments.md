@@ -1121,23 +1121,33 @@ All 970+ existing tests must continue passing after each phase.
 
 ---
 
-## Part 10 — Open Questions
+## Part 10 — Decisions (formerly Open Questions)
 
-1. **Required-after-optional** — Kotlin allows it when named-call is used. KlangScript too?
-   My vote: yes. Matches Kotlin, makes builder composition freer.
+All resolved — implementation can proceed.
 
-2. **~~Positional-after-named mixing rule~~** — **DECIDED**: no mixing. All-or-nothing at every
-   call site. Simplifies parser + runtime + analyzer + avoids whole class of ambiguity.
+1. **Required-after-optional** — ✅ **Allowed at any position**. Because the call-site rule is
+   all-or-nothing, there's no ambiguity: a caller who wants to skip an optional must use named
+   syntax anyway. Library authors get free composition; new required params can be added at any
+   position without reordering existing ones.
 
-3. **KSP default strategy** — Strategy 1 (delegate to Kotlin defaults, via `bodyRawResolved`) or
-   Strategy 2 (restate default in registration)?
-   My vote: Strategy 1. Keeps source-of-truth in the Kotlin fn signature, no annotation pollution.
+2. **Positional-after-named mixing** — ❌ **Disallowed**. All-or-nothing at every call site.
+   Mixing would create ambiguity (same position bound twice) and the readability gain is
+   marginal. Enforced at parse-then-classify stage and by the analyzer.
 
-4. **Max arity** — user said ~10. Is 10 the hard ceiling? 10 × 4 modifier combos = 40+ classes.
-   My vote: 10 is fine; beyond that, a library author should use an options object or vararg.
+3. **KSP default strategy** — ✅ **Strategy 1: delegate to Kotlin defaults**. The generated
+   bridge registers params as optional with placeholder thunks and dispatches by "which args
+   were supplied" to call the Kotlin fn at the right arity, letting Kotlin's own default
+   mechanism fill the rest. Single source of truth. Default *display values* in the Web UI docs
+   come from the author's `@param` KDoc prose (no new annotation needed).
 
-5. **Script-defined default values** — out of scope for this task (not requested). Flag for a
-   future phase.
+4. **Max arity** — ✅ **10 total slots, receiver counts as slot 0**. A function declared with
+   `withReceiver<T>()` plus 9 `withParam` calls is at capacity. Keeps builder codegen simple
+   (one `FunctionBuilderN` family, not two). KSP errors if an annotated Kotlin function has more
+   than 10 script-visible params — author must use vararg or pack into an options object.
+   Ceiling can be raised later without breaking callers.
+
+5. **Script-defined default values** — 🔜 **Deferred**. Script arrow functions stay
+   positional-only-at-body-bind for Phase 1. Future work: add `(name = default) =>` syntax.
 
 ---
 
