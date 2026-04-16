@@ -1,0 +1,57 @@
+package io.peekandpoke.klang.audio_be.ignitor
+
+/**
+ * Wraps an [Ignitor] so that its output is computed at most once per block.
+ *
+ * When the same DSL node is referenced multiple times in a signal graph (e.g.
+ * `let s = Osc.sine().adsr(...); s + s.shimmer()`), each reader would otherwise
+ * invoke the underlying generator independently. For stateful sources (phase
+ * accumulators, noise seeds) this produces divergent samples — which contradicts
+ * the `let` binding mental model.
+ *
+ * [MemoizingIgnitor] records the inputs of its first call per block and hands
+ * the cached output buffer to every subsequent call within the same block.
+ *
+ * **Cache invalidation key:** `(voiceElapsedFrames, offset, length, freqHz)`.
+ * If any of these changes between calls, the inner Ignitor runs again. Typical
+ * causes of invalidation:
+ * - New block (`voiceElapsedFrames` advanced by previous block's length).
+ * - Sub-block render (different `offset` / `length` within one block).
+ * - Caller applied pitch modulation that alters `freqHz` (e.g. `detune`).
+ *
+ * The cache buffer grows lazily to match the largest `output.size` seen.
+ */
+class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
+
+    private var cache: FloatArray = FloatArray(0)
+
+    // Cache key components. Sentinel values guarantee a miss on the first call.
+    private var cachedVoiceElapsedFrames: Int = Int.MIN_VALUE
+    private var cachedOffset: Int = Int.MIN_VALUE
+    private var cachedLength: Int = Int.MIN_VALUE
+    private var cachedFreqHz: Double = Double.NaN
+
+    override fun generate(buffer: FloatArray, freqHz: Double, ctx: IgniteContext) {
+        val miss = ctx.voiceElapsedFrames != cachedVoiceElapsedFrames
+                || ctx.offset != cachedOffset
+                || ctx.length != cachedLength
+                || freqHz != cachedFreqHz
+
+        if (miss) {
+            if (cache.size < buffer.size) {
+                cache = FloatArray(buffer.size)
+            }
+            inner.generate(cache, freqHz, ctx)
+            cachedVoiceElapsedFrames = ctx.voiceElapsedFrames
+            cachedOffset = ctx.offset
+            cachedLength = ctx.length
+            cachedFreqHz = freqHz
+        }
+
+        // Copy cached samples into the caller's output buffer.
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
+            buffer[i] = cache[i]
+        }
+    }
+}

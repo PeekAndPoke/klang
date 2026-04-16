@@ -440,10 +440,6 @@ class KlangScriptProcessor(
     }
 
     /**
-     * Generates a raw registerExtensionMethod for methods with default parameters.
-     * Dispatches by args.size so Kotlin's own default mechanism fills in missing values.
-     */
-    /**
      * Generates the arity-dispatching body for a function/method with default parameters.
      * Shared between method and top-level function registration.
      *
@@ -491,15 +487,25 @@ class KlangScriptProcessor(
             }
 
             val callArgs = argsForLevel.map { it.name?.asString() ?: "p" }.joinToString(", ")
-            appendLine("$indent        $fnCall($selfArg$callArgs)")
+            appendLine("$indent        $fnCall(${joinCallArgs(selfArg, callArgs)})")
         }
 
         // Final else: only required params
         val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name?.asString() ?: "p" }.joinToString(", ")
         appendLine("$indent    } else {")
-        appendLine("$indent        $fnCall($selfArg$requiredArgs)")
+        appendLine("$indent        $fnCall(${joinCallArgs(selfArg, requiredArgs)})")
         appendLine("$indent    }")
         appendLine("$indent)")
+    }
+
+    /**
+     * Join the receiver/self prefix and the comma-separated script args, handling the
+     * empty-args case so we never emit a trailing comma like `Foo.method(self, )`.
+     */
+    private fun joinCallArgs(selfArg: String, args: String): String = when {
+        selfArg.isEmpty() -> args
+        args.isEmpty() -> selfArg.trimEnd(' ', ',')
+        else -> "$selfArg$args"
     }
 
     private fun generateMethodWithDefaults(
@@ -925,6 +931,18 @@ class KlangScriptProcessor(
      * leave `default = null`; the runtime then rejects named-call omissions
      * for those slots.
      */
+    /**
+     * Build the Kotlin source for a `List<ParamSpec>` covering [scriptParams].
+     *
+     * Note on type aliases: [resolveKotlinType] follows aliases through to the
+     * underlying type, so a parameter declared as e.g. `IgnitorDslLike` (a
+     * typealias for `Any`) ends up with `kotlinType = Any::class` in the
+     * emitted spec. This is enough to drive named-arg binding (we only need
+     * the name), but it loses the original alias for runtime type-checking
+     * and intellisense — those rely on the separate KlangParam doc model
+     * which preserves the alias text. Functions that want strict type
+     * checking should declare concrete (non-alias) parameter types.
+     */
     private fun paramSpecsListExpression(scriptParams: List<KSValueParameter>): String {
         if (scriptParams.isEmpty()) return "emptyList()"
         return scriptParams.joinToString(
@@ -933,11 +951,15 @@ class KlangScriptProcessor(
             separator = ", ",
         ) { p ->
             val name = p.name?.asString() ?: "p"
-            val type = resolveKotlinType(p.type.resolve())
+            val resolvedType = p.type.resolve()
+            // Strip the nullable suffix so kotlinType is a bare KClass; track nullability separately.
+            val typeNoNull = resolveKotlinType(resolvedType).removeSuffix("?")
+            val isNullable = resolvedType.nullability == Nullability.NULLABLE
             val parts = mutableListOf<String>()
             parts.add("name = \"$name\"")
-            parts.add("kotlinType = $type::class")
+            parts.add("kotlinType = $typeNoNull::class")
             if (p.isVararg) parts.add("isVararg = true")
+            if (isNullable) parts.add("isNullable = true")
             if (p.hasDefault) {
                 parts.add("isOptional = true")
                 val thunk = safeDefaultThunk(p)
@@ -950,17 +972,27 @@ class KlangScriptProcessor(
     /**
      * Returns a Kotlin source expression for a thunk that produces the
      * extracted default value, or null if extraction failed or the text isn't
-     * safe to paste verbatim into a generated file.
+     * provably safe to paste verbatim into the generated file.
      *
-     * "Safe to paste" heuristic: extracted text contains no `this` or `super`
-     * tokens (rough check — doesn't strip strings, but defaults with `this` /
-     * `super` are unusual and the conservative skip keeps the generated code
-     * compilable).
+     * "Provably safe" = a Kotlin literal that requires no enclosing-scope
+     * symbols to compile:
+     *   - number literals (Int/Long/Float/Double, with optional sign and suffix)
+     *   - string literals ("…" or """…""")
+     *   - char literals ('…')
+     *   - boolean literals (true/false)
+     *   - null literal
+     *
+     * Anything else (qualified references, function calls, expressions) goes
+     * to `defaultDoc` for display only; the runtime falls back to Kotlin's
+     * own arity-dispatch when the user calls the function positionally, and
+     * to a "use positional" error when the caller omits the slot in a named
+     * call. This is the conservative choice: a paste failure here would
+     * break the build of [GeneratedStdlibRegistration]; a missing thunk
+     * just degrades to slightly-less-flexible named-arg ergonomics.
      */
     private fun safeDefaultThunk(param: KSValueParameter): String? {
         val text = DefaultValueExtractor.extract(param) ?: return null
-        if (Regex("\\bthis\\b").containsMatchIn(text)) return null
-        if (Regex("\\bsuper\\b").containsMatchIn(text)) return null
+        if (!SafeDefaultLiteral.isSafe(text)) return null
         return "{ wrapAsRuntimeValue($text) }"
     }
 

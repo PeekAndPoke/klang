@@ -74,47 +74,50 @@ fun Ignitor.svf(
     var initialized = false
     val hasEnv = env.depth != 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        // Read upstream into a scratch buffer so the caller's input is never mutated.
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        // Read cutoff and Q per block (control rate)
-        val baseCutoff = Ignitors.readParam(cutoffHz, freqHz, ctx)
-        val qVal = Ignitors.readParam(q, freqHz, ctx)
+            // Read cutoff and Q per block (control rate)
+            val baseCutoff = Ignitors.readParam(cutoffHz, freqHz, ctx)
+            val qVal = Ignitors.readParam(q, freqHz, ctx)
 
-        val effectiveCutoff = if (hasEnv) {
-            val envValue = computeFilterEnvelope(ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec)
-            baseCutoff * (1.0 + env.depth * envValue)
-        } else {
-            baseCutoff
-        }
+            val effectiveCutoff = if (hasEnv) {
+                val envValue = computeFilterEnvelope(ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec)
+                baseCutoff * (1.0 + env.depth * envValue)
+            } else {
+                baseCutoff
+            }
 
-        if (!initialized || hasEnv || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
-            val nyquist = 0.5 * ctx.sampleRate
-            val fc = effectiveCutoff.coerceIn(5.0, nyquist - 1.0)
-            val Q = qVal.coerceIn(0.1, 50.0)
-            val g = tan(PI * fc / ctx.sampleRate)
-            k = 1.0 / Q
-            a1 = 1.0 / (1.0 + g * (g + k))
-            a2 = g * a1
-            a3 = g * a2
-            initialized = true
-        }
+            if (!initialized || hasEnv || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
+                val nyquist = 0.5 * ctx.sampleRate
+                val fc = effectiveCutoff.coerceIn(5.0, nyquist - 1.0)
+                val Q = qVal.coerceIn(0.1, 50.0)
+                val g = tan(PI * fc / ctx.sampleRate)
+                k = 1.0 / Q
+                a1 = 1.0 / (1.0 + g * (g + k))
+                a2 = g * a1
+                a3 = g * a2
+                initialized = true
+            }
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val v0 = buffer[i].toDouble()
-            val v3 = v0 - ic2eq
-            val v1 = a1 * ic1eq + a2 * v3
-            val v2 = ic2eq + a2 * ic1eq + a3 * v3
-            ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-            ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val v0 = input[i].toDouble()
+                val v3 = v0 - ic2eq
+                val v1 = a1 * ic1eq + a2 * v3
+                val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
+                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
 
-            buffer[i] = when (mode) {
-                SvfMode.LOWPASS -> v2
-                SvfMode.HIGHPASS -> v0 - k * v1 - v2
-                SvfMode.BANDPASS -> v1
-                SvfMode.NOTCH -> v0 - k * v1
-            }.toFloat()
+                output[i] = when (mode) {
+                    SvfMode.LOWPASS -> v2
+                    SvfMode.HIGHPASS -> v0 - k * v1 - v2
+                    SvfMode.BANDPASS -> v1
+                    SvfMode.NOTCH -> v0 - k * v1
+                }.toFloat()
+            }
         }
     }
 }

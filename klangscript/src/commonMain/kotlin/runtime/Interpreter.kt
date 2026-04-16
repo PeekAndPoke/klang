@@ -549,7 +549,7 @@ class Interpreter(
         // Evaluate every argument left-to-right, preserving Positional vs Named distinction.
         val evaluated: List<EvaluatedArgument> = call.arguments.map { arg ->
             when (arg) {
-                is Argument.Positional -> EvaluatedArgument.Positional(evaluate(arg.value))
+                is Argument.Positional -> EvaluatedArgument.Positional(evaluate(arg.value), arg.location)
                 is Argument.Named -> EvaluatedArgument.Named(arg.name, evaluate(arg.value), arg.nameLocation)
             }
         }
@@ -684,35 +684,37 @@ class Interpreter(
         call: CallExpression,
     ): List<RuntimeValue> {
         // An empty specs list means "no metadata" — same as null for resolution.
-        val haveSpecs = paramSpecs != null && paramSpecs.isNotEmpty()
+        val specs: List<ParamSpec>? = paramSpecs?.takeIf { it.isNotEmpty() }
 
-        // Can we fully resolve EVERY call style via paramSpecs? Requires every
-        // optional slot to carry a default thunk. Holds for Phase 4 builder
-        // registrations and KSP bridges with safe-literal defaults; doesn't
-        // hold for legacy KSP bridges with complex Kotlin defaults.
-        val canResolveAll = haveSpecs && paramSpecs!!.all { !it.isOptional || it.default != null }
+        // Strict spec-aware: every optional has a thunk (or it's a vararg). We
+        // can fully resolve any call style and produce a list aligned with the
+        // spec list. Used by the Phase 4 builder and by KSP bridges where every
+        // default extracted to a safe literal.
+        val canResolveAll = specs != null && specs.all { !it.isOptional || it.default != null }
 
         if (canResolveAll) {
             val resolved = resolveByParamSpec(
                 functionName = functionName,
-                specs = paramSpecs!!,
+                specs = specs,
                 args = args,
                 callLocation = call.location,
                 callStackTrace = getStackTrace(),
             )
             return resolved.mapIndexed { i, v ->
-                v ?: if (paramSpecs[i].isVararg) ArrayValue(mutableListOf()) else paramSpecs[i].default!!.invoke()
+                v ?: if (specs[i].isVararg) ArrayValue(mutableListOf()) else specs[i].default!!.invoke()
             }
         }
 
-        // Mixed-mode: positional bypasses spec resolution (so legacy arity
-        // dispatch on args.size keeps working). Named requires either no
-        // specs (transitional reject) or all optionals thunked (handled above).
+        // Legacy / partially-thunked path. Positional bypasses spec resolution
+        // so the bridge body's arity dispatch on `args.size` keeps working and
+        // Kotlin's own defaults fill the tail.
         return when (args) {
             CallArgs.Empty -> emptyList()
+
             is CallArgs.Positional -> args.values
+
             is CallArgs.Named -> {
-                if (!haveSpecs) {
+                if (specs == null) {
                     throw KlangScriptArgumentError(
                         functionName = functionName,
                         message = "Native function '$functionName' does not yet support named arguments. " +
@@ -722,16 +724,50 @@ class Interpreter(
                         callStackTrace = getStackTrace(),
                     )
                 }
-                val unfillable = paramSpecs!!.first { it.isOptional && it.default == null }
-                throw KlangScriptArgumentError(
+
+                // Has specs but at least one optional lacks a thunk. Resolve as
+                // far as we can and let the bridge body's arity dispatch fill
+                // any trailing unfillable optionals via Kotlin's own defaults.
+                val resolved = resolveByParamSpec(
                     functionName = functionName,
-                    message = "Native function '$functionName' has parameter '${unfillable.name}' " +
-                            "whose default cannot be resolved by name (complex Kotlin default). " +
-                            "Call with positional arguments to use the Kotlin default.",
-                    location = call.location,
-                    astNode = call,
+                    specs = specs,
+                    args = args,
+                    callLocation = call.location,
                     callStackTrace = getStackTrace(),
                 )
+
+                var lastSuppliedIdx = -1
+                resolved.forEachIndexed { i, v -> if (v != null) lastSuppliedIdx = i }
+
+                val out = mutableListOf<RuntimeValue>()
+                for (i in resolved.indices) {
+                    val v = resolved[i]
+                    val spec = specs[i]
+                    val thunk = spec.default
+                    when {
+                        v != null -> out += v
+                        spec.isVararg -> out += ArrayValue(mutableListOf())
+                        thunk != null -> out += thunk()
+                        spec.isOptional && i > lastSuppliedIdx -> break  // trailing — let Kotlin default
+                        spec.isOptional -> throw KlangScriptArgumentError(
+                            functionName = functionName,
+                            message = "parameter '${spec.name}' has a complex Kotlin default and was omitted " +
+                                    "in the middle of the call. Either supply it explicitly or call positionally.",
+                            location = call.location,
+                            astNode = call,
+                            callStackTrace = getStackTrace(),
+                        )
+
+                        else -> throw KlangScriptArgumentError(
+                            functionName = functionName,
+                            message = "missing required parameter '${spec.name}'",
+                            location = call.location,
+                            astNode = call,
+                            callStackTrace = getStackTrace(),
+                        )
+                    }
+                }
+                out
             }
         }
     }

@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script.builder
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.runtime.ArrayValue
+import io.peekandpoke.klang.script.runtime.KlangScriptArgumentError
 import io.peekandpoke.klang.script.runtime.NullValue
 import io.peekandpoke.klang.script.runtime.ParamSpec
 import io.peekandpoke.klang.script.runtime.RuntimeValue
@@ -108,23 +109,48 @@ class BuilderCtx internal constructor(
 // ============================================================================
 
 private fun convertSlot(spec: ParamSpec, value: RuntimeValue, loc: SourceLocation?): Any? {
-    if (value is NullValue) return null
+    if (value is NullValue) {
+        if (!spec.isNullable) {
+            throw KlangScriptArgumentError(
+                functionName = spec.name,
+                message = "parameter '${spec.name}' is not nullable but received null",
+                location = loc,
+            )
+        }
+        return null
+    }
     @Suppress("UNCHECKED_CAST")
     return value.convertToKotlin(spec.kotlinType as KClass<Any>, loc)
 }
 
 private fun convertVararg(spec: ParamSpec, value: RuntimeValue, loc: SourceLocation?): List<Any?> {
-    val arr = value as? ArrayValue ?: error("vararg slot '${spec.name}' must be ArrayValue")
+    val arr = value as? ArrayValue ?: throw KlangScriptArgumentError(
+        functionName = spec.name,
+        message = "vararg parameter '${spec.name}' requires an array; got ${value::class.simpleName}",
+        location = loc,
+    )
     return arr.elements.map { convertSlot(spec, it, loc) }
 }
 
+/**
+ * Read the typed value at body-lambda parameter index [paramIdx]. When the
+ * builder has a receiver, [paramIdx] 0 is the receiver (handled separately
+ * by each body); script-visible params start at index 1, so we subtract one
+ * to find the spec/arg index. When there is no receiver, body params and
+ * specs line up.
+ */
 @Suppress("UNCHECKED_CAST")
-private fun <T> slot(specs: List<ParamSpec>, args: List<RuntimeValue>, idx: Int, loc: SourceLocation?): T =
-    convertSlot(specs[idx], args[idx], loc) as T
+private fun <T> slot(ctx: BuilderCtx, args: List<RuntimeValue>, paramIdx: Int, loc: SourceLocation?): T {
+    val specIdx = if (ctx.receiverClass != null) paramIdx - 1 else paramIdx
+    return convertSlot(ctx.specs[specIdx], args[specIdx], loc) as T
+}
 
+/** Vararg counterpart of [slot] — see its docs for the [paramIdx] convention. */
 @Suppress("UNCHECKED_CAST")
-private fun <T> varargSlot(specs: List<ParamSpec>, args: List<RuntimeValue>, idx: Int, loc: SourceLocation?): List<T> =
-    convertVararg(specs[idx], args[idx], loc) as List<T>
+private fun <T> varargSlot(ctx: BuilderCtx, args: List<RuntimeValue>, paramIdx: Int, loc: SourceLocation?): List<T> {
+    val specIdx = if (ctx.receiverClass != null) paramIdx - 1 else paramIdx
+    return convertVararg(ctx.specs[specIdx], args[specIdx], loc) as List<T>
+}
 
 // ============================================================================
 //  FunctionBuilder0 — entry; can declare a receiver
@@ -163,7 +189,23 @@ class FunctionBuilder0 @PublishedApi internal constructor(@PublishedApi internal
     }
 
     fun body(fn: () -> Any?) {
-        ctx.registerWithBody { _, _, _ -> fn() }
+        // Builder0 has zero specs. The interpreter's legacy passthrough lets
+        // any positional args reach the bridge unchecked, so we enforce the
+        // zero-arg invariant here — otherwise `answer(99)` would silently call
+        // `fn()` and ignore the user's arg.
+        val ctxName = ctx.name
+        ctx.registerWithBody { args, _, loc ->
+            if (args.isNotEmpty()) {
+                throw KlangScriptArgumentError(
+                    functionName = ctxName,
+                    message = "$ctxName expects no arguments but got ${args.size}",
+                    expected = 0,
+                    actual = args.size,
+                    location = loc,
+                )
+            }
+            fn()
+        }
     }
 }
 
@@ -188,11 +230,9 @@ class FunctionBuilder1<P1> @PublishedApi internal constructor(@PublishedApi inte
     }
 
     fun body(fn: (P1) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
             fn(p1)
         }
     }
@@ -215,14 +255,10 @@ class FunctionBuilder2<P1, P2> @PublishedApi internal constructor(@PublishedApi 
     }
 
     fun body(fn: (P1, P2) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
             fn(p1, p2)
         }
     }
@@ -245,15 +281,11 @@ class FunctionBuilder3<P1, P2, P3> @PublishedApi internal constructor(@Published
     }
 
     fun body(fn: (P1, P2, P3) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
             fn(p1, p2, p3)
         }
     }
@@ -276,16 +308,12 @@ class FunctionBuilder4<P1, P2, P3, P4> @PublishedApi internal constructor(@Publi
     }
 
     fun body(fn: (P1, P2, P3, P4) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
             fn(p1, p2, p3, p4)
         }
     }
@@ -308,17 +336,13 @@ class FunctionBuilder5<P1, P2, P3, P4, P5> @PublishedApi internal constructor(@P
     }
 
     fun body(fn: (P1, P2, P3, P4, P5) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
             fn(p1, p2, p3, p4, p5)
         }
     }
@@ -341,18 +365,14 @@ class FunctionBuilder6<P1, P2, P3, P4, P5, P6> @PublishedApi internal constructo
     }
 
     fun body(fn: (P1, P2, P3, P4, P5, P6) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
             fn(p1, p2, p3, p4, p5, p6)
         }
     }
@@ -378,19 +398,15 @@ class FunctionBuilder7<P1, P2, P3, P4, P5, P6, P7> @PublishedApi internal constr
     }
 
     fun body(fn: (P1, P2, P3, P4, P5, P6, P7) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
-            val p7: P7 = slot(specs, args, 6 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
+            val p7: P7 = slot(ctx, args, 6, loc)
             fn(p1, p2, p3, p4, p5, p6, p7)
         }
     }
@@ -416,20 +432,16 @@ class FunctionBuilder8<P1, P2, P3, P4, P5, P6, P7, P8> @PublishedApi internal co
     }
 
     fun body(fn: (P1, P2, P3, P4, P5, P6, P7, P8) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
-            val p7: P7 = slot(specs, args, 6 + off, loc)
-            val p8: P8 = slot(specs, args, 7 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
+            val p7: P7 = slot(ctx, args, 6, loc)
+            val p8: P8 = slot(ctx, args, 7, loc)
             fn(p1, p2, p3, p4, p5, p6, p7, p8)
         }
     }
@@ -455,21 +467,17 @@ class FunctionBuilder9<P1, P2, P3, P4, P5, P6, P7, P8, P9> @PublishedApi interna
     }
 
     fun body(fn: (P1, P2, P3, P4, P5, P6, P7, P8, P9) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
-            val p7: P7 = slot(specs, args, 6 + off, loc)
-            val p8: P8 = slot(specs, args, 7 + off, loc)
-            val p9: P9 = slot(specs, args, 8 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
+            val p7: P7 = slot(ctx, args, 6, loc)
+            val p8: P8 = slot(ctx, args, 7, loc)
+            val p9: P9 = slot(ctx, args, 8, loc)
             fn(p1, p2, p3, p4, p5, p6, p7, p8, p9)
         }
     }
@@ -478,22 +486,18 @@ class FunctionBuilder9<P1, P2, P3, P4, P5, P6, P7, P8, P9> @PublishedApi interna
 class FunctionBuilder10<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     // No more withParam — slot budget exhausted.
     fun body(fn: (P1, P2, P3, P4, P5, P6, P7, P8, P9, P10) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
-            val p7: P7 = slot(specs, args, 6 + off, loc)
-            val p8: P8 = slot(specs, args, 7 + off, loc)
-            val p9: P9 = slot(specs, args, 8 + off, loc)
-            val p10: P10 = slot(specs, args, 9 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
+            val p7: P7 = slot(ctx, args, 6, loc)
+            val p8: P8 = slot(ctx, args, 7, loc)
+            val p9: P9 = slot(ctx, args, 8, loc)
+            val p10: P10 = slot(ctx, args, 9, loc)
             fn(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
         }
     }
@@ -507,12 +511,12 @@ class FunctionBuilder10<P1, P2, P3, P4, P5, P6, P7, P8, P9, P10> @PublishedApi i
 // ============================================================================
 
 class TerminalVararg1<T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
+    // Type-state guarantees: TerminalVararg1 is only reachable from
+    // FunctionBuilder0.withVararg, which can only be called before withReceiver,
+    // so ctx.receiverClass is necessarily null here.
     fun body(fn: (List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
-        require(!hasReceiver) { "${ctx.name}: TerminalVararg1 cannot have a receiver" }
         ctx.registerWithBody { args, _, loc ->
-            val tail: List<T> = varargSlot(specs, args, 0, loc)
+            val tail: List<T> = varargSlot(ctx, args, 0, loc)
             fn(tail)
         }
     }
@@ -520,14 +524,10 @@ class TerminalVararg1<T> @PublishedApi internal constructor(@PublishedApi intern
 
 class TerminalVararg2<P1, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val tail: List<T> = varargSlot(specs, args, 1 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val tail: List<T> = varargSlot(ctx, args, 1, loc)
             fn(p1, tail)
         }
     }
@@ -535,15 +535,11 @@ class TerminalVararg2<P1, T> @PublishedApi internal constructor(@PublishedApi in
 
 class TerminalVararg3<P1, P2, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, P2, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val tail: List<T> = varargSlot(specs, args, 2 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val tail: List<T> = varargSlot(ctx, args, 2, loc)
             fn(p1, p2, tail)
         }
     }
@@ -551,16 +547,12 @@ class TerminalVararg3<P1, P2, T> @PublishedApi internal constructor(@PublishedAp
 
 class TerminalVararg4<P1, P2, P3, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, P2, P3, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val tail: List<T> = varargSlot(specs, args, 3 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val tail: List<T> = varargSlot(ctx, args, 3, loc)
             fn(p1, p2, p3, tail)
         }
     }
@@ -568,17 +560,13 @@ class TerminalVararg4<P1, P2, P3, T> @PublishedApi internal constructor(@Publish
 
 class TerminalVararg5<P1, P2, P3, P4, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, P2, P3, P4, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val tail: List<T> = varargSlot(specs, args, 4 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val tail: List<T> = varargSlot(ctx, args, 4, loc)
             fn(p1, p2, p3, p4, tail)
         }
     }
@@ -586,18 +574,14 @@ class TerminalVararg5<P1, P2, P3, P4, T> @PublishedApi internal constructor(@Pub
 
 class TerminalVararg6<P1, P2, P3, P4, P5, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, P2, P3, P4, P5, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val tail: List<T> = varargSlot(specs, args, 5 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val tail: List<T> = varargSlot(ctx, args, 5, loc)
             fn(p1, p2, p3, p4, p5, tail)
         }
     }
@@ -605,19 +589,15 @@ class TerminalVararg6<P1, P2, P3, P4, P5, T> @PublishedApi internal constructor(
 
 class TerminalVararg7<P1, P2, P3, P4, P5, P6, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, P2, P3, P4, P5, P6, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
-            val tail: List<T> = varargSlot(specs, args, 6 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
+            val tail: List<T> = varargSlot(ctx, args, 6, loc)
             fn(p1, p2, p3, p4, p5, p6, tail)
         }
     }
@@ -625,20 +605,16 @@ class TerminalVararg7<P1, P2, P3, P4, P5, P6, T> @PublishedApi internal construc
 
 class TerminalVararg8<P1, P2, P3, P4, P5, P6, P7, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, P2, P3, P4, P5, P6, P7, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
-            val p7: P7 = slot(specs, args, 6 + off, loc)
-            val tail: List<T> = varargSlot(specs, args, 7 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
+            val p7: P7 = slot(ctx, args, 6, loc)
+            val tail: List<T> = varargSlot(ctx, args, 7, loc)
             fn(p1, p2, p3, p4, p5, p6, p7, tail)
         }
     }
@@ -646,21 +622,17 @@ class TerminalVararg8<P1, P2, P3, P4, P5, P6, P7, T> @PublishedApi internal cons
 
 class TerminalVararg9<P1, P2, P3, P4, P5, P6, P7, P8, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, P2, P3, P4, P5, P6, P7, P8, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
-            val p7: P7 = slot(specs, args, 6 + off, loc)
-            val p8: P8 = slot(specs, args, 7 + off, loc)
-            val tail: List<T> = varargSlot(specs, args, 8 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
+            val p7: P7 = slot(ctx, args, 6, loc)
+            val p8: P8 = slot(ctx, args, 7, loc)
+            val tail: List<T> = varargSlot(ctx, args, 8, loc)
             fn(p1, p2, p3, p4, p5, p6, p7, p8, tail)
         }
     }
@@ -668,22 +640,18 @@ class TerminalVararg9<P1, P2, P3, P4, P5, P6, P7, P8, T> @PublishedApi internal 
 
 class TerminalVararg10<P1, P2, P3, P4, P5, P6, P7, P8, P9, T> @PublishedApi internal constructor(@PublishedApi internal val ctx: BuilderCtx) {
     fun body(fn: (P1, P2, P3, P4, P5, P6, P7, P8, P9, List<T>) -> Any?) {
-        val specs = ctx.specs
-        val hasReceiver = ctx.receiverClass != null
         ctx.registerWithBody { args, rcv, loc ->
-            val off = if (hasReceiver) -1 else 0
-
             @Suppress("UNCHECKED_CAST")
-            val p1: P1 = if (hasReceiver) rcv as P1 else slot(specs, args, 0, loc)
-            val p2: P2 = slot(specs, args, 1 + off, loc)
-            val p3: P3 = slot(specs, args, 2 + off, loc)
-            val p4: P4 = slot(specs, args, 3 + off, loc)
-            val p5: P5 = slot(specs, args, 4 + off, loc)
-            val p6: P6 = slot(specs, args, 5 + off, loc)
-            val p7: P7 = slot(specs, args, 6 + off, loc)
-            val p8: P8 = slot(specs, args, 7 + off, loc)
-            val p9: P9 = slot(specs, args, 8 + off, loc)
-            val tail: List<T> = varargSlot(specs, args, 9 + off, loc)
+            val p1: P1 = if (ctx.receiverClass != null) rcv as P1 else slot(ctx, args, 0, loc)
+            val p2: P2 = slot(ctx, args, 1, loc)
+            val p3: P3 = slot(ctx, args, 2, loc)
+            val p4: P4 = slot(ctx, args, 3, loc)
+            val p5: P5 = slot(ctx, args, 4, loc)
+            val p6: P6 = slot(ctx, args, 5, loc)
+            val p7: P7 = slot(ctx, args, 6, loc)
+            val p8: P8 = slot(ctx, args, 7, loc)
+            val p9: P9 = slot(ctx, args, 8, loc)
+            val tail: List<T> = varargSlot(ctx, args, 9, loc)
             fn(p1, p2, p3, p4, p5, p6, p7, p8, p9, tail)
         }
     }

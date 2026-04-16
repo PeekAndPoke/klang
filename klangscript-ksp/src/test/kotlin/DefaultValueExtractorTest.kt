@@ -124,4 +124,19 @@ class DefaultValueExtractorTest : StringSpec({
         // Scanner must see the `cutoff:` declaration, not the KDoc reference (which is in a comment).
         DefaultValueExtractor.extractFromWindow(src, "cutoff") shouldBe "1000.0"
     }
+
+    // The extractor itself just returns whatever's after `=` — it doesn't decide
+    // whether the text is safe to paste. That decision lives in the KSP processor's
+    // `safeDefaultThunk` / `isSafeLiteralForThunk`. We round-trip both here so a
+    // future refactor doesn't accidentally let unsafe text into the generated code.
+
+    "extractor returns dotted reference verbatim (caller decides safety)" {
+        val src = "fun sine(freq: IgnitorDslLike = IgnitorDsl.Freq)"
+        DefaultValueExtractor.extractFromWindow(src, "freq") shouldBe "IgnitorDsl.Freq"
+    }
+
+    "extractor returns 'this'-referencing default (caller must skip)" {
+        val src = "fun bar(x: Int = this.fallback)"
+        DefaultValueExtractor.extractFromWindow(src, "x") shouldBe "this.fallback"
+    }
 })

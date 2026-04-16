@@ -359,15 +359,28 @@ inline fun guardNativeCall(
 sealed class EvaluatedArgument {
     abstract val value: RuntimeValue
 
+    /**
+     * Source location used for diagnostics that point at *this* argument —
+     * e.g. the mixed-style error wants to highlight the offending positional
+     * arg when it appears after a named one. Falls back to the call's own
+     * location when the AST didn't carry a source location through.
+     */
+    abstract val location: SourceLocation?
+
     /** Positional: bound to the parameter at its index. */
-    data class Positional(override val value: RuntimeValue) : EvaluatedArgument()
+    data class Positional(
+        override val value: RuntimeValue,
+        override val location: SourceLocation?,
+    ) : EvaluatedArgument()
 
     /** Named: bound to the parameter matching [name]. */
     data class Named(
         val name: String,
         override val value: RuntimeValue,
         val nameLocation: SourceLocation?,
-    ) : EvaluatedArgument()
+    ) : EvaluatedArgument() {
+        override val location: SourceLocation? get() = nameLocation
+    }
 }
 
 /**
@@ -415,14 +428,10 @@ sealed class CallArgs {
             val firstKind = evaluated[0]::class
             val firstMismatch = evaluated.firstOrNull { it::class != firstKind }
             if (firstMismatch != null) {
-                val loc = when (firstMismatch) {
-                    is EvaluatedArgument.Named -> firstMismatch.nameLocation ?: callLocation
-                    else -> callLocation
-                }
                 throw KlangScriptArgumentError(
                     functionName = functionName,
                     message = "Call must use either all positional or all named arguments — no mixing",
-                    location = loc,
+                    location = firstMismatch.location ?: callLocation,
                     callStackTrace = callStackTrace,
                 )
             }
@@ -461,6 +470,9 @@ sealed class CallArgs {
  *   the bridge must handle the omission itself (e.g. Kotlin's own arity
  *   dispatch for legacy KSP-generated bridges that can't safely paste a
  *   default expression into a thunk).
+ * @property isNullable True if the underlying Kotlin parameter type is
+ *   nullable. Drives whether `NullValue` from script collapses to a Kotlin
+ *   `null` (when nullable) or rejects with a type error (when not).
  * @property default Null ⇒ no thunk; non-null thunk runs only when the arg is
  *   missing during named-call resolution.
  * @property isVararg True if this slot captures trailing positional args.
@@ -470,6 +482,7 @@ data class ParamSpec(
     val name: String,
     val kotlinType: KClass<*>,
     val isOptional: Boolean = false,
+    val isNullable: Boolean = false,
     val default: (() -> RuntimeValue)? = null,
     val isVararg: Boolean = false,
 )
