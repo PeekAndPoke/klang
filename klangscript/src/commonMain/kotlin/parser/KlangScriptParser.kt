@@ -887,6 +887,14 @@ class KlangScriptParser private constructor(
 
     private fun check(type: TokenType): Boolean = !isAtEnd() && peek().type == type
 
+    /** Lookahead: is the token at [pos + offset] of [type]? */
+    private fun checkAt(offset: Int, type: TokenType): Boolean {
+        val idx = pos + offset
+        if (idx >= tokens.size) return false
+        val tok = tokens[idx]
+        return tok.type != TokenType.EOF && tok.type == type
+    }
+
     private fun match(vararg types: TokenType): Boolean {
         for (type in types) {
             if (check(type)) {
@@ -1477,23 +1485,52 @@ class KlangScriptParser private constructor(
     }
 
     /**
-     * Parse function call arguments
-     * Handles trailing commas.
+     * Parse function call arguments. Handles trailing commas.
      *
-     * Phase 1 always wraps each expression as Argument.Positional. Named-arg
-     * detection ("name = expr") is added in Phase 2.
+     * Each argument is either:
+     *   - Named: `IDENTIFIER = expr` — bound by parameter name
+     *   - Positional: `expr`        — bound by index
+     *
+     * The call-site all-or-nothing rule (every argument must be the same kind)
+     * is enforced at the interpreter / analyzer layer, not here, so a mixed
+     * call still parses cleanly and produces a good error location later.
      */
     private fun parseArguments(): List<Argument> {
         val args = mutableListOf<Argument>()
 
         if (!check(TokenType.RIGHT_PAREN)) {
             do {
-                val expr = parseExpression()
-                args.add(Argument.Positional(expr))
+                args.add(parseArgument())
             } while (match(TokenType.COMMA) && !check(TokenType.RIGHT_PAREN))
         }
 
         return args
+    }
+
+    /**
+     * Parse a single argument — named if it starts with `IDENTIFIER =`, else positional.
+     *
+     * Named detection uses 2-token lookahead so we don't confuse it with:
+     *   - `==` / `===` comparisons    (EQ / STRICT_EQ tokens, not EQUALS)
+     *   - `+=`, `-=`, ...             (compound-assign tokens, not EQUALS)
+     *   - assignment-as-argument      (wrap in parens: `foo((x = 1))`)
+     *
+     * Only a bare `IDENTIFIER` followed by `EQUALS` at the start of an argument slot
+     * is treated as a named argument; everything else falls through to
+     * `parseExpression()` which handles assignment / ternary / arrow-fn / etc.
+     */
+    private fun parseArgument(): Argument {
+        if (check(TokenType.IDENTIFIER) && checkAt(1, TokenType.EQUALS)) {
+            val nameToken = advance()                    // consume IDENTIFIER
+            advance()                                    // consume EQUALS
+            val value = parseExpression()
+            return Argument.Named(
+                name = nameToken.text,
+                value = value,
+                nameLocation = nameToken.toSourceLocation(),
+            )
+        }
+        return Argument.Positional(parseExpression())
     }
 
     /**
