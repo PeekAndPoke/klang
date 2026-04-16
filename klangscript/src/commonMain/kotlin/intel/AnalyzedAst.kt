@@ -184,7 +184,7 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
         when (expr) {
             is CallExpression -> {
                 visitExpr(expr.callee)
-                expr.arguments.forEach { visitExpr(it) }
+                expr.arguments.forEach { visitExpr(it.value) }
             }
 
             is BinaryOperation -> {

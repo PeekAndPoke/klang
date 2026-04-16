@@ -449,19 +449,50 @@ data class Identifier(
 ) : Expression(location)
 
 /**
+ * A single argument at a call site.
+ *
+ * A [CallExpression] carries a list of [Argument]s. Each argument is either
+ * positional (bound by index) or named (bound by parameter name).
+ *
+ * A call must use either all positional or all named arguments — mixing is
+ * rejected at classification time by the interpreter and by the analyzer.
+ */
+sealed class Argument {
+    /** The expression producing the argument's value. */
+    abstract val value: Expression
+
+    /** Source location of the argument — the name token for named, the value for positional. */
+    abstract val location: SourceLocation?
+
+    /** Positional: `foo(expr)` — bound by index. */
+    data class Positional(
+        override val value: Expression,
+        override val location: SourceLocation? = value.location,
+    ) : Argument()
+
+    /** Named: `foo(name = expr)` — bound to the parameter matching [name]. */
+    data class Named(
+        val name: String,
+        override val value: Expression,
+        val nameLocation: SourceLocation? = null,
+        override val location: SourceLocation? = nameLocation ?: value.location,
+    ) : Argument()
+}
+
+/**
  * A function call expression
  *
  * Represents calling a function with zero or more arguments.
  * The callee can be any expression (typically an Identifier).
  *
  * Examples:
- * - print("hello") -> callee: Identifier("print"), arguments: [StringLiteral("hello")]
- * - add(1, 2, 3) -> callee: Identifier("add"), arguments: [NumberLiteral(1), NumberLiteral(2), NumberLiteral(3)]
- * - upper(getName()) -> nested function call
+ * - print("hello") -> callee: Identifier("print"), arguments: [Positional(StringLiteral("hello"))]
+ * - add(1, 2, 3) -> callee: Identifier("add"), arguments: [Positional, Positional, Positional]
+ * - filter(cutoff = 800) -> callee: Identifier("filter"), arguments: [Named("cutoff", ...)]
  */
 data class CallExpression(
     val callee: Expression,
-    val arguments: List<Expression>,
+    val arguments: List<Argument>,
     override val location: SourceLocation? = null,
 ) : Expression(location)
 

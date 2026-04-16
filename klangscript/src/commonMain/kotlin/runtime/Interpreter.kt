@@ -2,7 +2,42 @@ package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptEngine
-import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.ast.ArrayLiteral
+import io.peekandpoke.klang.script.ast.ArrowFunction
+import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.ast.AssignmentExpression
+import io.peekandpoke.klang.script.ast.BinaryOperation
+import io.peekandpoke.klang.script.ast.BinaryOperator
+import io.peekandpoke.klang.script.ast.BooleanLiteral
+import io.peekandpoke.klang.script.ast.BreakStatement
+import io.peekandpoke.klang.script.ast.CallExpression
+import io.peekandpoke.klang.script.ast.ConstDeclaration
+import io.peekandpoke.klang.script.ast.ContinueStatement
+import io.peekandpoke.klang.script.ast.DoWhileStatement
+import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportStatement
+import io.peekandpoke.klang.script.ast.Expression
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.ast.ForStatement
+import io.peekandpoke.klang.script.ast.Identifier
+import io.peekandpoke.klang.script.ast.IfExpression
+import io.peekandpoke.klang.script.ast.ImportStatement
+import io.peekandpoke.klang.script.ast.IndexAccess
+import io.peekandpoke.klang.script.ast.LetDeclaration
+import io.peekandpoke.klang.script.ast.MemberAccess
+import io.peekandpoke.klang.script.ast.NullLiteral
+import io.peekandpoke.klang.script.ast.NumberLiteral
+import io.peekandpoke.klang.script.ast.ObjectLiteral
+import io.peekandpoke.klang.script.ast.Program
+import io.peekandpoke.klang.script.ast.ReturnStatement
+import io.peekandpoke.klang.script.ast.Statement
+import io.peekandpoke.klang.script.ast.StringLiteral
+import io.peekandpoke.klang.script.ast.TemplateLiteral
+import io.peekandpoke.klang.script.ast.TemplatePart
+import io.peekandpoke.klang.script.ast.TernaryExpression
+import io.peekandpoke.klang.script.ast.UnaryOperation
+import io.peekandpoke.klang.script.ast.UnaryOperator
+import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import kotlin.math.pow
 
@@ -508,8 +543,10 @@ class Interpreter(
             throw e
         }
 
-        // Evaluate all arguments left-to-right
-        val args = call.arguments.map { evaluate(it) }
+        // Evaluate all arguments left-to-right.
+        // Phase 1: every argument is Positional — just unwrap .value.
+        // Phase 3 will classify positional vs named and build a proper CallArgs.
+        val args = call.arguments.map { evaluate(it.value) }
 
         // Handle different function types
         return when (callee) {

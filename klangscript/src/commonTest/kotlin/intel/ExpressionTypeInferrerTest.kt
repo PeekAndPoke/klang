@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script.intel
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.script.ast.Argument
 import io.peekandpoke.klang.script.ast.ArrayLiteral
 import io.peekandpoke.klang.script.ast.ArrowFunction
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
@@ -173,7 +174,7 @@ class ExpressionTypeInferrerTest : StringSpec({
         val inferrer = ExpressionTypeInferrer(registry())
         val call = CallExpression(
             callee = Identifier("note"),
-            arguments = listOf(StringLiteral("c3")),
+            arguments = listOf(Argument.Positional(StringLiteral("c3"))),
         )
         inferrer.inferType(call)?.simpleName shouldBe "Pattern"
     }
@@ -193,7 +194,7 @@ class ExpressionTypeInferrerTest : StringSpec({
         val inferrer = ExpressionTypeInferrer(registry())
         val call = CallExpression(
             callee = MemberAccess(obj = Identifier("Math"), property = "sqrt"),
-            arguments = listOf(NumberLiteral(16.0)),
+            arguments = listOf(Argument.Positional(NumberLiteral(16.0))),
         )
         inferrer.inferType(call)?.simpleName shouldBe "Number"
     }
@@ -210,7 +211,7 @@ class ExpressionTypeInferrerTest : StringSpec({
                 ),
                 property = "lowpass",
             ),
-            arguments = listOf(NumberLiteral(1000.0)),
+            arguments = listOf(Argument.Positional(NumberLiteral(1000.0))),
         )
         inferrer.inferType(chain)?.simpleName shouldBe "IgnitorDsl"
     }
@@ -221,11 +222,11 @@ class ExpressionTypeInferrerTest : StringSpec({
             callee = MemberAccess(
                 obj = CallExpression(
                     callee = Identifier("note"),
-                    arguments = listOf(StringLiteral("c3")),
+                    arguments = listOf(Argument.Positional(StringLiteral("c3"))),
                 ),
                 property = "gain",
             ),
-            arguments = listOf(NumberLiteral(0.5)),
+            arguments = listOf(Argument.Positional(NumberLiteral(0.5))),
         )
         inferrer.inferType(chain)?.simpleName shouldBe "Pattern"
     }
@@ -267,7 +268,7 @@ class ExpressionTypeInferrerTest : StringSpec({
                 ),
                 property = "lowpass",
             ),
-            arguments = listOf(NumberLiteral(1000.0)),
+            arguments = listOf(Argument.Positional(NumberLiteral(1000.0))),
         )
         inferrer.inferType(chain) shouldBe null
     }

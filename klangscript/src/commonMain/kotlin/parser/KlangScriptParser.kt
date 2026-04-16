@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.parser
 
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.script.ast.Argument
 import io.peekandpoke.klang.script.ast.ArrayLiteral
 import io.peekandpoke.klang.script.ast.ArrowFunction
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
@@ -1477,14 +1478,18 @@ class KlangScriptParser private constructor(
 
     /**
      * Parse function call arguments
-     * Handles trailing commas
+     * Handles trailing commas.
+     *
+     * Phase 1 always wraps each expression as Argument.Positional. Named-arg
+     * detection ("name = expr") is added in Phase 2.
      */
-    private fun parseArguments(): List<Expression> {
-        val args = mutableListOf<Expression>()
+    private fun parseArguments(): List<Argument> {
+        val args = mutableListOf<Argument>()
 
         if (!check(TokenType.RIGHT_PAREN)) {
             do {
-                args.add(parseExpression())
+                val expr = parseExpression()
+                args.add(Argument.Positional(expr))
             } while (match(TokenType.COMMA) && !check(TokenType.RIGHT_PAREN))
         }
 

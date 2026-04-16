@@ -232,7 +232,7 @@ class AnalyzedAstTest : StringSpec({
         val call = a.topExpr() as CallExpression
         a.typeOf(call)?.simpleName shouldBe "Number"
 
-        val arg = call.arguments.first()
+        val arg = call.arguments.first().value
         a.typeOf(arg)?.simpleName shouldBe "Number"
 
         val callee = call.callee as MemberAccess
@@ -460,7 +460,7 @@ class AnalyzedAstTest : StringSpec({
 
         // Also verify a nested expression
         val call = a.topExpr() as CallExpression
-        a.typeOf(call.arguments.first())?.simpleName shouldBe "Number"
+        a.typeOf(call.arguments.first().value)?.simpleName shouldBe "Number"
 
         val callee = call.callee as MemberAccess
         a.typeOf(callee.obj)?.simpleName shouldBe "Math"
@@ -675,7 +675,7 @@ class AnalyzedAstTest : StringSpec({
         // Navigate to the .ad MemberAccess
         val decl = a.ast.statements.first() as LetDeclaration
         val registerCall = decl.initializer as CallExpression
-        val secondArg = registerCall.arguments[1] as MemberAccess
+        val secondArg = registerCall.arguments[1].value as MemberAccess
         secondArg.property shouldBe "ad"
 
         // The receiver of .ad is Osc.sine() → IgnitorDsl
@@ -703,7 +703,7 @@ let a = Osc.register("aa", Osc.sine().ad)"""
         // Find .ad MemberAccess
         val letDecl = a.ast.statements.filterIsInstance<LetDeclaration>().first()
         val registerCall = letDecl.initializer as CallExpression
-        val secondArg = registerCall.arguments[1] as MemberAccess
+        val secondArg = registerCall.arguments[1].value as MemberAccess
         secondArg.property shouldBe "ad"
 
         // Receiver of .ad is Osc.sine() → must be IgnitorDsl

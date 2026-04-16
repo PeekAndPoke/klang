@@ -3,7 +3,16 @@ package io.peekandpoke.klang.script
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.ast.ArrowFunction
+import io.peekandpoke.klang.script.ast.BinaryOperation
+import io.peekandpoke.klang.script.ast.CallExpression
+import io.peekandpoke.klang.script.ast.ConstDeclaration
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.ast.Identifier
+import io.peekandpoke.klang.script.ast.LetDeclaration
+import io.peekandpoke.klang.script.ast.ObjectLiteral
+import io.peekandpoke.klang.script.ast.Program
+import io.peekandpoke.klang.script.ast.UnaryOperation
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 
 /**
@@ -269,7 +278,7 @@ class CompleteProgramTest : StringSpec({
         callExpr.arguments.size shouldBe 2
 
         // First argument should be division: 1/3
-        callExpr.arguments[0].shouldBeInstanceOf<BinaryOperation>()
+        callExpr.arguments[0].value.shouldBeInstanceOf<BinaryOperation>()
     }
 
     "should parse program with all features combined" {

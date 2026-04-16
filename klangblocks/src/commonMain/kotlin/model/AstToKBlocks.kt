@@ -3,7 +3,42 @@ package io.peekandpoke.klang.blocks.model
 import io.peekandpoke.klang.blocks.model.AstToKBlocks.extractChain
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.math.formatAsIntOrDouble
-import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.ast.ArrayLiteral
+import io.peekandpoke.klang.script.ast.ArrowFunction
+import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.ast.AssignmentExpression
+import io.peekandpoke.klang.script.ast.BinaryOperation
+import io.peekandpoke.klang.script.ast.BinaryOperator
+import io.peekandpoke.klang.script.ast.BooleanLiteral
+import io.peekandpoke.klang.script.ast.BreakStatement
+import io.peekandpoke.klang.script.ast.CallExpression
+import io.peekandpoke.klang.script.ast.ConstDeclaration
+import io.peekandpoke.klang.script.ast.ContinueStatement
+import io.peekandpoke.klang.script.ast.DoWhileStatement
+import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportStatement
+import io.peekandpoke.klang.script.ast.Expression
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.ast.ForStatement
+import io.peekandpoke.klang.script.ast.Identifier
+import io.peekandpoke.klang.script.ast.IfExpression
+import io.peekandpoke.klang.script.ast.ImportStatement
+import io.peekandpoke.klang.script.ast.IndexAccess
+import io.peekandpoke.klang.script.ast.LetDeclaration
+import io.peekandpoke.klang.script.ast.MemberAccess
+import io.peekandpoke.klang.script.ast.NullLiteral
+import io.peekandpoke.klang.script.ast.NumberLiteral
+import io.peekandpoke.klang.script.ast.ObjectLiteral
+import io.peekandpoke.klang.script.ast.Program
+import io.peekandpoke.klang.script.ast.ReturnStatement
+import io.peekandpoke.klang.script.ast.Statement
+import io.peekandpoke.klang.script.ast.StringLiteral
+import io.peekandpoke.klang.script.ast.TemplateLiteral
+import io.peekandpoke.klang.script.ast.TemplatePart
+import io.peekandpoke.klang.script.ast.TernaryExpression
+import io.peekandpoke.klang.script.ast.UnaryOperation
+import io.peekandpoke.klang.script.ast.UnaryOperator
+import io.peekandpoke.klang.script.ast.WhileStatement
 
 object AstToKBlocks {
 
@@ -90,11 +125,11 @@ object AstToKBlocks {
      */
     private fun extractChain(expr: Expression): ChainResult? = when {
         expr is CallExpression && expr.callee is Identifier ->
-            ChainResult(links = listOf(ChainLink((expr.callee as Identifier).name, expr.arguments, expr.location)))
+            ChainResult(links = listOf(ChainLink((expr.callee as Identifier).name, expr.arguments.map { it.value }, expr.location)))
 
         expr is CallExpression && expr.callee is MemberAccess -> {
             val access = expr.callee as MemberAccess
-            val thisLink = ChainLink(access.property, expr.arguments, expr.location)
+            val thisLink = ChainLink(access.property, expr.arguments.map { it.value }, expr.location)
             when {
                 // String literal is the direct receiver: "C4".func(...)
                 access.obj is StringLiteral ->
@@ -312,7 +347,7 @@ private fun Expression.toSourceString(): String = when (this) {
     is AssignmentExpression -> "${target.toSourceString()} = ${value.toSourceString()}"
     is MemberAccess -> "${obj.toSourceString()}.$property"
     is CallExpression ->
-        "${callee.toSourceString()}(${arguments.joinToString(", ") { it.toSourceString() }})"
+        "${callee.toSourceString()}(${arguments.joinToString(", ") { it.value.toSourceString() }})"
 
     is ArrowFunction -> {
         val params = if (parameters.size == 1) {
