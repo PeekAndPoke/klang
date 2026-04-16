@@ -570,10 +570,7 @@ class Interpreter(
                 executionContext.currentLocation = call.location
 
                 try {
-                    // Phase 3: native functions still take a List<RuntimeValue>.
-                    // Phase 5 migrates them to accept CallArgs directly, at which
-                    // point named calls to native functions will bind by name.
-                    val positional = requirePositionalForNative(callee.name, callArgs, call)
+                    val positional = positionalArgsForNative(callee.name, callee.paramSpecs, callArgs, call)
                     guardNativeCall(callee.name, positional, call.location) {
                         callee.function(positional, call.location)
                     }
@@ -622,7 +619,7 @@ class Interpreter(
                 executionContext.currentLocation = call.location
 
                 try {
-                    val positional = requirePositionalForNative(fnName, callArgs, call)
+                    val positional = positionalArgsForNative(fnName, callee.paramSpecs, callArgs, call)
                     guardNativeCall(fnName, positional, call.location) {
                         callee.invoker(positional, call.location)
                     }
@@ -662,25 +659,46 @@ class Interpreter(
     }
 
     /**
-     * Native functions still accept only `List<RuntimeValue>` in Phase 3.
-     * A CallArgs.Named against a native callee is a transitional error
-     * that goes away in Phase 5 once native registrations carry ParamSpecs.
+     * Convert [CallArgs] into the positional `List<RuntimeValue>` that the
+     * legacy native-function signature expects.
+     *
+     * - All-positional → pass through unchanged.
+     * - All-named with declared [paramSpecs] → resolve via [resolveByParamSpec],
+     *   filling default thunks for any optional slot the caller omitted.
+     * - All-named with no [paramSpecs] (legacy registrations) → transitional
+     *   error; lifted in Phase 5 once every native is migrated.
      */
-    private fun requirePositionalForNative(
+    private fun positionalArgsForNative(
         functionName: String,
+        paramSpecs: List<ParamSpec>?,
         args: CallArgs,
         call: CallExpression,
-    ): List<RuntimeValue> = when (args) {
-        CallArgs.Empty -> emptyList()
-        is CallArgs.Positional -> args.values
-        is CallArgs.Named -> throw KlangScriptArgumentError(
-            functionName = functionName,
-            message = "Native function '$functionName' does not yet support named arguments. " +
-                    "Pass them positionally for now (named-arg support lands with the builder rewrite).",
-            location = call.location,
-            astNode = call,
-            callStackTrace = getStackTrace(),
-        )
+    ): List<RuntimeValue> {
+        if (paramSpecs != null) {
+            val resolved = resolveByParamSpec(
+                functionName = functionName,
+                specs = paramSpecs,
+                args = args,
+                callLocation = call.location,
+                callStackTrace = getStackTrace(),
+            )
+            return resolved.mapIndexed { i, v ->
+                v ?: paramSpecs[i].default!!.invoke()
+            }
+        }
+
+        return when (args) {
+            CallArgs.Empty -> emptyList()
+            is CallArgs.Positional -> args.values
+            is CallArgs.Named -> throw KlangScriptArgumentError(
+                functionName = functionName,
+                message = "Native function '$functionName' does not yet support named arguments. " +
+                        "Pass them positionally for now (named-arg support lands with the builder rewrite).",
+                location = call.location,
+                astNode = call,
+                callStackTrace = getStackTrace(),
+            )
+        }
     }
 
     /**
@@ -1283,7 +1301,8 @@ class Interpreter(
                 return BoundNativeMethod(
                     methodName = memberAccess.property,
                     receiver = objValue,
-                    invoker = { args, location -> extensionMethod.invoker(objValue.value, args, location, engine) }
+                    invoker = { args, location -> extensionMethod.invoker(objValue.value, args, location, engine) },
+                    paramSpecs = extensionMethod.paramSpecs,
                 )
             }
 
@@ -1311,7 +1330,8 @@ class Interpreter(
                 return BoundNativeMethod(
                     methodName = memberAccess.property,
                     receiver = NativeObjectValue.fromValue(objValue),
-                    invoker = { args, location -> extensionMethod.invoker(objValue, args, location, engine) }
+                    invoker = { args, location -> extensionMethod.invoker(objValue, args, location, engine) },
+                    paramSpecs = extensionMethod.paramSpecs,
                 )
             }
 

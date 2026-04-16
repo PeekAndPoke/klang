@@ -88,8 +88,8 @@ class Environment(
         }
 
         // Define all native functions as values
-        native.functions.forEach { (name, function) ->
-            define(name, NativeFunctionValue(name, function))
+        native.functions.forEach { entry ->
+            define(entry.name, NativeFunctionValue(entry.name, entry.paramSpecs, entry.function))
         }
     }
 

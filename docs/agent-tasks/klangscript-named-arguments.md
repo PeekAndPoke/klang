@@ -629,6 +629,55 @@ named = { c: v3, a: v1 }
 - **Duplicate named**: `foo(a = 1, a = 2)` → "Duplicate named argument: a".
 - **Missing required**: after binding, a required spec is still unbound → "missing required parameter 'b'".
 
+### 4.4 Vararg interaction with named arguments
+
+Specs ending in a vararg slot (`withVararg<T>(name)`) accept both call styles, but the
+binding rule differs:
+
+**Positional call** — the tail absorbs into the vararg slot:
+
+```javascript
+stack("d1", 0.5, "bd", "sd", "hh")        // positional tail → samples = ["bd", "sd", "hh"]
+```
+
+The bridge collects everything past the last fixed-position spec into a `List<T>` and passes
+it to the body.
+
+**Named call** — the vararg slot is bound by name to **a single array value**:
+
+```javascript
+stack(orbit = "d1", gain = 0.5, samples = ["bd", "sd", "hh"])
+```
+
+The bridge expects an `ArrayValue` for the vararg slot, unwraps it to `List<T>`, and passes
+it to the body. The `.body` lambda receives `List<T>` regardless of which call style was
+used at the call site.
+
+**Strict typing — no auto-wrap.** A non-array value passed by name to a vararg slot is an
+error (not silently wrapped):
+
+```javascript
+stack(samples = "bd")                     // ERROR: vararg parameter 'samples' requires an array
+stack(samples = ["bd"])                   // OK
+```
+
+Rationale: explicit beats convenient; matches the "no implicit coercion" stance elsewhere.
+
+**Empty vararg** is fine in either style:
+
+```javascript
+stack("d1", 0.5)                          // samples = []
+stack(orbit = "d1", gain = 0.5)           // samples = []  (slot omitted in named call)
+```
+
+If the vararg slot is omitted in a named call (no `samples = …` entry), it defaults to
+`emptyList()` — varargs are inherently 0-or-more, never required.
+
+Spec for the analyzer (Part 6): when checking a named call against a callable with a vararg
+slot, additionally verify that the named arg's value-expression is statically an
+`ArrayLiteral` (or a known-array type via `ExpressionTypeInferrer`). Anything else gets a
+diagnostic at analysis time, before the user runs.
+
 ---
 
 ## Part 5 — KSP Processor Rewrite

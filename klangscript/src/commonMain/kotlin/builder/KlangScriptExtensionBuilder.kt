@@ -7,9 +7,32 @@ import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.getUniqueClassName
-import io.peekandpoke.klang.script.runtime.*
+import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
+import io.peekandpoke.klang.script.runtime.NativeTypeInfo
+import io.peekandpoke.klang.script.runtime.NumberValue
+import io.peekandpoke.klang.script.runtime.ParamSpec
+import io.peekandpoke.klang.script.runtime.RuntimeValue
+import io.peekandpoke.klang.script.runtime.StringValue
+import io.peekandpoke.klang.script.runtime.checkArgsSize
+import io.peekandpoke.klang.script.runtime.convertArgToKotlin
+import io.peekandpoke.klang.script.runtime.wrapAsRuntimeValue
 import kotlin.jvm.JvmName
 import kotlin.reflect.KClass
+
+/**
+ * One registered native top-level function.
+ *
+ * @property name Script-visible name.
+ * @property function The legacy positional invocation closure.
+ * @property paramSpecs Optional declared parameters. Set by the new
+ *   `createFunction` builder; null for legacy `registerFunction*` registrations.
+ *   Drives named-argument resolution at the interpreter layer.
+ */
+data class NativeFunctionEntry(
+    val name: String,
+    val function: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+    val paramSpecs: List<ParamSpec>? = null,
+)
 
 /**
  * Defines a klang script extension
@@ -18,7 +41,7 @@ class KlangScriptExtension(
     /** Registered libraries */
     val libraries: Map<String, KlangScriptLibrary>,
     /** Registered native functions */
-    val functions: List<Pair<String, (List<RuntimeValue>, SourceLocation?) -> RuntimeValue>>,
+    val functions: List<NativeFunctionEntry>,
     /** Registered native types */
     val types: Map<KClass<*>, NativeTypeInfo>,
     /** Registered native objects */
@@ -69,6 +92,29 @@ interface KlangScriptExtensionBuilder {
         name: String,
         fn: (T, List<RuntimeValue>, SourceLocation?, KlangScriptEngine) -> RuntimeValue,
     )
+
+    /**
+     * Internal — register a native function together with its declared
+     * parameter specs (Phase 4 [createFunction] builder). Drives named-arg
+     * resolution at the interpreter layer.
+     */
+    fun registerFunctionWithSpecs(
+        name: String,
+        paramSpecs: List<ParamSpec>,
+        fn: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+    )
+
+    /**
+     * Internal — register a native extension method together with its declared
+     * parameter specs. Receiver is supplied separately by the binding logic
+     * and is NOT included in [paramSpecs].
+     */
+    fun registerExtensionMethodWithSpecs(
+        receiver: KClass<*>,
+        name: String,
+        paramSpecs: List<ParamSpec>,
+        fn: (Any, List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+    )
 }
 
 /**
@@ -79,8 +125,7 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
     private val libraries = mutableMapOf<String, KlangScriptLibrary>()
 
     /** Registered native functions */
-    private val nativeFunctions =
-        mutableListOf<Pair<String, (List<RuntimeValue>, SourceLocation?) -> RuntimeValue>>()
+    private val nativeFunctions = mutableListOf<NativeFunctionEntry>()
 
     /** Registered native types */
     private val nativeTypes = mutableMapOf<KClass<*>, NativeTypeInfo>()
@@ -110,7 +155,16 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
         name: String,
         fn: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
     ) {
-        nativeFunctions.add(name to fn)
+        nativeFunctions.add(NativeFunctionEntry(name, fn))
+    }
+
+    /** Register a native function with declared parameter specs (Phase 4 builder uses this). */
+    override fun registerFunctionWithSpecs(
+        name: String,
+        paramSpecs: List<ParamSpec>,
+        fn: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+    ) {
+        nativeFunctions.add(NativeFunctionEntry(name, fn, paramSpecs))
     }
 
     /** Register a native Kotlin type */
@@ -174,6 +228,27 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
 
         registerType(receiver)
 
+        nativeExtensionMethods.getOrPut(receiver) { mutableMapOf() }[name] = extensionMethod
+    }
+
+    /**
+     * Used by the Phase 4 [createFunction] builder.
+     * Registers an extension method together with its declared param specs so
+     * the interpreter can resolve named-arg calls.
+     */
+    override fun registerExtensionMethodWithSpecs(
+        receiver: KClass<*>,
+        name: String,
+        paramSpecs: List<ParamSpec>,
+        fn: (Any, List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
+    ) {
+        val extensionMethod = NativeExtensionMethod(
+            methodName = name,
+            receiverClass = receiver,
+            invoker = { rcv, args, location, _ -> fn(rcv, args, location) },
+            paramSpecs = paramSpecs,
+        )
+        registerType(receiver) {}
         nativeExtensionMethods.getOrPut(receiver) { mutableMapOf() }[name] = extensionMethod
     }
 }
