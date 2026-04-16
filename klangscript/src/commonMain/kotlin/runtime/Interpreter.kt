@@ -2,6 +2,7 @@ package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptEngine
+import io.peekandpoke.klang.script.ast.Argument
 import io.peekandpoke.klang.script.ast.ArrayLiteral
 import io.peekandpoke.klang.script.ast.ArrowFunction
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
@@ -543,25 +544,38 @@ class Interpreter(
             throw e
         }
 
-        // Evaluate all arguments left-to-right.
-        // Phase 1: every argument is Positional — just unwrap .value.
-        // Phase 3 will classify positional vs named and build a proper CallArgs.
-        val args = call.arguments.map { evaluate(it.value) }
+        val calleeName = resolveCalleeName(callee, call.callee)
 
-        // Handle different function types
+        // Evaluate every argument left-to-right, preserving Positional vs Named distinction.
+        val evaluated: List<EvaluatedArgument> = call.arguments.map { arg ->
+            when (arg) {
+                is Argument.Positional -> EvaluatedArgument.Positional(evaluate(arg.value))
+                is Argument.Named -> EvaluatedArgument.Named(arg.name, evaluate(arg.value), arg.nameLocation)
+            }
+        }
+
+        // Classify: all-positional, all-named, or Empty.
+        // Throws KlangScriptArgumentError if mixed or if a name is duplicated.
+        val callArgs = CallArgs.resolve(
+            functionName = calleeName,
+            evaluated = evaluated,
+            callLocation = call.location,
+            callStackTrace = getStackTrace(),
+        )
+
         return when (callee) {
             is NativeFunctionValue -> {
-                // Push native function onto call stack
                 callStack.push("<native>", call.location)
-
-                // Update execution context with current call location
                 val previousLocation = executionContext.currentLocation
                 executionContext.currentLocation = call.location
 
                 try {
-                    // Call native Kotlin function with location, guarded
-                    guardNativeCall(callee.name, args, call.location) {
-                        callee.function(args, call.location)
+                    // Phase 3: native functions still take a List<RuntimeValue>.
+                    // Phase 5 migrates them to accept CallArgs directly, at which
+                    // point named calls to native functions will bind by name.
+                    val positional = requirePositionalForNative(callee.name, callArgs, call)
+                    guardNativeCall(callee.name, positional, call.location) {
+                        callee.function(positional, call.location)
                     }
                 } finally {
                     executionContext.currentLocation = previousLocation
@@ -570,50 +584,27 @@ class Interpreter(
             }
 
             is FunctionValue -> {
-                // Verify argument count matches parameter count
-                if (args.size != callee.parameters.size) {
-                    throw KlangScriptArgumentError(
-                        functionName = "<anonymous function>",
-                        message = "Function expects ${callee.parameters.size} arguments, got ${args.size}",
-                        expected = callee.parameters.size,
-                        actual = args.size,
-                        location = call.location,
-                        astNode = call,
-                        callStackTrace = getStackTrace()
-                    )
-                }
+                val boundArgs = bindScriptFunctionArgs(callee, callArgs, call)
 
-                // Push function onto call stack
                 callStack.push("<anonymous>", call.location)
                 try {
-                    // Create new environment extending the function's closure
                     val funcEnv = Environment(callee.closureEnv)
-
-                    // Bind parameters to arguments
-                    callee.parameters.zip(args).forEach { (param, arg) ->
+                    callee.parameters.zip(boundArgs).forEach { (param, arg) ->
                         funcEnv.define(param, arg)
                     }
 
-                    // Create temporary interpreter with function environment, shared call stack, and execution context
                     val funcInterpreter = Interpreter(funcEnv, engine, callStack, executionContext)
 
-                    // Evaluate function body based on type
                     when (val body = callee.body) {
-                        is ArrowFunctionBody.ExpressionBody -> {
-                            // Expression body: implicitly return the expression value
-                            funcInterpreter.evaluate(body.expression)
-                        }
+                        is ArrowFunctionBody.ExpressionBody -> funcInterpreter.evaluate(body.expression)
 
                         is ArrowFunctionBody.BlockBody -> {
-                            // Block body: execute statements, catch return exception
                             try {
                                 for (stmt in body.statements) {
                                     funcInterpreter.executeStatement(stmt)
                                 }
-                                // If no return statement was encountered, return NullValue
                                 NullValue
                             } catch (e: ReturnException) {
-                                // Return statement was encountered, return its value
                                 e.value
                             }
                         }
@@ -624,17 +615,16 @@ class Interpreter(
             }
 
             is BoundNativeMethod -> {
-                // Call the bound native method
                 val fnName = "${callee.receiver.qualifiedName}.${callee.methodName}"
                 callStack.push(fnName, call.location)
 
-                // Update execution context with current call location
                 val previousLocation = executionContext.currentLocation
                 executionContext.currentLocation = call.location
 
                 try {
-                    guardNativeCall(fnName, args, call.location) {
-                        callee.invoker(args, call.location)
+                    val positional = requirePositionalForNative(fnName, callArgs, call)
+                    guardNativeCall(fnName, positional, call.location) {
+                        callee.invoker(positional, call.location)
                     }
                 } finally {
                     executionContext.currentLocation = previousLocation
@@ -650,6 +640,123 @@ class Interpreter(
                     astNode = call,
                     callStackTrace = getStackTrace()
                 )
+            }
+        }
+    }
+
+    /** User-visible name for a callee — used in argument error messages. */
+    private fun resolveCalleeName(callee: RuntimeValue, calleeExpr: Expression): String = when (callee) {
+        is NativeFunctionValue -> callee.name
+        is BoundNativeMethod -> "${callee.receiver.qualifiedName}.${callee.methodName}"
+        is FunctionValue -> when (calleeExpr) {
+            is Identifier -> calleeExpr.name
+            is MemberAccess -> calleeExpr.property
+            else -> "<anonymous function>"
+        }
+
+        else -> when (calleeExpr) {
+            is Identifier -> calleeExpr.name
+            is MemberAccess -> calleeExpr.property
+            else -> "<anonymous>"
+        }
+    }
+
+    /**
+     * Native functions still accept only `List<RuntimeValue>` in Phase 3.
+     * A CallArgs.Named against a native callee is a transitional error
+     * that goes away in Phase 5 once native registrations carry ParamSpecs.
+     */
+    private fun requirePositionalForNative(
+        functionName: String,
+        args: CallArgs,
+        call: CallExpression,
+    ): List<RuntimeValue> = when (args) {
+        CallArgs.Empty -> emptyList()
+        is CallArgs.Positional -> args.values
+        is CallArgs.Named -> throw KlangScriptArgumentError(
+            functionName = functionName,
+            message = "Native function '$functionName' does not yet support named arguments. " +
+                    "Pass them positionally for now (named-arg support lands with the builder rewrite).",
+            location = call.location,
+            astNode = call,
+            callStackTrace = getStackTrace(),
+        )
+    }
+
+    /**
+     * Bind a [CallArgs] against the parameter list of a script arrow function,
+     * producing a positionally-ordered list aligned with [FunctionValue.parameters].
+     *
+     * Script params are all required in Phase 3 — script-side defaults are
+     * deferred to a later phase.
+     */
+    private fun bindScriptFunctionArgs(
+        fn: FunctionValue,
+        args: CallArgs,
+        call: CallExpression,
+    ): List<RuntimeValue> {
+        val paramNames = fn.parameters
+        val fnDisplay = "<anonymous function>"
+
+        return when (args) {
+            CallArgs.Empty -> {
+                if (paramNames.isNotEmpty()) {
+                    throw KlangScriptArgumentError(
+                        functionName = fnDisplay,
+                        message = "Function expects ${paramNames.size} arguments, got 0",
+                        expected = paramNames.size,
+                        actual = 0,
+                        location = call.location,
+                        astNode = call,
+                        callStackTrace = getStackTrace(),
+                    )
+                }
+                emptyList()
+            }
+
+            is CallArgs.Positional -> {
+                if (args.values.size != paramNames.size) {
+                    throw KlangScriptArgumentError(
+                        functionName = fnDisplay,
+                        message = "Function expects ${paramNames.size} arguments, got ${args.values.size}",
+                        expected = paramNames.size,
+                        actual = args.values.size,
+                        location = call.location,
+                        astNode = call,
+                        callStackTrace = getStackTrace(),
+                    )
+                }
+                args.values
+            }
+
+            is CallArgs.Named -> {
+                val result = arrayOfNulls<RuntimeValue>(paramNames.size)
+                for ((name, v) in args.values) {
+                    val idx = paramNames.indexOf(name)
+                    if (idx == -1) {
+                        throw KlangScriptArgumentError(
+                            functionName = fnDisplay,
+                            message = "unknown parameter '$name' (expected: ${paramNames.joinToString(", ")})",
+                            location = call.location,
+                            astNode = call,
+                            callStackTrace = getStackTrace(),
+                        )
+                    }
+                    result[idx] = v
+                }
+                paramNames.forEachIndexed { i, name ->
+                    if (result[i] == null) {
+                        throw KlangScriptArgumentError(
+                            functionName = fnDisplay,
+                            message = "missing required parameter '$name'",
+                            location = call.location,
+                            astNode = call,
+                            callStackTrace = getStackTrace(),
+                        )
+                    }
+                }
+                @Suppress("UNCHECKED_CAST")
+                result.toList() as List<RuntimeValue>
             }
         }
     }
