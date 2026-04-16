@@ -1,7 +1,19 @@
 package io.peekandpoke.klang.script.ksp
 
-import com.google.devtools.ksp.processing.*
-import com.google.devtools.ksp.symbol.*
+import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.Dependencies
+import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.processing.SymbolProcessor
+import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
+import com.google.devtools.ksp.symbol.ClassKind
+import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeAlias
+import com.google.devtools.ksp.symbol.KSValueParameter
+import com.google.devtools.ksp.symbol.Nullability
 import com.google.devtools.ksp.validate
 
 /**
@@ -767,6 +779,11 @@ class KlangScriptProcessor(
                     append("name = \"$paramName\", ")
                     append("type = ${generateKlangType(paramType)}")
                     if (param.isVararg) append(", isVararg = true")
+                    if (param.hasDefault) append(", isOptional = true")
+                    val defaultDoc = DefaultValueExtractor.extract(param)
+                    if (defaultDoc != null) {
+                        append(", defaultDoc = \"\"\"${defaultDoc.escapeForRawString()}\"\"\"")
+                    }
                     if (paramDesc.isNotEmpty()) append(", description = \"\"\"$paramDesc\"\"\"")
                     if (paramUiTools.isNotEmpty()) {
                         append(", uitools = listOf(${paramUiTools.joinToString(", ") { "\"$it\"" }})")
