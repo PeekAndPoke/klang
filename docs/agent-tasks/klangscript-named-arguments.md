@@ -879,16 +879,37 @@ with a trailing `?` and show default values:
 filter(cutoff: Number? = 1000, q: Number? = 1): IgnitorDsl
 ```
 
-The `?` + default draws from the new `KlangParam.isOptional` flag (added in Part 6.2). The
-default *value* is harder to surface — KSP can't easily grab the default-expression source. Two
-options:
+Two pieces feed this rendering:
 
-- **Simple**: show `?` only, omit the value. Enough to communicate "this is optional".
-- **Rich**: the new hand-written builder does accept an explicit default thunk; we can store
-  the thunk's *toString* or a user-supplied doc hint. For KSP-generated bridges, add
-  `@KlangScript.Param("cutoff", defaultDoc = "1000 Hz")` — opt-in, ugly but honest.
+- **`KlangParam.isOptional: Boolean`** — drives the `?` marker. Set by the KSP processor when
+  `KSValueParameter.hasDefault` is true. Always reliable.
+- **`KlangParam.defaultDoc: String?`** — drives the `= 1000` part. Extracted from raw source by
+  the KSP processor (see 7.1.1). When extraction fails or returns null, the UI just shows
+  `cutoff: Number?` — the `?` already conveys "optional".
 
-**Recommendation**: start with Simple. Add Rich if users ask.
+#### 7.1.1 KSP default-value extraction (for docs only)
+
+A small helper in the processor reads each defaulted parameter's source location, scans forward
+from the `=` token to the matching top-level `,` or `)`, and emits the trimmed string as
+`defaultDoc`. The extracted text is **only used in docs** — bridge generation stays on Strategy
+1 (delegate to Kotlin's own defaults via arity dispatch), so a flaky extraction never produces
+broken generated code.
+
+Scanner requirements:
+
+- Bracket-aware: track `(` `)` `[` `]` `{` `}` depth.
+- String-aware: skip over `"…"`, `'…'`, `` `…` `` content (including escaped quotes and
+  `${…}` interpolations).
+- Comment-aware: skip `// …\n` and `/* … */`.
+- Fail-soft: any unexpected token, missing offsets, or unclosed bracket → return `null`,
+  caller emits `defaultDoc = null`.
+
+Estimated size: ~80 lines of Kotlin, isolated in
+`klangscript-ksp/src/main/kotlin/DefaultValueExtractor.kt` with its own unit tests
+(literals, math expressions, multi-line, nested calls, comments inside, edge cases).
+
+Out of scope (deferred or never): pasting the extracted text into the bridge thunk; resolving
+references to enclosing-scope symbols; rendering interpolated `${…}` expressions specially.
 
 ### 7.2 Add a "Usage styles" section to each callable doc panel
 
@@ -968,6 +989,7 @@ any tutorial written after this ships.
 | Add "Usage styles" auto-examples panel     | `KlangScriptLibraryDocsPage.kt`                   | New helper funcs  |
 | Default-doc storage                        | `KlangParam` (already has `description`, add `defaultDoc: String?`) | Model change |
 | KSP emission of `isOptional` + `defaultDoc`| `KlangScriptProcessor.generateCallableDoc()`      | Modify            |
+| KSP source extractor for default values    | `klangscript-ksp/.../DefaultValueExtractor.kt` (new) + unit tests | New util          |
 | KDoc convention doc                        | `klangscript/ref/kdoc-conventions.md` (new)       | Docs              |
 | Stdlib KDoc sample sweep                   | All `@KlangScript.Method` / `@Function` sites     | Content rewrite   |
 
@@ -1018,7 +1040,9 @@ adapter that wraps them as `CallArgs.Positional → List<RuntimeValue>`.
 
 ### Phase 5 — KSP processor rewrite + doc metadata
 
-16. Add `isOptional` (+ optional `defaultDoc`) to `KlangParam`.
+16. Add `isOptional` (+ optional `defaultDoc`) to `KlangParam`. Implement
+    `DefaultValueExtractor` in the KSP module with bracket/string/comment-aware scanning
+    and a small unit test suite. Wire it into doc emission only — never into bridge logic.
 17. Rewrite `generateMethodRegistration` / `generateFunctionRegistration` to emit the new chain.
 18. Regenerate stdlib → `GeneratedStdlibRegistration.kt` uses new builder; doc blocks carry
     `isOptional`.
