@@ -150,6 +150,7 @@ class FunctionBuilder0 @PublishedApi internal constructor(@PublishedApi internal
             ParamSpec(
                 name = name,
                 kotlinType = T::class,
+                isOptional = true,
                 default = { wrapAsRuntimeValue(default()) },
             )
         )
@@ -177,7 +178,7 @@ class FunctionBuilder1<P1> @PublishedApi internal constructor(@PublishedApi inte
     }
 
     inline fun <reified T : Any> withOptionalParam(name: String, noinline default: () -> T): FunctionBuilder2<P1, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder2(ctx)
     }
 
@@ -204,7 +205,7 @@ class FunctionBuilder2<P1, P2> @PublishedApi internal constructor(@PublishedApi 
     }
 
     inline fun <reified T : Any> withOptionalParam(name: String, noinline default: () -> T): FunctionBuilder3<P1, P2, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder3(ctx)
     }
 
@@ -234,7 +235,7 @@ class FunctionBuilder3<P1, P2, P3> @PublishedApi internal constructor(@Published
     }
 
     inline fun <reified T : Any> withOptionalParam(name: String, noinline default: () -> T): FunctionBuilder4<P1, P2, P3, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder4(ctx)
     }
 
@@ -265,7 +266,7 @@ class FunctionBuilder4<P1, P2, P3, P4> @PublishedApi internal constructor(@Publi
     }
 
     inline fun <reified T : Any> withOptionalParam(name: String, noinline default: () -> T): FunctionBuilder5<P1, P2, P3, P4, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder5(ctx)
     }
 
@@ -297,7 +298,7 @@ class FunctionBuilder5<P1, P2, P3, P4, P5> @PublishedApi internal constructor(@P
     }
 
     inline fun <reified T : Any> withOptionalParam(name: String, noinline default: () -> T): FunctionBuilder6<P1, P2, P3, P4, P5, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder6(ctx)
     }
 
@@ -330,7 +331,7 @@ class FunctionBuilder6<P1, P2, P3, P4, P5, P6> @PublishedApi internal constructo
     }
 
     inline fun <reified T : Any> withOptionalParam(name: String, noinline default: () -> T): FunctionBuilder7<P1, P2, P3, P4, P5, P6, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder7(ctx)
     }
 
@@ -367,7 +368,7 @@ class FunctionBuilder7<P1, P2, P3, P4, P5, P6, P7> @PublishedApi internal constr
         name: String,
         noinline default: () -> T
     ): FunctionBuilder8<P1, P2, P3, P4, P5, P6, P7, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder8(ctx)
     }
 
@@ -405,7 +406,7 @@ class FunctionBuilder8<P1, P2, P3, P4, P5, P6, P7, P8> @PublishedApi internal co
         name: String,
         noinline default: () -> T
     ): FunctionBuilder9<P1, P2, P3, P4, P5, P6, P7, P8, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder9(ctx)
     }
 
@@ -444,7 +445,7 @@ class FunctionBuilder9<P1, P2, P3, P4, P5, P6, P7, P8, P9> @PublishedApi interna
         name: String,
         noinline default: () -> T
     ): FunctionBuilder10<P1, P2, P3, P4, P5, P6, P7, P8, P9, T> {
-        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, default = { wrapAsRuntimeValue(default()) }))
+        ctx.addSpec(ParamSpec(name = name, kotlinType = T::class, isOptional = true, default = { wrapAsRuntimeValue(default()) }))
         return FunctionBuilder10(ctx)
     }
 

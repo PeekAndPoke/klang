@@ -361,14 +361,12 @@ class KlangScriptProcessor(
     }
 
     /**
-     * Generates a registerMethod call for a single method.
+     * Generates a `registerMethod`/`registerVarargMethod`/etc. call for a
+     * single method. The chosen helper depends on whether the method has a
+     * vararg slot and whether it carries a `CallInfo` parameter.
      *
-     * For @Object methods: `registerMethod("name") { OwnerName.fn(args) }`
-     * For @TypeExtensions methods: the first param is the receiver (`self`), passed as `this` from the lambda.
-     *   Remaining params are the KlangScript-visible params.
-     *   Generated: `registerMethod("name") { scriptArgs -> OwnerName.fn(this, scriptArgs) }`
-     * For raw-args methods (first param is List<RuntimeValue>):
-     *   Generated: `registerExtensionMethod(OwnerClass::class, "name") { _, args, loc -> Owner.fn(args, loc) }`
+     * Phase 5b: every emission also stamps the registered method with a
+     * `paramSpecs` list so the interpreter can route named-arg calls.
      */
     private fun generateMethodRegistration(
         method: MethodEntry,
@@ -385,9 +383,13 @@ class KlangScriptProcessor(
         val selfArg = if (isTypeExtension) "this, " else ""
 
         val isVararg = scriptParams.any { it.isVararg }
+        val specsExpr = paramSpecsListExpression(scriptParams)
 
         return when {
             isVararg && hasCallInfo -> {
+                // Vararg + CallInfo helpers don't yet thread paramSpecs through. Named-arg
+                // calls against these will get the transitional "named args not supported"
+                // error. Phase 6 wires this up.
                 val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
                 val returnType = resolveKotlinType(fn.returnType?.resolve())
                 "registerVarargMethodWithCallInfo<$paramType, $returnType>(\"${method.name}\") { args, callInfo -> $ownerName.${fn.simpleName.asString()}(${selfArg}*args.toTypedArray(), callInfo) }"
@@ -405,7 +407,7 @@ class KlangScriptProcessor(
                 if (hasDefaults) {
                     // Generate raw registerExtensionMethod with arity dispatch
                     // so Kotlin default parameters work when fewer args are provided
-                    generateMethodWithDefaults(method, ownerCls, isTypeExtension, scriptParams)
+                    generateMethodWithDefaults(method, ownerCls, isTypeExtension, scriptParams, specsExpr)
                 } else {
                     if (scriptParams.size > MAX_FIXED_PARAMS) {
                         logger.error(
@@ -426,10 +428,10 @@ class KlangScriptProcessor(
                     }
 
                     when (scriptParams.size) {
-                        0 -> "registerMethod(\"${method.name}\") { $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
+                        0 -> "registerMethod(\"${method.name}\", $specsExpr) { $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
                         else -> {
                             val paramDecl = paramNames.joinToString(", ")
-                            "registerMethod(\"${method.name}\") { $paramDecl -> $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
+                            "registerMethod(\"${method.name}\", $specsExpr) { $paramDecl -> $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
                         }
                     }
                 }
@@ -505,13 +507,26 @@ class KlangScriptProcessor(
         ownerCls: KSClassDeclaration,
         isTypeExtension: Boolean,
         scriptParams: List<KSValueParameter>,
+        specsExpr: String,
     ): String {
         val ownerName = ownerCls.simpleName.asString()
         val fnName = method.fn.simpleName.asString()
-        val selfArg = if (isTypeExtension) "receiver, " else ""
+
+        // For type extensions, the Kotlin function takes a typed receiver as its first
+        // parameter. The bridge's `receiver: Any` needs to be cast to that type before
+        // being passed through the arity dispatch.
+        val receiverTypeName = if (isTypeExtension) {
+            method.fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it) }
+        } else null
+
+        val selfArg = if (isTypeExtension) "typedReceiver, " else ""
 
         return buildString {
-            appendLine("builder.registerExtensionMethod(cls, \"${method.name}\") { receiver, args, loc ->")
+            appendLine("builder.registerExtensionMethodWithSpecs(cls, \"${method.name}\", $specsExpr) { receiver, args, loc ->")
+            if (receiverTypeName != null) {
+                appendLine("                @Suppress(\"UNCHECKED_CAST\")")
+                appendLine("                val typedReceiver = receiver as $receiverTypeName")
+            }
             generateArityDispatchBody(
                 name = method.name,
                 fnCall = "$ownerName.$fnName",
@@ -544,6 +559,11 @@ class KlangScriptProcessor(
     /**
      * Generates a registerExtensionMethod call string for raw-args methods.
      * Called at the builder level, outside registerObject/registerType blocks.
+     *
+     * Raw-args methods receive a `List<RuntimeValue>` directly — no script-
+     * visible parameter names are declared, so paramSpecs stays empty and
+     * named-arg calls are rejected (transitional). Callers must use
+     * positional syntax.
      */
     private fun generateRawArgsExtensionMethod(method: MethodEntry, ownerCls: KSClassDeclaration): String {
         val fn = method.fn
@@ -563,6 +583,7 @@ class KlangScriptProcessor(
         val isVararg = params.any { it.isVararg }
         val hasDefaults = params.any { it.hasDefault }
         val fnName = fn.simpleName.asString()
+        val specsExpr = paramSpecsListExpression(params)
 
         return when {
             isVararg && hasCallInfo -> {
@@ -578,9 +599,10 @@ class KlangScriptProcessor(
             }
 
             hasDefaults -> {
-                // Use arity-dispatching raw registration so Kotlin defaults work
+                // Use arity-dispatching spec-aware registration so Kotlin defaults
+                // work for positional calls and safe-thunk defaults work for named.
                 buildString {
-                    appendLine("registerFunctionRaw(\"${entry.name}\") { args, loc ->")
+                    appendLine("registerFunctionWithSpecs(\"${entry.name}\", $specsExpr) { args, loc ->")
                     generateArityDispatchBody(
                         name = entry.name,
                         fnCall = fnName,
@@ -606,8 +628,8 @@ class KlangScriptProcessor(
                 val callArgs = params.map { it.name?.asString() ?: "p" }.joinToString(", ")
 
                 when (params.size) {
-                    0 -> "registerFunction(\"${entry.name}\") { $fnName() }"
-                    else -> "registerFunction(\"${entry.name}\") { ${paramDecls.joinToString(", ")} -> $fnName($callArgs) }"
+                    0 -> "registerFunction(\"${entry.name}\", $specsExpr) { $fnName() }"
+                    else -> "registerFunction(\"${entry.name}\", $specsExpr) { ${paramDecls.joinToString(", ")} -> $fnName($callArgs) }"
                 }
             }
         }
@@ -890,6 +912,56 @@ class KlangScriptProcessor(
 
     private fun typeDisplayName(kotlinName: String): String {
         return TYPE_DISPLAY_NAMES[kotlinName] ?: kotlinName
+    }
+
+    // ===== ParamSpec emission (Phase 5b) =====
+
+    /**
+     * Build the Kotlin source for a `List<ParamSpec>` covering [scriptParams].
+     *
+     * For optional params, attempts to extract the Kotlin default expression
+     * via [DefaultValueExtractor] and pastes it into a thunk if the text
+     * looks safe to embed (no `this`/`super` references). Unsafe defaults
+     * leave `default = null`; the runtime then rejects named-call omissions
+     * for those slots.
+     */
+    private fun paramSpecsListExpression(scriptParams: List<KSValueParameter>): String {
+        if (scriptParams.isEmpty()) return "emptyList()"
+        return scriptParams.joinToString(
+            prefix = "listOf(",
+            postfix = ")",
+            separator = ", ",
+        ) { p ->
+            val name = p.name?.asString() ?: "p"
+            val type = resolveKotlinType(p.type.resolve())
+            val parts = mutableListOf<String>()
+            parts.add("name = \"$name\"")
+            parts.add("kotlinType = $type::class")
+            if (p.isVararg) parts.add("isVararg = true")
+            if (p.hasDefault) {
+                parts.add("isOptional = true")
+                val thunk = safeDefaultThunk(p)
+                if (thunk != null) parts.add("default = $thunk")
+            }
+            "ParamSpec(${parts.joinToString(", ")})"
+        }
+    }
+
+    /**
+     * Returns a Kotlin source expression for a thunk that produces the
+     * extracted default value, or null if extraction failed or the text isn't
+     * safe to paste verbatim into a generated file.
+     *
+     * "Safe to paste" heuristic: extracted text contains no `this` or `super`
+     * tokens (rough check — doesn't strip strings, but defaults with `this` /
+     * `super` are unusual and the conservative skip keeps the generated code
+     * compilable).
+     */
+    private fun safeDefaultThunk(param: KSValueParameter): String? {
+        val text = DefaultValueExtractor.extract(param) ?: return null
+        if (Regex("\\bthis\\b").containsMatchIn(text)) return null
+        if (Regex("\\bsuper\\b").containsMatchIn(text)) return null
+        return "{ wrapAsRuntimeValue($text) }"
     }
 
     /** Escapes content for safe embedding in Kotlin raw strings ("""..."""). */

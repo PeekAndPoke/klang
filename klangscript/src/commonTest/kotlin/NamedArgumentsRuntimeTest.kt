@@ -126,16 +126,17 @@ class NamedArgumentsRuntimeTest : StringSpec({
         (result as NumberValue).value shouldBe 4.0
     }
 
-    "native function rejects named arguments with transitional message" {
+    "native function with paramSpecs accepts named arguments (Phase 5)" {
+        // Phase 5: KSP emits paramSpecs for stdlib functions, so named calls work.
+        // The transitional reject only applies to native fns without paramSpecs
+        // (older registrations or the few vararg-with-CallInfo cases not yet migrated).
         val engine = klangScript()
-        val err = shouldThrow<KlangScriptArgumentError> {
-            engine.execute(
-                """
-                import * from "stdlib"
-                Math.sqrt(x = 16)
-            """.trimIndent()
-            )
-        }
-        err.message!! shouldContain "does not yet support named arguments"
+        val result = engine.execute(
+            """
+            import * from "stdlib"
+            Math.sqrt(x = 16)
+        """.trimIndent()
+        )
+        (result as NumberValue).value shouldBe 4.0
     }
 })

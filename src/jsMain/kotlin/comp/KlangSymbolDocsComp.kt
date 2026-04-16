@@ -179,10 +179,18 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                                             td {
                                                 css { fontFamily = "monospace" }
                                                 b { +param.name }
+                                                if (param.isOptional && !param.isVararg) {
+                                                    css { color = Color(laf.textTertiary) }
+                                                    +"?"
+                                                }
                                             }
                                             td {
                                                 css { fontFamily = "monospace" }
                                                 +"${param.type}"
+                                                if (param.defaultDoc != null && !param.isVararg) {
+                                                    css { color = Color(laf.textTertiary) }
+                                                    +" = ${param.defaultDoc}"
+                                                }
                                             }
                                             td {
                                                 +param.description

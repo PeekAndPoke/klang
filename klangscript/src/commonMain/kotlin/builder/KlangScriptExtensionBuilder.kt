@@ -315,10 +315,13 @@ class NativeObjectExtensionsBuilder<T : Any>(
     /** Register a native extension method with no parameters */
     @JvmName("registerNativeExtensionMethod0")
     inline fun <reified R : Any> registerMethod(
-        name: String, noinline fn: T.(Any?) -> R,
+        name: String,
+        paramSpecs: List<ParamSpec> = emptyList(),
+        noinline fn: T.(Any?) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, _, _ ->
-            val result = receiver.fn(null)
+        builder.registerExtensionMethodWithSpecs(cls, name, paramSpecs) { receiver, _, _ ->
+            @Suppress("UNCHECKED_CAST")
+            val result = (receiver as T).fn(null)
             wrapAsRuntimeValue(result)
         }
     }
@@ -326,14 +329,16 @@ class NativeObjectExtensionsBuilder<T : Any>(
     /** Register a native extension method with one parameter */
     @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified R : Any> registerMethod(
-        name: String, noinline fn: T.(P1) -> R,
+        name: String,
+        paramSpecs: List<ParamSpec> = emptyList(),
+        noinline fn: T.(P1) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+        builder.registerExtensionMethodWithSpecs(cls, name, paramSpecs) { receiver, args, loc ->
             checkArgsSize(fn = name, args = args, expected = 1, location = loc)
 
             val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
 
-            val result = receiver.fn(p1)
+            val result = (receiver as T).fn(p1)
 
             wrapAsRuntimeValue(result)
         }
@@ -342,15 +347,17 @@ class NativeObjectExtensionsBuilder<T : Any>(
     /** Register a native extension method with two parameters */
     @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> registerMethod(
-        name: String, noinline fn: T.(P1, P2) -> R,
+        name: String,
+        paramSpecs: List<ParamSpec> = emptyList(),
+        noinline fn: T.(P1, P2) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+        builder.registerExtensionMethodWithSpecs(cls, name, paramSpecs) { receiver, args, loc ->
             checkArgsSize(fn = name, args = args, expected = 2, location = loc)
 
             val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
             val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
 
-            val result = receiver.fn(p1, p2)
+            val result = (receiver as T).fn(p1, p2)
 
             wrapAsRuntimeValue(result)
         }
@@ -359,16 +366,18 @@ class NativeObjectExtensionsBuilder<T : Any>(
     /** Register a native extension method with three parameters */
     @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any> registerMethod(
-        name: String, noinline fn: T.(P1, P2, P3) -> R,
+        name: String,
+        paramSpecs: List<ParamSpec> = emptyList(),
+        noinline fn: T.(P1, P2, P3) -> R,
     ) {
-        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+        builder.registerExtensionMethodWithSpecs(cls, name, paramSpecs) { receiver, args, loc ->
             checkArgsSize(fn = name, args = args, expected = 3, location = loc)
 
             val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
             val p2 = convertArgToKotlin(fn = name, args = args, index = 1, cls = P2::class, nullable = null is P2, loc = loc) as P2
             val p3 = convertArgToKotlin(fn = name, args = args, index = 2, cls = P3::class, nullable = null is P3, loc = loc) as P3
 
-            val result = receiver.fn(p1, p2, p3)
+            val result = (receiver as T).fn(p1, p2, p3)
 
             wrapAsRuntimeValue(result)
         }
@@ -377,9 +386,13 @@ class NativeObjectExtensionsBuilder<T : Any>(
     /** Register a native extension method with four parameters */
     @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
-            registerMethod(name: String, noinline fn: T.(P1, P2, P3, P4) -> R) {
+            registerMethod(
+        name: String,
+        paramSpecs: List<ParamSpec> = emptyList(),
+        noinline fn: T.(P1, P2, P3, P4) -> R,
+    ) {
 
-        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+        builder.registerExtensionMethodWithSpecs(cls, name, paramSpecs) { receiver, args, loc ->
             checkArgsSize(fn = name, args = args, expected = 4, location = loc)
 
             val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
@@ -387,7 +400,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
             val p3 = convertArgToKotlin(fn = name, args = args, index = 2, cls = P3::class, nullable = null is P3, loc = loc) as P3
             val p4 = convertArgToKotlin(fn = name, args = args, index = 3, cls = P4::class, nullable = null is P4, loc = loc) as P4
 
-            val result = receiver.fn(p1, p2, p3, p4)
+            val result = (receiver as T).fn(p1, p2, p3, p4)
 
             wrapAsRuntimeValue(result)
         }
@@ -396,9 +409,13 @@ class NativeObjectExtensionsBuilder<T : Any>(
     /** Register a native extension method with five parameters */
     @Suppress("UNCHECKED_CAST")
     inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
-            registerMethod(name: String, noinline fn: T.(P1, P2, P3, P4, P5) -> R) {
+            registerMethod(
+        name: String,
+        paramSpecs: List<ParamSpec> = emptyList(),
+        noinline fn: T.(P1, P2, P3, P4, P5) -> R,
+    ) {
 
-        builder.registerExtensionMethod(cls, name) { receiver, args, loc ->
+        builder.registerExtensionMethodWithSpecs(cls, name, paramSpecs) { receiver, args, loc ->
             checkArgsSize(fn = name, args = args, expected = 5, location = loc)
 
             val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
@@ -407,7 +424,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
             val p4 = convertArgToKotlin(fn = name, args = args, index = 3, cls = P4::class, nullable = null is P4, loc = loc) as P4
             val p5 = convertArgToKotlin(fn = name, args = args, index = 4, cls = P5::class, nullable = null is P5, loc = loc) as P5
 
-            val result = receiver.fn(p1, p2, p3, p4, p5)
+            val result = (receiver as T).fn(p1, p2, p3, p4, p5)
 
             wrapAsRuntimeValue(result)
         }
@@ -456,9 +473,11 @@ inline fun <reified P : Any, reified R : Any> KlangScriptLibrary.Builder.registe
 /** Registers a native function as a top-level function with no parameters */
 @JvmName("registerNativeFunction0")
 inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
-    name: String, noinline fn: (Any?) -> R,
+    name: String,
+    paramSpecs: List<ParamSpec> = emptyList(),
+    noinline fn: (Any?) -> R,
 ) {
-    registerFunctionRaw(name) { _, _ ->
+    registerFunctionWithSpecs(name, paramSpecs) { _, _ ->
         val result = fn(null)
         wrapAsRuntimeValue(result)
     }
@@ -467,9 +486,11 @@ inline fun <reified R : Any> KlangScriptExtensionBuilder.registerFunction(
 /** Registers a native function as a top-level function with one parameter */
 @Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
-    name: String, noinline fn: (P1) -> R,
+    name: String,
+    paramSpecs: List<ParamSpec> = emptyList(),
+    noinline fn: (P1) -> R,
 ) {
-    registerFunctionRaw(name) { args, loc ->
+    registerFunctionWithSpecs(name, paramSpecs) { args, loc ->
         checkArgsSize(fn = name, args = args, expected = 1, location = loc)
 
         val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
@@ -483,9 +504,11 @@ inline fun <reified P1 : Any, reified R : Any> KlangScriptExtensionBuilder.regis
 /** Registers a native function as a top-level function with two parameters */
 @Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExtensionBuilder.registerFunction(
-    name: String, noinline fn: (P1, P2) -> R,
+    name: String,
+    paramSpecs: List<ParamSpec> = emptyList(),
+    noinline fn: (P1, P2) -> R,
 ) {
-    registerFunctionRaw(name) { args, loc ->
+    registerFunctionWithSpecs(name, paramSpecs) { args, loc ->
         checkArgsSize(fn = name, args = args, expected = 2, location = loc)
 
         val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
@@ -500,8 +523,12 @@ inline fun <reified P1 : Any, reified P2 : Any, reified R : Any> KlangScriptExte
 /** Registers a native function as a top-level function with three parameters */
 @Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : Any>
-        KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3) -> R) {
-    registerFunctionRaw(name) { args, loc ->
+        KlangScriptExtensionBuilder.registerFunction(
+    name: String,
+    paramSpecs: List<ParamSpec> = emptyList(),
+    noinline fn: (P1, P2, P3) -> R,
+) {
+    registerFunctionWithSpecs(name, paramSpecs) { args, loc ->
         checkArgsSize(fn = name, args = args, expected = 3, location = loc)
 
         val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
@@ -517,8 +544,12 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified R : An
 /** Registers a native function as a top-level function with four parameters */
 @Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified R : Any>
-        KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4) -> R) {
-    registerFunctionRaw(name) { args, loc ->
+        KlangScriptExtensionBuilder.registerFunction(
+    name: String,
+    paramSpecs: List<ParamSpec> = emptyList(),
+    noinline fn: (P1, P2, P3, P4) -> R,
+) {
+    registerFunctionWithSpecs(name, paramSpecs) { args, loc ->
         checkArgsSize(fn = name, args = args, expected = 4, location = loc)
 
         val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1
@@ -535,8 +566,12 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
 /** Registers a native function as a top-level function with five parameters */
 @Suppress("UNCHECKED_CAST")
 inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : Any, reified P5 : Any, reified R : Any>
-        KlangScriptExtensionBuilder.registerFunction(name: String, noinline fn: (P1, P2, P3, P4, P5) -> R) {
-    registerFunctionRaw(name) { args, loc ->
+        KlangScriptExtensionBuilder.registerFunction(
+    name: String,
+    paramSpecs: List<ParamSpec> = emptyList(),
+    noinline fn: (P1, P2, P3, P4, P5) -> R,
+) {
+    registerFunctionWithSpecs(name, paramSpecs) { args, loc ->
         checkArgsSize(fn = name, args = args, expected = 5, location = loc)
 
         val p1 = convertArgToKotlin(fn = name, args = args, index = 0, cls = P1::class, nullable = null is P1, loc = loc) as P1

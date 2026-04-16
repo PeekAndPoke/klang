@@ -451,24 +451,28 @@ sealed class CallArgs {
 }
 
 /**
- * Declares one parameter of a native callable, used by the Phase 4 builder
- * hierarchy. Added in Phase 3 so the runtime types travel together; no
- * production callers use this until Phase 4.
+ * Declares one parameter of a native callable.
  *
  * @property name Parameter name used for named-arg binding.
  * @property kotlinType Kotlin class the converted value must match.
- * @property default Null ⇒ required; non-null thunk runs only when the arg is
- *                   missing.
+ * @property isOptional True if the script-side caller may omit this argument.
+ *   When true *and* [default] is set, the resolver invokes the thunk to fill
+ *   the slot. When true and [default] is null, the slot is left unfilled —
+ *   the bridge must handle the omission itself (e.g. Kotlin's own arity
+ *   dispatch for legacy KSP-generated bridges that can't safely paste a
+ *   default expression into a thunk).
+ * @property default Null ⇒ no thunk; non-null thunk runs only when the arg is
+ *   missing during named-call resolution.
  * @property isVararg True if this slot captures trailing positional args.
+ *   Vararg slots are inherently optional and need no thunk.
  */
 data class ParamSpec(
     val name: String,
     val kotlinType: KClass<*>,
+    val isOptional: Boolean = false,
     val default: (() -> RuntimeValue)? = null,
     val isVararg: Boolean = false,
-) {
-    val isOptional: Boolean get() = default != null
-}
+)
 
 /**
  * Bind a [CallArgs] to a spec list, producing a flat List<RuntimeValue?>
@@ -560,7 +564,7 @@ fun resolveByParamSpec(
     }
 
     specs.forEachIndexed { i, spec ->
-        if (result[i] == null && spec.default == null && !spec.isVararg) {
+        if (result[i] == null && !spec.isOptional && !spec.isVararg) {
             throw KlangScriptArgumentError(
                 functionName = functionName,
                 message = "missing required parameter '${spec.name}'",
