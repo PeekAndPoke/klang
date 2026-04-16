@@ -135,6 +135,11 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         props.ctrl.reemitVoiceSignals()
     }
 
+    /** Cancels all pending highlight marks on the code view. */
+    fun cancelHighlights() {
+        highlightBuffer.cancelAll()
+    }
+
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     private fun navToDoc(doc: KlangSymbol, event: dynamic) {

@@ -5,6 +5,8 @@ import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.resolveDistortionShape
 import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.sin
@@ -457,6 +459,175 @@ fun Ignitor.tremolo(
 ): Ignitor {
     if (depth <= 0.0) return this
     return tremolo(ParamIgnitor("rate", rate), ParamIgnitor("depth", depth))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Shimmer — granular pitch-shift cloud with feedback (Aetherizer-style)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Granular shimmer effect — short overlapping grains read back from a ring buffer at
+ * pitched-up rates (+7 and +12 semitones, alternating), with a feedback loop through a
+ * tone lowpass. Produces the classic rising-octaves shimmer cloud.
+ *
+ * All params read once per block (control rate). Bypasses when mix <= 0 AND feedback <= 0.
+ *
+ * @param mix Wet amount added to dry. 0.0 = dry only, 1.0 = full wet added on top. Clamped to [0, 1].
+ * @param feedback Wet → grain-buffer feedback. 0.0 = single pass, 0.9 = long cascading tails.
+ *   Hard-clamped to 0.95 for stability.
+ * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
+ */
+fun Ignitor.shimmer(
+    mix: Ignitor,
+    feedback: Ignitor,
+    tone: Ignitor,
+): Ignitor {
+    // Ring buffer — 1 second at 48kHz is enough headroom for 150ms grains at +12 semitones (rate 2.0).
+    // Sized for the highest sample rate we expect (96kHz safe) so no lazy allocation in hot path.
+    val ringSize = 96_000
+    val ring = FloatArray(ringSize)
+    var writePos = 0
+
+    // Hann-windowed grains. Pool of fixed slots to avoid allocation.
+    val maxGrains = 8
+    val grainActive = BooleanArray(maxGrains)
+    val grainReadPos = DoubleArray(maxGrains)
+    val grainRate = DoubleArray(maxGrains)
+    val grainElapsed = IntArray(maxGrains)
+    val grainTotal = IntArray(maxGrains)
+
+    // Fixed intervals for the MVP shimmer preset: perfect fifth and octave.
+    val intervalRates = doubleArrayOf(
+        1.0, // Same tone
+        2.0.pow(7.0 / 12.0),   // +7 semitones  ≈ 1.498
+        2.0.pow(12.0 / 12.0),  // +12 semitones = 2.000
+    )
+    var nextIntervalIdx = 0
+
+    // Grain scheduler — density fixed at ~12 grains/sec (overlap factor ~1.8 at 150ms grains).
+    val grainsPerSecond = 12.0
+    val grainSizeSec = 0.150
+    var samplesUntilNextGrain = 0
+
+    // Feedback tap + one-pole LPF state for the tone filter in the feedback path.
+    var feedbackTap = 0.0
+    var lpfState = 0.0
+
+    return Ignitor { buffer, freqHz, ctx ->
+        this.generate(buffer, freqHz, ctx)
+
+        val mixVal = Ignitors.readParam(mix, freqHz, ctx).coerceIn(0.0, 1.0)
+        val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
+        val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
+
+        if (mixVal <= 0.0 && fbVal <= 0.0) return@Ignitor
+
+        val sampleRate = ctx.sampleRate
+        val grainPeriodSamples = (sampleRate / grainsPerSecond).toInt().coerceAtLeast(1)
+        val grainTotalSamples = (sampleRate * grainSizeSec).toInt().coerceAtLeast(1)
+        val invGrainTotal = 1.0 / grainTotalSamples
+
+        // One-pole LPF coefficient. y[n] = (1-a) * x + a * y[n-1] where a = exp(-2π * fc / fs).
+        val lpfA = exp(-TWO_PI * toneVal / sampleRate)
+        val lpfOneMinusA = 1.0 - lpfA
+
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) {
+            val dry = buffer[i].toDouble()
+
+            // ── Write input + feedback tap into the ring buffer ──
+            var write = dry + feedbackTap * fbVal
+            if (write > 2.0) write = 2.0 else if (write < -2.0) write = -2.0
+            ring[writePos] = write.toFloat()
+            writePos++
+            if (writePos >= ringSize) writePos = 0
+
+            // ── Maybe spawn a new grain ──
+            if (samplesUntilNextGrain <= 0) {
+                samplesUntilNextGrain = grainPeriodSamples
+                val rate = intervalRates[nextIntervalIdx]
+                nextIntervalIdx = (nextIntervalIdx + 1) % intervalRates.size
+
+                // Find a free slot.
+                var slot = -1
+                for (g in 0 until maxGrains) {
+                    if (!grainActive[g]) {
+                        slot = g
+                        break
+                    }
+                }
+                if (slot >= 0) {
+                    // Start reading so that the grain finishes approximately at writePos.
+                    // Read distance = rate * grainTotalSamples; start that far behind writePos.
+                    val lookback = rate * grainTotalSamples
+                    var start = writePos - lookback
+                    while (start < 0.0) start += ringSize
+                    grainReadPos[slot] = start
+                    grainRate[slot] = rate
+                    grainElapsed[slot] = 0
+                    grainTotal[slot] = grainTotalSamples
+                    grainActive[slot] = true
+                }
+            }
+            samplesUntilNextGrain--
+
+            // ── Read & mix all active grains ──
+            var wet = 0.0
+            for (g in 0 until maxGrains) {
+                if (!grainActive[g]) continue
+
+                val pos = grainReadPos[g]
+                val idx1 = pos.toInt()
+                val frac = pos - idx1
+                val idx2 = if (idx1 + 1 >= ringSize) 0 else idx1 + 1
+                val s1 = ring[idx1].toDouble()
+                val s2 = ring[idx2].toDouble()
+                val sample = s1 + frac * (s2 - s1)
+
+                // Hann window over the grain lifetime.
+                val phase = grainElapsed[g] * invGrainTotal
+                val win = 0.5 - 0.5 * cos(TWO_PI * phase)
+
+                wet += sample * win
+
+                // Advance.
+                var nextPos = pos + grainRate[g]
+                while (nextPos >= ringSize) nextPos -= ringSize
+                grainReadPos[g] = nextPos
+                grainElapsed[g]++
+                if (grainElapsed[g] >= grainTotal[g]) {
+                    grainActive[g] = false
+                }
+            }
+
+            // ── Feedback tap through tone LPF ──
+            lpfState = flushDenormal(lpfOneMinusA * wet + lpfA * lpfState)
+            feedbackTap = lpfState
+
+            // ── Output: dry + wet * mix ──
+            buffer[i] = (dry + wet * mixVal).toFloat()
+        }
+    }
+}
+
+/**
+ * Granular shimmer (convenience overload with fixed values).
+ *
+ * @param mix Wet amount. 0.0 = dry only, 1.0 = full wet. Default: 0.5.
+ * @param feedback Cascade feedback. 0.0 = single pass, 0.9 = long tails. Default: 0.5.
+ * @param tone Feedback-path LPF cutoff in Hz. Default: 4000.0.
+ */
+fun Ignitor.shimmer(
+    mix: Double = 0.5,
+    feedback: Double = 0.5,
+    tone: Double = 4000.0,
+): Ignitor {
+    if (mix <= 0.0 && feedback <= 0.0) return this
+    return shimmer(
+        ParamIgnitor("mix", mix),
+        ParamIgnitor("feedback", feedback),
+        ParamIgnitor("tone", tone),
+    )
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

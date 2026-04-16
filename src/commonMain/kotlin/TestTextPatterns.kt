@@ -126,7 +126,7 @@ stack(
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.35).slow(16)).spread(1.0 ).tremolo("0.1:8").tremolodepth(saw.range(0,0.1).slow(256))
     .gain(0.9).distort(0.25).warmth(0.5).postgain(0.2).adsr("0.01:0.2:0.8:0.155")
-    .pan(sine.range(0.3, 0.7).slow(8)) // . solo()
+    .pan(sine.range(0.3, 0.7).slow(16)) // . solo()
     .hpf(300).lpf(800).lpenv(perlin.range(3.0, 4.0).slow(8)).analog(2)
     .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
@@ -134,7 +134,7 @@ stack(
     .orbit(2).s("supersaw").unison(4).detune(saw.range(0.05, 0.45).slow(64)).warmth(0.3)
     .gain(1.0).adsr("0.005:0.5:0.5:0.4").postgain(0.5).pan(saw.range(0.5, 0.3).slow(keep * 2))
     .superimpose(x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").pan(saw.range(0.5, 0.7).slow(keep * 2)).legato(1.05))    
-    .lpf(4 * 440).hpf(150).notchf(notch).notchq(0.75)
+    .lpf(5 * 440).hpf(150).notchf(notch).notchq(0.75)
     .superimpose(x => x.gain(saw.slow(64).pow(1.3).mul(2)).crush("2.0".add(berlin2.mul(0.25).slow(4))).lpf(4 * 440).hpf(200).postgain(0.5))
     .velocity(cat(saw.pow(2).slow(32), pure(1).slow(256))).analog(1.5)  // . solo()
     .filterWhen(x => x < (wait * 4 + keep)) // . mute()
@@ -162,7 +162,6 @@ stack(
    
    
    
- 
         """ // Stranger Things END
 
     // https://patorjk.com/software/taag/#p=display&f=BlurVision+ASCII&t=THE+HALO+EFFECT&x=none&v=4&h=4&w=80&we=false

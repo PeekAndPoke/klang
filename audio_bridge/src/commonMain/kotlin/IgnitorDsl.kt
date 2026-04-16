@@ -640,6 +640,32 @@ sealed interface IgnitorDsl {
         }
     }
 
+    /**
+     * Shimmer effect. Granular pitch-shift cloud with feedback — Aetherizer-style.
+     *
+     * Chops the input into short overlapping grains, replays them pitched up (fixed +7 and
+     * +12 semitone intervals), and feeds the wet output back into the grain buffer through a
+     * tone filter. Produces shimmering, rising tails.
+     *
+     * @param mix Wet amount added to the dry signal. 0.0 = dry only, 1.0 = full wet.
+     * @param feedback Wet → grain-buffer feedback. 0.0 = no cascade, 0.9 = long infinite tails.
+     *   Hard-clamped to 0.95 internally for stability.
+     * @param tone One-pole lowpass cutoff in Hz applied to the feedback path.
+     *   Lower = darker, more "ghostly" tails. Typical: 2000–6000.
+     */
+    @Serializable
+    @SerialName("shimmer")
+    data class Shimmer(
+        val inner: IgnitorDsl,
+        val mix: IgnitorDsl = Constant(0.5),
+        val feedback: IgnitorDsl = Constant(0.5),
+        val tone: IgnitorDsl = Constant(4000.0),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); mix.collectParams(out); feedback.collectParams(out); tone.collectParams(out)
+        }
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Pitch Modulation
     // ═════════════════════════════════════════════════════════════════════════════
@@ -825,6 +851,14 @@ fun IgnitorDsl.tremolo(rate: Double, depth: Double) = IgnitorDsl.Tremolo(
     depth = IgnitorDsl.Constant(depth),
 )
 
+/** Applies a granular shimmer (pitch-shift cloud with feedback) to the signal. */
+fun IgnitorDsl.shimmer(mix: Double = 0.5, feedback: Double = 0.5, tone: Double = 4000.0) = IgnitorDsl.Shimmer(
+    inner = this,
+    mix = IgnitorDsl.Constant(mix),
+    feedback = IgnitorDsl.Constant(feedback),
+    tone = IgnitorDsl.Constant(tone),
+)
+
 // Pitch modulation
 
 /** Applies vibrato (pitch modulation) at the given LFO [rate] and [depth]. */
@@ -882,6 +916,7 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     is IgnitorDsl.Coarse -> inner.maxReleaseSec()
     is IgnitorDsl.Phaser -> inner.maxReleaseSec()
     is IgnitorDsl.Tremolo -> inner.maxReleaseSec()
+    is IgnitorDsl.Shimmer -> inner.maxReleaseSec()
     is IgnitorDsl.Vibrato -> inner.maxReleaseSec()
     is IgnitorDsl.Accelerate -> inner.maxReleaseSec()
     is IgnitorDsl.PitchEnvelope -> inner.maxReleaseSec()

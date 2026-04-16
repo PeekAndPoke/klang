@@ -140,6 +140,26 @@ object KlangScriptOscExtensions {
     fun tremolo(self: IgnitorDsl, rate: IgnitorDslLike, depth: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Tremolo(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl())
 
+    /**
+     * Applies a granular shimmer cloud — pitched grains (+7 and +12 semitones) with feedback.
+     *
+     * @param mix Wet amount added to dry (0..1). Default 0.5.
+     * @param feedback Cascade feedback (0..0.95). Default 0.5.
+     * @param tone Feedback-path LPF cutoff in Hz. Default 4000.
+     */
+    @KlangScript.Method
+    fun shimmer(
+        self: IgnitorDsl,
+        mix: IgnitorDslLike = 0.5,
+        feedback: IgnitorDslLike = 0.5,
+        tone: IgnitorDslLike = 4000.0,
+    ): IgnitorDsl = IgnitorDsl.Shimmer(
+        inner = self,
+        mix = mix.toIgnitorDsl(),
+        feedback = feedback.toIgnitorDsl(),
+        tone = tone.toIgnitorDsl(),
+    )
+
     // ── FM Synthesis ─────────────────────────────────────────────────────────
 
     /** Applies FM synthesis with a modulator ignitor. */

@@ -156,6 +156,12 @@ fun IgnitorDsl.toExciter(oscParams: Map<String, Double>? = null): Ignitor {
             this.depth.toExciter(oscParams),
         )
 
+        is IgnitorDsl.Shimmer -> inner.toExciter(oscParams).shimmer(
+            this.mix.toExciter(oscParams),
+            this.feedback.toExciter(oscParams),
+            this.tone.toExciter(oscParams),
+        )
+
         // Pitch modulation
         is IgnitorDsl.Vibrato -> inner.toExciter(oscParams).vibrato(
             this.rate.toExciter(oscParams),
