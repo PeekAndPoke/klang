@@ -138,17 +138,24 @@ class CompositionPropertiesSpec : StringSpec({
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Memoisation sanity — same block, repeated generate() calls return cached output.
+    // Memoisation sanity — shared nodes cache; single-use nodes skip cache.
     // ═══════════════════════════════════════════════════════════════════════════
 
-    "repeated generate() calls within one block return identical samples" {
-        val ig = IgnitorDsl.Sine().toExciter()
+    "shared source (let s; s + s) returns identical samples to both readers" {
+        val s = IgnitorDsl.Sine()
+        val tree = IgnitorDsl.Plus(s, s) // shared → consumers=2 on memS
+        val ig = tree.toExciter()
         val ctx = createCtx()
 
-        val first = render(ig, 440.0, ctx)
-        val second = render(ig, 440.0, ctx)
+        // Plus calls left.generate(buf) and right.generate(tmp). Both should be identical
+        // (same memoised sine). Their sum = 2·sine.
+        val singleSine = IgnitorDsl.Sine().toExciter()
+        val singleBuf = render(singleSine, 440.0, createCtx())
+        val sumBuf = render(ig, 440.0, ctx)
 
-        for (i in 0 until blockFrames) first[i] shouldBe second[i]
+        for (i in 0 until blockFrames) {
+            sumBuf[i].toDouble() shouldBe ((2.0 * singleBuf[i]) plusOrMinus 1e-4)
+        }
     }
 
     "advancing voiceElapsedFrames produces new samples (cache invalidated)" {

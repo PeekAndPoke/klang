@@ -366,7 +366,7 @@ fun Ignitor.coarse(amount: Double): Ignitor {
  */
 fun Ignitor.phaser(
     rate: Ignitor,
-    mix: Ignitor,
+    blend: Ignitor,
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
 ): Ignitor {
@@ -381,12 +381,12 @@ fun Ignitor.phaser(
             this.generate(input, freqHz, ctx)
 
             val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-            val mixVal = Ignitors.readParam(mix, freqHz, ctx).coerceIn(0.0, 1.0)
+            val blendVal = Ignitors.readParam(blend, freqHz, ctx).coerceIn(0.0, 1.0)
             val centerVal = Ignitors.readParam(center, freqHz, ctx)
             val sweepVal = Ignitors.readParam(sweep, freqHz, ctx)
             val end = ctx.offset + ctx.length
 
-            if (mixVal <= 0.0) {
+            if (blendVal <= 0.0) {
                 for (i in ctx.offset until end) {
                     output[i] = input[i]
                 }
@@ -418,8 +418,8 @@ fun Ignitor.phaser(
 
                 lastOutput = flushDenormal(signal)
 
-                // Linear crossfade: dry · (1 − mix) + wet · mix
-                output[i] = (dry * (1.0 - mixVal) + signal * mixVal).toFloat()
+                // Crossfade: dry · (1 − blend) + wet · blend
+                output[i] = (dry * (1.0 - blendVal) + signal * blendVal).toFloat()
             }
         }
     }
@@ -429,20 +429,20 @@ fun Ignitor.phaser(
  * 4-stage all-pass cascade phaser (convenience overload with fixed values).
  *
  * @param rate LFO speed in Hz. Typical range: 0.1–5.0.
- * @param mix Linear crossfade between dry and wet. 0.0 = dry only, 1.0 = wet only. Default: 0.5.
+ * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default: 0.5.
  * @param center Center frequency in Hz. Default: 1000.0. Clamped to [100, 18000].
  * @param sweep Modulation width in Hz. Default: 1000.0. Clamped to [100, 18000].
  */
 fun Ignitor.phaser(
     rate: Double,
-    mix: Double = 0.5,
+    blend: Double = 0.5,
     center: Double = 1000.0,
     sweep: Double = 1000.0,
 ): Ignitor {
-    if (mix <= 0.0) return this
+    if (blend <= 0.0) return this
     return phaser(
         ParamIgnitor("rate", rate),
-        ParamIgnitor("mix", mix),
+        ParamIgnitor("blend", blend),
         ParamIgnitor("center", center),
         ParamIgnitor("sweep", sweep),
     )
@@ -519,28 +519,26 @@ fun Ignitor.tremolo(
 
 /**
  * Granular shimmer effect — short overlapping grains read back from a ring buffer at
- * pitched-up rates (+7 and +12 semitones, alternating), with a feedback loop through a
- * tone lowpass. Produces the classic rising-octaves shimmer cloud.
+ * pitched rates, with a feedback loop through a tone lowpass.
  *
- * All params read once per block (control rate). Bypasses when mix <= 0 AND feedback <= 0.
- *
- * @param mix Wet amount added to dry. 0.0 = dry only, 1.0 = full wet added on top. Clamped to [0, 1].
+ * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
+ *   Formula: `out = dry · (1 − blend) + wet · blend`.
  * @param feedback Wet → grain-buffer feedback. 0.0 = single pass, 0.9 = long cascading tails.
  *   Hard-clamped to 0.95 for stability.
  * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
+ * @param pitches Semitone transpositions for grains. Each grain is assigned a pitch from this
+ *   list in round-robin order. Default: `[0, 7, 12]` (root + fifth + octave).
  */
 fun Ignitor.shimmer(
-    mix: Ignitor,
+    blend: Ignitor,
     feedback: Ignitor,
     tone: Ignitor,
+    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
 ): Ignitor {
-    // Ring buffer — 1 second at 48kHz is enough headroom for 150ms grains at +12 semitones (rate 2.0).
-    // Sized for the highest sample rate we expect (96kHz safe) so no lazy allocation in hot path.
     val ringSize = 96_000
     val ring = FloatArray(ringSize)
     var writePos = 0
 
-    // Hann-windowed grains. Pool of fixed slots to avoid allocation.
     val maxGrains = 8
     val grainActive = BooleanArray(maxGrains)
     val grainReadPos = DoubleArray(maxGrains)
@@ -548,20 +546,13 @@ fun Ignitor.shimmer(
     val grainElapsed = IntArray(maxGrains)
     val grainTotal = IntArray(maxGrains)
 
-    // Fixed intervals for the MVP shimmer preset: perfect fifth and octave.
-    val intervalRates = doubleArrayOf(
-        1.0, // Same tone
-        2.0.pow(7.0 / 12.0),   // +7 semitones  ≈ 1.498
-        2.0.pow(12.0 / 12.0),  // +12 semitones = 2.000
-    )
+    val intervalRates = DoubleArray(pitches.size) { 2.0.pow(pitches[it] / 12.0) }
     var nextIntervalIdx = 0
 
-    // Grain scheduler — density fixed at ~12 grains/sec (overlap factor ~1.8 at 150ms grains).
     val grainsPerSecond = 12.0
     val grainSizeSec = 0.150
     var samplesUntilNextGrain = 0
 
-    // Feedback tap + one-pole LPF state for the tone filter in the feedback path.
     var feedbackTap = 0.0
     var lpfState = 0.0
 
@@ -569,12 +560,12 @@ fun Ignitor.shimmer(
         ctx.scratchBuffers.use { input ->
             this.generate(input, freqHz, ctx)
 
-            val mixVal = Ignitors.readParam(mix, freqHz, ctx).coerceIn(0.0, 1.0)
+            val blendVal = Ignitors.readParam(blend, freqHz, ctx).coerceIn(0.0, 1.0)
             val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
             val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
             val end = ctx.offset + ctx.length
 
-            if (mixVal <= 0.0 && fbVal <= 0.0) {
+            if (blendVal <= 0.0 && fbVal <= 0.0) {
                 for (i in ctx.offset until end) {
                     output[i] = input[i]
                 }
@@ -586,37 +577,30 @@ fun Ignitor.shimmer(
             val grainTotalSamples = (sampleRate * grainSizeSec).toInt().coerceAtLeast(1)
             val invGrainTotal = 1.0 / grainTotalSamples
 
-            // One-pole LPF coefficient. y[n] = (1-a) * x + a * y[n-1] where a = exp(-2π * fc / fs).
             val lpfA = exp(-TWO_PI * toneVal / sampleRate)
             val lpfOneMinusA = 1.0 - lpfA
 
             for (i in ctx.offset until end) {
                 val dry = input[i].toDouble()
 
-                // ── Write input + feedback tap into the ring buffer ──
                 var write = dry + feedbackTap * fbVal
                 if (write > 2.0) write = 2.0 else if (write < -2.0) write = -2.0
                 ring[writePos] = write.toFloat()
                 writePos++
                 if (writePos >= ringSize) writePos = 0
 
-                // ── Maybe spawn a new grain ──
                 if (samplesUntilNextGrain <= 0) {
                     samplesUntilNextGrain = grainPeriodSamples
                     val rate = intervalRates[nextIntervalIdx]
                     nextIntervalIdx = (nextIntervalIdx + 1) % intervalRates.size
 
-                    // Find a free slot.
                     var slot = -1
                     for (g in 0 until maxGrains) {
                         if (!grainActive[g]) {
-                            slot = g
-                            break
+                            slot = g; break
                         }
                     }
                     if (slot >= 0) {
-                        // Start reading so that the grain finishes approximately at writePos.
-                        // Read distance = rate * grainTotalSamples; start that far behind writePos.
                         val lookback = rate * grainTotalSamples
                         var start = writePos - lookback
                         while (start < 0.0) start += ringSize
@@ -629,7 +613,6 @@ fun Ignitor.shimmer(
                 }
                 samplesUntilNextGrain--
 
-                // ── Read & mix all active grains ──
                 var wet = 0.0
                 for (g in 0 until maxGrains) {
                     if (!grainActive[g]) continue
@@ -638,32 +621,24 @@ fun Ignitor.shimmer(
                     val idx1 = pos.toInt()
                     val frac = pos - idx1
                     val idx2 = if (idx1 + 1 >= ringSize) 0 else idx1 + 1
-                    val s1 = ring[idx1].toDouble()
-                    val s2 = ring[idx2].toDouble()
-                    val sample = s1 + frac * (s2 - s1)
+                    val sample = ring[idx1].toDouble() + frac * (ring[idx2].toDouble() - ring[idx1].toDouble())
 
-                    // Hann window over the grain lifetime.
                     val phase = grainElapsed[g] * invGrainTotal
                     val win = 0.5 - 0.5 * cos(TWO_PI * phase)
-
                     wet += sample * win
 
-                    // Advance.
                     var nextPos = pos + grainRate[g]
                     while (nextPos >= ringSize) nextPos -= ringSize
                     grainReadPos[g] = nextPos
                     grainElapsed[g]++
-                    if (grainElapsed[g] >= grainTotal[g]) {
-                        grainActive[g] = false
-                    }
+                    if (grainElapsed[g] >= grainTotal[g]) grainActive[g] = false
                 }
 
-                // ── Feedback tap through tone LPF ──
                 lpfState = flushDenormal(lpfOneMinusA * wet + lpfA * lpfState)
                 feedbackTap = lpfState
 
-                // Linear crossfade: dry · (1 − mix) + wet · mix
-                output[i] = (dry * (1.0 - mixVal) + wet * mixVal).toFloat()
+                // Crossfade: dry · (1 − blend) + wet · blend
+                output[i] = (dry * (1.0 - blendVal) + wet * blendVal).toFloat()
             }
         }
     }
@@ -672,20 +647,23 @@ fun Ignitor.shimmer(
 /**
  * Granular shimmer (convenience overload with fixed values).
  *
- * @param mix Wet amount. 0.0 = dry only, 1.0 = full wet. Default: 0.5.
+ * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default: 0.5.
  * @param feedback Cascade feedback. 0.0 = single pass, 0.9 = long tails. Default: 0.5.
  * @param tone Feedback-path LPF cutoff in Hz. Default: 4000.0.
+ * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]`.
  */
 fun Ignitor.shimmer(
-    mix: Double = 0.5,
+    blend: Double = 0.5,
     feedback: Double = 0.5,
     tone: Double = 4000.0,
+    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
 ): Ignitor {
-    if (mix <= 0.0 && feedback <= 0.0) return this
+    if (blend <= 0.0 && feedback <= 0.0) return this
     return shimmer(
-        ParamIgnitor("mix", mix),
+        ParamIgnitor("blend", blend),
         ParamIgnitor("feedback", feedback),
         ParamIgnitor("tone", tone),
+        pitches,
     )
 }
 

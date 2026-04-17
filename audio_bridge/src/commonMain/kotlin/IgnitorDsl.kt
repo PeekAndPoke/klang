@@ -643,19 +643,21 @@ sealed interface IgnitorDsl {
 
     /**
      * Phaser effect. Sweeps a series of allpass filters to create notch comb filtering.
-     * Uses linear crossfade: `out = dry · (1 − mix) + wet · mix`.
+     *
+     * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
+     *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
      */
     @Serializable
     @SerialName("phaser")
     data class Phaser(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(0.5),
-        val mix: IgnitorDsl = Constant(0.5),
+        val blend: IgnitorDsl = Constant(0.5),
         val center: IgnitorDsl = Constant(1000.0),
         val sweep: IgnitorDsl = Constant(1000.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); rate.collectParams(out); mix.collectParams(out)
+            inner.collectParams(out); rate.collectParams(out); blend.collectParams(out)
             center.collectParams(out); sweep.collectParams(out)
         }
     }
@@ -676,26 +678,30 @@ sealed interface IgnitorDsl {
     /**
      * Shimmer effect. Granular pitch-shift cloud with feedback — Aetherizer-style.
      *
-     * Chops the input into short overlapping grains, replays them pitched up (fixed +7 and
-     * +12 semitone intervals), and feeds the wet output back into the grain buffer through a
-     * tone filter. Produces shimmering, rising tails.
+     * Chops the input into short overlapping grains, replays them at the pitch intervals
+     * specified by [pitches] (in semitones), and feeds the wet output back into the grain buffer
+     * through a one-pole lowpass at [tone] Hz.
      *
-     * @param mix Wet amount added to the dry signal. 0.0 = dry only, 1.0 = full wet.
-     * @param feedback Wet → grain-buffer feedback. 0.0 = no cascade, 0.9 = long infinite tails.
+     * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
+     *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
+     * @param feedback Wet → grain-buffer feedback. 0.0 = no cascade, 0.9 = long tails.
      *   Hard-clamped to 0.95 internally for stability.
-     * @param tone One-pole lowpass cutoff in Hz applied to the feedback path.
-     *   Lower = darker, more "ghostly" tails. Typical: 2000–6000.
+     * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]` (root + fifth + octave).
+     *   Example: `[0, 4, 7, 11]` for a major 7th chord shimmer.
+     * @param tone One-pole lowpass cutoff in Hz applied in the feedback path.
+     *   Lower = darker, more ghostly tails. Typical: 2000–6000. Default: 4000.
      */
     @Serializable
     @SerialName("shimmer")
     data class Shimmer(
         val inner: IgnitorDsl,
-        val mix: IgnitorDsl = Constant(0.5),
+        val blend: IgnitorDsl = Constant(0.5),
         val feedback: IgnitorDsl = Constant(0.5),
+        val pitches: List<Double> = listOf(0.0, 7.0, 12.0),
         val tone: IgnitorDsl = Constant(4000.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); mix.collectParams(out); feedback.collectParams(out); tone.collectParams(out)
+            inner.collectParams(out); blend.collectParams(out); feedback.collectParams(out); tone.collectParams(out)
         }
     }
 
@@ -888,11 +894,11 @@ fun IgnitorDsl.coarse(amount: Double) = IgnitorDsl.Coarse(
     amount = IgnitorDsl.Constant(amount),
 )
 
-/** Applies a phaser effect with the given LFO [rate], [mix] (linear crossfade), [center] frequency, and [sweep] range. */
-fun IgnitorDsl.phaser(rate: Double, mix: Double = 0.5, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
+/** Applies a phaser effect. [blend]: 0.0 = dry only, 1.0 = wet only (crossfade). */
+fun IgnitorDsl.phaser(rate: Double, blend: Double = 0.5, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
-    mix = IgnitorDsl.Constant(mix),
+    blend = IgnitorDsl.Constant(blend),
     center = IgnitorDsl.Constant(center),
     sweep = IgnitorDsl.Constant(sweep),
 )
@@ -904,11 +910,21 @@ fun IgnitorDsl.tremolo(rate: Double, depth: Double) = IgnitorDsl.Tremolo(
     depth = IgnitorDsl.Constant(depth),
 )
 
-/** Applies a granular shimmer (pitch-shift cloud with feedback) to the signal. */
-fun IgnitorDsl.shimmer(mix: Double = 0.5, feedback: Double = 0.5, tone: Double = 4000.0) = IgnitorDsl.Shimmer(
+/**
+ * Applies a granular shimmer (pitch-shift cloud with feedback).
+ * [blend]: 0.0 = dry only, 1.0 = wet only (crossfade). [pitches]: semitone transpositions.
+ * [tone]: feedback-path LPF cutoff in Hz.
+ */
+fun IgnitorDsl.shimmer(
+    blend: Double = 0.5,
+    feedback: Double = 0.5,
+    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
+    tone: Double = 4000.0,
+) = IgnitorDsl.Shimmer(
     inner = this,
-    mix = IgnitorDsl.Constant(mix),
+    blend = IgnitorDsl.Constant(blend),
     feedback = IgnitorDsl.Constant(feedback),
+    pitches = pitches,
     tone = IgnitorDsl.Constant(tone),
 )
 

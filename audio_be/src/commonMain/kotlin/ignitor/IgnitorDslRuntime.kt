@@ -43,7 +43,11 @@ internal class IgnitorBuildCache {
 
     inline fun getOrPut(key: IgnitorDsl, mod: Ignitor?, compute: () -> Ignitor): Ignitor {
         for (i in dslKeys.indices) {
-            if (dslKeys[i] === key && modKeys[i] === mod) return values[i]
+            if (dslKeys[i] === key && modKeys[i] === mod) {
+                val existing = values[i]
+                if (existing is MemoizingIgnitor) existing.incConsumers()
+                return existing
+            }
         }
         val v = compute()
         dslKeys.add(key)
@@ -258,8 +262,8 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Clip -> inner.withMod().clip(shape, Oversampler.factorToStages(oversample))
         is IgnitorDsl.Crush -> inner.withMod().crush(amount.noMod())
         is IgnitorDsl.Coarse -> inner.withMod().coarse(amount.noMod())
-        is IgnitorDsl.Phaser -> inner.withMod().phaser(rate.noMod(), mix.noMod(), center.noMod(), sweep.noMod())
+        is IgnitorDsl.Phaser -> inner.withMod().phaser(rate.noMod(), blend.noMod(), center.noMod(), sweep.noMod())
         is IgnitorDsl.Tremolo -> inner.withMod().tremolo(rate.noMod(), depth.noMod())
-        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(mix.noMod(), feedback.noMod(), tone.noMod())
+        is IgnitorDsl.Shimmer -> inner.withMod().shimmer(blend.noMod(), feedback.noMod(), tone.noMod(), pitches)
     }
 }

@@ -119,18 +119,18 @@ object KlangScriptOscExtensions {
     fun coarse(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Coarse(inner = self, amount = amount.toIgnitorDsl())
 
-    /** Applies a multi-stage phaser effect. Mix: 0.0 = dry only, 1.0 = wet only (linear crossfade). */
+    /** Applies a multi-stage phaser effect. Blend: 0.0 = 100% dry (bypass), 1.0 = 100% wet (crossfade). */
     @KlangScript.Method
     fun phaser(
         self: IgnitorDsl,
         rate: IgnitorDslLike,
-        mix: IgnitorDslLike = 0.5,
+        blend: IgnitorDslLike = 0.5,
         center: IgnitorDslLike = 1000.0,
         sweep: IgnitorDslLike = 1000.0,
     ): IgnitorDsl = IgnitorDsl.Phaser(
         inner = self,
         rate = rate.toIgnitorDsl(),
-        mix = mix.toIgnitorDsl(),
+        blend = blend.toIgnitorDsl(),
         center = center.toIgnitorDsl(),
         sweep = sweep.toIgnitorDsl(),
     )
@@ -141,24 +141,34 @@ object KlangScriptOscExtensions {
         IgnitorDsl.Tremolo(inner = self, rate = rate.toIgnitorDsl(), depth = depth.toIgnitorDsl())
 
     /**
-     * Applies a granular shimmer cloud — pitched grains (+7 and +12 semitones) with feedback.
+     * Applies a granular shimmer cloud with configurable pitch transpositions and feedback.
      *
-     * @param mix Wet amount added to dry (0..1). Default 0.5.
+     * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default 0.5.
      * @param feedback Cascade feedback (0..0.95). Default 0.5.
      * @param tone Feedback-path LPF cutoff in Hz. Default 4000.
+     * @param pitches Array of semitone transpositions. Default [0, 7, 12]. Example: [0, 4, 7, 11] for maj7.
      */
     @KlangScript.Method
     fun shimmer(
         self: IgnitorDsl,
-        mix: IgnitorDslLike = 0.5,
+        blend: IgnitorDslLike = 0.5,
         feedback: IgnitorDslLike = 0.5,
         tone: IgnitorDslLike = 4000.0,
-    ): IgnitorDsl = IgnitorDsl.Shimmer(
-        inner = self,
-        mix = mix.toIgnitorDsl(),
-        feedback = feedback.toIgnitorDsl(),
-        tone = tone.toIgnitorDsl(),
-    )
+        pitches: Any = listOf(0.0, 7.0, 12.0),
+    ): IgnitorDsl {
+        @Suppress("UNCHECKED_CAST")
+        val pitchList = when (pitches) {
+            is List<*> -> pitches.map { (it as Number).toDouble() }
+            else -> listOf(0.0, 7.0, 12.0)
+        }
+        return IgnitorDsl.Shimmer(
+            inner = self,
+            blend = blend.toIgnitorDsl(),
+            feedback = feedback.toIgnitorDsl(),
+            pitches = pitchList,
+            tone = tone.toIgnitorDsl(),
+        )
+    }
 
     // ── FM Synthesis ─────────────────────────────────────────────────────────
 

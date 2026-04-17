@@ -51,9 +51,21 @@ class MemoizingIgnitorSpec : StringSpec({
         out[0] shouldBe 1.0f
     }
 
-    "second call within same block uses cache (probe not re-run)" {
+    "single consumer: generates directly into buffer (no cache overhead)" {
+        val probe = CountingIgnitor()
+        val memo = MemoizingIgnitor(probe) // consumers=1 by default
+        val ctx = createCtx()
+        val out = FloatArray(blockFrames)
+
+        memo.generate(out, 440.0, ctx)
+        probe.calls shouldBeExactly 1
+        out[0] shouldBe 1.0f
+    }
+
+    "multi-consumer: second call within same block uses cache (probe not re-run)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
+        memo.incConsumers() // simulate shared node (2 consumers)
         val ctx = createCtx()
         val out1 = FloatArray(blockFrames)
         val out2 = FloatArray(blockFrames)
@@ -69,6 +81,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "advancing voiceElapsedFrames invalidates cache" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
+        memo.incConsumers()
         val ctx = createCtx()
         val out = FloatArray(blockFrames)
 
@@ -84,6 +97,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "changing freqHz invalidates cache (e.g. detune path)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
+        memo.incConsumers()
         val ctx = createCtx()
         val out = FloatArray(blockFrames)
 
@@ -97,6 +111,7 @@ class MemoizingIgnitorSpec : StringSpec({
     "changing offset invalidates cache (sub-block render)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
+        memo.incConsumers()
         val ctx = createCtx()
         val out = FloatArray(blockFrames * 2)
 
@@ -113,6 +128,8 @@ class MemoizingIgnitorSpec : StringSpec({
     "three readers within same block trigger one generate call" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
+        memo.incConsumers() // 2
+        memo.incConsumers() // 3
         val ctx = createCtx()
         val a = FloatArray(blockFrames)
         val b = FloatArray(blockFrames)

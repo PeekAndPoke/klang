@@ -23,6 +23,7 @@ package io.peekandpoke.klang.audio_be.ignitor
  */
 class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
 
+    private var consumers: Int = 1
     private var cache: FloatArray = FloatArray(0)
 
     // Cache key components. Sentinel values guarantee a miss on the first call.
@@ -31,7 +32,16 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
     private var cachedLength: Int = Int.MIN_VALUE
     private var cachedFreqHz: Double = Double.NaN
 
+    fun incConsumers() {
+        consumers++
+    }
+
     override fun generate(buffer: FloatArray, freqHz: Double, ctx: IgniteContext) {
+        if (consumers <= 1) {
+            inner.generate(buffer, freqHz, ctx)
+            return
+        }
+
         val miss = ctx.voiceElapsedFrames != cachedVoiceElapsedFrames
                 || ctx.offset != cachedOffset
                 || ctx.length != cachedLength
@@ -48,10 +58,6 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
             cachedFreqHz = freqHz
         }
 
-        // Copy cached samples into the caller's output buffer.
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            buffer[i] = cache[i]
-        }
+        cache.copyInto(buffer, ctx.offset, ctx.offset, ctx.offset + ctx.length)
     }
 }
