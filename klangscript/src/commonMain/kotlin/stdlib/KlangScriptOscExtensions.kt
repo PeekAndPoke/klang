@@ -119,18 +119,18 @@ object KlangScriptOscExtensions {
     fun coarse(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Coarse(inner = self, amount = amount.toIgnitorDsl())
 
-    /** Applies a multi-stage phaser effect. */
+    /** Applies a multi-stage phaser effect. Mix: 0.0 = dry only, 1.0 = wet only (linear crossfade). */
     @KlangScript.Method
     fun phaser(
         self: IgnitorDsl,
         rate: IgnitorDslLike,
-        depth: IgnitorDslLike,
+        mix: IgnitorDslLike = 0.5,
         center: IgnitorDslLike = 1000.0,
         sweep: IgnitorDslLike = 1000.0,
     ): IgnitorDsl = IgnitorDsl.Phaser(
         inner = self,
         rate = rate.toIgnitorDsl(),
-        depth = depth.toIgnitorDsl(),
+        mix = mix.toIgnitorDsl(),
         center = center.toIgnitorDsl(),
         sweep = sweep.toIgnitorDsl(),
     )

@@ -108,11 +108,11 @@ class BuilderCtx internal constructor(
 //  Body-arg conversion helpers
 // ============================================================================
 
-private fun convertSlot(spec: ParamSpec, value: RuntimeValue, loc: SourceLocation?): Any? {
+private fun convertSlot(fnName: String, spec: ParamSpec, value: RuntimeValue, loc: SourceLocation?): Any? {
     if (value is NullValue) {
         if (!spec.isNullable) {
             throw KlangScriptArgumentError(
-                functionName = spec.name,
+                functionName = fnName,
                 message = "parameter '${spec.name}' is not nullable but received null",
                 location = loc,
             )
@@ -123,13 +123,13 @@ private fun convertSlot(spec: ParamSpec, value: RuntimeValue, loc: SourceLocatio
     return value.convertToKotlin(spec.kotlinType as KClass<Any>, loc)
 }
 
-private fun convertVararg(spec: ParamSpec, value: RuntimeValue, loc: SourceLocation?): List<Any?> {
+private fun convertVararg(fnName: String, spec: ParamSpec, value: RuntimeValue, loc: SourceLocation?): List<Any?> {
     val arr = value as? ArrayValue ?: throw KlangScriptArgumentError(
-        functionName = spec.name,
+        functionName = fnName,
         message = "vararg parameter '${spec.name}' requires an array; got ${value::class.simpleName}",
         location = loc,
     )
-    return arr.elements.map { convertSlot(spec, it, loc) }
+    return arr.elements.map { convertSlot(fnName, spec, it, loc) }
 }
 
 /**
@@ -142,14 +142,14 @@ private fun convertVararg(spec: ParamSpec, value: RuntimeValue, loc: SourceLocat
 @Suppress("UNCHECKED_CAST")
 private fun <T> slot(ctx: BuilderCtx, args: List<RuntimeValue>, paramIdx: Int, loc: SourceLocation?): T {
     val specIdx = if (ctx.receiverClass != null) paramIdx - 1 else paramIdx
-    return convertSlot(ctx.specs[specIdx], args[specIdx], loc) as T
+    return convertSlot(ctx.name, ctx.specs[specIdx], args[specIdx], loc) as T
 }
 
 /** Vararg counterpart of [slot] — see its docs for the [paramIdx] convention. */
 @Suppress("UNCHECKED_CAST")
 private fun <T> varargSlot(ctx: BuilderCtx, args: List<RuntimeValue>, paramIdx: Int, loc: SourceLocation?): List<T> {
     val specIdx = if (ctx.receiverClass != null) paramIdx - 1 else paramIdx
-    return convertVararg(ctx.specs[specIdx], args[specIdx], loc) as List<T>
+    return convertVararg(ctx.name, ctx.specs[specIdx], args[specIdx], loc) as List<T>
 }
 
 // ============================================================================

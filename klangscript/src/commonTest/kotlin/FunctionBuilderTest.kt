@@ -306,4 +306,61 @@ class FunctionBuilderTest : StringSpec({
         err.message!! shouldContain "complex Kotlin default"
         err.message!! shouldContain "in the middle"
     }
+
+    // ── Reviewer-flagged coverage gaps ───────────────────────────────────────
+
+    "vararg + receiver combined: positional tail works" {
+        val engine = klangScript {
+            registerObject("Ignitor", IgnitorLike) {}
+            createFunction("stack")
+                .withReceiver<IgnitorLike>()
+                .withParam<String>("orbit")
+                .withVararg<String>("samples")
+                .body { rcv: IgnitorLike, orbit: String, samples: List<String> ->
+                    "$rcv:$orbit:${samples.joinToString(",")}"
+                }
+        }
+        (engine.execute("Ignitor.stack(\"d1\", \"bd\", \"sd\")") as StringValue).value shouldBe "[IgnitorLike]:d1:bd,sd"
+    }
+
+    "vararg + receiver combined: named call with array" {
+        val engine = klangScript {
+            registerObject("Ignitor", IgnitorLike) {}
+            createFunction("stack")
+                .withReceiver<IgnitorLike>()
+                .withParam<String>("orbit")
+                .withVararg<String>("samples")
+                .body { rcv: IgnitorLike, orbit: String, samples: List<String> ->
+                    "$rcv:$orbit:${samples.joinToString(",")}"
+                }
+        }
+        (engine.execute("Ignitor.stack(orbit = \"d1\", samples = [\"bd\", \"sd\"])") as StringValue).value shouldBe "[IgnitorLike]:d1:bd,sd"
+    }
+
+    "nullable rejection error message includes function name, not param name" {
+        val engine = klangScript {
+            createFunction("double")
+                .withParam<Double>("x")
+                .body { x: Double -> x * 2 }
+        }
+        val err = shouldThrow<KlangScriptArgumentError> {
+            engine.execute("double(null)")
+        }
+        err.functionName shouldBe "double"
+        err.message!! shouldContain "not nullable"
+    }
+
+    "vararg non-array rejection error message includes function name" {
+        val engine = klangScript {
+            createFunction("stack")
+                .withParam<String>("orbit")
+                .withVararg<String>("samples")
+                .body { _: String, _: List<String> -> "ok" }
+        }
+        val err = shouldThrow<KlangScriptArgumentError> {
+            engine.execute("stack(orbit = \"d1\", samples = \"bd\")")
+        }
+        err.functionName shouldBe "stack"
+        err.message!! shouldContain "vararg parameter 'samples'"
+    }
 })

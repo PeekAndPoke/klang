@@ -55,6 +55,17 @@ class SafeDefaultLiteralTest : StringSpec({
     "empty string input" { SafeDefaultLiteral.isSafe("") shouldBe false }
     "blank string input" { SafeDefaultLiteral.isSafe("   ") shouldBe false }
 
+    // ── Kotlin number-literal extensions ────────────────────────────────────
+
+    "hex literal" { SafeDefaultLiteral.isSafe("0xFF") shouldBe true }
+    "hex literal uppercase" { SafeDefaultLiteral.isSafe("0XAB12") shouldBe true }
+    "binary literal" { SafeDefaultLiteral.isSafe("0b1010") shouldBe true }
+    "binary literal uppercase" { SafeDefaultLiteral.isSafe("0B110") shouldBe true }
+    "underscore-separated number" { SafeDefaultLiteral.isSafe("1_000_000") shouldBe true }
+    "underscore-separated double" { SafeDefaultLiteral.isSafe("1_000.0") shouldBe true }
+    "hex with underscores" { SafeDefaultLiteral.isSafe("0xFF_EC_DE") shouldBe true }
+    "unsigned suffix" { SafeDefaultLiteral.isSafe("42u") shouldBe true }
+
     // ── Edge cases that look like literals but aren't ────────────────────────
 
     "two adjacent triple strings (concat) is rejected" {

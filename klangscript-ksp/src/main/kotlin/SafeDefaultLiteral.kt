@@ -24,7 +24,18 @@ package io.peekandpoke.klang.script.ksp
  */
 object SafeDefaultLiteral {
 
-    private val NUMBER_LITERAL = Regex("^[+-]?(\\d+(\\.\\d+)?|\\.\\d+)([eE][+-]?\\d+)?[fFlLdD]?$")
+    // Covers decimal, hex (0x…), binary (0b…), underscore-separated (1_000), and
+    // optional sign + suffix. Permissive on underscores — Kotlin allows them anywhere
+    // between digits but rejects double-underscore or trailing; the Kotlin compiler
+    // catches those, so we don't over-validate here.
+    private val NUMBER_LITERAL = Regex(
+        "^[+-]?(" +
+                "0[xX][0-9a-fA-F_]+" +           // hex
+                "|0[bB][01_]+" +                  // binary
+                "|[\\d_]+(\\.[\\d_]+)?([eE][+-]?[\\d_]+)?" +  // decimal (optional fractional + exponent)
+                "|\\.\\d[\\d_]*([eE][+-]?[\\d_]+)?" +         // leading-dot decimal
+                ")[fFlLdDuU]?\$"
+    )
 
     fun isSafe(text: String): Boolean {
         val trimmed = text.trim()

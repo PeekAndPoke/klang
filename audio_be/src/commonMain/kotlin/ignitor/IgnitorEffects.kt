@@ -366,7 +366,7 @@ fun Ignitor.coarse(amount: Double): Ignitor {
  */
 fun Ignitor.phaser(
     rate: Ignitor,
-    depth: Ignitor,
+    mix: Ignitor,
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
 ): Ignitor {
@@ -381,12 +381,12 @@ fun Ignitor.phaser(
             this.generate(input, freqHz, ctx)
 
             val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-            val depthVal = Ignitors.readParam(depth, freqHz, ctx)
+            val mixVal = Ignitors.readParam(mix, freqHz, ctx).coerceIn(0.0, 1.0)
             val centerVal = Ignitors.readParam(center, freqHz, ctx)
             val sweepVal = Ignitors.readParam(sweep, freqHz, ctx)
             val end = ctx.offset + ctx.length
 
-            if (depthVal <= 0.0) {
+            if (mixVal <= 0.0) {
                 for (i in ctx.offset until end) {
                     output[i] = input[i]
                 }
@@ -397,20 +397,16 @@ fun Ignitor.phaser(
             val lfoIncrement = rateVal * TWO_PI * inverseSampleRate
 
             for (i in ctx.offset until end) {
-                // LFO
                 lfoPhase += lfoIncrement
                 if (lfoPhase > TWO_PI) lfoPhase -= TWO_PI
                 val lfoValue = (sin(lfoPhase) + 1.0) * 0.5
 
-                // Modulated frequency
                 var modFreq = centerVal + (lfoValue - 0.5) * sweepVal
                 modFreq = modFreq.coerceIn(100.0, 18000.0)
 
-                // All-pass coefficient
                 val tanValue = tan(PI * modFreq * inverseSampleRate)
                 val alpha = (tanValue - 1.0) / (tanValue + 1.0)
 
-                // All-pass cascade with feedback
                 val dry = input[i].toDouble()
                 var signal = dry + lastOutput * feedback
 
@@ -422,8 +418,8 @@ fun Ignitor.phaser(
 
                 lastOutput = flushDenormal(signal)
 
-                // Mix wet with dry
-                output[i] = (dry + signal * depthVal).toFloat()
+                // Linear crossfade: dry · (1 − mix) + wet · mix
+                output[i] = (dry * (1.0 - mixVal) + signal * mixVal).toFloat()
             }
         }
     }
@@ -433,20 +429,20 @@ fun Ignitor.phaser(
  * 4-stage all-pass cascade phaser (convenience overload with fixed values).
  *
  * @param rate LFO speed in Hz. Typical range: 0.1–5.0.
- * @param depth Wet/dry mix. 0.0 = bypass, 1.0 = full effect.
+ * @param mix Linear crossfade between dry and wet. 0.0 = dry only, 1.0 = wet only. Default: 0.5.
  * @param center Center frequency in Hz. Default: 1000.0. Clamped to [100, 18000].
  * @param sweep Modulation width in Hz. Default: 1000.0. Clamped to [100, 18000].
  */
 fun Ignitor.phaser(
     rate: Double,
-    depth: Double,
+    mix: Double = 0.5,
     center: Double = 1000.0,
     sweep: Double = 1000.0,
 ): Ignitor {
-    if (depth <= 0.0) return this
+    if (mix <= 0.0) return this
     return phaser(
         ParamIgnitor("rate", rate),
-        ParamIgnitor("depth", depth),
+        ParamIgnitor("mix", mix),
         ParamIgnitor("center", center),
         ParamIgnitor("sweep", sweep),
     )
@@ -666,8 +662,8 @@ fun Ignitor.shimmer(
                 lpfState = flushDenormal(lpfOneMinusA * wet + lpfA * lpfState)
                 feedbackTap = lpfState
 
-                // ── Output: dry + wet * mix ──
-                output[i] = (dry + wet * mixVal).toFloat()
+                // Linear crossfade: dry · (1 − mix) + wet · mix
+                output[i] = (dry * (1.0 - mixVal) + wet * mixVal).toFloat()
             }
         }
     }

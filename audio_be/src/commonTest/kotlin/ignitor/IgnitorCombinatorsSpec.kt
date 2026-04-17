@@ -130,9 +130,9 @@ class ExciterCombinatorsSpec : StringSpec({
     // Effects: phaser
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "phaser(rate, depth) - output differs from dry signal" {
+    "phaser(rate, mix) - output differs from dry signal" {
         val dry = generate(Ignitors.sine())
-        val wet = generate(Ignitors.sine().phaser(rate = 2.0, depth = 0.5))
+        val wet = generate(Ignitors.sine().phaser(rate = 2.0, mix = 0.5))
 
         // Phaser should modify the signal
         var differs = false

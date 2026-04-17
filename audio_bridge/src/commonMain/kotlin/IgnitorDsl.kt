@@ -641,18 +641,21 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Phaser effect. Sweeps a series of allpass filters to create notch comb filtering. */
+    /**
+     * Phaser effect. Sweeps a series of allpass filters to create notch comb filtering.
+     * Uses linear crossfade: `out = dry · (1 − mix) + wet · mix`.
+     */
     @Serializable
     @SerialName("phaser")
     data class Phaser(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(0.5),
-        val depth: IgnitorDsl = Constant(0.5),
+        val mix: IgnitorDsl = Constant(0.5),
         val center: IgnitorDsl = Constant(1000.0),
         val sweep: IgnitorDsl = Constant(1000.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
+            inner.collectParams(out); rate.collectParams(out); mix.collectParams(out)
             center.collectParams(out); sweep.collectParams(out)
         }
     }
@@ -885,11 +888,11 @@ fun IgnitorDsl.coarse(amount: Double) = IgnitorDsl.Coarse(
     amount = IgnitorDsl.Constant(amount),
 )
 
-/** Applies a phaser effect with the given LFO [rate], [depth], [center] frequency, and [sweep] range. */
-fun IgnitorDsl.phaser(rate: Double, depth: Double, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
+/** Applies a phaser effect with the given LFO [rate], [mix] (linear crossfade), [center] frequency, and [sweep] range. */
+fun IgnitorDsl.phaser(rate: Double, mix: Double = 0.5, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
-    depth = IgnitorDsl.Constant(depth),
+    mix = IgnitorDsl.Constant(mix),
     center = IgnitorDsl.Constant(center),
     sweep = IgnitorDsl.Constant(sweep),
 )
