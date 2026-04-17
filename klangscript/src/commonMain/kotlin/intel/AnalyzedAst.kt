@@ -149,25 +149,42 @@ class AnalyzedAst(
         /**
          * Parse source code and build an [AnalyzedAst].
          */
-        fun build(source: String, registry: KlangDocsRegistry): AnalyzedAst {
+        fun build(
+            source: String,
+            registry: KlangDocsRegistry,
+            computeDiagnostics: Boolean = true,
+        ): AnalyzedAst {
             val program = KlangScriptParser.parse(source)
-            return build(program, source, registry)
+            return build(program, source, registry, computeDiagnostics)
         }
 
         /**
          * Build an [AnalyzedAst] from an already-parsed program.
+         *
+         * @param computeDiagnostics Set to false when diagnostics aren't needed
+         *   (e.g. engine runtime, batch tools) to skip the analyzer walk.
          */
-        fun build(program: Program, source: String, registry: KlangDocsRegistry): AnalyzedAst {
+        fun build(
+            program: Program,
+            source: String,
+            registry: KlangDocsRegistry,
+            computeDiagnostics: Boolean = true,
+        ): AnalyzedAst {
             val astIndex = AstIndex.build(program, source)
             val inferrer = ExpressionTypeInferrer(registry)
             val typeMap = buildTypeMap(program, inferrer)
+            val diagnostics = if (computeDiagnostics) {
+                NamedArgumentChecker(registry, typeMap).check(program)
+            } else {
+                emptyList()
+            }
             return AnalyzedAst(
                 ast = program,
                 source = source,
                 astIndex = astIndex,
                 registry = registry,
                 typeMap = typeMap,
-                diagnostics = emptyList(),
+                diagnostics = diagnostics,
             )
         }
     }

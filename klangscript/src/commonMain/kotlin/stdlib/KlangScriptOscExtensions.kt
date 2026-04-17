@@ -199,6 +199,14 @@ object KlangScriptOscExtensions {
     fun accelerate(self: IgnitorDsl, amount: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Accelerate(inner = self, amount = amount.toIgnitorDsl())
 
+    /**
+     * Applies a custom pitch modulation from any Ignitor signal.
+     * The mod signal uses deviation space: 0.0 = no change, positive = higher, negative = lower.
+     */
+    @KlangScript.Method
+    fun pitchMod(self: IgnitorDsl, mod: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.PitchMod(inner = self, mod = mod.toIgnitorDsl())
+
     /** Applies a pitch envelope (pitch sweep over time). */
     @KlangScript.Method
     fun pitchEnvelope(

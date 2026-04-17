@@ -5,6 +5,10 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.accelerate
+import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.abs
 import kotlin.math.sqrt
 import io.kotest.matchers.ints.shouldBeGreaterThan as intShouldBeGreaterThan
@@ -316,8 +320,8 @@ class ExciterCombinatorsSpec : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "vibrato(rate, depth) - output differs from plain sine (frequency modulation)" {
-        val dry = generate(Ignitors.sine())
-        val wet = generate(Ignitors.sine().vibrato(rate = 5.0, depth = 0.05))
+        val dry = generate(IgnitorDsl.Sine().toExciter())
+        val wet = generate(IgnitorDsl.Sine().vibrato(5.0, 0.05).toExciter())
 
         var differs = false
         for (i in dry.indices) {
@@ -338,7 +342,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "accelerate(amount) - pitch changes over time" {
         val blockFrames = 44100 // 1 second
-        val wet = generate(Ignitors.sine().accelerate(2.0), freqHz = 440.0, blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().accelerate(2.0).toExciter(), freqHz = 440.0, blockFrames = blockFrames)
 
         // Count zero crossings in first half vs second half
         fun zeroCrossingsInRange(buf: FloatArray, start: Int, end: Int): Int {
@@ -364,8 +368,8 @@ class ExciterCombinatorsSpec : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "fm(modulator, ratio, depth) - output has more harmonic content than carrier alone" {
-        val dry = generate(Ignitors.sine())
-        val wet = generate(Ignitors.sine().fm(modulator = Ignitors.sine(), ratio = 2.0, depth = 200.0))
+        val dry = generate(IgnitorDsl.Sine().toExciter())
+        val wet = generate(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 2.0, depth = 200.0).toExciter())
 
         // FM synthesis creates sidebands — the waveform should differ substantially from a pure sine.
         // Compute mean absolute difference between dry and wet signals.

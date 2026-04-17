@@ -75,7 +75,7 @@ class IgnitorDslSerializationTest : StringSpec({
     }
 
     "WhiteNoise round-trips" {
-        val dsl = IgnitorDsl.WhiteNoise
+        val dsl = IgnitorDsl.WhiteNoise()
         roundTrip(dsl) shouldBe dsl
     }
 
@@ -211,12 +211,12 @@ class IgnitorDslSerializationTest : StringSpec({
     }
 
     "BrownNoise round-trips" {
-        val dsl = IgnitorDsl.BrownNoise
+        val dsl = IgnitorDsl.BrownNoise()
         roundTrip(dsl) shouldBe dsl
     }
 
     "PinkNoise round-trips" {
-        val dsl = IgnitorDsl.PinkNoise
+        val dsl = IgnitorDsl.PinkNoise()
         roundTrip(dsl) shouldBe dsl
     }
 

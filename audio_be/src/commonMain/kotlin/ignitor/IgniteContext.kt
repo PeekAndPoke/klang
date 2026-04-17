@@ -29,8 +29,14 @@ class IgniteContext(
     var length: Int = 0,
     /** Frames since voice start (monotonic, updated once per block) */
     var voiceElapsedFrames: Int = 0,
-    /** Per-sample phase-increment multipliers (1.0 = no change), or null.
-     *  MUST be at least (offset + length) elements long when non-null. */
+    /**
+     * Per-sample phase-increment multipliers (1.0 = no change), or null.
+     * MUST be at least (offset + length) elements long when non-null.
+     *
+     * **Set by IgniteRenderer only** (strip-level pipeline bridge from [BlockContext.freqModBuffer]).
+     * Ignitor DSL-level pitch mods (vibrato, accelerate, pitchEnvelope, FM) are resolved at
+     * build time via [ModApplyingIgnitor] and do NOT use this field.
+     */
     var phaseMod: DoubleArray? = null,
 ) {
     // ── Computed properties (derived from above, no storage) ───────────────────

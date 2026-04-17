@@ -4,6 +4,22 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
+ * Process-local counter used to stamp each noise-source DSL instance with a unique
+ * [IgnitorDsl.WhiteNoise.uid] / [IgnitorDsl.BrownNoise.uid] / [IgnitorDsl.PinkNoise.uid].
+ *
+ * Two calls to `Osc.whitenoise()` produce two different DSL objects with different uids —
+ * and therefore two independent Ignitors under the identity-caching `toExciter`. Binding to
+ * a variable and re-using it keeps a single instance, so `let s = Osc.whitenoise(); s + s`
+ * still collapses to one shared stream summed with itself.
+ *
+ * DSL construction is single-threaded in practice (the audio bridge is built from the UI
+ * thread before being serialised to the worklet), so a plain counter is sufficient.
+ */
+private var noiseUidCounter: Int = 0
+
+internal fun nextNoiseUid(): Int = noiseUidCounter++
+
+/**
  * Serializable sealed DSL for describing exciter signal graphs.
  *
  * Each subtype represents a primitive oscillator, noise source, effect, filter, envelope,
@@ -121,10 +137,18 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** White noise generator. Produces uniformly distributed random samples. */
+    /**
+     * White noise generator. Produces uniformly distributed random samples.
+     *
+     * [uid] is an instance-discriminator used by the runtime identity cache: each call to
+     * `Osc.whitenoise()` creates a fresh [WhiteNoise] with a unique uid, so two such calls
+     * yield two independent noise streams when composed (`a + b`). Binding to a variable and
+     * re-using it (`let s = Osc.whitenoise(); s + s`) keeps a single instance and sums the
+     * same stream twice.
+     */
     @Serializable
     @SerialName("white-noise")
-    data object WhiteNoise : IgnitorDsl {
+    data class WhiteNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
@@ -165,17 +189,23 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope. */
+    /**
+     * Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope.
+     * See [WhiteNoise] for the [uid] instance-discriminator story.
+     */
     @Serializable
     @SerialName("brown-noise")
-    data object BrownNoise : IgnitorDsl {
+    data class BrownNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
-    /** Pink noise generator. Equal energy per octave with -3 dB/oct slope. */
+    /**
+     * Pink noise generator. Equal energy per octave with -3 dB/oct slope.
+     * See [WhiteNoise] for the [uid] instance-discriminator story.
+     */
     @Serializable
     @SerialName("pink-noise")
-    data object PinkNoise : IgnitorDsl {
+    data class PinkNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
@@ -721,6 +751,26 @@ sealed interface IgnitorDsl {
             decaySec.collectParams(out); releaseSec.collectParams(out); curve.collectParams(out); anchor.collectParams(out)
         }
     }
+
+    /**
+     * General-purpose pitch modulation. The [mod] Ignitor produces per-sample phase-deviation
+     * values (0.0 = no change, positive = higher pitch, negative = lower). At runtime, the
+     * build-time walker converts to ratio space (`value + 1.0`) and bubbles the mod to the
+     * source oscillator.
+     *
+     * This is the general primitive underlying `.vibrato()`, `.accelerate()`, `.fm()`, and
+     * `.pitchEnvelope()`. Use it for custom pitch modulation from any Ignitor source.
+     */
+    @Serializable
+    @SerialName("pitch-mod")
+    data class PitchMod(
+        val inner: IgnitorDsl,
+        val mod: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); mod.collectParams(out)
+        }
+    }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════════
@@ -874,6 +924,14 @@ fun IgnitorDsl.accelerate(amount: Double) = IgnitorDsl.Accelerate(
     amount = IgnitorDsl.Constant(amount),
 )
 
+/**
+ * Applies a custom pitch modulation from any Ignitor signal.
+ *
+ * The [mod] signal uses deviation space: 0.0 = no change, positive = higher, negative = lower.
+ * At build time, the runtime converts to ratio space and bubbles the mod to the source oscillator.
+ */
+fun IgnitorDsl.pitchMod(mod: IgnitorDsl) = IgnitorDsl.PitchMod(inner = this, mod = mod)
+
 // ═════════════════════════════════════════════════════════════════════════════════
 // Discovery
 // ═════════════════════════════════════════════════════════════════════════════════
@@ -917,6 +975,7 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     is IgnitorDsl.Phaser -> inner.maxReleaseSec()
     is IgnitorDsl.Tremolo -> inner.maxReleaseSec()
     is IgnitorDsl.Shimmer -> inner.maxReleaseSec()
+    is IgnitorDsl.PitchMod -> inner.maxReleaseSec()
     is IgnitorDsl.Vibrato -> inner.maxReleaseSec()
     is IgnitorDsl.Accelerate -> inner.maxReleaseSec()
     is IgnitorDsl.PitchEnvelope -> inner.maxReleaseSec()

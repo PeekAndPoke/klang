@@ -108,15 +108,15 @@ fun IgnitorRegistry.registerDefaults() {
 
     // ─── Noises ──────────────────────────────────────────────────────────────
 
-    val whiteNoise = IgnitorDsl.WhiteNoise
+    val whiteNoise = IgnitorDsl.WhiteNoise()
     register(name = "whitenoise", dsl = whiteNoise)
     register(name = "white", dsl = whiteNoise)
 
-    val brownNoise = IgnitorDsl.BrownNoise
+    val brownNoise = IgnitorDsl.BrownNoise()
     register(name = "brownnoise", dsl = brownNoise)
     register(name = "brown", dsl = brownNoise)
 
-    val pinkNoise = IgnitorDsl.PinkNoise
+    val pinkNoise = IgnitorDsl.PinkNoise()
     register(name = "pinknoise", dsl = pinkNoise)
     register(name = "pink", dsl = pinkNoise)
 

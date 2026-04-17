@@ -42,44 +42,57 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
     var dcBlockX1 = 0.0
     var dcBlockY1 = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { work ->
+            this.generate(work, freqHz, ctx)
 
-        val amt = Ignitors.readParam(amount, freqHz, ctx)
-        if (amt <= 0.0) return@Ignitor
-
-        val drive = 10.0.pow(amt * 1.2)
-        val os = oversampler
-
-        if (os != null) {
-            os.process(buffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                (waveshaper(sample.toDouble() * drive) * outputGain).toFloat()
-            }
-            // DC blocker at original rate after decimation
-            if (needsDcBlock) {
-                val end = ctx.offset + ctx.length
-                for (i in ctx.offset until end) {
-                    val y = buffer[i].toDouble()
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    buffer[i] = dcOut.toFloat()
-                }
-            }
-        } else {
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                val x = buffer[i].toDouble() * drive
-                var y = waveshaper(x) * outputGain
 
-                if (needsDcBlock) {
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    y = dcOut
+            if (amt <= 0.0) {
+                // Bypass: copy upstream dry through to output.
+                for (i in ctx.offset until end) {
+                    output[i] = work[i]
                 }
+                return@use
+            }
 
-                buffer[i] = y.toFloat()
+            val drive = 10.0.pow(amt * 1.2)
+            val os = oversampler
+
+            if (os != null) {
+                // Oversampler processes work in place.
+                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                    (waveshaper(sample.toDouble() * drive) * outputGain).toFloat()
+                }
+                // DC blocker at original rate after decimation — emit directly into output.
+                if (needsDcBlock) {
+                    for (i in ctx.offset until end) {
+                        val y = work[i].toDouble()
+                        val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                        dcBlockX1 = y
+                        dcBlockY1 = flushDenormal(dcOut)
+                        output[i] = dcOut.toFloat()
+                    }
+                } else {
+                    for (i in ctx.offset until end) {
+                        output[i] = work[i]
+                    }
+                }
+            } else {
+                for (i in ctx.offset until end) {
+                    val x = work[i].toDouble() * drive
+                    var y = waveshaper(x) * outputGain
+
+                    if (needsDcBlock) {
+                        val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                        dcBlockX1 = y
+                        dcBlockY1 = flushDenormal(dcOut)
+                        y = dcOut
+                    }
+
+                    output[i] = y.toFloat()
+                }
             }
         }
     }
@@ -108,20 +121,28 @@ fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: In
  * @param type Drive type. Default: "linear". Future: "tube", "fet", "tape".
  */
 fun Ignitor.drive(amount: Ignitor, type: String = "linear"): Ignitor {
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { work ->
+            this.generate(work, freqHz, ctx)
 
-        val amt = Ignitors.readParam(amount, freqHz, ctx)
-        if (amt <= 0.0) return@Ignitor
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        val driveGain = when (type.lowercase()) {
-            "linear" -> 10.0.pow(amt * 1.2)
-            else -> 10.0.pow(amt * 1.2) // default to linear, future: tube, fet, tape
-        }
+            if (amt <= 0.0) {
+                for (i in ctx.offset until end) {
+                    output[i] = work[i]
+                }
+                return@use
+            }
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            buffer[i] = (buffer[i] * driveGain).toFloat()
+            val driveGain = when (type.lowercase()) {
+                "linear" -> 10.0.pow(amt * 1.2)
+                else -> 10.0.pow(amt * 1.2) // default to linear, future: tube, fet, tape
+            }
+
+            for (i in ctx.offset until end) {
+                output[i] = (work[i] * driveGain).toFloat()
+            }
         }
     }
 }
@@ -159,38 +180,43 @@ fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     var dcBlockX1 = 0.0
     var dcBlockY1 = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { work ->
+            this.generate(work, freqHz, ctx)
 
-        val os = oversampler
-
-        if (os != null) {
-            os.process(buffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                (clipFn(sample.toDouble()) * outputGain).toFloat()
-            }
-            if (needsDcBlock) {
-                val end = ctx.offset + ctx.length
-                for (i in ctx.offset until end) {
-                    val y = buffer[i].toDouble()
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    buffer[i] = dcOut.toFloat()
-                }
-            }
-        } else {
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                var y = clipFn(buffer[i].toDouble()) * outputGain
+            val os = oversampler
 
-                if (needsDcBlock) {
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    y = dcOut
+            if (os != null) {
+                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                    (clipFn(sample.toDouble()) * outputGain).toFloat()
                 }
+                if (needsDcBlock) {
+                    for (i in ctx.offset until end) {
+                        val y = work[i].toDouble()
+                        val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                        dcBlockX1 = y
+                        dcBlockY1 = flushDenormal(dcOut)
+                        output[i] = dcOut.toFloat()
+                    }
+                } else {
+                    for (i in ctx.offset until end) {
+                        output[i] = work[i]
+                    }
+                }
+            } else {
+                for (i in ctx.offset until end) {
+                    var y = clipFn(work[i].toDouble()) * outputGain
 
-                buffer[i] = y.toFloat()
+                    if (needsDcBlock) {
+                        val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+                        dcBlockX1 = y
+                        dcBlockY1 = flushDenormal(dcOut)
+                        y = dcOut
+                    }
+
+                    output[i] = y.toFloat()
+                }
             }
         }
     }
@@ -219,26 +245,33 @@ fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
  *   Internally: `levels = 2^amount`. Typical range: 2.0–8.0.
  */
 fun Ignitor.crush(amount: Ignitor): Ignitor {
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { work ->
+            this.generate(work, freqHz, ctx)
 
-        val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        // Continuous levels — no toInt() so modulating `amt` sweeps the grid smoothly.
-        val levels = 2.0.pow(amt)
-        // Bypass: need at least 2 levels (amt >= 1) for the quantizer to be
-        // remotely bounded by the input range. Sub-1.0 amounts would inflate by
-        // factor `1/halfLevels`, which can exceed 2×.
-        if (levels < 2.0) return@Ignitor
+            // Continuous levels — no toInt() so modulating `amt` sweeps the grid smoothly.
+            val levels = 2.0.pow(amt)
+            // Bypass: need at least 2 levels (amt >= 1) for the quantizer to be
+            // remotely bounded by the input range. Sub-1.0 amounts would inflate by
+            // factor `1/halfLevels`, which can exceed 2×.
+            if (levels < 2.0) {
+                for (i in ctx.offset until end) {
+                    output[i] = work[i]
+                }
+                return@use
+            }
 
-        val halfLevels = levels / 2.0
+            val halfLevels = levels / 2.0
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            // Midtread symmetric quantizer (round, not floor) — no DC bias.
-            // Clamp output to [-1, 1] to catch non-integer halfLevels inflation.
-            val q = round(buffer[i].toDouble() * halfLevels) / halfLevels
-            buffer[i] = q.coerceIn(-1.0, 1.0).toFloat()
+            for (i in ctx.offset until end) {
+                // Midtread symmetric quantizer (round, not floor) — no DC bias.
+                // Clamp output to [-1, 1] to catch non-integer halfLevels inflation.
+                val q = round(work[i].toDouble() * halfLevels) / halfLevels
+                output[i] = q.coerceIn(-1.0, 1.0).toFloat()
+            }
         }
     }
 }
@@ -272,23 +305,31 @@ fun Ignitor.coarse(amount: Ignitor): Ignitor {
     var lastValue = 0.0f
     var counter = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { work ->
+            this.generate(work, freqHz, ctx)
 
-        val amt = Ignitors.readParam(amount, freqHz, ctx)
-        if (amt <= 1.0) return@Ignitor
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val idx = i - ctx.offset
-
-            if (counter >= 1.0 || (idx == 0 && counter == 0.0)) {
-                lastValue = buffer[i]
-                counter -= 1.0
+            if (amt <= 1.0) {
+                for (i in ctx.offset until end) {
+                    output[i] = work[i]
+                }
+                return@use
             }
 
-            buffer[i] = lastValue
-            counter += (1.0 / amt)
+            for (i in ctx.offset until end) {
+                val idx = i - ctx.offset
+
+                if (counter >= 1.0 || (idx == 0 && counter == 0.0)) {
+                    lastValue = work[i]
+                    counter -= 1.0
+                }
+
+                output[i] = lastValue
+                counter += (1.0 / amt)
+            }
         }
     }
 }
@@ -335,47 +376,55 @@ fun Ignitor.phaser(
     var lastOutput = 0.0
     val feedback = 0.5
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-        val depthVal = Ignitors.readParam(depth, freqHz, ctx)
-        val centerVal = Ignitors.readParam(center, freqHz, ctx)
-        val sweepVal = Ignitors.readParam(sweep, freqHz, ctx)
+            val rateVal = Ignitors.readParam(rate, freqHz, ctx)
+            val depthVal = Ignitors.readParam(depth, freqHz, ctx)
+            val centerVal = Ignitors.readParam(center, freqHz, ctx)
+            val sweepVal = Ignitors.readParam(sweep, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        if (depthVal <= 0.0) return@Ignitor
-
-        val inverseSampleRate = 1.0 / ctx.sampleRate
-        val lfoIncrement = rateVal * TWO_PI * inverseSampleRate
-
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            // LFO
-            lfoPhase += lfoIncrement
-            if (lfoPhase > TWO_PI) lfoPhase -= TWO_PI
-            val lfoValue = (sin(lfoPhase) + 1.0) * 0.5
-
-            // Modulated frequency
-            var modFreq = centerVal + (lfoValue - 0.5) * sweepVal
-            modFreq = modFreq.coerceIn(100.0, 18000.0)
-
-            // All-pass coefficient
-            val tanValue = tan(PI * modFreq * inverseSampleRate)
-            val alpha = (tanValue - 1.0) / (tanValue + 1.0)
-
-            // All-pass cascade with feedback
-            var signal = buffer[i].toDouble() + lastOutput * feedback
-
-            for (s in 0 until stages) {
-                val output = alpha * signal + filterState[s]
-                filterState[s] = flushDenormal(signal - alpha * output)
-                signal = output
+            if (depthVal <= 0.0) {
+                for (i in ctx.offset until end) {
+                    output[i] = input[i]
+                }
+                return@use
             }
 
-            lastOutput = flushDenormal(signal)
+            val inverseSampleRate = 1.0 / ctx.sampleRate
+            val lfoIncrement = rateVal * TWO_PI * inverseSampleRate
 
-            // Mix wet with dry
-            buffer[i] = (buffer[i] + signal * depthVal).toFloat()
+            for (i in ctx.offset until end) {
+                // LFO
+                lfoPhase += lfoIncrement
+                if (lfoPhase > TWO_PI) lfoPhase -= TWO_PI
+                val lfoValue = (sin(lfoPhase) + 1.0) * 0.5
+
+                // Modulated frequency
+                var modFreq = centerVal + (lfoValue - 0.5) * sweepVal
+                modFreq = modFreq.coerceIn(100.0, 18000.0)
+
+                // All-pass coefficient
+                val tanValue = tan(PI * modFreq * inverseSampleRate)
+                val alpha = (tanValue - 1.0) / (tanValue + 1.0)
+
+                // All-pass cascade with feedback
+                val dry = input[i].toDouble()
+                var signal = dry + lastOutput * feedback
+
+                for (s in 0 until stages) {
+                    val stageOut = alpha * signal + filterState[s]
+                    filterState[s] = flushDenormal(signal - alpha * stageOut)
+                    signal = stageOut
+                }
+
+                lastOutput = flushDenormal(signal)
+
+                // Mix wet with dry
+                output[i] = (dry + signal * depthVal).toFloat()
+            }
         }
     }
 }
@@ -425,24 +474,31 @@ fun Ignitor.tremolo(
 ): Ignitor {
     var phase = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-        val depthVal = Ignitors.readParam(depth, freqHz, ctx)
+            val rateVal = Ignitors.readParam(rate, freqHz, ctx)
+            val depthVal = Ignitors.readParam(depth, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        if (depthVal <= 0.0) return@Ignitor
+            if (depthVal <= 0.0) {
+                for (i in ctx.offset until end) {
+                    output[i] = input[i]
+                }
+                return@use
+            }
 
-        val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
+            val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            phase += phaseInc
-            if (phase > TWO_PI) phase -= TWO_PI
+            for (i in ctx.offset until end) {
+                phase += phaseInc
+                if (phase > TWO_PI) phase -= TWO_PI
 
-            val lfoNorm = (sin(phase) + 1.0) * 0.5
-            val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
-            buffer[i] = (buffer[i] * gain).toFloat()
+                val lfoNorm = (sin(phase) + 1.0) * 0.5
+                val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
+                output[i] = (input[i] * gain).toFloat()
+            }
         }
     }
 }
@@ -513,99 +569,106 @@ fun Ignitor.shimmer(
     var feedbackTap = 0.0
     var lpfState = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val mixVal = Ignitors.readParam(mix, freqHz, ctx).coerceIn(0.0, 1.0)
-        val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
-        val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
+            val mixVal = Ignitors.readParam(mix, freqHz, ctx).coerceIn(0.0, 1.0)
+            val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
+            val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
+            val end = ctx.offset + ctx.length
 
-        if (mixVal <= 0.0 && fbVal <= 0.0) return@Ignitor
+            if (mixVal <= 0.0 && fbVal <= 0.0) {
+                for (i in ctx.offset until end) {
+                    output[i] = input[i]
+                }
+                return@use
+            }
 
-        val sampleRate = ctx.sampleRate
-        val grainPeriodSamples = (sampleRate / grainsPerSecond).toInt().coerceAtLeast(1)
-        val grainTotalSamples = (sampleRate * grainSizeSec).toInt().coerceAtLeast(1)
-        val invGrainTotal = 1.0 / grainTotalSamples
+            val sampleRate = ctx.sampleRate
+            val grainPeriodSamples = (sampleRate / grainsPerSecond).toInt().coerceAtLeast(1)
+            val grainTotalSamples = (sampleRate * grainSizeSec).toInt().coerceAtLeast(1)
+            val invGrainTotal = 1.0 / grainTotalSamples
 
-        // One-pole LPF coefficient. y[n] = (1-a) * x + a * y[n-1] where a = exp(-2π * fc / fs).
-        val lpfA = exp(-TWO_PI * toneVal / sampleRate)
-        val lpfOneMinusA = 1.0 - lpfA
+            // One-pole LPF coefficient. y[n] = (1-a) * x + a * y[n-1] where a = exp(-2π * fc / fs).
+            val lpfA = exp(-TWO_PI * toneVal / sampleRate)
+            val lpfOneMinusA = 1.0 - lpfA
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val dry = buffer[i].toDouble()
+            for (i in ctx.offset until end) {
+                val dry = input[i].toDouble()
 
-            // ── Write input + feedback tap into the ring buffer ──
-            var write = dry + feedbackTap * fbVal
-            if (write > 2.0) write = 2.0 else if (write < -2.0) write = -2.0
-            ring[writePos] = write.toFloat()
-            writePos++
-            if (writePos >= ringSize) writePos = 0
+                // ── Write input + feedback tap into the ring buffer ──
+                var write = dry + feedbackTap * fbVal
+                if (write > 2.0) write = 2.0 else if (write < -2.0) write = -2.0
+                ring[writePos] = write.toFloat()
+                writePos++
+                if (writePos >= ringSize) writePos = 0
 
-            // ── Maybe spawn a new grain ──
-            if (samplesUntilNextGrain <= 0) {
-                samplesUntilNextGrain = grainPeriodSamples
-                val rate = intervalRates[nextIntervalIdx]
-                nextIntervalIdx = (nextIntervalIdx + 1) % intervalRates.size
+                // ── Maybe spawn a new grain ──
+                if (samplesUntilNextGrain <= 0) {
+                    samplesUntilNextGrain = grainPeriodSamples
+                    val rate = intervalRates[nextIntervalIdx]
+                    nextIntervalIdx = (nextIntervalIdx + 1) % intervalRates.size
 
-                // Find a free slot.
-                var slot = -1
-                for (g in 0 until maxGrains) {
-                    if (!grainActive[g]) {
-                        slot = g
-                        break
+                    // Find a free slot.
+                    var slot = -1
+                    for (g in 0 until maxGrains) {
+                        if (!grainActive[g]) {
+                            slot = g
+                            break
+                        }
+                    }
+                    if (slot >= 0) {
+                        // Start reading so that the grain finishes approximately at writePos.
+                        // Read distance = rate * grainTotalSamples; start that far behind writePos.
+                        val lookback = rate * grainTotalSamples
+                        var start = writePos - lookback
+                        while (start < 0.0) start += ringSize
+                        grainReadPos[slot] = start
+                        grainRate[slot] = rate
+                        grainElapsed[slot] = 0
+                        grainTotal[slot] = grainTotalSamples
+                        grainActive[slot] = true
                     }
                 }
-                if (slot >= 0) {
-                    // Start reading so that the grain finishes approximately at writePos.
-                    // Read distance = rate * grainTotalSamples; start that far behind writePos.
-                    val lookback = rate * grainTotalSamples
-                    var start = writePos - lookback
-                    while (start < 0.0) start += ringSize
-                    grainReadPos[slot] = start
-                    grainRate[slot] = rate
-                    grainElapsed[slot] = 0
-                    grainTotal[slot] = grainTotalSamples
-                    grainActive[slot] = true
+                samplesUntilNextGrain--
+
+                // ── Read & mix all active grains ──
+                var wet = 0.0
+                for (g in 0 until maxGrains) {
+                    if (!grainActive[g]) continue
+
+                    val pos = grainReadPos[g]
+                    val idx1 = pos.toInt()
+                    val frac = pos - idx1
+                    val idx2 = if (idx1 + 1 >= ringSize) 0 else idx1 + 1
+                    val s1 = ring[idx1].toDouble()
+                    val s2 = ring[idx2].toDouble()
+                    val sample = s1 + frac * (s2 - s1)
+
+                    // Hann window over the grain lifetime.
+                    val phase = grainElapsed[g] * invGrainTotal
+                    val win = 0.5 - 0.5 * cos(TWO_PI * phase)
+
+                    wet += sample * win
+
+                    // Advance.
+                    var nextPos = pos + grainRate[g]
+                    while (nextPos >= ringSize) nextPos -= ringSize
+                    grainReadPos[g] = nextPos
+                    grainElapsed[g]++
+                    if (grainElapsed[g] >= grainTotal[g]) {
+                        grainActive[g] = false
+                    }
                 }
+
+                // ── Feedback tap through tone LPF ──
+                lpfState = flushDenormal(lpfOneMinusA * wet + lpfA * lpfState)
+                feedbackTap = lpfState
+
+                // ── Output: dry + wet * mix ──
+                output[i] = (dry + wet * mixVal).toFloat()
             }
-            samplesUntilNextGrain--
-
-            // ── Read & mix all active grains ──
-            var wet = 0.0
-            for (g in 0 until maxGrains) {
-                if (!grainActive[g]) continue
-
-                val pos = grainReadPos[g]
-                val idx1 = pos.toInt()
-                val frac = pos - idx1
-                val idx2 = if (idx1 + 1 >= ringSize) 0 else idx1 + 1
-                val s1 = ring[idx1].toDouble()
-                val s2 = ring[idx2].toDouble()
-                val sample = s1 + frac * (s2 - s1)
-
-                // Hann window over the grain lifetime.
-                val phase = grainElapsed[g] * invGrainTotal
-                val win = 0.5 - 0.5 * cos(TWO_PI * phase)
-
-                wet += sample * win
-
-                // Advance.
-                var nextPos = pos + grainRate[g]
-                while (nextPos >= ringSize) nextPos -= ringSize
-                grainReadPos[g] = nextPos
-                grainElapsed[g]++
-                if (grainElapsed[g] >= grainTotal[g]) {
-                    grainActive[g] = false
-                }
-            }
-
-            // ── Feedback tap through tone LPF ──
-            lpfState = flushDenormal(lpfOneMinusA * wet + lpfA * lpfState)
-            feedbackTap = lpfState
-
-            // ── Output: dry + wet * mix ──
-            buffer[i] = (dry + wet * mixVal).toFloat()
         }
     }
 }
@@ -648,16 +711,18 @@ fun Ignitor.dcBlock(coefficient: Double = 0.995): Ignitor {
     var x1 = 0.0
     var y1 = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val x = buffer[i].toDouble()
-            val y = x - x1 + coefficient * y1
-            x1 = x
-            y1 = flushDenormal(y)
-            buffer[i] = y.toFloat()
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val x = input[i].toDouble()
+                val y = x - x1 + coefficient * y1
+                x1 = x
+                y1 = flushDenormal(y)
+                output[i] = y.toFloat()
+            }
         }
     }
 }

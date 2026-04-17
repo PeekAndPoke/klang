@@ -237,18 +237,20 @@ fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = Filte
 fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor {
     var y = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
-        val nyquist = 0.5 * ctx.sampleRate
-        val alpha = 1.0 - exp(-2.0 * PI * fc.coerceIn(5.0, nyquist - 1.0) / ctx.sampleRate)
+            val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
+            val nyquist = 0.5 * ctx.sampleRate
+            val alpha = 1.0 - exp(-2.0 * PI * fc.coerceIn(5.0, nyquist - 1.0) / ctx.sampleRate)
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            y += alpha * (buffer[i].toDouble() - y)
-            y = flushDenormal(y)
-            buffer[i] = y.toFloat()
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                y += alpha * (input[i].toDouble() - y)
+                y = flushDenormal(y)
+                output[i] = y.toFloat()
+            }
         }
     }
 }
@@ -277,20 +279,22 @@ fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor {
     var y = 0.0
     var xPrev = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
-        val nyquist = 0.5 * ctx.sampleRate
-        val a = exp(-2.0 * PI * fc.coerceIn(5.0, nyquist - 1.0) / ctx.sampleRate)
+            val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
+            val nyquist = 0.5 * ctx.sampleRate
+            val a = exp(-2.0 * PI * fc.coerceIn(5.0, nyquist - 1.0) / ctx.sampleRate)
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val x = buffer[i].toDouble()
-            y = a * (y + x - xPrev)
-            y = flushDenormal(y)
-            xPrev = x
-            buffer[i] = y.toFloat()
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val x = input[i].toDouble()
+                y = a * (y + x - xPrev)
+                y = flushDenormal(y)
+                xPrev = x
+                output[i] = y.toFloat()
+            }
         }
     }
 }
@@ -329,17 +333,13 @@ fun Ignitor.formant(bands: List<FormantBand>): Ignitor {
         BandState(band.freq, band.q, 10.0.pow(band.db / 20.0))
     }
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val end = ctx.offset + ctx.length
-
-        ctx.scratchBuffers.use { inputCopy ->
+            val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                inputCopy[i] = buffer[i]
-            }
-            for (i in ctx.offset until end) {
-                buffer[i] = 0.0f
+                output[i] = 0.0f
             }
 
             for (band in bandStates) {
@@ -355,13 +355,13 @@ fun Ignitor.formant(bands: List<FormantBand>): Ignitor {
                 }
 
                 for (i in ctx.offset until end) {
-                    val v0 = inputCopy[i].toDouble()
+                    val v0 = input[i].toDouble()
                     val v3 = v0 - band.ic2eq
                     val v1 = band.a1 * band.ic1eq + band.a2 * v3
                     val v2 = band.ic2eq + band.a2 * band.ic1eq + band.a3 * v3
                     band.ic1eq = flushDenormal(2.0 * v1 - band.ic1eq)
                     band.ic2eq = flushDenormal(2.0 * v2 - band.ic2eq)
-                    buffer[i] = (buffer[i] + v1 * band.linearGain).toFloat()
+                    output[i] = (output[i] + v1 * band.linearGain).toFloat()
                 }
             }
         }
@@ -397,15 +397,17 @@ fun Ignitor.withWarmth(warmthFactor: Double): Ignitor {
     var lastSample = 0.0
     val alpha = warmthFactor.coerceIn(0.0, 0.99)
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val raw = buffer[i].toDouble()
-            val smoothed = raw + alpha * (lastSample - raw)
-            buffer[i] = smoothed.toFloat()
-            lastSample = flushDenormal(smoothed)
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val raw = input[i].toDouble()
+                val smoothed = raw + alpha * (lastSample - raw)
+                output[i] = smoothed.toFloat()
+                lastSample = flushDenormal(smoothed)
+            }
         }
     }
 }

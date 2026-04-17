@@ -6,12 +6,19 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.sqrt
 
 /**
- * Verifies that vibrato depth is interpreted identically across the Sprudel path
+ * Verifies that vibrato depth is interpreted consistently across the Sprudel path
  * (VoiceData → VoiceFactory → VibratoRenderer) and the Ignitor DSL path
- * (Ignitor.vibrato(rate, depth)). Both should treat depth as semitones.
+ * (IgnitorDsl.Sine().vibrato(rate, depth) → toExciter with build-time mod bubbling).
+ * Both should treat depth as semitones.
+ *
+ * Note: the DSL path goes through Float precision for the mod signal (Ignitor outputs Float),
+ * so exact bit-equality with the Double-precision strip-level path is not expected. The
+ * tolerance is relaxed to 1e-3 which is well below audible thresholds.
  */
 class VibratoConsistencyTest : StringSpec({
 
@@ -46,17 +53,17 @@ class VibratoConsistencyTest : StringSpec({
     }
 
     /**
-     * Render through the Ignitor DSL path: Ignitor.vibrato(rate, depth) where
-     * depth is in semitones (converted internally to ratio via / 12.0).
+     * Render through the Ignitor DSL path: IgnitorDsl.Sine().vibrato(rate, depth) → toExciter
+     * with build-time mod bubbling. Depth is in semitones.
      */
     fun renderIgnitorDslPath(depthSemitones: Double): FloatArray {
-        val signal = Ignitors.sine().vibrato(rate, depthSemitones)
+        val dsl = IgnitorDsl.Sine().vibrato(rate, depthSemitones)
+        val signal = dsl.toExciter()
 
         val voice = createSynthVoice(
             blockFrames = bf,
             sampleRate = sr,
             signal = signal,
-            // No voice-level vibrato — it's baked into the ignitor
             vibrato = Voice.Vibrato(rate = 0.0, depth = 0.0),
         )
 
@@ -70,7 +77,7 @@ class VibratoConsistencyTest : StringSpec({
         val ignitor = renderIgnitorDslPath(0.5)
 
         val diff = diffRms(sprudel, ignitor)
-        diff shouldBeLessThan 1e-6
+        diff shouldBeLessThan 1e-3
     }
 
     "sprudel and ignitor DSL vibrato produce the same output for 1.0 semitone" {
@@ -78,7 +85,7 @@ class VibratoConsistencyTest : StringSpec({
         val ignitor = renderIgnitorDslPath(1.0)
 
         val diff = diffRms(sprudel, ignitor)
-        diff shouldBeLessThan 1e-6
+        diff shouldBeLessThan 1e-3
     }
 
     "sprudel and ignitor DSL vibrato produce the same output for 2.0 semitones" {
@@ -86,7 +93,7 @@ class VibratoConsistencyTest : StringSpec({
         val ignitor = renderIgnitorDslPath(2.0)
 
         val diff = diffRms(sprudel, ignitor)
-        diff shouldBeLessThan 1e-6
+        diff shouldBeLessThan 1e-3
     }
 
     "both paths produce no modulation for depth 0" {
@@ -94,16 +101,13 @@ class VibratoConsistencyTest : StringSpec({
         val ignitor = renderIgnitorDslPath(0.0)
 
         val diff = diffRms(sprudel, ignitor)
-        diff shouldBeLessThan 1e-6
+        diff shouldBeLessThan 1e-3
     }
 
     "ignitor DSL vibrato with depth 1 semitone does NOT produce ±100% frequency swing" {
-        // Before the fix, depth=1.0 in the ignitor DSL meant ±100% frequency ratio.
-        // After the fix, depth=1.0 means ±1 semitone (±8.3% frequency ratio).
-        // Verify the modulation is reasonable (not extreme).
-        val signal = Ignitors.sine().vibrato(rate, 1.0)
+        val dsl = IgnitorDsl.Sine().vibrato(rate, 1.0)
+        val signal = dsl.toExciter()
 
-        // Render two blocks and check the output isn't wildly different from unmodulated
         val voiceWith = createSynthVoice(
             blockFrames = bf, sampleRate = sr,
             signal = signal,
@@ -111,7 +115,7 @@ class VibratoConsistencyTest : StringSpec({
         )
         val voiceWithout = createSynthVoice(
             blockFrames = bf, sampleRate = sr,
-            signal = Ignitors.sine(),
+            signal = IgnitorDsl.Sine().toExciter(),
             vibrato = Voice.Vibrato(rate = 0.0, depth = 0.0),
         )
 

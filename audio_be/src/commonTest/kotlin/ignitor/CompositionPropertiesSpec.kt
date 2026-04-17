@@ -2,6 +2,8 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
@@ -184,6 +186,160 @@ class CompositionPropertiesSpec : StringSpec({
     // Detune path should invalidate the memo cache for shared sources.
     // Without this, `let s = sine; s.detune(0) + s.detune(7)` would yield `2·s.detune(0)`.
     // ═══════════════════════════════════════════════════════════════════════════
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Independence of constructions — two distinct DSL instances of a stochastic
+    // source produce two independent Ignitors that sum incoherently.
+    //
+    // Uses Dust (a data class) rather than WhiteNoise (a data object singleton).
+    // Singleton DSL nodes are necessarily identity-equal and therefore collapse
+    // to a single Ignitor under memoisation — documented as a known consequence
+    // of the data-object choice; see the plan's decisions-locked-in section.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    "two separate Dust DSL instances yield independent Ignitors (identity check)" {
+        val a = IgnitorDsl.Dust(IgnitorDsl.Constant(2000.0))
+        val b = IgnitorDsl.Dust(IgnitorDsl.Constant(2000.0))
+        (a === b) shouldBe false
+
+        val cache = IgnitorBuildCache()
+        val igA = a.buildIgnitor(null, cache)
+        val igB = b.buildIgnitor(null, cache)
+
+        // Two distinct DSL instances → two distinct Ignitors (not collapsed by identity cache).
+        (igA === igB) shouldBe false
+    }
+
+    // Dust sample-output independence is stochastic and flaky with shared Random.
+    // The identity test above covers the independence guarantee at the structural level.
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Two separate WhiteNoise() constructions stay independent — they are distinct
+    // DSL instances (via the uid discriminator), so the identity cache keeps them
+    // apart. Re-using the same DSL node (saved in a val) shares one Ignitor.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    "two IgnitorDsl.WhiteNoise() instances produce distinct Ignitors" {
+        val a = IgnitorDsl.WhiteNoise()
+        val b = IgnitorDsl.WhiteNoise()
+        (a === b) shouldBe false
+
+        val cache = IgnitorBuildCache()
+        val ia = a.buildIgnitor(null, cache)
+        val ib = b.buildIgnitor(null, cache)
+        (ia === ib) shouldBe false
+    }
+
+    "re-using a single WhiteNoise DSL node shares one Ignitor" {
+        val s = IgnitorDsl.WhiteNoise()
+        val cache = IgnitorBuildCache()
+        val ia = s.buildIgnitor(null, cache)
+        val ib = s.buildIgnitor(null, cache)
+        (ia === ib) shouldBe true
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Pitch-mod bubbling: shared sources fork correctly under different mods.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    "shared source + vibrato: s + s.vibrato() produces two independent oscillators" {
+        val s = IgnitorDsl.Sine()
+        val tree = IgnitorDsl.Plus(s, IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(1.0)))
+
+        val cache = IgnitorBuildCache()
+        val plus = tree.buildIgnitor(null, cache)
+
+        // The two arms should be independent (different cache entries due to different mods).
+        // Verify by rendering over multiple blocks: if both were the same oscillator,
+        // zero crossings would match. With vibrato on one arm, they diverge.
+        val ctx = createCtx()
+        val single = IgnitorDsl.Sine().toExciter()
+        val singleBuf = render(single, 440.0, ctx)
+        val plusBuf = render(plus, 440.0, createCtx())
+
+        // The summed output should differ from 2×single (because one arm has vibrato).
+        var diffs = 0
+        for (i in 0 until blockFrames) {
+            if (kotlin.math.abs(plusBuf[i] - 2.0f * singleBuf[i]) > 0.001f) diffs++
+        }
+        (diffs > 0) shouldBe true
+    }
+
+    "shared source + same vibrato: let v = s.vibrato(); v + v shares one oscillator" {
+        val s = IgnitorDsl.Sine()
+        val v = IgnitorDsl.Vibrato(s, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(1.0))
+        val tree = IgnitorDsl.Plus(v, v)
+
+        val ig = tree.toExciter()
+        val singleV = v.toExciter()
+
+        val sumBuf = render(ig, 440.0, createCtx())
+        val singleBuf = render(singleV, 440.0, createCtx())
+
+        // v + v should equal 2 × v (shared oscillator, memoised).
+        for (i in 0 until blockFrames) {
+            sumBuf[i].toDouble() shouldBe ((2.0 * singleBuf[i]) plusOrMinus 1e-4)
+        }
+    }
+
+    "stacked mods: vibrato + accelerate combine correctly" {
+        val tree = IgnitorDsl.Sine()
+            .let { IgnitorDsl.Vibrato(it, rate = IgnitorDsl.Constant(5.0), depth = IgnitorDsl.Constant(0.5)) }
+            .let { IgnitorDsl.Accelerate(it, amount = IgnitorDsl.Constant(2.0)) }
+
+        val ig = tree.toExciter()
+        val ctx = createCtx()
+        val buf = render(ig, 440.0, ctx)
+
+        // Output should be non-zero and bounded (combined pitch mod applied).
+        buf.rms() shouldBeGreaterThan 0.1
+        for (s in buf) {
+            kotlin.math.abs(s.toDouble()) shouldBeLessThan 1.5
+        }
+    }
+
+    "custom pitchMod DSL node: deviation-space mod converts to ratio correctly" {
+        val s = IgnitorDsl.Sine()
+        val mod = IgnitorDsl.Constant(0.0) // 0.0 deviation = no change
+        val tree = IgnitorDsl.PitchMod(inner = s, mod = mod)
+
+        val plain = s.toExciter()
+        val modded = tree.toExciter()
+
+        val plainBuf = render(plain, 440.0, createCtx())
+        val moddedBuf = render(modded, 440.0, createCtx())
+
+        // PitchMod with Constant(0) = deviation 0 → ratio 1.0 → no pitch change.
+        for (i in 0 until blockFrames) {
+            moddedBuf[i].toDouble() shouldBe (plainBuf[i].toDouble() plusOrMinus 1e-5)
+        }
+    }
+
+    "mod across sum: (a + b).vibrato() applies vibrato to both sources" {
+        val a = IgnitorDsl.Sine()
+        val b = IgnitorDsl.Sawtooth()
+        val vibRate = IgnitorDsl.Constant(5.0)
+        val vibDepth = IgnitorDsl.Constant(1.0)
+
+        val sumVib = IgnitorDsl.Vibrato(
+            inner = IgnitorDsl.Plus(a, b),
+            rate = vibRate,
+            depth = vibDepth,
+        )
+
+        val ig = sumVib.toExciter()
+        val buf = render(ig, 440.0, createCtx())
+
+        // Output should be non-zero (both sources producing) and differ from plain sum.
+        val plainSum = IgnitorDsl.Plus(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()).toExciter()
+        val plainBuf = render(plainSum, 440.0, createCtx())
+
+        var diffs = 0
+        for (i in 0 until blockFrames) {
+            if (kotlin.math.abs(buf[i] - plainBuf[i]) > 0.001f) diffs++
+        }
+        (diffs > 0) shouldBe true
+    }
 
     "detuned shared source: two detunes with different semitones do NOT collapse" {
         val s = IgnitorDsl.Sine()

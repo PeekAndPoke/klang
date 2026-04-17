@@ -81,7 +81,7 @@ class IgnitorDslRuntimeTest : StringSpec({
     }
 
     "WhiteNoise DSL produces non-zero output" {
-        val sig = IgnitorDsl.WhiteNoise.toExciter()
+        val sig = IgnitorDsl.WhiteNoise().toExciter()
         generateBlock(sig).hasNonZeroSamples() shouldBe true
     }
 

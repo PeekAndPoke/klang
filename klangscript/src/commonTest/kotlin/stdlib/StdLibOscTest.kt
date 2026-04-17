@@ -165,7 +165,7 @@ class StdLibOscTest : StringSpec({
     }
 
     "Osc.whitenoise() returns WhiteNoise" {
-        evalIgnitorDsl("Osc.whitenoise()") shouldBe IgnitorDsl.WhiteNoise
+        evalIgnitorDsl("Osc.whitenoise()").shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
     }
 
     "Osc.perlin() returns PerlinNoise" {
@@ -394,7 +394,7 @@ class StdLibOscTest : StringSpec({
         engine.execute("""import * from "stdlib"""")
         val result = engine.execute("Osc.whitenoise().analog(0.5)")
         result.shouldBeInstanceOf<NativeObjectValue<*>>()
-        result.value shouldBe IgnitorDsl.WhiteNoise
+        result.value.shouldBeInstanceOf<IgnitorDsl.WhiteNoise>()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

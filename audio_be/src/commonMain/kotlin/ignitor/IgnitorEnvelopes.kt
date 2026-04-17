@@ -24,54 +24,56 @@ fun Ignitor.adsr(
     var releaseStartLevel = 0.0
     var releaseStarted = false
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    return Ignitor { output, freqHz, ctx ->
+        ctx.scratchBuffers.use { input ->
+            this.generate(input, freqHz, ctx)
 
-        val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx).coerceAtLeast(0.0)
-        val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx).coerceAtLeast(0.0)
-        val sustainLevelVal = Ignitors.readParam(sustainLevel, freqHz, ctx).coerceIn(0.0, 1.0)
-        val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx).coerceAtLeast(0.0)
+            val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx).coerceAtLeast(0.0)
+            val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx).coerceAtLeast(0.0)
+            val sustainLevelVal = Ignitors.readParam(sustainLevel, freqHz, ctx).coerceIn(0.0, 1.0)
+            val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx).coerceAtLeast(0.0)
 
-        val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
-        val decayFrames = (decaySecVal * ctx.sampleRate).toInt()
-        val gateEndPos = ctx.gateEndFrame
+            val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
+            val decayFrames = (decaySecVal * ctx.sampleRate).toInt()
+            val gateEndPos = ctx.gateEndFrame
 
-        val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-        val decRate = if (decayFrames > 0) (1.0 - sustainLevelVal) / decayFrames else 0.0
-        val releaseFrames = (releaseSecVal * ctx.sampleRate).toInt()
-        val relDenom = if (releaseFrames > 0) releaseFrames.toDouble() else 1.0
+            val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
+            val decRate = if (decayFrames > 0) (1.0 - sustainLevelVal) / decayFrames else 0.0
+            val releaseFrames = (releaseSecVal * ctx.sampleRate).toInt()
+            val relDenom = if (releaseFrames > 0) releaseFrames.toDouble() else 1.0
 
-        var absPos = ctx.voiceElapsedFrames
+            var absPos = ctx.voiceElapsedFrames
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            if (absPos >= gateEndPos) {
-                // Release phase
-                if (!releaseStarted) {
-                    releaseStartLevel = currentLevel
-                    releaseStarted = true
-                }
-                val relPos = absPos - gateEndPos
-                val relRate = releaseStartLevel / relDenom
-                currentLevel = releaseStartLevel - (relPos * relRate)
-            } else {
-                // Attack / Decay / Sustain
-                releaseStarted = false
-                currentLevel = when {
-                    absPos < attackFrames -> absPos * attRate
-                    absPos < attackFrames + decayFrames -> {
-                        val decPos = absPos - attackFrames
-                        1.0 - (decPos * decRate)
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                if (absPos >= gateEndPos) {
+                    // Release phase
+                    if (!releaseStarted) {
+                        releaseStartLevel = currentLevel
+                        releaseStarted = true
                     }
+                    val relPos = absPos - gateEndPos
+                    val relRate = releaseStartLevel / relDenom
+                    currentLevel = releaseStartLevel - (relPos * relRate)
+                } else {
+                    // Attack / Decay / Sustain
+                    releaseStarted = false
+                    currentLevel = when {
+                        absPos < attackFrames -> absPos * attRate
+                        absPos < attackFrames + decayFrames -> {
+                            val decPos = absPos - attackFrames
+                            1.0 - (decPos * decRate)
+                        }
 
-                    else -> sustainLevelVal
+                        else -> sustainLevelVal
+                    }
                 }
+
+                if (currentLevel < 0.0) currentLevel = 0.0
+
+                output[i] = (input[i] * currentLevel).toFloat()
+                absPos++
             }
-
-            if (currentLevel < 0.0) currentLevel = 0.0
-
-            buffer[i] = (buffer[i] * currentLevel).toFloat()
-            absPos++
         }
     }
 }
