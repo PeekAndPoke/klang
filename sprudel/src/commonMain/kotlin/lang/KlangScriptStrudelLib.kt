@@ -3,6 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.builder.registerType
 import io.peekandpoke.klang.script.builder.registerVarargFunctionWithCallInfo
+import io.peekandpoke.klang.script.generated.registerSprudelGenerated
 import io.peekandpoke.klang.script.klangScriptLibrary
 import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -14,6 +15,7 @@ import io.peekandpoke.klang.sprudel.lang.docs.registerSprudelDocs
  */
 val sprudelLib = klangScriptLibrary("sprudel") {
     registerSprudelDsl()
+    registerSprudelGenerated()
     docs { registerSprudelDocs(this) }
 }
 

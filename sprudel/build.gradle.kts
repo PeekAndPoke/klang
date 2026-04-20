@@ -117,6 +117,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
 
 dependencies {
     kspCommonMainMetadata(project(":sprudel-ksp"))
+    kspCommonMainMetadata(project(":klangscript-ksp"))
 
     add("kspJvmTest", project(":sprudel-ksp"))
     add("kspJsTest", project(":sprudel-ksp"))

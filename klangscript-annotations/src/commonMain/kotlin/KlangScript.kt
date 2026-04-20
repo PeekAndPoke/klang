@@ -54,10 +54,19 @@ object KlangScript {
     annotation class TypeExtensions(val type: KClass<*>)
 
     /**
-     * Registers a top-level KlangScript function.
+     * Registers a KlangScript function.
      *
-     * The annotated function becomes callable as a global function in KlangScript.
+     * When [receiver] is `Unit` (the default), the function is registered as a
+     * **top-level** callable. When [receiver] is set to a concrete type (e.g.
+     * `SprudelPattern::class`), the function is registered as an **extension
+     * method** on that type — equivalent to placing the function inside a
+     * `@TypeExtensions(receiver)` class but without the wrapper boilerplate.
+     *
      * The library is inherited from `@Library` on the enclosing file or class.
+     *
+     * For extension methods: the **first** parameter of the Kotlin function is
+     * treated as the receiver (same convention as `@TypeExtensions`). Remaining
+     * parameters are the script-visible params.
      *
      * Signature conventions:
      * - Fixed params → fixed-arity registration
@@ -65,10 +74,15 @@ object KlangScript {
      * - `CallInfo` as last param → CallInfo-aware registration (auto-detected)
      *
      * @param name The function name in KlangScript. Defaults to the Kotlin function name.
+     * @param receiver The receiver class for extension-method registration.
+     *   `Unit::class` (default) = top-level function. Any other class = extension method.
      */
     @Target(AnnotationTarget.FUNCTION)
     @Retention(AnnotationRetention.SOURCE)
-    annotation class Function(val name: String = "")
+    annotation class Function(
+        val name: String = "",
+        val receiver: KClass<*> = Unit::class,
+    )
 
     /**
      * Registers a method on an `@Object` or as a type extension in `@TypeExtensions`.

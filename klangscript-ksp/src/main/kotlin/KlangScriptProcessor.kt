@@ -135,8 +135,39 @@ class KlangScriptProcessor(
             val functionName = getAnnotationStringArg(fn, ANN_FUNCTION, "name")
                 .let { if (it.isNullOrEmpty()) fn.simpleName.asString() else it }
 
-            libraryEntries.getOrPut(library) { LibraryEntries() }
-                .functions.add(FunctionEntry(functionName, fn))
+            // Determine receiver class for extension-method registration:
+            //   1. Explicit annotation param: @Function(receiver = Foo::class) — takes priority.
+            //   2. Kotlin extension receiver: fun Foo.bar() — auto-detected.
+            //   3. Neither → top-level function.
+            val explicitReceiver = getAnnotationClassArg(fn, ANN_FUNCTION, "receiver")
+            val isExplicitUnit = explicitReceiver?.simpleName?.asString() == "Unit"
+
+            val receiverClass = when {
+                explicitReceiver != null && !isExplicitUnit -> explicitReceiver
+                else -> {
+                    val extType = fn.extensionReceiver?.resolve()
+                    if (extType != null) {
+                        var decl = extType.declaration
+                        while (decl is KSTypeAlias) decl = (decl as KSTypeAlias).type.resolve().declaration
+                        decl as? KSClassDeclaration
+                    } else null
+                }
+            }
+
+            if (receiverClass != null) {
+                libraryEntries.getOrPut(library) { LibraryEntries() }
+                    .typeExtensions.add(
+                        TypeExtEntry(
+                            typeDecl = receiverClass,
+                            cls = fn.parentDeclaration as? KSClassDeclaration
+                                ?: receiverClass,
+                            methods = listOf(MethodEntry(functionName, fn)),
+                        )
+                    )
+            } else {
+                libraryEntries.getOrPut(library) { LibraryEntries() }
+                    .functions.add(FunctionEntry(functionName, fn))
+            }
         }
 
         // Generate code per library
@@ -222,7 +253,12 @@ class KlangScriptProcessor(
             if (annType == annotationFqn) {
                 val value = ann.arguments.firstOrNull { it.name?.asString() == argName }?.value
                 if (value is KSType) {
-                    return value.declaration as? KSClassDeclaration
+                    // Follow through typealiases to the underlying class declaration.
+                    var declaration = value.declaration
+                    while (declaration is KSTypeAlias) {
+                        declaration = declaration.type.resolve().declaration
+                    }
+                    return declaration as? KSClassDeclaration
                 }
             }
         }
@@ -289,7 +325,7 @@ class KlangScriptProcessor(
         appendLine("import io.peekandpoke.klang.script.types.*")
         appendLine()
 
-        // Collect imports for annotated classes
+        // Collect imports for annotated classes and file-level functions
         val imports = mutableSetOf<String>()
         entries.objects.forEach { obj ->
             obj.cls.qualifiedName?.asString()?.let { imports.add(it) }
@@ -297,6 +333,24 @@ class KlangScriptProcessor(
         entries.typeExtensions.forEach { ext ->
             ext.cls.qualifiedName?.asString()?.let { imports.add(it) }
             ext.typeDecl.qualifiedName?.asString()?.let { imports.add(it) }
+            // File-level functions routed as type extensions need their own import
+            // (class-level methods are members and don't need separate imports).
+            // Also import typealiases used as receiver types in casts.
+            ext.methods.forEach { method ->
+                if (method.fn.parentDeclaration !is KSClassDeclaration) {
+                    method.fn.qualifiedName?.asString()?.let { imports.add(it) }
+                    // Import typealiases from the extension receiver OR the first
+                    // param so the generated `receiver as PatternMapperFn` cast compiles.
+                    val extReceiverType = method.fn.extensionReceiver?.resolve()
+                    if (extReceiverType?.declaration is KSTypeAlias) {
+                        extReceiverType.declaration.qualifiedName?.asString()?.let { imports.add(it) }
+                    }
+                    val firstParamType = method.fn.parameters.firstOrNull()?.type?.resolve()
+                    if (firstParamType?.declaration is KSTypeAlias) {
+                        firstParamType.declaration.qualifiedName?.asString()?.let { imports.add(it) }
+                    }
+                }
+            }
         }
         entries.functions.forEach { fn ->
             fn.fn.qualifiedName?.asString()?.let { imports.add(it) }
@@ -309,6 +363,46 @@ class KlangScriptProcessor(
         appendLine(" * Registers all @KlangScript annotated symbols for the '$libraryName' library.")
         appendLine(" */")
         appendLine("fun KlangScriptExtensionBuilder.register${capitalizedName}Generated() {")
+
+        // ── Duplicate (name, receiver) collision check ───────────────────────
+        // Prevents silently overwriting a registration when two annotated
+        // Kotlin overloads resolve to the same script-visible (name, receiver).
+        data class RegKey(val scriptName: String, val receiver: String?)
+
+        val seen = mutableMapOf<RegKey, String>()
+        fun checkCollision(scriptName: String, receiver: String?, sourceDesc: String) {
+            val key = RegKey(scriptName, receiver)
+            val prior = seen.put(key, sourceDesc)
+            if (prior != null) {
+                logger.error(
+                    "Duplicate KlangScript registration: '$scriptName' on receiver '${receiver ?: "<top-level>"}' " +
+                            "is registered by both [$prior] and [$sourceDesc]. " +
+                            "Only one @KlangScript.Method / @KlangScript.Function per (name, receiver) is allowed."
+                )
+            }
+        }
+
+        for (obj in entries.objects) {
+            for (method in obj.methods) {
+                checkCollision(
+                    method.name,
+                    obj.cls.simpleName.asString(),
+                    "${obj.cls.simpleName.asString()}.${method.fn.simpleName.asString()}"
+                )
+            }
+        }
+        for (ext in entries.typeExtensions) {
+            for (method in ext.methods) {
+                checkCollision(
+                    method.name,
+                    ext.typeDecl.simpleName.asString(),
+                    "${ext.cls.simpleName.asString()}.${method.fn.simpleName.asString()}"
+                )
+            }
+        }
+        for (fn in entries.functions) {
+            checkCollision(fn.name, null, fn.fn.simpleName.asString())
+        }
 
         // Objects
         for (obj in entries.objects) {
@@ -332,13 +426,27 @@ class KlangScriptProcessor(
         // Type extensions
         for (ext in entries.typeExtensions) {
             val typeName = ext.typeDecl.simpleName.asString()
+            val allFileLevelMethods = ext.methods.all { it.fn.parentDeclaration !is KSClassDeclaration }
+
             appendLine()
             appendLine("    // @TypeExtensions($typeName::class) on ${ext.cls.simpleName.asString()}")
-            appendLine("    registerType<$typeName> {")
-            for (method in ext.methods) {
-                appendLine("        ${generateMethodRegistration(method, ext.cls, isTypeExtension = true)}")
+
+            if (allFileLevelMethods) {
+                // File-level @Function(receiver = ...) — emit at top level via
+                // registerExtensionMethodWithSpecs. Can't use registerType<T> {
+                // registerMethod(...) } because that accesses @PublishedApi internal
+                // members of NativeObjectExtensionsBuilder, which aren't visible
+                // from a different module's generated code.
+                for (method in ext.methods) {
+                    appendLine("    ${generateFileLevelExtensionMethod(method, ext.typeDecl)}")
+                }
+            } else {
+                appendLine("    registerType<$typeName> {")
+                for (method in ext.methods) {
+                    appendLine("        ${generateMethodRegistration(method, ext.cls, isTypeExtension = true)}")
+                }
+                appendLine("    }")
             }
-            appendLine("    }")
         }
 
         // Top-level functions
@@ -376,11 +484,19 @@ class KlangScriptProcessor(
         val fn = method.fn
         val allParams = getScriptParams(fn)
         val hasCallInfo = hasCallInfoParam(fn)
-        val ownerName = ownerCls.simpleName.asString()
+
+        // File-level functions routed through @Function(receiver = ...) don't
+        // have a parent class — the function is called by its imported name,
+        // not qualified as OwnerClass.fn.
+        val isFileLevelFunction = fn.parentDeclaration !is KSClassDeclaration
+        val ownerName = if (isFileLevelFunction) "" else ownerCls.simpleName.asString()
+        val fnQualifier = if (ownerName.isEmpty()) "" else "$ownerName."
 
         // For type extensions, first param is the receiver — strip it from script-visible params
         val scriptParams = if (isTypeExtension && allParams.isNotEmpty()) allParams.drop(1) else allParams
-        val selfArg = if (isTypeExtension) "this, " else ""
+        val selfArg = if (isTypeExtension) {
+            if (isFileLevelFunction) "typedReceiver, " else "this, "
+        } else ""
 
         val isVararg = scriptParams.any { it.isVararg }
         val specsExpr = paramSpecsListExpression(scriptParams)
@@ -392,13 +508,13 @@ class KlangScriptProcessor(
                 // error. Phase 6 wires this up.
                 val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
                 val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargMethodWithCallInfo<$paramType, $returnType>(\"${method.name}\") { args, callInfo -> $ownerName.${fn.simpleName.asString()}(${selfArg}*args.toTypedArray(), callInfo) }"
+                "registerVarargMethodWithCallInfo<$paramType, $returnType>(\"${method.name}\") { args, callInfo -> $fnQualifier${fn.simpleName.asString()}(${selfArg}*args.toTypedArray(), callInfo) }"
             }
 
             isVararg -> {
                 val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
                 val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargMethod<$paramType, $returnType>(\"${method.name}\") { args -> $ownerName.${fn.simpleName.asString()}(${selfArg}*args.toTypedArray()) }"
+                "registerVarargMethod<$paramType, $returnType>(\"${method.name}\") { args -> $fnQualifier${fn.simpleName.asString()}(${selfArg}*args.toTypedArray()) }"
             }
 
             else -> {
@@ -428,10 +544,10 @@ class KlangScriptProcessor(
                     }
 
                     when (scriptParams.size) {
-                        0 -> "registerMethod(\"${method.name}\", $specsExpr) { $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
+                        0 -> "registerMethod(\"${method.name}\", $specsExpr) { $fnQualifier${fn.simpleName.asString()}($fullCallArgs) }"
                         else -> {
                             val paramDecl = paramNames.joinToString(", ")
-                            "registerMethod(\"${method.name}\", $specsExpr) { $paramDecl -> $ownerName.${fn.simpleName.asString()}($fullCallArgs) }"
+                            "registerMethod(\"${method.name}\", $specsExpr) { $paramDecl -> $fnQualifier${fn.simpleName.asString()}($fullCallArgs) }"
                         }
                     }
                 }
@@ -515,14 +631,15 @@ class KlangScriptProcessor(
         scriptParams: List<KSValueParameter>,
         specsExpr: String,
     ): String {
-        val ownerName = ownerCls.simpleName.asString()
         val fnName = method.fn.simpleName.asString()
+        val isFileLevelFn = method.fn.parentDeclaration !is KSClassDeclaration
+        val fnQual = if (isFileLevelFn) "" else "${ownerCls.simpleName.asString()}."
 
         // For type extensions, the Kotlin function takes a typed receiver as its first
         // parameter. The bridge's `receiver: Any` needs to be cast to that type before
         // being passed through the arity dispatch.
         val receiverTypeName = if (isTypeExtension) {
-            method.fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it) }
+            method.fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
         } else null
 
         val selfArg = if (isTypeExtension) "typedReceiver, " else ""
@@ -535,7 +652,7 @@ class KlangScriptProcessor(
             }
             generateArityDispatchBody(
                 name = method.name,
-                fnCall = "$ownerName.$fnName",
+                fnCall = "$fnQual$fnName",
                 selfArg = selfArg,
                 scriptParams = scriptParams,
                 indent = "                ",
@@ -580,6 +697,98 @@ class KlangScriptProcessor(
         val callArgs = if (hasLocation) "args, loc" else "args, null"
 
         return "registerExtensionMethod($ownerName::class, \"${method.name}\") { _, args, loc -> $ownerName.${fn.simpleName.asString()}($callArgs) }"
+    }
+
+    /**
+     * Generates a top-level `registerExtensionMethodWithSpecs(...)` call for a
+     * file-level @Function(receiver = ...) method. Avoids the `registerType<T>`
+     * / `registerMethod` wrapper that accesses @PublishedApi internal fields.
+     */
+    private fun generateFileLevelExtensionMethod(method: MethodEntry, typeDecl: KSClassDeclaration): String {
+        val fn = method.fn
+        val allParams = getScriptParams(fn)
+        val typeName = typeDecl.simpleName.asString()
+        val fnName = fn.simpleName.asString()
+
+        // Pattern A: Kotlin extension function (fun Foo.bar(amount)) — receiver
+        // is `this`, not an explicit first param. Script-visible params = ALL params.
+        // Bridge calls as extension: typedReceiver.fnName(args).
+        //
+        // Pattern B: Explicit self param (fun _klangBar(self: Foo, amount)) —
+        // first param IS the receiver. Script-visible params = params minus first.
+        // Bridge calls as standalone: fnName(typedReceiver, args).
+        val hasExtensionReceiver = fn.extensionReceiver != null
+
+        val scriptParams = if (hasExtensionReceiver) {
+            allParams  // Pattern A: all params are script-visible
+        } else {
+            if (allParams.isNotEmpty()) allParams.drop(1) else allParams  // Pattern B: strip self
+        }
+
+        val specsExpr = paramSpecsListExpression(scriptParams)
+        val hasDefaults = scriptParams.any { it.hasDefault }
+
+        // Receiver type for the cast. For Pattern A, we use convertToKotlin()
+        // so that StringValue → String, NumberValue → Double etc. are handled
+        // correctly (the Kotlin extension receiver type may differ from the
+        // KlangScript runtime value type). For Pattern B, the first param IS
+        // the runtime type, so a direct cast works.
+        val receiverTypeName = if (hasExtensionReceiver) {
+            fn.extensionReceiver?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
+        } else {
+            fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
+        }
+
+        return buildString {
+            appendLine("registerExtensionMethodWithSpecs($typeName::class, \"${method.name}\", $specsExpr) { receiver, args, loc ->")
+
+            if (receiverTypeName != null) {
+                if (hasExtensionReceiver) {
+                    // Pattern A: use convertToKotlin for type-safe unwrapping
+                    // (handles StringValue→String, NativeObjectValue→T, etc.)
+                    appendLine("        @Suppress(\"UNCHECKED_CAST\")")
+                    appendLine("        val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin($receiverTypeName::class, loc)")
+                } else {
+                    // Pattern B: direct cast (self param IS the runtime type)
+                    appendLine("        @Suppress(\"UNCHECKED_CAST\")")
+                    appendLine("        val typedReceiver = receiver as $receiverTypeName")
+                }
+            }
+
+            if (hasDefaults) {
+                // For Pattern A, the selfArg is "typedReceiver." (extension call prefix);
+                // for Pattern B, it's "typedReceiver, " (standalone call arg).
+                val selfArg = if (receiverTypeName != null) {
+                    if (hasExtensionReceiver) "" else "typedReceiver, "
+                } else ""
+                val fnCallPrefix = if (hasExtensionReceiver && receiverTypeName != null) "typedReceiver." else ""
+
+                generateArityDispatchBody(
+                    name = method.name,
+                    fnCall = "$fnCallPrefix$fnName",
+                    selfArg = selfArg,
+                    scriptParams = scriptParams,
+                    indent = "        ",
+                )
+            } else {
+                appendLine("        checkArgsSize(fn = \"${method.name}\", args = args, expected = ${scriptParams.size}, location = loc)")
+                scriptParams.forEachIndexed { i, param ->
+                    val paramName = param.name?.asString() ?: "p$i"
+                    val paramType = resolveKotlinType(param.type.resolve())
+                    appendLine("        val $paramName = convertArgToKotlin(fn = \"${method.name}\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
+                }
+                val callArgs = scriptParams.map { it.name?.asString() ?: "p" }.joinToString(", ")
+
+                if (hasExtensionReceiver && receiverTypeName != null) {
+                    appendLine("        wrapAsRuntimeValue(typedReceiver.$fnName($callArgs))")
+                } else {
+                    val selfArg = if (receiverTypeName != null) "typedReceiver, " else ""
+                    appendLine("        wrapAsRuntimeValue($fnName(${joinCallArgs(selfArg, callArgs)}))")
+                }
+            }
+
+            append("    }")
+        }
     }
 
     private fun generateFunctionRegistration(entry: FunctionEntry): String {
@@ -778,10 +987,14 @@ class KlangScriptProcessor(
         val fn = item.fn
         val allParams = getScriptParams(fn)
         // Raw-args methods have internal params (List<RuntimeValue>, SourceLocation?) — exclude all from docs
-        // For type extensions, first param is the receiver — exclude from docs
+        // For type extensions with explicit self param (no Kotlin extension receiver),
+        // the first param is the receiver — exclude from docs.
+        // For extension functions (fn.extensionReceiver != null), the receiver is `this`
+        // and ALL params are script-visible — don't strip.
+        val hasExtensionReceiver = fn.extensionReceiver != null
         val params = when {
             item.isRawArgs -> emptyList()
-            item.isTypeExtension && allParams.isNotEmpty() -> allParams.drop(1)
+            item.isTypeExtension && !hasExtensionReceiver && allParams.isNotEmpty() -> allParams.drop(1)
             else -> allParams
         }
         val returnType = fn.returnType?.resolve()
@@ -832,8 +1045,9 @@ class KlangScriptProcessor(
             appendLine("                returnDoc = \"\"\"$returnDoc\"\"\",")
             if (kdoc.samples.isNotEmpty()) {
                 appendLine("                samples = listOf(")
-                kdoc.samples.forEach { sample ->
-                    appendLine("                    KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})")
+                kdoc.samples.forEachIndexed { idx, sample ->
+                    val comma = if (idx < kdoc.samples.lastIndex) "," else ""
+                    appendLine("                    KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})$comma")
                 }
                 appendLine("                ),")
             } else {
@@ -888,16 +1102,23 @@ class KlangScriptProcessor(
         return resolveKotlinType(type)
     }
 
-    private fun resolveKotlinType(type: KSType?): String {
+    /**
+     * Resolve a type to its simple Kotlin name.
+     *
+     * @param followTypeAlias When true (default), follows typealiases to
+     *   the underlying type. When false, keeps the alias name — useful for
+     *   cast sites where `PatternMapperFn` needs to stay as the alias
+     *   rather than being expanded to `Function1<SprudelPattern, SprudelPattern>`.
+     */
+    private fun resolveKotlinType(type: KSType?, followTypeAlias: Boolean = true): String {
         if (type == null) return "Any"
-        // Resolve type aliases to their underlying type
-        val resolved = if (type.declaration is KSTypeAlias) {
+        val effective = if (followTypeAlias && type.declaration is KSTypeAlias) {
             (type.declaration as KSTypeAlias).type.resolve()
         } else {
             type
         }
-        val name = resolved.declaration.simpleName.asString()
-        val nullable = if (resolved.nullability == Nullability.NULLABLE) "?" else ""
+        val name = effective.declaration.simpleName.asString()
+        val nullable = if (effective.nullability == Nullability.NULLABLE) "?" else ""
         return "$name$nullable"
     }
 

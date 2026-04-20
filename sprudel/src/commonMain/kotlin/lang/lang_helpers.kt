@@ -13,7 +13,11 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.sprudel.pattern.*
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.pattern.ControlPattern
+import io.peekandpoke.klang.sprudel.pattern.ControlValueProvider
+import io.peekandpoke.klang.sprudel.pattern.EmptyPattern
+import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 
 // --- Init Property ---
 
@@ -274,6 +278,24 @@ fun List<SprudelDslArg<Any?>>.extractWeightedPairs(): Pair<List<SprudelDslArg<An
     }
     return items to weights
 }
+
+/**
+ * Parse a raw string as a mini-notation voice-value pattern.
+ *
+ * This is the standard "string → SprudelPattern" conversion used everywhere
+ * in the DSL: interprets the string as mini-notation, creates AtomicPatterns
+ * with [voiceValueModifier] for each note/sample token.
+ *
+ * Used by user-facing `String.gain(...)`, `String.pan(...)`, etc. as a
+ * replacement for the `dslStringExtension` delegate's internal parse step.
+ */
+fun String.toVoiceValuePattern(baseLocation: SourceLocation? = null): SprudelPattern =
+    parseMiniNotation(input = this, baseLocation = baseLocation) { text, loc ->
+        AtomicPattern(
+            data = SprudelVoiceData.empty.voiceValueModifier(text),
+            sourceLocations = loc,
+        )
+    }
 
 /**
  * Converts a single argument into a SprudelPattern.

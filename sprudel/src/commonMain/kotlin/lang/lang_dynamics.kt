@@ -1,7 +1,10 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftNumericField
@@ -20,21 +23,9 @@ var sprudelLangDynamicsInit = false
 
 private val gainMutation = voiceModifier { copy(gain = it?.asDoubleOrNull()) }
 
-fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, gainMutation)
 }
-
-internal val SprudelPattern._gain by dslPatternExtension { p, args, /* callInfo */ _ -> applyGain(p, args) }
-
-internal val String._gain by dslStringExtension { p, args, callInfo -> p._gain(args, callInfo) }
-
-internal val _gain by dslPatternMapper { args, callInfo -> { p -> p._gain(args, callInfo) } }
-
-internal val PatternMapperFn._gain by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_gain(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the gain (volume multiplier) for each event in the pattern.
@@ -56,8 +47,9 @@ internal val PatternMapperFn._gain by dslPatternMapperExtension { m, args, callI
  * @tags gain, volume, amplitude, dynamics
  */
 @SprudelDsl
+@KlangScript.Function
 fun SprudelPattern.gain(amount: PatternLike? = null): SprudelPattern =
-    this._gain(listOfNotNull(amount).asSprudelDslArgs())
+    applyGain(this, listOfNotNull(amount).asSprudelDslArgs())
 
 /**
  * Parses this string as a pattern and sets the gain for each event.
@@ -69,8 +61,9 @@ fun SprudelPattern.gain(amount: PatternLike? = null): SprudelPattern =
  * @param amount The control value to use for gain.
  */
 @SprudelDsl
+@KlangScript.Function(receiver = StringValue::class)
 fun String.gain(amount: PatternLike? = null): SprudelPattern =
-    this._gain(listOfNotNull(amount).asSprudelDslArgs())
+    this.toVoiceValuePattern().gain(amount)
 
 /**
  * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
@@ -82,8 +75,9 @@ fun String.gain(amount: PatternLike? = null): SprudelPattern =
  * @param amount The control value to use for gain.
  */
 @SprudelDsl
+@KlangScript.Function
 fun gain(amount: PatternLike? = null): PatternMapperFn =
-    _gain(listOfNotNull(amount).asSprudelDslArgs())
+    { p -> p.gain(amount) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the gain after the previous mapper.
@@ -95,8 +89,9 @@ fun gain(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The control value to use for gain.
  */
 @SprudelDsl
+@KlangScript.Function
 fun PatternMapperFn.gain(amount: PatternLike? = null): PatternMapperFn =
-    _gain(listOfNotNull(amount).asSprudelDslArgs())
+    this.chain { p -> p.gain(amount) }
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
