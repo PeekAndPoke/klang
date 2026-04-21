@@ -4,7 +4,6 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.script.annotations.KlangScript
-import io.peekandpoke.klang.script.runtime.StringValue
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftNumericField
@@ -61,7 +60,7 @@ fun SprudelPattern.gain(amount: PatternLike? = null): SprudelPattern =
  * @param amount The control value to use for gain.
  */
 @SprudelDsl
-@KlangScript.Function(receiver = StringValue::class)
+@KlangScript.Function
 fun String.gain(amount: PatternLike? = null): SprudelPattern =
     this.toVoiceValuePattern().gain(amount)
 

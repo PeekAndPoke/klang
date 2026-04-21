@@ -149,7 +149,13 @@ class KlangScriptProcessor(
                     if (extType != null) {
                         var decl = extType.declaration
                         while (decl is KSTypeAlias) decl = (decl as KSTypeAlias).type.resolve().declaration
-                        decl as? KSClassDeclaration
+                        val cls = decl as? KSClassDeclaration
+
+                        // Auto-map Kotlin platform types to their KlangScript runtime
+                        // value types (e.g. String → StringValue). This lets sprudel write
+                        // `fun String.gain(...)` without needing `receiver = StringValue::class`.
+                        val mapped = cls?.let { mapReceiverType(resolver, it) }
+                        mapped ?: cls
                     } else null
                 }
             }
@@ -1273,6 +1279,26 @@ class KlangScriptProcessor(
             appendLine("                library = \"$libraryName\"")
             append("            )")
         }
+    }
+
+    // ===== Receiver type auto-mapping =====
+
+    /**
+     * Maps Kotlin platform types to their KlangScript runtime value types.
+     * Allows writing `fun String.gain(...)` instead of `@Function(receiver = StringValue::class)`.
+     */
+    private val RECEIVER_TYPE_MAP = mapOf(
+        "kotlin.String" to "io.peekandpoke.klang.script.runtime.StringValue",
+        "kotlin.Double" to "io.peekandpoke.klang.script.runtime.NumberValue",
+        "kotlin.Int" to "io.peekandpoke.klang.script.runtime.NumberValue",
+        "kotlin.Float" to "io.peekandpoke.klang.script.runtime.NumberValue",
+        "kotlin.Boolean" to "io.peekandpoke.klang.script.runtime.BooleanValue",
+    )
+
+    private fun mapReceiverType(resolver: Resolver, cls: KSClassDeclaration): KSClassDeclaration? {
+        val fqn = cls.qualifiedName?.asString() ?: return null
+        val mappedFqn = RECEIVER_TYPE_MAP[fqn] ?: return null
+        return resolver.getClassDeclarationByName(resolver.getKSNameFromString(mappedFqn))
     }
 
     // ===== Type helpers =====

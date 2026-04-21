@@ -39,7 +39,9 @@ data class KlangParam(
     fun render(): String = buildString {
         if (isVararg) append("vararg ")
         append("$name: ${type.render()}")
-        if (isOptional && !isVararg) append("?")
+        // Show `?` for optional params — but skip if the type itself is already nullable
+        // to avoid double `??` (e.g. `amount: PatternLike?` where PatternLike is already Any?).
+        if (isOptional && !isVararg && !type.isNullable) append("?")
         if (defaultDoc != null && !isVararg) append(" = $defaultDoc")
     }
 }
