@@ -404,6 +404,8 @@ class KlangScriptProcessor(
             checkCollision(fn.name, null, fn.fn.simpleName.asString())
         }
 
+        // ── Pass 2: Build RegistrationItems and render ────────────────────
+
         // Objects
         for (obj in entries.objects) {
             val normalMethods = obj.methods.filter { !isRawArgsMethod(it.fn) }
@@ -413,13 +415,14 @@ class KlangScriptProcessor(
             appendLine("    // @Object(\"${obj.name}\") on ${obj.cls.simpleName.asString()}")
             appendLine("    registerObject(\"${obj.name}\", ${obj.cls.simpleName.asString()}) {")
             for (method in normalMethods) {
-                appendLine("        ${generateMethodRegistration(method, obj.cls)}")
+                val item = buildMethodItem(method, obj.cls, isTypeExtension = false)
+                appendLine("        ${item.renderRegistration()}")
             }
             appendLine("    }")
 
-            // Raw-args extension methods are registered at the builder level, outside registerObject
             for (method in rawArgsMethods) {
-                appendLine("    ${generateRawArgsExtensionMethod(method, obj.cls)}")
+                val item = buildRawArgsItem(method, obj.cls)
+                appendLine("    ${item.renderRegistration()}")
             }
         }
 
@@ -432,18 +435,15 @@ class KlangScriptProcessor(
             appendLine("    // @TypeExtensions($typeName::class) on ${ext.cls.simpleName.asString()}")
 
             if (allFileLevelMethods) {
-                // File-level @Function(receiver = ...) — emit at top level via
-                // registerExtensionMethodWithSpecs. Can't use registerType<T> {
-                // registerMethod(...) } because that accesses @PublishedApi internal
-                // members of NativeObjectExtensionsBuilder, which aren't visible
-                // from a different module's generated code.
                 for (method in ext.methods) {
-                    appendLine("    ${generateFileLevelExtensionMethod(method, ext.typeDecl)}")
+                    val item = buildFileLevelExtItem(method, ext.typeDecl)
+                    appendLine("    ${item.renderRegistration()}")
                 }
             } else {
                 appendLine("    registerType<$typeName> {")
                 for (method in ext.methods) {
-                    appendLine("        ${generateMethodRegistration(method, ext.cls, isTypeExtension = true)}")
+                    val item = buildMethodItem(method, ext.cls, isTypeExtension = true)
+                    appendLine("        ${item.renderRegistration()}")
                 }
                 appendLine("    }")
             }
@@ -453,7 +453,8 @@ class KlangScriptProcessor(
         for (fn in entries.functions) {
             appendLine()
             appendLine("    // @Function on ${fn.fn.simpleName.asString()}")
-            appendLine("    ${generateFunctionRegistration(fn)}")
+            val item = buildTopLevelFunctionItem(fn)
+            appendLine("    ${item.renderRegistration()}")
         }
 
         // Auto-register docs when called from a library builder
@@ -468,15 +469,231 @@ class KlangScriptProcessor(
         generateDocsCode(libraryName, capitalizedName, entries)
     }
 
-    /**
-     * Generates a `registerMethod`/`registerVarargMethod`/etc. call for a
-     * single method. The chosen helper depends on whether the method has a
-     * vararg slot and whether it carries a `CallInfo` parameter.
-     *
-     * Phase 5b: every emission also stamps the registered method with a
-     * `paramSpecs` list so the interpreter can route named-arg calls.
-     */
-    private fun generateMethodRegistration(
+    // ===== Pass 2: Build RegistrationItems from entries =====
+
+    private fun buildMethodItem(
+        method: MethodEntry,
+        ownerCls: KSClassDeclaration,
+        isTypeExtension: Boolean,
+    ): RegistrationItem {
+        val fn = method.fn
+        val allParams = getScriptParams(fn)
+        val hasCallInfo = hasCallInfoParam(fn)
+        val ownerName = ownerCls.simpleName.asString()
+        val isFileLevelFn = fn.parentDeclaration !is KSClassDeclaration
+        val fnQualifier = if (isFileLevelFn) "" else "$ownerName."
+
+        val scriptParams = if (isTypeExtension && allParams.isNotEmpty()) allParams.drop(1) else allParams
+        val selfArg = if (isTypeExtension) {
+            if (isFileLevelFn) "typedReceiver, " else "this, "
+        } else ""
+
+        val isVararg = scriptParams.any { it.isVararg }
+        val specsExpr = paramSpecsListExpression(scriptParams)
+
+        // Vararg → legacy helper
+        if (isVararg) {
+            val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
+            val returnType = resolveKotlinType(fn.returnType?.resolve())
+            val fnCall = "$fnQualifier${fn.simpleName.asString()}(${selfArg}*args.toTypedArray()${if (hasCallInfo) ", callInfo" else ""})"
+            return VarargItem(
+                scriptName = method.name,
+                specsExpr = specsExpr,
+                paramType = paramType,
+                returnType = returnType,
+                fnCallWithArgs = fnCall,
+                hasCallInfo = hasCallInfo,
+                isTopLevel = false,
+            )
+        }
+
+        val hasDefaults = scriptParams.any { it.hasDefault }
+
+        // With defaults → arity dispatch
+        if (hasDefaults) {
+            val receiverCast = if (isTypeExtension) {
+                val receiverTypeName = fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
+                receiverTypeName?.let { ArityDispatchItem.ReceiverCast(it, useConvertToKotlin = false) }
+            } else null
+
+            return ArityDispatchItem(
+                scriptName = method.name,
+                specsExpr = specsExpr,
+                fnCall = "$fnQualifier${fn.simpleName.asString()}",
+                selfArg = if (isTypeExtension) "typedReceiver, " else "",
+                scriptParams = scriptParams.mapIndexed { i, p ->
+                    ArityDispatchItem.ResolvedParam(
+                        name = p.name?.asString() ?: "p$i",
+                        kotlinType = resolveKotlinType(p.type.resolve()),
+                        hasDefault = p.hasDefault,
+                        index = i,
+                    )
+                },
+                receiverCast = receiverCast,
+                receiverClassName = null,
+                isTopLevel = false,
+            )
+        }
+
+        // Fixed arity — simple one-liner
+        if (scriptParams.size > MAX_FIXED_PARAMS) {
+            logger.error("@Method '${method.name}' has ${scriptParams.size} parameters (max $MAX_FIXED_PARAMS)", fn)
+        }
+
+        val params = scriptParams.map { p ->
+            (p.name?.asString() ?: "p") to resolveKotlinType(p.type.resolve())
+        }
+        val callArgsStr = scriptParams.map { it.name?.asString() ?: "p" }.joinToString(", ")
+        val fullCallArgs = if (isTypeExtension) {
+            if (callArgsStr.isEmpty()) "this" else "this, $callArgsStr"
+        } else callArgsStr
+
+        return FixedMethodItem(
+            scriptName = method.name,
+            specsExpr = specsExpr,
+            fnCall = "$fnQualifier${fn.simpleName.asString()}",
+            params = params,
+            callArgs = fullCallArgs,
+            isTopLevel = false,
+        )
+    }
+
+    private fun buildRawArgsItem(method: MethodEntry, ownerCls: KSClassDeclaration): RawArgsItem {
+        val fn = method.fn
+        val ownerName = ownerCls.simpleName.asString()
+        val params = fn.parameters
+        val hasLocation = params.size >= 2 &&
+                params[1].type.resolve().declaration.simpleName.asString() == "SourceLocation"
+        return RawArgsItem(
+            scriptName = method.name,
+            specsExpr = "emptyList()",
+            ownerName = ownerName,
+            fnName = fn.simpleName.asString(),
+            hasLocation = hasLocation,
+        )
+    }
+
+    private fun buildFileLevelExtItem(method: MethodEntry, typeDecl: KSClassDeclaration): FileLevelExtItem {
+        val fn = method.fn
+        val allParams = getScriptParams(fn)
+        val typeName = typeDecl.simpleName.asString()
+        val fnName = fn.simpleName.asString()
+        val hasExtensionReceiver = fn.extensionReceiver != null
+
+        val scriptParams = if (hasExtensionReceiver) allParams else {
+            if (allParams.isNotEmpty()) allParams.drop(1) else allParams
+        }
+
+        val specsExpr = paramSpecsListExpression(scriptParams)
+        val hasDefaults = scriptParams.any { it.hasDefault }
+
+        val receiverTypeName = if (hasExtensionReceiver) {
+            fn.extensionReceiver?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
+        } else {
+            fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
+        }
+
+        val receiverCast = receiverTypeName?.let {
+            ArityDispatchItem.ReceiverCast(it, useConvertToKotlin = hasExtensionReceiver)
+        }
+
+        val selfArg = if (receiverTypeName != null) {
+            if (hasExtensionReceiver) "" else "typedReceiver, "
+        } else ""
+        val fnCallPrefix = if (hasExtensionReceiver && receiverTypeName != null) "typedReceiver." else ""
+
+        return FileLevelExtItem(
+            scriptName = method.name,
+            specsExpr = specsExpr,
+            receiverClassName = typeName,
+            receiverCast = receiverCast,
+            fnName = fnName,
+            scriptParams = scriptParams.mapIndexed { i, p ->
+                ArityDispatchItem.ResolvedParam(
+                    name = p.name?.asString() ?: "p$i",
+                    kotlinType = resolveKotlinType(p.type.resolve()),
+                    hasDefault = p.hasDefault,
+                    index = i,
+                )
+            },
+            hasExtensionReceiver = hasExtensionReceiver,
+            hasDefaults = hasDefaults,
+            selfArg = selfArg,
+            fnCallPrefix = fnCallPrefix,
+        )
+    }
+
+    private fun buildTopLevelFunctionItem(entry: FunctionEntry): RegistrationItem {
+        val fn = entry.fn
+        val params = getScriptParams(fn)
+        val hasCallInfo = hasCallInfoParam(fn)
+        val isVararg = params.any { it.isVararg }
+        val hasDefaults = params.any { it.hasDefault }
+        val fnName = fn.simpleName.asString()
+        val specsExpr = paramSpecsListExpression(params)
+
+        // Vararg → legacy
+        if (isVararg) {
+            val paramType = getVarargComponentType(params.first { it.isVararg })
+            val returnType = resolveKotlinType(fn.returnType?.resolve())
+            val fnCall = "$fnName(*args.toTypedArray()${if (hasCallInfo) ", callInfo" else ""})"
+            return VarargItem(
+                scriptName = entry.name,
+                specsExpr = specsExpr,
+                paramType = paramType,
+                returnType = returnType,
+                fnCallWithArgs = fnCall,
+                hasCallInfo = hasCallInfo,
+                isTopLevel = true,
+            )
+        }
+
+        // With defaults → arity dispatch
+        if (hasDefaults) {
+            return ArityDispatchItem(
+                scriptName = entry.name,
+                specsExpr = specsExpr,
+                fnCall = fnName,
+                selfArg = "",
+                scriptParams = params.mapIndexed { i, p ->
+                    ArityDispatchItem.ResolvedParam(
+                        name = p.name?.asString() ?: "p$i",
+                        kotlinType = resolveKotlinType(p.type.resolve()),
+                        hasDefault = p.hasDefault,
+                        index = i,
+                    )
+                },
+                receiverCast = null,
+                receiverClassName = null,
+                isTopLevel = true,
+            )
+        }
+
+        // Fixed arity
+        if (params.size > MAX_FIXED_PARAMS) {
+            logger.error("@Function '${entry.name}' has ${params.size} parameters (max $MAX_FIXED_PARAMS)", fn)
+        }
+
+        val paramPairs = params.map { p ->
+            (p.name?.asString() ?: "p") to resolveKotlinType(p.type.resolve())
+        }
+        val callArgs = params.map { it.name?.asString() ?: "p" }.joinToString(", ")
+
+        return FixedMethodItem(
+            scriptName = entry.name,
+            specsExpr = specsExpr,
+            fnCall = fnName,
+            params = paramPairs,
+            callArgs = callArgs,
+            isTopLevel = true,
+        )
+    }
+
+    // ===== DEAD CODE — old emission methods, replaced by build*Item() + RegistrationItem.renderRegistration() =====
+    // TODO: Delete everything from here to "===== Docs generation =====" once verified.
+
+    @Suppress("unused")
+    private fun DEAD_generateMethodRegistration(
         method: MethodEntry,
         ownerCls: KSClassDeclaration,
         isTypeExtension: Boolean = false,
