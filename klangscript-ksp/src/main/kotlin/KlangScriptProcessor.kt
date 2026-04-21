@@ -533,6 +533,7 @@ class KlangScriptProcessor(
                         name = p.name?.asString() ?: "p$i",
                         kotlinType = resolveKotlinType(p.type.resolve()),
                         hasDefault = p.hasDefault,
+                        isNullable = p.type.resolve().isMarkedNullable,
                         index = i,
                     )
                 },
@@ -620,6 +621,7 @@ class KlangScriptProcessor(
                     name = p.name?.asString() ?: "p$i",
                     kotlinType = resolveKotlinType(p.type.resolve()),
                     hasDefault = p.hasDefault,
+                    isNullable = p.type.resolve().isMarkedNullable,
                     index = i,
                 )
             },
@@ -668,6 +670,7 @@ class KlangScriptProcessor(
                         name = p.name?.asString() ?: "p$i",
                         kotlinType = resolveKotlinType(p.type.resolve()),
                         hasDefault = p.hasDefault,
+                        isNullable = p.type.resolve().isMarkedNullable,
                         index = i,
                     )
                 },

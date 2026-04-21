@@ -1,7 +1,17 @@
 package io.peekandpoke.klang.sprudel.ksp
 
-import com.google.devtools.ksp.processing.*
-import com.google.devtools.ksp.symbol.*
+import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.Dependencies
+import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.processing.SymbolProcessor
+import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
+import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
+import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeAlias
+import com.google.devtools.ksp.symbol.Nullability
 import com.google.devtools.ksp.validate
 
 /**
@@ -218,7 +228,9 @@ class SprudelDocsProcessor(
             if (isExtension && receiverType != null) {
                 appendLine("                receiver = ${generateTypeModelCode(receiverType)},")
             }
-            val params = function.parameters
+            val params = function.parameters.filter {
+                it.type.resolve().declaration.simpleName.asString() != "CallInfo"
+            }
             if (params.isNotEmpty()) {
                 appendLine("                params = listOf(")
                 params.forEach { param ->

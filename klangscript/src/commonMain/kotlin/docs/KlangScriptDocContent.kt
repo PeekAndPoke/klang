@@ -6,10 +6,29 @@ data class DocSection(
     val examples: List<DocExample>,
 )
 
+/**
+ * Indicates how cleanly a KlangScript example maps onto vanilla JavaScript.
+ *
+ * The label is a reading aid for people coming from JS — it answers
+ * "can I copy this snippet into a plain JS REPL and expect it to behave the
+ * same way?". The `import * from "stdlib"` line is treated as a REPL
+ * convention (the REPL auto-imports it) and does not by itself mark an
+ * example incompatible — the classification is based on the language
+ * features and stdlib methods the example actually demonstrates.
+ */
+enum class JsCompat {
+    /** Works the same in vanilla JS (modulo the optional stdlib import line). */
+    Compatible,
+
+    /** Uses KlangScript-only syntax or Kotlin-style stdlib methods. */
+    Incompatible,
+}
+
 data class DocExample(
     val title: String? = null,
     val description: String? = null,
     val code: String,
+    val jsCompat: JsCompat,
 )
 
 val klangScriptDocSections: List<DocSection> = listOf(
@@ -28,6 +47,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |// Just write an expression. The REPL displays the result.
                     |2 + 3
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "console.log for multiple values",
@@ -37,8 +57,18 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |
                     |console.log("result:", 6 * 7)
                     |console.log("Hello,", "KlangScript!")
+                """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
+            ),
+            DocExample(
+                title = "print() — KlangScript shorthand",
+                description = "KlangScript also exposes a shorter `print()` for quick logging. JavaScript has no global `print()`.",
+                code = """
+                    |import * from "stdlib"
+                    |
                     |print("print() also works")
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "Comments",
@@ -55,6 +85,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |// console.log("This is commented out — it won't run")
                     |console.log("Done!")
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
         ),
     ),
@@ -80,10 +111,11 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |bpm = 140
                     |console.log("Tempo changed to", bpm, "BPM")
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "All value types",
-                description = "KlangScript has numbers, strings, booleans, and null. No undefined — uninitialized variables are null. JS note: Unlike JavaScript, there is no undefined. Uninitialized variables are null.",
+                description = "KlangScript has numbers, strings, booleans, and null — just like JavaScript.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -92,12 +124,22 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const key = "A minor"
                     |const active = true
                     |let solo = null
-                    |let unset
                     |
                     |console.log(`Track: ${"$"}{key}, ${"$"}{tempo} BPM, swing: ${"$"}{swing}`)
                     |console.log("active:", active, "solo:", solo)
+                """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
+            ),
+            DocExample(
+                title = "No undefined — uninitialized is null",
+                description = "Unlike JavaScript, there is no `undefined` value. An uninitialized `let` is `null`, not `undefined`.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |let unset
                     |console.log("uninitialized let:", unset)
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "Number formats",
@@ -113,6 +155,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("0o77 =", octal)
                     |console.log("0b1010 =", binary)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
         ),
     ),
@@ -138,6 +181,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("17 % 4 =", 17 % 4)
                     |console.log("Halftime:", bpm / 2, "BPM")
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Comparison and ternary",
@@ -151,6 +195,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const label = velocity >= 90 ? "forte" : "piano"
                     |label
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Logical operators and short-circuit",
@@ -172,6 +217,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log(0 || "zero is falsy")
                     |console.log("" || "empty string is falsy")
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Assignment operators and increment",
@@ -196,6 +242,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("postfix ++:", step++)
                     |console.log("after postfix:", step)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
         ),
     ),
@@ -221,6 +268,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("|| with 0:", 0 || "fallback")
                     |console.log("?? with 0:", 0 ?? "fallback")
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Optional chaining (?.)",
@@ -237,6 +285,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const empty = { audio: null }
                     |console.log("missing:", empty?.audio?.sampleRate)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Combining ?? and ?.",
@@ -247,6 +296,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const rate = config?.audio?.sampleRate ?? 44100
                     |rate
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
         ),
     ),
@@ -269,6 +319,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("0b1100 ^ 0b1010 =", 0b1100 ^ 0b1010)
                     |console.log("~0b1010 =", ~0b1010)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Shift operators",
@@ -280,6 +331,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("128 >> 3 =", 128 >> 3)
                     |console.log("-8 >>> 1 =", -8 >>> 1)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Practical: flags and masks",
@@ -306,6 +358,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |effects ^= DELAY
                     |console.log("after toggle delay:", effects)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
         ),
     ),
@@ -331,20 +384,32 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log(`Velocity: ${"$"}{velocity} / 127 = ${"$"}{Math.round(velocity * 100 / 127)}%`)
                     |console.log(`Is loud: ${"$"}{velocity > 80 ? "yes" : "no"}`)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "String methods — queries",
-                description = "Check string properties: length, position, prefix, suffix. JS note: .length() is a method call with parens, not a property like in JavaScript.",
+                description = "Check string properties: position, prefix, suffix, character access.",
                 code = """
                     |import * from "stdlib"
                     |
                     |const note = "C#4"
-                    |console.log("length:", note.length())
                     |console.log("starts with C:", note.startsWith("C"))
                     |console.log("ends with 4:", note.endsWith("4"))
                     |console.log("# at index:", note.indexOf("#"))
                     |console.log("char at 0:", note.charAt(0))
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
+            ),
+            DocExample(
+                title = "String .length() is a method",
+                description = "KlangScript exposes string length as a method call with parens: `s.length()`. In JavaScript, `length` is a property accessed without parens.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |const note = "C#4"
+                    |console.log("length:", note.length())
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "String methods — transforms",
@@ -363,6 +428,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("repeat:", "kick ".repeat(4))
                     |console.log("concat:", "hello".concat(" world"))
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
         ),
     ),
@@ -376,7 +442,22 @@ val klangScriptDocSections: List<DocSection> = listOf(
         examples = listOf(
             DocExample(
                 title = "Creating and accessing",
-                description = "Arrays hold ordered values. Access by index, or use .first() and .last() for the endpoints. JS note: Use .size() instead of .length, .first()/.last() instead of index math.",
+                description = "Arrays hold ordered values. Use `[i]` to read and write by index.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |const notes = ["C4", "E4", "G4", "B4"]
+                    |console.log("[0]:", notes[0])
+                    |console.log("[2]:", notes[2])
+                    |
+                    |notes[2] = "G#4"
+                    |console.log("after update:", notes)
+                """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
+            ),
+            DocExample(
+                title = "Array size and endpoints",
+                description = "Arrays use Kotlin-style methods: `.size()` (with parens) instead of the JavaScript `.length` property; `.first()` and `.last()` instead of `[0]` / `[arr.length - 1]`.",
                 code = """
                     |import * from "stdlib"
                     |
@@ -384,11 +465,8 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("size:", notes.size())
                     |console.log("first:", notes.first())
                     |console.log("last:", notes.last())
-                    |console.log("[2]:", notes[2])
-                    |
-                    |notes[2] = "G#4"
-                    |console.log("after update:", notes)
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "Array methods — query and transform",
@@ -406,6 +484,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("middle:", scale.subList(2, 5))
                     |console.log("joined:", scale.joinToString(" - "))
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "Array methods — mutate",
@@ -426,6 +505,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |seq.removeLast()
                     |console.log("after removeLast:", seq)
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
         ),
     ),
@@ -450,6 +530,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const field = "velocity"
                     |console.log("velocity:", track[field])
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Object utility methods",
@@ -460,13 +541,24 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const mixer = { kick: 80, snare: 70, hat: 50, bass: 90 }
                     |console.log("channels:", Object.keys(mixer))
                     |console.log("levels:", Object.values(mixer))
+                    |console.log("entries:", Object.entries(mixer))
+                """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
+            ),
+            DocExample(
+                title = "Iterating entries with .size()",
+                description = "Arrays use `.size()` in KlangScript — a method call with parens, not the `.length` property you'd find in JavaScript.",
+                code = """
+                    |import * from "stdlib"
                     |
+                    |const mixer = { kick: 80, snare: 70, hat: 50, bass: 90 }
                     |const entries = Object.entries(mixer)
                     |for (let i = 0; i < entries.size(); i++) {
                     |  const pair = entries[i]
                     |  console.log(`  ${"$"}{pair[0]}: ${"$"}{pair[1]}`)
                     |}
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "Nested objects and the in operator",
@@ -485,6 +577,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("verse bars:", song.verse.bars)
                     |console.log("chorus bpm:", song.chorus.bpm)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
         ),
     ),
@@ -515,6 +608,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |
                     |console.log(`Velocity ${"$"}{velocity} = ${"$"}{dynamic}`)
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "for and while loops",
@@ -537,6 +631,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |}
                     |console.log("doubled past 200:", bpm)
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "do-while",
@@ -553,6 +648,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |
                     |console.log(`Found ${"$"}{value} after ${"$"}{attempts} attempts`)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "break and continue",
@@ -579,6 +675,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |}
                     |console.log("first sharp:", sharp)
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
         ),
     ),
@@ -610,6 +707,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log(add(3, 4))
                     |console.log(describe("C", 4))
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Closures",
@@ -628,6 +726,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const beat = makeCounter()
                     |console.log("beat:", beat(), beat(), beat(), beat())
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Higher-order functions and currying",
@@ -646,12 +745,89 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("C4 up a fifth:", upFifth(60))
                     |console.log("E4 up a fifth:", upFifth(64))
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
         ),
     ),
 
     // ==========================================
-    // 11. Imports & the Standard Library
+    // 11. Named Arguments
+    // ==========================================
+    DocSection(
+        title = "Named Arguments",
+        description = "Call any function by parameter name with `name = value`. Handy when a function has lots of parameters — the call reads like a sentence. JS note: JavaScript has no named arguments. The usual workaround there is to pass an options object (`foo({ name: value })`), which looks different and behaves differently.",
+        examples = listOf(
+            DocExample(
+                title = "Named call to an arrow function",
+                description = "Pass arguments by parameter name with `name = value`. Works for any arrow function you define.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |const greet = (greeting, target) => `${"$"}{greeting}, ${"$"}{target}!`
+                    |
+                    |// Positional — bound by position
+                    |console.log(greet("Hello", "world"))
+                    |
+                    |// Named — bound by parameter name
+                    |console.log(greet(greeting = "Hi", target = "KlangScript"))
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "Named arguments can appear in any order",
+                description = "When you use named arguments, the order at the call site doesn't matter — each value is routed by name.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |const subtract = (a, b) => a - b
+                    |
+                    |// Swap the order — still subtracts b from a
+                    |console.log("10 - 3 =", subtract(b = 3, a = 10))
+                    |console.log("same:", subtract(a = 10, b = 3))
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "All-or-nothing rule",
+                description = "A single call must be either fully positional or fully named — never mixed. Mixing is rejected. Rationale: mixing creates ambiguity about which slot a positional arg fills.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |const add = (a, b) => a + b
+                    |
+                    |// OK — all positional
+                    |console.log(add(1, 2))
+                    |
+                    |// OK — all named
+                    |console.log(add(a = 1, b = 2))
+                    |
+                    |// ERROR — mixing positional and named is rejected:
+                    |//   add(1, b = 2)
+                    |//   → "Call must use either all positional or all named arguments"
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "Named arguments on stdlib functions",
+                description = "Stdlib functions expose parameter names too. Useful when a signature has several numeric parameters that would otherwise be hard to tell apart at the call site.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |// Positional
+                    |console.log("sqrt(16):", Math.sqrt(16))
+                    |console.log("pow(2, 10):", Math.pow(2, 10))
+                    |
+                    |// Named — self-documenting at the call site
+                    |console.log("sqrt(x=16):", Math.sqrt(x = 16))
+                    |console.log("pow(base=2, exp=10):", Math.pow(base = 2, exp = 10))
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+        ),
+    ),
+
+    // ==========================================
+    // 12. Imports & the Standard Library
     // ==========================================
     DocSection(
         title = "Imports & the Standard Library",
@@ -670,6 +846,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("round(3.5):", Math.round(3.5))
                     |console.log("pow(2, 10):", Math.pow(2, 10))
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "Trigonometry and clamping",
@@ -690,6 +867,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |const clamped = Math.min(Math.max(raw, 0), 127)
                     |console.log("clamped:", clamped)
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Selective and aliased imports",
@@ -710,12 +888,13 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("C4 (60):", midiToFreq(60), "Hz")
                     |console.log("A4 (69):", midiToFreq(69), "Hz")
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
         ),
     ),
 
     // ==========================================
-    // 12. Method Chaining & Putting It All Together
+    // 13. Method Chaining & Putting It All Together
     // ==========================================
     DocSection(
         title = "Method Chaining & Putting It All Together",
@@ -731,6 +910,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("chained:", result)
                     |console.log("split:", result.split(" "))
                 """.trimMargin(),
+                jsCompat = JsCompat.Compatible,
             ),
             DocExample(
                 title = "Array + string chaining",
@@ -751,6 +931,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |// Build display string
                     |console.log(`Melody (${"$"}{melody.size()} notes): ${"$"}{melody.joinToString(", ")}`)
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
             DocExample(
                 title = "Capstone: putting it all together",
@@ -790,6 +971,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |
                     |console.log(`Total steps: ${"$"}{output.size()}`)
                 """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
         ),
     ),
