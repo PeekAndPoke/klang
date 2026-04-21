@@ -183,6 +183,7 @@ data class FileLevelExtItem(
     val scriptParams: List<ArityDispatchItem.ResolvedParam>,
     val hasExtensionReceiver: Boolean,
     val hasDefaults: Boolean,
+    val hasCallInfo: Boolean,
     val selfArg: String,
     val fnCallPrefix: String,
 ) : RegistrationItem() {
@@ -196,6 +197,21 @@ data class FileLevelExtItem(
             } else {
                 appendLine("        val typedReceiver = receiver as ${receiverCast.typeName}")
             }
+        }
+
+        if (hasCallInfo) {
+            appendLine("        val callInfo = CallInfo(")
+            appendLine("            callLocation = loc,")
+            appendLine("            receiverLocation = (receiver as? StringValue)?.location ?: (receiver as? NumberValue)?.location,")
+            appendLine("            paramLocations = args.map { arg -> (arg as? StringValue)?.location ?: (arg as? NumberValue)?.location },")
+            appendLine("        )")
+        }
+
+        // Helper: append callInfo to a call-args string, handling the empty-args case.
+        fun withCallInfo(args: String): String = when {
+            !hasCallInfo -> args
+            args.isEmpty() -> "callInfo"
+            else -> "$args, callInfo"
         }
 
         if (hasDefaults) {
@@ -232,11 +248,11 @@ data class FileLevelExtItem(
                     }
                 }
                 val callArgs = argsForLevel.map { it.name }.joinToString(", ")
-                appendLine("$indent        $fnCallPrefix$fnName(${joinCallArgs(selfArg, callArgs)})")
+                appendLine("$indent        $fnCallPrefix$fnName(${withCallInfo(joinCallArgs(selfArg, callArgs))})")
             }
             val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name }.joinToString(", ")
             appendLine("$indent    } else {")
-            appendLine("$indent        $fnCallPrefix$fnName(${joinCallArgs(selfArg, requiredArgs)})")
+            appendLine("$indent        $fnCallPrefix$fnName(${withCallInfo(joinCallArgs(selfArg, requiredArgs))})")
             appendLine("$indent    }")
             appendLine("$indent)")
         } else {
@@ -246,9 +262,9 @@ data class FileLevelExtItem(
             }
             val callArgs = scriptParams.map { it.name }.joinToString(", ")
             if (hasExtensionReceiver && receiverCast != null) {
-                appendLine("        wrapAsRuntimeValue(${fnCallPrefix}$fnName($callArgs))")
+                appendLine("        wrapAsRuntimeValue(${fnCallPrefix}$fnName(${withCallInfo(callArgs)}))")
             } else {
-                appendLine("        wrapAsRuntimeValue($fnName(${joinCallArgs(selfArg, callArgs)}))")
+                appendLine("        wrapAsRuntimeValue($fnName(${withCallInfo(joinCallArgs(selfArg, callArgs))}))")
             }
         }
 

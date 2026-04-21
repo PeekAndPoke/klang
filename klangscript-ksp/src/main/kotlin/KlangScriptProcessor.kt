@@ -326,6 +326,7 @@ class KlangScriptProcessor(
         appendLine("package $packageName")
         appendLine()
         appendLine("import io.peekandpoke.klang.script.KlangScriptLibrary")
+        appendLine("import io.peekandpoke.klang.script.ast.CallInfo")
         appendLine("import io.peekandpoke.klang.script.builder.*")
         appendLine("import io.peekandpoke.klang.script.runtime.*")
         appendLine("import io.peekandpoke.klang.script.types.*")
@@ -624,6 +625,7 @@ class KlangScriptProcessor(
             },
             hasExtensionReceiver = hasExtensionReceiver,
             hasDefaults = hasDefaults,
+            hasCallInfo = hasCallInfoParam(fn),
             selfArg = selfArg,
             fnCallPrefix = fnCallPrefix,
         )

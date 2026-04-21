@@ -4,6 +4,7 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftNumericField
@@ -47,8 +48,8 @@ private fun applyGain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.gain(amount: PatternLike? = null): SprudelPattern =
-    applyGain(this, listOfNotNull(amount).asSprudelDslArgs())
+fun SprudelPattern.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyGain(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the gain for each event.
@@ -61,8 +62,8 @@ fun SprudelPattern.gain(amount: PatternLike? = null): SprudelPattern =
  */
 @SprudelDsl
 @KlangScript.Function
-fun String.gain(amount: PatternLike? = null): SprudelPattern =
-    this.toVoiceValuePattern().gain(amount)
+fun String.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().gain(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
@@ -75,8 +76,8 @@ fun String.gain(amount: PatternLike? = null): SprudelPattern =
  */
 @SprudelDsl
 @KlangScript.Function
-fun gain(amount: PatternLike? = null): PatternMapperFn =
-    { p -> p.gain(amount) }
+fun gain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.gain(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the gain after the previous mapper.
@@ -89,8 +90,8 @@ fun gain(amount: PatternLike? = null): PatternMapperFn =
  */
 @SprudelDsl
 @KlangScript.Function
-fun PatternMapperFn.gain(amount: PatternLike? = null): PatternMapperFn =
-    this.chain { p -> p.gain(amount) }
+fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.gain(amount, callInfo) }
 
 // -- pan() ------------------------------------------------------------------------------------------------------------
 
