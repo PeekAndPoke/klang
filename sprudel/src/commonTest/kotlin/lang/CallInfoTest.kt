@@ -32,6 +32,62 @@ class CallInfoTest : StringSpec({
     "postgain passes CallInfo from KlangScript" {
         assertCallInfoPresent("""seq("0 1").postgain("0.5")""")
     }
+
+    "compressor passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").compressor("-20:4:3:0.03:0.1")""")
+    }
+
+    "unison passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").unison("3")""")
+    }
+
+    "detune passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").detune("0.3")""")
+    }
+
+    "spread passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").spread("0.8")""")
+    }
+
+    "density passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").density("5")""")
+    }
+
+    "attack passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").attack("0.01")""")
+    }
+
+    "decay passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").decay("0.2")""")
+    }
+
+    "sustain passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").sustain("0.7")""")
+    }
+
+    "release passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").release("0.5")""")
+    }
+
+    "adsr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").adsr("0.01:0.2:0.7:0.5")""")
+    }
+
+    "orbit passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").orbit("1")""")
+    }
+
+    "duckorbit passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").duckorbit("1")""")
+    }
+
+    "duckattack passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").duckattack("0.2")""")
+    }
+
+    "duckdepth passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").duckdepth("0.8")""")
+    }
 })
 
 /**

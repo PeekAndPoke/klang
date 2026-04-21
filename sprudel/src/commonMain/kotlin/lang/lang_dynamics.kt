@@ -390,27 +390,9 @@ fun PatternMapperFn.postgain(amount: PatternLike? = null, callInfo: CallInfo? = 
 
 private val compressorMutation = voiceModifier { copy(compressor = it?.toString()) }
 
-fun applyCompressor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyCompressor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, compressorMutation)
 }
-
-internal val SprudelPattern._compressor by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
-internal val String._compressor by dslStringExtension { p, args, callInfo -> p._compressor(args, callInfo) }
-internal val _compressor by dslPatternMapper { args, callInfo -> { p -> p._compressor(args, callInfo) } }
-
-internal val PatternMapperFn._compressor by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_compressor(args, callInfo))
-}
-
-internal val SprudelPattern._comp by dslPatternExtension { p, args, /* callInfo */ _ -> applyCompressor(p, args) }
-internal val String._comp by dslStringExtension { p, args, callInfo -> p._comp(args, callInfo) }
-internal val _comp by dslPatternMapper { args, callInfo -> { p -> p._comp(args, callInfo) } }
-
-internal val PatternMapperFn._comp by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_comp(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets dynamic range compression parameters as a colon-separated string
@@ -472,8 +454,9 @@ internal val PatternMapperFn._comp by dslPatternMapperExtension { m, args, callI
  * @tags compressor, comp, compression, threshold, ratio, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.compressor(params: PatternLike? = null): SprudelPattern =
-    this._compressor(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyCompressor(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets dynamic range compression parameters.
@@ -485,8 +468,9 @@ fun SprudelPattern.compressor(params: PatternLike? = null): SprudelPattern =
  * @param params The compression parameters as a colon-separated string.
  */
 @SprudelDsl
-fun String.compressor(params: PatternLike? = null): SprudelPattern =
-    this._compressor(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().compressor(params, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
@@ -497,8 +481,9 @@ fun String.compressor(params: PatternLike? = null): SprudelPattern =
 
  */
 @SprudelDsl
-fun compressor(params: PatternLike? = null): PatternMapperFn =
-    _compressor(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun compressor(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.compressor(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets compressor parameters after the previous mapper.
@@ -510,8 +495,9 @@ fun compressor(params: PatternLike? = null): PatternMapperFn =
  * @param params The compression parameters as a colon-separated string.
  */
 @SprudelDsl
-fun PatternMapperFn.compressor(params: PatternLike? = null): PatternMapperFn =
-    _compressor(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.compressor(params, callInfo) }
 
 /**
  * Alias for [compressor]. Sets dynamic range compression parameters as a colon-separated string
@@ -533,8 +519,9 @@ fun PatternMapperFn.compressor(params: PatternLike? = null): PatternMapperFn =
  * @tags comp, compressor, compression, threshold, ratio, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.comp(params: PatternLike? = null): SprudelPattern =
-    this._comp(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.comp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.compressor(params, callInfo)
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
@@ -546,8 +533,9 @@ fun SprudelPattern.comp(params: PatternLike? = null): SprudelPattern =
  * @param params The compression parameters as a colon-separated string.
  */
 @SprudelDsl
-fun String.comp(params: PatternLike? = null): SprudelPattern =
-    this._comp(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.comp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().compressor(params, callInfo)
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
@@ -559,8 +547,9 @@ fun String.comp(params: PatternLike? = null): SprudelPattern =
  * @param params The compression parameters as a colon-separated string.
  */
 @SprudelDsl
-fun comp(params: PatternLike? = null): PatternMapperFn =
-    _comp(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun comp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.compressor(params, callInfo) }
 
 /**
  * Alias for [compressor]. Creates a chained [PatternMapperFn] that sets compressor parameters after the previous
@@ -573,8 +562,9 @@ fun comp(params: PatternLike? = null): PatternMapperFn =
  * @param params The compression parameters as a colon-separated string.
  */
 @SprudelDsl
-fun PatternMapperFn.comp(params: PatternLike? = null): PatternMapperFn =
-    _comp(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.comp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.compressor(params, callInfo) }
 
 // -- unison() / uni() -------------------------------------------------------------------------------------------------
 
@@ -584,23 +574,6 @@ private fun applyUnison(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return source._liftOrReinterpretStringField(args, unisonMutation)
 }
 
-internal val SprudelPattern._unison by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
-internal val String._unison by dslStringExtension { p, args, callInfo -> p._unison(args, callInfo) }
-internal val _unison by dslPatternMapper { args, callInfo -> { p -> p._unison(args, callInfo) } }
-
-internal val PatternMapperFn._unison by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_unison(args, callInfo))
-}
-
-internal val SprudelPattern._uni by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnison(p, args) }
-internal val String._uni by dslStringExtension { p, args, callInfo -> p._uni(args, callInfo) }
-internal val _uni by dslPatternMapper { args, callInfo -> { p -> p._uni(args, callInfo) } }
-
-internal val PatternMapperFn._uni by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_uni(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the number of unison voices for oscillator stacking effects (e.g. supersaw).
@@ -623,8 +596,9 @@ internal val PatternMapperFn._uni by dslPatternMapperExtension { m, args, callIn
  * @tags unison, uni, voices, stacking, supersaw
  */
 @SprudelDsl
-fun SprudelPattern.unison(voices: PatternLike? = null): SprudelPattern =
-    this._unison(listOfNotNull(voices).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyUnison(this, listOfNotNull(voices).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the number of unison voices.
@@ -636,8 +610,9 @@ fun SprudelPattern.unison(voices: PatternLike? = null): SprudelPattern =
  * @param voices The number of unison voices.
  */
 @SprudelDsl
-fun String.unison(voices: PatternLike? = null): SprudelPattern =
-    this._unison(listOfNotNull(voices).asSprudelDslArgs())
+@KlangScript.Function
+fun String.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().unison(voices, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
@@ -649,8 +624,9 @@ fun String.unison(voices: PatternLike? = null): SprudelPattern =
  * @param voices The number of unison voices.
  */
 @SprudelDsl
-fun unison(voices: PatternLike? = null): PatternMapperFn =
-    _unison(listOfNotNull(voices).asSprudelDslArgs())
+@KlangScript.Function
+fun unison(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.unison(voices, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous mapper.
@@ -662,8 +638,9 @@ fun unison(voices: PatternLike? = null): PatternMapperFn =
  * @param voices The number of unison voices.
  */
 @SprudelDsl
-fun PatternMapperFn.unison(voices: PatternLike? = null): PatternMapperFn =
-    _unison(listOfNotNull(voices).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.unison(voices, callInfo) }
 
 /**
  * Alias for [unison]. Sets the number of unison voices for oscillator stacking effects.
@@ -683,8 +660,9 @@ fun PatternMapperFn.unison(voices: PatternLike? = null): PatternMapperFn =
  * @tags uni, unison, voices, stacking, supersaw
  */
 @SprudelDsl
-fun SprudelPattern.uni(voices: PatternLike? = null): SprudelPattern =
-    this._uni(listOfNotNull(voices).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.unison(voices, callInfo)
 
 /**
  * Alias for [unison]. Parses this string as a pattern and sets the number of unison voices.
@@ -694,8 +672,9 @@ fun SprudelPattern.uni(voices: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.uni(voices: PatternLike? = null): SprudelPattern =
-    this._uni(listOfNotNull(voices).asSprudelDslArgs())
+@KlangScript.Function
+fun String.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().unison(voices, callInfo)
 
 /**
  * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
@@ -707,8 +686,9 @@ fun String.uni(voices: PatternLike? = null): SprudelPattern =
  * @param voices The number of unison voices.
  */
 @SprudelDsl
-fun uni(voices: PatternLike? = null): PatternMapperFn =
-    _uni(listOfNotNull(voices).asSprudelDslArgs())
+@KlangScript.Function
+fun uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.unison(voices, callInfo) }
 
 /**
  * Alias for [unison]. Creates a chained [PatternMapperFn] that sets the number of unison voices after the previous
@@ -721,8 +701,9 @@ fun uni(voices: PatternLike? = null): PatternMapperFn =
  * @param voices The number of unison voices.
  */
 @SprudelDsl
-fun PatternMapperFn.uni(voices: PatternLike? = null): PatternMapperFn =
-    _uni(listOfNotNull(voices).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.unison(voices, callInfo) }
 
 // -- detune() ---------------------------------------------------------------------------------------------------------
 
@@ -732,15 +713,6 @@ private fun applyDetune(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return source._liftOrReinterpretStringField(args, detuneMutation)
 }
 
-internal val SprudelPattern._detune by dslPatternExtension { p, args, /* callInfo */ _ -> applyDetune(p, args) }
-internal val String._detune by dslStringExtension { p, args, callInfo -> p._detune(args, callInfo) }
-internal val _detune by dslPatternMapper { args, callInfo -> { p -> p._detune(args, callInfo) } }
-
-internal val PatternMapperFn._detune by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_detune(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the oscillator frequency spread in cents for unison/supersaw effects.
@@ -762,8 +734,9 @@ internal val PatternMapperFn._detune by dslPatternMapperExtension { m, args, cal
  * @tags detune, spread, unison, cents, supersaw
  */
 @SprudelDsl
-fun SprudelPattern.detune(amount: PatternLike? = null): SprudelPattern =
-    this._detune(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.detune(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDetune(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the oscillator frequency spread.
@@ -775,8 +748,9 @@ fun SprudelPattern.detune(amount: PatternLike? = null): SprudelPattern =
  * @param amount The detuning in cents.
  */
 @SprudelDsl
-fun String.detune(amount: PatternLike? = null): SprudelPattern =
-    this._detune(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.detune(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().detune(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the oscillator frequency spread for a pattern.
@@ -787,8 +761,9 @@ fun String.detune(amount: PatternLike? = null): SprudelPattern =
  * @param amount The detuning in cents.
  */
 @SprudelDsl
-fun detune(amount: PatternLike? = null): PatternMapperFn =
-    _detune(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun detune(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.detune(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator frequency spread after the previous mapper.
@@ -800,8 +775,9 @@ fun detune(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The detuning in cents.
  */
 @SprudelDsl
-fun PatternMapperFn.detune(amount: PatternLike? = null): PatternMapperFn =
-    _detune(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.detune(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.detune(amount, callInfo) }
 
 // -- spread() ---------------------------------------------------------------------------------------------------------
 
@@ -811,15 +787,6 @@ private fun applySpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return source._liftOrReinterpretStringField(args, spreadMutation)
 }
 
-internal val SprudelPattern._spread by dslPatternExtension { p, args, /* callInfo */ _ -> applySpread(p, args) }
-internal val String._spread by dslStringExtension { p, args, callInfo -> p._spread(args, callInfo) }
-internal val _spread by dslPatternMapper { args, callInfo -> { p -> p._spread(args, callInfo) } }
-
-internal val PatternMapperFn._spread by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_spread(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the stereo pan spread for unison/supersaw voices (0 = mono, 1 = full stereo spread).
@@ -841,8 +808,9 @@ internal val PatternMapperFn._spread by dslPatternMapperExtension { m, args, cal
  * @tags spread, pan, stereo, unison, supersaw
  */
 @SprudelDsl
-fun SprudelPattern.spread(amount: PatternLike? = null): SprudelPattern =
-    this._spread(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applySpread(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the stereo pan spread for unison voices.
@@ -854,8 +822,9 @@ fun SprudelPattern.spread(amount: PatternLike? = null): SprudelPattern =
  * @param amount The stereo pan spread, between 0 and 1.
  */
 @SprudelDsl
-fun String.spread(amount: PatternLike? = null): SprudelPattern =
-    this._spread(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().spread(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
@@ -867,8 +836,9 @@ fun String.spread(amount: PatternLike? = null): SprudelPattern =
  * @param amount The stereo pan spread, between 0 and 1.
  */
 @SprudelDsl
-fun spread(amount: PatternLike? = null): PatternMapperFn =
-    _spread(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun spread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.spread(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the stereo pan spread after the previous mapper.
@@ -880,8 +850,9 @@ fun spread(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The stereo pan spread, between 0 and 1.
  */
 @SprudelDsl
-fun PatternMapperFn.spread(amount: PatternLike? = null): PatternMapperFn =
-    _spread(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.spread(amount, callInfo) }
 
 // -- density() / d() --------------------------------------------------------------------------------------------------
 
@@ -891,23 +862,6 @@ private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
     return source._liftOrReinterpretStringField(args, densityMutation)
 }
 
-internal val SprudelPattern._density by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
-internal val String._density by dslStringExtension { p, args, callInfo -> p._density(args, callInfo) }
-internal val _density by dslPatternMapper { args, callInfo -> { p -> p._density(args, callInfo) } }
-
-internal val PatternMapperFn._density by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_density(args, callInfo))
-}
-
-internal val SprudelPattern._d by dslPatternExtension { p, args, /* callInfo */ _ -> applyDensity(p, args) }
-internal val String._d by dslStringExtension { p, args, callInfo -> p._d(args, callInfo) }
-internal val _d by dslPatternMapper { args, callInfo -> { p -> p._d(args, callInfo) } }
-
-internal val PatternMapperFn._d by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_d(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the oscillator density for supersaw or noise density for dust/crackle generators.
@@ -930,8 +884,9 @@ internal val PatternMapperFn._d by dslPatternMapperExtension { m, args, callInfo
  * @tags density, d, supersaw, dust, noise
  */
 @SprudelDsl
-fun SprudelPattern.density(amount: PatternLike? = null): SprudelPattern =
-    this._density(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.density(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDensity(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the oscillator or noise density.
@@ -943,8 +898,9 @@ fun SprudelPattern.density(amount: PatternLike? = null): SprudelPattern =
  * @param amount The oscillator density.
  */
 @SprudelDsl
-fun String.density(amount: PatternLike? = null): SprudelPattern =
-    this._density(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.density(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().density(amount, callInfo)
 
 /**
  * Parses this string as a pattern and sets the oscillator or noise density.
@@ -955,8 +911,9 @@ fun String.density(amount: PatternLike? = null): SprudelPattern =
  * @param amount The oscillator density.
  */
 @SprudelDsl
-fun density(amount: PatternLike? = null): PatternMapperFn =
-    _density(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun density(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.density(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the previous mapper.
@@ -968,8 +925,9 @@ fun density(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The oscillator density.
  */
 @SprudelDsl
-fun PatternMapperFn.density(amount: PatternLike? = null): PatternMapperFn =
-    _density(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.density(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.density(amount, callInfo) }
 
 /**
  * Alias for [density]. Sets the oscillator density for supersaw or noise density for dust/crackle.
@@ -989,8 +947,9 @@ fun PatternMapperFn.density(amount: PatternLike? = null): PatternMapperFn =
  * @tags d, density, supersaw, dust, noise
  */
 @SprudelDsl
-fun SprudelPattern.d(amount: PatternLike? = null): SprudelPattern =
-    this._d(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.density(amount, callInfo)
 
 /**
  * Alias for [density]. Parses this string as a pattern and sets the oscillator or noise density.
@@ -1002,8 +961,9 @@ fun SprudelPattern.d(amount: PatternLike? = null): SprudelPattern =
  * @param amount The oscillator density.
  */
 @SprudelDsl
-fun String.d(amount: PatternLike? = null): SprudelPattern =
-    this._d(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().density(amount, callInfo)
 
 /**
  * Alias for [density]. Creates a [PatternMapperFn] that sets the oscillator or noise density.
@@ -1015,8 +975,9 @@ fun String.d(amount: PatternLike? = null): SprudelPattern =
  * @param amount The oscillator density.
  */
 @SprudelDsl
-fun d(amount: PatternLike? = null): PatternMapperFn =
-    _d(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun d(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.density(amount, callInfo) }
 
 /**
  * Alias for [density]. Creates a chained [PatternMapperFn] that sets the oscillator or noise density after the
@@ -1029,8 +990,9 @@ fun d(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The oscillator density.
  */
 @SprudelDsl
-fun PatternMapperFn.d(amount: PatternLike? = null): PatternMapperFn =
-    _d(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.d(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.density(amount, callInfo) }
 
 // -- ADSR attack() ----------------------------------------------------------------------------------------------------
 
@@ -1040,17 +1002,6 @@ private fun applyAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return source._liftOrReinterpretStringField(args, attackMutation)
 }
 
-internal val SprudelPattern._attack by dslPatternExtension { p, args, /* callInfo */ _ -> applyAttack(p, args) }
-
-internal val String._attack by dslStringExtension { p, args, callInfo -> p._attack(args, callInfo) }
-
-internal val _attack by dslPatternMapper { args, callInfo -> { p -> p._attack(args, callInfo) } }
-
-internal val PatternMapperFn._attack by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_attack(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the ADSR envelope attack time in seconds for synthesised notes.
@@ -1072,8 +1023,9 @@ internal val PatternMapperFn._attack by dslPatternMapperExtension { m, args, cal
  * @tags attack, adsr, envelope, fade-in
  */
 @SprudelDsl
-fun SprudelPattern.attack(time: PatternLike? = null): SprudelPattern =
-    this._attack(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.attack(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyAttack(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the ADSR envelope attack time.
@@ -1085,8 +1037,9 @@ fun SprudelPattern.attack(time: PatternLike? = null): SprudelPattern =
  * @param time The attack time in seconds.
  */
 @SprudelDsl
-fun String.attack(time: PatternLike? = null): SprudelPattern =
-    this._attack(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun String.attack(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().attack(time, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope attack time for each event.
@@ -1098,7 +1051,9 @@ fun String.attack(time: PatternLike? = null): SprudelPattern =
  * @param time The attack time in seconds.
  */
 @SprudelDsl
-fun attack(time: PatternLike? = null): PatternMapperFn = _attack(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun attack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.attack(time, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR attack time after the previous mapper.
@@ -1110,8 +1065,9 @@ fun attack(time: PatternLike? = null): PatternMapperFn = _attack(listOfNotNull(t
  * @param time The attack time in seconds.
  */
 @SprudelDsl
-fun PatternMapperFn.attack(time: PatternLike? = null): PatternMapperFn =
-    _attack(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.attack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.attack(time, callInfo) }
 
 // -- ADSR decay() -----------------------------------------------------------------------------------------------------
 
@@ -1121,17 +1077,6 @@ private fun applyDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     return source._liftOrReinterpretStringField(args, decayMutation)
 }
 
-internal val SprudelPattern._decay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDecay(p, args) }
-
-internal val String._decay by dslStringExtension { p, args, callInfo -> p._decay(args, callInfo) }
-
-internal val _decay by dslPatternMapper { args, callInfo -> { p -> p._decay(args, callInfo) } }
-
-internal val PatternMapperFn._decay by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_decay(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the ADSR envelope decay time in seconds for synthesised notes.
@@ -1152,8 +1097,9 @@ internal val PatternMapperFn._decay by dslPatternMapperExtension { m, args, call
  * @tags decay, adsr, envelope
  */
 @SprudelDsl
-fun SprudelPattern.decay(time: PatternLike? = null): SprudelPattern =
-    this._decay(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.decay(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDecay(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the ADSR envelope decay time.
@@ -1165,8 +1111,9 @@ fun SprudelPattern.decay(time: PatternLike? = null): SprudelPattern =
  * @param time The decay time in seconds.
  */
 @SprudelDsl
-fun String.decay(time: PatternLike? = null): SprudelPattern =
-    this._decay(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun String.decay(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().decay(time, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope decay time for each event.
@@ -1178,7 +1125,9 @@ fun String.decay(time: PatternLike? = null): SprudelPattern =
  * @param time The decay time in seconds.
  */
 @SprudelDsl
-fun decay(time: PatternLike? = null): PatternMapperFn = _decay(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun decay(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.decay(time, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR decay time after the previous mapper.
@@ -1190,8 +1139,9 @@ fun decay(time: PatternLike? = null): PatternMapperFn = _decay(listOfNotNull(tim
  * @param time The decay time in seconds.
  */
 @SprudelDsl
-fun PatternMapperFn.decay(time: PatternLike? = null): PatternMapperFn =
-    _decay(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.decay(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.decay(time, callInfo) }
 
 // -- ADSR sustain() ---------------------------------------------------------------------------------------------------
 
@@ -1201,17 +1151,6 @@ private fun applySustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
     return source._liftOrReinterpretStringField(args, sustainMutation)
 }
 
-internal val SprudelPattern._sustain by dslPatternExtension { p, args, /* callInfo */ _ -> applySustain(p, args) }
-
-internal val String._sustain by dslStringExtension { p, args, callInfo -> p._sustain(args, callInfo) }
-
-internal val _sustain by dslPatternMapper { args, callInfo -> { p -> p._sustain(args, callInfo) } }
-
-internal val PatternMapperFn._sustain by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_sustain(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the ADSR envelope sustain level (0–1) for synthesised notes.
@@ -1233,8 +1172,9 @@ internal val PatternMapperFn._sustain by dslPatternMapperExtension { m, args, ca
  * @tags sustain, adsr, envelope, hold
  */
 @SprudelDsl
-fun SprudelPattern.sustain(level: PatternLike? = null): SprudelPattern =
-    this._sustain(listOfNotNull(level).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.sustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applySustain(this, listOfNotNull(level).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the ADSR envelope sustain level.
@@ -1246,8 +1186,9 @@ fun SprudelPattern.sustain(level: PatternLike? = null): SprudelPattern =
  * @param level The sustain level between 0 and 1.
  */
 @SprudelDsl
-fun String.sustain(level: PatternLike? = null): SprudelPattern =
-    this._sustain(listOfNotNull(level).asSprudelDslArgs())
+@KlangScript.Function
+fun String.sustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().sustain(level, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope sustain level for each event.
@@ -1259,7 +1200,9 @@ fun String.sustain(level: PatternLike? = null): SprudelPattern =
  * @param level The sustain level between 0 and 1.
  */
 @SprudelDsl
-fun sustain(level: PatternLike? = null): PatternMapperFn = _sustain(listOfNotNull(level).asSprudelDslArgs())
+@KlangScript.Function
+fun sustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.sustain(level, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR sustain level after the previous mapper.
@@ -1271,8 +1214,9 @@ fun sustain(level: PatternLike? = null): PatternMapperFn = _sustain(listOfNotNul
  * @param level The sustain level between 0 and 1.
  */
 @SprudelDsl
-fun PatternMapperFn.sustain(level: PatternLike? = null): PatternMapperFn =
-    _sustain(listOfNotNull(level).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.sustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.sustain(level, callInfo) }
 
 // -- ADSR release() ---------------------------------------------------------------------------------------------------
 
@@ -1282,17 +1226,6 @@ private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
     return source._liftOrReinterpretStringField(args, releaseMutation)
 }
 
-internal val SprudelPattern._release by dslPatternExtension { p, args, /* callInfo */ _ -> applyRelease(p, args) }
-
-internal val String._release by dslStringExtension { p, args, callInfo -> p._release(args, callInfo) }
-
-internal val _release by dslPatternMapper { args, callInfo -> { p -> p._release(args, callInfo) } }
-
-internal val PatternMapperFn._release by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_release(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the ADSR envelope release time in seconds for synthesised notes.
@@ -1314,8 +1247,9 @@ internal val PatternMapperFn._release by dslPatternMapperExtension { m, args, ca
  * @tags release, adsr, envelope, fade-out
  */
 @SprudelDsl
-fun SprudelPattern.release(time: PatternLike? = null): SprudelPattern =
-    this._release(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.release(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyRelease(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the ADSR envelope release time.
@@ -1327,8 +1261,9 @@ fun SprudelPattern.release(time: PatternLike? = null): SprudelPattern =
  * @param time The release time in seconds.
  */
 @SprudelDsl
-fun String.release(time: PatternLike? = null): SprudelPattern =
-    this._release(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun String.release(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().release(time, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope release time for each event.
@@ -1340,7 +1275,9 @@ fun String.release(time: PatternLike? = null): SprudelPattern =
  * @param time The release time in seconds.
  */
 @SprudelDsl
-fun release(time: PatternLike? = null): PatternMapperFn = _release(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun release(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.release(time, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ADSR release time after the previous mapper.
@@ -1352,8 +1289,9 @@ fun release(time: PatternLike? = null): PatternMapperFn = _release(listOfNotNull
  * @param time The release time in seconds.
  */
 @SprudelDsl
-fun PatternMapperFn.release(time: PatternLike? = null): PatternMapperFn =
-    _release(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.release(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.release(time, callInfo) }
 
 // -- ADSR adsr() ------------------------------------------------------------------------------------------------------
 
@@ -1380,17 +1318,6 @@ private fun applyAdsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     }
 }
 
-internal val SprudelPattern._adsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyAdsr(p, args) }
-
-internal val String._adsr by dslStringExtension { p, args, callInfo -> p._adsr(args, callInfo) }
-
-internal val _adsr by dslPatternMapper { args, callInfo -> { p -> p._adsr(args, callInfo) } }
-
-internal val PatternMapperFn._adsr by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_adsr(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets all four ADSR envelope parameters at once via a colon-separated string
@@ -1418,8 +1345,9 @@ internal val PatternMapperFn._adsr by dslPatternMapperExtension { m, args, callI
  * @tags adsr, attack, decay, sustain, release, envelope
  */
 @SprudelDsl
-fun SprudelPattern.adsr(params: PatternLike? = null): SprudelPattern =
-    this._adsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyAdsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets all ADSR envelope parameters.
@@ -1431,8 +1359,9 @@ fun SprudelPattern.adsr(params: PatternLike? = null): SprudelPattern =
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
  */
 @SprudelDsl
-fun String.adsr(params: PatternLike? = null): SprudelPattern =
-    this._adsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().adsr(params, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets all ADSR envelope parameters for each event.
@@ -1444,7 +1373,9 @@ fun String.adsr(params: PatternLike? = null): SprudelPattern =
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
  */
 @SprudelDsl
-fun adsr(params: PatternLike? = null): PatternMapperFn = _adsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun adsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.adsr(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all ADSR parameters after the previous mapper.
@@ -1456,8 +1387,9 @@ fun adsr(params: PatternLike? = null): PatternMapperFn = _adsr(listOfNotNull(par
  * @param params The ADSR parameters as a colon-separated string `"attack:decay:sustain:release"`.
  */
 @SprudelDsl
-fun PatternMapperFn.adsr(params: PatternLike? = null): PatternMapperFn =
-    _adsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.adsr(params, callInfo) }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Routing
@@ -1473,23 +1405,6 @@ private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     return source._liftOrReinterpretStringField(args, orbitMutation)
 }
 
-internal val SprudelPattern._orbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
-internal val String._orbit by dslStringExtension { p, args, callInfo -> p._orbit(args, callInfo) }
-internal val _orbit by dslPatternMapper { args, callInfo -> { p -> p._orbit(args, callInfo) } }
-
-internal val PatternMapperFn._orbit by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_orbit(args, callInfo))
-}
-
-internal val SprudelPattern._o by dslPatternExtension { p, args, /* callInfo */ _ -> applyOrbit(p, args) }
-internal val String._o by dslStringExtension { p, args, callInfo -> p._o(args, callInfo) }
-internal val _o by dslPatternMapper { args, callInfo -> { p -> p._o(args, callInfo) } }
-
-internal val PatternMapperFn._o by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_o(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Routes the pattern to an audio output orbit (channel group) for independent effect processing.
@@ -1512,8 +1427,9 @@ internal val PatternMapperFn._o by dslPatternMapperExtension { m, args, callInfo
  * @tags orbit, o, routing, effects, bus, channel
  */
 @SprudelDsl
-fun SprudelPattern.orbit(index: PatternLike? = null): SprudelPattern =
-    this._orbit(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyOrbit(this, listOfNotNull(index).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and routes it to the given audio output orbit.
@@ -1525,8 +1441,9 @@ fun SprudelPattern.orbit(index: PatternLike? = null): SprudelPattern =
  * @param index The orbit index to route events to.
  */
 @SprudelDsl
-fun String.orbit(index: PatternLike? = null): SprudelPattern =
-    this._orbit(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun String.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().orbit(index, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that routes events to the given audio output orbit.
@@ -1538,8 +1455,9 @@ fun String.orbit(index: PatternLike? = null): SprudelPattern =
  * @param index The orbit index to route events to.
  */
 @SprudelDsl
-fun orbit(index: PatternLike? = null): PatternMapperFn =
-    _orbit(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun orbit(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.orbit(index, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that routes events to the given orbit after the previous mapper.
@@ -1551,8 +1469,9 @@ fun orbit(index: PatternLike? = null): PatternMapperFn =
  * @param index The orbit index to route events to.
  */
 @SprudelDsl
-fun PatternMapperFn.orbit(index: PatternLike? = null): PatternMapperFn =
-    _orbit(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.orbit(index, callInfo) }
 
 /**
  * Alias for [orbit]. Routes the pattern to an audio output orbit for independent effect processing.
@@ -1572,8 +1491,9 @@ fun PatternMapperFn.orbit(index: PatternLike? = null): PatternMapperFn =
  * @tags o, orbit, routing, effects, bus, channel
  */
 @SprudelDsl
-fun SprudelPattern.o(index: PatternLike? = null): SprudelPattern =
-    this._o(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.o(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.orbit(index, callInfo)
 
 /**
  * Alias for [orbit]. Parses this string as a pattern and routes it to the given orbit.
@@ -1585,8 +1505,9 @@ fun SprudelPattern.o(index: PatternLike? = null): SprudelPattern =
  * @param index The orbit index to route events to.
  */
 @SprudelDsl
-fun String.o(index: PatternLike? = null): SprudelPattern =
-    this._o(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun String.o(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().orbit(index, callInfo)
 
 /**
  * Alias for [orbit]. Creates a [PatternMapperFn] that routes events to the given audio output orbit.
@@ -1598,8 +1519,9 @@ fun String.o(index: PatternLike? = null): SprudelPattern =
  * @param index The orbit index to route events to.
  */
 @SprudelDsl
-fun o(index: PatternLike? = null): PatternMapperFn =
-    _o(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun o(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.orbit(index, callInfo) }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Ducking / Sidechain
@@ -1615,23 +1537,6 @@ private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?
     return source._liftNumericField(args, duckOrbitMutation)
 }
 
-internal val SprudelPattern._duckorbit by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
-internal val String._duckorbit by dslStringExtension { p, args, callInfo -> p._duckorbit(args, callInfo) }
-internal val _duckorbit by dslPatternMapper { args, callInfo -> { p -> p._duckorbit(args, callInfo) } }
-
-internal val PatternMapperFn._duckorbit by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_duckorbit(args, callInfo))
-}
-
-internal val SprudelPattern._duck by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckOrbit(p, args) }
-internal val String._duck by dslStringExtension { p, args, callInfo -> p._duck(args, callInfo) }
-internal val _duck by dslPatternMapper { args, callInfo -> { p -> p._duck(args, callInfo) } }
-
-internal val PatternMapperFn._duck by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_duck(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the target orbit to listen to for sidechain ducking.
@@ -1654,8 +1559,9 @@ internal val PatternMapperFn._duck by dslPatternMapperExtension { m, args, callI
  * @tags duckorbit, duck, sidechain, ducking, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.duckorbit(orbitIndex: PatternLike? = null): SprudelPattern =
-    this._duckorbit(listOfNotNull(orbitIndex).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDuckOrbit(this, listOfNotNull(orbitIndex).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the sidechain source orbit for ducking.
@@ -1667,8 +1573,9 @@ fun SprudelPattern.duckorbit(orbitIndex: PatternLike? = null): SprudelPattern =
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
 @SprudelDsl
-fun String.duckorbit(orbitIndex: PatternLike? = null): SprudelPattern =
-    this._duckorbit(listOfNotNull(orbitIndex).asSprudelDslArgs())
+@KlangScript.Function
+fun String.duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().duckorbit(orbitIndex, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
@@ -1680,8 +1587,9 @@ fun String.duckorbit(orbitIndex: PatternLike? = null): SprudelPattern =
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
 @SprudelDsl
-fun duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
-    _duckorbit(listOfNotNull(orbitIndex).asSprudelDslArgs())
+@KlangScript.Function
+fun duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.duckorbit(orbitIndex, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the previous mapper.
@@ -1693,8 +1601,9 @@ fun duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
 @SprudelDsl
-fun PatternMapperFn.duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn =
-    _duckorbit(listOfNotNull(orbitIndex).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.duckorbit(orbitIndex, callInfo) }
 
 /**
  * Alias for [duckorbit]. Sets the target orbit to listen to for sidechain ducking.
@@ -1713,8 +1622,9 @@ fun PatternMapperFn.duckorbit(orbitIndex: PatternLike? = null): PatternMapperFn 
  * @tags duck, duckorbit, sidechain, ducking, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.duck(orbitIndex: PatternLike? = null): SprudelPattern =
-    this._duck(listOfNotNull(orbitIndex).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.duckorbit(orbitIndex, callInfo)
 
 /**
  * Alias for [duckorbit]. Parses this string as a pattern and sets the sidechain source orbit.
@@ -1726,8 +1636,9 @@ fun SprudelPattern.duck(orbitIndex: PatternLike? = null): SprudelPattern =
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
 @SprudelDsl
-fun String.duck(orbitIndex: PatternLike? = null): SprudelPattern =
-    this._duck(listOfNotNull(orbitIndex).asSprudelDslArgs())
+@KlangScript.Function
+fun String.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().duckorbit(orbitIndex, callInfo)
 
 /**
  * Alias for [duckorbit]. Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
@@ -1739,8 +1650,9 @@ fun String.duck(orbitIndex: PatternLike? = null): SprudelPattern =
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
 @SprudelDsl
-fun duck(orbitIndex: PatternLike? = null): PatternMapperFn =
-    _duck(listOfNotNull(orbitIndex).asSprudelDslArgs())
+@KlangScript.Function
+fun duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.duckorbit(orbitIndex, callInfo) }
 
 /**
  * Alias for [duckorbit]. Creates a chained [PatternMapperFn] that sets the sidechain source orbit after the
@@ -1753,8 +1665,9 @@ fun duck(orbitIndex: PatternLike? = null): PatternMapperFn =
  * @param orbitIndex The orbit index to listen to for the sidechain trigger.
  */
 @SprudelDsl
-fun PatternMapperFn.duck(orbitIndex: PatternLike? = null): PatternMapperFn =
-    _duck(listOfNotNull(orbitIndex).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.duckorbit(orbitIndex, callInfo) }
 
 // -- duckattack() / duckatt() -----------------------------------------------------------------------------------------
 
@@ -1764,23 +1677,6 @@ private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any
     return source._liftNumericField(args, duckAttackMutation)
 }
 
-internal val SprudelPattern._duckattack by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
-internal val String._duckattack by dslStringExtension { p, args, callInfo -> p._duckattack(args, callInfo) }
-internal val _duckattack by dslPatternMapper { args, callInfo -> { p -> p._duckattack(args, callInfo) } }
-
-internal val PatternMapperFn._duckattack by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_duckattack(args, callInfo))
-}
-
-internal val SprudelPattern._duckatt by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckAttack(p, args) }
-internal val String._duckatt by dslStringExtension { p, args, callInfo -> p._duckatt(args, callInfo) }
-internal val _duckatt by dslPatternMapper { args, callInfo -> { p -> p._duckatt(args, callInfo) } }
-
-internal val PatternMapperFn._duckatt by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_duckatt(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the duck release (return-to-normal) time in seconds for sidechain ducking.
@@ -1803,8 +1699,9 @@ internal val PatternMapperFn._duckatt by dslPatternMapperExtension { m, args, ca
  * @tags duckattack, duckatt, sidechain, ducking, release, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.duckattack(time: PatternLike? = null): SprudelPattern =
-    this._duckattack(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDuckAttack(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the duck release time.
@@ -1816,8 +1713,9 @@ fun SprudelPattern.duckattack(time: PatternLike? = null): SprudelPattern =
  * @param time The recovery time in seconds.
  */
 @SprudelDsl
-fun String.duckattack(time: PatternLike? = null): SprudelPattern =
-    this._duckattack(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun String.duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().duckattack(time, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the duck release time.
@@ -1829,8 +1727,9 @@ fun String.duckattack(time: PatternLike? = null): SprudelPattern =
  * @param time The recovery time in seconds.
  */
 @SprudelDsl
-fun duckattack(time: PatternLike? = null): PatternMapperFn =
-    _duckattack(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.duckattack(time, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous mapper.
@@ -1842,8 +1741,9 @@ fun duckattack(time: PatternLike? = null): PatternMapperFn =
  * @param time The recovery time in seconds.
  */
 @SprudelDsl
-fun PatternMapperFn.duckattack(time: PatternLike? = null): PatternMapperFn =
-    _duckattack(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.duckattack(time, callInfo) }
 
 /**
  * Alias for [duckattack]. Sets the duck release (return-to-normal) time in seconds.
@@ -1863,8 +1763,9 @@ fun PatternMapperFn.duckattack(time: PatternLike? = null): PatternMapperFn =
  * @tags duckatt, duckattack, sidechain, ducking, release, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.duckatt(time: PatternLike? = null): SprudelPattern =
-    this._duckatt(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.duckattack(time, callInfo)
 
 /**
  * Alias for [duckattack]. Parses this string as a pattern and sets the duck release time.
@@ -1876,8 +1777,9 @@ fun SprudelPattern.duckatt(time: PatternLike? = null): SprudelPattern =
  * @param time The recovery time in seconds.
  */
 @SprudelDsl
-fun String.duckatt(time: PatternLike? = null): SprudelPattern =
-    this._duckatt(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun String.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().duckattack(time, callInfo)
 
 /**
  * Alias for [duckattack]. Creates a [PatternMapperFn] that sets the duck release time.
@@ -1889,8 +1791,9 @@ fun String.duckatt(time: PatternLike? = null): SprudelPattern =
  * @param time The recovery time in seconds.
  */
 @SprudelDsl
-fun duckatt(time: PatternLike? = null): PatternMapperFn =
-    _duckatt(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.duckattack(time, callInfo) }
 
 /**
  * Alias for [duckattack]. Creates a chained [PatternMapperFn] that sets the duck recovery time after the previous
@@ -1903,8 +1806,9 @@ fun duckatt(time: PatternLike? = null): PatternMapperFn =
  * @param time The recovery time in seconds.
  */
 @SprudelDsl
-fun PatternMapperFn.duckatt(time: PatternLike? = null): PatternMapperFn =
-    _duckatt(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.duckattack(time, callInfo) }
 
 // -- duckdepth() ------------------------------------------------------------------------------------------------------
 
@@ -1914,15 +1818,6 @@ private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?
     return source._liftNumericField(args, duckDepthMutation)
 }
 
-internal val SprudelPattern._duckdepth by dslPatternExtension { p, args, /* callInfo */ _ -> applyDuckDepth(p, args) }
-internal val String._duckdepth by dslStringExtension { p, args, callInfo -> p._duckdepth(args, callInfo) }
-internal val _duckdepth by dslPatternMapper { args, callInfo -> { p -> p._duckdepth(args, callInfo) } }
-
-internal val PatternMapperFn._duckdepth by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_duckdepth(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the ducking depth (0.0 = no ducking, 1.0 = full silence) for sidechain ducking.
@@ -1944,8 +1839,9 @@ internal val PatternMapperFn._duckdepth by dslPatternMapperExtension { m, args, 
  * @tags duckdepth, sidechain, ducking, attenuation, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.duckdepth(amount: PatternLike? = null): SprudelPattern =
-    this._duckdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDuckDepth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the ducking depth.
@@ -1957,8 +1853,9 @@ fun SprudelPattern.duckdepth(amount: PatternLike? = null): SprudelPattern =
  * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
  */
 @SprudelDsl
-fun String.duckdepth(amount: PatternLike? = null): SprudelPattern =
-    this._duckdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().duckdepth(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ducking depth.
@@ -1970,8 +1867,9 @@ fun String.duckdepth(amount: PatternLike? = null): SprudelPattern =
  * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
  */
 @SprudelDsl
-fun duckdepth(amount: PatternLike? = null): PatternMapperFn =
-    _duckdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.duckdepth(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the ducking depth after the previous mapper.
@@ -1983,5 +1881,6 @@ fun duckdepth(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The ducking depth between 0.0 (no ducking) and 1.0 (full silence).
  */
 @SprudelDsl
-fun PatternMapperFn.duckdepth(amount: PatternLike? = null): PatternMapperFn =
-    _duckdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.duckdepth(amount, callInfo) }

@@ -1,21 +1,18 @@
-@file:Suppress("ObjectPropertyName")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
 // ADDONS: functions that are NOT available in the original strudel impl
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
 import io.peekandpoke.klang.sprudel.lang.SprudelDsl
-import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-import io.peekandpoke.klang.sprudel.lang._orbit
 import io.peekandpoke.klang.sprudel.lang.chain
-import io.peekandpoke.klang.sprudel.lang.dslPatternExtension
-import io.peekandpoke.klang.sprudel.lang.dslPatternMapper
-import io.peekandpoke.klang.sprudel.lang.dslPatternMapperExtension
-import io.peekandpoke.klang.sprudel.lang.dslStringExtension
 import io.peekandpoke.klang.sprudel.lang.orbit
+import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -24,14 +21,6 @@ import io.peekandpoke.klang.sprudel.lang.orbit
 var sprudelLangDynamicsAddonsInit = false
 
 // -- cylinder() — alias for orbit() ----------------------------------------------------------------------------------
-
-internal val SprudelPattern._cylinder by dslPatternExtension { p, args, callInfo -> p._orbit(args, callInfo) }
-internal val String._cylinder by dslStringExtension { p, args, callInfo -> p._cylinder(args, callInfo) }
-internal val _cylinder by dslPatternMapper { args, callInfo -> { p -> p._cylinder(args, callInfo) } }
-
-internal val PatternMapperFn._cylinder by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_cylinder(args, callInfo))
-}
 
 /**
  * Routes events to a specific audio output cylinder (alias for [orbit]).
@@ -49,8 +38,9 @@ internal val PatternMapperFn._cylinder by dslPatternMapperExtension { m, args, c
  * @tags cylinder, orbit, routing, effects, bus, channel, addon
  */
 @SprudelDsl
-fun SprudelPattern.cylinder(index: PatternLike? = null): SprudelPattern =
-    this._cylinder(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.orbit(index, callInfo)
 
 /**
  * Parses this string as a pattern and routes it to the given audio output cylinder (alias for [orbit]).
@@ -65,8 +55,9 @@ fun SprudelPattern.cylinder(index: PatternLike? = null): SprudelPattern =
  * @tags cylinder, orbit, routing, effects, bus, channel, addon
  */
 @SprudelDsl
-fun String.cylinder(index: PatternLike? = null): SprudelPattern =
-    this._cylinder(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun String.cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().orbit(index, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that routes events to the given audio output cylinder (alias for [orbit]).
@@ -81,8 +72,9 @@ fun String.cylinder(index: PatternLike? = null): SprudelPattern =
  * @tags cylinder, orbit, routing, effects, bus, channel, addon
  */
 @SprudelDsl
-fun cylinder(index: PatternLike? = null): PatternMapperFn =
-    _cylinder(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.orbit(index, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that routes events to the given cylinder after the previous mapper
@@ -98,5 +90,6 @@ fun cylinder(index: PatternLike? = null): PatternMapperFn =
  * @tags cylinder, orbit, routing, effects, bus, channel, addon
  */
 @SprudelDsl
-fun PatternMapperFn.cylinder(index: PatternLike? = null): PatternMapperFn =
-    this._cylinder(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.orbit(index, callInfo) }
