@@ -97,21 +97,9 @@ fun PatternMapperFn.gain(amount: PatternLike? = null, callInfo: CallInfo? = null
 
 private val panMutation = voiceModifier { copy(pan = it?.asDoubleOrNull()) }
 
-fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPan(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, panMutation)
 }
-
-internal val SprudelPattern._pan by dslPatternExtension { p, args, /* callInfo */ _ -> applyPan(p, args) }
-
-internal val String._pan by dslStringExtension { p, args, callInfo -> p._pan(args, callInfo) }
-
-internal val _pan by dslPatternMapper { args, callInfo -> { p -> p._pan(args, callInfo) } }
-
-internal val PatternMapperFn._pan by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pan(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the stereo panning position for each event (0 = full left, 0.5 = centre, 1 = full right).
@@ -137,8 +125,9 @@ internal val PatternMapperFn._pan by dslPatternMapperExtension { m, args, callIn
  * @tags pan, stereo, panning, position
  */
 @SprudelDsl
-fun SprudelPattern.pan(amount: PatternLike? = null): SprudelPattern =
-    this._pan(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPan(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the stereo panning position.
@@ -150,8 +139,9 @@ fun SprudelPattern.pan(amount: PatternLike? = null): SprudelPattern =
  * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
  */
 @SprudelDsl
-fun String.pan(amount: PatternLike? = null): SprudelPattern =
-    this._pan(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().pan(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the pan for each event in a pattern.
@@ -161,8 +151,9 @@ fun String.pan(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun pan(amount: PatternLike? = null): PatternMapperFn =
-    _pan(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun pan(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pan(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the pan after the previous mapper.
@@ -174,37 +165,16 @@ fun pan(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The panning position for each event, ranging from 0 (full left) to 1 (full right).
  */
 @SprudelDsl
-fun PatternMapperFn.pan(amount: PatternLike? = null): PatternMapperFn =
-    _pan(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pan(amount, callInfo) }
 
 // -- velocity() / vel() -----------------------------------------------------------------------------------------------
 
 private val velocityMutation = voiceModifier { copy(velocity = it?.asDoubleOrNull()) }
 
-fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, velocityMutation)
-}
-
-internal val SprudelPattern._velocity by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyVelocity(p, args)
-}
-
-internal val String._velocity by dslStringExtension { p, args, callInfo -> p._velocity(args, callInfo) }
-
-internal val _velocity by dslPatternMapper { args, callInfo -> { p -> p._velocity(args, callInfo) } }
-
-internal val PatternMapperFn._velocity by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_velocity(args, callInfo))
-}
-
-internal val SprudelPattern._vel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVelocity(p, args) }
-
-internal val String._vel by dslStringExtension { p, args, callInfo -> p._velocity(args, callInfo) }
-
-internal val _vel by dslPatternMapper { args, callInfo -> { p -> p._velocity(args, callInfo) } }
-
-internal val PatternMapperFn._vel by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_vel(args, callInfo))
 }
 
 // ===== USER-FACING OVERLOADS =====
@@ -231,8 +201,9 @@ internal val PatternMapperFn._vel by dslPatternMapperExtension { m, args, callIn
  * @tags velocity, vel, volume, midi, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.velocity(amount: PatternLike? = null): SprudelPattern =
-    this._velocity(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyVelocity(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the velocity (gain multiplier) for each event.
@@ -244,8 +215,9 @@ fun SprudelPattern.velocity(amount: PatternLike? = null): SprudelPattern =
  * @param amount The velocity value or pattern to apply to the events.
  */
 @SprudelDsl
-fun String.velocity(amount: PatternLike? = null): SprudelPattern =
-    this._velocity(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().velocity(amount, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
@@ -257,8 +229,9 @@ fun String.velocity(amount: PatternLike? = null): SprudelPattern =
  * @param amount The velocity value or pattern to apply to the events.
  */
 @SprudelDsl
-fun velocity(amount: PatternLike? = null): PatternMapperFn =
-    _velocity(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.velocity(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
@@ -270,8 +243,9 @@ fun velocity(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The velocity value or pattern to apply to the events.
  */
 @SprudelDsl
-fun PatternMapperFn.velocity(amount: PatternLike? = null): PatternMapperFn =
-    _velocity(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.velocity(amount, callInfo) }
 
 /**
  * Alias for [velocity]. Sets the gain 'velocity'. It is multiplied with the gain of the events.
@@ -291,8 +265,9 @@ fun PatternMapperFn.velocity(amount: PatternLike? = null): PatternMapperFn =
  * @tags vel, velocity, volume, midi, dynamics
  */
 @SprudelDsl
-fun SprudelPattern.vel(amount: PatternLike? = null): SprudelPattern =
-    this._vel(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.velocity(amount, callInfo)
 
 /**
  * Alias for [velocity]. Sets the velocity (gain multiplier) for each event in this pattern.
@@ -304,8 +279,9 @@ fun SprudelPattern.vel(amount: PatternLike? = null): SprudelPattern =
  * @param amount The velocity value or pattern to apply to the events.
  */
 @SprudelDsl
-fun String.vel(amount: PatternLike? = null): SprudelPattern =
-    this._vel(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().velocity(amount, callInfo)
 
 /**
  * Alias for [velocity]. Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
@@ -317,8 +293,9 @@ fun String.vel(amount: PatternLike? = null): SprudelPattern =
  * @param amount The velocity value or pattern to apply to the events.
  */
 @SprudelDsl
-fun vel(amount: PatternLike? = null): PatternMapperFn =
-    _vel(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.velocity(amount, callInfo) }
 
 /**
  * Alias for [velocity]. Creates a chained [PatternMapperFn] that sets the velocity after the previous mapper.
@@ -330,27 +307,16 @@ fun vel(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The velocity value or pattern to apply to the events.
  */
 @SprudelDsl
-fun PatternMapperFn.vel(amount: PatternLike? = null): PatternMapperFn =
-    _vel(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.velocity(amount, callInfo) }
 
 // -- postgain() -------------------------------------------------------------------------------------------------------
 
 private val postgainMutation = voiceModifier { copy(postGain = it?.asDoubleOrNull()) }
 
-fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, postgainMutation)
-}
-
-internal val SprudelPattern._postgain by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPostgain(p, args)
-}
-
-internal val String._postgain by dslStringExtension { p, args, callInfo -> p._postgain(args, callInfo) }
-
-internal val _postgain by dslPatternMapper { args, callInfo -> { p -> p._postgain(args, callInfo) } }
-
-internal val PatternMapperFn._postgain by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_postgain(args, callInfo))
 }
 
 // ===== USER-FACING OVERLOADS =====
@@ -374,8 +340,9 @@ internal val PatternMapperFn._postgain by dslPatternMapperExtension { m, args, c
  * @tags postgain, gain, volume, post-processing
  */
 @SprudelDsl
-fun SprudelPattern.postgain(amount: PatternLike? = null): SprudelPattern =
-    this._postgain(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPostgain(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the post-gain for each event.
@@ -387,8 +354,9 @@ fun SprudelPattern.postgain(amount: PatternLike? = null): SprudelPattern =
  * @param amount The post-gain value or pattern to apply to the events.
  */
 @SprudelDsl
-fun String.postgain(amount: PatternLike? = null): SprudelPattern =
-    this._postgain(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().postgain(amount, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
@@ -400,8 +368,9 @@ fun String.postgain(amount: PatternLike? = null): SprudelPattern =
  * @param amount The post-gain value or pattern to apply to the events.
  */
 @SprudelDsl
-fun postgain(amount: PatternLike? = null): PatternMapperFn =
-    _postgain(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.postgain(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the post-gain after the previous mapper.
@@ -413,8 +382,9 @@ fun postgain(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The post-gain value or pattern to apply to the events.
  */
 @SprudelDsl
-fun PatternMapperFn.postgain(amount: PatternLike? = null): PatternMapperFn =
-    _postgain(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.postgain(amount, callInfo) }
 
 // -- compressor() / comp() --------------------------------------------------------------------------------------------
 
