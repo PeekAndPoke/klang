@@ -1,7 +1,10 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
@@ -14,21 +17,9 @@ var sprudelLangVowelInit = false
 
 // -- vowel() ----------------------------------------------------------------------------------------------------------
 
-fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyVowel(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args) { v -> copy(vowel = v?.lowercase()) }
 }
-
-internal val SprudelPattern._vowel by dslPatternExtension { p, args, /* callInfo */ _ -> applyVowel(p, args) }
-
-internal val String._vowel by dslStringExtension { p, args, callInfo -> p._vowel(args, callInfo) }
-
-internal val _vowel by dslPatternMapper { args, callInfo -> { p -> p._vowel(args, callInfo) } }
-
-internal val PatternMapperFn._vowel by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_vowel(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the vowel formant filter.
@@ -62,19 +53,23 @@ internal val PatternMapperFn._vowel by dslPatternMapperExtension { m, args, call
  * @tags vowel, formant, vocal, filter, singing
  */
 @SprudelDsl
-fun SprudelPattern.vowel(vowel: PatternLike? = null): SprudelPattern =
-    this._vowel(listOfNotNull(vowel).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyVowel(this, listOfNotNull(vowel).asSprudelDslArgs(callInfo))
 
 /** Sets the vowel formant filter on a string pattern. */
 @SprudelDsl
-fun String.vowel(vowel: PatternLike? = null): SprudelPattern =
-    this._vowel(listOfNotNull(vowel).asSprudelDslArgs())
+@KlangScript.Function
+fun String.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().vowel(vowel, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the vowel formant filter. */
 @SprudelDsl
-fun vowel(vowel: PatternLike? = null): PatternMapperFn = _vowel(listOfNotNull(vowel).asSprudelDslArgs())
+@KlangScript.Function
+fun vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.vowel(vowel, callInfo) }
 
 /** Chains a vowel step onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.vowel(vowel: PatternLike? = null): PatternMapperFn =
-    this._vowel(listOfNotNull(vowel).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.vowel(vowel, callInfo) }
