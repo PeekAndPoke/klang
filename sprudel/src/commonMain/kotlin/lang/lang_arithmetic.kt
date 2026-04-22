@@ -1,7 +1,10 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
@@ -17,7 +20,7 @@ import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinter
 var sprudelLangArithmeticInit = false
 
 // Helper for arithmetic operations that modify the 'value' field
-fun applyArithmetic(
+internal fun applyArithmetic(
     source: SprudelPattern,
     args: List<SprudelDslArg<Any?>>,
     op: (SprudelVoiceValue, SprudelVoiceValue) -> SprudelVoiceValue?,
@@ -37,7 +40,7 @@ fun applyArithmetic(
 /**
  * Helper for applying unary operations to patterns.
  */
-fun applyUnaryOp(
+internal fun applyUnaryOp(
     source: SprudelPattern,
     op: (SprudelVoiceValue) -> SprudelVoiceValue?,
 ): SprudelPattern {
@@ -55,13 +58,6 @@ fun applyUnaryOp(
 }
 
 // -- add() ------------------------------------------------------------------------------------------------------------
-
-internal val SprudelPattern._add by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a + b } }
-internal val String._add by dslStringExtension { p, args, callInfo -> p._add(args, callInfo) }
-internal val _add by dslPatternMapper { args, callInfo -> { p -> p._add(args, callInfo) } }
-internal val PatternMapperFn._add by dslPatternMapperExtension { m, args, callInfo -> m.chain(_add(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Adds [amount] to every numeric value in the pattern.
@@ -84,7 +80,9 @@ internal val PatternMapperFn._add by dslPatternMapperExtension { m, args, callIn
  * @tags add, arithmetic, math, offset
  */
 @SprudelDsl
-fun SprudelPattern.add(amount: PatternLike): SprudelPattern = this._add(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.add(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(amount).asSprudelDslArgs(callInfo)) { a, b -> a + b }
 
 /**
  * Parses this string as a pattern, then adds [amount] to every numeric value.
@@ -99,7 +97,9 @@ fun SprudelPattern.add(amount: PatternLike): SprudelPattern = this._add(listOf(a
  * @param amount The value to add. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.add(amount: PatternLike): SprudelPattern = this._add(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.add(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().add(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that adds [amount] to every numeric value in a pattern.
@@ -114,7 +114,9 @@ fun String.add(amount: PatternLike): SprudelPattern = this._add(listOf(amount).a
  * @param amount The value to add. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun add(amount: PatternLike): PatternMapperFn = _add(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun add(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.add(amount, callInfo) }
 
 /**
  * Chains a PatternMapperFn to this pattern, adding [amount] to every numeric value in the result.
@@ -126,16 +128,11 @@ fun add(amount: PatternLike): PatternMapperFn = _add(listOf(amount).asSprudelDsl
  * @param amount The value to subtract. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.add(amount: PatternLike): PatternMapperFn = _add(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.add(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.add(amount, callInfo) }
 
 // -- sub() ------------------------------------------------------------------------------------------------------------
-
-internal val _sub by dslPatternMapper { args, callInfo -> { p -> p._sub(args, callInfo) } }
-internal val SprudelPattern._sub by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a - b } }
-internal val String._sub by dslStringExtension { p, args, callInfo -> p._sub(args, callInfo) }
-internal val PatternMapperFn._sub by dslPatternMapperExtension { m, args, callInfo -> m.chain(_sub(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Subtracts [amount] from every numeric value in the pattern.
@@ -158,7 +155,9 @@ internal val PatternMapperFn._sub by dslPatternMapperExtension { m, args, callIn
  * @tags sub, subtract, arithmetic, math, offset
  */
 @SprudelDsl
-fun SprudelPattern.sub(amount: PatternLike): SprudelPattern = this._sub(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.sub(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(amount).asSprudelDslArgs(callInfo)) { a, b -> a - b }
 
 /**
  * Parses this string as a pattern, then subtracts [amount] from every numeric value.
@@ -173,7 +172,9 @@ fun SprudelPattern.sub(amount: PatternLike): SprudelPattern = this._sub(listOf(a
  * @param amount The value to subtract. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.sub(amount: PatternLike): SprudelPattern = this._sub(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.sub(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().sub(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that subtracts [amount] from every numeric value in a pattern.
@@ -188,7 +189,9 @@ fun String.sub(amount: PatternLike): SprudelPattern = this._sub(listOf(amount).a
  * @param amount The value to subtract. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun sub(amount: PatternLike): PatternMapperFn = _sub(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun sub(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.sub(amount, callInfo) }
 
 /**
  * Chains a subtraction onto this [PatternMapperFn], subtracting [amount] from every numeric value in the result.
@@ -200,16 +203,11 @@ fun sub(amount: PatternLike): PatternMapperFn = _sub(listOf(amount).asSprudelDsl
  * @param amount The value to subtract. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.sub(amount: PatternLike): PatternMapperFn = _sub(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.sub(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.sub(amount, callInfo) }
 
 // -- mul() ------------------------------------------------------------------------------------------------------------
-
-internal val _mul by dslPatternMapper { args, callInfo -> { p -> p._mul(args, callInfo) } }
-internal val SprudelPattern._mul by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a * b } }
-internal val String._mul by dslStringExtension { p, args, callInfo -> p._mul(args, callInfo) }
-internal val PatternMapperFn._mul by dslPatternMapperExtension { m, args, callInfo -> m.chain(_mul(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Multiplies every numeric value in the pattern by [factor].
@@ -232,7 +230,9 @@ internal val PatternMapperFn._mul by dslPatternMapperExtension { m, args, callIn
  * @tags mul, multiply, arithmetic, math, scale
  */
 @SprudelDsl
-fun SprudelPattern.mul(factor: PatternLike): SprudelPattern = this._mul(listOf(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.mul(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(factor).asSprudelDslArgs(callInfo)) { a, b -> a * b }
 
 /**
  * Parses this string as a pattern, then multiplies every numeric value by [factor].
@@ -247,7 +247,9 @@ fun SprudelPattern.mul(factor: PatternLike): SprudelPattern = this._mul(listOf(f
  * @param factor The multiplier. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.mul(factor: PatternLike): SprudelPattern = this._mul(listOf(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.mul(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().mul(factor, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that multiplies every numeric value in a pattern by [factor].
@@ -262,7 +264,9 @@ fun String.mul(factor: PatternLike): SprudelPattern = this._mul(listOf(factor).a
  * @param factor The multiplier. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun mul(factor: PatternLike): PatternMapperFn = _mul(listOf(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun mul(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.mul(factor, callInfo) }
 
 /**
  * Chains a multiplication onto this [PatternMapperFn], multiplying every numeric value by [factor].
@@ -274,16 +278,11 @@ fun mul(factor: PatternLike): PatternMapperFn = _mul(listOf(factor).asSprudelDsl
  * @param factor The multiplier. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.mul(factor: PatternLike): PatternMapperFn = _mul(listOf(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.mul(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.mul(factor, callInfo) }
 
 // -- div() ------------------------------------------------------------------------------------------------------------
-
-internal val _div by dslPatternMapper { args, callInfo -> { p -> p._div(args, callInfo) } }
-internal val SprudelPattern._div by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a / b } }
-internal val String._div by dslStringExtension { p, args, callInfo -> p._div(args, callInfo) }
-internal val PatternMapperFn._div by dslPatternMapperExtension { m, args, callInfo -> m.chain(_div(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Divides every numeric value in the pattern by [divisor].
@@ -306,7 +305,9 @@ internal val PatternMapperFn._div by dslPatternMapperExtension { m, args, callIn
  * @tags div, divide, arithmetic, math, scale
  */
 @SprudelDsl
-fun SprudelPattern.div(divisor: PatternLike): SprudelPattern = this._div(listOf(divisor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.div(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(divisor).asSprudelDslArgs(callInfo)) { a, b -> a / b }
 
 /**
  * Parses this string as a pattern, then divides every numeric value by [divisor].
@@ -321,7 +322,9 @@ fun SprudelPattern.div(divisor: PatternLike): SprudelPattern = this._div(listOf(
  * @param divisor The divisor. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.div(divisor: PatternLike): SprudelPattern = this._div(listOf(divisor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.div(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().div(divisor, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that divides every numeric value in a pattern by [divisor].
@@ -336,7 +339,9 @@ fun String.div(divisor: PatternLike): SprudelPattern = this._div(listOf(divisor)
  * @param divisor The divisor. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun div(divisor: PatternLike): PatternMapperFn = _div(listOf(divisor).asSprudelDslArgs())
+@KlangScript.Function
+fun div(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.div(divisor, callInfo) }
 
 /**
  * Chains a division onto this [PatternMapperFn], dividing every numeric value by [divisor].
@@ -348,16 +353,11 @@ fun div(divisor: PatternLike): PatternMapperFn = _div(listOf(divisor).asSprudelD
  * @param divisor The divisor. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.div(divisor: PatternLike): PatternMapperFn = _div(listOf(divisor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.div(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.div(divisor, callInfo) }
 
 // -- mod() ------------------------------------------------------------------------------------------------------------
-
-internal val _mod by dslPatternMapper { args, callInfo -> { p -> p._mod(args, callInfo) } }
-internal val SprudelPattern._mod by dslPatternExtension { p, args, _ -> applyArithmetic(p, args) { a, b -> a % b } }
-internal val String._mod by dslStringExtension { p, args, callInfo -> p._mod(args, callInfo) }
-internal val PatternMapperFn._mod by dslPatternMapperExtension { m, args, callInfo -> m.chain(_mod(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies modulo [divisor] to every numeric value in the pattern.
@@ -381,7 +381,9 @@ internal val PatternMapperFn._mod by dslPatternMapperExtension { m, args, callIn
  * @tags mod, modulo, arithmetic, math, wrap
  */
 @SprudelDsl
-fun SprudelPattern.mod(divisor: PatternLike): SprudelPattern = this._mod(listOf(divisor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.mod(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(divisor).asSprudelDslArgs(callInfo)) { a, b -> a % b }
 
 /**
  * Parses this string as a pattern, then applies modulo [divisor] to every numeric value.
@@ -396,7 +398,9 @@ fun SprudelPattern.mod(divisor: PatternLike): SprudelPattern = this._mod(listOf(
  * @param divisor The modulus. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.mod(divisor: PatternLike): SprudelPattern = this._mod(listOf(divisor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.mod(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().mod(divisor, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies modulo [divisor] to every numeric value in a pattern.
@@ -412,7 +416,9 @@ fun String.mod(divisor: PatternLike): SprudelPattern = this._mod(listOf(divisor)
  * @param divisor The modulus. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun mod(divisor: PatternLike): PatternMapperFn = _mod(listOf(divisor).asSprudelDslArgs())
+@KlangScript.Function
+fun mod(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.mod(divisor, callInfo) }
 
 /**
  * Chains a modulo operation onto this [PatternMapperFn], applying modulo [divisor] to every numeric value.
@@ -424,18 +430,11 @@ fun mod(divisor: PatternLike): PatternMapperFn = _mod(listOf(divisor).asSprudelD
  * @param divisor The modulus. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.mod(divisor: PatternLike): PatternMapperFn = _mod(listOf(divisor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.mod(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.mod(divisor, callInfo) }
 
 // -- pow() ------------------------------------------------------------------------------------------------------------
-
-internal val _pow by dslPatternMapper { args, callInfo -> { p -> p._pow(args, callInfo) } }
-internal val SprudelPattern._pow by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a pow b }
-}
-internal val String._pow by dslStringExtension { p, args, callInfo -> p._pow(args, callInfo) }
-internal val PatternMapperFn._pow by dslPatternMapperExtension { m, args, callInfo -> m.chain(_pow(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Raises every numeric value in the pattern to the power of [exponent].
@@ -458,7 +457,9 @@ internal val PatternMapperFn._pow by dslPatternMapperExtension { m, args, callIn
  * @tags pow, power, exponent, arithmetic, math
  */
 @SprudelDsl
-fun SprudelPattern.pow(exponent: PatternLike): SprudelPattern = this._pow(listOf(exponent).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pow(exponent: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(exponent).asSprudelDslArgs(callInfo)) { a, b -> a pow b }
 
 /**
  * Parses this string as a pattern, then raises every numeric value to the power of [exponent].
@@ -473,7 +474,9 @@ fun SprudelPattern.pow(exponent: PatternLike): SprudelPattern = this._pow(listOf
  * @param exponent The exponent. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.pow(exponent: PatternLike): SprudelPattern = this._pow(listOf(exponent).asSprudelDslArgs())
+@KlangScript.Function
+fun String.pow(exponent: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().pow(exponent, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that raises every numeric value in a pattern to the power of [exponent].
@@ -488,7 +491,9 @@ fun String.pow(exponent: PatternLike): SprudelPattern = this._pow(listOf(exponen
  * @param exponent The exponent. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun pow(exponent: PatternLike): PatternMapperFn = _pow(listOf(exponent).asSprudelDslArgs())
+@KlangScript.Function
+fun pow(exponent: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pow(exponent, callInfo) }
 
 /**
  * Chains an exponentiation onto this [PatternMapperFn], raising every numeric value to [exponent].
@@ -500,18 +505,11 @@ fun pow(exponent: PatternLike): PatternMapperFn = _pow(listOf(exponent).asSprude
  * @param exponent The exponent. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.pow(exponent: PatternLike): PatternMapperFn = _pow(listOf(exponent).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pow(exponent: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pow(exponent, callInfo) }
 
 // -- band() (Bitwise AND) ---------------------------------------------------------------------------------------------
-
-internal val _band by dslPatternMapper { args, callInfo -> { p -> p._band(args, callInfo) } }
-internal val SprudelPattern._band by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a band b }
-}
-internal val String._band by dslStringExtension { p, args, callInfo -> p._band(args, callInfo) }
-internal val PatternMapperFn._band by dslPatternMapperExtension { m, args, callInfo -> m.chain(_band(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies bitwise AND of [mask] to every integer value in the pattern.
@@ -533,7 +531,9 @@ internal val PatternMapperFn._band by dslPatternMapperExtension { m, args, callI
  * @tags band, bitwise, and, arithmetic, binary
  */
 @SprudelDsl
-fun SprudelPattern.band(mask: PatternLike): SprudelPattern = this._band(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a band b }
 
 /**
  * Parses this string as a pattern, then applies bitwise AND with [mask] to every integer value.
@@ -548,7 +548,9 @@ fun SprudelPattern.band(mask: PatternLike): SprudelPattern = this._band(listOf(m
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.band(mask: PatternLike): SprudelPattern = this._band(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun String.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().band(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise AND of [mask] to every integer value in a pattern.
@@ -563,7 +565,9 @@ fun String.band(mask: PatternLike): SprudelPattern = this._band(listOf(mask).asS
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun band(mask: PatternLike): PatternMapperFn = _band(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun band(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.band(mask, callInfo) }
 
 /**
  * Chains a bitwise AND onto this [PatternMapperFn], applying [mask] to every integer value.
@@ -575,18 +579,11 @@ fun band(mask: PatternLike): PatternMapperFn = _band(listOf(mask).asSprudelDslAr
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.band(mask: PatternLike): PatternMapperFn = _band(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.band(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.band(mask, callInfo) }
 
 // -- bor() (Bitwise OR) -----------------------------------------------------------------------------------------------
-
-internal val _bor by dslPatternMapper { args, callInfo -> { p -> p._bor(args, callInfo) } }
-internal val SprudelPattern._bor by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a bor b }
-}
-internal val String._bor by dslStringExtension { p, args, callInfo -> p._bor(args, callInfo) }
-internal val PatternMapperFn._bor by dslPatternMapperExtension { m, args, callInfo -> m.chain(_bor(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies bitwise OR of [mask] to every integer value in the pattern.
@@ -608,7 +605,9 @@ internal val PatternMapperFn._bor by dslPatternMapperExtension { m, args, callIn
  * @tags bor, bitwise, or, arithmetic, binary
  */
 @SprudelDsl
-fun SprudelPattern.bor(mask: PatternLike): SprudelPattern = this._bor(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bor b }
 
 /**
  * Parses this string as a pattern, then applies bitwise OR with [mask] to every integer value.
@@ -623,7 +622,9 @@ fun SprudelPattern.bor(mask: PatternLike): SprudelPattern = this._bor(listOf(mas
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.bor(mask: PatternLike): SprudelPattern = this._bor(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun String.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().bor(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise OR of [mask] to every integer value in a pattern.
@@ -638,7 +639,9 @@ fun String.bor(mask: PatternLike): SprudelPattern = this._bor(listOf(mask).asSpr
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun bor(mask: PatternLike): PatternMapperFn = _bor(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun bor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bor(mask, callInfo) }
 
 /**
  * Chains a bitwise OR onto this [PatternMapperFn], applying [mask] to every integer value.
@@ -650,18 +653,11 @@ fun bor(mask: PatternLike): PatternMapperFn = _bor(listOf(mask).asSprudelDslArgs
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.bor(mask: PatternLike): PatternMapperFn = _bor(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.bor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bor(mask, callInfo) }
 
 // -- bxor() (Bitwise XOR) ---------------------------------------------------------------------------------------------
-
-internal val _bxor by dslPatternMapper { args, callInfo -> { p -> p._bxor(args, callInfo) } }
-internal val SprudelPattern._bxor by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a bxor b }
-}
-internal val String._bxor by dslStringExtension { p, args, callInfo -> p._bxor(args, callInfo) }
-internal val PatternMapperFn._bxor by dslPatternMapperExtension { m, args, callInfo -> m.chain(_bxor(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies bitwise XOR of [mask] to every integer value in the pattern.
@@ -684,7 +680,9 @@ internal val PatternMapperFn._bxor by dslPatternMapperExtension { m, args, callI
  * @tags bxor, bitwise, xor, arithmetic, binary
  */
 @SprudelDsl
-fun SprudelPattern.bxor(mask: PatternLike): SprudelPattern = this._bxor(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bxor b }
 
 /**
  * Parses this string as a pattern, then applies bitwise XOR with [mask] to every integer value.
@@ -699,7 +697,9 @@ fun SprudelPattern.bxor(mask: PatternLike): SprudelPattern = this._bxor(listOf(m
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.bxor(mask: PatternLike): SprudelPattern = this._bxor(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun String.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().bxor(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise XOR of [mask] to every integer value in a pattern.
@@ -714,7 +714,9 @@ fun String.bxor(mask: PatternLike): SprudelPattern = this._bxor(listOf(mask).asS
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun bxor(mask: PatternLike): PatternMapperFn = _bxor(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun bxor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bxor(mask, callInfo) }
 
 /**
  * Chains a bitwise XOR onto this [PatternMapperFn], applying [mask] to every integer value.
@@ -726,28 +728,14 @@ fun bxor(mask: PatternLike): PatternMapperFn = _bxor(listOf(mask).asSprudelDslAr
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.bxor(mask: PatternLike): PatternMapperFn = _bxor(listOf(mask).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.bxor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bxor(mask, callInfo) }
 
 // -- blshift() (Bitwise Left Shift) -----------------------------------------------------------------------------------
 
-internal val _blshift by dslPatternMapper { args, callInfo -> { p -> p._blshift(args, callInfo) } }
-internal val SprudelPattern._blshift by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a shl b }
-}
-internal val String._blshift by dslStringExtension { p, args, callInfo -> p._blshift(args, callInfo) }
-internal val PatternMapperFn._blshift by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(
-        _blshift(
-            args,
-            callInfo
-        )
-    )
-}
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
- * Shifts every integer value in the pattern left by [bits] bits (equivalent to multiplying by 2ⁿ).
+ * Shifts every integer value in the pattern left by [bits] bits (equivalent to multiplying by 2^n).
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
  * remain unchanged. Values are truncated to integers before the operation.
@@ -766,7 +754,9 @@ internal val PatternMapperFn._blshift by dslPatternMapperExtension { m, args, ca
  * @tags blshift, bitwise, shift, left shift, arithmetic, binary
  */
 @SprudelDsl
-fun SprudelPattern.blshift(bits: PatternLike): SprudelPattern = this._blshift(listOf(bits).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(bits).asSprudelDslArgs(callInfo)) { a, b -> a shl b }
 
 /**
  * Parses this string as a pattern, then shifts every integer value left by [bits] bits.
@@ -781,7 +771,9 @@ fun SprudelPattern.blshift(bits: PatternLike): SprudelPattern = this._blshift(li
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.blshift(bits: PatternLike): SprudelPattern = this._blshift(listOf(bits).asSprudelDslArgs())
+@KlangScript.Function
+fun String.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().blshift(bits, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that shifts every integer value in a pattern left by [bits] bits.
@@ -797,7 +789,9 @@ fun String.blshift(bits: PatternLike): SprudelPattern = this._blshift(listOf(bit
  *   or a [SprudelPattern].
  */
 @SprudelDsl
-fun blshift(bits: PatternLike): PatternMapperFn = _blshift(listOf(bits).asSprudelDslArgs())
+@KlangScript.Function
+fun blshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.blshift(bits, callInfo) }
 
 /**
  * Chains a bitwise left-shift onto this [PatternMapperFn], shifting every integer value left by [bits] bits.
@@ -809,28 +803,14 @@ fun blshift(bits: PatternLike): PatternMapperFn = _blshift(listOf(bits).asSprude
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.blshift(bits: PatternLike): PatternMapperFn = _blshift(listOf(bits).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.blshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.blshift(bits, callInfo) }
 
 // -- brshift() (Bitwise Right Shift) ----------------------------------------------------------------------------------
 
-internal val _brshift by dslPatternMapper { args, callInfo -> { p -> p._brshift(args, callInfo) } }
-internal val SprudelPattern._brshift by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a shr b }
-}
-internal val String._brshift by dslStringExtension { p, args, callInfo -> p._brshift(args, callInfo) }
-internal val PatternMapperFn._brshift by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(
-        _brshift(
-            args,
-            callInfo
-        )
-    )
-}
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
- * Shifts every integer value in the pattern right by [bits] bits (equivalent to integer-dividing by 2ⁿ).
+ * Shifts every integer value in the pattern right by [bits] bits (equivalent to integer-dividing by 2^n).
  *
  * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
  * remain unchanged. Values are truncated to integers before the operation.
@@ -849,7 +829,9 @@ internal val PatternMapperFn._brshift by dslPatternMapperExtension { m, args, ca
  * @tags brshift, bitwise, shift, right shift, arithmetic, binary
  */
 @SprudelDsl
-fun SprudelPattern.brshift(bits: PatternLike): SprudelPattern = this._brshift(listOf(bits).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(bits).asSprudelDslArgs(callInfo)) { a, b -> a shr b }
 
 /**
  * Parses this string as a pattern, then shifts every integer value right by [bits] bits.
@@ -864,7 +846,9 @@ fun SprudelPattern.brshift(bits: PatternLike): SprudelPattern = this._brshift(li
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun String.brshift(bits: PatternLike): SprudelPattern = this._brshift(listOf(bits).asSprudelDslArgs())
+@KlangScript.Function
+fun String.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().brshift(bits, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that shifts every integer value in a pattern right by [bits] bits.
@@ -879,7 +863,9 @@ fun String.brshift(bits: PatternLike): SprudelPattern = this._brshift(listOf(bit
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun brshift(bits: PatternLike): PatternMapperFn = _brshift(listOf(bits).asSprudelDslArgs())
+@KlangScript.Function
+fun brshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.brshift(bits, callInfo) }
 
 /**
  * Chains a bitwise right-shift onto this [PatternMapperFn], shifting every integer value right by [bits] bits.
@@ -891,16 +877,11 @@ fun brshift(bits: PatternLike): PatternMapperFn = _brshift(listOf(bits).asSprude
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
 @SprudelDsl
-fun PatternMapperFn.brshift(bits: PatternLike): PatternMapperFn = _brshift(listOf(bits).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.brshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.brshift(bits, callInfo) }
 
 // -- log2() -----------------------------------------------------------------------------------------------------------
-
-internal val _log2 by dslPatternMapper { args, callInfo -> { p -> p._log2(args, callInfo) } }
-internal val SprudelPattern._log2 by dslPatternExtension { p, _, _ -> applyUnaryOp(p) { it.log2() } }
-internal val String._log2 by dslStringExtension { p, args, callInfo -> p._log2(args, callInfo) }
-internal val PatternMapperFn._log2 by dslPatternMapperExtension { m, _, _ -> m.chain(_log2(emptyList())) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies log base 2 to every numeric value in the pattern.
@@ -910,19 +891,21 @@ internal val PatternMapperFn._log2 by dslPatternMapperExtension { m, _, _ -> m.c
  * octave values.
  *
  * ```KlangScript(Playable)
- * "8 16".log2().scale("c3:major").n()  // log₂(8)=3, log₂(16)=4
+ * "8 16".log2().scale("c3:major").n()  // log2(8)=3, log2(16)=4
  * ```
  *
  * ```KlangScript(Playable)
  * "1 2 4 8".log2().scale("c3:major").n()  // 0, 1, 2, 3
  * ```
  *
- * @return A new pattern where each value is replaced by `log₂(value)`.
+ * @return A new pattern where each value is replaced by `log2(value)`.
  * @category arithmetic
  * @tags log2, logarithm, arithmetic, math
  */
 @SprudelDsl
-fun SprudelPattern.log2(): SprudelPattern = this._log2()
+@KlangScript.Function
+fun SprudelPattern.log2(callInfo: CallInfo? = null): SprudelPattern =
+    applyUnaryOp(this) { it.log2() }
 
 /**
  * Parses this string as a pattern, then applies log base 2 to every numeric value.
@@ -935,7 +918,9 @@ fun SprudelPattern.log2(): SprudelPattern = this._log2()
  * ```
  */
 @SprudelDsl
-fun String.log2(): SprudelPattern = this._log2()
+@KlangScript.Function
+fun String.log2(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().log2(callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies log base 2 to every numeric value in a pattern.
@@ -948,28 +933,23 @@ fun String.log2(): SprudelPattern = this._log2()
  * ```
  */
 @SprudelDsl
-fun log2(): PatternMapperFn = _log2(emptyList())
+@KlangScript.Function
+fun log2(callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.log2(callInfo) }
 
 /**
- * Chains a log₂ operation onto this [PatternMapperFn], applying log base 2 to every numeric value.
+ * Chains a log2 operation onto this [PatternMapperFn], applying log base 2 to every numeric value.
  *
  * ```KlangScript(Playable)
  * seq("2 4").apply(mul(4).log2()).scale("c3:major").n()  // log2(2*4)=log2(8)=3, log2(4*4)=log2(16)=4
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.log2(): PatternMapperFn = _log2(emptyList())
+@KlangScript.Function
+fun PatternMapperFn.log2(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.log2(callInfo) }
 
 // -- lt() (Less Than) -------------------------------------------------------------------------------------------------
-
-internal val _lt by dslPatternMapper { args, callInfo -> { p -> p._lt(args, callInfo) } }
-internal val SprudelPattern._lt by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a lt b }
-}
-internal val String._lt by dslStringExtension { p, args, callInfo -> p._lt(args, callInfo) }
-internal val PatternMapperFn._lt by dslPatternMapperExtension { m, args, callInfo -> m.chain(_lt(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Compares every value in the pattern to [threshold], replacing each with `1` (true) if less
@@ -980,7 +960,7 @@ internal val PatternMapperFn._lt by dslPatternMapperExtension { m, args, callInf
  * [SprudelPattern] as [threshold] to modulate the threshold per cycle or event.
  *
  * ```KlangScript(Playable)
- * seq("5 10").lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
+ * seq("5 10").lt(8).scale("c3:major").n()  // 5<8 -> 1, 10<8 -> 0
  * ```
  *
  * ```KlangScript(Playable)
@@ -993,78 +973,30 @@ internal val PatternMapperFn._lt by dslPatternMapperExtension { m, args, callInf
  * @tags lt, less than, comparison, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.lt(threshold: PatternLike): SprudelPattern = this._lt(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.lt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(threshold).asSprudelDslArgs(callInfo)) { a, b -> a lt b }
 
-/**
- * Parses this string as a pattern, then compares every value to [threshold] using less-than.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "5 10".lt(8).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.lt(threshold: PatternLike): SprudelPattern = this._lt(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun String.lt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().lt(threshold, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that compares every value in a pattern to [threshold], replacing
- * each with `1` (true) if less than [threshold] or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("5 10").apply(lt(8)).scale("c3:major").n()  // 5<8 → 1, 10<8 → 0
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun lt(threshold: PatternLike): PatternMapperFn = _lt(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun lt(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lt(threshold, callInfo) }
 
-/**
- * Chains a less-than comparison onto this [PatternMapperFn], replacing each value with `1` if less
- * than [threshold] or `0` otherwise.
- *
- * ```KlangScript(Playable)
- * seq("5 10").apply(add(3).lt(9)).scale("c3:major").n()  // (5+3)<9=1, (10+3)<9=0
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.lt(threshold: PatternLike): PatternMapperFn = _lt(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.lt(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.lt(threshold, callInfo) }
 
 // -- gt() (Greater Than) ----------------------------------------------------------------------------------------------
-
-internal val _gt by dslPatternMapper { args, callInfo -> { p -> p._gt(args, callInfo) } }
-internal val SprudelPattern._gt by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a gt b }
-}
-internal val String._gt by dslStringExtension { p, args, callInfo -> p._gt(args, callInfo) }
-internal val PatternMapperFn._gt by dslPatternMapperExtension { m, args, callInfo -> m.chain(_gt(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Compares every value in the pattern to [threshold], replacing each with `1` (true) if greater
  * than [threshold] or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
- * remain unchanged. Supports control patterns: pass a mini-notation string or another
- * [SprudelPattern] as [threshold] to modulate the threshold per cycle or event.
- *
- * ```KlangScript(Playable)
- * seq("5 10").gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
- * ```
- *
- * ```KlangScript(Playable)
- * seq("5 10").gt("<8 6>").scale("c3:major").n()  // threshold changes each cycle
- * ```
  *
  * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern of `0`/`1` values.
@@ -1072,78 +1004,30 @@ internal val PatternMapperFn._gt by dslPatternMapperExtension { m, args, callInf
  * @tags gt, greater than, comparison, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.gt(threshold: PatternLike): SprudelPattern = this._gt(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.gt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(threshold).asSprudelDslArgs(callInfo)) { a, b -> a gt b }
 
-/**
- * Parses this string as a pattern, then compares every value to [threshold] using greater-than.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "5 10".gt(8).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.gt(threshold: PatternLike): SprudelPattern = this._gt(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun String.gt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().gt(threshold, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that compares every value in a pattern to [threshold], replacing
- * each with `1` (true) if greater than [threshold] or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("5 10").apply(gt(8)).scale("c3:major").n()  // 5>8 → 0, 10>8 → 1
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun gt(threshold: PatternLike): PatternMapperFn = _gt(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun gt(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.gt(threshold, callInfo) }
 
-/**
- * Chains a greater-than comparison onto this [PatternMapperFn], replacing each value with `1` if greater
- * than [threshold] or `0` otherwise.
- *
- * ```KlangScript(Playable)
- * seq("5 10").apply(add(3).gt(9)).scale("c3:major").n()  // (5+3)>9=0, (10+3)>9=1
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.gt(threshold: PatternLike): PatternMapperFn = _gt(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.gt(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.gt(threshold, callInfo) }
 
 // -- lte() (Less Than or Equal) ---------------------------------------------------------------------------------------
-
-internal val _lte by dslPatternMapper { args, callInfo -> { p -> p._lte(args, callInfo) } }
-internal val SprudelPattern._lte by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a lte b }
-}
-internal val String._lte by dslStringExtension { p, args, callInfo -> p._lte(args, callInfo) }
-internal val PatternMapperFn._lte by dslPatternMapperExtension { m, args, callInfo -> m.chain(_lte(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Compares every value in the pattern to [threshold], replacing each with `1` (true) if less
  * than or equal to [threshold] or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
- * remain unchanged. Supports control patterns: pass a mini-notation string or another
- * [SprudelPattern] as [threshold] to modulate the threshold per cycle or event.
- *
- * ```KlangScript(Playable)
- * seq("5 8 10").lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
- * ```
- *
- * ```KlangScript(Playable)
- * seq("5 8 10").lte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
- * ```
  *
  * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern of `0`/`1` values.
@@ -1151,79 +1035,30 @@ internal val PatternMapperFn._lte by dslPatternMapperExtension { m, args, callIn
  * @tags lte, less than or equal, comparison, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.lte(threshold: PatternLike): SprudelPattern = this._lte(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.lte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(threshold).asSprudelDslArgs(callInfo)) { a, b -> a lte b }
 
-/**
- * Parses this string as a pattern, then compares every value to [threshold]
- * using less-than-or-equal.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "5 8 10".lte(8).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.lte(threshold: PatternLike): SprudelPattern = this._lte(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun String.lte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().lte(threshold, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that compares every value in a pattern to [threshold], replacing
- * each with `1` (true) if less than or equal to [threshold] or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("5 8 10").apply(lte(8)).scale("c3:major").n()  // 5<=8 → 1, 8<=8 → 1, 10<=8 → 0
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun lte(threshold: PatternLike): PatternMapperFn = _lte(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun lte(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lte(threshold, callInfo) }
 
-/**
- * Chains a less-than-or-equal comparison onto this [PatternMapperFn], replacing each value with `1` if
- * less than or equal to [threshold] or `0` otherwise.
- *
- * ```KlangScript(Playable)
- * seq("5 10").apply(add(3).lte(11)).scale("c3:major").n()  // (5+3)<=11=1, (10+3)<=11=0
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.lte(threshold: PatternLike): PatternMapperFn = _lte(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.lte(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.lte(threshold, callInfo) }
 
 // -- gte() (Greater Than or Equal) ------------------------------------------------------------------------------------
-
-internal val _gte by dslPatternMapper { args, callInfo -> { p -> p._gte(args, callInfo) } }
-internal val SprudelPattern._gte by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a gte b }
-}
-internal val String._gte by dslStringExtension { p, args, callInfo -> p._gte(args, callInfo) }
-internal val PatternMapperFn._gte by dslPatternMapperExtension { m, args, callInfo -> m.chain(_gte(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Compares every value in the pattern to [threshold], replacing each with `1` (true) if greater
  * than or equal to [threshold] or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
- * remain unchanged. Supports control patterns: pass a mini-notation string or another
- * [SprudelPattern] as [threshold] to modulate the threshold per cycle or event.
- *
- * ```KlangScript(Playable)
- * seq("5 8 10").gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
- * ```
- *
- * ```KlangScript(Playable)
- * seq("5 8 10").gte("<8 6>").scale("c3:major").n()  // threshold changes each cycle
- * ```
  *
  * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern of `0`/`1` values.
@@ -1231,79 +1066,30 @@ internal val PatternMapperFn._gte by dslPatternMapperExtension { m, args, callIn
  * @tags gte, greater than or equal, comparison, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.gte(threshold: PatternLike): SprudelPattern = this._gte(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.gte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(threshold).asSprudelDslArgs(callInfo)) { a, b -> a gte b }
 
-/**
- * Parses this string as a pattern, then compares every value to [threshold]
- * using greater-than-or-equal.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "5 8 10".gte(8).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.gte(threshold: PatternLike): SprudelPattern = this._gte(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun String.gte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().gte(threshold, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that compares every value in a pattern to [threshold], replacing
- * each with `1` (true) if greater than or equal to [threshold] or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("5 8 10").apply(gte(8)).scale("c3:major").n()  // 5>=8 → 0, 8>=8 → 1, 10>=8 → 1
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun gte(threshold: PatternLike): PatternMapperFn = _gte(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun gte(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.gte(threshold, callInfo) }
 
-/**
- * Chains a greater-than-or-equal comparison onto this [PatternMapperFn], replacing each value with `1` if
- * greater than or equal to [threshold] or `0` otherwise.
- *
- * ```KlangScript(Playable)
- * seq("5 10").apply(add(3).gte(11)).scale("c3:major").n()  // (5+3)>=11=0, (10+3)>=11=1
- * ```
- *
- * @param threshold The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.gte(threshold: PatternLike): PatternMapperFn = _gte(listOf(threshold).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.gte(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.gte(threshold, callInfo) }
 
 // -- eq() (Equal) -----------------------------------------------------------------------------------------------------
-
-internal val _eq by dslPatternMapper { args, callInfo -> { p -> p._eq(args, callInfo) } }
-internal val SprudelPattern._eq by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a eq b }
-}
-internal val String._eq by dslStringExtension { p, args, callInfo -> p._eq(args, callInfo) }
-internal val PatternMapperFn._eq by dslPatternMapperExtension { m, args, callInfo -> m.chain(_eq(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Compares every value in the pattern to [other] for strict equality, replacing each with
  * `1` (true) if equal or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
- * remain unchanged. Supports control patterns: pass a mini-notation string or another
- * [SprudelPattern] as [other] to vary the comparison target per cycle or event.
- *
- * ```KlangScript(Playable)
- * seq("5 8").eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
- * ```
- *
- * ```KlangScript(Playable)
- * seq("0 1 2 3").eq("<0 1>").scale("c3:major").n()  // equality target alternates each cycle
- * ```
  *
  * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern of `0`/`1` values.
@@ -1311,77 +1097,30 @@ internal val PatternMapperFn._eq by dslPatternMapperExtension { m, args, callInf
  * @tags eq, equal, equality, comparison, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.eq(other: PatternLike): SprudelPattern = this._eq(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.eq(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a eq b }
 
-/**
- * Parses this string as a pattern, then tests every value for strict equality with [other].
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "5 8".eq(8).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.eq(other: PatternLike): SprudelPattern = this._eq(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun String.eq(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().eq(other, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that tests every value in a pattern for strict equality with [other],
- * replacing each with `1` (true) if equal or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("5 8").apply(eq(8)).scale("c3:major").n()  // 5==8 → 0, 8==8 → 1
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun eq(other: PatternLike): PatternMapperFn = _eq(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun eq(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.eq(other, callInfo) }
 
-/**
- * Chains a strict-equality test onto this [PatternMapperFn], replacing each value with `1` if equal
- * to [other] or `0` otherwise.
- *
- * ```KlangScript(Playable)
- * seq("5 8").apply(add(3).eq(11)).scale("c3:major").n()  // (5+3)=8==11=0, (8+3)=11==11=1
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.eq(other: PatternLike): PatternMapperFn = _eq(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.eq(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.eq(other, callInfo) }
 
 // -- eqt() (Truthiness Equal) -----------------------------------------------------------------------------------------
-
-internal val _eqt by dslPatternMapper { args, callInfo -> { p -> p._eqt(args, callInfo) } }
-internal val SprudelPattern._eqt by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a eqt b }
-}
-internal val String._eqt by dslStringExtension { p, args, callInfo -> p._eqt(args, callInfo) }
-internal val PatternMapperFn._eqt by dslPatternMapperExtension { m, args, callInfo -> m.chain(_eqt(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Compares the truthiness of every value in the pattern to the truthiness of [other], replacing
  * each with `1` (true) if both share the same truthiness, or `0` (false) otherwise.
- *
- * A value is falsy if it is zero; otherwise it is truthy. Only the raw event `value` is
- * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
- *
- * ```KlangScript(Playable)
- * seq("0 5").eqt(0).scale("c3:major").n()  // 0~=0 → 1 (both falsy), 5~=0 → 0
- * ```
- *
- * ```KlangScript(Playable)
- * seq("0 5").eqt(3).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
- * ```
  *
  * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern of `0`/`1` values.
@@ -1389,78 +1128,30 @@ internal val PatternMapperFn._eqt by dslPatternMapperExtension { m, args, callIn
  * @tags eqt, truthiness, equal, comparison, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.eqt(other: PatternLike): SprudelPattern = this._eqt(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.eqt(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a eqt b }
 
-/**
- * Parses this string as a pattern, then tests every value for truthiness equality with [other].
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. A value is falsy if it is zero; otherwise it is truthy.
- *
- * ```KlangScript(Playable)
- * "0 5".eqt(0).scale("c3:major").n()  // 0~=0 → 1 (both falsy), 5~=0 → 0
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.eqt(other: PatternLike): SprudelPattern = this._eqt(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun String.eqt(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().eqt(other, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that compares the truthiness of every value in a pattern to [other],
- * replacing each with `1` (true) if both share the same truthiness, or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("0 5").apply(eqt(3)).scale("c3:major").n()  // 0~=3 → 0, 5~=3 → 1 (both truthy)
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun eqt(other: PatternLike): PatternMapperFn = _eqt(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun eqt(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.eqt(other, callInfo) }
 
-/**
- * Chains a truthiness-equality test onto this [PatternMapperFn], replacing each value with `1` if it shares
- * the same truthiness as [other] or `0` otherwise.
- *
- * ```KlangScript(Playable)
- * seq("0 5").apply(mul(3).eqt(0)).scale("c3:major").n()  // (0*3)=0~=0=1 (both falsy), (5*3)=15~=0=0
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.eqt(other: PatternLike): PatternMapperFn = _eqt(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.eqt(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.eqt(other, callInfo) }
 
 // -- ne() (Not Equal) -------------------------------------------------------------------------------------------------
-
-internal val _ne by dslPatternMapper { args, callInfo -> { p -> p._ne(args, callInfo) } }
-internal val SprudelPattern._ne by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a ne b }
-}
-internal val String._ne by dslStringExtension { p, args, callInfo -> p._ne(args, callInfo) }
-internal val PatternMapperFn._ne by dslPatternMapperExtension { m, args, callInfo -> m.chain(_ne(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Compares every value in the pattern to [other] for strict inequality, replacing each with
  * `1` (true) if not equal or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
- * remain unchanged. Supports control patterns: pass a mini-notation string or another
- * [SprudelPattern] as [other] to vary the comparison target per cycle or event.
- *
- * ```KlangScript(Playable)
- * seq("5 8").ne(8).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
- * ```
- *
- * ```KlangScript(Playable)
- * seq("0 1 2 3").ne("<0 1>").scale("c3:major").n()  // target alternates each cycle
- * ```
  *
  * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern of `0`/`1` values.
@@ -1468,77 +1159,30 @@ internal val PatternMapperFn._ne by dslPatternMapperExtension { m, args, callInf
  * @tags ne, not equal, inequality, comparison, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.ne(other: PatternLike): SprudelPattern = this._ne(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.ne(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a ne b }
 
-/**
- * Parses this string as a pattern, then tests every value for strict inequality with [other].
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "5 8".ne(8).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.ne(other: PatternLike): SprudelPattern = this._ne(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun String.ne(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().ne(other, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that tests every value in a pattern for strict inequality with [other],
- * replacing each with `1` (true) if not equal or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("5 8").apply(ne(8)).scale("c3:major").n()  // 5!=8 → 1, 8!=8 → 0
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun ne(other: PatternLike): PatternMapperFn = _ne(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun ne(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.ne(other, callInfo) }
 
-/**
- * Chains a strict-inequality test onto this [PatternMapperFn], replacing each value with `1` if not equal
- * to [other] or `0` otherwise.
- *
- * ```KlangScript(Playable)
- * seq("5 8").apply(add(3).ne(11)).scale("c3:major").n()  // (5+3)=8!=11=1, (8+3)=11!=11=0
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.ne(other: PatternLike): PatternMapperFn = _ne(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.ne(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.ne(other, callInfo) }
 
 // -- net() (Truthiness Not Equal) -------------------------------------------------------------------------------------
-
-internal val _net by dslPatternMapper { args, callInfo -> { p -> p._net(args, callInfo) } }
-internal val SprudelPattern._net by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a net b }
-}
-internal val String._net by dslStringExtension { p, args, callInfo -> p._net(args, callInfo) }
-internal val PatternMapperFn._net by dslPatternMapperExtension { m, args, callInfo -> m.chain(_net(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Compares the truthiness of every value in the pattern to the truthiness of [other], replacing
  * each with `1` (true) if their truthiness differs, or `0` (false) otherwise.
- *
- * A value is falsy if it is zero; otherwise it is truthy. Only the raw event `value` is
- * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
- *
- * ```KlangScript(Playable)
- * seq("0 5").net(0).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
- * ```
- *
- * ```KlangScript(Playable)
- * seq("0 5").net(3).scale("c3:major").n()  // 0~!=3 → 1, 5~!=3 → 0 (both truthy)
- * ```
  *
  * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern of `0`/`1` values.
@@ -1546,77 +1190,29 @@ internal val PatternMapperFn._net by dslPatternMapperExtension { m, args, callIn
  * @tags net, truthiness, not equal, inequality, comparison, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.net(other: PatternLike): SprudelPattern = this._net(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.net(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a net b }
 
-/**
- * Parses this string as a pattern, then tests every value for truthiness inequality with [other].
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. A value is falsy if it is zero; otherwise it is truthy.
- *
- * ```KlangScript(Playable)
- * "0 5".net(0).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.net(other: PatternLike): SprudelPattern = this._net(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun String.net(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().net(other, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that compares the truthiness of every value in a pattern to [other],
- * replacing each with `1` (true) if their truthiness differs, or `0` (false) otherwise.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the comparison to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("0 5").apply(net(0)).scale("c3:major").n()  // 0~!=0 → 0 (both falsy), 5~!=0 → 1
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun net(other: PatternLike): PatternMapperFn = _net(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun net(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.net(other, callInfo) }
 
-/**
- * Chains a truthiness-inequality test onto this [PatternMapperFn], replacing each value with `1` if it has
- * different truthiness than [other] or `0` otherwise.
- *
- * ```KlangScript(Playable)
- * seq("0 5").apply(mul(3).net(0)).scale("c3:major").n()  // (0*3)=0~!=0=0 (both falsy), (5*3)=15~!=0=1
- * ```
- *
- * @param other The value to compare against. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.net(other: PatternLike): PatternMapperFn = _net(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.net(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.net(other, callInfo) }
 
 // -- and() (Logical AND) ----------------------------------------------------------------------------------------------
 
-internal val _and by dslPatternMapper { args, callInfo -> { p -> p._and(args, callInfo) } }
-internal val SprudelPattern._and by dslPatternExtension { source, args, _ ->
-    applyArithmetic(source, args) { a, b -> a and b }
-}
-internal val String._and by dslStringExtension { p, args, callInfo -> p._and(args, callInfo) }
-internal val PatternMapperFn._and by dslPatternMapperExtension { m, args, callInfo -> m.chain(_and(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Applies logical AND between every value in the pattern and [other].
- *
- * Returns [other] when the source value is truthy (non-zero), or `0` when it is falsy (zero).
- * This mirrors JavaScript's `&&` short-circuit behaviour. Only the raw event `value` is
- * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
- *
- * ```KlangScript(Playable)
- * seq("0 5").and(10).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
- * ```
- *
- * ```KlangScript(Playable)
- * seq("5").and("<0 10>").scale("c3:major").n()  // gate on/off each cycle
- * ```
  *
  * @param other The right-hand operand. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern where each value is `value && other`.
@@ -1624,76 +1220,29 @@ internal val PatternMapperFn._and by dslPatternMapperExtension { m, args, callIn
  * @tags and, logical, boolean, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.and(other: PatternLike): SprudelPattern = this._and(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.and(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a and b }
 
-/**
- * Parses this string as a pattern, then applies logical AND with [other] to every value.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "0 5".and(10).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
- * ```
- *
- * @param other The right-hand operand. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.and(other: PatternLike): SprudelPattern = this._and(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun String.and(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().and(other, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that applies logical AND between every value in a pattern and [other].
- *
- * Returns [other] when the source value is truthy (non-zero), or `0` when it is falsy (zero).
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the gate to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("0 5").apply(and(10)).scale("c3:major").n()  // 0&&10 → 0, 5&&10 → 10
- * ```
- *
- * @param other The right-hand operand. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun and(other: PatternLike): PatternMapperFn = _and(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun and(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.and(other, callInfo) }
 
-/**
- * Chains a logical AND onto this [PatternMapperFn]. Returns [other] when the value is truthy, or `0` when falsy.
- *
- * ```KlangScript(Playable)
- * seq("1 5").apply(sub(1).and(7)).scale("c3:major").n()  // (1-1)=0&&7=0, (5-1)=4&&7=7
- * ```
- *
- * @param other The right-hand operand. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.and(other: PatternLike): PatternMapperFn = _and(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.and(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.and(other, callInfo) }
 
 // -- or() (Logical OR) ------------------------------------------------------------------------------------------------
 
-internal val _or by dslPatternMapper { args, callInfo -> { p -> p._or(args, callInfo) } }
-internal val SprudelPattern._or by dslPatternExtension { p, args, _ ->
-    applyArithmetic(p, args) { a, b -> a or b }
-}
-internal val String._or by dslStringExtension { p, args, callInfo -> p._or(args, callInfo) }
-internal val PatternMapperFn._or by dslPatternMapperExtension { m, args, callInfo -> m.chain(_or(args, callInfo)) }
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Applies logical OR between every value in the pattern and [other].
- *
- * Returns the source value when it is truthy (non-zero), or [other] when it is falsy (zero).
- * This mirrors JavaScript's `||` short-circuit behaviour. Only the raw event `value` is
- * affected — `note`, `soundIndex`, and all other voice properties remain unchanged.
- *
- * ```KlangScript(Playable)
- * seq("0 5").or(10).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
- * ```
- *
- * ```KlangScript(Playable)
- * seq("0 5").or("<1 2>").scale("c3:major").n()  // fallback alternates each cycle
- * ```
  *
  * @param other The right-hand operand. May be a number, string mini-notation, or a [SprudelPattern].
  * @return A new pattern where each value is `value || other`.
@@ -1701,254 +1250,108 @@ internal val PatternMapperFn._or by dslPatternMapperExtension { m, args, callInf
  * @tags or, logical, boolean, arithmetic
  */
 @SprudelDsl
-fun SprudelPattern.or(other: PatternLike): SprudelPattern = this._or(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.or(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a or b }
 
-/**
- * Parses this string as a pattern, then applies logical OR with [other] to every value.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "0 5".or(10).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
- * ```
- *
- * @param other The right-hand operand. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun String.or(other: PatternLike): SprudelPattern = this._or(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun String.or(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().or(other, callInfo)
 
-/**
- * Creates a [PatternMapperFn] that applies logical OR between every value in a pattern and [other].
- *
- * Returns the source value when it is truthy (non-zero), or [other] when it is falsy (zero).
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply the fallback to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("0 5").apply(or(10)).scale("c3:major").n()  // 0||10 → 10, 5||10 → 5
- * ```
- *
- * @param other The right-hand operand. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun or(other: PatternLike): PatternMapperFn = _or(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun or(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.or(other, callInfo) }
 
-/**
- * Chains a logical OR onto this [PatternMapperFn]. Returns the source value when truthy, or [other] when falsy.
- *
- * ```KlangScript(Playable)
- * seq("0 5").apply(mul(1).or(7)).scale("c3:major").n()  // (0*1)=0||7=7, (5*1)=5||7=5
- * ```
- *
- * @param other The right-hand operand. May be a number, string mini-notation, or a [SprudelPattern].
- */
 @SprudelDsl
-fun PatternMapperFn.or(other: PatternLike): PatternMapperFn = _or(listOf(other).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.or(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.or(other, callInfo) }
 
 // -- round() ----------------------------------------------------------------------------------------------------------
 
-internal val _round by dslPatternMapper { _, callInfo -> { p -> p._round(emptyList(), callInfo) } }
-internal val SprudelPattern._round by dslPatternExtension { p, _, _ ->
-    applyUnaryOp(p) { v -> v.asRational?.round()?.asVoiceValue() ?: v }
-}
-internal val String._round by dslStringExtension { p, _, _ -> p._round() }
-internal val PatternMapperFn._round by dslPatternMapperExtension { m, _, _ -> m.chain(_round(emptyList())) }
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Rounds every numeric value in the pattern to the nearest integer.
- *
- * Halfway values (e.g. 2.5) round up. Non-numeric values are passed through unchanged.
- * Only the raw event `value` is affected — `note`, `soundIndex`, and all other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "2.4 2.5 2.6".round().scale("c3:major").n()  // 2, 3, 3
- * ```
- *
- * ```KlangScript(Playable)
- * "0.1 0.9".round().scale("c3:major").n()  // 0, 1
- * ```
  *
  * @return A new pattern with each value rounded to the nearest integer.
  * @category arithmetic
  * @tags round, rounding, arithmetic, math
  */
 @SprudelDsl
-fun SprudelPattern.round(): SprudelPattern = this._round()
+@KlangScript.Function
+fun SprudelPattern.round(callInfo: CallInfo? = null): SprudelPattern =
+    applyUnaryOp(this) { v -> v.asRational?.round()?.asVoiceValue() ?: v }
 
-/**
- * Parses this string as a pattern, then rounds every numeric value to the nearest integer.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "2.4 2.5 2.6".round().scale("c3:major").n()  // 2, 3, 3
- * ```
- */
 @SprudelDsl
-fun String.round(): SprudelPattern = this._round()
+@KlangScript.Function
+fun String.round(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().round(callInfo)
 
-/**
- * Creates a [PatternMapperFn] that rounds every numeric value in a pattern to the nearest integer.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply rounding to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("2.4 2.5 2.6").apply(round()).scale("c3:major").n()  // 2, 3, 3
- * ```
- */
 @SprudelDsl
-fun round(): PatternMapperFn = _round(emptyList())
+@KlangScript.Function
+fun round(callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.round(callInfo) }
 
-/**
- * Chains a rounding operation onto this [PatternMapperFn], rounding every numeric value to the nearest integer.
- *
- * ```KlangScript(Playable)
- * seq("2.1 3.7").apply(mul(2).round()).scale("c3:major").n()  // round(2.1*2)=round(4.2)=4, round(3.7*2)=round(7.4)=7
- * ```
- */
 @SprudelDsl
-fun PatternMapperFn.round(): PatternMapperFn = _round(emptyList())
+@KlangScript.Function
+fun PatternMapperFn.round(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.round(callInfo) }
 
 // -- floor() ----------------------------------------------------------------------------------------------------------
 
-internal val _floor by dslPatternMapper { _, callInfo -> { p -> p._floor(emptyList(), callInfo) } }
-internal val SprudelPattern._floor by dslPatternExtension { p, _, _ ->
-    applyUnaryOp(p) { v -> v.asRational?.floor()?.asVoiceValue() ?: v }
-}
-internal val String._floor by dslStringExtension { p, _, _ -> p._floor() }
-internal val PatternMapperFn._floor by dslPatternMapperExtension { m, _, _ -> m.chain(_floor(emptyList())) }
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Floors every numeric value in the pattern to the largest integer less than or equal to the value.
- *
- * For negative numbers this rounds away from zero: `floor(-2.1) = -3`.
- * Non-numeric values are passed through unchanged. Only the raw event `value` is affected —
- * `note`, `soundIndex`, and all other voice properties remain unchanged.
- *
- * ```KlangScript(Playable)
- * "2.1 2.9".floor().scale("c3:major").n()  // 2, 2
- * ```
- *
- * ```KlangScript(Playable)
- * "-2.1 -2.9".floor().scale("c3:major").n()  // -3, -3
- * ```
  *
  * @return A new pattern with each value floored to an integer.
  * @category arithmetic
  * @tags floor, rounding, arithmetic, math
  */
 @SprudelDsl
-fun SprudelPattern.floor(): SprudelPattern = this._floor()
+@KlangScript.Function
+fun SprudelPattern.floor(callInfo: CallInfo? = null): SprudelPattern =
+    applyUnaryOp(this) { v -> v.asRational?.floor()?.asVoiceValue() ?: v }
 
-/**
- * Parses this string as a pattern, then floors every numeric value to an integer.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "2.1 2.9".floor().scale("c3:major").n()  // 2, 2
- * ```
- */
 @SprudelDsl
-fun String.floor(): SprudelPattern = this._floor()
+@KlangScript.Function
+fun String.floor(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().floor(callInfo)
 
-/**
- * Creates a [PatternMapperFn] that floors every numeric value in a pattern to an integer.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply flooring to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("2.1 2.9").apply(floor()).scale("c3:major").n()  // 2, 2
- * ```
- */
 @SprudelDsl
-fun floor(): PatternMapperFn = _floor(emptyList())
+@KlangScript.Function
+fun floor(callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.floor(callInfo) }
 
-/**
- * Chains a floor operation onto this [PatternMapperFn], flooring every numeric value to an integer.
- *
- * ```KlangScript(Playable)
- * seq("2.1 3.9").apply(mul(2).floor()).scale("c3:major").n()  // floor(2.1*2)=floor(4.2)=4, floor(3.9*2)=floor(7.8)=7
- * ```
- */
 @SprudelDsl
-fun PatternMapperFn.floor(): PatternMapperFn = _floor(emptyList())
+@KlangScript.Function
+fun PatternMapperFn.floor(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.floor(callInfo) }
 
 // -- ceil() -----------------------------------------------------------------------------------------------------------
 
-internal val _ceil by dslPatternMapper { _, callInfo -> { p -> p._ceil(emptyList(), callInfo) } }
-internal val SprudelPattern._ceil by dslPatternExtension { p, _, _ ->
-    applyUnaryOp(p) { v -> v.asRational?.ceil()?.asVoiceValue() ?: v }
-}
-internal val String._ceil by dslStringExtension { p, _, _ -> p._ceil() }
-internal val PatternMapperFn._ceil by dslPatternMapperExtension { m, _, _ -> m.chain(_ceil(emptyList())) }
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Ceils every numeric value in the pattern to the smallest integer greater than or equal to the value.
- *
- * For negative numbers this rounds toward zero: `ceil(-2.9) = -2`.
- * Non-numeric values are passed through unchanged. Only the raw event `value` is affected —
- * `note`, `soundIndex`, and all other voice properties remain unchanged.
- *
- * ```KlangScript(Playable)
- * "2.1 2.9".ceil().scale("c3:major").n()  // 3, 3
- * ```
- *
- * ```KlangScript(Playable)
- * "-2.9 -2.1".ceil().scale("c3:major").n()  // -2, -2
- * ```
  *
  * @return A new pattern with each value ceiled to an integer.
  * @category arithmetic
  * @tags ceil, ceiling, rounding, arithmetic, math
  */
 @SprudelDsl
-fun SprudelPattern.ceil(): SprudelPattern = this._ceil()
+@KlangScript.Function
+fun SprudelPattern.ceil(callInfo: CallInfo? = null): SprudelPattern =
+    applyUnaryOp(this) { v -> v.asRational?.ceil()?.asVoiceValue() ?: v }
 
-/**
- * Parses this string as a pattern, then ceils every numeric value to an integer.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged.
- *
- * ```KlangScript(Playable)
- * "2.1 2.9".ceil().scale("c3:major").n()  // 3, 3
- * ```
- */
 @SprudelDsl
-fun String.ceil(): SprudelPattern = this._ceil()
+@KlangScript.Function
+fun String.ceil(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().ceil(callInfo)
 
-/**
- * Creates a [PatternMapperFn] that ceils every numeric value in a pattern to an integer.
- *
- * Only the raw event `value` is affected — `note`, `soundIndex`, and other voice properties
- * remain unchanged. Use with [SprudelPattern.apply] to apply ceiling to an existing pattern.
- *
- * ```KlangScript(Playable)
- * seq("2.1 2.9").apply(ceil()).scale("c3:major").n()  // 3, 3
- * ```
- */
 @SprudelDsl
-fun ceil(): PatternMapperFn = _ceil(emptyList())
+@KlangScript.Function
+fun ceil(callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.ceil(callInfo) }
 
-/**
- * Chains a ceiling operation onto this [PatternMapperFn], ceiling every numeric value to an integer.
- *
- * ```KlangScript(Playable)
- * seq("2.1 3.9").apply(mul(2).ceil()).scale("c3:major").n()  // ceil(2.1*2)=ceil(4.2)=5, ceil(3.9*2)=ceil(7.8)=8
- * ```
- */
 @SprudelDsl
-fun PatternMapperFn.ceil(): PatternMapperFn = _ceil(emptyList())
+@KlangScript.Function
+fun PatternMapperFn.ceil(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.ceil(callInfo) }

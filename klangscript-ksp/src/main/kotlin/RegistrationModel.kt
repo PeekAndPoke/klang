@@ -74,9 +74,16 @@ data class ArityDispatchItem(
         val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
 
         if (isTopLevel) {
-            appendLine("registerFunctionWithSpecs(\"$scriptName\", $specsExpr) { args, loc ->")
+            appendLine("registerFunctionWithSpecs(")
+            appendLine("    name = \"$scriptName\",")
+            appendLine("    paramSpecs = $specsExpr,")
+            appendLine(") { args, loc ->")
         } else {
-            appendLine("builder.registerExtensionMethodWithSpecs(cls, \"$scriptName\", $specsExpr) { receiver, args, loc ->")
+            appendLine("builder.registerExtensionMethodWithSpecs(")
+            appendLine("    receiver = cls,")
+            appendLine("    name = \"$scriptName\",")
+            appendLine("    paramSpecs = $specsExpr,")
+            appendLine(") { receiver, args, loc ->")
         }
 
         val indent = if (isTopLevel) "        " else "                "
@@ -95,7 +102,14 @@ data class ArityDispatchItem(
         // Required params — always convert
         scriptParams.forEach { param ->
             if (!param.hasDefault) {
-                appendLine("${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc) as ${param.kotlinType}${if (param.isNullable) "?" else ""}")
+                appendLine(
+                    "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
+                        castSuffix(
+                            param.kotlinType,
+                            param.isNullable
+                        )
+                    }"
+                )
             }
         }
 
@@ -109,7 +123,14 @@ data class ArityDispatchItem(
 
             argsForLevel.forEach { param ->
                 if (param.hasDefault) {
-                    appendLine("$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc) as ${param.kotlinType}${if (param.isNullable) "?" else ""}")
+                    appendLine(
+                        "$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
+                            castSuffix(
+                                param.kotlinType,
+                                param.isNullable
+                            )
+                        }"
+                    )
                 }
             }
 
@@ -188,7 +209,11 @@ data class FileLevelExtItem(
     val fnCallPrefix: String,
 ) : RegistrationItem() {
     override fun renderRegistration(): String = buildString {
-        appendLine("registerExtensionMethodWithSpecs($receiverClassName::class, \"$scriptName\", $specsExpr) { receiver, args, loc ->")
+        appendLine("registerExtensionMethodWithSpecs(")
+        appendLine("    receiver = $receiverClassName::class,")
+        appendLine("    name = \"$scriptName\",")
+        appendLine("    paramSpecs = $specsExpr,")
+        appendLine(") { receiver, args, loc ->")
 
         if (receiverCast != null) {
             appendLine("        @Suppress(\"UNCHECKED_CAST\")")
@@ -235,7 +260,14 @@ data class FileLevelExtItem(
             appendLine("${indent}checkArgsSize(fn = \"$scriptName\", args = args, expected = $requiredCount, location = loc)")
             scriptParams.forEach { param ->
                 if (!param.hasDefault) {
-                    appendLine("${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc) as ${param.kotlinType}${if (param.isNullable) "?" else ""}")
+                    appendLine(
+                        "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
+                            castSuffix(
+                                param.kotlinType,
+                                param.isNullable
+                            )
+                        }"
+                    )
                 }
             }
             appendLine("${indent}wrapAsRuntimeValue(")
@@ -245,7 +277,14 @@ data class FileLevelExtItem(
                 appendLine("$indent    $prefix (args.size >= $level) {")
                 argsForLevel.forEach { param ->
                     if (param.hasDefault) {
-                        appendLine("$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc) as ${param.kotlinType}${if (param.isNullable) "?" else ""}")
+                        appendLine(
+                            "$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
+                                castSuffix(
+                                    param.kotlinType,
+                                    param.isNullable
+                                )
+                            }"
+                        )
                     }
                 }
                 val callArgs = argsForLevel.map { it.name }.joinToString(", ")
@@ -259,7 +298,14 @@ data class FileLevelExtItem(
         } else {
             appendLine("        checkArgsSize(fn = \"$scriptName\", args = args, expected = ${scriptParams.size}, location = loc)")
             scriptParams.forEach { param ->
-                appendLine("        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc) as ${param.kotlinType}${if (param.isNullable) "?" else ""}")
+                appendLine(
+                    "        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
+                        castSuffix(
+                            param.kotlinType,
+                            param.isNullable
+                        )
+                    }"
+                )
             }
             val callArgs = scriptParams.map { it.name }.joinToString(", ")
             if (hasExtensionReceiver && receiverCast != null) {
@@ -276,6 +322,12 @@ data class FileLevelExtItem(
 // ============================================================================
 //  Shared utility
 // ============================================================================
+
+/** Produces the `as Type` suffix for a convertArgToKotlin call. Returns empty string when the cast is redundant (e.g. `as Any?`). */
+internal fun castSuffix(kotlinType: String, isNullable: Boolean): String {
+    val fullType = "$kotlinType${if (isNullable) "?" else ""}"
+    return if (fullType == "Any?") "" else " as $fullType"
+}
 
 internal fun joinCallArgs(selfArg: String, args: String): String = when {
     selfArg.isEmpty() -> args

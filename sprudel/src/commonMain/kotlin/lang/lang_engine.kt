@@ -1,7 +1,10 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
@@ -18,20 +21,11 @@ var sprudelLangEngineInit = false
 // so non-sprudel callers (e.g. raw VoiceData) are still case-insensitive.
 private val engineMutation = voiceModifier { name -> copy(engine = name?.toString()?.lowercase()) }
 
-fun applyEngine(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyEngine(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, engineMutation) { src, ctrl ->
         src.copy(engine = ctrl.engine)
     }
 }
-
-internal val _engine by dslPatternMapper { args, callInfo -> { p -> p._engine(args, callInfo) } }
-internal val SprudelPattern._engine by dslPatternExtension { p, args, /* callInfo */ _ -> applyEngine(p, args) }
-internal val String._engine by dslStringExtension { p, args, callInfo -> p._engine(args, callInfo) }
-internal val PatternMapperFn._engine by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_engine(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Selects the voice pipeline engine for this pattern.
@@ -57,8 +51,9 @@ internal val PatternMapperFn._engine by dslPatternMapperExtension { m, args, cal
  * @tags engine, pipeline, topology, modern, pedal, motor
  */
 @SprudelDsl
-fun SprudelPattern.engine(name: PatternLike): SprudelPattern =
-    this._engine(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.engine(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyEngine(this, listOf(name).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and selects the voice pipeline engine.
@@ -71,8 +66,9 @@ fun SprudelPattern.engine(name: PatternLike): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.engine(name: PatternLike): SprudelPattern =
-    this._engine(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun String.engine(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().engine(name, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that selects the voice pipeline engine.
@@ -87,8 +83,9 @@ fun String.engine(name: PatternLike): SprudelPattern =
  * @tags engine, pipeline, topology, modern, pedal, motor
  */
 @SprudelDsl
-fun engine(name: PatternLike): PatternMapperFn =
-    _engine(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun engine(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.engine(name, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that selects the voice pipeline engine after the previous mapper.
@@ -96,5 +93,6 @@ fun engine(name: PatternLike): PatternMapperFn =
  * @param name The engine name (case-insensitive). See [SprudelPattern.engine] for known engines.
  */
 @SprudelDsl
-fun PatternMapperFn.engine(name: PatternLike): PatternMapperFn =
-    _engine(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.engine(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.engine(name, callInfo) }

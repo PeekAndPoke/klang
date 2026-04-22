@@ -1,7 +1,10 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
@@ -30,7 +33,7 @@ private val distortMutation = voiceModifier {
     }
 }
 
-fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, distortMutation) { src, ctrl ->
@@ -44,22 +47,6 @@ fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprud
         source._liftOrReinterpretNumericalField(args, distortMutation)
     }
 }
-
-internal val _distort by dslPatternMapper { args, callInfo -> { p -> p._distort(args, callInfo) } }
-internal val SprudelPattern._distort by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistort(p, args) }
-internal val String._distort by dslStringExtension { p, args, callInfo -> p._distort(args, callInfo) }
-internal val PatternMapperFn._distort by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_distort(args, callInfo))
-}
-
-internal val _dist by dslPatternMapper { args, callInfo -> { p -> p._dist(args, callInfo) } }
-internal val SprudelPattern._dist by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistort(p, args) }
-internal val String._dist by dslStringExtension { p, args, callInfo -> p._dist(args, callInfo) }
-internal val PatternMapperFn._dist by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_dist(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies waveshaper distortion to this pattern.
@@ -128,8 +115,9 @@ internal val PatternMapperFn._dist by dslPatternMapperExtension { m, args, callI
  * @tags distort, dist, distortion, waveshaper, overdrive
  */
 @SprudelDsl
-fun SprudelPattern.distort(amount: PatternLike? = null): SprudelPattern =
-    this._distort(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDistort(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern, then applies waveshaper distortion.
@@ -145,8 +133,9 @@ fun SprudelPattern.distort(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.distort(amount: PatternLike? = null): SprudelPattern =
-    this._distort(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().distort(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies waveshaper distortion.
@@ -173,7 +162,8 @@ fun String.distort(amount: PatternLike? = null): SprudelPattern =
  * @tags distort, dist, distortion, waveshaper, overdrive
  */
 @SprudelDsl
-fun distort(amount: PatternLike? = null): PatternMapperFn = _distort(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun distort(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies waveshaper distortion after the previous mapper.
@@ -190,8 +180,9 @@ fun distort(amount: PatternLike? = null): PatternMapperFn = _distort(listOfNotNu
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.distort(amount: PatternLike? = null): PatternMapperFn =
-    _distort(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distort(amount, callInfo) }
 
 /**
  * Alias for [distort]. Applies waveshaper distortion to this pattern.
@@ -221,8 +212,9 @@ fun PatternMapperFn.distort(amount: PatternLike? = null): PatternMapperFn =
  * @tags dist, distort, distortion, waveshaper, overdrive
  */
 @SprudelDsl
-fun SprudelPattern.dist(amount: PatternLike? = null): SprudelPattern =
-    this._dist(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.distort(amount, callInfo)
 
 /**
  * Alias for [distort]. Parses this string as a pattern, then applies waveshaper distortion.
@@ -238,8 +230,9 @@ fun SprudelPattern.dist(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.dist(amount: PatternLike? = null): SprudelPattern =
-    this._dist(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().distort(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies waveshaper distortion. Alias for [distort].
@@ -266,7 +259,8 @@ fun String.dist(amount: PatternLike? = null): SprudelPattern =
  * @tags dist, distort, distortion, waveshaper, overdrive
  */
 @SprudelDsl
-fun dist(amount: PatternLike? = null): PatternMapperFn = _dist(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun dist(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distort(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies waveshaper distortion (alias for [distort]) after the previous mapper.
@@ -283,32 +277,17 @@ fun dist(amount: PatternLike? = null): PatternMapperFn = _dist(listOfNotNull(amo
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.dist(amount: PatternLike? = null): PatternMapperFn =
-    _dist(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distort(amount, callInfo) }
 
 // -- distos() / distortoversampling() ---------------------------------------------------------------------------------
 
 private val distortOversampleMutation = voiceModifier { copy(distortOversample = it?.toString()?.toIntOrNull()) }
 
-fun applyDistortOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyDistortOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, distortOversampleMutation)
 }
-
-internal val _distos by dslPatternMapper { args, callInfo -> { p -> p._distos(args, callInfo) } }
-internal val SprudelPattern._distos by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistortOversample(p, args) }
-internal val String._distos by dslStringExtension { p, args, callInfo -> p._distos(args, callInfo) }
-internal val PatternMapperFn._distos by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_distos(args, callInfo))
-}
-
-internal val _distortOversampling by dslPatternMapper { args, callInfo -> { p -> p._distortOversampling(args, callInfo) } }
-internal val SprudelPattern._distortOversampling by dslPatternExtension { p, args, /* callInfo */ _ -> applyDistortOversample(p, args) }
-internal val String._distortOversampling by dslStringExtension { p, args, callInfo -> p._distortOversampling(args, callInfo) }
-internal val PatternMapperFn._distortOversampling by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_distortOversampling(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the distortion oversampling factor.
@@ -331,73 +310,53 @@ internal val PatternMapperFn._distortOversampling by dslPatternMapperExtension {
  * @tags distos, distort, oversampling, aliasing, quality
  */
 @SprudelDsl
-fun SprudelPattern.distos(factor: PatternLike? = null): SprudelPattern =
-    this._distos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDistortOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
 @SprudelDsl
-fun String.distos(factor: PatternLike? = null): SprudelPattern =
-    this._distos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().distos(factor, callInfo)
 
 @SprudelDsl
-fun distos(factor: PatternLike? = null): PatternMapperFn = _distos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun distos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distos(factor, callInfo) }
 
 @SprudelDsl
-fun PatternMapperFn.distos(factor: PatternLike? = null): PatternMapperFn =
-    _distos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distos(factor, callInfo) }
 
 @SprudelDsl
-fun SprudelPattern.distortOversampling(factor: PatternLike? = null): SprudelPattern =
-    this._distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDistortOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
 @SprudelDsl
-fun String.distortOversampling(factor: PatternLike? = null): SprudelPattern =
-    this._distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().distortOversampling(factor, callInfo)
 
 @SprudelDsl
-fun distortOversampling(factor: PatternLike? = null): PatternMapperFn = _distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.distortOversampling(factor, callInfo) }
 
 @SprudelDsl
-fun PatternMapperFn.distortOversampling(factor: PatternLike? = null): PatternMapperFn =
-    _distortOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distortOversampling(factor, callInfo) }
 
 // -- distortshape() / distshape() / dshape() --------------------------------------------------------------------------
 
 private val distortShapeMutation = voiceModifier { shape -> copy(distortShape = shape?.toString()?.lowercase()) }
 
-fun applyDistortShape(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyDistortShape(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, distortShapeMutation) { src, ctrl ->
         src.copy(distortShape = ctrl.distortShape)
     }
 }
-
-internal val _distortshape by dslPatternMapper { args, callInfo -> { p -> p._distortshape(args, callInfo) } }
-internal val SprudelPattern._distortshape by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDistortShape(p, args)
-}
-internal val String._distortshape by dslStringExtension { p, args, callInfo -> p._distortshape(args, callInfo) }
-internal val PatternMapperFn._distortshape by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_distortshape(args, callInfo))
-}
-
-internal val _distshape by dslPatternMapper { args, callInfo -> { p -> p._distshape(args, callInfo) } }
-internal val SprudelPattern._distshape by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDistortShape(p, args)
-}
-internal val String._distshape by dslStringExtension { p, args, callInfo -> p._distshape(args, callInfo) }
-internal val PatternMapperFn._distshape by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_distshape(args, callInfo))
-}
-
-internal val _dshape by dslPatternMapper { args, callInfo -> { p -> p._dshape(args, callInfo) } }
-internal val SprudelPattern._dshape by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDistortShape(p, args)
-}
-internal val String._dshape by dslStringExtension { p, args, callInfo -> p._dshape(args, callInfo) }
-internal val PatternMapperFn._dshape by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_dshape(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the distortion waveshaper shape for this pattern.
@@ -422,8 +381,9 @@ internal val PatternMapperFn._dshape by dslPatternMapperExtension { m, args, cal
  * @tags distortshape, distshape, dshape, distort, shape, waveshaper
  */
 @SprudelDsl
-fun SprudelPattern.distortshape(shape: PatternLike): SprudelPattern =
-    this._distortshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.distortshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyDistortShape(this, listOf(shape).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the distortion waveshaper shape.
@@ -435,7 +395,9 @@ fun SprudelPattern.distortshape(shape: PatternLike): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.distortshape(shape: PatternLike): SprudelPattern = this._distortshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun String.distortshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().distortshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape.
@@ -453,7 +415,8 @@ fun String.distortshape(shape: PatternLike): SprudelPattern = this._distortshape
  * @tags distortshape, distshape, dshape, distort, shape, waveshaper
  */
 @SprudelDsl
-fun distortshape(shape: PatternLike): PatternMapperFn = _distortshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun distortshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distortshape(shape, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape after the previous mapper.
@@ -466,8 +429,9 @@ fun distortshape(shape: PatternLike): PatternMapperFn = _distortshape(listOf(sha
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.distortshape(shape: PatternLike): PatternMapperFn =
-    _distortshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.distortshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distortshape(shape, callInfo) }
 
 /**
  * Alias for [distortshape]. Sets the distortion waveshaper shape for this pattern.
@@ -489,8 +453,9 @@ fun PatternMapperFn.distortshape(shape: PatternLike): PatternMapperFn =
  * @tags distshape, distortshape, dshape, distort, shape, waveshaper
  */
 @SprudelDsl
-fun SprudelPattern.distshape(shape: PatternLike): SprudelPattern =
-    this._distshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.distshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.distortshape(shape, callInfo)
 
 /**
  * Alias for [distortshape]. Parses this string as a pattern and sets the distortion waveshaper shape.
@@ -502,7 +467,9 @@ fun SprudelPattern.distshape(shape: PatternLike): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.distshape(shape: PatternLike): SprudelPattern = this._distshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun String.distshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().distortshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape. Alias for [distortshape].
@@ -519,7 +486,8 @@ fun String.distshape(shape: PatternLike): SprudelPattern = this._distshape(listO
  * @tags distshape, distortshape, dshape, distort, shape, waveshaper
  */
 @SprudelDsl
-fun distshape(shape: PatternLike): PatternMapperFn = _distshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun distshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distortshape(shape, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape (alias for [distortshape])
@@ -533,8 +501,9 @@ fun distshape(shape: PatternLike): PatternMapperFn = _distshape(listOf(shape).as
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.distshape(shape: PatternLike): PatternMapperFn =
-    _distshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.distshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distortshape(shape, callInfo) }
 
 /**
  * Alias for [distortshape]. Sets the distortion waveshaper shape for this pattern.
@@ -552,8 +521,9 @@ fun PatternMapperFn.distshape(shape: PatternLike): PatternMapperFn =
  * @tags dshape, distortshape, distshape, distort, shape, waveshaper
  */
 @SprudelDsl
-fun SprudelPattern.dshape(shape: PatternLike): SprudelPattern =
-    this._dshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.dshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.distortshape(shape, callInfo)
 
 /**
  * Alias for [distortshape]. Parses this string as a pattern and sets the distortion waveshaper shape.
@@ -565,7 +535,8 @@ fun SprudelPattern.dshape(shape: PatternLike): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.dshape(shape: PatternLike): SprudelPattern = this._dshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun String.dshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.toVoiceValuePattern().distortshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape. Alias for [distortshape].
@@ -582,7 +553,8 @@ fun String.dshape(shape: PatternLike): SprudelPattern = this._dshape(listOf(shap
  * @tags dshape, distortshape, distshape, distort, shape, waveshaper
  */
 @SprudelDsl
-fun dshape(shape: PatternLike): PatternMapperFn = _dshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun dshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.distortshape(shape, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape (alias for [distortshape])
@@ -596,26 +568,18 @@ fun dshape(shape: PatternLike): PatternMapperFn = _dshape(listOf(shape).asSprude
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.dshape(shape: PatternLike): PatternMapperFn =
-    _dshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.dshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.distortshape(shape, callInfo) }
 
 // -- Named distortion shapes ------------------------------------------------------------------------------------------
 // -- crush() ----------------------------------------------------------------------------------------------------------
 
 private val crushMutation = voiceModifier { copy(crush = it?.asDoubleOrNull()) }
 
-fun applyCrush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyCrush(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, crushMutation)
 }
-
-internal val _crush by dslPatternMapper { args, callInfo -> { p -> p._crush(args, callInfo) } }
-internal val SprudelPattern._crush by dslPatternExtension { p, args, /* callInfo */ _ -> applyCrush(p, args) }
-internal val String._crush by dslStringExtension { p, args, callInfo -> p._crush(args, callInfo) }
-internal val PatternMapperFn._crush by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_crush(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies bit-crushing (bit-depth reduction) to this pattern.
@@ -644,8 +608,9 @@ internal val PatternMapperFn._crush by dslPatternMapperExtension { m, args, call
  * @tags crush, bitcrush, lofi, bitdepth, distortion
  */
 @SprudelDsl
-fun SprudelPattern.crush(amount: PatternLike? = null): SprudelPattern =
-    this._crush(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyCrush(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and applies bit-crushing.
@@ -661,8 +626,9 @@ fun SprudelPattern.crush(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.crush(amount: PatternLike? = null): SprudelPattern =
-    this._crush(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().crush(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies bit-crushing.
@@ -686,7 +652,8 @@ fun String.crush(amount: PatternLike? = null): SprudelPattern =
  * @tags crush, bitcrush, lofi, bitdepth, distortion
  */
 @SprudelDsl
-fun crush(amount: PatternLike? = null): PatternMapperFn = _crush(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun crush(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.crush(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies bit-crushing after the previous mapper.
@@ -704,32 +671,17 @@ fun crush(amount: PatternLike? = null): PatternMapperFn = _crush(listOfNotNull(a
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.crush(amount: PatternLike? = null): PatternMapperFn =
-    _crush(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.crush(amount, callInfo) }
 
 // -- crushos() / crushoversampling() ----------------------------------------------------------------------------------
 
 private val crushOversampleMutation = voiceModifier { copy(crushOversample = it?.toString()?.toIntOrNull()) }
 
-fun applyCrushOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyCrushOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, crushOversampleMutation)
 }
-
-internal val _crushos by dslPatternMapper { args, callInfo -> { p -> p._crushos(args, callInfo) } }
-internal val SprudelPattern._crushos by dslPatternExtension { p, args, /* callInfo */ _ -> applyCrushOversample(p, args) }
-internal val String._crushos by dslStringExtension { p, args, callInfo -> p._crushos(args, callInfo) }
-internal val PatternMapperFn._crushos by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_crushos(args, callInfo))
-}
-
-internal val _crushOversampling by dslPatternMapper { args, callInfo -> { p -> p._crushOversampling(args, callInfo) } }
-internal val SprudelPattern._crushOversampling by dslPatternExtension { p, args, /* callInfo */ _ -> applyCrushOversample(p, args) }
-internal val String._crushOversampling by dslStringExtension { p, args, callInfo -> p._crushOversampling(args, callInfo) }
-internal val PatternMapperFn._crushOversampling by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_crushOversampling(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the bit-crush oversampling factor.
@@ -749,52 +701,51 @@ internal val PatternMapperFn._crushOversampling by dslPatternMapperExtension { m
  * @tags crushos, crush, oversampling, aliasing, quality
  */
 @SprudelDsl
-fun SprudelPattern.crushos(factor: PatternLike? = null): SprudelPattern =
-    this._crushos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyCrushOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
 @SprudelDsl
-fun String.crushos(factor: PatternLike? = null): SprudelPattern =
-    this._crushos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().crushos(factor, callInfo)
 
 @SprudelDsl
-fun crushos(factor: PatternLike? = null): PatternMapperFn = _crushos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.crushos(factor, callInfo) }
 
 @SprudelDsl
-fun PatternMapperFn.crushos(factor: PatternLike? = null): PatternMapperFn =
-    _crushos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.crushos(factor, callInfo) }
 
 @SprudelDsl
-fun SprudelPattern.crushOversampling(factor: PatternLike? = null): SprudelPattern =
-    this._crushOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyCrushOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
 @SprudelDsl
-fun String.crushOversampling(factor: PatternLike? = null): SprudelPattern =
-    this._crushOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().crushOversampling(factor, callInfo)
 
 @SprudelDsl
-fun crushOversampling(factor: PatternLike? = null): PatternMapperFn =
-    _crushOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.crushOversampling(factor, callInfo) }
 
 @SprudelDsl
-fun PatternMapperFn.crushOversampling(factor: PatternLike? = null): PatternMapperFn =
-    _crushOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.crushOversampling(factor, callInfo) }
 
 // -- coarse() ---------------------------------------------------------------------------------------------------------
 
 private val coarseMutation = voiceModifier { copy(coarse = it?.asDoubleOrNull()) }
 
-fun applyCoarse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyCoarse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, coarseMutation)
 }
-
-internal val _coarse by dslPatternMapper { args, callInfo -> { p -> p._coarse(args, callInfo) } }
-internal val SprudelPattern._coarse by dslPatternExtension { p, args, /* callInfo */ _ -> applyCoarse(p, args) }
-internal val String._coarse by dslStringExtension { p, args, callInfo -> p._coarse(args, callInfo) }
-internal val PatternMapperFn._coarse by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_coarse(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies sample-rate reduction (downsampling) to this pattern.
@@ -823,8 +774,9 @@ internal val PatternMapperFn._coarse by dslPatternMapperExtension { m, args, cal
  * @tags coarse, samplerate, lofi, aliasing, downsample
  */
 @SprudelDsl
-fun SprudelPattern.coarse(amount: PatternLike? = null): SprudelPattern =
-    this._coarse(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyCoarse(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and applies sample-rate reduction.
@@ -840,8 +792,9 @@ fun SprudelPattern.coarse(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.coarse(amount: PatternLike? = null): SprudelPattern =
-    this._coarse(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().coarse(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies sample-rate reduction.
@@ -865,7 +818,8 @@ fun String.coarse(amount: PatternLike? = null): SprudelPattern =
  * @tags coarse, samplerate, lofi, aliasing, downsample
  */
 @SprudelDsl
-fun coarse(amount: PatternLike? = null): PatternMapperFn = _coarse(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.coarse(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that applies sample-rate reduction after the previous mapper.
@@ -883,32 +837,17 @@ fun coarse(amount: PatternLike? = null): PatternMapperFn = _coarse(listOfNotNull
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.coarse(amount: PatternLike? = null): PatternMapperFn =
-    _coarse(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.coarse(amount, callInfo) }
 
 // -- coarseos() / coarseoversampling() --------------------------------------------------------------------------------
 
 private val coarseOversampleMutation = voiceModifier { copy(coarseOversample = it?.toString()?.toIntOrNull()) }
 
-fun applyCoarseOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyCoarseOversample(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, coarseOversampleMutation)
 }
-
-internal val _coarseos by dslPatternMapper { args, callInfo -> { p -> p._coarseos(args, callInfo) } }
-internal val SprudelPattern._coarseos by dslPatternExtension { p, args, /* callInfo */ _ -> applyCoarseOversample(p, args) }
-internal val String._coarseos by dslStringExtension { p, args, callInfo -> p._coarseos(args, callInfo) }
-internal val PatternMapperFn._coarseos by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_coarseos(args, callInfo))
-}
-
-internal val _coarseOversampling by dslPatternMapper { args, callInfo -> { p -> p._coarseOversampling(args, callInfo) } }
-internal val SprudelPattern._coarseOversampling by dslPatternExtension { p, args, /* callInfo */ _ -> applyCoarseOversample(p, args) }
-internal val String._coarseOversampling by dslStringExtension { p, args, callInfo -> p._coarseOversampling(args, callInfo) }
-internal val PatternMapperFn._coarseOversampling by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_coarseOversampling(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the coarse (sample-rate reducer) oversampling factor.
@@ -931,35 +870,43 @@ internal val PatternMapperFn._coarseOversampling by dslPatternMapperExtension { 
  * @tags coarseos, coarse, oversampling, aliasing, quality
  */
 @SprudelDsl
-fun SprudelPattern.coarseos(factor: PatternLike? = null): SprudelPattern =
-    this._coarseos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyCoarseOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
 @SprudelDsl
-fun String.coarseos(factor: PatternLike? = null): SprudelPattern =
-    this._coarseos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().coarseos(factor, callInfo)
 
 @SprudelDsl
-fun coarseos(factor: PatternLike? = null): PatternMapperFn = _coarseos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.coarseos(factor, callInfo) }
 
 @SprudelDsl
-fun PatternMapperFn.coarseos(factor: PatternLike? = null): PatternMapperFn =
-    _coarseos(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.coarseos(factor, callInfo) }
 
 @SprudelDsl
-fun SprudelPattern.coarseOversampling(factor: PatternLike? = null): SprudelPattern =
-    this._coarseOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyCoarseOversample(this, listOfNotNull(factor).asSprudelDslArgs(callInfo))
 
 @SprudelDsl
-fun String.coarseOversampling(factor: PatternLike? = null): SprudelPattern =
-    this._coarseOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().coarseOversampling(factor, callInfo)
 
 @SprudelDsl
-fun coarseOversampling(factor: PatternLike? = null): PatternMapperFn =
-    _coarseOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.coarseOversampling(factor, callInfo) }
 
 @SprudelDsl
-fun PatternMapperFn.coarseOversampling(factor: PatternLike? = null): PatternMapperFn =
-    _coarseOversampling(listOfNotNull(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.coarseOversampling(factor, callInfo) }
 
 // -- room() -----------------------------------------------------------------------------------------------------------
 
@@ -976,7 +923,7 @@ private val roomMutation = voiceModifier {
     )
 }
 
-fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // No args: reinterpret pattern's own values as room mix (backward compat)
     if (args.isEmpty()) {
         return source.reinterpretVoice {
@@ -994,15 +941,6 @@ fun applyRoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelP
         )
     }
 }
-
-internal val _room by dslPatternMapper { args, callInfo -> { p -> p._room(args, callInfo) } }
-internal val SprudelPattern._room by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoom(p, args) }
-internal val String._room by dslStringExtension { p, args, callInfo -> p._room(args, callInfo) }
-internal val PatternMapperFn._room by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_room(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the reverb wet/dry mix for this pattern (0 = dry, 1 = full wet).
@@ -1030,8 +968,9 @@ internal val PatternMapperFn._room by dslPatternMapperExtension { m, args, callI
  * @tags room, reverb, wet, mix, space
  */
 @SprudelDsl
-fun SprudelPattern.room(amount: PatternLike? = null): SprudelPattern =
-    this._room(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.room(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyRoom(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the reverb wet/dry mix.
@@ -1046,8 +985,9 @@ fun SprudelPattern.room(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.room(amount: PatternLike? = null): SprudelPattern =
-    this._room(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.room(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().room(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb wet/dry mix.
@@ -1070,7 +1010,8 @@ fun String.room(amount: PatternLike? = null): SprudelPattern =
  * @tags room, reverb, wet, mix, space
  */
 @SprudelDsl
-fun room(amount: PatternLike? = null): PatternMapperFn = _room(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun room(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.room(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb wet/dry mix after the previous mapper.
@@ -1087,46 +1028,17 @@ fun room(amount: PatternLike? = null): PatternMapperFn = _room(listOfNotNull(amo
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.room(amount: PatternLike? = null): PatternMapperFn =
-    _room(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.room(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.room(amount, callInfo) }
 
 // -- roomsize() / rsize() / sz() / size() -----------------------------------------------------------------------------
 
 private val roomSizeMutation = voiceModifier { copy(roomSize = it?.asDoubleOrNull()) }
 
-fun applyRoomSize(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyRoomSize(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, roomSizeMutation)
 }
-
-internal val _roomsize by dslPatternMapper { args, callInfo -> { p -> p._roomsize(args, callInfo) } }
-internal val SprudelPattern._roomsize by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
-internal val String._roomsize by dslStringExtension { p, args, callInfo -> p._roomsize(args, callInfo) }
-internal val PatternMapperFn._roomsize by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_roomsize(args, callInfo))
-}
-
-internal val _rsize by dslPatternMapper { args, callInfo -> { p -> p._rsize(args, callInfo) } }
-internal val SprudelPattern._rsize by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
-internal val String._rsize by dslStringExtension { p, args, callInfo -> p._rsize(args, callInfo) }
-internal val PatternMapperFn._rsize by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_rsize(args, callInfo))
-}
-
-internal val _sz by dslPatternMapper { args, callInfo -> { p -> p._sz(args, callInfo) } }
-internal val SprudelPattern._sz by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
-internal val String._sz by dslStringExtension { p, args, callInfo -> p._sz(args, callInfo) }
-internal val PatternMapperFn._sz by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_sz(args, callInfo))
-}
-
-internal val _size by dslPatternMapper { args, callInfo -> { p -> p._size(args, callInfo) } }
-internal val SprudelPattern._size by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomSize(p, args) }
-internal val String._size by dslStringExtension { p, args, callInfo -> p._size(args, callInfo) }
-internal val PatternMapperFn._size by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_size(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the reverb room size (tail length) for this pattern.
@@ -1157,8 +1069,9 @@ internal val PatternMapperFn._size by dslPatternMapperExtension { m, args, callI
  * @tags roomsize, rsize, sz, size, reverb, room, tail
  */
 @SprudelDsl
-fun SprudelPattern.roomsize(amount: PatternLike? = null): SprudelPattern =
-    this._roomsize(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyRoomSize(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the reverb room size.
@@ -1174,8 +1087,9 @@ fun SprudelPattern.roomsize(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.roomsize(amount: PatternLike? = null): SprudelPattern =
-    this._roomsize(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomsize(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb room size.
@@ -1200,7 +1114,8 @@ fun String.roomsize(amount: PatternLike? = null): SprudelPattern =
  * @tags roomsize, rsize, sz, size, reverb, room, tail
  */
 @SprudelDsl
-fun roomsize(amount: PatternLike? = null): PatternMapperFn = _roomsize(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size after the previous mapper.
@@ -1217,8 +1132,9 @@ fun roomsize(amount: PatternLike? = null): PatternMapperFn = _roomsize(listOfNot
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.roomsize(amount: PatternLike? = null): PatternMapperFn =
-    _roomsize(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomsize(amount, callInfo) }
 
 /**
  * Alias for [roomsize]. Sets the reverb room size for this pattern.
@@ -1236,8 +1152,9 @@ fun PatternMapperFn.roomsize(amount: PatternLike? = null): PatternMapperFn =
  * @tags rsize, roomsize, sz, size, reverb, room, tail
  */
 @SprudelDsl
-fun SprudelPattern.rsize(amount: PatternLike? = null): SprudelPattern =
-    this._rsize(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.roomsize(amount, callInfo)
 
 /**
  * Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size.
@@ -1249,8 +1166,9 @@ fun SprudelPattern.rsize(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.rsize(amount: PatternLike? = null): SprudelPattern =
-    this._rsize(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomsize(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
@@ -1267,7 +1185,8 @@ fun String.rsize(amount: PatternLike? = null): SprudelPattern =
  * @tags rsize, roomsize, sz, size, reverb, room, tail
  */
 @SprudelDsl
-fun rsize(amount: PatternLike? = null): PatternMapperFn = _rsize(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1284,8 +1203,9 @@ fun rsize(amount: PatternLike? = null): PatternMapperFn = _rsize(listOfNotNull(a
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.rsize(amount: PatternLike? = null): PatternMapperFn =
-    _rsize(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomsize(amount, callInfo) }
 
 /**
  * Alias for [roomsize]. Sets the reverb room size for this pattern.
@@ -1303,8 +1223,9 @@ fun PatternMapperFn.rsize(amount: PatternLike? = null): PatternMapperFn =
  * @tags sz, roomsize, rsize, size, reverb, room, tail
  */
 @SprudelDsl
-fun SprudelPattern.sz(amount: PatternLike? = null): SprudelPattern =
-    this._sz(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.roomsize(amount, callInfo)
 
 /**
  * Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size.
@@ -1316,8 +1237,9 @@ fun SprudelPattern.sz(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.sz(amount: PatternLike? = null): SprudelPattern =
-    this._sz(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomsize(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
@@ -1334,7 +1256,8 @@ fun String.sz(amount: PatternLike? = null): SprudelPattern =
  * @tags sz, roomsize, rsize, size, reverb, room, tail
  */
 @SprudelDsl
-fun sz(amount: PatternLike? = null): PatternMapperFn = _sz(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1351,8 +1274,9 @@ fun sz(amount: PatternLike? = null): PatternMapperFn = _sz(listOfNotNull(amount)
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.sz(amount: PatternLike? = null): PatternMapperFn =
-    _sz(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomsize(amount, callInfo) }
 
 /**
  * Alias for [roomsize]. Sets the reverb room size for this pattern.
@@ -1369,8 +1293,9 @@ fun PatternMapperFn.sz(amount: PatternLike? = null): PatternMapperFn =
  * @tags size, roomsize, rsize, sz, reverb, room, tail
  */
 @SprudelDsl
-fun SprudelPattern.size(amount: PatternLike? = null): SprudelPattern =
-    this._size(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.size(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.roomsize(amount, callInfo)
 
 /**
  * Alias for [roomsize]. Parses this string as a pattern and sets the reverb room size.
@@ -1382,8 +1307,9 @@ fun SprudelPattern.size(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.size(amount: PatternLike? = null): SprudelPattern =
-    this._size(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.size(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomsize(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
@@ -1400,7 +1326,8 @@ fun String.size(amount: PatternLike? = null): SprudelPattern =
  * @tags size, roomsize, rsize, sz, reverb, room, tail
  */
 @SprudelDsl
-fun size(amount: PatternLike? = null): PatternMapperFn = _size(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomsize(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb room size (alias for roomsize) after the previous mapper.
@@ -1417,32 +1344,17 @@ fun size(amount: PatternLike? = null): PatternMapperFn = _size(listOfNotNull(amo
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.size(amount: PatternLike? = null): PatternMapperFn =
-    _size(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.size(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomsize(amount, callInfo) }
 
 // -- roomfade() / rfade() ---------------------------------------------------------------------------------------------
 
 private val roomFadeMutation = voiceModifier { copy(roomFade = it?.asDoubleOrNull()) }
 
-fun applyRoomFade(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyRoomFade(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, roomFadeMutation)
 }
-
-internal val _roomfade by dslPatternMapper { args, callInfo -> { p -> p._roomfade(args, callInfo) } }
-internal val SprudelPattern._roomfade by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomFade(p, args) }
-internal val String._roomfade by dslStringExtension { p, args, callInfo -> p._roomfade(args, callInfo) }
-internal val PatternMapperFn._roomfade by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_roomfade(args, callInfo))
-}
-
-internal val _rfade by dslPatternMapper { args, callInfo -> { p -> p._rfade(args, callInfo) } }
-internal val SprudelPattern._rfade by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomFade(p, args) }
-internal val String._rfade by dslStringExtension { p, args, callInfo -> p._rfade(args, callInfo) }
-internal val PatternMapperFn._rfade by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_rfade(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the reverb fade time in seconds for this pattern.
@@ -1471,8 +1383,9 @@ internal val PatternMapperFn._rfade by dslPatternMapperExtension { m, args, call
  * @tags roomfade, rfade, reverb, fade, tail
  */
 @SprudelDsl
-fun SprudelPattern.roomfade(time: PatternLike? = null): SprudelPattern =
-    this._roomfade(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyRoomFade(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the reverb fade time.
@@ -1486,8 +1399,9 @@ fun SprudelPattern.roomfade(time: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.roomfade(time: PatternLike? = null): SprudelPattern =
-    this._roomfade(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomfade(time, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb fade time.
@@ -1511,7 +1425,8 @@ fun String.roomfade(time: PatternLike? = null): SprudelPattern =
  * @tags roomfade, rfade, reverb, fade, tail
  */
 @SprudelDsl
-fun roomfade(time: PatternLike? = null): PatternMapperFn = _roomfade(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomfade(time, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb fade time after the previous mapper.
@@ -1528,8 +1443,9 @@ fun roomfade(time: PatternLike? = null): PatternMapperFn = _roomfade(listOfNotNu
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.roomfade(time: PatternLike? = null): PatternMapperFn =
-    _roomfade(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomfade(time, callInfo) }
 
 /**
  * Alias for [roomfade]. Sets the reverb fade time in seconds for this pattern.
@@ -1552,8 +1468,9 @@ fun PatternMapperFn.roomfade(time: PatternLike? = null): PatternMapperFn =
  * @tags rfade, roomfade, reverb, fade, tail
  */
 @SprudelDsl
-fun SprudelPattern.rfade(time: PatternLike? = null): SprudelPattern =
-    this._rfade(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.roomfade(time, callInfo)
 
 /**
  * Alias for [roomfade]. Parses this string as a pattern and sets the reverb fade time.
@@ -1567,8 +1484,9 @@ fun SprudelPattern.rfade(time: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.rfade(time: PatternLike? = null): SprudelPattern =
-    this._rfade(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomfade(time, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb fade time. Alias for [roomfade].
@@ -1589,7 +1507,8 @@ fun String.rfade(time: PatternLike? = null): SprudelPattern =
  * @tags rfade, roomfade, reverb, fade, tail
  */
 @SprudelDsl
-fun rfade(time: PatternLike? = null): PatternMapperFn = _rfade(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomfade(time, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb fade time (alias for roomfade) after the previous mapper.
@@ -1606,32 +1525,17 @@ fun rfade(time: PatternLike? = null): PatternMapperFn = _rfade(listOfNotNull(tim
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.rfade(time: PatternLike? = null): PatternMapperFn =
-    _rfade(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomfade(time, callInfo) }
 
 // -- roomlp() / rlp() -------------------------------------------------------------------------------------------------
 
 private val roomLpMutation = voiceModifier { copy(roomLp = it?.asDoubleOrNull()) }
 
-fun applyRoomLp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyRoomLp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, roomLpMutation)
 }
-
-internal val _roomlp by dslPatternMapper { args, callInfo -> { p -> p._roomlp(args, callInfo) } }
-internal val SprudelPattern._roomlp by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomLp(p, args) }
-internal val String._roomlp by dslStringExtension { p, args, callInfo -> p._roomlp(args, callInfo) }
-internal val PatternMapperFn._roomlp by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_roomlp(args, callInfo))
-}
-
-internal val _rlp by dslPatternMapper { args, callInfo -> { p -> p._rlp(args, callInfo) } }
-internal val SprudelPattern._rlp by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomLp(p, args) }
-internal val String._rlp by dslStringExtension { p, args, callInfo -> p._rlp(args, callInfo) }
-internal val PatternMapperFn._rlp by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_rlp(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the reverb lowpass start frequency in Hz for this pattern.
@@ -1661,8 +1565,9 @@ internal val PatternMapperFn._rlp by dslPatternMapperExtension { m, args, callIn
  * @tags roomlp, rlp, reverb, lowpass, filter
  */
 @SprudelDsl
-fun SprudelPattern.roomlp(freq: PatternLike? = null): SprudelPattern =
-    this._roomlp(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyRoomLp(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the reverb lowpass start frequency.
@@ -1677,8 +1582,9 @@ fun SprudelPattern.roomlp(freq: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.roomlp(freq: PatternLike? = null): SprudelPattern =
-    this._roomlp(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun String.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomlp(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb lowpass start frequency.
@@ -1703,7 +1609,8 @@ fun String.roomlp(freq: PatternLike? = null): SprudelPattern =
  * @tags roomlp, rlp, reverb, lowpass, filter
  */
 @SprudelDsl
-fun roomlp(freq: PatternLike? = null): PatternMapperFn = _roomlp(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomlp(freq, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency after the previous mapper.
@@ -1721,8 +1628,9 @@ fun roomlp(freq: PatternLike? = null): PatternMapperFn = _roomlp(listOfNotNull(f
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.roomlp(freq: PatternLike? = null): PatternMapperFn =
-    _roomlp(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomlp(freq, callInfo) }
 
 /**
  * Alias for [roomlp]. Sets the reverb lowpass start frequency in Hz for this pattern.
@@ -1746,8 +1654,9 @@ fun PatternMapperFn.roomlp(freq: PatternLike? = null): PatternMapperFn =
  * @tags rlp, roomlp, reverb, lowpass, filter
  */
 @SprudelDsl
-fun SprudelPattern.rlp(freq: PatternLike? = null): SprudelPattern =
-    this._rlp(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.roomlp(freq, callInfo)
 
 /**
  * Alias for [roomlp]. Parses this string as a pattern and sets the reverb lowpass start frequency.
@@ -1762,8 +1671,9 @@ fun SprudelPattern.rlp(freq: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.rlp(freq: PatternLike? = null): SprudelPattern =
-    this._rlp(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun String.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomlp(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb lowpass start frequency. Alias for [roomlp].
@@ -1787,7 +1697,8 @@ fun String.rlp(freq: PatternLike? = null): SprudelPattern =
  * @tags rlp, roomlp, reverb, lowpass, filter
  */
 @SprudelDsl
-fun rlp(freq: PatternLike? = null): PatternMapperFn = _rlp(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomlp(freq, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency (alias for roomlp) after the previous mapper.
@@ -1805,32 +1716,17 @@ fun rlp(freq: PatternLike? = null): PatternMapperFn = _rlp(listOfNotNull(freq).a
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.rlp(freq: PatternLike? = null): PatternMapperFn =
-    _rlp(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomlp(freq, callInfo) }
 
 // -- roomdim() / rdim() -----------------------------------------------------------------------------------------------
 
 private val roomDimMutation = voiceModifier { copy(roomDim = it?.asDoubleOrNull()) }
 
-fun applyRoomDim(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyRoomDim(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, roomDimMutation)
 }
-
-internal val _roomdim by dslPatternMapper { args, callInfo -> { p -> p._roomdim(args, callInfo) } }
-internal val SprudelPattern._roomdim by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomDim(p, args) }
-internal val String._roomdim by dslStringExtension { p, args, callInfo -> p._roomdim(args, callInfo) }
-internal val PatternMapperFn._roomdim by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_roomdim(args, callInfo))
-}
-
-internal val _rdim by dslPatternMapper { args, callInfo -> { p -> p._rdim(args, callInfo) } }
-internal val SprudelPattern._rdim by dslPatternExtension { p, args, /* callInfo */ _ -> applyRoomDim(p, args) }
-internal val String._rdim by dslStringExtension { p, args, callInfo -> p._rdim(args, callInfo) }
-internal val PatternMapperFn._rdim by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_rdim(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the reverb lowpass frequency at -60 dB for this pattern.
@@ -1859,8 +1755,9 @@ internal val PatternMapperFn._rdim by dslPatternMapperExtension { m, args, callI
  * @tags roomdim, rdim, reverb, lowpass, darkness
  */
 @SprudelDsl
-fun SprudelPattern.roomdim(freq: PatternLike? = null): SprudelPattern =
-    this._roomdim(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyRoomDim(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the reverb lowpass frequency at -60 dB.
@@ -1874,8 +1771,9 @@ fun SprudelPattern.roomdim(freq: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.roomdim(freq: PatternLike? = null): SprudelPattern =
-    this._roomdim(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun String.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomdim(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB.
@@ -1899,7 +1797,8 @@ fun String.roomdim(freq: PatternLike? = null): SprudelPattern =
  * @tags roomdim, rdim, reverb, lowpass, darkness
  */
 @SprudelDsl
-fun roomdim(freq: PatternLike? = null): PatternMapperFn = _roomdim(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomdim(freq, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB after the previous mapper.
@@ -1916,8 +1815,9 @@ fun roomdim(freq: PatternLike? = null): PatternMapperFn = _roomdim(listOfNotNull
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.roomdim(freq: PatternLike? = null): PatternMapperFn =
-    _roomdim(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomdim(freq, callInfo) }
 
 /**
  * Alias for [roomdim]. Sets the reverb lowpass frequency at -60 dB for this pattern.
@@ -1944,8 +1844,9 @@ fun PatternMapperFn.roomdim(freq: PatternLike? = null): PatternMapperFn =
  * @tags rdim, roomdim, reverb, lowpass, darkness
  */
 @SprudelDsl
-fun SprudelPattern.rdim(freq: PatternLike? = null): SprudelPattern =
-    this._rdim(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.roomdim(freq, callInfo)
 
 /**
  * Alias for [roomdim]. Parses this string as a pattern and sets the reverb lowpass frequency at -60 dB.
@@ -1959,8 +1860,9 @@ fun SprudelPattern.rdim(freq: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.rdim(freq: PatternLike? = null): SprudelPattern =
-    this._rdim(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun String.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().roomdim(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB. Alias for [roomdim].
@@ -1977,7 +1879,8 @@ fun String.rdim(freq: PatternLike? = null): SprudelPattern =
  * @tags rdim, roomdim, reverb, lowpass, darkness
  */
 @SprudelDsl
-fun rdim(freq: PatternLike? = null): PatternMapperFn = _rdim(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.roomdim(freq, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the reverb -60 dB frequency (alias for roomdim) after the previous
@@ -1995,34 +1898,19 @@ fun rdim(freq: PatternLike? = null): PatternMapperFn = _rdim(listOfNotNull(freq)
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.rdim(freq: PatternLike? = null): PatternMapperFn =
-    _rdim(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.roomdim(freq, callInfo) }
 
 // -- iresponse() / ir() -----------------------------------------------------------------------------------------------
 
 private val iResponseMutation = voiceModifier { response -> copy(iResponse = response?.toString()) }
 
-fun applyIResponse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyIResponse(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, iResponseMutation) { src, ctrl ->
         src.copy(iResponse = ctrl.iResponse)
     }
 }
-
-internal val _iresponse by dslPatternMapper { args, callInfo -> { p -> p._iresponse(args, callInfo) } }
-internal val SprudelPattern._iresponse by dslPatternExtension { p, args, /* callInfo */ _ -> applyIResponse(p, args) }
-internal val String._iresponse by dslStringExtension { p, args, callInfo -> p._iresponse(args, callInfo) }
-internal val PatternMapperFn._iresponse by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_iresponse(args, callInfo))
-}
-
-internal val _ir by dslPatternMapper { args, callInfo -> { p -> p._ir(args, callInfo) } }
-internal val SprudelPattern._ir by dslPatternExtension { p, args, /* callInfo */ _ -> applyIResponse(p, args) }
-internal val String._ir by dslStringExtension { p, args, callInfo -> p._ir(args, callInfo) }
-internal val PatternMapperFn._ir by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_ir(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the impulse response sample name for convolution reverb on this pattern.
@@ -2046,7 +1934,9 @@ internal val PatternMapperFn._ir by dslPatternMapperExtension { m, args, callInf
  * @tags iresponse, ir, impulse, convolution, reverb
  */
 @SprudelDsl
-fun SprudelPattern.iresponse(name: PatternLike): SprudelPattern = this._iresponse(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyIResponse(this, listOf(name).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the impulse response sample for convolution reverb.
@@ -2058,7 +1948,8 @@ fun SprudelPattern.iresponse(name: PatternLike): SprudelPattern = this._irespons
  * ```
  */
 @SprudelDsl
-fun String.iresponse(name: PatternLike): SprudelPattern = this._iresponse(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun String.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.toVoiceValuePattern().iresponse(name, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the impulse response sample for convolution reverb.
@@ -2081,7 +1972,8 @@ fun String.iresponse(name: PatternLike): SprudelPattern = this._iresponse(listOf
  * @tags iresponse, ir, impulse, convolution, reverb
  */
 @SprudelDsl
-fun iresponse(name: PatternLike): PatternMapperFn = _iresponse(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun iresponse(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.iresponse(name, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the impulse response after the previous mapper.
@@ -2098,7 +1990,9 @@ fun iresponse(name: PatternLike): PatternMapperFn = _iresponse(listOf(name).asSp
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.iresponse(name: PatternLike): PatternMapperFn = _iresponse(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.iresponse(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.iresponse(name, callInfo) }
 
 /**
  * Alias for [iresponse]. Sets the impulse response sample name for convolution reverb on this pattern.
@@ -2119,7 +2013,8 @@ fun PatternMapperFn.iresponse(name: PatternLike): PatternMapperFn = _iresponse(l
  * @tags ir, iresponse, impulse, convolution, reverb
  */
 @SprudelDsl
-fun SprudelPattern.ir(name: PatternLike): SprudelPattern = this._ir(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.iresponse(name, callInfo)
 
 /**
  * Alias for [iresponse]. Parses this string as a pattern and sets the impulse response sample.
@@ -2131,7 +2026,8 @@ fun SprudelPattern.ir(name: PatternLike): SprudelPattern = this._ir(listOf(name)
  * ```
  */
 @SprudelDsl
-fun String.ir(name: PatternLike): SprudelPattern = this._ir(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun String.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.toVoiceValuePattern().iresponse(name, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the impulse response sample. Alias for [iresponse].
@@ -2148,7 +2044,8 @@ fun String.ir(name: PatternLike): SprudelPattern = this._ir(listOf(name).asSprud
  * @tags ir, iresponse, impulse, convolution, reverb
  */
 @SprudelDsl
-fun ir(name: PatternLike): PatternMapperFn = _ir(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun ir(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.iresponse(name, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the impulse response (alias for iresponse) after the previous mapper.
@@ -2165,7 +2062,8 @@ fun ir(name: PatternLike): PatternMapperFn = _ir(listOf(name).asSprudelDslArgs()
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.ir(name: PatternLike): PatternMapperFn = _ir(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.ir(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = this.chain { p -> p.iresponse(name, callInfo) }
 
 // -- delay() ----------------------------------------------------------------------------------------------------------
 
@@ -2198,15 +2096,6 @@ private fun applyDelay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
         source._liftOrReinterpretNumericalField(args, delayMutation)
     }
 }
-
-internal val _delay by dslPatternMapper { args, callInfo -> { p -> p._delay(args, callInfo) } }
-internal val SprudelPattern._delay by dslPatternExtension { p, args, /* callInfo */ _ -> applyDelay(p, args) }
-internal val String._delay by dslStringExtension { p, args, callInfo -> p._delay(args, callInfo) }
-internal val PatternMapperFn._delay by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_delay(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the delay effect for this pattern.
@@ -2244,8 +2133,9 @@ internal val PatternMapperFn._delay by dslPatternMapperExtension { m, args, call
  * @tags delay, echo, wet, mix, delaytime, delayfeedback
  */
 @SprudelDsl
-fun SprudelPattern.delay(amount: PatternLike? = null): SprudelPattern =
-    this._delay(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDelay(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the delay wet/dry mix.
@@ -2259,8 +2149,9 @@ fun SprudelPattern.delay(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.delay(amount: PatternLike? = null): SprudelPattern =
-    this._delay(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().delay(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay wet/dry mix.
@@ -2283,7 +2174,8 @@ fun String.delay(amount: PatternLike? = null): SprudelPattern =
  * @tags delay, echo, wet, mix
  */
 @SprudelDsl
-fun delay(amount: PatternLike? = null): PatternMapperFn = _delay(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun delay(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delay(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay wet/dry mix after the previous mapper.
@@ -2300,25 +2192,17 @@ fun delay(amount: PatternLike? = null): PatternMapperFn = _delay(listOfNotNull(a
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.delay(amount: PatternLike? = null): PatternMapperFn =
-    _delay(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delay(amount, callInfo) }
 
 // -- delaytime() ------------------------------------------------------------------------------------------------------
 
 private val delayTimeMutation = voiceModifier { copy(delayTime = it?.asDoubleOrNull()) }
 
-fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyDelayTime(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, delayTimeMutation)
 }
-
-internal val _delaytime by dslPatternMapper { args, callInfo -> { p -> p._delaytime(args, callInfo) } }
-internal val SprudelPattern._delaytime by dslPatternExtension { p, args, /* callInfo */ _ -> applyDelayTime(p, args) }
-internal val String._delaytime by dslStringExtension { p, args, callInfo -> p._delaytime(args, callInfo) }
-internal val PatternMapperFn._delaytime by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_delaytime(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the delay time in seconds (the interval between repeats) for this pattern.
@@ -2347,8 +2231,9 @@ internal val PatternMapperFn._delaytime by dslPatternMapperExtension { m, args, 
  * @tags delaytime, delay, echo, time, interval
  */
 @SprudelDsl
-fun SprudelPattern.delaytime(time: PatternLike? = null): SprudelPattern =
-    this._delaytime(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDelayTime(this, listOfNotNull(time).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the delay time.
@@ -2362,8 +2247,9 @@ fun SprudelPattern.delaytime(time: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.delaytime(time: PatternLike? = null): SprudelPattern =
-    this._delaytime(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun String.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().delaytime(time, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay time in seconds.
@@ -2386,7 +2272,8 @@ fun String.delaytime(time: PatternLike? = null): SprudelPattern =
  * @tags delaytime, delay, echo, time, interval
  */
 @SprudelDsl
-fun delaytime(time: PatternLike? = null): PatternMapperFn = _delaytime(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delaytime(time, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay time after the previous mapper.
@@ -2403,43 +2290,17 @@ fun delaytime(time: PatternLike? = null): PatternMapperFn = _delaytime(listOfNot
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.delaytime(time: PatternLike? = null): PatternMapperFn =
-    _delaytime(listOfNotNull(time).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delaytime(time, callInfo) }
 
 // -- delayfeedback() / delayfb() / dfb() ------------------------------------------------------------------------------
 
 private val delayFeedbackMutation = voiceModifier { copy(delayFeedback = it?.asDoubleOrNull()) }
 
-fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyDelayFeedback(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, delayFeedbackMutation)
 }
-
-internal val _delayfeedback by dslPatternMapper { args, callInfo -> { p -> p._delayfeedback(args, callInfo) } }
-internal val SprudelPattern._delayfeedback by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDelayFeedback(p, args)
-}
-internal val String._delayfeedback by dslStringExtension { p, args, callInfo -> p._delayfeedback(args, callInfo) }
-internal val PatternMapperFn._delayfeedback by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_delayfeedback(args, callInfo))
-}
-
-internal val _delayfb by dslPatternMapper { args, callInfo -> { p -> p._delayfb(args, callInfo) } }
-internal val SprudelPattern._delayfb by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyDelayFeedback(p, args)
-}
-internal val String._delayfb by dslStringExtension { p, args, callInfo -> p._delayfb(args, callInfo) }
-internal val PatternMapperFn._delayfb by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_delayfb(args, callInfo))
-}
-
-internal val _dfb by dslPatternMapper { args, callInfo -> { p -> p._dfb(args, callInfo) } }
-internal val SprudelPattern._dfb by dslPatternExtension { p, args, /* callInfo */ _ -> applyDelayFeedback(p, args) }
-internal val String._dfb by dslStringExtension { p, args, callInfo -> p._dfb(args, callInfo) }
-internal val PatternMapperFn._dfb by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_dfb(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the delay feedback amount (0–1) for this pattern, controlling the number of echoes.
@@ -2469,8 +2330,9 @@ internal val PatternMapperFn._dfb by dslPatternMapperExtension { m, args, callIn
  * @tags delayfeedback, delayfb, dfb, delay, echo, feedback, repeats
  */
 @SprudelDsl
-fun SprudelPattern.delayfeedback(amount: PatternLike? = null): SprudelPattern =
-    this._delayfeedback(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyDelayFeedback(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the delay feedback amount.
@@ -2484,8 +2346,9 @@ fun SprudelPattern.delayfeedback(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.delayfeedback(amount: PatternLike? = null): SprudelPattern =
-    this._delayfeedback(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().delayfeedback(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay feedback amount.
@@ -2509,8 +2372,9 @@ fun String.delayfeedback(amount: PatternLike? = null): SprudelPattern =
  * @tags delayfeedback, delayfb, dfb, delay, echo, feedback, repeats
  */
 @SprudelDsl
-fun delayfeedback(amount: PatternLike? = null): PatternMapperFn =
-    _delayfeedback(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.delayfeedback(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback amount after the previous mapper.
@@ -2527,8 +2391,9 @@ fun delayfeedback(amount: PatternLike? = null): PatternMapperFn =
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.delayfeedback(amount: PatternLike? = null): PatternMapperFn =
-    _delayfeedback(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delayfeedback(amount, callInfo) }
 
 /**
  * Alias for [delayfeedback]. Sets the delay feedback amount (0–1) for this pattern.
@@ -2556,8 +2421,9 @@ fun PatternMapperFn.delayfeedback(amount: PatternLike? = null): PatternMapperFn 
  * @tags delayfb, delayfeedback, dfb, delay, echo, feedback, repeats
  */
 @SprudelDsl
-fun SprudelPattern.delayfb(amount: PatternLike? = null): SprudelPattern =
-    this._delayfb(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.delayfeedback(amount, callInfo)
 
 /**
  * Alias for [delayfeedback]. Parses this string as a pattern and sets the delay feedback amount.
@@ -2571,8 +2437,9 @@ fun SprudelPattern.delayfb(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.delayfb(amount: PatternLike? = null): SprudelPattern =
-    this._delayfb(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().delayfeedback(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay feedback amount. Alias for [delayfeedback].
@@ -2589,7 +2456,8 @@ fun String.delayfb(amount: PatternLike? = null): SprudelPattern =
  * @tags delayfb, delayfeedback, dfb, delay, echo, feedback, repeats
  */
 @SprudelDsl
-fun delayfb(amount: PatternLike? = null): PatternMapperFn = _delayfb(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delayfeedback(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback (alias for delayfeedback) after the previous
@@ -2607,8 +2475,9 @@ fun delayfb(amount: PatternLike? = null): PatternMapperFn = _delayfb(listOfNotNu
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.delayfb(amount: PatternLike? = null): PatternMapperFn =
-    _delayfb(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delayfeedback(amount, callInfo) }
 
 /**
  * Alias for [delayfeedback]. Sets the delay feedback amount (0–1) for this pattern.
@@ -2635,8 +2504,9 @@ fun PatternMapperFn.delayfb(amount: PatternLike? = null): PatternMapperFn =
  * @tags dfb, delayfeedback, delayfb, delay, echo, feedback, repeats
  */
 @SprudelDsl
-fun SprudelPattern.dfb(amount: PatternLike? = null): SprudelPattern =
-    this._dfb(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.delayfeedback(amount, callInfo)
 
 /**
  * Alias for [delayfeedback]. Parses this string as a pattern and sets the delay feedback amount.
@@ -2650,8 +2520,9 @@ fun SprudelPattern.dfb(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.dfb(amount: PatternLike? = null): SprudelPattern =
-    this._dfb(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().delayfeedback(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay feedback amount. Alias for [delayfeedback].
@@ -2668,7 +2539,8 @@ fun String.dfb(amount: PatternLike? = null): SprudelPattern =
  * @tags dfb, delayfeedback, delayfb, delay, echo, feedback, repeats
  */
 @SprudelDsl
-fun dfb(amount: PatternLike? = null): PatternMapperFn = _dfb(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.delayfeedback(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the delay feedback (alias for delayfeedback) after the previous
@@ -2686,8 +2558,9 @@ fun dfb(amount: PatternLike? = null): PatternMapperFn = _dfb(listOfNotNull(amoun
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.dfb(amount: PatternLike? = null): PatternMapperFn =
-    _dfb(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.delayfeedback(amount, callInfo) }
 
 // -- phaser() / ph() --------------------------------------------------------------------------------------------------
 
@@ -2706,7 +2579,7 @@ private val phaserMutation = voiceModifier {
     }
 }
 
-fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val str = args.firstOrNull()?.value?.toString() ?: ""
     return if (":" in str) {
         source._applyControlFromParams(args, phaserMutation) { src, ctrl ->
@@ -2721,22 +2594,6 @@ fun applyPhaser(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprude
         source._liftOrReinterpretNumericalField(args, phaserMutation)
     }
 }
-
-internal val _phaser by dslPatternMapper { args, callInfo -> { p -> p._phaser(args, callInfo) } }
-internal val SprudelPattern._phaser by dslPatternExtension { p, args, /* callInfo */ _ -> applyPhaser(p, args) }
-internal val String._phaser by dslStringExtension { p, args, callInfo -> p._phaser(args, callInfo) }
-internal val PatternMapperFn._phaser by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_phaser(args, callInfo))
-}
-
-internal val _ph by dslPatternMapper { args, callInfo -> { p -> p._ph(args, callInfo) } }
-internal val SprudelPattern._ph by dslPatternExtension { p, args, /* callInfo */ _ -> applyPhaser(p, args) }
-internal val String._ph by dslStringExtension { p, args, callInfo -> p._ph(args, callInfo) }
-internal val PatternMapperFn._ph by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_ph(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the phaser LFO rate in Hz for this pattern.
@@ -2779,8 +2636,9 @@ internal val PatternMapperFn._ph by dslPatternMapperExtension { m, args, callInf
  * @tags phaser, ph, phase, sweep, modulation
  */
 @SprudelDsl
-fun SprudelPattern.phaser(rate: PatternLike? = null): SprudelPattern =
-    this._phaser(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPhaser(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the phaser LFO rate.
@@ -2794,8 +2652,9 @@ fun SprudelPattern.phaser(rate: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.phaser(rate: PatternLike? = null): SprudelPattern =
-    this._phaser(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun String.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phaser(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate.
@@ -2825,7 +2684,8 @@ fun String.phaser(rate: PatternLike? = null): SprudelPattern =
  * @tags phaser, ph, phase, sweep, modulation
  */
 @SprudelDsl
-fun phaser(rate: PatternLike? = null): PatternMapperFn = _phaser(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate after the previous mapper.
@@ -2842,8 +2702,9 @@ fun phaser(rate: PatternLike? = null): PatternMapperFn = _phaser(listOfNotNull(r
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.phaser(rate: PatternLike? = null): PatternMapperFn =
-    _phaser(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaser(rate, callInfo) }
 
 /**
  * Alias for [phaser]. Sets the phaser LFO rate in Hz for this pattern.
@@ -2876,8 +2737,9 @@ fun PatternMapperFn.phaser(rate: PatternLike? = null): PatternMapperFn =
  * @tags ph, phaser, phase, sweep, modulation
  */
 @SprudelDsl
-fun SprudelPattern.ph(rate: PatternLike? = null): SprudelPattern =
-    this._ph(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.phaser(rate, callInfo)
 
 /**
  * Alias for [phaser]. Parses this string as a pattern and sets the phaser LFO rate.
@@ -2891,8 +2753,9 @@ fun SprudelPattern.ph(rate: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.ph(rate: PatternLike? = null): SprudelPattern =
-    this._ph(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun String.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phaser(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate. Alias for [phaser].
@@ -2915,7 +2778,8 @@ fun String.ph(rate: PatternLike? = null): SprudelPattern =
  * @tags ph, phaser, phase, sweep, modulation
  */
 @SprudelDsl
-fun ph(rate: PatternLike? = null): PatternMapperFn = _ph(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun ph(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaser(rate, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser LFO rate (alias for phaser) after the previous mapper.
@@ -2932,41 +2796,17 @@ fun ph(rate: PatternLike? = null): PatternMapperFn = _ph(listOfNotNull(rate).asS
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.ph(rate: PatternLike? = null): PatternMapperFn =
-    _ph(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaser(rate, callInfo) }
 
 // -- phaserdepth() / phd() / phasdp() ---------------------------------------------------------------------------------
 
 private val phaserDepthMutation = voiceModifier { copy(phaserDepth = it?.asDoubleOrNull()) }
 
-fun applyPhaserDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPhaserDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, phaserDepthMutation)
 }
-
-internal val _phaserdepth by dslPatternMapper { args, callInfo -> { p -> p._phaserdepth(args, callInfo) } }
-internal val SprudelPattern._phaserdepth by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPhaserDepth(p, args)
-}
-internal val String._phaserdepth by dslStringExtension { p, args, callInfo -> p._phaserdepth(args, callInfo) }
-internal val PatternMapperFn._phaserdepth by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_phaserdepth(args, callInfo))
-}
-
-internal val _phd by dslPatternMapper { args, callInfo -> { p -> p._phd(args, callInfo) } }
-internal val SprudelPattern._phd by dslPatternExtension { p, args, /* callInfo */ _ -> applyPhaserDepth(p, args) }
-internal val String._phd by dslStringExtension { p, args, callInfo -> p._phd(args, callInfo) }
-internal val PatternMapperFn._phd by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_phd(args, callInfo))
-}
-
-internal val _phasdp by dslPatternMapper { args, callInfo -> { p -> p._phasdp(args, callInfo) } }
-internal val SprudelPattern._phasdp by dslPatternExtension { p, args, /* callInfo */ _ -> applyPhaserDepth(p, args) }
-internal val String._phasdp by dslStringExtension { p, args, callInfo -> p._phasdp(args, callInfo) }
-internal val PatternMapperFn._phasdp by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_phasdp(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the phaser depth (modulation intensity) for this pattern.
@@ -2995,8 +2835,9 @@ internal val PatternMapperFn._phasdp by dslPatternMapperExtension { m, args, cal
  * @tags phaserdepth, phd, phasdp, phaser, depth, modulation
  */
 @SprudelDsl
-fun SprudelPattern.phaserdepth(amount: PatternLike? = null): SprudelPattern =
-    this._phaserdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPhaserDepth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the phaser depth.
@@ -3010,8 +2851,9 @@ fun SprudelPattern.phaserdepth(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.phaserdepth(amount: PatternLike? = null): SprudelPattern =
-    this._phaserdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phaserdepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser depth.
@@ -3035,7 +2877,8 @@ fun String.phaserdepth(amount: PatternLike? = null): SprudelPattern =
  * @tags phaserdepth, phd, phasdp, phaser, depth, modulation
  */
 @SprudelDsl
-fun phaserdepth(amount: PatternLike? = null): PatternMapperFn = _phaserdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser depth after the previous mapper.
@@ -3052,8 +2895,9 @@ fun phaserdepth(amount: PatternLike? = null): PatternMapperFn = _phaserdepth(lis
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.phaserdepth(amount: PatternLike? = null): PatternMapperFn =
-    _phaserdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaserdepth(amount, callInfo) }
 
 /**
  * Alias for [phaserdepth]. Sets the phaser depth (modulation intensity) for this pattern.
@@ -3080,8 +2924,9 @@ fun PatternMapperFn.phaserdepth(amount: PatternLike? = null): PatternMapperFn =
  * @tags phd, phaserdepth, phasdp, phaser, depth, modulation
  */
 @SprudelDsl
-fun SprudelPattern.phd(amount: PatternLike? = null): SprudelPattern =
-    this._phd(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.phaserdepth(amount, callInfo)
 
 /**
  * Alias for [phaserdepth]. Parses this string as a pattern and sets the phaser depth.
@@ -3095,8 +2940,9 @@ fun SprudelPattern.phd(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.phd(amount: PatternLike? = null): SprudelPattern =
-    this._phd(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phaserdepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserdepth].
@@ -3113,7 +2959,8 @@ fun String.phd(amount: PatternLike? = null): SprudelPattern =
  * @tags phd, phaserdepth, phasdp, phaser, depth, modulation
  */
 @SprudelDsl
-fun phd(amount: PatternLike? = null): PatternMapperFn = _phd(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser depth (alias for phaserdepth) after the previous mapper.
@@ -3130,8 +2977,9 @@ fun phd(amount: PatternLike? = null): PatternMapperFn = _phd(listOfNotNull(amoun
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.phd(amount: PatternLike? = null): PatternMapperFn =
-    _phd(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaserdepth(amount, callInfo) }
 
 /**
  * Alias for [phaserdepth]. Sets the phaser depth (modulation intensity) for this pattern.
@@ -3158,8 +3006,9 @@ fun PatternMapperFn.phd(amount: PatternLike? = null): PatternMapperFn =
  * @tags phasdp, phaserdepth, phd, phaser, depth, modulation
  */
 @SprudelDsl
-fun SprudelPattern.phasdp(amount: PatternLike? = null): SprudelPattern =
-    this._phasdp(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.phaserdepth(amount, callInfo)
 
 /**
  * Alias for [phaserdepth]. Parses this string as a pattern and sets the phaser depth.
@@ -3173,8 +3022,9 @@ fun SprudelPattern.phasdp(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.phasdp(amount: PatternLike? = null): SprudelPattern =
-    this._phasdp(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phaserdepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserdepth].
@@ -3191,7 +3041,8 @@ fun String.phasdp(amount: PatternLike? = null): SprudelPattern =
  * @tags phasdp, phaserdepth, phd, phaser, depth, modulation
  */
 @SprudelDsl
-fun phasdp(amount: PatternLike? = null): PatternMapperFn = _phasdp(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phaserdepth(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser depth (alias for phaserdepth) after the previous mapper.
@@ -3208,34 +3059,17 @@ fun phasdp(amount: PatternLike? = null): PatternMapperFn = _phasdp(listOfNotNull
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.phasdp(amount: PatternLike? = null): PatternMapperFn =
-    _phasdp(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phaserdepth(amount, callInfo) }
 
 // -- phasercenter() / phc() -------------------------------------------------------------------------------------------
 
 private val phaserCenterMutation = voiceModifier { copy(phaserCenter = it?.asDoubleOrNull()) }
 
-fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPhaserCenter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, phaserCenterMutation)
 }
-
-internal val _phasercenter by dslPatternMapper { args, callInfo -> { p -> p._phasercenter(args, callInfo) } }
-internal val SprudelPattern._phasercenter by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPhaserCenter(p, args)
-}
-internal val String._phasercenter by dslStringExtension { p, args, callInfo -> p._phasercenter(args, callInfo) }
-internal val PatternMapperFn._phasercenter by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_phasercenter(args, callInfo))
-}
-
-internal val _phc by dslPatternMapper { args, callInfo -> { p -> p._phc(args, callInfo) } }
-internal val SprudelPattern._phc by dslPatternExtension { p, args, /* callInfo */ _ -> applyPhaserCenter(p, args) }
-internal val String._phc by dslStringExtension { p, args, callInfo -> p._phc(args, callInfo) }
-internal val PatternMapperFn._phc by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_phc(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the phaser center frequency in Hz for this pattern.
@@ -3264,8 +3098,9 @@ internal val PatternMapperFn._phc by dslPatternMapperExtension { m, args, callIn
  * @tags phasercenter, phc, phaser, frequency, center
  */
 @SprudelDsl
-fun SprudelPattern.phasercenter(freq: PatternLike? = null): SprudelPattern =
-    this._phasercenter(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPhaserCenter(this, listOfNotNull(freq).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the phaser center frequency.
@@ -3279,8 +3114,9 @@ fun SprudelPattern.phasercenter(freq: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.phasercenter(freq: PatternLike? = null): SprudelPattern =
-    this._phasercenter(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun String.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phasercenter(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser center frequency.
@@ -3304,7 +3140,8 @@ fun String.phasercenter(freq: PatternLike? = null): SprudelPattern =
  * @tags phasercenter, phc, phaser, frequency, center
  */
 @SprudelDsl
-fun phasercenter(freq: PatternLike? = null): PatternMapperFn = _phasercenter(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasercenter(freq, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser center frequency after the previous mapper.
@@ -3321,8 +3158,9 @@ fun phasercenter(freq: PatternLike? = null): PatternMapperFn = _phasercenter(lis
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.phasercenter(freq: PatternLike? = null): PatternMapperFn =
-    _phasercenter(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phasercenter(freq, callInfo) }
 
 /**
  * Alias for [phasercenter]. Sets the phaser center frequency in Hz for this pattern.
@@ -3349,8 +3187,9 @@ fun PatternMapperFn.phasercenter(freq: PatternLike? = null): PatternMapperFn =
  * @tags phc, phasercenter, phaser, frequency, center
  */
 @SprudelDsl
-fun SprudelPattern.phc(freq: PatternLike? = null): SprudelPattern =
-    this._phc(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.phasercenter(freq, callInfo)
 
 /**
  * Alias for [phasercenter]. Parses this string as a pattern and sets the phaser center frequency.
@@ -3364,8 +3203,9 @@ fun SprudelPattern.phc(freq: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.phc(freq: PatternLike? = null): SprudelPattern =
-    this._phc(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun String.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phasercenter(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser center frequency. Alias for [phasercenter].
@@ -3382,7 +3222,8 @@ fun String.phc(freq: PatternLike? = null): SprudelPattern =
  * @tags phc, phasercenter, phaser, frequency, center
  */
 @SprudelDsl
-fun phc(freq: PatternLike? = null): PatternMapperFn = _phc(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun phc(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasercenter(freq, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser center frequency (alias for phasercenter) after the
@@ -3400,34 +3241,17 @@ fun phc(freq: PatternLike? = null): PatternMapperFn = _phc(listOfNotNull(freq).a
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.phc(freq: PatternLike? = null): PatternMapperFn =
-    _phc(listOfNotNull(freq).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phasercenter(freq, callInfo) }
 
 // -- phasersweep() / phs() --------------------------------------------------------------------------------------------
 
 private val phaserSweepMutation = voiceModifier { copy(phaserSweep = it?.asDoubleOrNull()) }
 
-fun applyPhaserSweep(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPhaserSweep(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, phaserSweepMutation)
 }
-
-internal val _phasersweep by dslPatternMapper { args, callInfo -> { p -> p._phasersweep(args, callInfo) } }
-internal val SprudelPattern._phasersweep by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyPhaserSweep(p, args)
-}
-internal val String._phasersweep by dslStringExtension { p, args, callInfo -> p._phasersweep(args, callInfo) }
-internal val PatternMapperFn._phasersweep by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_phasersweep(args, callInfo))
-}
-
-internal val _phs by dslPatternMapper { args, callInfo -> { p -> p._phs(args, callInfo) } }
-internal val SprudelPattern._phs by dslPatternExtension { p, args, /* callInfo */ _ -> applyPhaserSweep(p, args) }
-internal val String._phs by dslStringExtension { p, args, callInfo -> p._phs(args, callInfo) }
-internal val PatternMapperFn._phs by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_phs(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the phaser sweep range in Hz (half the total sweep width) for this pattern.
@@ -3456,8 +3280,9 @@ internal val PatternMapperFn._phs by dslPatternMapperExtension { m, args, callIn
  * @tags phasersweep, phs, phaser, sweep, width
  */
 @SprudelDsl
-fun SprudelPattern.phasersweep(amount: PatternLike? = null): SprudelPattern =
-    this._phasersweep(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyPhaserSweep(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the phaser sweep range.
@@ -3471,8 +3296,9 @@ fun SprudelPattern.phasersweep(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.phasersweep(amount: PatternLike? = null): SprudelPattern =
-    this._phasersweep(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phasersweep(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser sweep range.
@@ -3496,7 +3322,8 @@ fun String.phasersweep(amount: PatternLike? = null): SprudelPattern =
  * @tags phasersweep, phs, phaser, sweep, width
  */
 @SprudelDsl
-fun phasersweep(amount: PatternLike? = null): PatternMapperFn = _phasersweep(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasersweep(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser sweep range after the previous mapper.
@@ -3513,8 +3340,9 @@ fun phasersweep(amount: PatternLike? = null): PatternMapperFn = _phasersweep(lis
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.phasersweep(amount: PatternLike? = null): PatternMapperFn =
-    _phasersweep(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phasersweep(amount, callInfo) }
 
 /**
  * Alias for [phasersweep]. Sets the phaser sweep range in Hz for this pattern.
@@ -3541,8 +3369,9 @@ fun PatternMapperFn.phasersweep(amount: PatternLike? = null): PatternMapperFn =
  * @tags phs, phasersweep, phaser, sweep, width
  */
 @SprudelDsl
-fun SprudelPattern.phs(amount: PatternLike? = null): SprudelPattern =
-    this._phs(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.phasersweep(amount, callInfo)
 
 /**
  * Alias for [phasersweep]. Parses this string as a pattern and sets the phaser sweep range.
@@ -3556,8 +3385,9 @@ fun SprudelPattern.phs(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.phs(amount: PatternLike? = null): SprudelPattern =
-    this._phs(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().phasersweep(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser sweep range. Alias for [phasersweep].
@@ -3574,7 +3404,8 @@ fun String.phs(amount: PatternLike? = null): SprudelPattern =
  * @tags phs, phasersweep, phaser, sweep, width
  */
 @SprudelDsl
-fun phs(amount: PatternLike? = null): PatternMapperFn = _phs(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun phs(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.phasersweep(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the phaser sweep range (alias for phasersweep) after the previous
@@ -3592,36 +3423,17 @@ fun phs(amount: PatternLike? = null): PatternMapperFn = _phs(listOfNotNull(amoun
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.phs(amount: PatternLike? = null): PatternMapperFn =
-    _phs(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.phasersweep(amount, callInfo) }
 
 // -- tremolosync() / tremsync() ---------------------------------------------------------------------------------------
 
 private val tremoloSyncMutation = voiceModifier { copy(tremoloSync = it?.asDoubleOrNull()) }
 
-fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyTremoloSync(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, tremoloSyncMutation)
 }
-
-internal val _tremolosync by dslPatternMapper { args, callInfo -> { p -> p._tremolosync(args, callInfo) } }
-internal val SprudelPattern._tremolosync by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloSync(p, args)
-}
-internal val String._tremolosync by dslStringExtension { p, args, callInfo -> p._tremolosync(args, callInfo) }
-internal val PatternMapperFn._tremolosync by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremolosync(args, callInfo))
-}
-
-internal val _tremsync by dslPatternMapper { args, callInfo -> { p -> p._tremsync(args, callInfo) } }
-internal val SprudelPattern._tremsync by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloSync(p, args)
-}
-internal val String._tremsync by dslStringExtension { p, args, callInfo -> p._tremsync(args, callInfo) }
-internal val PatternMapperFn._tremsync by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremsync(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the tremolo LFO rate in Hz for this pattern.
@@ -3650,8 +3462,9 @@ internal val PatternMapperFn._tremsync by dslPatternMapperExtension { m, args, c
  * @tags tremolosync, tremsync, tremolo, rate, modulation
  */
 @SprudelDsl
-fun SprudelPattern.tremolosync(rate: PatternLike? = null): SprudelPattern =
-    this._tremolosync(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyTremoloSync(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the tremolo LFO rate.
@@ -3665,8 +3478,9 @@ fun SprudelPattern.tremolosync(rate: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremolosync(rate: PatternLike? = null): SprudelPattern =
-    this._tremolosync(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremolosync(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO rate.
@@ -3690,7 +3504,8 @@ fun String.tremolosync(rate: PatternLike? = null): SprudelPattern =
  * @tags tremolosync, tremsync, tremolo, rate, modulation
  */
 @SprudelDsl
-fun tremolosync(rate: PatternLike? = null): PatternMapperFn = _tremolosync(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolosync(rate, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO rate after the previous mapper.
@@ -3707,8 +3522,9 @@ fun tremolosync(rate: PatternLike? = null): PatternMapperFn = _tremolosync(listO
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremolosync(rate: PatternLike? = null): PatternMapperFn =
-    _tremolosync(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremolosync(rate, callInfo) }
 
 /**
  * Alias for [tremolosync]. Sets the tremolo LFO rate in Hz for this pattern.
@@ -3735,8 +3551,9 @@ fun PatternMapperFn.tremolosync(rate: PatternLike? = null): PatternMapperFn =
  * @tags tremsync, tremolosync, tremolo, rate, modulation
  */
 @SprudelDsl
-fun SprudelPattern.tremsync(rate: PatternLike? = null): SprudelPattern =
-    this._tremsync(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.tremolosync(rate, callInfo)
 
 /**
  * Alias for [tremolosync]. Parses this string as a pattern and sets the tremolo LFO rate.
@@ -3750,8 +3567,9 @@ fun SprudelPattern.tremsync(rate: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremsync(rate: PatternLike? = null): SprudelPattern =
-    this._tremsync(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremolosync(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO rate. Alias for [tremolosync].
@@ -3768,7 +3586,8 @@ fun String.tremsync(rate: PatternLike? = null): SprudelPattern =
  * @tags tremsync, tremolosync, tremolo, rate, modulation
  */
 @SprudelDsl
-fun tremsync(rate: PatternLike? = null): PatternMapperFn = _tremsync(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolosync(rate, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO rate (alias for tremolosync) after the previous
@@ -3786,36 +3605,17 @@ fun tremsync(rate: PatternLike? = null): PatternMapperFn = _tremsync(listOfNotNu
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremsync(rate: PatternLike? = null): PatternMapperFn =
-    _tremsync(listOfNotNull(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremolosync(rate, callInfo) }
 
 // -- tremolodepth() / tremdepth() -------------------------------------------------------------------------------------
 
 private val tremoloDepthMutation = voiceModifier { copy(tremoloDepth = it?.asDoubleOrNull()) }
 
-fun applyTremoloDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyTremoloDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, tremoloDepthMutation)
 }
-
-internal val _tremolodepth by dslPatternMapper { args, callInfo -> { p -> p._tremolodepth(args, callInfo) } }
-internal val SprudelPattern._tremolodepth by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloDepth(p, args)
-}
-internal val String._tremolodepth by dslStringExtension { p, args, callInfo -> p._tremolodepth(args, callInfo) }
-internal val PatternMapperFn._tremolodepth by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremolodepth(args, callInfo))
-}
-
-internal val _tremdepth by dslPatternMapper { args, callInfo -> { p -> p._tremdepth(args, callInfo) } }
-internal val SprudelPattern._tremdepth by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloDepth(p, args)
-}
-internal val String._tremdepth by dslStringExtension { p, args, callInfo -> p._tremdepth(args, callInfo) }
-internal val PatternMapperFn._tremdepth by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremdepth(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the tremolo depth (modulation intensity, 0–1) for this pattern.
@@ -3844,8 +3644,9 @@ internal val PatternMapperFn._tremdepth by dslPatternMapperExtension { m, args, 
  * @tags tremolodepth, tremdepth, tremolo, depth, modulation
  */
 @SprudelDsl
-fun SprudelPattern.tremolodepth(amount: PatternLike? = null): SprudelPattern =
-    this._tremolodepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyTremoloDepth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the tremolo depth.
@@ -3859,8 +3660,9 @@ fun SprudelPattern.tremolodepth(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremolodepth(amount: PatternLike? = null): SprudelPattern =
-    this._tremolodepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremolodepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo depth.
@@ -3884,7 +3686,8 @@ fun String.tremolodepth(amount: PatternLike? = null): SprudelPattern =
  * @tags tremolodepth, tremdepth, tremolo, depth, modulation
  */
 @SprudelDsl
-fun tremolodepth(amount: PatternLike? = null): PatternMapperFn = _tremolodepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolodepth(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo depth after the previous mapper.
@@ -3901,8 +3704,9 @@ fun tremolodepth(amount: PatternLike? = null): PatternMapperFn = _tremolodepth(l
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremolodepth(amount: PatternLike? = null): PatternMapperFn =
-    _tremolodepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremolodepth(amount, callInfo) }
 
 /**
  * Alias for [tremolodepth]. Sets the tremolo depth (modulation intensity, 0–1) for this pattern.
@@ -3929,8 +3733,9 @@ fun PatternMapperFn.tremolodepth(amount: PatternLike? = null): PatternMapperFn =
  * @tags tremdepth, tremolodepth, tremolo, depth, modulation
  */
 @SprudelDsl
-fun SprudelPattern.tremdepth(amount: PatternLike? = null): SprudelPattern =
-    this._tremdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.tremolodepth(amount, callInfo)
 
 /**
  * Alias for [tremolodepth]. Parses this string as a pattern and sets the tremolo depth.
@@ -3944,8 +3749,9 @@ fun SprudelPattern.tremdepth(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremdepth(amount: PatternLike? = null): SprudelPattern =
-    this._tremdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremolodepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo depth. Alias for [tremolodepth].
@@ -3962,7 +3768,8 @@ fun String.tremdepth(amount: PatternLike? = null): SprudelPattern =
  * @tags tremdepth, tremolodepth, tremolo, depth, modulation
  */
 @SprudelDsl
-fun tremdepth(amount: PatternLike? = null): PatternMapperFn = _tremdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolodepth(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo depth (alias for tremolodepth) after the previous mapper.
@@ -3979,36 +3786,17 @@ fun tremdepth(amount: PatternLike? = null): PatternMapperFn = _tremdepth(listOfN
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremdepth(amount: PatternLike? = null): PatternMapperFn =
-    _tremdepth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremolodepth(amount, callInfo) }
 
 // -- tremoloskew() / tremskew() ---------------------------------------------------------------------------------------
 
 private val tremoloSkewMutation = voiceModifier { copy(tremoloSkew = it?.asDoubleOrNull()) }
 
-fun applyTremoloSkew(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyTremoloSkew(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, tremoloSkewMutation)
 }
-
-internal val _tremoloskew by dslPatternMapper { args, callInfo -> { p -> p._tremoloskew(args, callInfo) } }
-internal val SprudelPattern._tremoloskew by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloSkew(p, args)
-}
-internal val String._tremoloskew by dslStringExtension { p, args, callInfo -> p._tremoloskew(args, callInfo) }
-internal val PatternMapperFn._tremoloskew by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremoloskew(args, callInfo))
-}
-
-internal val _tremskew by dslPatternMapper { args, callInfo -> { p -> p._tremskew(args, callInfo) } }
-internal val SprudelPattern._tremskew by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloSkew(p, args)
-}
-internal val String._tremskew by dslStringExtension { p, args, callInfo -> p._tremskew(args, callInfo) }
-internal val PatternMapperFn._tremskew by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremskew(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the tremolo LFO skew (asymmetry) value for this pattern.
@@ -4037,8 +3825,9 @@ internal val PatternMapperFn._tremskew by dslPatternMapperExtension { m, args, c
  * @tags tremoloskew, tremskew, tremolo, skew, asymmetry
  */
 @SprudelDsl
-fun SprudelPattern.tremoloskew(amount: PatternLike? = null): SprudelPattern =
-    this._tremoloskew(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyTremoloSkew(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the tremolo LFO skew.
@@ -4052,8 +3841,9 @@ fun SprudelPattern.tremoloskew(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremoloskew(amount: PatternLike? = null): SprudelPattern =
-    this._tremoloskew(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremoloskew(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO skew.
@@ -4077,7 +3867,8 @@ fun String.tremoloskew(amount: PatternLike? = null): SprudelPattern =
  * @tags tremoloskew, tremskew, tremolo, skew, asymmetry
  */
 @SprudelDsl
-fun tremoloskew(amount: PatternLike? = null): PatternMapperFn = _tremoloskew(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloskew(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO skew after the previous mapper.
@@ -4094,8 +3885,9 @@ fun tremoloskew(amount: PatternLike? = null): PatternMapperFn = _tremoloskew(lis
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremoloskew(amount: PatternLike? = null): PatternMapperFn =
-    _tremoloskew(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremoloskew(amount, callInfo) }
 
 /**
  * Alias for [tremoloskew]. Sets the tremolo LFO skew (asymmetry) value for this pattern.
@@ -4122,8 +3914,9 @@ fun PatternMapperFn.tremoloskew(amount: PatternLike? = null): PatternMapperFn =
  * @tags tremskew, tremoloskew, tremolo, skew, asymmetry
  */
 @SprudelDsl
-fun SprudelPattern.tremskew(amount: PatternLike? = null): SprudelPattern =
-    this._tremskew(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.tremoloskew(amount, callInfo)
 
 /**
  * Alias for [tremoloskew]. Parses this string as a pattern and sets the tremolo LFO skew.
@@ -4137,8 +3930,9 @@ fun SprudelPattern.tremskew(amount: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremskew(amount: PatternLike? = null): SprudelPattern =
-    this._tremskew(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremoloskew(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO skew. Alias for [tremoloskew].
@@ -4155,7 +3949,8 @@ fun String.tremskew(amount: PatternLike? = null): SprudelPattern =
  * @tags tremskew, tremoloskew, tremolo, skew, asymmetry
  */
 @SprudelDsl
-fun tremskew(amount: PatternLike? = null): PatternMapperFn = _tremskew(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloskew(amount, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO skew (alias for tremoloskew) after the previous
@@ -4173,36 +3968,17 @@ fun tremskew(amount: PatternLike? = null): PatternMapperFn = _tremskew(listOfNot
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremskew(amount: PatternLike? = null): PatternMapperFn =
-    _tremskew(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremoloskew(amount, callInfo) }
 
 // -- tremolophase() / tremphase() -------------------------------------------------------------------------------------
 
 private val tremoloPhaseMutation = voiceModifier { copy(tremoloPhase = it?.asDoubleOrNull()) }
 
-fun applyTremoloPhase(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyTremoloPhase(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, tremoloPhaseMutation)
 }
-
-internal val _tremolophase by dslPatternMapper { args, callInfo -> { p -> p._tremolophase(args, callInfo) } }
-internal val SprudelPattern._tremolophase by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloPhase(p, args)
-}
-internal val String._tremolophase by dslStringExtension { p, args, callInfo -> p._tremolophase(args, callInfo) }
-internal val PatternMapperFn._tremolophase by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremolophase(args, callInfo))
-}
-
-internal val _tremphase by dslPatternMapper { args, callInfo -> { p -> p._tremphase(args, callInfo) } }
-internal val SprudelPattern._tremphase by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloPhase(p, args)
-}
-internal val String._tremphase by dslStringExtension { p, args, callInfo -> p._tremphase(args, callInfo) }
-internal val PatternMapperFn._tremphase by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremphase(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the tremolo LFO starting phase in radians for this pattern.
@@ -4234,8 +4010,9 @@ internal val PatternMapperFn._tremphase by dslPatternMapperExtension { m, args, 
  * @tags tremolophase, tremphase, tremolo, phase, offset
  */
 @SprudelDsl
-fun SprudelPattern.tremolophase(phase: PatternLike? = null): SprudelPattern =
-    this._tremolophase(listOfNotNull(phase).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyTremoloPhase(this, listOfNotNull(phase).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the tremolo LFO starting phase.
@@ -4249,8 +4026,9 @@ fun SprudelPattern.tremolophase(phase: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremolophase(phase: PatternLike? = null): SprudelPattern =
-    this._tremolophase(listOfNotNull(phase).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremolophase(phase, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase.
@@ -4274,7 +4052,8 @@ fun String.tremolophase(phase: PatternLike? = null): SprudelPattern =
  * @tags tremolophase, tremphase, tremolo, phase, offset
  */
 @SprudelDsl
-fun tremolophase(phase: PatternLike? = null): PatternMapperFn = _tremolophase(listOfNotNull(phase).asSprudelDslArgs())
+@KlangScript.Function
+fun tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolophase(phase, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO starting phase after the previous mapper.
@@ -4291,8 +4070,9 @@ fun tremolophase(phase: PatternLike? = null): PatternMapperFn = _tremolophase(li
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremolophase(phase: PatternLike? = null): PatternMapperFn =
-    _tremolophase(listOfNotNull(phase).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremolophase(phase, callInfo) }
 
 /**
  * Alias for [tremolophase]. Sets the tremolo LFO starting phase in radians for this pattern.
@@ -4319,8 +4099,9 @@ fun PatternMapperFn.tremolophase(phase: PatternLike? = null): PatternMapperFn =
  * @tags tremphase, tremolophase, tremolo, phase, offset
  */
 @SprudelDsl
-fun SprudelPattern.tremphase(phase: PatternLike? = null): SprudelPattern =
-    this._tremphase(listOfNotNull(phase).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.tremolophase(phase, callInfo)
 
 /**
  * Alias for [tremolophase]. Parses this string as a pattern and sets the tremolo LFO starting phase.
@@ -4334,8 +4115,9 @@ fun SprudelPattern.tremphase(phase: PatternLike? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremphase(phase: PatternLike? = null): SprudelPattern =
-    this._tremphase(listOfNotNull(phase).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremolophase(phase, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase. Alias for [tremolophase].
@@ -4352,7 +4134,8 @@ fun String.tremphase(phase: PatternLike? = null): SprudelPattern =
  * @tags tremphase, tremolophase, tremolo, phase, offset
  */
 @SprudelDsl
-fun tremphase(phase: PatternLike? = null): PatternMapperFn = _tremphase(listOfNotNull(phase).asSprudelDslArgs())
+@KlangScript.Function
+fun tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremolophase(phase, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO starting phase (alias for tremolophase) after the
@@ -4370,38 +4153,19 @@ fun tremphase(phase: PatternLike? = null): PatternMapperFn = _tremphase(listOfNo
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremphase(phase: PatternLike? = null): PatternMapperFn =
-    _tremphase(listOfNotNull(phase).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremolophase(phase, callInfo) }
 
 // -- tremoloshape() / tremshape() -------------------------------------------------------------------------------------
 
 private val tremoloShapeMutation = voiceModifier { shape -> copy(tremoloShape = shape?.toString()?.lowercase()) }
 
-fun applyTremoloShape(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyTremoloShape(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._applyControlFromParams(args, tremoloShapeMutation) { src, ctrl ->
         src.copy(tremoloShape = ctrl.tremoloShape)
     }
 }
-
-internal val _tremoloshape by dslPatternMapper { args, callInfo -> { p -> p._tremoloshape(args, callInfo) } }
-internal val SprudelPattern._tremoloshape by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloShape(p, args)
-}
-internal val String._tremoloshape by dslStringExtension { p, args, callInfo -> p._tremoloshape(args, callInfo) }
-internal val PatternMapperFn._tremoloshape by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremoloshape(args, callInfo))
-}
-
-internal val _tremshape by dslPatternMapper { args, callInfo -> { p -> p._tremshape(args, callInfo) } }
-internal val SprudelPattern._tremshape by dslPatternExtension { p, args, /* callInfo */ _ ->
-    applyTremoloShape(p, args)
-}
-internal val String._tremshape by dslStringExtension { p, args, callInfo -> p._tremshape(args, callInfo) }
-internal val PatternMapperFn._tremshape by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremshape(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the tremolo LFO waveform shape for this pattern.
@@ -4426,8 +4190,9 @@ internal val PatternMapperFn._tremshape by dslPatternMapperExtension { m, args, 
  * @tags tremoloshape, tremshape, tremolo, shape, waveform
  */
 @SprudelDsl
-fun SprudelPattern.tremoloshape(shape: PatternLike): SprudelPattern =
-    this._tremoloshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyTremoloShape(this, listOf(shape).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the tremolo LFO waveform shape.
@@ -4439,7 +4204,9 @@ fun SprudelPattern.tremoloshape(shape: PatternLike): SprudelPattern =
  * ```
  */
 @SprudelDsl
-fun String.tremoloshape(shape: PatternLike): SprudelPattern = this._tremoloshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremoloshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO waveform shape.
@@ -4462,7 +4229,8 @@ fun String.tremoloshape(shape: PatternLike): SprudelPattern = this._tremoloshape
  * @tags tremoloshape, tremshape, tremolo, shape, waveform
  */
 @SprudelDsl
-fun tremoloshape(shape: PatternLike): PatternMapperFn = _tremoloshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloshape(shape, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO waveform shape after the previous mapper.
@@ -4479,7 +4247,9 @@ fun tremoloshape(shape: PatternLike): PatternMapperFn = _tremoloshape(listOf(sha
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremoloshape(shape: PatternLike): PatternMapperFn = _tremoloshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremoloshape(shape, callInfo) }
 
 /**
  * Alias for [tremoloshape]. Sets the tremolo LFO waveform shape for this pattern.
@@ -4501,7 +4271,8 @@ fun PatternMapperFn.tremoloshape(shape: PatternLike): PatternMapperFn = _tremolo
  * @tags tremshape, tremoloshape, tremolo, shape, waveform
  */
 @SprudelDsl
-fun SprudelPattern.tremshape(shape: PatternLike): SprudelPattern = this._tremshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.tremoloshape(shape, callInfo)
 
 /**
  * Alias for [tremoloshape]. Parses this string as a pattern and sets the tremolo LFO waveform shape.
@@ -4513,7 +4284,9 @@ fun SprudelPattern.tremshape(shape: PatternLike): SprudelPattern = this._tremsha
  * ```
  */
 @SprudelDsl
-fun String.tremshape(shape: PatternLike): SprudelPattern = this._tremshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremoloshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO waveform shape. Alias for [tremoloshape].
@@ -4530,7 +4303,8 @@ fun String.tremshape(shape: PatternLike): SprudelPattern = this._tremshape(listO
  * @tags tremshape, tremoloshape, tremolo, shape, waveform
  */
 @SprudelDsl
-fun tremshape(shape: PatternLike): PatternMapperFn = _tremshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun tremshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.tremoloshape(shape, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets the tremolo LFO waveform shape (alias for tremoloshape) after the
@@ -4548,4 +4322,6 @@ fun tremshape(shape: PatternLike): PatternMapperFn = _tremshape(listOf(shape).as
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremshape(shape: PatternLike): PatternMapperFn = _tremshape(listOf(shape).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremoloshape(shape, callInfo) }
