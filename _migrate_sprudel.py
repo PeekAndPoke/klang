@@ -155,9 +155,9 @@ def rewrite_delegate_ref(line, fn_type):
     delegate_name = m.group(1)
     args = m.group(2)
 
-    # Extract param name
-    param_match = re.search(r'(?:listOfNotNull|listOf)\((\w+)\)', args)
-    param_name = param_match.group(1) if param_match else None
+    # Extract all param names (supports multi-param: listOf(n, transform), listOfNotNull(amount))
+    param_match = re.search(r'(?:listOfNotNull|listOf)\(([^)]*)\)', args)
+    param_name = param_match.group(1).strip() if param_match and param_match.group(1).strip() else None
 
     # Determine primary name
     primary = alias_to_primary.get(delegate_name, delegate_name)
@@ -191,13 +191,14 @@ def rewrite_delegate_ref(line, fn_type):
 
 for i, line in enumerate(lines):
     # Add callInfo to function signatures
-    if 'PatternLike' in line and ('): SprudelPattern' in line or '): PatternMapperFn' in line):
-        if 'callInfo' not in line:
-            line = re.sub(
-                r'(\w+: PatternLike(?:\? = null)?)\): (SprudelPattern|PatternMapperFn)',
-                r'\1, callInfo: CallInfo? = null): \2',
-                line,
-            )
+    # Match any param ending with `): SprudelPattern` or `): PatternMapperFn`
+    # Last param can be PatternLike, PatternMapperFn, Int, etc. (with optional `? = null` or `= ...` default)
+    if ('): SprudelPattern' in line or '): PatternMapperFn' in line) and 'callInfo' not in line:
+        line = re.sub(
+            r'(\w+: \w+(?:<[^>]+>)?(?:\?)?(?:\s*=\s*[^,)]+)?)\): (SprudelPattern|PatternMapperFn)',
+            r'\1, callInfo: CallInfo? = null): \2',
+            line,
+        )
 
     # Check for delegate references in the line
     if re.search(r'(?:this\.)?_\w+\((?:listOfNotNull|listOf|emptyList)', line):

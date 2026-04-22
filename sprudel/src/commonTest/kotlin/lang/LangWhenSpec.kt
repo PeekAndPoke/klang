@@ -13,15 +13,15 @@ class LangWhenSpec : FunSpec({
     test("when dsl interface") {
         dslInterfaceTests(
             "pattern.when(condition, transform)" to
-                    note("a").`when`("1") { it.note("b") },
+                    note("a").`when`("1", { it.note("b") }),
             "script pattern.when(condition, transform)" to
                     SprudelPattern.compile("""note("a").when("1", x => x.note("b"))"""),
             "string.when(condition, transform)" to
-                    "a".`when`("1") { it.note("b") },
+                    "a".`when`("1", { it.note("b") }),
             "script string.when(condition, transform)" to
                     SprudelPattern.compile(""""a".when("1", x => x.note("b"))"""),
             "when(condition, transform)" to
-                    note("a").apply(`when`("1") { it.note("b") }),
+                    note("a").apply(`when`("1", { it.note("b") })),
             "script when(condition, transform)" to
                     SprudelPattern.compile("""note("a").apply(when("1", x => x.note("b")))"""),
         ) { _, events ->
@@ -31,7 +31,7 @@ class LangWhenSpec : FunSpec({
 
     test("when() works with direct function calls") {
         val pat = note("c3 d3 e3 f3")
-            .`when`(pure(1)) { it.transpose(12) }
+            .`when`(pure(1), { it.transpose(12) })
 
         val events = pat.queryArc(0.0, 1.0)
         println("Events count: ${events.size}")
@@ -44,7 +44,7 @@ class LangWhenSpec : FunSpec({
 
     test("when() works with mini-notation") {
         val pat = note("c3 d3 e3 f3")
-            .`when`("1 0 1 0") { it.transpose(12) }
+            .`when`("1 0 1 0", { it.transpose(12) })
 
         val events = pat.queryArc(0.0, 1.0)
         println("Events count: ${events.size}")
@@ -57,7 +57,7 @@ class LangWhenSpec : FunSpec({
 
     test("when() should apply transformation when condition is truthy") {
         val pat = note("c3 d3 e3 f3")
-            .`when`(seq("1 0 1 0")) { it.transpose(12) }
+            .`when`(seq("1 0 1 0"), { it.transpose(12) })
 
         val events = pat.queryArc(0.0, 1.0)
 
@@ -85,7 +85,7 @@ class LangWhenSpec : FunSpec({
     }
 
     test("when() should keep events unchanged when condition is falsy") {
-        val pat = note("c d e f").`when`(pure(0)) { it.transpose(12) }
+        val pat = note("c d e f").`when`(pure(0), { it.transpose(12) })
 
         val events = pat.queryArc(0.0, 1.0)
         events.size shouldBe 4
@@ -113,7 +113,7 @@ class LangWhenSpec : FunSpec({
     test("when() with cycling binary control [1,0,0,0].iter(4) over 12 cycles") {
         val source = seq("0 1 2 3").repeatCycles(4)
         val binaryControl = seq("1 0 0 0").iter(4)
-        val transformed = source.`when`(binaryControl) { it.add(10) }
+        val transformed = source.`when`(binaryControl, { it.add(10) })
 
         println("\n=== when() with cycling binary control ===")
         for (cycle in 0..11) {
@@ -136,8 +136,8 @@ class LangWhenSpec : FunSpec({
         // First when("1 0"): c3 (truthy at t=0) -> e3; d3 (falsy at t=0.5) unchanged
         // Second when("1 0"): e3 (truthy at t=0) -> f3; d3 (falsy at t=0.5) unchanged
         val p = note("c3 d3").apply(
-            `when`("1 0") { it.note("e3") }
-                .`when`("1 0") { it.note("f3") }
+            `when`("1 0", { it.note("e3") })
+                .`when`("1 0", { it.note("f3") })
         )
         val events = p.queryArc(0.0, 1.0).filter { it.isOnset }
 
@@ -158,7 +158,7 @@ class LangWhenSpec : FunSpec({
     test("when() with cycling binary control [1,0,0,0].iterBack(4) over 12 cycles") {
         val source = seq("0 1 2 3").repeatCycles(4)
         val binaryControl = seq("1 0 0 0").iterBack(4)
-        val transformed = source.`when`(binaryControl) { it.add(10) }
+        val transformed = source.`when`(binaryControl, { it.add(10) })
 
         println("\n=== when() with iterBack binary control ===")
         for (cycle in 0..11) {

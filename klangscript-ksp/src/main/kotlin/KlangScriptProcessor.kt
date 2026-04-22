@@ -9,6 +9,7 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeAlias
@@ -55,6 +56,14 @@ class KlangScriptProcessor(
 
         /** Maximum number of fixed parameters supported by registerMethod/registerFunction overloads. */
         private const val MAX_FIXED_PARAMS = 5
+
+        /** Kotlin hard keywords that must be backticked when used as identifiers. */
+        private val KOTLIN_HARD_KEYWORDS = setOf(
+            "as", "break", "class", "continue", "do", "else", "false", "for", "fun",
+            "if", "in", "interface", "is", "null", "object", "package", "return",
+            "super", "this", "throw", "true", "try", "typealias", "typeof", "val",
+            "var", "when", "while",
+        )
     }
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
@@ -362,7 +371,7 @@ class KlangScriptProcessor(
         entries.functions.forEach { fn ->
             fn.fn.qualifiedName?.asString()?.let { imports.add(it) }
         }
-        imports.sorted().forEach { appendLine("import $it") }
+        imports.sorted().forEach { appendLine("import ${escapeQualifiedNameKeywords(it)}") }
         if (imports.isNotEmpty()) appendLine()
 
         // === Registration function ===
@@ -502,7 +511,8 @@ class KlangScriptProcessor(
         if (isVararg) {
             val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
             val returnType = resolveKotlinType(fn.returnType?.resolve())
-            val fnCall = "$fnQualifier${fn.simpleName.asString()}(${selfArg}*args.toTypedArray()${if (hasCallInfo) ", callInfo" else ""})"
+            val fnCall =
+                "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}(${selfArg}*args.toTypedArray()${if (hasCallInfo) ", callInfo" else ""})"
             return VarargItem(
                 scriptName = method.name,
                 specsExpr = specsExpr,
@@ -526,12 +536,13 @@ class KlangScriptProcessor(
             return ArityDispatchItem(
                 scriptName = method.name,
                 specsExpr = specsExpr,
-                fnCall = "$fnQualifier${fn.simpleName.asString()}",
+                fnCall = "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}",
                 selfArg = if (isTypeExtension) "typedReceiver, " else "",
                 scriptParams = scriptParams.mapIndexed { i, p ->
                     ArityDispatchItem.ResolvedParam(
                         name = p.name?.asString() ?: "p$i",
                         kotlinType = resolveKotlinType(p.type.resolve()),
+                        castType = resolveCastType(p.type.resolve()),
                         hasDefault = p.hasDefault,
                         isNullable = p.type.resolve().isMarkedNullable,
                         index = i,
@@ -549,7 +560,7 @@ class KlangScriptProcessor(
         }
 
         val params = scriptParams.map { p ->
-            (p.name?.asString() ?: "p") to resolveKotlinType(p.type.resolve())
+            (p.name?.asString() ?: "p") to resolveCastType(p.type.resolve())
         }
         val callArgsStr = scriptParams.map { it.name?.asString() ?: "p" }.joinToString(", ")
         val fullCallArgs = if (isTypeExtension) {
@@ -559,8 +570,9 @@ class KlangScriptProcessor(
         return FixedMethodItem(
             scriptName = method.name,
             specsExpr = specsExpr,
-            fnCall = "$fnQualifier${fn.simpleName.asString()}",
+            fnCall = "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}",
             params = params,
+            returnType = resolveCastType(fn.returnType?.resolve()),
             callArgs = fullCallArgs,
             isTopLevel = false,
         )
@@ -576,7 +588,7 @@ class KlangScriptProcessor(
             scriptName = method.name,
             specsExpr = "emptyList()",
             ownerName = ownerName,
-            fnName = fn.simpleName.asString(),
+            fnName = escapeIdentifier(fn.simpleName.asString()),
             hasLocation = hasLocation,
         )
     }
@@ -585,7 +597,7 @@ class KlangScriptProcessor(
         val fn = method.fn
         val allParams = getScriptParams(fn)
         val typeName = typeDecl.simpleName.asString()
-        val fnName = fn.simpleName.asString()
+        val fnName = escapeIdentifier(fn.simpleName.asString())
         val hasExtensionReceiver = fn.extensionReceiver != null
 
         val scriptParams = if (hasExtensionReceiver) allParams else {
@@ -620,6 +632,7 @@ class KlangScriptProcessor(
                 ArityDispatchItem.ResolvedParam(
                     name = p.name?.asString() ?: "p$i",
                     kotlinType = resolveKotlinType(p.type.resolve()),
+                    castType = resolveCastType(p.type.resolve()),
                     hasDefault = p.hasDefault,
                     isNullable = p.type.resolve().isMarkedNullable,
                     index = i,
@@ -639,7 +652,7 @@ class KlangScriptProcessor(
         val hasCallInfo = hasCallInfoParam(fn)
         val isVararg = params.any { it.isVararg }
         val hasDefaults = params.any { it.hasDefault }
-        val fnName = fn.simpleName.asString()
+        val fnName = escapeIdentifier(fn.simpleName.asString())
         val specsExpr = paramSpecsListExpression(params)
 
         // Vararg → legacy
@@ -669,6 +682,7 @@ class KlangScriptProcessor(
                     ArityDispatchItem.ResolvedParam(
                         name = p.name?.asString() ?: "p$i",
                         kotlinType = resolveKotlinType(p.type.resolve()),
+                        castType = resolveCastType(p.type.resolve()),
                         hasDefault = p.hasDefault,
                         isNullable = p.type.resolve().isMarkedNullable,
                         index = i,
@@ -686,7 +700,7 @@ class KlangScriptProcessor(
         }
 
         val paramPairs = params.map { p ->
-            (p.name?.asString() ?: "p") to resolveKotlinType(p.type.resolve())
+            (p.name?.asString() ?: "p") to resolveCastType(p.type.resolve())
         }
         val callArgs = params.map { it.name?.asString() ?: "p" }.joinToString(", ")
 
@@ -695,6 +709,7 @@ class KlangScriptProcessor(
             specsExpr = specsExpr,
             fnCall = fnName,
             params = paramPairs,
+            returnType = resolveCastType(fn.returnType?.resolve()),
             callArgs = callArgs,
             isTopLevel = true,
         )
@@ -736,13 +751,17 @@ class KlangScriptProcessor(
                 // error. Phase 6 wires this up.
                 val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
                 val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargMethodWithCallInfo<$paramType, $returnType>(\"${method.name}\") { args, callInfo -> $fnQualifier${fn.simpleName.asString()}(${selfArg}*args.toTypedArray(), callInfo) }"
+                "registerVarargMethodWithCallInfo<$paramType, $returnType>(\"${method.name}\") { args, callInfo -> $fnQualifier${
+                    escapeIdentifier(
+                        fn.simpleName.asString()
+                    )
+                }(${selfArg}*args.toTypedArray(), callInfo) }"
             }
 
             isVararg -> {
                 val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
                 val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargMethod<$paramType, $returnType>(\"${method.name}\") { args -> $fnQualifier${fn.simpleName.asString()}(${selfArg}*args.toTypedArray()) }"
+                "registerVarargMethod<$paramType, $returnType>(\"${method.name}\") { args -> $fnQualifier${escapeIdentifier(fn.simpleName.asString())}(${selfArg}*args.toTypedArray()) }"
             }
 
             else -> {
@@ -761,7 +780,7 @@ class KlangScriptProcessor(
                     }
                     val paramNames = scriptParams.map { p ->
                         val name = p.name?.asString() ?: "p"
-                        "$name: ${resolveKotlinType(p.type.resolve())}"
+                        "$name: ${resolveCastType(p.type.resolve())}"
                     }
                     val callArgs = scriptParams.map { it.name?.asString() ?: "p" }
                     val callArgsStr = if (callArgs.isEmpty()) "" else callArgs.joinToString(", ")
@@ -772,10 +791,10 @@ class KlangScriptProcessor(
                     }
 
                     when (scriptParams.size) {
-                        0 -> "registerMethod(\"${method.name}\", $specsExpr) { $fnQualifier${fn.simpleName.asString()}($fullCallArgs) }"
+                        0 -> "registerMethod(\"${method.name}\", $specsExpr) { $fnQualifier${escapeIdentifier(fn.simpleName.asString())}($fullCallArgs) }"
                         else -> {
                             val paramDecl = paramNames.joinToString(", ")
-                            "registerMethod(\"${method.name}\", $specsExpr) { $paramDecl -> $fnQualifier${fn.simpleName.asString()}($fullCallArgs) }"
+                            "registerMethod(\"${method.name}\", $specsExpr) { $paramDecl -> $fnQualifier${escapeIdentifier(fn.simpleName.asString())}($fullCallArgs) }"
                         }
                     }
                 }
@@ -859,7 +878,7 @@ class KlangScriptProcessor(
         scriptParams: List<KSValueParameter>,
         specsExpr: String,
     ): String {
-        val fnName = method.fn.simpleName.asString()
+        val fnName = escapeIdentifier(method.fn.simpleName.asString())
         val isFileLevelFn = method.fn.parentDeclaration !is KSClassDeclaration
         val fnQual = if (isFileLevelFn) "" else "${ownerCls.simpleName.asString()}."
 
@@ -924,7 +943,7 @@ class KlangScriptProcessor(
                 params[1].type.resolve().declaration.simpleName.asString() == "SourceLocation"
         val callArgs = if (hasLocation) "args, loc" else "args, null"
 
-        return "registerExtensionMethod($ownerName::class, \"${method.name}\") { _, args, loc -> $ownerName.${fn.simpleName.asString()}($callArgs) }"
+        return "registerExtensionMethod($ownerName::class, \"${method.name}\") { _, args, loc -> $ownerName.${escapeIdentifier(fn.simpleName.asString())}($callArgs) }"
     }
 
     /**
@@ -936,7 +955,7 @@ class KlangScriptProcessor(
         val fn = method.fn
         val allParams = getScriptParams(fn)
         val typeName = typeDecl.simpleName.asString()
-        val fnName = fn.simpleName.asString()
+        val fnName = escapeIdentifier(fn.simpleName.asString())
 
         // Pattern A: Kotlin extension function (fun Foo.bar(amount)) — receiver
         // is `this`, not an explicit first param. Script-visible params = ALL params.
@@ -1025,7 +1044,7 @@ class KlangScriptProcessor(
         val hasCallInfo = hasCallInfoParam(fn)
         val isVararg = params.any { it.isVararg }
         val hasDefaults = params.any { it.hasDefault }
-        val fnName = fn.simpleName.asString()
+        val fnName = escapeIdentifier(fn.simpleName.asString())
         val specsExpr = paramSpecsListExpression(params)
 
         return when {
@@ -1066,7 +1085,7 @@ class KlangScriptProcessor(
                 }
                 val paramDecls = params.map { p ->
                     val name = p.name?.asString() ?: "p"
-                    "$name: ${resolveKotlinType(p.type.resolve())}"
+                    "$name: ${resolveCastType(p.type.resolve())}"
                 }
                 val callArgs = params.map { it.name?.asString() ?: "p" }.joinToString(", ")
 
@@ -1370,6 +1389,52 @@ class KlangScriptProcessor(
         return "$name$nullable"
     }
 
+    /**
+     * Resolves the cast/declaration type for a parameter.
+     *
+     * Most types use the alias-followed underlying type. Function types
+     * (FunctionN<P1, ..., R>) — including aliases like
+     * `PatternMapperFn = (SprudelPattern) -> SprudelPattern` — get expanded
+     * to their structural form `(P1, ..., PN) -> R`. This matters because:
+     *  - `as Function1` is a raw-type cast that Kotlin rejects.
+     *  - `as PatternMapperFn` would require importing the alias.
+     *  - `as (SprudelPattern) -> SprudelPattern` is unambiguous and only
+     *    requires the component types to be in scope (they typically already are).
+     */
+    /** Walk through chained typealiases to the underlying type. */
+    private fun KSType.resolveAlias(): KSType {
+        var t = this
+        while (t.declaration is KSTypeAlias) {
+            t = (t.declaration as KSTypeAlias).type.resolve()
+        }
+        return t
+    }
+
+    private fun resolveCastType(type: KSType?): String {
+        if (type == null) return "Any"
+
+        val effective = type.resolveAlias()
+        val effectiveName = effective.declaration.simpleName.asString()
+        val isFunctionType = effectiveName.startsWith("Function") &&
+                effectiveName.removePrefix("Function").toIntOrNull() != null
+
+        if (isFunctionType && effective.arguments.isNotEmpty()) {
+            // FunctionN<P1, ..., PN, R> — last arg is return, rest are params.
+            val typeArgs = effective.arguments
+            val paramTypes = typeArgs.dropLast(1).map { arg ->
+                arg.type?.resolve()?.let { resolveKotlinType(it) } ?: "Any"
+            }
+            val returnType = typeArgs.last().type?.resolve()?.let { resolveKotlinType(it) } ?: "Any"
+            val funcType = "(${paramTypes.joinToString(", ")}) -> $returnType"
+            // Always parenthesize so the type is unambiguous in lambda parameter
+            // declarations like `{ transform: ((P) -> R) -> body }`.
+            val isNullable = type.nullability == Nullability.NULLABLE
+            return if (isNullable) "(($funcType)?)" else "($funcType)"
+        }
+
+        return resolveKotlinType(type)
+    }
+
     private fun generateKlangType(type: KSType): String {
         val declaration = type.declaration
         val simpleName = declaration.simpleName.asString()
@@ -1388,6 +1453,30 @@ class KlangScriptProcessor(
     private fun typeDisplayName(kotlinName: String): String {
         return TYPE_DISPLAY_NAMES[kotlinName] ?: kotlinName
     }
+
+    /**
+     * Wraps any segment of a qualified name that is a Kotlin hard keyword in backticks.
+     * E.g. `io.peekandpoke.klang.sprudel.lang.when` → `io.peekandpoke.klang.sprudel.lang.\`when\``.
+     */
+    private fun escapeQualifiedNameKeywords(qualifiedName: String): String {
+        return qualifiedName.split('.').joinToString(".") { segment ->
+            if (segment in KOTLIN_HARD_KEYWORDS) "`$segment`" else segment
+        }
+    }
+
+    /**
+     * Wraps a Kotlin identifier in backticks if it is a hard keyword.
+     */
+    private fun escapeIdentifier(name: String): String {
+        return if (name in KOTLIN_HARD_KEYWORDS) "`$name`" else name
+    }
+
+    /**
+     * Returns the Kotlin source-safe simple name of a declaration,
+     * adding backticks for hard keywords like `when`.
+     */
+    private fun KSDeclaration.escapedSimpleName(): String =
+        escapeIdentifier(simpleName.asString())
 
     // ===== ParamSpec emission (Phase 5b) =====
 

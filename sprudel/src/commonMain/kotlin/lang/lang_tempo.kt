@@ -1516,9 +1516,9 @@ fun applyBrak(pattern: SprudelPattern): SprudelPattern {
         )
     )
 
-    return pattern.`when`(condition) { x ->
+    return pattern.`when`(condition, { x ->
         fastcat(x, silence).late(0.25.toRational())
-    }
+    })
 }
 
 internal val SprudelPattern._brak by dslPatternExtension { p, /* args */ _, /* callInfo */ _ -> applyBrak(p) }

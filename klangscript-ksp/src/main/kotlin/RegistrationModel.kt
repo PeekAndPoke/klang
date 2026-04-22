@@ -20,34 +20,36 @@ sealed class RegistrationItem {
 // ============================================================================
 
 /**
- * A fixed-arity method with NO Kotlin defaults. Renders as a single-line
- * `registerMethod(name, specs) { params -> Owner.fn(callArgs) }` (inside a
- * registerObject/registerType block) or
- * `registerFunction(name, specs) { params -> fn(callArgs) }` (top-level).
+ * A fixed-arity method with NO Kotlin defaults.
+ *
+ * Renders with explicit generic type arguments so Kotlin can infer the lambda
+ * parameter types without us writing them out. This is the only sane way to
+ * pass function-type parameters (like `(SprudelPattern) -> SprudelPattern`)
+ * through — typed lambda params `{ x: (A) -> B -> body }` are ambiguous at
+ * the parser level because the lambda's `->` collides with the type's `->`.
+ *
+ * Top-level: `registerFunction<P1, ..., PN, R>("name", specs) { p1, ..., pN -> fn(callArgs) }`
+ * Method:    `registerMethod<P1, ..., PN, R>("name", specs) { p1, ..., pN -> fn(callArgs) }`
  */
 data class FixedMethodItem(
     override val scriptName: String,
     override val specsExpr: String,
     val fnCall: String,
     val params: List<Pair<String, String>>,
+    val returnType: String,
     val callArgs: String,
     val isTopLevel: Boolean,
 ) : RegistrationItem() {
     override fun renderRegistration(): String {
-        val paramDecl = params.joinToString(", ") { "${it.first}: ${it.second}" }
-        return if (isTopLevel) {
-            if (params.isEmpty()) {
-                "registerFunction(\"$scriptName\", $specsExpr) { $fnCall() }"
-            } else {
-                "registerFunction(\"$scriptName\", $specsExpr) { $paramDecl -> $fnCall($callArgs) }"
-            }
-        } else {
-            if (params.isEmpty()) {
-                "registerMethod(\"$scriptName\", $specsExpr) { $fnCall($callArgs) }"
-            } else {
-                "registerMethod(\"$scriptName\", $specsExpr) { $paramDecl -> $fnCall($callArgs) }"
-            }
+        val registerFn = if (isTopLevel) "registerFunction" else "registerMethod"
+
+        if (params.isEmpty()) {
+            return "$registerFn<$returnType>(\"$scriptName\", $specsExpr) { $fnCall($callArgs) }"
         }
+
+        val genericArgs = (params.map { it.second } + returnType).joinToString(", ")
+        val paramNames = params.joinToString(", ") { it.first }
+        return "$registerFn<$genericArgs>(\"$scriptName\", $specsExpr) { $paramNames -> $fnCall($callArgs) }"
     }
 }
 
@@ -66,7 +68,14 @@ data class ArityDispatchItem(
     val isTopLevel: Boolean,
 ) : RegistrationItem() {
 
-    data class ResolvedParam(val name: String, val kotlinType: String, val hasDefault: Boolean, val isNullable: Boolean, val index: Int)
+    data class ResolvedParam(
+        val name: String,
+        val kotlinType: String,
+        val castType: String,
+        val hasDefault: Boolean,
+        val isNullable: Boolean,
+        val index: Int,
+    )
     data class ReceiverCast(val typeName: String, val useConvertToKotlin: Boolean)
 
     override fun renderRegistration(): String = buildString {
@@ -105,7 +114,7 @@ data class ArityDispatchItem(
                 appendLine(
                     "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
                         castSuffix(
-                            param.kotlinType,
+                            param.castType,
                             param.isNullable
                         )
                     }"
@@ -126,7 +135,7 @@ data class ArityDispatchItem(
                     appendLine(
                         "$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
                             castSuffix(
-                                param.kotlinType,
+                                param.castType,
                                 param.isNullable
                             )
                         }"
@@ -263,7 +272,7 @@ data class FileLevelExtItem(
                     appendLine(
                         "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
                             castSuffix(
-                                param.kotlinType,
+                                param.castType,
                                 param.isNullable
                             )
                         }"
@@ -280,7 +289,7 @@ data class FileLevelExtItem(
                         appendLine(
                             "$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
                                 castSuffix(
-                                    param.kotlinType,
+                                    param.castType,
                                     param.isNullable
                                 )
                             }"
@@ -301,7 +310,7 @@ data class FileLevelExtItem(
                 appendLine(
                     "        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
                         castSuffix(
-                            param.kotlinType,
+                            param.castType,
                             param.isNullable
                         )
                     }"
