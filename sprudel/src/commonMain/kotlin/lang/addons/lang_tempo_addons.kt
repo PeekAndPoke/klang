@@ -1,15 +1,25 @@
 @file:Suppress("ObjectPropertyName")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel._outerJoin
 import io.peekandpoke.klang.sprudel._splitQueries
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.PatternLike
+import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
+import io.peekandpoke.klang.sprudel.lang.SprudelDsl
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.chain
+import io.peekandpoke.klang.sprudel.lang.toPattern
+import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
+import io.peekandpoke.klang.sprudel.lang.voiceValueModifier
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -51,17 +61,6 @@ private fun applyTimeMoveInCycle(
 
 // -- lateInCycle() ----------------------------------------------------------------------------------------------------
 
-internal val SprudelPattern._lateInCycle by dslPatternExtension { p, args, _ ->
-    applyTimeMoveInCycle(pattern = p, args = args, factor = Rational.ONE)
-}
-internal val String._lateInCycle by dslStringExtension { p, args, callInfo -> p._lateInCycle(args, callInfo) }
-internal val _lateInCycle by dslPatternMapper { args, callInfo -> { p -> p._lateInCycle(args, callInfo) } }
-internal val PatternMapperFn._lateInCycle by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_lateInCycle(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Nudges events later within their cycle by the given fraction of a cycle.
  *
@@ -82,8 +81,9 @@ internal val PatternMapperFn._lateInCycle by dslPatternMapperExtension { m, args
  * @tags lateInCycle, timing, swing, nudge, offset, addon
  */
 @SprudelDsl
-fun SprudelPattern.lateInCycle(amount: PatternLike): SprudelPattern =
-    this._lateInCycle(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.lateInCycle(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyTimeMoveInCycle(pattern = this, args = listOf(amount).asSprudelDslArgs(callInfo), factor = Rational.ONE)
 
 /**
  * Parses this string as a pattern and nudges events later within their cycle.
@@ -95,8 +95,9 @@ fun SprudelPattern.lateInCycle(amount: PatternLike): SprudelPattern =
  * @param amount Fraction of a cycle to nudge events later.
  */
 @SprudelDsl
-fun String.lateInCycle(amount: PatternLike): SprudelPattern =
-    this._lateInCycle(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.lateInCycle(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().lateInCycle(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that nudges events later within their cycle.
@@ -111,8 +112,9 @@ fun String.lateInCycle(amount: PatternLike): SprudelPattern =
  * @tags lateInCycle, timing, swing, nudge, offset, addon
  */
 @SprudelDsl
-fun lateInCycle(amount: PatternLike): PatternMapperFn =
-    _lateInCycle(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun lateInCycle(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lateInCycle(amount, callInfo) }
 
 /**
  * Chains a late-nudge onto this [PatternMapperFn], shifting events later within their cycle.
@@ -124,21 +126,11 @@ fun lateInCycle(amount: PatternLike): PatternMapperFn =
  * @param amount Fraction of a cycle to nudge events later.
  */
 @SprudelDsl
-fun PatternMapperFn.lateInCycle(amount: PatternLike): PatternMapperFn =
-    _lateInCycle(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.lateInCycle(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.lateInCycle(amount, callInfo) }
 
 // -- earlyInCycle() ---------------------------------------------------------------------------------------------------
-
-internal val SprudelPattern._earlyInCycle by dslPatternExtension { p, args, _ ->
-    applyTimeMoveInCycle(pattern = p, args = args, factor = Rational.MINUS_ONE)
-}
-internal val String._earlyInCycle by dslStringExtension { p, args, callInfo -> p._earlyInCycle(args, callInfo) }
-internal val _earlyInCycle by dslPatternMapper { args, callInfo -> { p -> p._earlyInCycle(args, callInfo) } }
-internal val PatternMapperFn._earlyInCycle by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_earlyInCycle(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Nudges events earlier within their cycle by the given fraction of a cycle.
@@ -160,8 +152,9 @@ internal val PatternMapperFn._earlyInCycle by dslPatternMapperExtension { m, arg
  * @tags earlyInCycle, timing, nudge, offset, addon
  */
 @SprudelDsl
-fun SprudelPattern.earlyInCycle(amount: PatternLike): SprudelPattern =
-    this._earlyInCycle(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.earlyInCycle(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyTimeMoveInCycle(pattern = this, args = listOf(amount).asSprudelDslArgs(callInfo), factor = Rational.MINUS_ONE)
 
 /**
  * Parses this string as a pattern and nudges events earlier within their cycle.
@@ -173,8 +166,9 @@ fun SprudelPattern.earlyInCycle(amount: PatternLike): SprudelPattern =
  * @param amount Fraction of a cycle to nudge events earlier.
  */
 @SprudelDsl
-fun String.earlyInCycle(amount: PatternLike): SprudelPattern =
-    this._earlyInCycle(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.earlyInCycle(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().earlyInCycle(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that nudges events earlier within their cycle.
@@ -189,8 +183,9 @@ fun String.earlyInCycle(amount: PatternLike): SprudelPattern =
  * @tags earlyInCycle, timing, nudge, offset, addon
  */
 @SprudelDsl
-fun earlyInCycle(amount: PatternLike): PatternMapperFn =
-    _earlyInCycle(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun earlyInCycle(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.earlyInCycle(amount, callInfo) }
 
 /**
  * Chains an early-nudge onto this [PatternMapperFn], shifting events earlier within their cycle.
@@ -202,8 +197,9 @@ fun earlyInCycle(amount: PatternLike): PatternMapperFn =
  * @param amount Fraction of a cycle to nudge events earlier.
  */
 @SprudelDsl
-fun PatternMapperFn.earlyInCycle(amount: PatternLike): PatternMapperFn =
-    _earlyInCycle(listOf(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.earlyInCycle(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.earlyInCycle(amount, callInfo) }
 
 // -- stretchBy() ------------------------------------------------------------------------------------------------------
 
@@ -226,15 +222,6 @@ private fun applyStretchBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any
     }
 }
 
-internal val SprudelPattern._stretchBy by dslPatternExtension { p, args, _ -> applyStretchBy(p, args) }
-internal val String._stretchBy by dslStringExtension { p, args, callInfo -> p._stretchBy(args, callInfo) }
-internal val _stretchBy by dslPatternMapper { args, callInfo -> { p -> p._stretchBy(args, callInfo) } }
-internal val PatternMapperFn._stretchBy by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_stretchBy(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Multiplies the duration of each event in this pattern by the given factor, without affecting onset time.
  *
@@ -255,8 +242,9 @@ internal val PatternMapperFn._stretchBy by dslPatternMapperExtension { m, args, 
  * @tags stretchBy, duration, stretch, event length, addon
  */
 @SprudelDsl
-fun SprudelPattern.stretchBy(factor: PatternLike): SprudelPattern =
-    this._stretchBy(listOf(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.stretchBy(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyStretchBy(this, listOf(factor).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and multiplies the duration of each event by the given factor.
@@ -268,7 +256,9 @@ fun SprudelPattern.stretchBy(factor: PatternLike): SprudelPattern =
  * @param factor The duration multiplier. Values > 1 extend events; values < 1 shorten them.
  */
 @SprudelDsl
-fun String.stretchBy(factor: PatternLike): SprudelPattern = this._stretchBy(listOf(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun String.stretchBy(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().stretchBy(factor, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that multiplies the duration of each event by the given factor.
@@ -287,7 +277,9 @@ fun String.stretchBy(factor: PatternLike): SprudelPattern = this._stretchBy(list
  * @tags stretchBy, duration, stretch, event length, addon
  */
 @SprudelDsl
-fun stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun stretchBy(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.stretchBy(factor, callInfo) }
 
 /**
  * Chains a duration-stretch onto this [PatternMapperFn], multiplying each event's duration.
@@ -299,4 +291,6 @@ fun stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).
  * @param factor The duration multiplier. Values > 1 extend events; values < 1 shorten them.
  */
 @SprudelDsl
-fun PatternMapperFn.stretchBy(factor: PatternLike): PatternMapperFn = _stretchBy(listOf(factor).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.stretchBy(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.stretchBy(factor, callInfo) }
