@@ -177,7 +177,6 @@ private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>
     return source._liftOrReinterpretNumericalField(args, velocityMutation)
 }
 
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the gain 'velocity'. It is multiplied with the gain of the events.
@@ -319,7 +318,6 @@ private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>
     return source._liftOrReinterpretNumericalField(args, postgainMutation)
 }
 
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets the post-gain (applied after voice processing) for each event in the pattern.

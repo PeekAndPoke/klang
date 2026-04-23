@@ -87,19 +87,19 @@ fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().oscparam(key, value, callInfo)
+    this.toVoiceValuePattern().oscp(key, value, callInfo)
 
 /** Alias for [oscparam]. Creates a [PatternMapperFn] that sets an oscillator parameter. */
 @SprudelDsl
 @KlangScript.Function
 fun oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    oscparam(key, value, callInfo)
+    { p -> p.oscp(key, value, callInfo) }
 
 /** Alias for [oscparam]. Chains an oscillator-parameter-set onto this [PatternMapperFn]. */
 @SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.oscparam(key, value, callInfo)
+    this.chain { p -> p.oscp(key, value, callInfo) }
 
 // -- analog() ---------------------------------------------------------------------------------------------------------
 

@@ -158,7 +158,7 @@ fun SprudelPattern.every(n: PatternLike, transform: PatternMapperFn, callInfo: C
 @SprudelDsl
 @KlangScript.Function
 fun String.every(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().firstOf(n, transform, callInfo)
+    this.toVoiceValuePattern().every(n, transform, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies [transform] on the **first** cycle of every [n] cycles.
@@ -204,7 +204,6 @@ fun PatternMapperFn.every(n: PatternLike, transform: PatternMapperFn, callInfo: 
 // -- lastOf() ---------------------------------------------------------------------------------------------------------
 
 private fun applyLastOf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    @Suppress("UNCHECKED_CAST")
     val transform = args.getOrNull(1).toPatternMapper() ?: return source
 
     return source._innerJoin(args.take(1)) { src, nValue ->

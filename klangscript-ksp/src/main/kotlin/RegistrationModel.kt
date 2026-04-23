@@ -64,8 +64,8 @@ data class ArityDispatchItem(
     val selfArg: String,
     val scriptParams: List<ResolvedParam>,
     val receiverCast: ReceiverCast?,
-    val receiverClassName: String?,
     val isTopLevel: Boolean,
+    val hasCallInfo: Boolean = false,
 ) : RegistrationItem() {
 
     data class ResolvedParam(
@@ -78,10 +78,15 @@ data class ArityDispatchItem(
     )
     data class ReceiverCast(val typeName: String, val useConvertToKotlin: Boolean)
 
+    private fun callWithCallInfo(args: String): String = withCallInfo(args, hasCallInfo)
+
     override fun renderRegistration(): String = buildString {
         val requiredCount = scriptParams.count { !it.hasDefault }
         val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
+        val hasDefaults = firstOptionalIdx != -1
 
+        // Emit at column 0; the caller wraps with `prependIndent` to position the whole
+        // block within its surrounding context (top-level vs nested register block).
         if (isTopLevel) {
             appendLine("registerFunctionWithSpecs(")
             appendLine("    name = \"$scriptName\",")
@@ -95,7 +100,7 @@ data class ArityDispatchItem(
             appendLine(") { receiver, args, loc ->")
         }
 
-        val indent = if (isTopLevel) "        " else "                "
+        val indent = "    "
 
         if (receiverCast != null) {
             appendLine("$indent@Suppress(\"UNCHECKED_CAST\")")
@@ -106,6 +111,19 @@ data class ArityDispatchItem(
             }
         }
 
+        if (hasCallInfo) {
+            val receiverLocExpr = if (isTopLevel) {
+                "null"
+            } else {
+                "(receiver as? StringValue)?.location ?: (receiver as? NumberValue)?.location"
+            }
+            appendLine("${indent}val callInfo = CallInfo(")
+            appendLine("$indent    callLocation = loc,")
+            appendLine("$indent    receiverLocation = $receiverLocExpr,")
+            appendLine("$indent    paramLocations = args.map { arg -> (arg as? StringValue)?.location ?: (arg as? NumberValue)?.location },")
+            appendLine("$indent)")
+        }
+
         appendLine("${indent}checkArgsSize(fn = \"$scriptName\", args = args, expected = $requiredCount, location = loc)")
 
         // Required params — always convert
@@ -113,13 +131,18 @@ data class ArityDispatchItem(
             if (!param.hasDefault) {
                 appendLine(
                     "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                        castSuffix(
-                            param.castType,
-                            param.isNullable
-                        )
+                        castSuffix(param.castType, param.isNullable)
                     }"
                 )
             }
+        }
+
+        if (!hasDefaults) {
+            // No defaults — single call with all required params
+            val callArgs = scriptParams.map { it.name }.joinToString(", ")
+            appendLine("${indent}wrapAsRuntimeValue($fnCall(${callWithCallInfo(joinCallArgs(selfArg, callArgs))}))")
+            append("}")
+            return@buildString
         }
 
         appendLine("${indent}wrapAsRuntimeValue(")
@@ -134,27 +157,23 @@ data class ArityDispatchItem(
                 if (param.hasDefault) {
                     appendLine(
                         "$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                            castSuffix(
-                                param.castType,
-                                param.isNullable
-                            )
+                            castSuffix(param.castType, param.isNullable)
                         }"
                     )
                 }
             }
 
             val callArgs = argsForLevel.map { it.name }.joinToString(", ")
-            appendLine("$indent        $fnCall(${joinCallArgs(selfArg, callArgs)})")
+            appendLine("$indent        $fnCall(${callWithCallInfo(joinCallArgs(selfArg, callArgs))})")
         }
 
         val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name }.joinToString(", ")
         appendLine("$indent    } else {")
-        appendLine("$indent        $fnCall(${joinCallArgs(selfArg, requiredArgs)})")
+        appendLine("$indent        $fnCall(${callWithCallInfo(joinCallArgs(selfArg, requiredArgs))})")
         appendLine("$indent    }")
         appendLine("$indent)")
 
-        val closing = if (isTopLevel) "    }" else "            }"
-        append(closing)
+        append("}")
     }
 }
 
@@ -218,63 +237,45 @@ data class FileLevelExtItem(
     val fnCallPrefix: String,
 ) : RegistrationItem() {
     override fun renderRegistration(): String = buildString {
+        // Emit at column 0; the caller wraps with `prependIndent` to position the whole
+        // block within its surrounding context.
         appendLine("registerExtensionMethodWithSpecs(")
         appendLine("    receiver = $receiverClassName::class,")
         appendLine("    name = \"$scriptName\",")
         appendLine("    paramSpecs = $specsExpr,")
         appendLine(") { receiver, args, loc ->")
 
+        val indent = "    "
+
         if (receiverCast != null) {
-            appendLine("        @Suppress(\"UNCHECKED_CAST\")")
+            appendLine("$indent@Suppress(\"UNCHECKED_CAST\")")
             if (receiverCast.useConvertToKotlin) {
-                appendLine("        val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin(${receiverCast.typeName}::class, loc)")
+                appendLine("${indent}val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin(${receiverCast.typeName}::class, loc)")
             } else {
-                appendLine("        val typedReceiver = receiver as ${receiverCast.typeName}")
+                appendLine("${indent}val typedReceiver = receiver as ${receiverCast.typeName}")
             }
         }
 
         if (hasCallInfo) {
-            appendLine("        val callInfo = CallInfo(")
-            appendLine("            callLocation = loc,")
-            appendLine("            receiverLocation = (receiver as? StringValue)?.location ?: (receiver as? NumberValue)?.location,")
-            appendLine("            paramLocations = args.map { arg -> (arg as? StringValue)?.location ?: (arg as? NumberValue)?.location },")
-            appendLine("        )")
+            appendLine("${indent}val callInfo = CallInfo(")
+            appendLine("$indent    callLocation = loc,")
+            appendLine("$indent    receiverLocation = (receiver as? StringValue)?.location ?: (receiver as? NumberValue)?.location,")
+            appendLine("$indent    paramLocations = args.map { arg -> (arg as? StringValue)?.location ?: (arg as? NumberValue)?.location },")
+            appendLine("$indent)")
         }
 
-        // Helper: append callInfo to a call-args string, always using named parameter
-        // to avoid positional mismatch when optional params are omitted.
-        fun withCallInfo(args: String): String = when {
-            !hasCallInfo -> args
-            args.isEmpty() -> "callInfo = callInfo"
-            else -> "$args, callInfo = callInfo"
-        }
+        fun withCallInfo(args: String): String = withCallInfo(args, hasCallInfo)
 
         if (hasDefaults) {
-            // Delegate to the shared arity-dispatch rendering
-            val dispatchItem = ArityDispatchItem(
-                scriptName = scriptName,
-                specsExpr = specsExpr,
-                fnCall = "$fnCallPrefix$fnName",
-                selfArg = selfArg,
-                scriptParams = scriptParams,
-                receiverCast = null, // already emitted above
-                receiverClassName = receiverClassName,
-                isTopLevel = false,
-            )
-            // Extract just the body (skip the opening line + receiver cast we already emitted)
             val requiredCount = scriptParams.count { !it.hasDefault }
             val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
-            val indent = "        "
 
             appendLine("${indent}checkArgsSize(fn = \"$scriptName\", args = args, expected = $requiredCount, location = loc)")
             scriptParams.forEach { param ->
                 if (!param.hasDefault) {
                     appendLine(
                         "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                            castSuffix(
-                                param.castType,
-                                param.isNullable
-                            )
+                            castSuffix(param.castType, param.isNullable)
                         }"
                     )
                 }
@@ -288,10 +289,7 @@ data class FileLevelExtItem(
                     if (param.hasDefault) {
                         appendLine(
                             "$indent        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                                castSuffix(
-                                    param.castType,
-                                    param.isNullable
-                                )
+                                castSuffix(param.castType, param.isNullable)
                             }"
                         )
                     }
@@ -305,26 +303,21 @@ data class FileLevelExtItem(
             appendLine("$indent    }")
             appendLine("$indent)")
         } else {
-            appendLine("        checkArgsSize(fn = \"$scriptName\", args = args, expected = ${scriptParams.size}, location = loc)")
+            appendLine("${indent}checkArgsSize(fn = \"$scriptName\", args = args, expected = ${scriptParams.size}, location = loc)")
             scriptParams.forEach { param ->
                 appendLine(
-                    "        val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
-                        castSuffix(
-                            param.castType,
-                            param.isNullable
-                        )
+                    "${indent}val ${param.name} = convertArgToKotlin(fn = \"$scriptName\", args = args, index = ${param.index}, cls = ${param.kotlinType}::class, nullable = ${param.isNullable}, loc = loc)${
+                        castSuffix(param.castType, param.isNullable)
                     }"
                 )
             }
             val callArgs = scriptParams.map { it.name }.joinToString(", ")
-            if (hasExtensionReceiver && receiverCast != null) {
-                appendLine("        wrapAsRuntimeValue(${fnCallPrefix}$fnName(${withCallInfo(callArgs)}))")
-            } else {
-                appendLine("        wrapAsRuntimeValue($fnName(${withCallInfo(joinCallArgs(selfArg, callArgs))}))")
-            }
+            // Note: for hasExtensionReceiver, selfArg is "" (set in buildFileLevelExtItem),
+            // so joinCallArgs collapses to just callArgs — both branches produce identical output.
+            appendLine("${indent}wrapAsRuntimeValue(${fnCallPrefix}$fnName(${withCallInfo(joinCallArgs(selfArg, callArgs))}))")
         }
 
-        append("    }")
+        append("}")
     }
 }
 
@@ -342,4 +335,11 @@ internal fun joinCallArgs(selfArg: String, args: String): String = when {
     selfArg.isEmpty() -> args
     args.isEmpty() -> selfArg.trimEnd(' ', ',')
     else -> "$selfArg$args"
+}
+
+/** Appends `callInfo = callInfo` to a call-args string when [hasCallInfo] is true. */
+internal fun withCallInfo(args: String, hasCallInfo: Boolean): String = when {
+    !hasCallInfo -> args
+    args.isEmpty() -> "callInfo = callInfo"
+    else -> "$args, callInfo = callInfo"
 }

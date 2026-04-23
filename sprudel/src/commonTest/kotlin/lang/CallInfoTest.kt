@@ -88,6 +88,54 @@ class CallInfoTest : StringSpec({
     "duckdepth passes CallInfo from KlangScript" {
         assertCallInfoPresent("""seq("0 1").duckdepth("0.8")""")
     }
+
+    "vowel passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").vowel("a")""")
+    }
+
+    "firstOf passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3 d3").firstOf(2, x => x.note("e3"))""")
+    }
+
+    "every passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3 d3").every(2, x => x.note("e3"))""")
+    }
+
+    "lastOf passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3 d3").lastOf(2, x => x.note("e3"))""")
+    }
+
+    "when passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3 d3").when("1 0", x => x.note("e3"))""")
+    }
+
+    "lateInCycle passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").lateInCycle("0.1")""")
+    }
+
+    "earlyInCycle passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").earlyInCycle("0.1")""")
+    }
+
+    "stretchBy passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").stretchBy("2")""")
+    }
+
+    "oscparam passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").oscparam("analog", "0.5")""")
+    }
+
+    "oscp passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").oscp("analog", "0.5")""")
+    }
+
+    "analog passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").analog("0.5")""")
+    }
+
+    "warmth passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").warmth("0.5")""")
+    }
 })
 
 /**

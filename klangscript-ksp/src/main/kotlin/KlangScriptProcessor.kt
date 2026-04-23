@@ -9,7 +9,6 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeAlias
@@ -54,8 +53,17 @@ class KlangScriptProcessor(
 
         private const val CALL_INFO_TYPE = "CallInfo"
 
-        /** Maximum number of fixed parameters supported by registerMethod/registerFunction overloads. */
-        private const val MAX_FIXED_PARAMS = 5
+        /**
+         * Max parameters supported by the inline `registerMethod<P1, ..., R>` overloads.
+         * Beyond this, fall back to the spec-aware path.
+         */
+        private const val MAX_FIXED_PARAMS_METHOD = 3
+
+        /**
+         * Max parameters supported by the inline `registerFunction<P1, ..., R>` overloads.
+         * Beyond this, fall back to the spec-aware path.
+         */
+        private const val MAX_FIXED_PARAMS_FUNCTION = 2
 
         /** Kotlin hard keywords that must be backticked when used as identifiers. */
         private val KOTLIN_HARD_KEYWORDS = setOf(
@@ -432,13 +440,13 @@ class KlangScriptProcessor(
             appendLine("    registerObject(\"${obj.name}\", ${obj.cls.simpleName.asString()}) {")
             for (method in normalMethods) {
                 val item = buildMethodItem(method, obj.cls, isTypeExtension = false)
-                appendLine("        ${item.renderRegistration()}")
+                appendLine(item.renderRegistration().prependIndent("        "))
             }
             appendLine("    }")
 
             for (method in rawArgsMethods) {
                 val item = buildRawArgsItem(method, obj.cls)
-                appendLine("    ${item.renderRegistration()}")
+                appendLine(item.renderRegistration().prependIndent("    "))
             }
         }
 
@@ -453,13 +461,13 @@ class KlangScriptProcessor(
             if (allFileLevelMethods) {
                 for (method in ext.methods) {
                     val item = buildFileLevelExtItem(method, ext.typeDecl)
-                    appendLine("    ${item.renderRegistration()}")
+                    appendLine(item.renderRegistration().prependIndent("    "))
                 }
             } else {
                 appendLine("    registerType<$typeName> {")
                 for (method in ext.methods) {
                     val item = buildMethodItem(method, ext.cls, isTypeExtension = true)
-                    appendLine("        ${item.renderRegistration()}")
+                    appendLine(item.renderRegistration().prependIndent("        "))
                 }
                 appendLine("    }")
             }
@@ -470,7 +478,7 @@ class KlangScriptProcessor(
             appendLine()
             appendLine("    // @Function on ${fn.fn.simpleName.asString()}")
             val item = buildTopLevelFunctionItem(fn)
-            appendLine("    ${item.renderRegistration()}")
+            appendLine(item.renderRegistration().prependIndent("    "))
         }
 
         // Auto-register docs when called from a library builder
@@ -526,8 +534,12 @@ class KlangScriptProcessor(
 
         val hasDefaults = scriptParams.any { it.hasDefault }
 
-        // With defaults → arity dispatch
-        if (hasDefaults) {
+        // Use the spec-aware path when:
+        //  - we have Kotlin defaults (need arity dispatch),
+        //  - we need CallInfo (only spec-aware path threads `loc`),
+        //  - or arity exceeds the inline overload set (only spec-aware path is unbounded).
+        val needsSpecAware = hasDefaults || hasCallInfo || scriptParams.size > MAX_FIXED_PARAMS_METHOD
+        if (needsSpecAware) {
             val receiverCast = if (isTypeExtension) {
                 val receiverTypeName = fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
                 receiverTypeName?.let { ArityDispatchItem.ReceiverCast(it, useConvertToKotlin = false) }
@@ -549,14 +561,9 @@ class KlangScriptProcessor(
                     )
                 },
                 receiverCast = receiverCast,
-                receiverClassName = null,
                 isTopLevel = false,
+                hasCallInfo = hasCallInfo,
             )
-        }
-
-        // Fixed arity — simple one-liner
-        if (scriptParams.size > MAX_FIXED_PARAMS) {
-            logger.error("@Method '${method.name}' has ${scriptParams.size} parameters (max $MAX_FIXED_PARAMS)", fn)
         }
 
         val params = scriptParams.map { p ->
@@ -671,8 +678,12 @@ class KlangScriptProcessor(
             )
         }
 
-        // With defaults → arity dispatch
-        if (hasDefaults) {
+        // Use the spec-aware path when:
+        //  - we have Kotlin defaults (need arity dispatch),
+        //  - we need CallInfo (only spec-aware path threads `loc`),
+        //  - or arity exceeds the inline overload set (only spec-aware path is unbounded).
+        val needsSpecAware = hasDefaults || hasCallInfo || params.size > MAX_FIXED_PARAMS_FUNCTION
+        if (needsSpecAware) {
             return ArityDispatchItem(
                 scriptName = entry.name,
                 specsExpr = specsExpr,
@@ -689,14 +700,9 @@ class KlangScriptProcessor(
                     )
                 },
                 receiverCast = null,
-                receiverClassName = null,
                 isTopLevel = true,
+                hasCallInfo = hasCallInfo,
             )
-        }
-
-        // Fixed arity
-        if (params.size > MAX_FIXED_PARAMS) {
-            logger.error("@Function '${entry.name}' has ${params.size} parameters (max $MAX_FIXED_PARAMS)", fn)
         }
 
         val paramPairs = params.map { p ->
@@ -715,386 +721,17 @@ class KlangScriptProcessor(
         )
     }
 
-    // ===== DEAD CODE — old emission methods, replaced by build*Item() + RegistrationItem.renderRegistration() =====
-    // TODO: Delete everything from here to "===== Docs generation =====" once verified.
-
-    @Suppress("unused")
-    private fun DEAD_generateMethodRegistration(
-        method: MethodEntry,
-        ownerCls: KSClassDeclaration,
-        isTypeExtension: Boolean = false,
-    ): String {
-        val fn = method.fn
-        val allParams = getScriptParams(fn)
-        val hasCallInfo = hasCallInfoParam(fn)
-
-        // File-level functions routed through @Function(receiver = ...) don't
-        // have a parent class — the function is called by its imported name,
-        // not qualified as OwnerClass.fn.
-        val isFileLevelFunction = fn.parentDeclaration !is KSClassDeclaration
-        val ownerName = if (isFileLevelFunction) "" else ownerCls.simpleName.asString()
-        val fnQualifier = if (ownerName.isEmpty()) "" else "$ownerName."
-
-        // For type extensions, first param is the receiver — strip it from script-visible params
-        val scriptParams = if (isTypeExtension && allParams.isNotEmpty()) allParams.drop(1) else allParams
-        val selfArg = if (isTypeExtension) {
-            if (isFileLevelFunction) "typedReceiver, " else "this, "
-        } else ""
-
-        val isVararg = scriptParams.any { it.isVararg }
-        val specsExpr = paramSpecsListExpression(scriptParams)
-
-        return when {
-            isVararg && hasCallInfo -> {
-                // Vararg + CallInfo helpers don't yet thread paramSpecs through. Named-arg
-                // calls against these will get the transitional "named args not supported"
-                // error. Phase 6 wires this up.
-                val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
-                val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargMethodWithCallInfo<$paramType, $returnType>(\"${method.name}\") { args, callInfo -> $fnQualifier${
-                    escapeIdentifier(
-                        fn.simpleName.asString()
-                    )
-                }(${selfArg}*args.toTypedArray(), callInfo) }"
-            }
-
-            isVararg -> {
-                val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
-                val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargMethod<$paramType, $returnType>(\"${method.name}\") { args -> $fnQualifier${escapeIdentifier(fn.simpleName.asString())}(${selfArg}*args.toTypedArray()) }"
-            }
-
-            else -> {
-                val hasDefaults = scriptParams.any { it.hasDefault }
-
-                if (hasDefaults) {
-                    // Generate raw registerExtensionMethod with arity dispatch
-                    // so Kotlin default parameters work when fewer args are provided
-                    generateMethodWithDefaults(method, ownerCls, isTypeExtension, scriptParams, specsExpr)
-                } else {
-                    if (scriptParams.size > MAX_FIXED_PARAMS) {
-                        logger.error(
-                            "@Method '${method.name}' has ${scriptParams.size} parameters (max $MAX_FIXED_PARAMS for fixed-arity registration)",
-                            fn
-                        )
-                    }
-                    val paramNames = scriptParams.map { p ->
-                        val name = p.name?.asString() ?: "p"
-                        "$name: ${resolveCastType(p.type.resolve())}"
-                    }
-                    val callArgs = scriptParams.map { it.name?.asString() ?: "p" }
-                    val callArgsStr = if (callArgs.isEmpty()) "" else callArgs.joinToString(", ")
-                    val fullCallArgs = if (isTypeExtension) {
-                        if (callArgsStr.isEmpty()) "this" else "this, $callArgsStr"
-                    } else {
-                        callArgsStr
-                    }
-
-                    when (scriptParams.size) {
-                        0 -> "registerMethod(\"${method.name}\", $specsExpr) { $fnQualifier${escapeIdentifier(fn.simpleName.asString())}($fullCallArgs) }"
-                        else -> {
-                            val paramDecl = paramNames.joinToString(", ")
-                            "registerMethod(\"${method.name}\", $specsExpr) { $paramDecl -> $fnQualifier${escapeIdentifier(fn.simpleName.asString())}($fullCallArgs) }"
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     /**
-     * Generates the arity-dispatching body for a function/method with default parameters.
-     * Shared between method and top-level function registration.
-     *
-     * @param name script-visible name (for error messages)
-     * @param fnCall how to call the Kotlin function, e.g. "OwnerName.fnName"
-     * @param selfArg prefix for the call args, e.g. "receiver, " for type extensions, "" for functions
-     * @param scriptParams the script-visible parameters (receiver already stripped for type extensions)
-     * @param indent base indentation for the generated code
-     */
-    private fun StringBuilder.generateArityDispatchBody(
-        name: String,
-        fnCall: String,
-        selfArg: String,
-        scriptParams: List<KSValueParameter>,
-        indent: String,
-    ) {
-        val requiredCount = scriptParams.count { !it.hasDefault }
-        val firstOptionalIdx = scriptParams.indexOfFirst { it.hasDefault }
-
-        appendLine("${indent}checkArgsSize(fn = \"$name\", args = args, expected = $requiredCount, location = loc)")
-
-        // Required params — always convert
-        scriptParams.forEachIndexed { i, param ->
-            if (!param.hasDefault) {
-                val paramName = param.name?.asString() ?: "p$i"
-                val paramType = resolveKotlinType(param.type.resolve())
-                appendLine("${indent}val $paramName = convertArgToKotlin(fn = \"$name\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
-            }
-        }
-
-        appendLine("${indent}wrapAsRuntimeValue(")
-
-        // Generate if/else chain for each arity level
-        for (level in scriptParams.size downTo firstOptionalIdx + 1) {
-            val argsForLevel = scriptParams.take(level)
-            val prefix = if (level == scriptParams.size) "if" else "} else if"
-            appendLine("$indent    $prefix (args.size >= $level) {")
-
-            argsForLevel.forEachIndexed { i, param ->
-                if (param.hasDefault) {
-                    val paramName = param.name?.asString() ?: "p$i"
-                    val paramType = resolveKotlinType(param.type.resolve())
-                    appendLine("$indent        val $paramName = convertArgToKotlin(fn = \"$name\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
-                }
-            }
-
-            val callArgs = argsForLevel.map { it.name?.asString() ?: "p" }.joinToString(", ")
-            appendLine("$indent        $fnCall(${joinCallArgs(selfArg, callArgs)})")
-        }
-
-        // Final else: only required params
-        val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name?.asString() ?: "p" }.joinToString(", ")
-        appendLine("$indent    } else {")
-        appendLine("$indent        $fnCall(${joinCallArgs(selfArg, requiredArgs)})")
-        appendLine("$indent    }")
-        appendLine("$indent)")
-    }
-
-    /**
-     * Join the receiver/self prefix and the comma-separated script args, handling the
-     * empty-args case so we never emit a trailing comma like `Foo.method(self, )`.
-     */
-    private fun joinCallArgs(selfArg: String, args: String): String = when {
-        selfArg.isEmpty() -> args
-        args.isEmpty() -> selfArg.trimEnd(' ', ',')
-        else -> "$selfArg$args"
-    }
-
-    private fun generateMethodWithDefaults(
-        method: MethodEntry,
-        ownerCls: KSClassDeclaration,
-        isTypeExtension: Boolean,
-        scriptParams: List<KSValueParameter>,
-        specsExpr: String,
-    ): String {
-        val fnName = escapeIdentifier(method.fn.simpleName.asString())
-        val isFileLevelFn = method.fn.parentDeclaration !is KSClassDeclaration
-        val fnQual = if (isFileLevelFn) "" else "${ownerCls.simpleName.asString()}."
-
-        // For type extensions, the Kotlin function takes a typed receiver as its first
-        // parameter. The bridge's `receiver: Any` needs to be cast to that type before
-        // being passed through the arity dispatch.
-        val receiverTypeName = if (isTypeExtension) {
-            method.fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
-        } else null
-
-        val selfArg = if (isTypeExtension) "typedReceiver, " else ""
-
-        return buildString {
-            appendLine("builder.registerExtensionMethodWithSpecs(cls, \"${method.name}\", $specsExpr) { receiver, args, loc ->")
-            if (receiverTypeName != null) {
-                appendLine("                @Suppress(\"UNCHECKED_CAST\")")
-                appendLine("                val typedReceiver = receiver as $receiverTypeName")
-            }
-            generateArityDispatchBody(
-                name = method.name,
-                fnCall = "$fnQual$fnName",
-                selfArg = selfArg,
-                scriptParams = scriptParams,
-                indent = "                ",
-            )
-            append("            }")
-        }
-    }
-
-    /**
-     * Detects if a method uses the raw-args pattern: first param is List<RuntimeValue>.
-     * Optional second param is SourceLocation?.
+     * Detect raw-args methods: first param is `List<RuntimeValue>`. These bypass the
+     * spec/dispatch machinery — the function takes the args list directly.
      */
     private fun isRawArgsMethod(fn: KSFunctionDeclaration): Boolean {
         val params = fn.parameters
         if (params.isEmpty()) return false
-        val firstParam = params.first()
-        val firstType = firstParam.type.resolve()
-        val firstTypeName = firstType.declaration.simpleName.asString()
-        if (firstTypeName != "List") return false
-        // Check the type argument is RuntimeValue
-        val typeArgs = firstType.arguments
-        if (typeArgs.isEmpty()) return false
-        val elementType = typeArgs.first().type?.resolve()?.declaration?.simpleName?.asString()
+        val firstType = params.first().type.resolve()
+        if (firstType.declaration.simpleName.asString() != "List") return false
+        val elementType = firstType.arguments.firstOrNull()?.type?.resolve()?.declaration?.simpleName?.asString()
         return elementType == "RuntimeValue"
-    }
-
-    /**
-     * Generates a registerExtensionMethod call string for raw-args methods.
-     * Called at the builder level, outside registerObject/registerType blocks.
-     *
-     * Raw-args methods receive a `List<RuntimeValue>` directly — no script-
-     * visible parameter names are declared, so paramSpecs stays empty and
-     * named-arg calls are rejected (transitional). Callers must use
-     * positional syntax.
-     */
-    private fun generateRawArgsExtensionMethod(method: MethodEntry, ownerCls: KSClassDeclaration): String {
-        val fn = method.fn
-        val ownerName = ownerCls.simpleName.asString()
-        val params = fn.parameters
-        val hasLocation = params.size >= 2 &&
-                params[1].type.resolve().declaration.simpleName.asString() == "SourceLocation"
-        val callArgs = if (hasLocation) "args, loc" else "args, null"
-
-        return "registerExtensionMethod($ownerName::class, \"${method.name}\") { _, args, loc -> $ownerName.${escapeIdentifier(fn.simpleName.asString())}($callArgs) }"
-    }
-
-    /**
-     * Generates a top-level `registerExtensionMethodWithSpecs(...)` call for a
-     * file-level @Function(receiver = ...) method. Avoids the `registerType<T>`
-     * / `registerMethod` wrapper that accesses @PublishedApi internal fields.
-     */
-    private fun generateFileLevelExtensionMethod(method: MethodEntry, typeDecl: KSClassDeclaration): String {
-        val fn = method.fn
-        val allParams = getScriptParams(fn)
-        val typeName = typeDecl.simpleName.asString()
-        val fnName = escapeIdentifier(fn.simpleName.asString())
-
-        // Pattern A: Kotlin extension function (fun Foo.bar(amount)) — receiver
-        // is `this`, not an explicit first param. Script-visible params = ALL params.
-        // Bridge calls as extension: typedReceiver.fnName(args).
-        //
-        // Pattern B: Explicit self param (fun _klangBar(self: Foo, amount)) —
-        // first param IS the receiver. Script-visible params = params minus first.
-        // Bridge calls as standalone: fnName(typedReceiver, args).
-        val hasExtensionReceiver = fn.extensionReceiver != null
-
-        val scriptParams = if (hasExtensionReceiver) {
-            allParams  // Pattern A: all params are script-visible
-        } else {
-            if (allParams.isNotEmpty()) allParams.drop(1) else allParams  // Pattern B: strip self
-        }
-
-        val specsExpr = paramSpecsListExpression(scriptParams)
-        val hasDefaults = scriptParams.any { it.hasDefault }
-
-        // Receiver type for the cast. For Pattern A, we use convertToKotlin()
-        // so that StringValue → String, NumberValue → Double etc. are handled
-        // correctly (the Kotlin extension receiver type may differ from the
-        // KlangScript runtime value type). For Pattern B, the first param IS
-        // the runtime type, so a direct cast works.
-        val receiverTypeName = if (hasExtensionReceiver) {
-            fn.extensionReceiver?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
-        } else {
-            fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
-        }
-
-        return buildString {
-            appendLine("registerExtensionMethodWithSpecs($typeName::class, \"${method.name}\", $specsExpr) { receiver, args, loc ->")
-
-            if (receiverTypeName != null) {
-                if (hasExtensionReceiver) {
-                    // Pattern A: use convertToKotlin for type-safe unwrapping
-                    // (handles StringValue→String, NativeObjectValue→T, etc.)
-                    appendLine("        @Suppress(\"UNCHECKED_CAST\")")
-                    appendLine("        val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin($receiverTypeName::class, loc)")
-                } else {
-                    // Pattern B: direct cast (self param IS the runtime type)
-                    appendLine("        @Suppress(\"UNCHECKED_CAST\")")
-                    appendLine("        val typedReceiver = receiver as $receiverTypeName")
-                }
-            }
-
-            if (hasDefaults) {
-                // For Pattern A, the selfArg is "typedReceiver." (extension call prefix);
-                // for Pattern B, it's "typedReceiver, " (standalone call arg).
-                val selfArg = if (receiverTypeName != null) {
-                    if (hasExtensionReceiver) "" else "typedReceiver, "
-                } else ""
-                val fnCallPrefix = if (hasExtensionReceiver && receiverTypeName != null) "typedReceiver." else ""
-
-                generateArityDispatchBody(
-                    name = method.name,
-                    fnCall = "$fnCallPrefix$fnName",
-                    selfArg = selfArg,
-                    scriptParams = scriptParams,
-                    indent = "        ",
-                )
-            } else {
-                appendLine("        checkArgsSize(fn = \"${method.name}\", args = args, expected = ${scriptParams.size}, location = loc)")
-                scriptParams.forEachIndexed { i, param ->
-                    val paramName = param.name?.asString() ?: "p$i"
-                    val paramType = resolveKotlinType(param.type.resolve())
-                    appendLine("        val $paramName = convertArgToKotlin(fn = \"${method.name}\", args = args, index = $i, cls = $paramType::class, nullable = false, loc = loc) as $paramType")
-                }
-                val callArgs = scriptParams.map { it.name?.asString() ?: "p" }.joinToString(", ")
-
-                if (hasExtensionReceiver && receiverTypeName != null) {
-                    appendLine("        wrapAsRuntimeValue(typedReceiver.$fnName($callArgs))")
-                } else {
-                    val selfArg = if (receiverTypeName != null) "typedReceiver, " else ""
-                    appendLine("        wrapAsRuntimeValue($fnName(${joinCallArgs(selfArg, callArgs)}))")
-                }
-            }
-
-            append("    }")
-        }
-    }
-
-    private fun generateFunctionRegistration(entry: FunctionEntry): String {
-        val fn = entry.fn
-        val params = getScriptParams(fn)
-        val hasCallInfo = hasCallInfoParam(fn)
-        val isVararg = params.any { it.isVararg }
-        val hasDefaults = params.any { it.hasDefault }
-        val fnName = escapeIdentifier(fn.simpleName.asString())
-        val specsExpr = paramSpecsListExpression(params)
-
-        return when {
-            isVararg && hasCallInfo -> {
-                val paramType = getVarargComponentType(params.first { it.isVararg })
-                val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargFunctionWithCallInfo<$paramType, $returnType>(\"${entry.name}\") { args, callInfo -> $fnName(*args.toTypedArray(), callInfo) }"
-            }
-
-            isVararg -> {
-                val paramType = getVarargComponentType(params.first { it.isVararg })
-                val returnType = resolveKotlinType(fn.returnType?.resolve())
-                "registerVarargFunction<$paramType, $returnType>(\"${entry.name}\") { args -> $fnName(*args.toTypedArray()) }"
-            }
-
-            hasDefaults -> {
-                // Use arity-dispatching spec-aware registration so Kotlin defaults
-                // work for positional calls and safe-thunk defaults work for named.
-                buildString {
-                    appendLine("registerFunctionWithSpecs(\"${entry.name}\", $specsExpr) { args, loc ->")
-                    generateArityDispatchBody(
-                        name = entry.name,
-                        fnCall = fnName,
-                        selfArg = "",
-                        scriptParams = params,
-                        indent = "        ",
-                    )
-                    append("    }")
-                }
-            }
-
-            else -> {
-                if (params.size > MAX_FIXED_PARAMS) {
-                    logger.error(
-                        "@Function '${entry.name}' has ${params.size} parameters (max $MAX_FIXED_PARAMS for fixed-arity registration)",
-                        fn
-                    )
-                }
-                val paramDecls = params.map { p ->
-                    val name = p.name?.asString() ?: "p"
-                    "$name: ${resolveCastType(p.type.resolve())}"
-                }
-                val callArgs = params.map { it.name?.asString() ?: "p" }.joinToString(", ")
-
-                when (params.size) {
-                    0 -> "registerFunction(\"${entry.name}\", $specsExpr) { $fnName() }"
-                    else -> "registerFunction(\"${entry.name}\", $specsExpr) { ${paramDecls.joinToString(", ")} -> $fnName($callArgs) }"
-                }
-            }
-        }
     }
 
     // ===== Docs generation =====
@@ -1327,7 +964,6 @@ class KlangScriptProcessor(
 
     // ===== Type helpers =====
 
-    /** Get function parameters excluding CallInfo (which is auto-injected). */
     /** Get function parameters excluding CallInfo (which is auto-injected). Warns on Long usage. */
     private fun getScriptParams(fn: KSFunctionDeclaration): List<KSValueParameter> {
         val params = fn.parameters
@@ -1471,35 +1107,23 @@ class KlangScriptProcessor(
         return if (name in KOTLIN_HARD_KEYWORDS) "`$name`" else name
     }
 
-    /**
-     * Returns the Kotlin source-safe simple name of a declaration,
-     * adding backticks for hard keywords like `when`.
-     */
-    private fun KSDeclaration.escapedSimpleName(): String =
-        escapeIdentifier(simpleName.asString())
-
-    // ===== ParamSpec emission (Phase 5b) =====
+    // ===== ParamSpec emission =====
 
     /**
      * Build the Kotlin source for a `List<ParamSpec>` covering [scriptParams].
      *
-     * For optional params, attempts to extract the Kotlin default expression
-     * via [DefaultValueExtractor] and pastes it into a thunk if the text
-     * looks safe to embed (no `this`/`super` references). Unsafe defaults
-     * leave `default = null`; the runtime then rejects named-call omissions
-     * for those slots.
-     */
-    /**
-     * Build the Kotlin source for a `List<ParamSpec>` covering [scriptParams].
+     * For optional params, attempts to extract the Kotlin default expression via
+     * [DefaultValueExtractor] and pastes it into a thunk if the text looks safe
+     * to embed (no `this`/`super` references). Unsafe defaults leave `default = null`;
+     * the runtime then rejects named-call omissions for those slots.
      *
      * Note on type aliases: [resolveKotlinType] follows aliases through to the
-     * underlying type, so a parameter declared as e.g. `IgnitorDslLike` (a
-     * typealias for `Any`) ends up with `kotlinType = Any::class` in the
-     * emitted spec. This is enough to drive named-arg binding (we only need
-     * the name), but it loses the original alias for runtime type-checking
-     * and intellisense — those rely on the separate KlangParam doc model
-     * which preserves the alias text. Functions that want strict type
-     * checking should declare concrete (non-alias) parameter types.
+     * underlying type, so a parameter declared as e.g. `IgnitorDslLike` (a typealias
+     * for `Any`) ends up with `kotlinType = Any::class` in the emitted spec. This is
+     * enough to drive named-arg binding (we only need the name), but it loses the
+     * original alias for runtime type-checking and intellisense — those rely on the
+     * separate KlangParam doc model which preserves the alias text. Functions that
+     * want strict type checking should declare concrete (non-alias) parameter types.
      */
     private fun paramSpecsListExpression(scriptParams: List<KSValueParameter>, indent: String = "    "): String {
         if (scriptParams.isEmpty()) return "emptyList()"
