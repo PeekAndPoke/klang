@@ -1,7 +1,10 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.PatternLike
@@ -11,10 +14,7 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.asDoubleOrNull
 import io.peekandpoke.klang.sprudel.lang.chain
-import io.peekandpoke.klang.sprudel.lang.dslPatternExtension
-import io.peekandpoke.klang.sprudel.lang.dslPatternMapper
-import io.peekandpoke.klang.sprudel.lang.dslPatternMapperExtension
-import io.peekandpoke.klang.sprudel.lang.dslStringExtension
+import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.lang.voiceModifier
 import io.peekandpoke.klang.sprudel.withOscParam
 
@@ -33,23 +33,6 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
     val mutation = voiceModifier { withOscParam(key, it?.asDoubleOrNull()) }
     return source._liftOrReinterpretStringField(valueArgs, mutation)
 }
-
-internal val SprudelPattern._oscparam by dslPatternExtension { p, args, _ -> applyOscparam(p, args) }
-internal val String._oscparam by dslStringExtension { p, args, callInfo -> p._oscparam(args, callInfo) }
-internal val _oscparam by dslPatternMapper { args, callInfo -> { p -> p._oscparam(args, callInfo) } }
-internal val PatternMapperFn._oscparam by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_oscparam(args, callInfo))
-}
-
-// Alias: oscp
-internal val SprudelPattern._oscp by dslPatternExtension { p, args, _ -> applyOscparam(p, args) }
-internal val String._oscp by dslStringExtension { p, args, callInfo -> p._oscp(args, callInfo) }
-internal val _oscp by dslPatternMapper { args, callInfo -> { p -> p._oscp(args, callInfo) } }
-internal val PatternMapperFn._oscp by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_oscp(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets an arbitrary oscillator parameter by key.
@@ -72,43 +55,51 @@ internal val PatternMapperFn._oscp by dslPatternMapperExtension { m, args, callI
  * @tags oscillator, parameter, osc, addon
  */
 @SprudelDsl
-fun SprudelPattern.oscparam(key: String, value: PatternLike): SprudelPattern =
-    this._oscparam(listOf(key, value).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyOscparam(this, listOf(key, value).asSprudelDslArgs(callInfo))
 
 /** Parses this string as a pattern and sets an oscillator parameter. */
 @SprudelDsl
-fun String.oscparam(key: String, value: PatternLike): SprudelPattern =
-    this._oscparam(listOf(key, value).asSprudelDslArgs())
+@KlangScript.Function
+fun String.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().oscparam(key, value, callInfo)
 
 /** Creates a [PatternMapperFn] that sets an oscillator parameter. */
 @SprudelDsl
-fun oscparam(key: String, value: PatternLike): PatternMapperFn =
-    _oscparam(listOf(key, value).asSprudelDslArgs())
+@KlangScript.Function
+fun oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.oscparam(key, value, callInfo) }
 
 /** Chains an oscillator-parameter-set onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.oscparam(key: String, value: PatternLike): PatternMapperFn =
-    this._oscparam(listOf(key, value).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.oscparam(key, value, callInfo) }
 
 /** Alias for [oscparam]. */
 @SprudelDsl
-fun SprudelPattern.oscp(key: String, value: PatternLike): SprudelPattern =
-    this._oscp(listOf(key, value).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.oscparam(key, value, callInfo)
 
 /** Alias for [oscparam]. Parses this string as a pattern and sets an oscillator parameter. */
 @SprudelDsl
-fun String.oscp(key: String, value: PatternLike): SprudelPattern =
-    this._oscp(listOf(key, value).asSprudelDslArgs())
+@KlangScript.Function
+fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().oscparam(key, value, callInfo)
 
 /** Alias for [oscparam]. Creates a [PatternMapperFn] that sets an oscillator parameter. */
 @SprudelDsl
-fun oscp(key: String, value: PatternLike): PatternMapperFn =
-    _oscp(listOf(key, value).asSprudelDslArgs())
+@KlangScript.Function
+fun oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    oscparam(key, value, callInfo)
 
 /** Alias for [oscparam]. Chains an oscillator-parameter-set onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.oscp(key: String, value: PatternLike): PatternMapperFn =
-    this._oscp(listOf(key, value).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.oscparam(key, value, callInfo)
 
 // -- analog() ---------------------------------------------------------------------------------------------------------
 
@@ -119,15 +110,6 @@ private val analogMutation = voiceModifier {
 private fun applyAnalog(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, analogMutation)
 }
-
-internal val SprudelPattern._analog by dslPatternExtension { p, args, /* callInfo */ _ -> applyAnalog(p, args) }
-internal val String._analog by dslStringExtension { p, args, callInfo -> p._analog(args, callInfo) }
-internal val _analog by dslPatternMapper { args, callInfo -> { p -> p._analog(args, callInfo) } }
-internal val PatternMapperFn._analog by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_analog(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Adds analog oscillator drift to the sound.
@@ -153,8 +135,9 @@ internal val PatternMapperFn._analog by dslPatternMapperExtension { m, args, cal
  * @tags analog, drift, oscillator, warmth, vco, addon
  */
 @SprudelDsl
-fun SprudelPattern.analog(amount: PatternLike? = null): SprudelPattern =
-    this._analog(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyAnalog(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the analog drift amount.
@@ -169,8 +152,9 @@ fun SprudelPattern.analog(amount: PatternLike? = null): SprudelPattern =
  * @tags analog, drift, oscillator, warmth, vco, addon
  */
 @SprudelDsl
-fun String.analog(amount: PatternLike? = null): SprudelPattern =
-    this._analog(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().analog(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the analog drift amount.
@@ -185,8 +169,9 @@ fun String.analog(amount: PatternLike? = null): SprudelPattern =
  * @tags analog, drift, oscillator, warmth, vco, addon
  */
 @SprudelDsl
-fun analog(amount: PatternLike? = null): PatternMapperFn =
-    _analog(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.analog(amount, callInfo) }
 
 /**
  * Chains an analog-drift-set onto this [PatternMapperFn].
@@ -198,8 +183,9 @@ fun analog(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The analog drift amount between 0.0 (digital) and 1.0 (maximum drift).
  */
 @SprudelDsl
-fun PatternMapperFn.analog(amount: PatternLike? = null): PatternMapperFn =
-    _analog(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.analog(amount, callInfo) }
 
 // -- warmth() ---------------------------------------------------------------------------------------------------------
 
@@ -210,20 +196,6 @@ private val warmthMutation = voiceModifier {
 private fun applyWarmth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, warmthMutation)
 }
-
-internal val SprudelPattern._warmth by dslPatternExtension { p, args, /* callInfo */ _ -> applyWarmth(p, args) }
-internal val String._warmth by dslStringExtension { p, args, callInfo -> p._warmth(args, callInfo) }
-internal val _warmth by dslPatternMapper { args, callInfo -> { p -> p._warmth(args, callInfo) } }
-internal val PatternMapperFn._warmth by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(
-        _warmth(
-            args,
-            callInfo
-        )
-    )
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Controls the oscillator warmth (low-pass filtering amount).
@@ -244,8 +216,9 @@ internal val PatternMapperFn._warmth by dslPatternMapperExtension { m, args, cal
  * @tags warmth, oscillator, filter, low-pass, addon
  */
 @SprudelDsl
-fun SprudelPattern.warmth(amount: PatternLike? = null): SprudelPattern =
-    this._warmth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyWarmth(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets the oscillator warmth.
@@ -257,8 +230,9 @@ fun SprudelPattern.warmth(amount: PatternLike? = null): SprudelPattern =
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
 @SprudelDsl
-fun String.warmth(amount: PatternLike? = null): SprudelPattern =
-    this._warmth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun String.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().warmth(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the oscillator warmth.
@@ -270,8 +244,9 @@ fun String.warmth(amount: PatternLike? = null): SprudelPattern =
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
 @SprudelDsl
-fun warmth(amount: PatternLike? = null): PatternMapperFn =
-    _warmth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.warmth(amount, callInfo) }
 
 /**
  * Chains a warmth-set onto this [PatternMapperFn], applying oscillator warmth after the previous step.
@@ -283,5 +258,6 @@ fun warmth(amount: PatternLike? = null): PatternMapperFn =
  * @param amount The warmth amount between 0.0 (bright) and 1.0 (warm/muffled).
  */
 @SprudelDsl
-fun PatternMapperFn.warmth(amount: PatternLike? = null): PatternMapperFn =
-    _warmth(listOfNotNull(amount).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.warmth(amount, callInfo) }
