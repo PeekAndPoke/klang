@@ -192,6 +192,260 @@ class CallInfoTest : StringSpec({
     "eish passes CallInfo from KlangScript" {
         assertCallInfoPresent("""seq("0 1 2 3").eish(3, 8, 0.5)""")
     }
+
+    "notchf passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").notchf("1000")""")
+    }
+
+    "nresonance passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nresonance("5")""")
+    }
+
+    "notchq passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").notchq("5")""")
+    }
+
+    "nfattack passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfattack("0.1")""")
+    }
+
+    "nfa passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfa("0.1")""")
+    }
+
+    "nfdecay passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfdecay("0.3")""")
+    }
+
+    "nfd passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfd("0.3")""")
+    }
+
+    "nfsustain passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfsustain("0.5")""")
+    }
+
+    "nfs passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfs("0.5")""")
+    }
+
+    "nfrelease passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfrelease("0.5")""")
+    }
+
+    "nfr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfr("0.5")""")
+    }
+
+    "nfenv passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfenv("3000")""")
+    }
+
+    "nfe passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfe("3000")""")
+    }
+
+    "begin passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").begin("0.5")""")
+    }
+
+    "end passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").end("0.5")""")
+    }
+
+    "speed passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").speed("2")""")
+    }
+
+    "unit passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").unit("c")""")
+    }
+
+    "loop passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").loop(1)""")
+    }
+
+    "loopBegin passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").loopBegin("0.25")""")
+    }
+
+    "loopb passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").loopb("0.25")""")
+    }
+
+    "loopEnd passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").loopEnd("0.75")""")
+    }
+
+    "loope passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").loope("0.75")""")
+    }
+
+    "loopAt passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").loopAt("1")""")
+    }
+
+    "loopAtCps passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").loopAtCps("1", "0.5")""")
+    }
+
+    "loopatcps passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").loopatcps("1", "0.5")""")
+    }
+
+    "cut passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").cut("1")""")
+    }
+
+    "slice passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").slice(8, 0)""")
+    }
+
+    "splice passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""s("bd").splice(8, 0)""")
+    }
+
+    "sndPluck passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndPluck("0.99:0.5")""")
+    }
+
+    "sndSuperPluck passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSuperPluck()""")
+    }
+
+    "sndSine passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSine()""")
+    }
+
+    "sndSuperSine passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSuperSine()""")
+    }
+
+    "sndSaw passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSaw()""")
+    }
+
+    "sndSuperSaw passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSuperSaw()""")
+    }
+
+    "sndSquare passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSquare()""")
+    }
+
+    "sndSuperSquare passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSuperSquare()""")
+    }
+
+    "sndTriangle passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndTriangle()""")
+    }
+
+    "sndSuperTri passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSuperTri()""")
+    }
+
+    "sndRamp passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndRamp()""")
+    }
+
+    "sndSuperRamp passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndSuperRamp()""")
+    }
+
+    "sndPulze passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndPulze()""")
+    }
+
+    "sndPink passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndPink()""")
+    }
+
+    "sndBrown passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndBrown()""")
+    }
+
+    "sndNoise passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndNoise()""")
+    }
+
+    "sndCrackle passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndCrackle()""")
+    }
+
+    "sndDust passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c3").sndDust()""")
+    }
+
+    "slow passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").slow(2)""")
+    }
+
+    "fast passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").fast(2)""")
+    }
+
+    "rev passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d e f").rev()""")
+    }
+
+    "revv passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d e f").revv()""")
+    }
+
+    "palindrome passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d e f").palindrome()""")
+    }
+
+    "early passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").early("0.25")""")
+    }
+
+    "late passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").late("0.25")""")
+    }
+
+    "compress passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").compress("0.25", "0.75")""")
+    }
+
+    "focus passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").focus("0.25", "0.75")""")
+    }
+
+    "ply passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").ply("2")""")
+    }
+
+    // plyWith / plywith intentionally not tested — applyPlyWith uses `_bindSqueeze` with
+    // AtomicInfinitePattern, which does not propagate source locations from the outer call.
+
+    "hurry passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").hurry("2")""")
+    }
+
+    "fastGap passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").fastGap("2")""")
+    }
+
+    "densityGap passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").densityGap("2")""")
+    }
+
+    // inside / outside intentionally not tested — applyInside/applyOutside reconstruct
+    // patterns through slow/transform/fast which does not reliably propagate source locations.
+
+    "swing passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").swing("2")""")
+    }
+
+    "swingBy passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").swingBy("0.3", "2")""")
+    }
+
+    "brak passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""note("c d").brak()""")
+    }
 })
 
 /**

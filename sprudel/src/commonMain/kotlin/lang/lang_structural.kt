@@ -4357,11 +4357,11 @@ fun PatternMapperFn.repeatCycles(n: PatternLike): PatternMapperFn =
 
 // -- extend() ---------------------------------------------------------------------------------------------------------
 
-internal val _extend by dslPatternMapper { args, callInfo -> { p -> p._fast(args, callInfo) } }
-internal val SprudelPattern._extend by dslPatternExtension { p, args, callInfo -> p._fast(args, callInfo) }
+internal val _extend by dslPatternMapper { args, callInfo -> { p -> applyFast(p, args) } }
+internal val SprudelPattern._extend by dslPatternExtension { p, args, _ -> applyFast(p, args) }
 internal val String._extend by dslStringExtension { p, args, callInfo -> p._extend(args, callInfo) }
-internal val PatternMapperFn._extend by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain({ p -> p._fast(args, callInfo) })
+internal val PatternMapperFn._extend by dslPatternMapperExtension { m, args, _ ->
+    m.chain { p -> applyFast(p, args) }
 }
 
 /**

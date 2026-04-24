@@ -17,11 +17,11 @@ class LangPlyForEachSpec : StringSpec({
         val n = 2
 
         dslInterfaceTests(
-            "pattern.plyForEach(n)" to s(pat).plyForEach(n) { p, _ -> p },
+            "pattern.plyForEach(n)" to s(pat).plyForEach(n, { p, _ -> p }),
             "script pattern.plyForEach(n)" to SprudelPattern.compile("""s("$pat").plyForEach($n, (p, i) => p)"""),
-            "string.plyForEach(n)" to pat.plyForEach(n) { p, _ -> p },
+            "string.plyForEach(n)" to pat.plyForEach(n, { p, _ -> p }),
             "script string.plyForEach(n)" to SprudelPattern.compile(""""$pat".plyForEach($n, (p, i) => p)"""),
-            "plyForEach(n)" to s(pat).apply(plyForEach(n) { p, _ -> p }),
+            "plyForEach(n)" to s(pat).apply(plyForEach(n, { p, _ -> p })),
             "script plyForEach(n)" to SprudelPattern.compile("""s("$pat").apply(plyForEach($n, (p, i) => p))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
@@ -32,9 +32,9 @@ class LangPlyForEachSpec : StringSpec({
     "plyForEach() with soundIndex (n pattern)" {
         // Test that plyForEach starts with the original value,
         // then applies the function with index 1, 2, 3...
-        val p = seq("1").plyForEach(4) { pattern, index ->
+        val p = seq("1").plyForEach(4, { pattern, index ->
             pattern.add(index * 2)
-        }
+        })
 
         assertSoftly {
 
@@ -70,9 +70,9 @@ class LangPlyForEachSpec : StringSpec({
     }
 
     "plyForEach() with multiple events" {
-        val p = seq("0 10").plyForEach(3) { pattern, index ->
+        val p = seq("0 10").plyForEach(3, { pattern, index ->
             pattern.add((index * 10).toString())
-        }
+        })
         val events = p.queryArc(0.0, 1.0)
 
         // 2 events, each repeated 3 times = 6 total
@@ -90,9 +90,9 @@ class LangPlyForEachSpec : StringSpec({
     }
 
     "plyForEach() with factor 1 returns original" {
-        val p = seq("5").plyForEach(1) { pattern, _ ->
+        val p = seq("5").plyForEach(1, { pattern, _ ->
             pattern.add("100") // This shouldn't be called since factor=1
-        }
+        })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -100,9 +100,9 @@ class LangPlyForEachSpec : StringSpec({
     }
 
     "plyforeach() lowercase alias works" {
-        val p = seq("0").plyforeach(2) { pattern, index ->
+        val p = seq("0").plyforeach(2, { pattern, index ->
             pattern.add(index * 5)
-        }
+        })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -112,10 +112,10 @@ class LangPlyForEachSpec : StringSpec({
 
     "plyForEach() passes correct indices" {
         // Verify that the indices passed are 1, 2, 3 (not 0, 1, 2)
-        val p = seq("10").plyForEach(4) { pattern, index ->
+        val p = seq("10").plyForEach(4, { pattern, index ->
             // index should be: 1, 2, 3 (skips 0)
             pattern.add(index * 100)
-        }
+        })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -129,9 +129,9 @@ class LangPlyForEachSpec : StringSpec({
 
     "plyForEach() with note patterns" {
         // Test with note() and transpose
-        val p = note("c3").plyForEach(3) { pattern, index ->
+        val p = note("c3").plyForEach(3, { pattern, index ->
             pattern.transpose(index * 12)  // Transpose by octaves
-        }
+        })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
@@ -144,9 +144,9 @@ class LangPlyForEachSpec : StringSpec({
 
     "plyForEach() timing is correct" {
         // Verify that events are evenly distributed in time
-        val p = seq("1").plyForEach(5) { pattern, index ->
+        val p = seq("1").plyForEach(5, { pattern, index ->
             pattern.add(index)
-        }
+        })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 5

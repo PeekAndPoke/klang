@@ -19,11 +19,11 @@ class LangInsideSpec : StringSpec({
         val factor = 2
 
         dslInterfaceTests(
-            "pattern.inside(factor)" to s(pat).inside(factor) { it },
+            "pattern.inside(factor)" to s(pat).inside(factor, { it }),
             "script pattern.inside(factor)" to SprudelPattern.compile("""s("$pat").inside($factor, p => p)"""),
-            "string.inside(factor)" to pat.inside(factor) { it },
+            "string.inside(factor)" to pat.inside(factor, { it }),
             "script string.inside(factor)" to SprudelPattern.compile(""""$pat".inside($factor, p => p)"""),
-            "inside(factor)" to s(pat).apply(inside(factor) { it }),
+            "inside(factor)" to s(pat).apply(inside(factor, { it })),
             "script inside(factor)" to SprudelPattern.compile("""s("$pat").apply(inside($factor, p => p))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
