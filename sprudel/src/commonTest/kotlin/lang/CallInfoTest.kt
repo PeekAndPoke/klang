@@ -136,6 +136,62 @@ class CallInfoTest : StringSpec({
     "warmth passes CallInfo from KlangScript" {
         assertCallInfoPresent("""seq("0 1").warmth("0.5")""")
     }
+
+    "reverb passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").reverb("0.5:2")""")
+    }
+
+    "lpadsr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").lpadsr("0.01:0.3:0.5:0.5")""")
+    }
+
+    "hpadsr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").hpadsr("0.01:0.3:0.5:0.5")""")
+    }
+
+    "bpadsr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").bpadsr("0.01:0.3:0.5:0.5")""")
+    }
+
+    "tremolo passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").tremolo("0.5:4")""")
+    }
+
+    "nfadsr passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1").nfadsr("0.01:0.3:0.5:0.5")""")
+    }
+
+    "euclid passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1 2 3").euclid(3, 8)""")
+    }
+
+    "euclidRot passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1 2 3").euclidRot(3, 8, 2)""")
+    }
+
+    "euclidrot passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1 2 3").euclidrot(3, 8, 2)""")
+    }
+
+    "bjork passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1 2 3").bjork(3, 8, 0)""")
+    }
+
+    "euclidLegato passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1 2 3").euclidLegato(3, 8)""")
+    }
+
+    "euclidLegatoRot passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1 2 3").euclidLegatoRot(3, 8, 2)""")
+    }
+
+    "euclidish passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1 2 3").euclidish(3, 8, 0.5)""")
+    }
+
+    "eish passes CallInfo from KlangScript" {
+        assertCallInfoPresent("""seq("0 1 2 3").eish(3, 8, 0.5)""")
+    }
 })
 
 /**

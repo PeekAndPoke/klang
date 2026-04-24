@@ -1,11 +1,20 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.PatternLike
+import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
+import io.peekandpoke.klang.sprudel.lang.SprudelDsl
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
+import io.peekandpoke.klang.sprudel.lang.chain
+import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
+import io.peekandpoke.klang.sprudel.lang.voiceModifier
 
 /**
  * Accessing this property forces the initialization of this file's class,
@@ -39,15 +48,6 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
         )
     }
 }
-
-internal val _reverb by dslPatternMapper { args, callInfo -> { p -> p._reverb(args, callInfo) } }
-internal val SprudelPattern._reverb by dslPatternExtension { p, args, /* callInfo */ _ -> applyReverb(p, args) }
-internal val String._reverb by dslStringExtension { p, args, callInfo -> p._reverb(args, callInfo) }
-internal val PatternMapperFn._reverb by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_reverb(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets all reverb parameters at once via a colon-separated string
@@ -86,8 +86,9 @@ internal val PatternMapperFn._reverb by dslPatternMapperExtension { m, args, cal
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
 @SprudelDsl
-fun SprudelPattern.reverb(params: PatternLike? = null): SprudelPattern =
-    this._reverb(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.reverb(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyReverb(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets all reverb parameters.
@@ -102,8 +103,9 @@ fun SprudelPattern.reverb(params: PatternLike? = null): SprudelPattern =
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
 @SprudelDsl
-fun String.reverb(params: PatternLike? = null): SprudelPattern =
-    this._reverb(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.reverb(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().reverb(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all reverb parameters.
@@ -125,7 +127,9 @@ fun String.reverb(params: PatternLike? = null): SprudelPattern =
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
 @SprudelDsl
-fun reverb(params: PatternLike? = null): PatternMapperFn = _reverb(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun reverb(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.reverb(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all reverb parameters after the previous mapper.
@@ -142,8 +146,9 @@ fun reverb(params: PatternLike? = null): PatternMapperFn = _reverb(listOfNotNull
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.reverb(params: PatternLike? = null): PatternMapperFn =
-    _reverb(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.reverb(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.reverb(params, callInfo) }
 
 // -- lpadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -170,15 +175,6 @@ private fun applyLpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     }
 }
 
-internal val _lpadsr by dslPatternMapper { args, callInfo -> { p -> p._lpadsr(args, callInfo) } }
-internal val SprudelPattern._lpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyLpadsr(p, args) }
-internal val String._lpadsr by dslStringExtension { p, args, callInfo -> p._lpadsr(args, callInfo) }
-internal val PatternMapperFn._lpadsr by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_lpadsr(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Sets the LPF envelope shape via a colon-separated string `"attack:decay:sustain:release"`.
  *
@@ -199,8 +195,9 @@ internal val PatternMapperFn._lpadsr by dslPatternMapperExtension { m, args, cal
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun SprudelPattern.lpadsr(params: PatternLike? = null): SprudelPattern =
-    this._lpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyLpadsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets all LPF envelope parameters.
@@ -215,8 +212,9 @@ fun SprudelPattern.lpadsr(params: PatternLike? = null): SprudelPattern =
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun String.lpadsr(params: PatternLike? = null): SprudelPattern =
-    this._lpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().lpadsr(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all LPF envelope parameters.
@@ -231,7 +229,9 @@ fun String.lpadsr(params: PatternLike? = null): SprudelPattern =
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun lpadsr(params: PatternLike? = null): PatternMapperFn = _lpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.lpadsr(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all LPF envelope parameters after the previous mapper.
@@ -241,8 +241,9 @@ fun lpadsr(params: PatternLike? = null): PatternMapperFn = _lpadsr(listOfNotNull
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.lpadsr(params: PatternLike? = null): PatternMapperFn =
-    _lpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.lpadsr(params, callInfo) }
 
 // -- hpadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -269,15 +270,6 @@ private fun applyHpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     }
 }
 
-internal val _hpadsr by dslPatternMapper { args, callInfo -> { p -> p._hpadsr(args, callInfo) } }
-internal val SprudelPattern._hpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyHpadsr(p, args) }
-internal val String._hpadsr by dslStringExtension { p, args, callInfo -> p._hpadsr(args, callInfo) }
-internal val PatternMapperFn._hpadsr by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_hpadsr(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Sets the HPF envelope shape via a colon-separated string `"attack:decay:sustain:release"`.
  *
@@ -298,8 +290,9 @@ internal val PatternMapperFn._hpadsr by dslPatternMapperExtension { m, args, cal
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun SprudelPattern.hpadsr(params: PatternLike? = null): SprudelPattern =
-    this._hpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyHpadsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets all HPF envelope parameters.
@@ -314,8 +307,9 @@ fun SprudelPattern.hpadsr(params: PatternLike? = null): SprudelPattern =
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun String.hpadsr(params: PatternLike? = null): SprudelPattern =
-    this._hpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().hpadsr(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all HPF envelope parameters.
@@ -330,7 +324,9 @@ fun String.hpadsr(params: PatternLike? = null): SprudelPattern =
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun hpadsr(params: PatternLike? = null): PatternMapperFn = _hpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.hpadsr(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all HPF envelope parameters after the previous mapper.
@@ -340,8 +336,9 @@ fun hpadsr(params: PatternLike? = null): PatternMapperFn = _hpadsr(listOfNotNull
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.hpadsr(params: PatternLike? = null): PatternMapperFn =
-    _hpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.hpadsr(params, callInfo) }
 
 // -- bpadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -368,15 +365,6 @@ private fun applyBpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     }
 }
 
-internal val _bpadsr by dslPatternMapper { args, callInfo -> { p -> p._bpadsr(args, callInfo) } }
-internal val SprudelPattern._bpadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyBpadsr(p, args) }
-internal val String._bpadsr by dslStringExtension { p, args, callInfo -> p._bpadsr(args, callInfo) }
-internal val PatternMapperFn._bpadsr by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_bpadsr(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Sets the BPF envelope shape via a colon-separated string `"attack:decay:sustain:release"`.
  *
@@ -397,8 +385,9 @@ internal val PatternMapperFn._bpadsr by dslPatternMapperExtension { m, args, cal
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun SprudelPattern.bpadsr(params: PatternLike? = null): SprudelPattern =
-    this._bpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyBpadsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets all BPF envelope parameters.
@@ -413,8 +402,9 @@ fun SprudelPattern.bpadsr(params: PatternLike? = null): SprudelPattern =
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun String.bpadsr(params: PatternLike? = null): SprudelPattern =
-    this._bpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().bpadsr(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all BPF envelope parameters.
@@ -429,7 +419,9 @@ fun String.bpadsr(params: PatternLike? = null): SprudelPattern =
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun bpadsr(params: PatternLike? = null): PatternMapperFn = _bpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.bpadsr(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all BPF envelope parameters after the previous mapper.
@@ -439,8 +431,9 @@ fun bpadsr(params: PatternLike? = null): PatternMapperFn = _bpadsr(listOfNotNull
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.bpadsr(params: PatternLike? = null): PatternMapperFn =
-    _bpadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.bpadsr(params, callInfo) }
 
 // -- tremolo() --------------------------------------------------------------------------------------------------------
 
@@ -467,15 +460,6 @@ private fun applyTremolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
         )
     }
 }
-
-internal val _tremolo by dslPatternMapper { args, callInfo -> { p -> p._tremolo(args, callInfo) } }
-internal val SprudelPattern._tremolo by dslPatternExtension { p, args, /* callInfo */ _ -> applyTremolo(p, args) }
-internal val String._tremolo by dslStringExtension { p, args, callInfo -> p._tremolo(args, callInfo) }
-internal val PatternMapperFn._tremolo by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_tremolo(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Sets all tremolo parameters at once via a colon-separated string
@@ -512,8 +496,9 @@ internal val PatternMapperFn._tremolo by dslPatternMapperExtension { m, args, ca
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
 @SprudelDsl
-fun SprudelPattern.tremolo(params: PatternLike? = null): SprudelPattern =
-    this._tremolo(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyTremolo(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets all tremolo parameters.
@@ -528,8 +513,9 @@ fun SprudelPattern.tremolo(params: PatternLike? = null): SprudelPattern =
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
 @SprudelDsl
-fun String.tremolo(params: PatternLike? = null): SprudelPattern =
-    this._tremolo(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().tremolo(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all tremolo parameters.
@@ -548,7 +534,9 @@ fun String.tremolo(params: PatternLike? = null): SprudelPattern =
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
 @SprudelDsl
-fun tremolo(params: PatternLike? = null): PatternMapperFn = _tremolo(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.tremolo(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all tremolo parameters after the previous mapper.
@@ -562,8 +550,9 @@ fun tremolo(params: PatternLike? = null): PatternMapperFn = _tremolo(listOfNotNu
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.tremolo(params: PatternLike? = null): PatternMapperFn =
-    _tremolo(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.tremolo(params, callInfo) }
 
 // -- nfadsr() ---------------------------------------------------------------------------------------------------------
 
@@ -590,15 +579,6 @@ private fun applyNfadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     }
 }
 
-internal val _nfadsr by dslPatternMapper { args, callInfo -> { p -> p._nfadsr(args, callInfo) } }
-internal val SprudelPattern._nfadsr by dslPatternExtension { p, args, /* callInfo */ _ -> applyNfadsr(p, args) }
-internal val String._nfadsr by dslStringExtension { p, args, callInfo -> p._nfadsr(args, callInfo) }
-internal val PatternMapperFn._nfadsr by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_nfadsr(args, callInfo))
-}
-
-// ===== USER-FACING OVERLOADS =====
-
 /**
  * Sets the notch filter envelope shape via a colon-separated string `"attack:decay:sustain:release"`.
  *
@@ -619,8 +599,9 @@ internal val PatternMapperFn._nfadsr by dslPatternMapperExtension { m, args, cal
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun SprudelPattern.nfadsr(params: PatternLike? = null): SprudelPattern =
-    this._nfadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyNfadsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
 
 /**
  * Parses this string as a pattern and sets all notch filter envelope parameters.
@@ -635,8 +616,9 @@ fun SprudelPattern.nfadsr(params: PatternLike? = null): SprudelPattern =
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun String.nfadsr(params: PatternLike? = null): SprudelPattern =
-    this._nfadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun String.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern().nfadsr(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all notch filter envelope parameters.
@@ -651,7 +633,9 @@ fun String.nfadsr(params: PatternLike? = null): SprudelPattern =
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
 @SprudelDsl
-fun nfadsr(params: PatternLike? = null): PatternMapperFn = _nfadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.nfadsr(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all notch filter envelope parameters after the previous mapper.
@@ -661,5 +645,6 @@ fun nfadsr(params: PatternLike? = null): PatternMapperFn = _nfadsr(listOfNotNull
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.nfadsr(params: PatternLike? = null): PatternMapperFn =
-    _nfadsr(listOfNotNull(params).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.nfadsr(params, callInfo) }
