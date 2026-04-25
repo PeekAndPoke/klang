@@ -5,6 +5,7 @@ import io.peekandpoke.klang.comp.KlangScriptReplComp
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.generated.generatedSprudelDocs
 import io.peekandpoke.klang.script.generated.generatedStdlibDocs
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangCallable
@@ -13,7 +14,6 @@ import io.peekandpoke.klang.script.types.KlangDecl
 import io.peekandpoke.klang.script.types.KlangMutability
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
-import io.peekandpoke.klang.sprudel.lang.docs.registerSprudelDocs
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -65,7 +65,7 @@ import kotlinx.html.pre
  * Maps library slug (used in URL) to a function that populates a [KlangDocsRegistry].
  */
 private val libraryDocsProviders: Map<String, (KlangDocsRegistry) -> Unit> = mapOf(
-    "sprudel" to { registry -> registerSprudelDocs(registry) },
+    "sprudel" to { registry -> registry.registerAll(generatedSprudelDocs) },
     "stdlib" to { registry -> registry.registerAll(generatedStdlibDocs) },
 )
 

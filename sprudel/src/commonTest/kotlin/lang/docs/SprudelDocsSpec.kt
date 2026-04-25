@@ -7,6 +7,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.generated.generatedSprudelDocs
 import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.kotest.matchers.string.shouldContain as stringShouldContain
@@ -15,7 +16,7 @@ class SprudelDocsSpec : StringSpec({
 
     beforeTest {
         // Register Sprudel docs into the global registry for the assertions below.
-        registerSprudelDocs()
+        KlangDocsRegistry.global.registerAll(generatedSprudelDocs)
     }
 
     "seq documentation should be registered" {

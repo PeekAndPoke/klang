@@ -34,7 +34,6 @@ include(
 
     // Sequencers
     ":sprudel",
-    ":sprudel-ksp",
 
     // Interactive/Notebook support
     ":klang-notebook",

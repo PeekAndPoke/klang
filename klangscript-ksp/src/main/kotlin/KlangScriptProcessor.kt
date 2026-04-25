@@ -987,7 +987,7 @@ class KlangScriptProcessor(
             docItems.add(DocItem(fn.name, null, fn.fn))
         }
 
-        if (docItems.isEmpty() && entries.objects.isEmpty()) return
+        if (docItems.isEmpty() && entries.objects.isEmpty() && entries.properties.isEmpty()) return
 
         // Group by script name (handles overloads)
         val grouped = docItems.groupBy { it.scriptName }
@@ -1039,10 +1039,59 @@ class KlangScriptProcessor(
             appendLine()
         }
 
+        // Generate top-level property entries (e.g., "PI", "sine", "silence", "flipSign")
+        if (entries.properties.isNotEmpty()) {
+            appendLine("private fun generated${capitalizedName}DocsProperties() = mapOf(")
+            entries.properties.forEachIndexed { index, prop ->
+                val kdoc = KDocParser.parse(prop.prop.docString)
+                val description = kdoc.description.escapeForRawString()
+                val category = kdoc.category ?: "uncategorized"
+                val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
+                val aliasesString = kdoc.aliases.joinToString(", ") { "\"$it\"" }
+                val propType = prop.prop.type.resolve()
+
+                appendLine()
+                appendLine("    \"${prop.name}\" to KlangSymbol(")
+                appendLine("        name = \"${prop.name}\",")
+                appendLine("        category = \"$category\",")
+                appendLine("        tags = listOf($tagsString),")
+                appendLine("        aliases = listOf($aliasesString),")
+                appendLine("        library = \"$libraryName\",")
+                appendLine("        variants = listOf(")
+                appendLine("            KlangProperty(")
+                appendLine("                name = \"${prop.name}\",")
+                appendLine("                type = ${generateKlangType(propType)},")
+                appendLine("                description = \"\"\"$description\"\"\",")
+                if (kdoc.samples.isNotEmpty()) {
+                    appendLine("                samples = listOf(")
+                    kdoc.samples.forEachIndexed { sIdx, sample ->
+                        val comma = if (sIdx < kdoc.samples.lastIndex) "," else ""
+                        appendLine("                    KlangCodeSample(code = \"\"\"${sample.code.escapeForRawString()}\"\"\", type = KlangCodeSampleType.${sample.type.name})$comma")
+                    }
+                    appendLine("                ),")
+                } else {
+                    appendLine("                samples = emptyList(),")
+                }
+                appendLine("                library = \"$libraryName\",")
+                appendLine("            )")
+                appendLine("        )")
+                if (index < entries.properties.size - 1) {
+                    appendLine("    ),")
+                } else {
+                    appendLine("    )")
+                }
+            }
+            appendLine(")")
+            appendLine()
+        }
+
         appendLine("/** Generated documentation for the '$libraryName' library. */")
         appendLine("val generated${capitalizedName}Docs: Map<String, KlangSymbol> = buildMap {")
         if (entries.objects.isNotEmpty()) {
             appendLine("    putAll(generated${capitalizedName}DocsObjects())")
+        }
+        if (entries.properties.isNotEmpty()) {
+            appendLine("    putAll(generated${capitalizedName}DocsProperties())")
         }
         chunks.forEachIndexed { chunkIdx, _ ->
             appendLine("    putAll(generated${capitalizedName}DocsChunk$chunkIdx())")
