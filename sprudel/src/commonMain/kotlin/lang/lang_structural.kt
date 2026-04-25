@@ -47,13 +47,6 @@ import io.peekandpoke.klang.sprudel.withWeight
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.log2
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangStructuralInit = false
-
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Structural patterns
 // ///

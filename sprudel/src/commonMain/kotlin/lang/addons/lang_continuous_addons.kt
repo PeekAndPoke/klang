@@ -1,24 +1,16 @@
 @file:Suppress("ObjectPropertyName")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
+import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.SprudelDsl
-import io.peekandpoke.klang.sprudel.lang.dslObject
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import io.peekandpoke.ultra.datetime.Kronos
 import kotlin.math.PI
 import kotlin.math.sin
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangContinuousAddonsInit = false
-
 // -- cps() ------------------------------------------------------------------------------------------------------------
-
-internal val _cps by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() } }
 
 /**
  * Returns the cycles per second at which playback is currently running as a continuous pattern.
@@ -31,11 +23,10 @@ internal val _cps by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() }
  * @tags cps, tempo, playback speed, continuous, addon
  */
 @SprudelDsl
-val cps: SprudelPattern get() = _cps
+@KlangScript.Property
+val cps: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() }
 
 // -- rpm() ------------------------------------------------------------------------------------------------------------
-
-internal val _rpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 } }
 
 /**
  * Returns the current revolutions per minute as a continuous pattern (RPM = CPS × 60).
@@ -48,11 +39,10 @@ internal val _rpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() *
  * @tags rpm, tempo, revolutions per minute, continuous, addon
  */
 @SprudelDsl
-val rpm: SprudelPattern get() = _rpm
+@KlangScript.Property
+val rpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 }
 
 // -- bpm() ------------------------------------------------------------------------------------------------------------
-
-internal val _bpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() * 240.0 } }
 
 /**
  * Returns the current beats per minute as a continuous pattern (assuming 4/4 time, 4 beats per cycle).
@@ -65,7 +55,8 @@ internal val _bpm by dslObject { ContinuousPattern { _, _, ctx -> ctx.getCps() *
  * @tags bpm, tempo, beats per minute, continuous, addon
  */
 @SprudelDsl
-val bpm: SprudelPattern get() = _bpm
+@KlangScript.Property
+val bpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 240.0 }
 
 // -- Time of Day Functions --------------------------------------------------------------------------------------------
 
@@ -79,12 +70,6 @@ private fun getTimeOfDayFraction(kronos: Kronos): Double {
     val minute = localTime.minute.toDouble()
     val second = localTime.second.toDouble()
     return (hour + minute / 60.0 + second / 3600.0) / 24.0
-}
-
-internal val _timeOfDay by dslObject {
-    ContinuousPattern { _, _, ctx ->
-        getTimeOfDayFraction(ctx.getKronos())
-    }
 }
 
 /**
@@ -102,13 +87,9 @@ internal val _timeOfDay by dslObject {
  * @tags timeOfDay, time, clock, continuous, addon
  */
 @SprudelDsl
-val timeOfDay: SprudelPattern get() = _timeOfDay
-
-internal val _sinOfDay by dslObject {
-    ContinuousPattern { _, _, ctx ->
-        val t = getTimeOfDayFraction(ctx.getKronos())
-        sin(t * PI)
-    }
+@KlangScript.Property
+val timeOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
+    getTimeOfDayFraction(ctx.getKronos())
 }
 
 /**
@@ -126,13 +107,10 @@ internal val _sinOfDay by dslObject {
  * @tags sinOfDay, time, sine, clock, continuous, addon
  */
 @SprudelDsl
-val sinOfDay: SprudelPattern get() = _sinOfDay
-
-internal val _sinOfDay2 by dslObject {
-    ContinuousPattern { _, _, ctx ->
-        val t = getTimeOfDayFraction(ctx.getKronos())
-        sin(t * PI) * 2.0 - 1.0
-    }
+@KlangScript.Property
+val sinOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
+    val t = getTimeOfDayFraction(ctx.getKronos())
+    sin(t * PI)
 }
 
 /**
@@ -150,12 +128,10 @@ internal val _sinOfDay2 by dslObject {
  * @tags sinOfDay2, time, sine, bipolar, clock, continuous, addon
  */
 @SprudelDsl
-val sinOfDay2: SprudelPattern get() = _sinOfDay2
-
-internal val _timeOfNight by dslObject {
-    ContinuousPattern { _, _, ctx ->
-        1.0 - getTimeOfDayFraction(ctx.getKronos())
-    }
+@KlangScript.Property
+val sinOfDay2: SprudelPattern = ContinuousPattern { _, _, ctx ->
+    val t = getTimeOfDayFraction(ctx.getKronos())
+    sin(t * PI) * 2.0 - 1.0
 }
 
 /**
@@ -173,13 +149,9 @@ internal val _timeOfNight by dslObject {
  * @tags timeOfNight, time, clock, night, continuous, addon
  */
 @SprudelDsl
-val timeOfNight: SprudelPattern get() = _timeOfNight
-
-internal val _sinOfNight by dslObject {
-    ContinuousPattern { _, _, ctx ->
-        val t = getTimeOfDayFraction(ctx.getKronos())
-        1.0 - sin(t * PI)
-    }
+@KlangScript.Property
+val timeOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
+    1.0 - getTimeOfDayFraction(ctx.getKronos())
 }
 
 /**
@@ -197,13 +169,10 @@ internal val _sinOfNight by dslObject {
  * @tags sinOfNight, time, sine, night, clock, continuous, addon
  */
 @SprudelDsl
-val sinOfNight: SprudelPattern get() = _sinOfNight
-
-internal val _sinOfNight2 by dslObject {
-    ContinuousPattern { _, _, ctx ->
-        val t = getTimeOfDayFraction(ctx.getKronos())
-        1.0 - sin(t * PI) * 2.0
-    }
+@KlangScript.Property
+val sinOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
+    val t = getTimeOfDayFraction(ctx.getKronos())
+    1.0 - sin(t * PI)
 }
 
 /**
@@ -222,4 +191,8 @@ internal val _sinOfNight2 by dslObject {
  * @tags sinOfNight2, time, sine, bipolar, night, clock, continuous, addon
  */
 @SprudelDsl
-val sinOfNight2: SprudelPattern get() = _sinOfNight2
+@KlangScript.Property
+val sinOfNight2: SprudelPattern = ContinuousPattern { _, _, ctx ->
+    val t = getTimeOfDayFraction(ctx.getKronos())
+    1.0 - sin(t * PI) * 2.0
+}

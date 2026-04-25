@@ -12,13 +12,6 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.sampleAt
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangConditionalInit = false
-
 // -- firstOf() --------------------------------------------------------------------------------------------------------
 
 private fun applyFirstOf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {

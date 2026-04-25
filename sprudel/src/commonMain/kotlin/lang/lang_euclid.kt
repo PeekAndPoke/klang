@@ -12,13 +12,6 @@ import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.EuclideanMorphPattern
 import io.peekandpoke.klang.sprudel.pattern.EuclideanPattern
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangEuclidInit = false
-
 // -- euclid() ---------------------------------------------------------------------------------------------------------
 
 private fun applyEuclid(source: SprudelPattern, pulses: Int, steps: Int, rotation: Int): SprudelPattern {

@@ -2,8 +2,41 @@
 
 package io.peekandpoke.klang
 
-import io.peekandpoke.klang.sprudel.lang.*
 import io.peekandpoke.klang.sprudel.lang.addons.flipSign
+import io.peekandpoke.klang.sprudel.lang.adsr
+import io.peekandpoke.klang.sprudel.lang.arrange
+import io.peekandpoke.klang.sprudel.lang.clip
+import io.peekandpoke.klang.sprudel.lang.delay
+import io.peekandpoke.klang.sprudel.lang.delayfeedback
+import io.peekandpoke.klang.sprudel.lang.delaytime
+import io.peekandpoke.klang.sprudel.lang.detune
+import io.peekandpoke.klang.sprudel.lang.distort
+import io.peekandpoke.klang.sprudel.lang.early
+import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.filterWhen
+import io.peekandpoke.klang.sprudel.lang.gain
+import io.peekandpoke.klang.sprudel.lang.hpf
+import io.peekandpoke.klang.sprudel.lang.lpf
+import io.peekandpoke.klang.sprudel.lang.n
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.orbit
+import io.peekandpoke.klang.sprudel.lang.pan
+import io.peekandpoke.klang.sprudel.lang.perlin
+import io.peekandpoke.klang.sprudel.lang.range
+import io.peekandpoke.klang.sprudel.lang.room
+import io.peekandpoke.klang.sprudel.lang.rsize
+import io.peekandpoke.klang.sprudel.lang.s
+import io.peekandpoke.klang.sprudel.lang.scale
+import io.peekandpoke.klang.sprudel.lang.silence
+import io.peekandpoke.klang.sprudel.lang.sine
+import io.peekandpoke.klang.sprudel.lang.slow
+import io.peekandpoke.klang.sprudel.lang.sound
+import io.peekandpoke.klang.sprudel.lang.spread
+import io.peekandpoke.klang.sprudel.lang.stack
+import io.peekandpoke.klang.sprudel.lang.struct
+import io.peekandpoke.klang.sprudel.lang.superimpose
+import io.peekandpoke.klang.sprudel.lang.transpose
+import io.peekandpoke.klang.sprudel.lang.unison
 
 @Suppress("unused")
 object TestKotlinPatterns {
@@ -21,7 +54,7 @@ object TestKotlinPatterns {
                 >
                 """.trimIndent()
         ).sound("tri")
-            .filterWhen { it >= 16 }
+            .filterWhen(predicate = { it >= 16 })
 //            .struct("x(5,8,2)")
             .orbit(0).gain(0.375)
             .pan(sine.slow(48).range(0.3, 0.7).flipSign())
@@ -45,7 +78,7 @@ object TestKotlinPatterns {
                 >
             """.trimIndent()
         ).sound("supersaw")
-            .filterWhen { it >= 31.5 }
+            .filterWhen(predicate = { it >= 31.5 })
 //            .struct("<x*2>")
             .spread(0.5).unison(sine.range(4, 12).slow(32))
             .detune(sine.range(0.05, 0.3).early(1.5).slow(12))

@@ -12,13 +12,6 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.withOscParam
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangDynamicsInit = false
-
 // -- gain() -----------------------------------------------------------------------------------------------------------
 
 private val gainMutation = voiceModifier { copy(gain = it?.asDoubleOrNull()) }

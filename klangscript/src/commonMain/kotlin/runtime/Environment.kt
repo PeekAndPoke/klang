@@ -82,9 +82,15 @@ class Environment(
         // Register all native extension methods
         nativeExtensionMethods.putAll(native.extensionMethods)
 
-        // Define all native objects as values
+        // Define all native objects as values.
+        //
+        // Use wrapAsRuntimeValue so primitives (Double / Int / String / Boolean) are
+        // exposed as their script-level types (NumberValue / StringValue / BooleanValue),
+        // letting `@KlangScript.Property val PI: Double` participate naturally in arithmetic
+        // and comparison. Non-primitive values fall through to NativeObjectValue<T>, the
+        // existing behavior for objects like SprudelPattern.
         native.objects.forEach { (name, obj) ->
-            define(name, NativeObjectValue.fromValue(obj))
+            define(name, wrapAsRuntimeValue(obj))
         }
 
         // Define all native functions as values

@@ -15,13 +15,6 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.lang.voiceModifier
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangEffectsAddonsInit = false
-
 // -- reverb() ---------------------------------------------------------------------------------------------------------
 
 private val reverbMutation = voiceModifier {

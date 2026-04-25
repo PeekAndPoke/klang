@@ -1,32 +1,25 @@
 @file:Suppress("ObjectPropertyName")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
+import io.peekandpoke.klang.sprudel.lang.SprudelDsl
+import io.peekandpoke.klang.sprudel.lang.applyUnaryOp
+import io.peekandpoke.klang.sprudel.lang.chain
+import io.peekandpoke.klang.sprudel.lang.mul
+import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangArithmeticAddonsInit = false
 
 // -- negateValue  -----------------------------------------------------------------------------------------------------
 
 private fun applyFlipSign(pattern: SprudelPattern): SprudelPattern {
     return pattern.mul(-1.0)
 }
-
-internal val SprudelPattern._flipSign by dslPatternExtension { pattern, _, _ -> applyFlipSign(pattern) }
-
-internal val String._flipSign by dslStringExtension { pattern, _, _ -> applyFlipSign(pattern) }
-
-internal val _flipSign: PatternMapperFn by dslObject { { p -> p._flipSign() } }
-internal val PatternMapperFn._flipSign by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._flipSign() } }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Flips the sign of numerical values in each event's voice data.
@@ -46,7 +39,8 @@ internal val PatternMapperFn._flipSign by dslPatternMapperExtension { m, _, _ ->
  * @tags flipSign, negate, invert, arithmetic, value, addon
  */
 @SprudelDsl
-fun SprudelPattern.flipSign(): SprudelPattern = this._flipSign(emptyList())
+@KlangScript.Function
+fun SprudelPattern.flipSign(callInfo: CallInfo? = null): SprudelPattern = applyFlipSign(this)
 
 /**
  * Flips the sign of numerical values in a string pattern.
@@ -56,17 +50,20 @@ fun SprudelPattern.flipSign(): SprudelPattern = this._flipSign(emptyList())
  * ```
  */
 @SprudelDsl
-fun String.flipSign(): SprudelPattern = this._flipSign(emptyList())
+@KlangScript.Function
+fun String.flipSign(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).flipSign(callInfo)
 
 /**
- * Flips the sign of numerical values in a string pattern.
+ * Flips the sign of numerical values as a [PatternMapperFn].
  *
  * ```KlangScript(Playable)
  * flipSign("<[1 2 3 4] [-1 -2 -3 -4]>").scale("C4:major").n()
  * ```
  */
 @SprudelDsl
-val flipSign: PatternMapperFn get() = _flipSign
+@KlangScript.Property
+val flipSign: PatternMapperFn = { p -> p.flipSign() }
 
 /**
  * Chains a sign-flip onto this [PatternMapperFn], negating every numeric value in the result.
@@ -76,7 +73,9 @@ val flipSign: PatternMapperFn get() = _flipSign
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.flipSign(): PatternMapperFn = this._flipSign()
+@KlangScript.Function
+fun PatternMapperFn.flipSign(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.flipSign(callInfo) }
 
 // -- oneMinus ---------------------------------------------------------------------------------------------------------
 
@@ -88,15 +87,6 @@ private fun applyOneMinusValue(pattern: SprudelPattern): SprudelPattern {
         evt.copy(data = evt.data.copy(value = oneMinusCurrent.asVoiceValue()))
     }
 }
-
-internal val SprudelPattern._oneMinusValue by dslPatternExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
-
-internal val String._oneMinusValue by dslStringExtension { pattern, _, _ -> applyOneMinusValue(pattern) }
-
-internal val _oneMinusValue: PatternMapperFn by dslObject { { p -> p._oneMinusValue() } }
-internal val PatternMapperFn._oneMinusValue by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._oneMinusValue() } }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Calculates `1.0 - value` for each event's voice data.
@@ -116,15 +106,19 @@ internal val PatternMapperFn._oneMinusValue by dslPatternMapperExtension { m, _,
  * @tags oneMinusValue, invert, complement, arithmetic, value, addon
  */
 @SprudelDsl
-fun SprudelPattern.oneMinusValue(): SprudelPattern = this._oneMinusValue(emptyList())
+@KlangScript.Function
+fun SprudelPattern.oneMinusValue(callInfo: CallInfo? = null): SprudelPattern = applyOneMinusValue(this)
 
 /** Calculates `1.0 - value` for a string pattern. */
 @SprudelDsl
-fun String.oneMinusValue(): SprudelPattern = this._oneMinusValue(emptyList())
+@KlangScript.Function
+fun String.oneMinusValue(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).oneMinusValue(callInfo)
 
-/** Calculates `1.0 - value` for a string pattern. */
+/** Calculates `1.0 - value` as a [PatternMapperFn]. */
 @SprudelDsl
-val oneMinusValue: PatternMapperFn get() = _oneMinusValue
+@KlangScript.Property
+val oneMinusValue: PatternMapperFn = { p -> p.oneMinusValue() }
 
 /**
  * Chains a `1 - value` operation onto this [PatternMapperFn], inverting every value within `[0, 1]`.
@@ -134,7 +128,9 @@ val oneMinusValue: PatternMapperFn get() = _oneMinusValue
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.oneMinusValue(): PatternMapperFn = this._oneMinusValue()
+@KlangScript.Function
+fun PatternMapperFn.oneMinusValue(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.oneMinusValue(callInfo) }
 
 // -- not --------------------------------------------------------------------------------------------------------------
 
@@ -146,15 +142,6 @@ private fun applyNot(pattern: SprudelPattern): SprudelPattern {
         evt.copy(data = evt.data.copy(value = withNot.asVoiceValue()))
     }
 }
-
-internal val SprudelPattern._not by dslPatternExtension { pattern, _, _ -> applyNot(pattern) }
-
-internal val String._not by dslStringExtension { pattern, _, _ -> applyNot(pattern) }
-
-internal val _not: PatternMapperFn by dslObject { { p -> p._not() } }
-internal val PatternMapperFn._not by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._not() } }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Applies logical NOT to each event's boolean value.
@@ -170,7 +157,8 @@ internal val PatternMapperFn._not by dslPatternMapperExtension { m, _, _ -> m.ch
  * @tags not, logical, boolean, gate, invert, addon
  */
 @SprudelDsl
-fun SprudelPattern.not(): SprudelPattern = this._not(emptyList())
+@KlangScript.Function
+fun SprudelPattern.not(callInfo: CallInfo? = null): SprudelPattern = applyNot(this)
 
 /**
  * Applies logical NOT to a string pattern's boolean values.
@@ -180,7 +168,9 @@ fun SprudelPattern.not(): SprudelPattern = this._not(emptyList())
  * ```
  */
 @SprudelDsl
-fun String.not(): SprudelPattern = this._not(emptyList())
+@KlangScript.Function
+fun String.not(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).not(callInfo)
 
 /**
  * Applies logical NOT as a [PatternMapperFn], inverting each event's boolean value.
@@ -190,7 +180,8 @@ fun String.not(): SprudelPattern = this._not(emptyList())
  * ```
  */
 @SprudelDsl
-val not: PatternMapperFn get() = _not
+@KlangScript.Property
+val not: PatternMapperFn = { p -> p.not() }
 
 /**
  * Chains a logical NOT onto this [PatternMapperFn], inverting every boolean value in the result.
@@ -200,20 +191,15 @@ val not: PatternMapperFn get() = _not
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.not(): PatternMapperFn = this._not()
+@KlangScript.Function
+fun PatternMapperFn.not(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.not(callInfo) }
 
 // -- abs --------------------------------------------------------------------------------------------------------------
 
 private fun applyAbs(pattern: SprudelPattern): SprudelPattern {
     return applyUnaryOp(pattern) { v -> v.asRational?.abs()?.asVoiceValue() ?: v }
 }
-
-internal val SprudelPattern._abs by dslPatternExtension { pattern, _, _ -> applyAbs(pattern) }
-internal val String._abs by dslStringExtension { pattern, _, _ -> applyAbs(pattern) }
-internal val _abs: PatternMapperFn by dslObject { { p -> p._abs() } }
-internal val PatternMapperFn._abs by dslPatternMapperExtension { m, _, _ -> m.chain { p -> p._abs() } }
-
-// ===== USER-FACING OVERLOADS =====
 
 /**
  * Returns the absolute value of each event's numeric data.
@@ -233,7 +219,8 @@ internal val PatternMapperFn._abs by dslPatternMapperExtension { m, _, _ -> m.ch
  * @tags abs, absolute, value, arithmetic, addon
  */
 @SprudelDsl
-fun SprudelPattern.abs(): SprudelPattern = this._abs(emptyList())
+@KlangScript.Function
+fun SprudelPattern.abs(callInfo: CallInfo? = null): SprudelPattern = applyAbs(this)
 
 /**
  * Returns the absolute value of each event's numeric data in a string pattern.
@@ -243,7 +230,9 @@ fun SprudelPattern.abs(): SprudelPattern = this._abs(emptyList())
  * ```
  */
 @SprudelDsl
-fun String.abs(): SprudelPattern = this._abs(emptyList())
+@KlangScript.Function
+fun String.abs(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).abs(callInfo)
 
 /**
  * Applies absolute-value as a [PatternMapperFn], making every numeric value non-negative.
@@ -253,7 +242,8 @@ fun String.abs(): SprudelPattern = this._abs(emptyList())
  * ```
  */
 @SprudelDsl
-val abs: PatternMapperFn get() = _abs
+@KlangScript.Property
+val abs: PatternMapperFn = { p -> p.abs() }
 
 /**
  * Chains an absolute-value operation onto this [PatternMapperFn].
@@ -263,4 +253,6 @@ val abs: PatternMapperFn get() = _abs
  * ```
  */
 @SprudelDsl
-fun PatternMapperFn.abs(): PatternMapperFn = this._abs()
+@KlangScript.Function
+fun PatternMapperFn.abs(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.abs(callInfo) }

@@ -12,13 +12,6 @@ import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel._liftData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangSampleInit = false
-
 // -- begin() ----------------------------------------------------------------------------------------------------------
 
 private val beginMutation = voiceModifier { copy(begin = it?.asDoubleOrNull()) }

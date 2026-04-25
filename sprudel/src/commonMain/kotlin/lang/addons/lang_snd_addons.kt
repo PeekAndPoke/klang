@@ -18,13 +18,6 @@ import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.lang.voiceModifier
 import io.peekandpoke.klang.sprudel.mergeOscParamsFrom
 import io.peekandpoke.klang.sprudel.withOscParams
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangSndAddonsInit = false
-
 // -- sndPluck() -------------------------------------------------------------------------------------------------------
 
 private val sndPluckMutation = voiceModifier {

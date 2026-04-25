@@ -10,6 +10,7 @@ import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeAlias
 import com.google.devtools.ksp.symbol.KSValueParameter
@@ -34,6 +35,7 @@ class KlangScriptProcessor(
         private const val ANN_TYPE_EXTENSIONS = "$ANN_PKG.TypeExtensions"
         private const val ANN_FUNCTION = "$ANN_PKG.Function"
         private const val ANN_METHOD = "$ANN_PKG.Method"
+        private const val ANN_PROPERTY = "$ANN_PKG.Property"
 
         /** Maps Kotlin/RuntimeValue types to KlangScript display names. */
         private val TYPE_DISPLAY_NAMES = mapOf(
@@ -84,8 +86,15 @@ class KlangScriptProcessor(
             .filterIsInstance<KSClassDeclaration>().toList()
         val topLevelFunctions = resolver.getSymbolsWithAnnotation(ANN_FUNCTION)
             .filterIsInstance<KSFunctionDeclaration>().toList()
+        val topLevelProperties = resolver.getSymbolsWithAnnotation(ANN_PROPERTY)
+            .filterIsInstance<KSPropertyDeclaration>().toList()
 
-        logger.info("KlangScriptProcessor: Found ${objectClasses.size} @Object, ${typeExtClasses.size} @TypeExtensions, ${topLevelFunctions.size} @Function")
+        logger.info(
+            "KlangScriptProcessor: Found ${objectClasses.size} @Object, " +
+                    "${typeExtClasses.size} @TypeExtensions, " +
+                    "${topLevelFunctions.size} @Function, " +
+                    "${topLevelProperties.size} @Property"
+        )
 
         // Validate orphaned @Method annotations (on classes without @Object or @TypeExtensions)
         val validParents = (objectClasses + typeExtClasses).toSet()
@@ -102,7 +111,7 @@ class KlangScriptProcessor(
             }
         }
 
-        if (objectClasses.isEmpty() && typeExtClasses.isEmpty() && topLevelFunctions.isEmpty()) {
+        if (objectClasses.isEmpty() && typeExtClasses.isEmpty() && topLevelFunctions.isEmpty() && topLevelProperties.isEmpty()) {
             return emptyList()
         }
 
@@ -193,6 +202,19 @@ class KlangScriptProcessor(
             }
         }
 
+        for (prop in topLevelProperties) {
+            val library = getLibraryNameForProperty(prop)
+            if (library == null) {
+                logger.error("@Property '${prop.simpleName.asString()}' must have @Library (on file or enclosing class)", prop)
+                continue
+            }
+            val propertyName = getAnnotationStringArg(prop, ANN_PROPERTY, "name")
+                .let { if (it.isNullOrEmpty()) prop.simpleName.asString() else it }
+
+            libraryEntries.getOrPut(library) { LibraryEntries() }
+                .properties.add(PropertyEntry(propertyName, prop))
+        }
+
         // Generate code per library
         for ((libraryName, entries) in libraryEntries) {
             generateLibraryCode(libraryName, entries)
@@ -203,6 +225,7 @@ class KlangScriptProcessor(
         unprocessed.addAll(objectClasses.filterNot { it.validate() })
         unprocessed.addAll(typeExtClasses.filterNot { it.validate() })
         unprocessed.addAll(topLevelFunctions.filterNot { it.validate() })
+        unprocessed.addAll(topLevelProperties.filterNot { it.validate() })
         return unprocessed
     }
 
@@ -212,6 +235,7 @@ class KlangScriptProcessor(
         val objects: MutableList<ObjectEntry> = mutableListOf(),
         val typeExtensions: MutableList<TypeExtEntry> = mutableListOf(),
         val functions: MutableList<FunctionEntry> = mutableListOf(),
+        val properties: MutableList<PropertyEntry> = mutableListOf(),
     )
 
     private data class ObjectEntry(
@@ -229,6 +253,11 @@ class KlangScriptProcessor(
     private data class FunctionEntry(
         val name: String,
         val fn: KSFunctionDeclaration,
+    )
+
+    private data class PropertyEntry(
+        val name: String,
+        val prop: KSPropertyDeclaration,
     )
 
     private data class MethodEntry(
@@ -251,6 +280,22 @@ class KlangScriptProcessor(
         }
         // Check file-level annotation
         val file = fn.containingFile ?: return null
+        for (ann in file.annotations) {
+            val annType = ann.annotationType.resolve().declaration.qualifiedName?.asString()
+            if (annType == ANN_LIBRARY) {
+                return ann.arguments.firstOrNull { it.name?.asString() == "name" }?.value as? String
+            }
+        }
+        return null
+    }
+
+    private fun getLibraryNameForProperty(prop: KSPropertyDeclaration): String? {
+        val parent = prop.parentDeclaration
+        if (parent is KSClassDeclaration) {
+            val lib = getAnnotationStringArg(parent, ANN_LIBRARY, "name")
+            if (lib != null) return lib
+        }
+        val file = prop.containingFile ?: return null
         for (ann in file.annotations) {
             val annType = ann.annotationType.resolve().declaration.qualifiedName?.asString()
             if (annType == ANN_LIBRARY) {
@@ -311,6 +356,7 @@ class KlangScriptProcessor(
             entries.objects.forEach { addAll(listOfNotNull(it.cls.containingFile)) }
             entries.typeExtensions.forEach { addAll(listOfNotNull(it.cls.containingFile)) }
             entries.functions.forEach { addAll(listOfNotNull(it.fn.containingFile)) }
+            entries.properties.forEach { addAll(listOfNotNull(it.prop.containingFile)) }
         }.distinct()
 
         val capitalizedName = libraryName.replaceFirstChar { it.uppercase() }
@@ -415,6 +461,16 @@ class KlangScriptProcessor(
             fn.fn.qualifiedName?.asString()?.let { imports.add(it) }
             collectTypeImports(fn.fn)
         }
+        entries.properties.forEach { entry ->
+            entry.prop.qualifiedName?.asString()?.let { imports.add(it) }
+            // Recurse into the property type so its declaration is imported (for any
+            // generated cast or expansion that needs the type).
+            val propType = entry.prop.type.resolve()
+            val typeQn = propType.declaration.qualifiedName?.asString()
+            if (typeQn != null && !typeQn.startsWith("kotlin.") && !typeQn.startsWith("java.lang.") && typeQn !in alreadyImported) {
+                imports.add(typeQn)
+            }
+        }
         imports.sorted().forEach { appendLine("import ${escapeQualifiedNameKeywords(it)}") }
         if (imports.isNotEmpty()) appendLine()
 
@@ -431,7 +487,8 @@ class KlangScriptProcessor(
                 logger.error(
                     "Duplicate KlangScript registration: '$scriptName' on receiver '${receiver ?: "<top-level>"}' " +
                             "is registered by both [$prior] and [$sourceDesc]. " +
-                            "Only one @KlangScript.Method / @KlangScript.Function per (name, receiver) is allowed."
+                            "Only one @KlangScript.Method / @KlangScript.Function / @KlangScript.Property " +
+                            "per (name, receiver) is allowed."
                 )
             }
         }
@@ -456,6 +513,9 @@ class KlangScriptProcessor(
         }
         for (fn in entries.functions) {
             checkCollision(fn.name, null, fn.fn.simpleName.asString())
+        }
+        for (prop in entries.properties) {
+            checkCollision(prop.name, null, prop.prop.simpleName.asString())
         }
 
         // ── Pass 2: Build RegistrationItems and render ────────────────────
@@ -523,6 +583,16 @@ class KlangScriptProcessor(
                 appendLine("    // @Function on ${fn.fn.simpleName.asString()}")
                 val item = buildTopLevelFunctionItem(fn)
                 appendLine(item.renderRegistration().prependIndent("    "))
+            }
+            registrationBlocks.add(block)
+        }
+
+        // Top-level properties — register as named native objects.
+        for (prop in entries.properties) {
+            val block = buildString {
+                appendLine()
+                appendLine("    // @Property on ${prop.prop.simpleName.asString()}")
+                appendLine("    registerObject(\"${prop.name}\", ${escapeIdentifier(prop.prop.simpleName.asString())})")
             }
             registrationBlocks.add(block)
         }

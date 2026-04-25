@@ -32,13 +32,6 @@ import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangStructuralAddonsInit = false
-
 // -- morse() ----------------------------------------------------------------------------------------------------------
 
 private val morseMap = mapOf(

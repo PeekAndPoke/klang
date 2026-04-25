@@ -13,13 +13,6 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.orbit
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangDynamicsAddonsInit = false
-
 // -- cylinder() — alias for orbit() ----------------------------------------------------------------------------------
 
 /**

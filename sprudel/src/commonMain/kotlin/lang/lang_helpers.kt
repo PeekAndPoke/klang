@@ -20,13 +20,6 @@ import io.peekandpoke.klang.sprudel.pattern.EmptyPattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 
 // --- Init Property ---
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangHelpersInit = false
-
 // --- Source ID Generation ---
 
 private var sourceIdCounter = 0
@@ -48,17 +41,6 @@ internal fun generateSourceId(sourceLocation: SourceLocation? = null): String {
         // Fallback to counter for patterns without source locations
         "id_${++sourceIdCounter}"
     }
-}
-
-// --- Registry ---
-
-object SprudelRegistry {
-    val symbols = mutableMapOf<String, Any>()
-    val patternCreationFunctions = mutableMapOf<String, SprudelDslTopLevelFn<SprudelPattern>>()
-    val patternExtensionMethods = mutableMapOf<String, SprudelDslPatternExtFn<SprudelPattern>>()
-    val stringExtensionMethods = mutableMapOf<String, SprudelDslPatternExtFn<String>>()
-    val patternMapperFunctions = mutableMapOf<String, SprudelDslTopLevelFn<PatternMapperFn>>()
-    val patternMapperExtensionMethods = mutableMapOf<String, SprudelDslPatternMapperExtFn<PatternMapperFn>>()
 }
 
 data class SprudelDslArg<out T>(

@@ -30,8 +30,6 @@ import kotlin.math.pow
 /**
  * Accessing this property forces the initialization of this file's class.
  */
-var sprudelLangTonalInit = false
-
 /** Cleans up the scale name */
 fun String.cleanScaleName() = replace(":", " ").replace("_", " ")
 

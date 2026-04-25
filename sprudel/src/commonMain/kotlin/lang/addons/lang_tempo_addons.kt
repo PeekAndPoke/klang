@@ -20,13 +20,6 @@ import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.toPattern
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.lang.voiceValueModifier
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangTempoAddonsInit = false
-
 // -- helpers ----------------------------------------------------------------------------------------------------------
 
 private fun applyTimeMoveInCycle(

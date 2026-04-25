@@ -28,13 +28,6 @@ import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 import io.peekandpoke.klang.sprudel.pattern.SwingPattern
 import io.peekandpoke.klang.sprudel.pattern.TimeShiftPattern
 import io.peekandpoke.klang.sprudel.withSteps
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangTempoInit = false
-
 // Helpers /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 internal fun applyTimeShift(

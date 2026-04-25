@@ -1,7 +1,10 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
@@ -25,26 +28,17 @@ import kotlin.math.floor
 
 /**
  * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
+ * ensuring all top-level vals (e.g. random constants) are eagerly evaluated.
  */
-var sprudelLangRandomInit = false
-
 // -- Helpers ----------------------------------------------------------------------------------------------------------
 
-fun applyRandomSeed(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyRandomSeed(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val seedArg = args.getOrNull(0) ?: return pattern
     val seedPattern = seedArg.toPattern()
     return SeedPattern(source = pattern, seedPattern = seedPattern)
 }
 
 // -- seed() -----------------------------------------------------------------------------------------------------------
-
-internal val _seed by dslPatternMapper { args, callInfo -> { p -> p._seed(args, callInfo) } }
-internal val SprudelPattern._seed by dslPatternExtension { pattern, args, _ -> applyRandomSeed(pattern, args) }
-internal val String._seed by dslStringExtension { pattern, args, callInfo -> pattern._seed(args, callInfo) }
-internal val PatternMapperFn._seed by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_seed(args, callInfo))
-}
 
 /**
  * Sets the random seed for the pattern, making all random operations reproducible.
@@ -69,11 +63,15 @@ internal val PatternMapperFn._seed by dslPatternMapperExtension { m, args, callI
  * @tags seed, random, reproducible, deterministic
  */
 @SprudelDsl
-fun SprudelPattern.seed(n: PatternLike): SprudelPattern = this._seed(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.seed(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyRandomSeed(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Sets the random seed for reproducible random operations on a string pattern. */
 @SprudelDsl
-fun String.seed(n: PatternLike): SprudelPattern = this._seed(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun String.seed(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).seed(n, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that pins all random operations to the given seed.
@@ -92,20 +90,16 @@ fun String.seed(n: PatternLike): SprudelPattern = this._seed(listOf(n).asSprudel
  * @tags seed, random, reproducible, deterministic
  */
 @SprudelDsl
-fun seed(n: PatternLike): PatternMapperFn = _seed(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun seed(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.seed(n, callInfo) }
 
 /** Chains a seed onto this [PatternMapperFn]; pins all random operations to the given seed value. */
 @SprudelDsl
-fun PatternMapperFn.seed(n: PatternLike): PatternMapperFn = this._seed(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.seed(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.seed(n, callInfo) }
 
 // -- withSeed() -------------------------------------------------------------------------------------------------------
-
-internal val _withSeed by dslPatternMapper { args, callInfo -> _seed(args, callInfo) }
-internal val SprudelPattern._withSeed by dslPatternExtension { pattern, args, _ -> applyRandomSeed(pattern, args) }
-internal val String._withSeed by dslStringExtension { pattern, args, callInfo -> pattern._withSeed(args, callInfo) }
-internal val PatternMapperFn._withSeed by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_seed(args, callInfo))
-}
 
 /**
  * Alias for [seed]. Sets the random seed for reproducible random operations.
@@ -118,21 +112,28 @@ internal val PatternMapperFn._withSeed by dslPatternMapperExtension { m, args, c
  * @tags withSeed, seed, random, reproducible
  */
 @SprudelDsl
-fun SprudelPattern.withSeed(n: PatternLike): SprudelPattern = this._withSeed(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.withSeed(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyRandomSeed(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Alias for [seed] on a string pattern. */
 @SprudelDsl
-fun String.withSeed(n: PatternLike): SprudelPattern = this._withSeed(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun String.withSeed(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).withSeed(n, callInfo)
 
 /** Returns a [PatternMapperFn] — alias for [seed] — that pins all random operations to the given seed. */
 @SprudelDsl
-fun withSeed(n: PatternLike): PatternMapperFn = _withSeed(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun withSeed(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { p -> p.withSeed(n, callInfo) }
 
 /** Chains a withSeed (alias for [seed]) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.withSeed(n: PatternLike): PatternMapperFn = this._withSeed(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.withSeed(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.withSeed(n, callInfo) }
 
-// -- rand() / rand2() -------------------------------------------------------------------------------------------------
+// -- rand / rand2 / randCycle -----------------------------------------------------------------------------------------
 
 /**
  * Continuous random pattern producing values in the range 0–1.
@@ -152,22 +153,16 @@ fun PatternMapperFn.withSeed(n: PatternLike): PatternMapperFn = this._withSeed(l
  * @category random
  * @tags rand, random, continuous, noise
  */
-internal val _rand by dslObject {
-    ContinuousPattern { from, _, ctx ->
-        ctx.getSeededRandom(from, "rand").nextDouble()
-    }
-}
-
-/**
- * Continuous random pattern producing values in the range 0–1.
- */
 @SprudelDsl
-val rand: SprudelPattern get() = _rand
+@KlangScript.Property
+val rand: SprudelPattern = ContinuousPattern { from, _, ctx ->
+    ctx.getSeededRandom(from, "rand").nextDouble()
+}
 
 /**
  * Continuous random pattern producing values in the range -1–1 (bipolar).
  *
- * Equivalent to `rand.range(-1, 1)`. Useful for LFO-style modulation that oscillates
+ * Equivalent to `rand.toBipolar()`. Useful for LFO-style modulation that oscillates
  * around zero (e.g., pitch detune, stereo panning centred at 0).
  *
  * ```KlangScript(Playable)
@@ -181,13 +176,9 @@ val rand: SprudelPattern get() = _rand
  * @category random
  * @tags rand2, random, bipolar, continuous, noise
  */
-internal val _rand2 by dslObject { rand.range(-1.0, 1.0) }
-
-/**
- * Continuous random pattern producing values in the range -1–1 (bipolar).
- */
 @SprudelDsl
-val rand2: SprudelPattern get() = _rand2
+@KlangScript.Property
+val rand2: SprudelPattern = rand.toBipolar()
 
 /**
  * Continuous random pattern that holds a constant value for each full cycle.
@@ -203,21 +194,15 @@ val rand2: SprudelPattern get() = _rand2
  * @category random
  * @tags randCycle, random, cycle, hold, step
  */
-internal val _randCycle by dslObject {
-    ContinuousPattern { fromTime, _, ctx ->
-        ctx.getSeededRandom(floor(fromTime), "randCycle").nextDouble()
-    }
-}
-
-/**
- * Continuous random pattern that holds a constant value for each full cycle.
- */
 @SprudelDsl
-val randCycle: SprudelPattern get() = _randCycle
+@KlangScript.Property
+val randCycle: SprudelPattern = ContinuousPattern { fromTime, _, ctx ->
+    ctx.getSeededRandom(floor(fromTime), "randCycle").nextDouble()
+}
 
 // -- brand() / brandBy() ----------------------------------------------------------------------------------------------
 
-internal val _brandBy by dslPatternFunction { args, /* callInfo */ _ ->
+private fun applyBrandBy(args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val probArg = args.getOrNull(0)
     val probVal = probArg?.value
 
@@ -225,7 +210,7 @@ internal val _brandBy by dslPatternFunction { args, /* callInfo */ _ ->
 
     val staticProb = probVal?.asDoubleOrNull()
 
-    if (staticProb != null) {
+    return if (staticProb != null) {
         // Static path
         val probability = staticProb.coerceIn(0.0, 1.0)
         ContinuousPattern { from, _, ctx ->
@@ -270,7 +255,9 @@ internal val _brandBy by dslPatternFunction { args, /* callInfo */ _ ->
  * @tags brandBy, binary, random, gate, probability
  */
 @SprudelDsl
-fun brandBy(prob: PatternLike): SprudelPattern = _brandBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun brandBy(prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyBrandBy(listOf(prob).asSprudelDslArgs(callInfo))
 
 /**
  * Binary random pattern with 50% probability — outputs 0 or 1 with equal chance.
@@ -284,17 +271,13 @@ fun brandBy(prob: PatternLike): SprudelPattern = _brandBy(listOf(prob).asSprudel
  * @category random
  * @tags brand, brandBy, binary, random, gate
  */
-internal val _brand by dslObject { brandBy(0.5) }
-
-/**
- * Binary random pattern with 50% probability — outputs 0 or 1 with equal chance.
- */
 @SprudelDsl
-val brand: SprudelPattern get() = _brand
+@KlangScript.Property
+val brand: SprudelPattern = brandBy(0.5)
 
 // -- irand() ----------------------------------------------------------------------------------------------------------
 
-internal val _irand by dslPatternFunction { args, /* callInfo */ _ ->
+private fun applyIrand(args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
@@ -302,7 +285,7 @@ internal val _irand by dslPatternFunction { args, /* callInfo */ _ ->
 
     val staticN = nVal?.asIntOrNull()
 
-    if (staticN != null) {
+    return if (staticN != null) {
         // Static path
         if (staticN < 0) {
             silence
@@ -362,20 +345,15 @@ internal val _irand by dslPatternFunction { args, /* callInfo */ _ ->
  * @tags irand, random, integer, continuous
  */
 @SprudelDsl
-fun irand(n: PatternLike): SprudelPattern = _irand(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun irand(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyIrand(listOf(n).asSprudelDslArgs(callInfo))
 
 // -- degradeBy() ------------------------------------------------------------------------------------------------------
 
-fun applyDegradeBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyDegradeBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // degradeBy(x) is just degradeByWith(rand, x)
     return applyDegradeByWith(pattern, listOf(SprudelDslArg.of(rand)) + args)
-}
-
-internal val _degradeBy by dslPatternMapper { args, callInfo -> { p -> p._degradeBy(args, callInfo) } }
-internal val SprudelPattern._degradeBy by dslPatternExtension { pattern, args, _ -> applyDegradeBy(pattern, args) }
-internal val String._degradeBy by dslStringExtension { pattern, args, callInfo -> pattern._degradeBy(args, callInfo) }
-internal val PatternMapperFn._degradeBy by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_degradeBy(args, callInfo))
 }
 
 /**
@@ -399,11 +377,15 @@ internal val PatternMapperFn._degradeBy by dslPatternMapperExtension { m, args, 
  * @tags degradeBy, random, remove, probability, drop
  */
 @SprudelDsl
-fun SprudelPattern.degradeBy(prob: PatternLike): SprudelPattern = this._degradeBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.degradeBy(prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyDegradeBy(this, listOf(prob).asSprudelDslArgs(callInfo))
 
 /** Randomly removes events with the given probability (0 = none removed, 1 = all removed). */
 @SprudelDsl
-fun String.degradeBy(prob: PatternLike): SprudelPattern = this._degradeBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun String.degradeBy(prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).degradeBy(prob, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that randomly removes events with the given probability.
@@ -419,20 +401,17 @@ fun String.degradeBy(prob: PatternLike): SprudelPattern = this._degradeBy(listOf
  * @tags degradeBy, random, remove, probability, drop
  */
 @SprudelDsl
-fun degradeBy(prob: PatternLike): PatternMapperFn = _degradeBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun degradeBy(prob: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.degradeBy(prob, callInfo) }
 
 /** Chains a degradeBy onto this [PatternMapperFn]; randomly removes events at the given probability. */
 @SprudelDsl
-fun PatternMapperFn.degradeBy(prob: PatternLike): PatternMapperFn = this._degradeBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.degradeBy(prob: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.degradeBy(prob, callInfo) }
 
 // -- degrade() --------------------------------------------------------------------------------------------------------
-
-internal val _degrade by dslPatternMapper { args, callInfo -> { p -> p._degrade(args, callInfo) } }
-internal val SprudelPattern._degrade by dslPatternExtension { pattern, args, _ -> applyDegradeBy(pattern, args) }
-internal val String._degrade by dslStringExtension { pattern, args, callInfo -> pattern._degrade(args, callInfo) }
-internal val PatternMapperFn._degrade by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_degrade(args, callInfo))
-}
 
 /**
  * Randomly removes events with a 50% probability. Shorthand for `degradeBy(0.5)`.
@@ -448,15 +427,18 @@ internal val PatternMapperFn._degrade by dslPatternMapperExtension { m, args, ca
  * @tags degrade, degradeBy, random, remove, probability
  */
 @SprudelDsl
-fun SprudelPattern.degrade(prob: PatternLike = 0.5): SprudelPattern =
-    this._degrade(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.degrade(prob: PatternLike = 0.5, callInfo: CallInfo? = null): SprudelPattern =
+    applyDegradeBy(this, listOf(prob).asSprudelDslArgs(callInfo))
 
 /** Randomly removes events with a 50% probability. Shorthand for `degradeBy(0.5)`. */
 @SprudelDsl
-fun String.degrade(prob: PatternLike = 0.5): SprudelPattern = this._degrade(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun String.degrade(prob: PatternLike = 0.5, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).degrade(prob, callInfo)
 
 /**
- * Returns a [PatternMapperFn] that randomly removes events with 50% probability.
+ * Returns a [PatternMapperFn] that randomly removes events at the given probability (default 0.5).
  *
  * ```KlangScript(Playable)
  * s("bd sd hh cp").apply(degrade())   // ~half the events play via mapper
@@ -466,23 +448,19 @@ fun String.degrade(prob: PatternLike = 0.5): SprudelPattern = this._degrade(list
  * @tags degrade, degradeBy, random, remove, probability
  */
 @SprudelDsl
-fun degrade(): PatternMapperFn = _degrade(listOf(0.5).asSprudelDslArgs())
+@KlangScript.Function
+fun degrade(prob: PatternLike = 0.5, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.degrade(prob, callInfo) }
 
-/** Returns a [PatternMapperFn] that randomly removes events at the given probability. */
+/** Chains a degrade onto this [PatternMapperFn] with the given probability (default 0.5). */
 @SprudelDsl
-fun degrade(prob: PatternLike): PatternMapperFn = _degrade(listOf(prob).asSprudelDslArgs())
-
-/** Chains a degrade (50% removal) onto this [PatternMapperFn]. */
-@SprudelDsl
-fun PatternMapperFn.degrade(): PatternMapperFn = this._degrade(listOf(0.5).asSprudelDslArgs())
-
-/** Chains a degrade onto this [PatternMapperFn] with the given probability. */
-@SprudelDsl
-fun PatternMapperFn.degrade(prob: PatternLike): PatternMapperFn = this._degrade(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.degrade(prob: PatternLike = 0.5, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.degrade(prob, callInfo) }
 
 // -- degradeByWith() --------------------------------------------------------------------------------------------------
 
-fun applyDegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyDegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // JavaScript: pat.fmap((a) => (_) => a).appLeft(withPat.filterValues((v) => v > x))
     // Keeps events where withPat > x
     // Examples:
@@ -495,17 +473,6 @@ fun applyDegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return pattern._lift(xPat) { x, src ->
         src.appLeft(withPat.filterValues { v -> (v?.asDouble ?: 0.0) > x })
     }
-}
-
-internal val _degradeByWith by dslPatternMapper { args, callInfo -> { p -> p._degradeByWith(args, callInfo) } }
-internal val SprudelPattern._degradeByWith by dslPatternExtension { pattern, args, _ ->
-    applyDegradeByWith(pattern, args)
-}
-internal val String._degradeByWith by dslStringExtension { pattern, args, callInfo ->
-    pattern._degradeByWith(args, callInfo)
-}
-internal val PatternMapperFn._degradeByWith by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_degradeByWith(args, callInfo))
 }
 
 /**
@@ -531,13 +498,15 @@ internal val PatternMapperFn._degradeByWith by dslPatternMapperExtension { m, ar
  * @tags degradeByWith, random, remove, custom, probability
  */
 @SprudelDsl
-fun SprudelPattern.degradeByWith(withPat: PatternLike, prob: PatternLike): SprudelPattern =
-    this._degradeByWith(listOf(withPat, prob).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.degradeByWith(withPat: PatternLike, prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyDegradeByWith(this, listOf(withPat, prob).asSprudelDslArgs(callInfo))
 
 /** Randomly removes events using a custom random-value pattern as the randomness source. */
 @SprudelDsl
-fun String.degradeByWith(withPat: PatternLike, prob: PatternLike): SprudelPattern =
-    this._degradeByWith(listOf(withPat, prob).asSprudelDslArgs())
+@KlangScript.Function
+fun String.degradeByWith(withPat: PatternLike, prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).degradeByWith(withPat, prob, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that removes events using a custom random-value pattern.
@@ -554,31 +523,22 @@ fun String.degradeByWith(withPat: PatternLike, prob: PatternLike): SprudelPatter
  * @tags degradeByWith, random, remove, custom, probability
  */
 @SprudelDsl
-fun degradeByWith(withPat: PatternLike, prob: PatternLike): PatternMapperFn =
-    _degradeByWith(listOf(withPat, prob).asSprudelDslArgs())
+@KlangScript.Function
+fun degradeByWith(withPat: PatternLike, prob: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.degradeByWith(withPat, prob, callInfo) }
 
 /** Chains a degradeByWith onto this [PatternMapperFn] using a custom randomness source. */
 @SprudelDsl
-fun PatternMapperFn.degradeByWith(withPat: PatternLike, prob: PatternLike): PatternMapperFn =
-    this._degradeByWith(listOf(withPat, prob).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.degradeByWith(withPat: PatternLike, prob: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.degradeByWith(withPat, prob, callInfo) }
 
 // -- undegradeBy() ----------------------------------------------------------------------------------------------------
 
-fun applyUndegradeBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyUndegradeBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // undegradeBy(x) is just undegradeByWith(rand, x)
     // undegradeBy(0) = 100% removal, undegradeBy(1) = 0% removal
     return applyUndegradeByWith(pattern, listOf(SprudelDslArg.of(rand)) + args)
-}
-
-internal val _undegradeBy by dslPatternMapper { args, callInfo -> { p -> p._undegradeBy(args, callInfo) } }
-internal val SprudelPattern._undegradeBy by dslPatternExtension { pattern, args, _ ->
-    applyUndegradeBy(pattern, args)
-}
-internal val String._undegradeBy by dslStringExtension { pattern, args, callInfo ->
-    pattern._undegradeBy(args, callInfo)
-}
-internal val PatternMapperFn._undegradeBy by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_undegradeBy(args, callInfo))
 }
 
 /**
@@ -605,11 +565,15 @@ internal val PatternMapperFn._undegradeBy by dslPatternMapperExtension { m, args
  * @tags undegradeBy, random, inverse, keep, probability
  */
 @SprudelDsl
-fun SprudelPattern.undegradeBy(prob: PatternLike): SprudelPattern = this._undegradeBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.undegradeBy(prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyUndegradeBy(this, listOf(prob).asSprudelDslArgs(callInfo))
 
 /** Inverse of `degradeBy`: keeps events that `degradeBy` would remove (0 = none, 1 = all). */
 @SprudelDsl
-fun String.undegradeBy(prob: PatternLike): SprudelPattern = this._undegradeBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun String.undegradeBy(prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).undegradeBy(prob, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that keeps only events `degradeBy` would remove.
@@ -625,16 +589,19 @@ fun String.undegradeBy(prob: PatternLike): SprudelPattern = this._undegradeBy(li
  * @tags undegradeBy, random, inverse, keep, probability
  */
 @SprudelDsl
-fun undegradeBy(prob: PatternLike): PatternMapperFn = _undegradeBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun undegradeBy(prob: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.undegradeBy(prob, callInfo) }
 
 /** Chains an undegradeBy onto this [PatternMapperFn]; keeps events at the given probability. */
 @SprudelDsl
-fun PatternMapperFn.undegradeBy(prob: PatternLike): PatternMapperFn =
-    this._undegradeBy(listOf(prob).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.undegradeBy(prob: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.undegradeBy(prob, callInfo) }
 
 // -- undegradeByWith() ------------------------------------------------------------------------------------------------
 
-fun applyUndegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyUndegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // Inverse of degradeByWith: keep where withPat >= (1 - x)
     // Keeps events where withPat >= (1 - x), which is equivalent to keeping where withPat > (1 - x) for continuous values
     // Examples:
@@ -647,17 +614,6 @@ fun applyUndegradeByWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
     return pattern._lift(xPat) { x, src ->
         src.appLeft(withPat.filterValues { v -> (v?.asDouble ?: 0.0) >= (1 - x) })
     }
-}
-
-internal val _undegradeByWith by dslPatternMapper { args, callInfo -> { p -> p._undegradeByWith(args, callInfo) } }
-internal val SprudelPattern._undegradeByWith by dslPatternExtension { pattern, args, _ ->
-    applyUndegradeByWith(pattern, args)
-}
-internal val String._undegradeByWith by dslStringExtension { pattern, args, callInfo ->
-    pattern._undegradeByWith(args, callInfo)
-}
-internal val PatternMapperFn._undegradeByWith by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_undegradeByWith(args, callInfo))
 }
 
 /**
@@ -677,13 +633,15 @@ internal val PatternMapperFn._undegradeByWith by dslPatternMapperExtension { m, 
  * @tags undegradeByWith, random, inverse, custom, probability
  */
 @SprudelDsl
-fun SprudelPattern.undegradeByWith(withPat: PatternLike, prob: PatternLike): SprudelPattern =
-    this._undegradeByWith(listOf(withPat, prob).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.undegradeByWith(withPat: PatternLike, prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyUndegradeByWith(this, listOf(withPat, prob).asSprudelDslArgs(callInfo))
 
 /** Inverse of `degradeByWith` using a custom random-value pattern. */
 @SprudelDsl
-fun String.undegradeByWith(withPat: PatternLike, prob: PatternLike): SprudelPattern =
-    this._undegradeByWith(listOf(withPat, prob).asSprudelDslArgs())
+@KlangScript.Function
+fun String.undegradeByWith(withPat: PatternLike, prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).undegradeByWith(withPat, prob, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that is the inverse of `degradeByWith`.
@@ -700,26 +658,17 @@ fun String.undegradeByWith(withPat: PatternLike, prob: PatternLike): SprudelPatt
  * @tags undegradeByWith, random, inverse, custom, probability
  */
 @SprudelDsl
-fun undegradeByWith(withPat: PatternLike, prob: PatternLike): PatternMapperFn =
-    _undegradeByWith(listOf(withPat, prob).asSprudelDslArgs())
+@KlangScript.Function
+fun undegradeByWith(withPat: PatternLike, prob: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.undegradeByWith(withPat, prob, callInfo) }
 
 /** Chains an undegradeByWith onto this [PatternMapperFn] using a custom randomness source. */
 @SprudelDsl
-fun PatternMapperFn.undegradeByWith(withPat: PatternLike, prob: PatternLike): PatternMapperFn =
-    this._undegradeByWith(listOf(withPat, prob).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.undegradeByWith(withPat: PatternLike, prob: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.undegradeByWith(withPat, prob, callInfo) }
 
 // -- undegrade() ------------------------------------------------------------------------------------------------------
-
-internal val _undegrade by dslPatternMapper { args, callInfo -> { p -> p._undegrade(args, callInfo) } }
-internal val SprudelPattern._undegrade by dslPatternExtension { pattern, args, _ ->
-    applyUndegradeBy(pattern, args)
-}
-internal val String._undegrade by dslStringExtension { pattern, args, callInfo ->
-    pattern._undegrade(args, callInfo)
-}
-internal val PatternMapperFn._undegrade by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_undegrade(args, callInfo))
-}
 
 /**
  * Keeps events with 50% probability. Inverse of `degrade` — shorthand for `undegradeBy(0.5)`.
@@ -734,11 +683,15 @@ internal val PatternMapperFn._undegrade by dslPatternMapperExtension { m, args, 
  * @tags undegrade, undegradeBy, random, inverse, probability
  */
 @SprudelDsl
-fun SprudelPattern.undegrade(): SprudelPattern = this._undegrade(emptyList())
+@KlangScript.Function
+fun SprudelPattern.undegrade(callInfo: CallInfo? = null): SprudelPattern =
+    applyUndegradeBy(this, emptyList<Any>().asSprudelDslArgs(callInfo))
 
 /** Keeps events with 50% probability. Shorthand for `undegradeBy(0.5)`. */
 @SprudelDsl
-fun String.undegrade(): SprudelPattern = this._undegrade(emptyList())
+@KlangScript.Function
+fun String.undegrade(callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).undegrade(callInfo)
 
 /**
  * Returns a [PatternMapperFn] that keeps events with 50% probability (inverse of [degrade]).
@@ -751,18 +704,21 @@ fun String.undegrade(): SprudelPattern = this._undegrade(emptyList())
  * @tags undegrade, undegradeBy, random, inverse, probability
  */
 @SprudelDsl
-fun undegrade(): PatternMapperFn = _undegrade(emptyList())
+@KlangScript.Function
+fun undegrade(callInfo: CallInfo? = null): PatternMapperFn = { p -> p.undegrade(callInfo) }
 
 /** Chains an undegrade (50% keep) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.undegrade(): PatternMapperFn = this._undegrade(emptyList())
+@KlangScript.Function
+fun PatternMapperFn.undegrade(callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.undegrade(callInfo) }
 
 // -- sometimesBy() ----------------------------------------------------------------------------------------------------
 
 /**
  * Randomly applies the given function by the given probability.
  */
-fun applySometimesBy(
+private fun applySometimesBy(
     pattern: SprudelPattern,
     args: List<SprudelDslArg<Any?>>,
     seedByCycle: Boolean = false,
@@ -780,17 +736,6 @@ fun applySometimesBy(
         // Apply transform when random < x, otherwise keep original
         src.`when`(randomPattern.lt(x), transform)
     }
-}
-
-internal val _sometimesBy by dslPatternMapper { args, callInfo -> { p -> p._sometimesBy(args, callInfo) } }
-internal val SprudelPattern._sometimesBy by dslPatternExtension { pattern, args, _ ->
-    applySometimesBy(pattern, args)
-}
-internal val String._sometimesBy by dslStringExtension { pattern, args, callInfo ->
-    pattern._sometimesBy(args, callInfo)
-}
-internal val PatternMapperFn._sometimesBy by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_sometimesBy(args, callInfo))
 }
 
 /**
@@ -815,13 +760,15 @@ internal val PatternMapperFn._sometimesBy by dslPatternMapperExtension { m, args
  * @tags sometimesBy, random, probability, conditional, transform
  */
 @SprudelDsl
-fun SprudelPattern.sometimesBy(prob: PatternLike, mapper: PatternMapperFn): SprudelPattern =
-    this._sometimesBy(listOf(prob, mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.sometimesBy(prob: PatternLike, callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applySometimesBy(this, listOf(prob, mapper).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` to each event independently with the given probability. */
 @SprudelDsl
-fun String.sometimesBy(prob: PatternLike, mapper: PatternMapperFn): SprudelPattern =
-    this._sometimesBy(listOf(prob, mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.sometimesBy(prob: PatternLike, callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sometimesBy(prob, callInfo, mapper)
 
 /**
  * Returns a [PatternMapperFn] that applies `mapper` to each event at the given probability.
@@ -838,27 +785,22 @@ fun String.sometimesBy(prob: PatternLike, mapper: PatternMapperFn): SprudelPatte
  * @tags sometimesBy, random, probability, conditional, transform
  */
 @SprudelDsl
-fun sometimesBy(prob: PatternLike, mapper: PatternMapperFn): PatternMapperFn =
-    _sometimesBy(listOf(prob, mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun sometimesBy(prob: PatternLike, callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.sometimesBy(prob, callInfo, mapper) }
 
 /** Chains a sometimesBy onto this [PatternMapperFn]; applies inner mapper at the given probability. */
 @SprudelDsl
-fun PatternMapperFn.sometimesBy(prob: PatternLike, mapper: PatternMapperFn): PatternMapperFn =
-    this._sometimesBy(listOf(prob, mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.sometimesBy(prob: PatternLike, callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.sometimesBy(prob, callInfo, mapper) }
 
 // -- sometimes() ------------------------------------------------------------------------------------------------------
 
-fun applySometimes(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applySometimes(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
     val x = 0.5
     return pattern.`when`(rand.lt(x), transform)
-}
-
-internal val _sometimes by dslPatternMapper { args, callInfo -> { p -> p._sometimes(args, callInfo) } }
-internal val SprudelPattern._sometimes by dslPatternExtension { pattern, args, _ -> applySometimes(pattern, args) }
-internal val String._sometimes by dslStringExtension { pattern, args, callInfo -> pattern._sometimes(args, callInfo) }
-internal val PatternMapperFn._sometimes by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_sometimes(args, callInfo))
 }
 
 /**
@@ -879,35 +821,34 @@ internal val PatternMapperFn._sometimes by dslPatternMapperExtension { m, args, 
  * @tags sometimes, random, probability, conditional, transform
  */
 @SprudelDsl
-fun SprudelPattern.sometimes(mapper: PatternMapperFn): SprudelPattern =
-    this._sometimes(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.sometimes(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applySometimes(this, listOf(mapper).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` with a 50% chance per event. Shorthand for `sometimesBy(0.5, fn)`. */
 @SprudelDsl
-fun String.sometimes(mapper: PatternMapperFn): SprudelPattern = this._sometimes(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.sometimes(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sometimes(callInfo, mapper)
 
 /** Returns a [PatternMapperFn] that applies `mapper` with 50% probability per event. */
 @SprudelDsl
-fun sometimes(mapper: PatternMapperFn): PatternMapperFn = _sometimes(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun sometimes(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.sometimes(callInfo, mapper) }
 
 /** Chains a sometimes (50% per event) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.sometimes(mapper: PatternMapperFn): PatternMapperFn =
-    this._sometimes(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.sometimes(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.sometimes(callInfo, mapper) }
 
 // -- often() ----------------------------------------------------------------------------------------------------------
 
-fun applyOften(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyOften(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
     val x = 0.75
     return pattern.`when`(rand.lt(x), transform)
-}
-
-internal val _often by dslPatternMapper { args, callInfo -> { p -> p._often(args, callInfo) } }
-internal val SprudelPattern._often by dslPatternExtension { pattern, args, _ -> applyOften(pattern, args) }
-internal val String._often by dslStringExtension { pattern, args, callInfo -> pattern._often(args, callInfo) }
-internal val PatternMapperFn._often by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_often(args, callInfo))
 }
 
 /**
@@ -924,33 +865,34 @@ internal val PatternMapperFn._often by dslPatternMapperExtension { m, args, call
  * @tags often, random, probability, conditional, transform
  */
 @SprudelDsl
-fun SprudelPattern.often(mapper: PatternMapperFn): SprudelPattern = this._often(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.often(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applyOften(this, listOf(mapper).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` with 75% probability per event. Shorthand for `sometimesBy(0.75, fn)`. */
 @SprudelDsl
-fun String.often(mapper: PatternMapperFn): SprudelPattern = this._often(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.often(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).often(callInfo, mapper)
 
 /** Returns a [PatternMapperFn] that applies `mapper` with 75% probability per event. */
 @SprudelDsl
-fun often(mapper: PatternMapperFn): PatternMapperFn = _often(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun often(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.often(callInfo, mapper) }
 
 /** Chains an often (75% per event) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.often(mapper: PatternMapperFn): PatternMapperFn = this._often(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.often(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.often(callInfo, mapper) }
 
 // -- rarely() ---------------------------------------------------------------------------------------------------------
 
-fun applyRarely(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyRarely(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
     val x = 0.25
     return pattern.`when`(rand.lt(x), transform)
-}
-
-internal val _rarely by dslPatternMapper { args, callInfo -> { p -> p._rarely(args, callInfo) } }
-internal val SprudelPattern._rarely by dslPatternExtension { pattern, args, _ -> applyRarely(pattern, args) }
-internal val String._rarely by dslStringExtension { pattern, args, callInfo -> pattern._rarely(args, callInfo) }
-internal val PatternMapperFn._rarely by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_rarely(args, callInfo))
 }
 
 /**
@@ -967,37 +909,34 @@ internal val PatternMapperFn._rarely by dslPatternMapperExtension { m, args, cal
  * @tags rarely, random, probability, conditional, transform
  */
 @SprudelDsl
-fun SprudelPattern.rarely(mapper: PatternMapperFn): SprudelPattern = this._rarely(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.rarely(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applyRarely(this, listOf(mapper).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` with 25% probability per event. Shorthand for `sometimesBy(0.25, fn)`. */
 @SprudelDsl
-fun String.rarely(mapper: PatternMapperFn): SprudelPattern = this._rarely(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.rarely(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).rarely(callInfo, mapper)
 
 /** Returns a [PatternMapperFn] that applies `mapper` with 25% probability per event. */
 @SprudelDsl
-fun rarely(mapper: PatternMapperFn): PatternMapperFn = _rarely(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun rarely(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.rarely(callInfo, mapper) }
 
 /** Chains a rarely (25% per event) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.rarely(mapper: PatternMapperFn): PatternMapperFn = this._rarely(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.rarely(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.rarely(callInfo, mapper) }
 
 // -- almostNever() ----------------------------------------------------------------------------------------------------
 
-fun applyAlmostNever(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyAlmostNever(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
     val x = 0.1
     return pattern.`when`(rand.lt(x), transform)
-}
-
-internal val _almostNever by dslPatternMapper { args, callInfo -> { p -> p._almostNever(args, callInfo) } }
-internal val SprudelPattern._almostNever by dslPatternExtension { pattern, args, _ ->
-    applyAlmostNever(pattern, args)
-}
-internal val String._almostNever by dslStringExtension { pattern, args, callInfo ->
-    pattern._almostNever(args, callInfo)
-}
-internal val PatternMapperFn._almostNever by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_almostNever(args, callInfo))
 }
 
 /**
@@ -1014,39 +953,34 @@ internal val PatternMapperFn._almostNever by dslPatternMapperExtension { m, args
  * @tags almostNever, random, probability, conditional, rare
  */
 @SprudelDsl
-fun SprudelPattern.almostNever(mapper: PatternMapperFn): SprudelPattern =
-    this._almostNever(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.almostNever(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applyAlmostNever(this, listOf(mapper).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` with 10% probability per event. Shorthand for `sometimesBy(0.1, fn)`. */
 @SprudelDsl
-fun String.almostNever(mapper: PatternMapperFn): SprudelPattern = this._almostNever(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.almostNever(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).almostNever(callInfo, mapper)
 
 /** Returns a [PatternMapperFn] that applies `mapper` with 10% probability per event. */
 @SprudelDsl
-fun almostNever(mapper: PatternMapperFn): PatternMapperFn = _almostNever(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun almostNever(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.almostNever(callInfo, mapper) }
 
 /** Chains an almostNever (10% per event) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.almostNever(mapper: PatternMapperFn): PatternMapperFn =
-    this._almostNever(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.almostNever(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.almostNever(callInfo, mapper) }
 
 // -- almostAlways() ---------------------------------------------------------------------------------------------------
 
-fun applyAlmostAlways(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyAlmostAlways(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val transform = args.getOrNull(0).toPatternMapper() ?: { it }
     val x = 0.9
     return pattern.`when`(rand.lt(x), transform)
-}
-
-internal val _almostAlways by dslPatternMapper { args, callInfo -> { p -> p._almostAlways(args, callInfo) } }
-internal val SprudelPattern._almostAlways by dslPatternExtension { pattern, args, _ ->
-    applyAlmostAlways(pattern, args)
-}
-internal val String._almostAlways by dslStringExtension { pattern, args, callInfo ->
-    pattern._almostAlways(args, callInfo)
-}
-internal val PatternMapperFn._almostAlways by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_almostAlways(args, callInfo))
 }
 
 /**
@@ -1063,30 +997,29 @@ internal val PatternMapperFn._almostAlways by dslPatternMapperExtension { m, arg
  * @tags almostAlways, random, probability, conditional, frequent
  */
 @SprudelDsl
-fun SprudelPattern.almostAlways(mapper: PatternMapperFn): SprudelPattern =
-    this._almostAlways(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.almostAlways(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applyAlmostAlways(this, listOf(mapper).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` with 90% probability per event. Shorthand for `sometimesBy(0.9, fn)`. */
 @SprudelDsl
-fun String.almostAlways(mapper: PatternMapperFn): SprudelPattern = this._almostAlways(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.almostAlways(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).almostAlways(callInfo, mapper)
 
 /** Returns a [PatternMapperFn] that applies `mapper` with 90% probability per event. */
 @SprudelDsl
-fun almostAlways(mapper: PatternMapperFn): PatternMapperFn = _almostAlways(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun almostAlways(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.almostAlways(callInfo, mapper) }
 
 /** Chains an almostAlways (90% per event) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.almostAlways(mapper: PatternMapperFn): PatternMapperFn =
-    this._almostAlways(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.almostAlways(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.almostAlways(callInfo, mapper) }
 
 // -- never() ----------------------------------------------------------------------------------------------------------
-
-internal val _never by dslPatternMapper { args, callInfo -> { p -> p._never(args, callInfo) } }
-internal val SprudelPattern._never by dslPatternExtension { pattern, _, _ -> pattern }
-internal val String._never by dslStringExtension { pattern, args, callInfo -> pattern._never(args, callInfo) }
-internal val PatternMapperFn._never by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_never(args, callInfo))
-}
 
 /**
  * Never applies `transform` — the pattern passes through unchanged. Shorthand for
@@ -1103,32 +1036,32 @@ internal val PatternMapperFn._never by dslPatternMapperExtension { m, args, call
  * @tags never, noop, placeholder, conditional
  */
 @SprudelDsl
-fun SprudelPattern.never(mapper: PatternMapperFn): SprudelPattern = this._never(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.never(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern = this
 
 /** Never applies `transform` — the pattern passes through unchanged. */
 @SprudelDsl
-fun String.never(mapper: PatternMapperFn): SprudelPattern = this._never(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.never(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).never(callInfo, mapper)
 
 /** Returns a [PatternMapperFn] that never applies `mapper` — source passes through unchanged. */
 @SprudelDsl
-fun never(mapper: PatternMapperFn): PatternMapperFn = _never(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun never(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.never(callInfo, mapper) }
 
 /** Chains a never (no-op) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.never(mapper: PatternMapperFn): PatternMapperFn = this._never(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.never(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.never(callInfo, mapper) }
 
 // -- always() ---------------------------------------------------------------------------------------------------------
 
-fun applyAlways(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyAlways(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val func = args.getOrNull(0).toPatternMapper()
     return func?.invoke(pattern) ?: pattern
-}
-
-internal val _always by dslPatternMapper { args, callInfo -> { p -> p._always(args, callInfo) } }
-internal val SprudelPattern._always by dslPatternExtension { pattern, args, _ -> applyAlways(pattern, args) }
-internal val String._always by dslStringExtension { pattern, args, callInfo -> pattern._always(args, callInfo) }
-internal val PatternMapperFn._always by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_always(args, callInfo))
 }
 
 /**
@@ -1146,36 +1079,33 @@ internal val PatternMapperFn._always by dslPatternMapperExtension { m, args, cal
  * @tags always, unconditional, transform, conditional
  */
 @SprudelDsl
-fun SprudelPattern.always(mapper: PatternMapperFn): SprudelPattern = this._always(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.always(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applyAlways(this, listOf(mapper).asSprudelDslArgs(callInfo))
 
 /** Always applies `transform`. Shorthand for `sometimesBy(1, fn)`. */
 @SprudelDsl
-fun String.always(mapper: PatternMapperFn): SprudelPattern = this._always(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.always(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).always(callInfo, mapper)
 
 /** Returns a [PatternMapperFn] that always applies `mapper` unconditionally. */
 @SprudelDsl
-fun always(mapper: PatternMapperFn): PatternMapperFn = _always(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun always(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.always(callInfo, mapper) }
 
 /** Chains an always (unconditional apply) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.always(mapper: PatternMapperFn): PatternMapperFn = this._always(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.always(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.always(callInfo, mapper) }
 
 // -- someCyclesBy() ---------------------------------------------------------------------------------------------------
 
-fun applySomeCyclesBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applySomeCyclesBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // Delegate to applySometimesBy with seedByCycle = true
     return applySometimesBy(pattern = pattern, args = args, seedByCycle = true)
-}
-
-internal val _someCyclesBy by dslPatternMapper { args, callInfo -> { p -> p._someCyclesBy(args, callInfo) } }
-internal val SprudelPattern._someCyclesBy by dslPatternExtension { pattern, args, _ ->
-    applySomeCyclesBy(pattern, args)
-}
-internal val String._someCyclesBy by dslStringExtension { pattern, args, callInfo ->
-    pattern._someCyclesBy(args, callInfo)
-}
-internal val PatternMapperFn._someCyclesBy by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_someCyclesBy(args, callInfo))
 }
 
 /**
@@ -1200,13 +1130,15 @@ internal val PatternMapperFn._someCyclesBy by dslPatternMapperExtension { m, arg
  * @tags someCyclesBy, random, cycle, probability, conditional
  */
 @SprudelDsl
-fun SprudelPattern.someCyclesBy(prob: PatternLike, mapper: PatternMapperFn): SprudelPattern =
-    this._someCyclesBy(listOf(prob, mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.someCyclesBy(prob: PatternLike, callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applySomeCyclesBy(this, listOf(prob, mapper).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` with the given probability, decided once per cycle (not per event). */
 @SprudelDsl
-fun String.someCyclesBy(prob: PatternLike, mapper: PatternMapperFn): SprudelPattern =
-    this._someCyclesBy(listOf(prob, mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.someCyclesBy(prob: PatternLike, callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).someCyclesBy(prob, callInfo, mapper)
 
 /**
  * Returns a [PatternMapperFn] that applies `mapper` with the given probability per cycle.
@@ -1223,26 +1155,17 @@ fun String.someCyclesBy(prob: PatternLike, mapper: PatternMapperFn): SprudelPatt
  * @tags someCyclesBy, random, cycle, probability, conditional
  */
 @SprudelDsl
-fun someCyclesBy(prob: PatternLike, mapper: PatternMapperFn): PatternMapperFn =
-    _someCyclesBy(listOf(prob, mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun someCyclesBy(prob: PatternLike, callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.someCyclesBy(prob, callInfo, mapper) }
 
 /** Chains a someCyclesBy onto this [PatternMapperFn]; applies inner mapper at the given per-cycle probability. */
 @SprudelDsl
-fun PatternMapperFn.someCyclesBy(prob: PatternLike, mapper: PatternMapperFn): PatternMapperFn =
-    this._someCyclesBy(listOf(prob, mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.someCyclesBy(prob: PatternLike, callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.someCyclesBy(prob, callInfo, mapper) }
 
 // -- someCycles() -----------------------------------------------------------------------------------------------------
-
-internal val _someCycles by dslPatternMapper { args, callInfo -> { p -> p._someCycles(args, callInfo) } }
-internal val SprudelPattern._someCycles by dslPatternExtension { pattern, args, _ ->
-    applySomeCyclesBy(pattern, args)
-}
-internal val String._someCycles by dslStringExtension { pattern, args, callInfo ->
-    pattern._someCycles(args, callInfo)
-}
-internal val PatternMapperFn._someCycles by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_someCycles(args, callInfo))
-}
 
 /**
  * Applies `transform` with 50% probability per cycle. Shorthand for `someCyclesBy(0.5, fn)`.
@@ -1258,25 +1181,31 @@ internal val PatternMapperFn._someCycles by dslPatternMapperExtension { m, args,
  * @tags someCycles, someCyclesBy, random, cycle, probability
  */
 @SprudelDsl
-fun SprudelPattern.someCycles(mapper: PatternMapperFn): SprudelPattern =
-    this._someCycles(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.someCycles(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    applySomeCyclesBy(this, listOf(mapper).asSprudelDslArgs(callInfo))
 
 /** Applies `transform` with 50% probability per cycle. Shorthand for `someCyclesBy(0.5, fn)`. */
 @SprudelDsl
-fun String.someCycles(mapper: PatternMapperFn): SprudelPattern = this._someCycles(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun String.someCycles(callInfo: CallInfo? = null, mapper: PatternMapperFn): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).someCycles(callInfo, mapper)
 
 /** Returns a [PatternMapperFn] that applies `mapper` with 50% probability per cycle. */
 @SprudelDsl
-fun someCycles(mapper: PatternMapperFn): PatternMapperFn = _someCycles(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun someCycles(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    { p -> p.someCycles(callInfo, mapper) }
 
 /** Chains a someCycles (50% per cycle) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.someCycles(mapper: PatternMapperFn): PatternMapperFn =
-    this._someCycles(listOf(mapper).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.someCycles(callInfo: CallInfo? = null, mapper: PatternMapperFn): PatternMapperFn =
+    this.chain { p -> p.someCycles(callInfo, mapper) }
 
 // -- randL() ----------------------------------------------------------------------------------------------------------
 
-internal val _randL by dslPatternFunction { args, /* callInfo */ _ ->
+private fun applyRandL(args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
@@ -1284,7 +1213,7 @@ internal val _randL by dslPatternFunction { args, /* callInfo */ _ ->
 
     val staticN = nVal?.asIntOrNull()
 
-    RandLPattern.create(nPattern, staticN)
+    return RandLPattern.create(nPattern, staticN)
 }
 
 /**
@@ -1302,11 +1231,13 @@ internal val _randL by dslPatternFunction { args, /* callInfo */ _ ->
  * @tags randL, random, list, array, partials
  */
 @SprudelDsl
-fun randL(n: PatternLike): SprudelPattern = _randL(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun randL(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyRandL(listOf(n).asSprudelDslArgs(callInfo))
 
 // -- randrun() --------------------------------------------------------------------------------------------------------
 
-internal val _randrun by dslPatternFunction { args, /* callInfo */ _ ->
+private fun applyRandrun(args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nArg = args.getOrNull(0)
     val nVal = nArg?.value
 
@@ -1314,7 +1245,7 @@ internal val _randrun by dslPatternFunction { args, /* callInfo */ _ ->
 
     val staticN = nVal?.asIntOrNull()
 
-    if (staticN != null) {
+    return if (staticN != null) {
         // Static path
         if (staticN < 1) {
             silence
@@ -1322,11 +1253,11 @@ internal val _randrun by dslPatternFunction { args, /* callInfo */ _ ->
             val atom = AtomicPattern.pure
             val events = (0..<staticN).map { index ->
                 atom.reinterpret { evt, ctx ->
-                    val ctx = ctx.update {
+                    val updatedCtx = ctx.update {
                         setIfAbsent(QueryContext.randomSeedKey, 0)
                     }
                     val cycle = evt.part.begin.floor()
-                    val random = ctx.getSeededRandom(cycle, "randrun")
+                    val random = updatedCtx.getSeededRandom(cycle, "randrun")
                     val permutation = (0 until staticN).toMutableList()
                     permutation.shuffle(random)
                     val value = permutation[index].asVoiceValue()
@@ -1360,18 +1291,15 @@ internal val _randrun by dslPatternFunction { args, /* callInfo */ _ ->
  * @tags randrun, random, permutation, shuffle, sequence
  */
 @SprudelDsl
-fun randrun(n: PatternLike): SprudelPattern = _randrun(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun randrun(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyRandrun(listOf(n).asSprudelDslArgs(callInfo))
 
 // -- shuffle() --------------------------------------------------------------------------------------------------------
 
-internal val _shuffle by dslPatternMapper { args, callInfo -> { p -> p._shuffle(args, callInfo) } }
-internal val SprudelPattern._shuffle by dslPatternExtension { p, args, /* callInfo */ _ ->
+private fun applyShuffle(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nPattern = (args.getOrNull(0) ?: SprudelDslArg.of(4)).toPattern()
-    ShufflePattern(source = p, nPattern = nPattern)
-}
-internal val String._shuffle by dslStringExtension { p, args, callInfo -> p._shuffle(args, callInfo) }
-internal val PatternMapperFn._shuffle by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_shuffle(args, callInfo))
+    return ShufflePattern(source = p, nPattern = nPattern)
 }
 
 /**
@@ -1395,11 +1323,15 @@ internal val PatternMapperFn._shuffle by dslPatternMapperExtension { m, args, ca
  * @tags shuffle, random, reorder, slice, permutation
  */
 @SprudelDsl
-fun SprudelPattern.shuffle(n: PatternLike): SprudelPattern = this._shuffle(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.shuffle(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyShuffle(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Slices the pattern into `n` equal parts and plays them in a new random order each cycle. */
 @SprudelDsl
-fun String.shuffle(n: PatternLike): SprudelPattern = this._shuffle(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun String.shuffle(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).shuffle(n, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that slices the source into `n` parts and plays them in random order.
@@ -1415,24 +1347,23 @@ fun String.shuffle(n: PatternLike): SprudelPattern = this._shuffle(listOf(n).asS
  * @tags shuffle, random, reorder, slice, permutation
  */
 @SprudelDsl
-fun shuffle(n: PatternLike): PatternMapperFn = _shuffle(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun shuffle(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.shuffle(n, callInfo) }
 
 /** Chains a shuffle onto this [PatternMapperFn]; randomly reorders `n` equal slices each cycle. */
 @SprudelDsl
-fun PatternMapperFn.shuffle(n: PatternLike): PatternMapperFn = this._shuffle(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.shuffle(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.shuffle(n, callInfo) }
 
 // -- scramble() -------------------------------------------------------------------------------------------------------
 
-internal val _scramble by dslPatternMapper { args, callInfo -> { p -> p._scramble(args, callInfo) } }
-internal val SprudelPattern._scramble by dslPatternExtension { p, args, /* callInfo */ _ ->
+private fun applyScramble(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nArg: SprudelDslArg<Any?> = args.getOrNull(0) ?: SprudelDslArg.of(4)
     val nValue = nArg.value ?: 4
-    val indices = _irand(listOf(nArg)).segment(nValue)
-    p.bite(nValue, indices)
-}
-internal val String._scramble by dslStringExtension { p, args, callInfo -> p._scramble(args, callInfo) }
-internal val PatternMapperFn._scramble by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_scramble(args, callInfo))
+    val indices = applyIrand(listOf(nArg)).segment(nValue)
+    return p.bite(nValue, indices)
 }
 
 /**
@@ -1456,11 +1387,15 @@ internal val PatternMapperFn._scramble by dslPatternMapperExtension { m, args, c
  * @tags scramble, random, slice, replacement, selection
  */
 @SprudelDsl
-fun SprudelPattern.scramble(n: PatternLike): SprudelPattern = this._scramble(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.scramble(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyScramble(this, listOf(n).asSprudelDslArgs(callInfo))
 
 /** Slices the pattern into `n` equal parts and picks slices at random each cycle. */
 @SprudelDsl
-fun String.scramble(n: PatternLike): SprudelPattern = this._scramble(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun String.scramble(n: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).scramble(n, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that slices the source into `n` parts and picks randomly with replacement.
@@ -1476,30 +1411,22 @@ fun String.scramble(n: PatternLike): SprudelPattern = this._scramble(listOf(n).a
  * @tags scramble, random, slice, replacement, selection
  */
 @SprudelDsl
-fun scramble(n: PatternLike): PatternMapperFn = _scramble(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun scramble(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.scramble(n, callInfo) }
 
 /** Chains a scramble onto this [PatternMapperFn]; randomly picks `n` slices with replacement. */
 @SprudelDsl
-fun PatternMapperFn.scramble(n: PatternLike): PatternMapperFn = this._scramble(listOf(n).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.scramble(n: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.scramble(n, callInfo) }
 
 // -- chooseWith() -----------------------------------------------------------------------------------------------------
 
-internal val _chooseWith by dslPatternFunction { args, /* callInfo */ _ ->
-    val firstArg = args.getOrNull(0)
-
-    when (val firstVal = firstArg?.value) {
-        is SprudelPattern -> firstVal._chooseWith(args.drop(1))
-        else -> AtomicPattern.pure._chooseWith(args)
-    }
-}
-
-internal val SprudelPattern._chooseWith by dslPatternExtension { p, args, /* callInfo */ _ ->
+private fun applyChooseWith(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val xs = args.extractChoiceArgs()
-
-    ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.Out)
+    return ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.Out)
 }
-
-internal val String._chooseWith by dslStringExtension { p, args, callInfo -> p._chooseWith(args, callInfo) }
 
 /**
  * Chooses from the given list of values using a selector pattern (values 0–1).
@@ -1521,35 +1448,34 @@ internal val String._chooseWith by dslStringExtension { p, args, callInfo -> p._
  * @tags chooseWith, choose, selector, random, values
  */
 @SprudelDsl
-fun chooseWith(vararg args: PatternLike): SprudelPattern = _chooseWith(args.toList().asSprudelDslArgs())
-
-/** Uses this pattern (range 0–1) as a selector to choose from the given list. */
-@SprudelDsl
-fun SprudelPattern.chooseWith(vararg args: PatternLike): SprudelPattern =
-    this._chooseWith(args.toList().asSprudelDslArgs())
-
-/** Uses this string pattern as a selector to choose from the given list. */
-@SprudelDsl
-fun String.chooseWith(vararg args: PatternLike): SprudelPattern = this._chooseWith(args.toList().asSprudelDslArgs())
-
-// -- chooseInWith() ---------------------------------------------------------------------------------------------------
-
-internal val _chooseInWith by dslPatternFunction { args, /* callInfo */ _ ->
-    val firstArg = args.getOrNull(0)
-
-    when (val firstVal = firstArg?.value) {
-        is SprudelPattern -> firstVal._chooseInWith(args.drop(1))
-        else -> AtomicPattern.pure._chooseInWith(args)
+@KlangScript.Function
+fun chooseWith(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val argList = args.toList().asSprudelDslArgs(callInfo)
+    val firstArg = argList.firstOrNull()
+    return when (val firstVal = firstArg?.value) {
+        is SprudelPattern -> applyChooseWith(firstVal, argList.drop(1))
+        else -> applyChooseWith(AtomicPattern.pure, argList)
     }
 }
 
-internal val SprudelPattern._chooseInWith by dslPatternExtension { p, args, /* callInfo */ _ ->
+/** Uses this pattern (range 0–1) as a selector to choose from the given list. */
+@SprudelDsl
+@KlangScript.Function
+fun SprudelPattern.chooseWith(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyChooseWith(this, args.toList().asSprudelDslArgs(callInfo))
+
+/** Uses this string pattern as a selector to choose from the given list. */
+@SprudelDsl
+@KlangScript.Function
+fun String.chooseWith(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).chooseWith(*args, callInfo = callInfo)
+
+// -- chooseInWith() ---------------------------------------------------------------------------------------------------
+
+private fun applyChooseInWith(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val xs = args.extractChoiceArgs()
-
-    ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.In)
+    return ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.In)
 }
-
-internal val String._chooseInWith by dslStringExtension { p, args, callInfo -> p._chooseInWith(args, callInfo) }
 
 /**
  * Like `chooseWith` but structure comes from the chosen values, not the selector pattern.
@@ -1566,36 +1492,34 @@ internal val String._chooseInWith by dslStringExtension { p, args, callInfo -> p
  * @tags chooseInWith, chooseWith, selector, random, structure
  */
 @SprudelDsl
-fun chooseInWith(vararg args: PatternLike): SprudelPattern = _chooseInWith(args.toList().asSprudelDslArgs())
-
-/** Uses this pattern as a selector to choose from the given list (structure from chosen). */
-@SprudelDsl
-fun SprudelPattern.chooseInWith(vararg args: PatternLike): SprudelPattern =
-    this._chooseInWith(args.toList().asSprudelDslArgs())
-
-/** Uses this string pattern as a selector to choose from the given list (structure from chosen). */
-@SprudelDsl
-fun String.chooseInWith(vararg args: PatternLike): SprudelPattern =
-    this._chooseInWith(args.toList().asSprudelDslArgs())
-
-// -- choose() ---------------------------------------------------------------------------------------------------------
-
-internal val _choose by dslPatternFunction { args, /* callInfo */ _ ->
-    val firstArg = args.getOrNull(0)
-
-    when (val firstVal = firstArg?.value) {
-        is SprudelPattern -> firstVal._choose(args.drop(1))
-        else -> AtomicPattern.pure._choose(args)
+@KlangScript.Function
+fun chooseInWith(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val argList = args.toList().asSprudelDslArgs(callInfo)
+    val firstArg = argList.firstOrNull()
+    return when (val firstVal = firstArg?.value) {
+        is SprudelPattern -> applyChooseInWith(firstVal, argList.drop(1))
+        else -> applyChooseInWith(AtomicPattern.pure, argList)
     }
 }
 
-internal val SprudelPattern._choose by dslPatternExtension { p, args, /* callInfo */ _ ->
+/** Uses this pattern as a selector to choose from the given list (structure from chosen). */
+@SprudelDsl
+@KlangScript.Function
+fun SprudelPattern.chooseInWith(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyChooseInWith(this, args.toList().asSprudelDslArgs(callInfo))
+
+/** Uses this string pattern as a selector to choose from the given list (structure from chosen). */
+@SprudelDsl
+@KlangScript.Function
+fun String.chooseInWith(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).chooseInWith(*args, callInfo = callInfo)
+
+// -- choose() ---------------------------------------------------------------------------------------------------------
+
+private fun applyChoose(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val xs = args.extractChoiceArgs()
-
-    ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.Out)
+    return ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.Out)
 }
-
-internal val String._choose by dslStringExtension { p, args, callInfo -> p._choose(args, callInfo) }
 
 /**
  * Chooses randomly from the given values or patterns at each event.
@@ -1617,7 +1541,15 @@ internal val String._choose by dslStringExtension { p, args, callInfo -> p._choo
  * @tags choose, random, selection, values, chooseOut
  */
 @SprudelDsl
-fun choose(vararg args: PatternLike): SprudelPattern = _choose(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun choose(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val argList = args.toList().asSprudelDslArgs(callInfo)
+    val firstArg = argList.firstOrNull()
+    return when (val firstVal = firstArg?.value) {
+        is SprudelPattern -> applyChoose(firstVal, argList.drop(1))
+        else -> applyChoose(AtomicPattern.pure, argList)
+    }
+}
 
 /**
  * Uses this pattern (range 0–1) as a selector to choose from the given list.
@@ -1635,17 +1567,17 @@ fun choose(vararg args: PatternLike): SprudelPattern = _choose(args.toList().asS
  * @tags choose, selector, random, chooseOut
  */
 @SprudelDsl
-fun SprudelPattern.choose(vararg args: PatternLike): SprudelPattern = this._choose(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.choose(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyChoose(this, args.toList().asSprudelDslArgs(callInfo))
 
 /** Uses this string pattern as a selector to choose from the given list. */
 @SprudelDsl
-fun String.choose(vararg args: PatternLike): SprudelPattern = this._choose(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.choose(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).choose(*args, callInfo = callInfo)
 
 // -- chooseOut() ------------------------------------------------------------------------------------------------------
-
-internal val _chooseOut by dslPatternFunction { args, /* callInfo */ _ -> _choose(args) }
-internal val SprudelPattern._chooseOut by dslPatternExtension { p, args, callInfo -> p._choose(args, callInfo) }
-internal val String._chooseOut by dslStringExtension { p, args, callInfo -> p._chooseOut(args, callInfo) }
 
 /**
  * Alias for [choose].
@@ -1656,35 +1588,28 @@ internal val String._chooseOut by dslStringExtension { p, args, callInfo -> p._c
  * @tags chooseOut, choose, random, selection
  */
 @SprudelDsl
-fun chooseOut(vararg args: PatternLike): SprudelPattern = _chooseOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun chooseOut(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    choose(*args, callInfo = callInfo)
 
 /** Alias for [choose]. */
 @SprudelDsl
-fun SprudelPattern.chooseOut(vararg args: PatternLike): SprudelPattern =
-    this._chooseOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.chooseOut(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.choose(*args, callInfo = callInfo)
 
 /** Alias for [choose]. */
 @SprudelDsl
-fun String.chooseOut(vararg args: PatternLike): SprudelPattern = this._chooseOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.chooseOut(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).chooseOut(*args, callInfo = callInfo)
 
 // -- chooseIn() -------------------------------------------------------------------------------------------------------
 
-internal val _chooseIn by dslPatternFunction { args, /* callInfo */ _ ->
-    val firstArg = args.getOrNull(0)
-
-    when (val firstVal = firstArg?.value) {
-        is SprudelPattern -> firstVal._chooseIn(args.drop(1))
-        else -> AtomicPattern.pure._chooseIn(args)
-    }
-}
-
-internal val SprudelPattern._chooseIn by dslPatternExtension { p, args, /* callInfo */ _ ->
+private fun applyChooseIn(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val xs = args.extractChoiceArgs()
-
-    ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.In)
+    return ChoicePattern.createFromRaw(p, xs, mode = StructurePattern.Mode.In)
 }
-
-internal val String._chooseIn by dslStringExtension { p, args, callInfo -> p._chooseIn(args, callInfo) }
 
 /**
  * Like `choose`, but structure comes from the chosen values rather than the selector.
@@ -1701,26 +1626,34 @@ internal val String._chooseIn by dslStringExtension { p, args, callInfo -> p._ch
  * @tags chooseIn, random, selection, structure
  */
 @SprudelDsl
-fun chooseIn(vararg args: PatternLike): SprudelPattern = _chooseIn(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun chooseIn(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val argList = args.toList().asSprudelDslArgs(callInfo)
+    val firstArg = argList.firstOrNull()
+    return when (val firstVal = firstArg?.value) {
+        is SprudelPattern -> applyChooseIn(firstVal, argList.drop(1))
+        else -> applyChooseIn(AtomicPattern.pure, argList)
+    }
+}
 
 /** Uses this pattern as a selector; structure comes from the chosen value. */
 @SprudelDsl
-fun SprudelPattern.chooseIn(vararg args: PatternLike): SprudelPattern =
-    this._chooseIn(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.chooseIn(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyChooseIn(this, args.toList().asSprudelDslArgs(callInfo))
 
 /** Uses this string pattern as a selector; structure comes from the chosen value. */
 @SprudelDsl
-fun String.chooseIn(vararg args: PatternLike): SprudelPattern = this._chooseIn(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.chooseIn(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).chooseIn(*args, callInfo = callInfo)
 
 // -- choose2() --------------------------------------------------------------------------------------------------------
 
-internal val SprudelPattern._choose2 by dslPatternExtension { p, args, /* callInfo */ _ ->
+private fun applyChoose2(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val xs = args.extractChoiceArgs()
-
-    ChoicePattern.createFromRaw(p.fromBipolar(), xs, mode = StructurePattern.Mode.Out)
+    return ChoicePattern.createFromRaw(p.fromBipolar(), xs, mode = StructurePattern.Mode.Out)
 }
-
-internal val String._choose2 by dslStringExtension { p, args, callInfo -> p._choose2(args, callInfo) }
 
 /**
  * Like `choose`, but the selector pattern should be in the range -1 to 1 (bipolar).
@@ -1737,31 +1670,21 @@ internal val String._choose2 by dslStringExtension { p, args, callInfo -> p._cho
  * @tags choose2, bipolar, selector, random
  */
 @SprudelDsl
-fun SprudelPattern.choose2(vararg args: PatternLike): SprudelPattern = this._choose2(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.choose2(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyChoose2(this, args.toList().asSprudelDslArgs(callInfo))
 
 /** Like `choose`, but the selector pattern should be in the range -1 to 1 (bipolar). */
 @SprudelDsl
-fun String.choose2(vararg args: PatternLike): SprudelPattern = this._choose2(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.choose2(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).choose2(*args, callInfo = callInfo)
 
 // -- chooseCycles() ---------------------------------------------------------------------------------------------------
 
-internal val _chooseCycles by dslPatternFunction { args, /* callInfo */ _ ->
-    val firstArg = args.getOrNull(0)
-
-    when (val firstVal = firstArg?.value) {
-        is SprudelPattern -> firstVal._chooseCycles(args.drop(1))
-        else -> AtomicPattern.pure._chooseCycles(args)
-    }
-}
-
-internal val SprudelPattern._chooseCycles by dslPatternExtension { p, args, /* callInfo */ _ ->
+private fun applyChooseCyclesPattern(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val xs = (listOf(p) + args.map { it.value }).asSprudelDslArgs()
-    ChoicePattern.createFromRaw(rand.segment(1), xs, mode = StructurePattern.Mode.In)
-}
-
-internal val String._chooseCycles by dslStringExtension { p, args, /* callInfo */ _ ->
-    val xs = (listOf(p) + args.map { it.value }).asSprudelDslArgs()
-    ChoicePattern.createFromRaw(rand.segment(1), xs, mode = StructurePattern.Mode.In)
+    return ChoicePattern.createFromRaw(rand.segment(1), xs, mode = StructurePattern.Mode.In)
 }
 
 /**
@@ -1784,23 +1707,29 @@ internal val String._chooseCycles by dslStringExtension { p, args, /* callInfo *
  * @tags chooseCycles, random, cycle, randcat, selection
  */
 @SprudelDsl
-fun chooseCycles(vararg args: PatternLike): SprudelPattern = _chooseCycles(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun chooseCycles(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val argList = args.toList().asSprudelDslArgs(callInfo)
+    val firstArg = argList.firstOrNull()
+    return when (val firstVal = firstArg?.value) {
+        is SprudelPattern -> applyChooseCyclesPattern(firstVal, argList.drop(1))
+        else -> applyChooseCyclesPattern(AtomicPattern.pure, argList)
+    }
+}
 
 /** Picks one of the given values at random, changing once per cycle. */
 @SprudelDsl
-fun SprudelPattern.chooseCycles(vararg args: PatternLike): SprudelPattern =
-    this._chooseCycles(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.chooseCycles(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyChooseCyclesPattern(this, args.toList().asSprudelDslArgs(callInfo))
 
 /** Picks one of the given values at random, changing once per cycle. */
 @SprudelDsl
-fun String.chooseCycles(vararg args: PatternLike): SprudelPattern =
-    this._chooseCycles(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.chooseCycles(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).chooseCycles(*args, callInfo = callInfo)
 
 // -- randcat() --------------------------------------------------------------------------------------------------------
-
-internal val _randcat by dslPatternFunction { args, /* callInfo */ _ -> _chooseCycles(args) }
-internal val SprudelPattern._randcat by dslPatternExtension { p, args, callInfo -> p._chooseCycles(args, callInfo) }
-internal val String._randcat by dslStringExtension { p, args, callInfo -> p._randcat(args, callInfo) }
 
 /**
  * Alias for [chooseCycles].
@@ -1811,39 +1740,33 @@ internal val String._randcat by dslStringExtension { p, args, callInfo -> p._ran
  * @tags randcat, chooseCycles, random, cycle
  */
 @SprudelDsl
-fun randcat(vararg args: PatternLike): SprudelPattern = _randcat(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun randcat(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    chooseCycles(*args, callInfo = callInfo)
 
 /** Alias for [chooseCycles]. */
 @SprudelDsl
-fun SprudelPattern.randcat(vararg args: PatternLike): SprudelPattern = this._randcat(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.randcat(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.chooseCycles(*args, callInfo = callInfo)
 
 /** Alias for [chooseCycles]. */
 @SprudelDsl
-fun String.randcat(vararg args: PatternLike): SprudelPattern = this._randcat(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.randcat(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).randcat(*args, callInfo = callInfo)
 
 // -- wchoose() --------------------------------------------------------------------------------------------------------
 
-internal val _wchoose by dslPatternFunction { args, /* callInfo */ _ ->
-    val firstArg = args.getOrNull(0)
-
-    when (val firstVal = firstArg?.value) {
-        is SprudelPattern -> firstVal._wchoose(args.drop(1))
-        else -> AtomicPattern.pure._wchoose(args)
-    }
-}
-
-internal val SprudelPattern._wchoose by dslPatternExtension { p, args, /* callInfo */ _ ->
+private fun applyWchoose(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val (items, weights) = args.extractWeightedPairs()
-
-    ChoicePattern.createFromRaw(
+    return ChoicePattern.createFromRaw(
         selector = p,
         choices = items,
         weights = weights,
         mode = StructurePattern.Mode.Out,
     )
 }
-
-internal val String._wchoose by dslStringExtension { p, args, callInfo -> p._wchoose(args, callInfo) }
 
 /**
  * Chooses randomly from the given values according to relative weights.
@@ -1864,41 +1787,42 @@ internal val String._wchoose by dslStringExtension { p, args, callInfo -> p._wch
  * @tags wchoose, weighted, random, probability, selection
  */
 @SprudelDsl
-fun wchoose(vararg args: PatternLike): SprudelPattern = _wchoose(args.toList().asSprudelDslArgs())
-
-/** Uses this pattern (range 0–1) as a weighted selector over the given value/weight pairs. */
-@SprudelDsl
-fun SprudelPattern.wchoose(vararg args: PatternLike): SprudelPattern = this._wchoose(args.toList().asSprudelDslArgs())
-
-/** Uses this string pattern as a weighted selector over the given value/weight pairs. */
-@SprudelDsl
-fun String.wchoose(vararg args: PatternLike): SprudelPattern = this._wchoose(args.toList().asSprudelDslArgs())
-
-// -- wchooseCycles() --------------------------------------------------------------------------------------------------
-
-internal val _wchooseCycles by dslPatternFunction { args, /* callInfo */ _ ->
-    val firstArg = args.getOrNull(0)
-
-    when (val firstVal = firstArg?.value) {
-        is SprudelPattern -> firstVal._wchooseCycles(args.drop(1))
-        else -> AtomicPattern.pure._wchooseCycles(args)
+@KlangScript.Function
+fun wchoose(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val argList = args.toList().asSprudelDslArgs(callInfo)
+    val firstArg = argList.firstOrNull()
+    return when (val firstVal = firstArg?.value) {
+        is SprudelPattern -> applyWchoose(firstVal, argList.drop(1))
+        else -> applyWchoose(AtomicPattern.pure, argList)
     }
 }
 
-internal val SprudelPattern._wchooseCycles by dslPatternExtension { p, args, /* callInfo */ _ ->
+/** Uses this pattern (range 0–1) as a weighted selector over the given value/weight pairs. */
+@SprudelDsl
+@KlangScript.Function
+fun SprudelPattern.wchoose(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyWchoose(this, args.toList().asSprudelDslArgs(callInfo))
+
+/** Uses this string pattern as a weighted selector over the given value/weight pairs. */
+@SprudelDsl
+@KlangScript.Function
+fun String.wchoose(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).wchoose(*args, callInfo = callInfo)
+
+// -- wchooseCycles() --------------------------------------------------------------------------------------------------
+
+private fun applyWchooseCyclesPattern(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val (items, weights) = args.extractWeightedPairs()
     val allItems = (listOf(p) + items.map { it.value }).asSprudelDslArgs()
     val allWeights = (listOf(1.0) + weights.map { it.value }).asSprudelDslArgs()
 
-    ChoicePattern.createFromRaw(
+    return ChoicePattern.createFromRaw(
         selector = rand.segment(1),
         choices = allItems,
         weights = allWeights,
         mode = StructurePattern.Mode.In,
     )
 }
-
-internal val String._wchooseCycles by dslStringExtension { p, args, callInfo -> p._wchooseCycles(args, callInfo) }
 
 /**
  * Picks one of the given values at random each cycle according to relative weights.
@@ -1916,23 +1840,29 @@ internal val String._wchooseCycles by dslStringExtension { p, args, callInfo -> 
  * @tags wchooseCycles, weighted, random, cycle, wrandcat
  */
 @SprudelDsl
-fun wchooseCycles(vararg args: PatternLike): SprudelPattern = _wchooseCycles(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun wchooseCycles(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern {
+    val argList = args.toList().asSprudelDslArgs(callInfo)
+    val firstArg = argList.firstOrNull()
+    return when (val firstVal = firstArg?.value) {
+        is SprudelPattern -> applyWchooseCyclesPattern(firstVal, argList.drop(1))
+        else -> applyWchooseCyclesPattern(AtomicPattern.pure, argList)
+    }
+}
 
 /** Picks a weighted random value once per cycle. */
 @SprudelDsl
-fun SprudelPattern.wchooseCycles(vararg args: PatternLike): SprudelPattern =
-    this._wchooseCycles(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.wchooseCycles(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyWchooseCyclesPattern(this, args.toList().asSprudelDslArgs(callInfo))
 
 /** Picks a weighted random value once per cycle. */
 @SprudelDsl
-fun String.wchooseCycles(vararg args: PatternLike): SprudelPattern =
-    this._wchooseCycles(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.wchooseCycles(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).wchooseCycles(*args, callInfo = callInfo)
 
 // -- wrandcat() -------------------------------------------------------------------------------------------------------
-
-internal val _wrandcat by dslPatternFunction { args, /* callInfo */ _ -> _wchooseCycles(args) }
-internal val SprudelPattern._wrandcat by dslPatternExtension { p, args, callInfo -> p._wchooseCycles(args, callInfo) }
-internal val String._wrandcat by dslStringExtension { p, args, callInfo -> p._wrandcat(args, callInfo) }
 
 /**
  * Alias for [wchooseCycles].
@@ -1943,13 +1873,18 @@ internal val String._wrandcat by dslStringExtension { p, args, callInfo -> p._wr
  * @tags wrandcat, wchooseCycles, weighted, random, cycle
  */
 @SprudelDsl
-fun wrandcat(vararg args: PatternLike): SprudelPattern = _wrandcat(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun wrandcat(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    wchooseCycles(*args, callInfo = callInfo)
 
 /** Alias for [wchooseCycles]. */
 @SprudelDsl
-fun SprudelPattern.wrandcat(vararg args: PatternLike): SprudelPattern =
-    this._wrandcat(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.wrandcat(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.wchooseCycles(*args, callInfo = callInfo)
 
 /** Alias for [wchooseCycles]. */
 @SprudelDsl
-fun String.wrandcat(vararg args: PatternLike): SprudelPattern = this._wrandcat(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.wrandcat(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).wrandcat(*args, callInfo = callInfo)

@@ -8,13 +8,6 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangEngineInit = false
-
 // -- engine() ---------------------------------------------------------------------------------------------------------
 
 // Lowercased on storage for consistency. AudioEngine.fromName also lowercases defensively

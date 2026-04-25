@@ -9,13 +9,6 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._liftNumericField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangSynthesisInit = false
-
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // FM Synthesis
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

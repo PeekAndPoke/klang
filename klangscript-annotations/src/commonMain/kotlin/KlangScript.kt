@@ -97,4 +97,19 @@ object KlangScript {
     @Target(AnnotationTarget.FUNCTION)
     @Retention(AnnotationRetention.SOURCE)
     annotation class Method(val name: String = "")
+
+    /**
+     * Registers a top-level property as a named value in KlangScript.
+     *
+     * The annotated Kotlin property becomes accessible by name in KlangScript and
+     * is registered as a native object — its runtime type is also registered, which
+     * enables extension methods on the value's class.
+     *
+     * The library is inherited from `@Library` on the enclosing file or class.
+     *
+     * @param name The name visible in KlangScript. Defaults to the Kotlin property name.
+     */
+    @Target(AnnotationTarget.PROPERTY)
+    @Retention(AnnotationRetention.SOURCE)
+    annotation class Property(val name: String = "")
 }

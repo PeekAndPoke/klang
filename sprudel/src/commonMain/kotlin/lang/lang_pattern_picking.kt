@@ -20,13 +20,6 @@ import io.peekandpoke.klang.sprudel.pattern.PickResetPattern
 import io.peekandpoke.klang.sprudel.pattern.PickRestartPattern
 import io.peekandpoke.klang.sprudel.pattern.PickSqueezePattern
 import kotlin.math.floor
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangPatternPickingInit = false
-
 // =====================================================================================================================
 // Helper Functions
 // =====================================================================================================================

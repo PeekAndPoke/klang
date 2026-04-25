@@ -17,13 +17,6 @@ import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.lang.voiceModifier
 import io.peekandpoke.klang.sprudel.withOscParam
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangOscAddonsInit = false
-
 // -- oscparam() / oscp() ----------------------------------------------------------------------------------------------
 
 private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
