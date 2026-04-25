@@ -40,7 +40,7 @@ class LangFilterSpec : StringSpec({
     "filter() works as pattern extension" {
         // filter(predicate)
         // Keep events where note is "a"
-        val p = note("a b").filter { it.data.note?.lowercase() == "a" }
+        val p = note("a b").filter(predicate = { it.data.note?.lowercase() == "a" })
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
@@ -48,7 +48,7 @@ class LangFilterSpec : StringSpec({
     }
 
     "filter() works as string extension" {
-        val p = "a b".filter { it.data.value?.asString == "b" }.note()
+        val p = "a b".filter(predicate = { it.data.value?.asString == "b" }).note()
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
@@ -56,14 +56,14 @@ class LangFilterSpec : StringSpec({
     }
 
     "filter() works as top-level PatternMapperFn" {
-        val p = note("a b").apply(filter { it.data.note?.lowercase() == "a" })
+        val p = note("a b").apply(filter(predicate = { it.data.note?.lowercase() == "a" }))
 
         p.queryArc(0.0, 1.0).size shouldBe 1
     }
 
     "filter() can use other properties" {
         // Keep events with gain > 0.5
-        val p = note("a b").gain("0.8 0.2").filter { (it.data.gain ?: 0.0) > 0.5 }
+        val p = note("a b").gain("0.8 0.2").filter(predicate = { (it.data.gain ?: 0.0) > 0.5 })
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1

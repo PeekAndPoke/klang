@@ -135,7 +135,7 @@ fun SprudelPattern.distort(amount: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().distort(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies waveshaper distortion.
@@ -232,7 +232,7 @@ fun SprudelPattern.dist(amount: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().distort(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distort(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies waveshaper distortion. Alias for [distort].
@@ -317,7 +317,7 @@ fun SprudelPattern.distos(factor: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.distos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().distos(factor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distos(factor, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -336,7 +336,7 @@ fun SprudelPattern.distortOversampling(factor: PatternLike? = null, callInfo: Ca
 @SprudelDsl
 @KlangScript.Function
 fun String.distortOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().distortOversampling(factor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distortOversampling(factor, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -397,7 +397,7 @@ fun SprudelPattern.distortshape(shape: PatternLike, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.distortshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().distortshape(shape, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distortshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape.
@@ -469,7 +469,7 @@ fun SprudelPattern.distshape(shape: PatternLike, callInfo: CallInfo? = null): Sp
 @SprudelDsl
 @KlangScript.Function
 fun String.distshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().distortshape(shape, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distortshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape. Alias for [distortshape].
@@ -536,7 +536,8 @@ fun SprudelPattern.dshape(shape: PatternLike, callInfo: CallInfo? = null): Sprud
  */
 @SprudelDsl
 @KlangScript.Function
-fun String.dshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.toVoiceValuePattern().distortshape(shape, callInfo)
+fun String.dshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).distortshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape. Alias for [distortshape].
@@ -628,7 +629,7 @@ fun SprudelPattern.crush(amount: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.crush(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().crush(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).crush(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies bit-crushing.
@@ -708,7 +709,7 @@ fun SprudelPattern.crushos(factor: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.crushos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().crushos(factor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).crushos(factor, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -727,7 +728,7 @@ fun SprudelPattern.crushOversampling(factor: PatternLike? = null, callInfo: Call
 @SprudelDsl
 @KlangScript.Function
 fun String.crushOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().crushOversampling(factor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).crushOversampling(factor, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -794,7 +795,7 @@ fun SprudelPattern.coarse(amount: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.coarse(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().coarse(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).coarse(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies sample-rate reduction.
@@ -877,7 +878,7 @@ fun SprudelPattern.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.coarseos(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().coarseos(factor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).coarseos(factor, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -896,7 +897,7 @@ fun SprudelPattern.coarseOversampling(factor: PatternLike? = null, callInfo: Cal
 @SprudelDsl
 @KlangScript.Function
 fun String.coarseOversampling(factor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().coarseOversampling(factor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).coarseOversampling(factor, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -987,7 +988,7 @@ fun SprudelPattern.room(amount: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.room(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().room(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).room(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb wet/dry mix.
@@ -1089,7 +1090,7 @@ fun SprudelPattern.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.roomsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomsize(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb room size.
@@ -1168,7 +1169,7 @@ fun SprudelPattern.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.rsize(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomsize(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
@@ -1239,7 +1240,7 @@ fun SprudelPattern.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): 
 @SprudelDsl
 @KlangScript.Function
 fun String.sz(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomsize(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
@@ -1309,7 +1310,7 @@ fun SprudelPattern.size(amount: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.size(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomsize(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomsize(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb room size. Alias for [roomsize].
@@ -1401,7 +1402,7 @@ fun SprudelPattern.roomfade(time: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.roomfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomfade(time, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomfade(time, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb fade time.
@@ -1486,7 +1487,7 @@ fun SprudelPattern.rfade(time: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.rfade(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomfade(time, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomfade(time, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb fade time. Alias for [roomfade].
@@ -1584,7 +1585,7 @@ fun SprudelPattern.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.roomlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomlp(freq, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomlp(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb lowpass start frequency.
@@ -1673,7 +1674,7 @@ fun SprudelPattern.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): S
 @SprudelDsl
 @KlangScript.Function
 fun String.rlp(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomlp(freq, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomlp(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb lowpass start frequency. Alias for [roomlp].
@@ -1773,7 +1774,7 @@ fun SprudelPattern.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.roomdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomdim(freq, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomdim(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB.
@@ -1862,7 +1863,7 @@ fun SprudelPattern.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): 
 @SprudelDsl
 @KlangScript.Function
 fun String.rdim(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().roomdim(freq, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).roomdim(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the reverb lowpass frequency at -60 dB. Alias for [roomdim].
@@ -1949,7 +1950,8 @@ fun SprudelPattern.iresponse(name: PatternLike, callInfo: CallInfo? = null): Spr
  */
 @SprudelDsl
 @KlangScript.Function
-fun String.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.toVoiceValuePattern().iresponse(name, callInfo)
+fun String.iresponse(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).iresponse(name, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the impulse response sample for convolution reverb.
@@ -2027,7 +2029,8 @@ fun SprudelPattern.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPat
  */
 @SprudelDsl
 @KlangScript.Function
-fun String.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern = this.toVoiceValuePattern().iresponse(name, callInfo)
+fun String.ir(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).iresponse(name, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the impulse response sample. Alias for [iresponse].
@@ -2151,7 +2154,7 @@ fun SprudelPattern.delay(amount: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.delay(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().delay(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delay(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay wet/dry mix.
@@ -2249,7 +2252,7 @@ fun SprudelPattern.delaytime(time: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.delaytime(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().delaytime(time, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delaytime(time, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay time in seconds.
@@ -2348,7 +2351,7 @@ fun SprudelPattern.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo
 @SprudelDsl
 @KlangScript.Function
 fun String.delayfeedback(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().delayfeedback(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay feedback amount.
@@ -2439,7 +2442,7 @@ fun SprudelPattern.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.delayfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().delayfeedback(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay feedback amount. Alias for [delayfeedback].
@@ -2522,7 +2525,7 @@ fun SprudelPattern.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.dfb(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().delayfeedback(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).delayfeedback(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the delay feedback amount. Alias for [delayfeedback].
@@ -2654,7 +2657,7 @@ fun SprudelPattern.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.phaser(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phaser(rate, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate.
@@ -2755,7 +2758,7 @@ fun SprudelPattern.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): Sp
 @SprudelDsl
 @KlangScript.Function
 fun String.ph(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phaser(rate, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaser(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser LFO rate. Alias for [phaser].
@@ -2853,7 +2856,7 @@ fun SprudelPattern.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? 
 @SprudelDsl
 @KlangScript.Function
 fun String.phaserdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phaserdepth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser depth.
@@ -2942,7 +2945,7 @@ fun SprudelPattern.phd(amount: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.phd(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phaserdepth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserdepth].
@@ -3024,7 +3027,7 @@ fun SprudelPattern.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.phasdp(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phaserdepth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phaserdepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser depth. Alias for [phaserdepth].
@@ -3116,7 +3119,7 @@ fun SprudelPattern.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? =
 @SprudelDsl
 @KlangScript.Function
 fun String.phasercenter(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phasercenter(freq, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phasercenter(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser center frequency.
@@ -3205,7 +3208,7 @@ fun SprudelPattern.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): S
 @SprudelDsl
 @KlangScript.Function
 fun String.phc(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phasercenter(freq, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phasercenter(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser center frequency. Alias for [phasercenter].
@@ -3298,7 +3301,7 @@ fun SprudelPattern.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? 
 @SprudelDsl
 @KlangScript.Function
 fun String.phasersweep(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phasersweep(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phasersweep(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser sweep range.
@@ -3387,7 +3390,7 @@ fun SprudelPattern.phs(amount: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.phs(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().phasersweep(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).phasersweep(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the phaser sweep range. Alias for [phasersweep].
@@ -3480,7 +3483,7 @@ fun SprudelPattern.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = 
 @SprudelDsl
 @KlangScript.Function
 fun String.tremolosync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremolosync(rate, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolosync(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO rate.
@@ -3569,7 +3572,7 @@ fun SprudelPattern.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.tremsync(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremolosync(rate, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolosync(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO rate. Alias for [tremolosync].
@@ -3662,7 +3665,7 @@ fun SprudelPattern.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo?
 @SprudelDsl
 @KlangScript.Function
 fun String.tremolodepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremolodepth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolodepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo depth.
@@ -3751,7 +3754,7 @@ fun SprudelPattern.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = 
 @SprudelDsl
 @KlangScript.Function
 fun String.tremdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremolodepth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolodepth(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo depth. Alias for [tremolodepth].
@@ -3843,7 +3846,7 @@ fun SprudelPattern.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? 
 @SprudelDsl
 @KlangScript.Function
 fun String.tremoloskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremoloskew(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloskew(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO skew.
@@ -3932,7 +3935,7 @@ fun SprudelPattern.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.tremskew(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremoloskew(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloskew(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO skew. Alias for [tremoloskew].
@@ -4028,7 +4031,7 @@ fun SprudelPattern.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? 
 @SprudelDsl
 @KlangScript.Function
 fun String.tremolophase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremolophase(phase, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolophase(phase, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase.
@@ -4117,7 +4120,7 @@ fun SprudelPattern.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.tremphase(phase: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremolophase(phase, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolophase(phase, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO starting phase. Alias for [tremolophase].
@@ -4206,7 +4209,7 @@ fun SprudelPattern.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.tremoloshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremoloshape(shape, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO waveform shape.
@@ -4286,7 +4289,7 @@ fun SprudelPattern.tremshape(shape: PatternLike, callInfo: CallInfo? = null): Sp
 @SprudelDsl
 @KlangScript.Function
 fun String.tremshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremoloshape(shape, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremoloshape(shape, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the tremolo LFO waveform shape. Alias for [tremoloshape].

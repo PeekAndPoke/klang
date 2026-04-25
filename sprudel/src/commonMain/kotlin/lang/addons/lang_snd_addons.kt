@@ -92,7 +92,7 @@ fun SprudelPattern.sndPluck(params: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.sndPluck(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndPluck(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndPluck(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to plucked string.
@@ -188,7 +188,7 @@ fun SprudelPattern.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSuperPluck(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperPluck(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to super plucked string.
@@ -239,7 +239,7 @@ fun SprudelPattern.sndSine(params: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSine(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSine(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSine(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to sine wave.
  * @category tonal
@@ -282,7 +282,7 @@ fun SprudelPattern.sndSaw(params: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSaw(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSaw(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSaw(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to sawtooth wave.
  * @category tonal
@@ -325,7 +325,7 @@ fun SprudelPattern.sndSquare(params: PatternLike? = null, callInfo: CallInfo? = 
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSquare(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSquare(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSquare(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to square wave.
  * @category tonal
@@ -368,7 +368,7 @@ fun SprudelPattern.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? 
 @SprudelDsl
 @KlangScript.Function
 fun String.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndTriangle(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndTriangle(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to triangle wave.
  * @category tonal
@@ -411,7 +411,7 @@ fun SprudelPattern.sndRamp(params: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.sndRamp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndRamp(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndRamp(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to ramp wave.
  * @category tonal
@@ -454,7 +454,7 @@ fun SprudelPattern.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndNoise(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndNoise(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to white noise.
  * @category tonal
@@ -497,7 +497,7 @@ fun SprudelPattern.sndBrown(params: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.sndBrown(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndBrown(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndBrown(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to brown noise.
  * @category tonal
@@ -540,7 +540,7 @@ fun SprudelPattern.sndPink(params: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.sndPink(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndPink(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndPink(params, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the sound to pink noise.
  * @category tonal
@@ -604,7 +604,7 @@ fun SprudelPattern.sndPulze(params: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.sndPulze(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndPulze(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndPulze(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to pulse wave.
@@ -674,7 +674,7 @@ fun SprudelPattern.sndDust(params: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.sndDust(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndDust(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndDust(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to dust generator.
@@ -744,7 +744,7 @@ fun SprudelPattern.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? =
 @SprudelDsl
 @KlangScript.Function
 fun String.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndCrackle(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndCrackle(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to crackle generator.
@@ -816,7 +816,7 @@ fun SprudelPattern.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? 
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSuperSaw(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperSaw(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to super sawtooth.
@@ -889,7 +889,7 @@ fun SprudelPattern.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo?
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSuperSine(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperSine(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to super sine.
@@ -962,7 +962,7 @@ fun SprudelPattern.sndSuperSquare(params: PatternLike? = null, callInfo: CallInf
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSuperSquare(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperSquare(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to super square.
@@ -1035,7 +1035,7 @@ fun SprudelPattern.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? 
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSuperTri(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperTri(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to super triangle.
@@ -1108,7 +1108,7 @@ fun SprudelPattern.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo?
 @SprudelDsl
 @KlangScript.Function
 fun String.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sndSuperRamp(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperRamp(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sound to super ramp.

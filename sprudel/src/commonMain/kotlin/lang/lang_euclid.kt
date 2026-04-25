@@ -123,7 +123,7 @@ fun SprudelPattern.euclid(pulses: Int, steps: Int, callInfo: CallInfo? = null): 
 @SprudelDsl
 @KlangScript.Function
 fun String.euclid(pulses: Int, steps: Int, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().euclid(pulses, steps, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).euclid(pulses, steps, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a Euclidean rhythm structure to the source pattern.
@@ -259,7 +259,7 @@ fun SprudelPattern.euclidRot(pulses: Int, steps: Int, rotation: Int, callInfo: C
 @SprudelDsl
 @KlangScript.Function
 fun String.euclidRot(pulses: Int, steps: Int, rotation: Int, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().euclidRot(pulses, steps, rotation, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).euclidRot(pulses, steps, rotation, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a rotated Euclidean rhythm to the source pattern.
@@ -352,7 +352,7 @@ fun SprudelPattern.euclidrot(pulses: Int, steps: Int, rotation: Int, callInfo: C
 @SprudelDsl
 @KlangScript.Function
 fun String.euclidrot(pulses: Int, steps: Int, rotation: Int, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().euclidrot(pulses, steps, rotation, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).euclidrot(pulses, steps, rotation, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [euclidRot] — applies a rotated Euclidean rhythm.
@@ -462,7 +462,7 @@ fun SprudelPattern.bjork(pulses: Int, steps: Int, rotation: Int = 0, callInfo: C
 @SprudelDsl
 @KlangScript.Function
 fun String.bjork(pulses: Int, steps: Int, rotation: Int = 0, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().bjork(pulses, steps, rotation, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bjork(pulses, steps, rotation, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a Euclidean rhythm specified as (pulses, steps, rotation).
@@ -558,7 +558,7 @@ fun SprudelPattern.euclidLegato(pulses: Int, steps: Int, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.euclidLegato(pulses: Int, steps: Int, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().euclidLegato(pulses, steps, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).euclidLegato(pulses, steps, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies legato Euclidean rhythm structure to the source pattern.
@@ -671,7 +671,7 @@ fun SprudelPattern.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int, callI
 @SprudelDsl
 @KlangScript.Function
 fun String.euclidLegatoRot(pulses: Int, steps: Int, rotation: Int, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().euclidLegatoRot(pulses, steps, rotation, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).euclidLegatoRot(pulses, steps, rotation, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies legato Euclidean rhythm with rotation to the source pattern.
@@ -792,7 +792,7 @@ fun SprudelPattern.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0,
 @SprudelDsl
 @KlangScript.Function
 fun String.euclidish(pulses: Int, steps: Int, groove: PatternLike = 0.0, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().euclidish(pulses, steps, groove, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).euclidish(pulses, steps, groove, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies morphed Euclidean rhythm structure to the source pattern.
@@ -850,7 +850,7 @@ fun SprudelPattern.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0, call
 @SprudelDsl
 @KlangScript.Function
 fun String.eish(pulses: Int, steps: Int, groove: PatternLike = 0.0, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().eish(pulses, steps, groove, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).eish(pulses, steps, groove, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [euclidish] — applies morphed Euclidean rhythm.

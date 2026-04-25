@@ -72,7 +72,7 @@ class LangWhenSpec : FunSpec({
     }
 
     test("chunk() works with direct function calls") {
-        val pat = seq("0 1 2 3").chunk(4) { it.add(12) }
+        val pat = seq("0 1 2 3").chunk(4, transform = { it.add(12) })
 
         val events0 = pat.queryArc(0.0, 1.0)
         events0.size shouldBe 4

@@ -57,7 +57,7 @@ fun SprudelPattern.cylinder(index: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().orbit(index, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).orbit(index, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that routes events to the given audio output cylinder (alias for [orbit]).

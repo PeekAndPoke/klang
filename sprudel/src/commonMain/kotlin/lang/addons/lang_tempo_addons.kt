@@ -97,7 +97,7 @@ fun SprudelPattern.lateInCycle(amount: PatternLike, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.lateInCycle(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().lateInCycle(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lateInCycle(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that nudges events later within their cycle.
@@ -168,7 +168,7 @@ fun SprudelPattern.earlyInCycle(amount: PatternLike, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.earlyInCycle(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().earlyInCycle(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).earlyInCycle(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that nudges events earlier within their cycle.
@@ -258,7 +258,7 @@ fun SprudelPattern.stretchBy(factor: PatternLike, callInfo: CallInfo? = null): S
 @SprudelDsl
 @KlangScript.Function
 fun String.stretchBy(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().stretchBy(factor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).stretchBy(factor, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that multiplies the duration of each event by the given factor.

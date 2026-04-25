@@ -99,7 +99,7 @@ fun SprudelPattern.add(amount: PatternLike, callInfo: CallInfo? = null): Sprudel
 @SprudelDsl
 @KlangScript.Function
 fun String.add(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().add(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).add(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that adds [amount] to every numeric value in a pattern.
@@ -174,7 +174,7 @@ fun SprudelPattern.sub(amount: PatternLike, callInfo: CallInfo? = null): Sprudel
 @SprudelDsl
 @KlangScript.Function
 fun String.sub(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sub(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sub(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that subtracts [amount] from every numeric value in a pattern.
@@ -249,7 +249,7 @@ fun SprudelPattern.mul(factor: PatternLike, callInfo: CallInfo? = null): Sprudel
 @SprudelDsl
 @KlangScript.Function
 fun String.mul(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().mul(factor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).mul(factor, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that multiplies every numeric value in a pattern by [factor].
@@ -324,7 +324,7 @@ fun SprudelPattern.div(divisor: PatternLike, callInfo: CallInfo? = null): Sprude
 @SprudelDsl
 @KlangScript.Function
 fun String.div(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().div(divisor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).div(divisor, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that divides every numeric value in a pattern by [divisor].
@@ -400,7 +400,7 @@ fun SprudelPattern.mod(divisor: PatternLike, callInfo: CallInfo? = null): Sprude
 @SprudelDsl
 @KlangScript.Function
 fun String.mod(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().mod(divisor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).mod(divisor, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies modulo [divisor] to every numeric value in a pattern.
@@ -476,7 +476,7 @@ fun SprudelPattern.pow(exponent: PatternLike, callInfo: CallInfo? = null): Sprud
 @SprudelDsl
 @KlangScript.Function
 fun String.pow(exponent: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().pow(exponent, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pow(exponent, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that raises every numeric value in a pattern to the power of [exponent].
@@ -550,7 +550,7 @@ fun SprudelPattern.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelP
 @SprudelDsl
 @KlangScript.Function
 fun String.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().band(mask, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).band(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise AND of [mask] to every integer value in a pattern.
@@ -624,7 +624,7 @@ fun SprudelPattern.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPa
 @SprudelDsl
 @KlangScript.Function
 fun String.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().bor(mask, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bor(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise OR of [mask] to every integer value in a pattern.
@@ -699,7 +699,7 @@ fun SprudelPattern.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelP
 @SprudelDsl
 @KlangScript.Function
 fun String.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().bxor(mask, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bxor(mask, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies bitwise XOR of [mask] to every integer value in a pattern.
@@ -773,7 +773,7 @@ fun SprudelPattern.blshift(bits: PatternLike, callInfo: CallInfo? = null): Sprud
 @SprudelDsl
 @KlangScript.Function
 fun String.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().blshift(bits, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).blshift(bits, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that shifts every integer value in a pattern left by [bits] bits.
@@ -848,7 +848,7 @@ fun SprudelPattern.brshift(bits: PatternLike, callInfo: CallInfo? = null): Sprud
 @SprudelDsl
 @KlangScript.Function
 fun String.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().brshift(bits, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).brshift(bits, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that shifts every integer value in a pattern right by [bits] bits.
@@ -920,7 +920,7 @@ fun SprudelPattern.log2(callInfo: CallInfo? = null): SprudelPattern =
 @SprudelDsl
 @KlangScript.Function
 fun String.log2(callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().log2(callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).log2(callInfo)
 
 /**
  * Creates a [PatternMapperFn] that applies log base 2 to every numeric value in a pattern.
@@ -980,7 +980,7 @@ fun SprudelPattern.lt(threshold: PatternLike, callInfo: CallInfo? = null): Sprud
 @SprudelDsl
 @KlangScript.Function
 fun String.lt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().lt(threshold, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lt(threshold, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1011,7 +1011,7 @@ fun SprudelPattern.gt(threshold: PatternLike, callInfo: CallInfo? = null): Sprud
 @SprudelDsl
 @KlangScript.Function
 fun String.gt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().gt(threshold, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).gt(threshold, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1042,7 +1042,7 @@ fun SprudelPattern.lte(threshold: PatternLike, callInfo: CallInfo? = null): Spru
 @SprudelDsl
 @KlangScript.Function
 fun String.lte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().lte(threshold, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lte(threshold, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1073,7 +1073,7 @@ fun SprudelPattern.gte(threshold: PatternLike, callInfo: CallInfo? = null): Spru
 @SprudelDsl
 @KlangScript.Function
 fun String.gte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().gte(threshold, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).gte(threshold, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1104,7 +1104,7 @@ fun SprudelPattern.eq(other: PatternLike, callInfo: CallInfo? = null): SprudelPa
 @SprudelDsl
 @KlangScript.Function
 fun String.eq(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().eq(other, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).eq(other, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1135,7 +1135,7 @@ fun SprudelPattern.eqt(other: PatternLike, callInfo: CallInfo? = null): SprudelP
 @SprudelDsl
 @KlangScript.Function
 fun String.eqt(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().eqt(other, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).eqt(other, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1166,7 +1166,7 @@ fun SprudelPattern.ne(other: PatternLike, callInfo: CallInfo? = null): SprudelPa
 @SprudelDsl
 @KlangScript.Function
 fun String.ne(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().ne(other, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).ne(other, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1197,7 +1197,7 @@ fun SprudelPattern.net(other: PatternLike, callInfo: CallInfo? = null): SprudelP
 @SprudelDsl
 @KlangScript.Function
 fun String.net(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().net(other, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).net(other, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1227,7 +1227,7 @@ fun SprudelPattern.and(other: PatternLike, callInfo: CallInfo? = null): SprudelP
 @SprudelDsl
 @KlangScript.Function
 fun String.and(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().and(other, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).and(other, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1257,7 +1257,7 @@ fun SprudelPattern.or(other: PatternLike, callInfo: CallInfo? = null): SprudelPa
 @SprudelDsl
 @KlangScript.Function
 fun String.or(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().or(other, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).or(other, callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1286,7 +1286,7 @@ fun SprudelPattern.round(callInfo: CallInfo? = null): SprudelPattern =
 @SprudelDsl
 @KlangScript.Function
 fun String.round(callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().round(callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).round(callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1315,7 +1315,7 @@ fun SprudelPattern.floor(callInfo: CallInfo? = null): SprudelPattern =
 @SprudelDsl
 @KlangScript.Function
 fun String.floor(callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().floor(callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).floor(callInfo)
 
 @SprudelDsl
 @KlangScript.Function
@@ -1344,7 +1344,7 @@ fun SprudelPattern.ceil(callInfo: CallInfo? = null): SprudelPattern =
 @SprudelDsl
 @KlangScript.Function
 fun String.ceil(callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().ceil(callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).ceil(callInfo)
 
 @SprudelDsl
 @KlangScript.Function

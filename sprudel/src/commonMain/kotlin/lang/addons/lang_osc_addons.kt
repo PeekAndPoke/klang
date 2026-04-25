@@ -63,7 +63,7 @@ fun SprudelPattern.oscparam(key: String, value: PatternLike, callInfo: CallInfo?
 @SprudelDsl
 @KlangScript.Function
 fun String.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().oscparam(key, value, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
 
 /** Creates a [PatternMapperFn] that sets an oscillator parameter. */
 @SprudelDsl
@@ -87,7 +87,7 @@ fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().oscp(key, value, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).oscp(key, value, callInfo)
 
 /** Alias for [oscparam]. Creates a [PatternMapperFn] that sets an oscillator parameter. */
 @SprudelDsl
@@ -154,7 +154,7 @@ fun SprudelPattern.analog(amount: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.analog(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().analog(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).analog(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the analog drift amount.
@@ -232,7 +232,7 @@ fun SprudelPattern.warmth(amount: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.warmth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().warmth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).warmth(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the oscillator warmth.

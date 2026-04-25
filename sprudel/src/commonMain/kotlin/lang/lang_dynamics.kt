@@ -63,7 +63,7 @@ fun SprudelPattern.gain(amount: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.gain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().gain(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).gain(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the gain for each event in a pattern.
@@ -141,7 +141,7 @@ fun SprudelPattern.pan(amount: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.pan(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().pan(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pan(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the pan for each event in a pattern.
@@ -216,7 +216,7 @@ fun SprudelPattern.velocity(amount: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.velocity(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().velocity(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(amount, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
@@ -280,7 +280,7 @@ fun SprudelPattern.vel(amount: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.vel(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().velocity(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).velocity(amount, callInfo)
 
 /**
  * Alias for [velocity]. Create a [PatternMapperFn] that sets the velocity (gain multiplier) for each event in a pattern.
@@ -354,7 +354,7 @@ fun SprudelPattern.postgain(amount: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.postgain(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().postgain(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).postgain(amount, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets the post-gain for each event in a pattern.
@@ -468,7 +468,7 @@ fun SprudelPattern.compressor(params: PatternLike? = null, callInfo: CallInfo? =
 @SprudelDsl
 @KlangScript.Function
 fun String.compressor(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().compressor(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(params, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets dynamic range compression parameters for a pattern.
@@ -533,7 +533,7 @@ fun SprudelPattern.comp(params: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.comp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().compressor(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).compressor(params, callInfo)
 
 /**
  * Alias for [compressor]. Parses this string as a pattern and sets compression parameters.
@@ -610,7 +610,7 @@ fun SprudelPattern.unison(voices: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.unison(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().unison(voices, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
 
 /**
  * Create a [PatternMapperFn] that sets the number of unison voices for a pattern.
@@ -672,7 +672,7 @@ fun SprudelPattern.uni(voices: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.uni(voices: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().unison(voices, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).unison(voices, callInfo)
 
 /**
  * Alias for [unison]. Creates a [PatternMapperFn] that sets the number of unison voices for a pattern.
@@ -748,7 +748,7 @@ fun SprudelPattern.detune(amount: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.detune(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().detune(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).detune(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the oscillator frequency spread for a pattern.
@@ -822,7 +822,7 @@ fun SprudelPattern.spread(amount: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.spread(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().spread(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).spread(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the stereo pan spread for unison voices.
@@ -898,7 +898,7 @@ fun SprudelPattern.density(amount: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.density(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().density(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).density(amount, callInfo)
 
 /**
  * Parses this string as a pattern and sets the oscillator or noise density.
@@ -961,7 +961,7 @@ fun SprudelPattern.d(amount: PatternLike? = null, callInfo: CallInfo? = null): S
 @SprudelDsl
 @KlangScript.Function
 fun String.d(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().density(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).density(amount, callInfo)
 
 /**
  * Alias for [density]. Creates a [PatternMapperFn] that sets the oscillator or noise density.
@@ -1037,7 +1037,7 @@ fun SprudelPattern.attack(time: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.attack(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().attack(time, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).attack(time, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope attack time for each event.
@@ -1111,7 +1111,7 @@ fun SprudelPattern.decay(time: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.decay(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().decay(time, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).decay(time, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope decay time for each event.
@@ -1186,7 +1186,7 @@ fun SprudelPattern.sustain(level: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.sustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().sustain(level, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sustain(level, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope sustain level for each event.
@@ -1261,7 +1261,7 @@ fun SprudelPattern.release(time: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.release(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().release(time, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).release(time, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ADSR envelope release time for each event.
@@ -1359,7 +1359,7 @@ fun SprudelPattern.adsr(params: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().adsr(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).adsr(params, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets all ADSR envelope parameters for each event.
@@ -1441,7 +1441,7 @@ fun SprudelPattern.orbit(index: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.orbit(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().orbit(index, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).orbit(index, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that routes events to the given audio output orbit.
@@ -1505,7 +1505,7 @@ fun SprudelPattern.o(index: PatternLike? = null, callInfo: CallInfo? = null): Sp
 @SprudelDsl
 @KlangScript.Function
 fun String.o(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().orbit(index, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).orbit(index, callInfo)
 
 /**
  * Alias for [orbit]. Creates a [PatternMapperFn] that routes events to the given audio output orbit.
@@ -1573,7 +1573,7 @@ fun SprudelPattern.duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo
 @SprudelDsl
 @KlangScript.Function
 fun String.duckorbit(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().duckorbit(orbitIndex, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).duckorbit(orbitIndex, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
@@ -1636,7 +1636,7 @@ fun SprudelPattern.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.duck(orbitIndex: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().duckorbit(orbitIndex, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).duckorbit(orbitIndex, callInfo)
 
 /**
  * Alias for [duckorbit]. Creates a [PatternMapperFn] that sets the sidechain source orbit for ducking.
@@ -1713,7 +1713,7 @@ fun SprudelPattern.duckattack(time: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.duckattack(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().duckattack(time, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).duckattack(time, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the duck release time.
@@ -1777,7 +1777,7 @@ fun SprudelPattern.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.duckatt(time: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().duckattack(time, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).duckattack(time, callInfo)
 
 /**
  * Alias for [duckattack]. Creates a [PatternMapperFn] that sets the duck release time.
@@ -1853,7 +1853,7 @@ fun SprudelPattern.duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = 
 @SprudelDsl
 @KlangScript.Function
 fun String.duckdepth(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().duckdepth(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).duckdepth(amount, callInfo)
 
 /**
  * Creates a [PatternMapperFn] that sets the ducking depth.

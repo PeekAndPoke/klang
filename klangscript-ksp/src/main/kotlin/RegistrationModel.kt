@@ -138,8 +138,12 @@ data class ArityDispatchItem(
         }
 
         if (!hasDefaults) {
-            // No defaults — single call with all required params
-            val callArgs = scriptParams.map { it.name }.joinToString(", ")
+            // No defaults — single call with all required params.
+            // Use named-arg syntax so that the Kotlin parameter order can differ
+            // from the script parameter order (e.g. `callInfo` in the middle,
+            // trailing lambda last) without the generated code needing to match
+            // positional order.
+            val callArgs = scriptParams.joinToString(", ") { "${it.name} = ${it.name}" }
             appendLine("${indent}wrapAsRuntimeValue($fnCall(${callWithCallInfo(joinCallArgs(selfArg, callArgs))}))")
             append("}")
             return@buildString
@@ -148,6 +152,12 @@ data class ArityDispatchItem(
         appendLine("${indent}wrapAsRuntimeValue(")
 
         // Arity-dispatch chain
+        //
+        // For each level (starting from the highest arity that makes sense, down to
+        // the required-arity count), decide which optional params are filled from
+        // `args` and which take their default. Required params (no default) are
+        // always passed using named-arg syntax — they come from values extracted
+        // at the top level of the block.
         for (level in scriptParams.size downTo firstOptionalIdx + 1) {
             val argsForLevel = scriptParams.take(level)
             val prefix = if (level == scriptParams.size) "if" else "} else if"
@@ -163,11 +173,16 @@ data class ArityDispatchItem(
                 }
             }
 
-            val callArgs = argsForLevel.map { it.name }.joinToString(", ")
+            // Pass every param bound at this level plus all required (no-default)
+            // params that may live after them in the Kotlin signature. Named-arg
+            // syntax makes order irrelevant.
+            val boundNames = argsForLevel.map { it.name }.toSet()
+            val callParams = argsForLevel + scriptParams.filter { !it.hasDefault && it.name !in boundNames }
+            val callArgs = callParams.joinToString(", ") { "${it.name} = ${it.name}" }
             appendLine("$indent        $fnCall(${callWithCallInfo(joinCallArgs(selfArg, callArgs))})")
         }
 
-        val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name }.joinToString(", ")
+        val requiredArgs = scriptParams.filter { !it.hasDefault }.joinToString(", ") { "${it.name} = ${it.name}" }
         appendLine("$indent    } else {")
         appendLine("$indent        $fnCall(${callWithCallInfo(joinCallArgs(selfArg, requiredArgs))})")
         appendLine("$indent    }")
@@ -175,6 +190,20 @@ data class ArityDispatchItem(
 
         append("}")
     }
+}
+
+/**
+ * A raw rendered registration block. Use when none of the specialised items
+ * (VarargItem / ArityDispatchItem / FixedMethodItem / FileLevelExtItem) fit
+ * the shape — e.g. file-level vararg extensions which need a custom
+ * `registerExtensionMethodWithSpecs` body plus manual vararg spread.
+ */
+data class RawBlockItem(
+    override val scriptName: String,
+    override val specsExpr: String,
+    val rendered: String,
+) : RegistrationItem() {
+    override fun renderRegistration(): String = rendered
 }
 
 /**
@@ -294,10 +323,14 @@ data class FileLevelExtItem(
                         )
                     }
                 }
-                val callArgs = argsForLevel.map { it.name }.joinToString(", ")
+                // Pass required (no-default) params that live after the bound
+                // level in the Kotlin signature — named args make order flexible.
+                val boundNames = argsForLevel.map { it.name }.toSet()
+                val callParams = argsForLevel + scriptParams.filter { !it.hasDefault && it.name !in boundNames }
+                val callArgs = callParams.joinToString(", ") { "${it.name} = ${it.name}" }
                 appendLine("$indent        $fnCallPrefix$fnName(${withCallInfo(joinCallArgs(selfArg, callArgs))})")
             }
-            val requiredArgs = scriptParams.filter { !it.hasDefault }.map { it.name }.joinToString(", ")
+            val requiredArgs = scriptParams.filter { !it.hasDefault }.joinToString(", ") { "${it.name} = ${it.name}" }
             appendLine("$indent    } else {")
             appendLine("$indent        $fnCallPrefix$fnName(${withCallInfo(joinCallArgs(selfArg, requiredArgs))})")
             appendLine("$indent    }")
@@ -311,7 +344,7 @@ data class FileLevelExtItem(
                     }"
                 )
             }
-            val callArgs = scriptParams.map { it.name }.joinToString(", ")
+            val callArgs = scriptParams.joinToString(", ") { "${it.name} = ${it.name}" }
             // Note: for hasExtensionReceiver, selfArg is "" (set in buildFileLevelExtItem),
             // so joinCallArgs collapses to just callArgs — both branches produce identical output.
             appendLine("${indent}wrapAsRuntimeValue(${fnCallPrefix}$fnName(${withCallInfo(joinCallArgs(selfArg, callArgs))}))")

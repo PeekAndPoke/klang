@@ -77,7 +77,7 @@ fun SprudelPattern.firstOf(n: PatternLike, transform: PatternMapperFn, callInfo:
 @SprudelDsl
 @KlangScript.Function
 fun String.firstOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().firstOf(n, transform, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).firstOf(n, transform, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies [transform] on the **first** cycle of every [n] cycles.
@@ -158,7 +158,7 @@ fun SprudelPattern.every(n: PatternLike, transform: PatternMapperFn, callInfo: C
 @SprudelDsl
 @KlangScript.Function
 fun String.every(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().every(n, transform, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).every(n, transform, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies [transform] on the **first** cycle of every [n] cycles.
@@ -258,7 +258,7 @@ fun SprudelPattern.lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: 
 @SprudelDsl
 @KlangScript.Function
 fun String.lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().lastOf(n, transform, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lastOf(n, transform, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies [transform] on the **last** cycle of every [n] cycles.
@@ -374,7 +374,7 @@ fun SprudelPattern.`when`(condition: PatternLike, transform: PatternMapperFn, ca
 @SprudelDsl
 @KlangScript.Function
 fun String.`when`(condition: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().`when`(condition, transform, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).`when`(condition, transform, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that conditionally applies [transform] to events where [condition] is truthy.

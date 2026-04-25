@@ -105,7 +105,7 @@ fun SprudelPattern.reverb(params: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.reverb(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().reverb(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).reverb(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all reverb parameters.
@@ -214,7 +214,7 @@ fun SprudelPattern.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().lpadsr(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).lpadsr(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all LPF envelope parameters.
@@ -309,7 +309,7 @@ fun SprudelPattern.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().hpadsr(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).hpadsr(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all HPF envelope parameters.
@@ -404,7 +404,7 @@ fun SprudelPattern.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().bpadsr(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bpadsr(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all BPF envelope parameters.
@@ -515,7 +515,7 @@ fun SprudelPattern.tremolo(params: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().tremolo(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).tremolo(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all tremolo parameters.
@@ -618,7 +618,7 @@ fun SprudelPattern.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfadsr(params, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfadsr(params, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets all notch filter envelope parameters.

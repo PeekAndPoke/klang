@@ -61,7 +61,7 @@ fun SprudelPattern.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.vowel(vowel: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().vowel(vowel, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vowel(vowel, callInfo)
 
 /** Returns a [PatternMapperFn] that sets the vowel formant filter. */
 @SprudelDsl

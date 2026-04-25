@@ -68,7 +68,7 @@ fun SprudelPattern.engine(name: PatternLike, callInfo: CallInfo? = null): Sprude
 @SprudelDsl
 @KlangScript.Function
 fun String.engine(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().engine(name, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).engine(name, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that selects the voice pipeline engine.

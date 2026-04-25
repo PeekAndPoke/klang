@@ -1426,8 +1426,9 @@ fun PatternMapperFn.shuffle(n: PatternLike): PatternMapperFn = this._shuffle(lis
 internal val _scramble by dslPatternMapper { args, callInfo -> { p -> p._scramble(args, callInfo) } }
 internal val SprudelPattern._scramble by dslPatternExtension { p, args, /* callInfo */ _ ->
     val nArg: SprudelDslArg<Any?> = args.getOrNull(0) ?: SprudelDslArg.of(4)
-    val indices = _irand(listOf(nArg))._segment(nArg)
-    p.bite(nArg, indices)
+    val nValue = nArg.value ?: 4
+    val indices = _irand(listOf(nArg)).segment(nValue)
+    p.bite(nValue, indices)
 }
 internal val String._scramble by dslStringExtension { p, args, callInfo -> p._scramble(args, callInfo) }
 internal val PatternMapperFn._scramble by dslPatternMapperExtension { m, args, callInfo ->

@@ -14,11 +14,11 @@ class LangOffSpec : StringSpec({
         val pat = "c e"
         val transform: PatternMapperFn = { it.note("e") }
         dslInterfaceTests(
-            "pattern.off(0.25, fn)" to note(pat).off(0.25, transform),
+            "pattern.off(0.25, fn)" to note(pat).off(0.25, transform = transform),
             "script pattern.off(0.25, fn)" to SprudelPattern.compile("""note("$pat").off(0.25, x => x.note("e"))"""),
-            "string.off(0.25, fn)" to pat.off(0.25, transform),
+            "string.off(0.25, fn)" to pat.off(0.25, transform = transform),
             "script string.off(0.25, fn)" to SprudelPattern.compile(""""$pat".off(0.25, x => x.note("e"))"""),
-            "off(0.25, fn)" to note(pat).apply(off(0.25, transform)),
+            "off(0.25, fn)" to note(pat).apply(off(0.25, transform = transform)),
             "script off(0.25, fn)" to SprudelPattern.compile("""note("$pat").apply(off(0.25, x => x.note("e")))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
@@ -29,7 +29,7 @@ class LangOffSpec : StringSpec({
     "off() layers a time-shifted transformation" {
         // Original at 0.0
         // Delayed at 0.25 (default time) with transformation (note "e")
-        val p = note("c").off(0.25) { it.note("e") }
+        val p = note("c").off(0.25, transform = { it.note("e") })
 
         // Query enough to see the delayed event
         val events = p.queryArc(0.0, 1.0)
@@ -48,7 +48,7 @@ class LangOffSpec : StringSpec({
     }
 
     "off() supports custom delay time" {
-        val subject = note("c").off(0.5) { it }
+        val subject = note("c").off(0.5, transform = { it })
 
         assertSoftly {
 

@@ -14,11 +14,11 @@ class LangApplyNSpec : StringSpec({
         val pat = "a b"
         val transform: PatternMapperFn = { it.fast(2) }
         dslInterfaceTests(
-            "pattern.applyN(2, fn)" to note(pat).applyN(2, transform),
+            "pattern.applyN(2, fn)" to note(pat).applyN(2, transform = transform),
             "script pattern.applyN(2, fn)" to SprudelPattern.compile("""note("$pat").applyN(2, x => x.fast(2))"""),
-            "string.applyN(2, fn)" to pat.applyN(2, transform),
+            "string.applyN(2, fn)" to pat.applyN(2, transform = transform),
             "script string.applyN(2, fn)" to SprudelPattern.compile(""""$pat".applyN(2, x => x.fast(2))"""),
-            "applyN(2, fn)" to note(pat).apply(applyN(2, transform)),
+            "applyN(2, fn)" to note(pat).apply(applyN(2, transform = transform)),
             "script applyN(2, fn)" to SprudelPattern.compile("""note("$pat").apply(applyN(2, x => x.fast(2)))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
@@ -28,7 +28,7 @@ class LangApplyNSpec : StringSpec({
 
     "applyN() applies function n times" {
         // Apply fast(2) three times: fast(2).fast(2).fast(2) = fast(8)
-        val pattern = note("a").applyN(3) { it.fast(2) }
+        val pattern = note("a").applyN(3, transform = { it.fast(2) })
         val events = pattern.queryArc(0.0, 1.0)
 
         // Should have 8 events in one cycle (2^3)
@@ -36,7 +36,7 @@ class LangApplyNSpec : StringSpec({
     }
 
     "applyN() with n=0 returns pattern unchanged" {
-        val pattern = note("a b").applyN(0) { it.fast(2) }
+        val pattern = note("a b").applyN(0, transform = { it.fast(2) })
         val events = pattern.queryArc(0.0, 1.0)
 
         // Should have 2 events (unchanged)
@@ -44,7 +44,7 @@ class LangApplyNSpec : StringSpec({
     }
 
     "applyN() with n=1 applies function once" {
-        val pattern = note("a b").applyN(1) { it.fast(2) }
+        val pattern = note("a b").applyN(1, transform = { it.fast(2) })
         val events = pattern.queryArc(0.0, 1.0)
 
         // Should have 4 events (applied once)
@@ -54,7 +54,7 @@ class LangApplyNSpec : StringSpec({
     "applyN() with rev function" {
         // Apply rev twice should return to original
         val original = note("a b c")
-        val doubled = original.applyN(2) { it.rev() }
+        val doubled = original.applyN(2, transform = { it.rev() })
 
         val originalEvents = original.queryArc(0.0, 1.0).sortedBy { it.part.begin }
         val doubledEvents = doubled.queryArc(0.0, 1.0).sortedBy { it.part.begin }
@@ -68,7 +68,7 @@ class LangApplyNSpec : StringSpec({
 
     "applyN() with control pattern for n" {
         // Use "2 1" as control pattern for n
-        val pattern = seq("1").applyN("2 1") { it.add(1) }
+        val pattern = seq("1").applyN("2 1", transform = { it.add(1) })
         val events = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         // First half: n=2, add(1) twice: 1 + 1 + 1 = 3
@@ -79,7 +79,7 @@ class LangApplyNSpec : StringSpec({
     }
 
     "applyN() works as PatternMapperFn" {
-        val pattern = note("a").apply(applyN(2) { p: SprudelPattern -> p.fast(2) })
+        val pattern = note("a").apply(applyN(2, transform = { p: SprudelPattern -> p.fast(2) }))
         val events = pattern.queryArc(0.0, 1.0)
 
         // Should have 4 events (fast(2) applied twice)
@@ -87,7 +87,7 @@ class LangApplyNSpec : StringSpec({
     }
 
     "applyN() works as string extension" {
-        val pattern = "a b".applyN(2) { it.fast(2) }
+        val pattern = "a b".applyN(2, transform = { it.fast(2) })
         val events = pattern.queryArc(0.0, 1.0)
 
         // Should have 8 events
@@ -103,7 +103,7 @@ class LangApplyNSpec : StringSpec({
     }
 
     "applyN() with slow function" {
-        val pattern = note("a b c d").applyN(2) { it.slow(2) }
+        val pattern = note("a b c d").applyN(2, transform = { it.slow(2) })
         val events = pattern.queryArc(0.0, 1.0)
 
         // slow(2).slow(2) = slow(4)
@@ -113,7 +113,7 @@ class LangApplyNSpec : StringSpec({
     }
 
     "applyN() with different transformations" {
-        val pattern = note("c d e").applyN(2) { it.fast(2) }
+        val pattern = note("c d e").applyN(2, transform = { it.fast(2) })
         val events = pattern.queryArc(0.0, 1.0)
 
         // fast(2) applied twice = fast(4)

@@ -351,6 +351,40 @@ class KlangScriptProcessor(
 
         // Collect imports for annotated classes and file-level functions
         val imports = mutableSetOf<String>()
+
+        /**
+         * Collect imports for every declaration referenced by a function's signature —
+         * return type and parameter types, drilling into type arguments (e.g. generics
+         * and function types like `(SprudelPatternEvent) -> Boolean`). This ensures
+         * cast sites like `as ((SprudelPatternEvent) -> Boolean)` compile without
+         * needing to list every type manually.
+         */
+        // Types that are always imported at the top — don't re-add them.
+        val alreadyImported = setOf(
+            "io.peekandpoke.klang.script.ast.CallInfo",
+        )
+
+        fun collectTypeImports(fn: KSFunctionDeclaration) {
+            fun addFromType(type: KSType?) {
+                if (type == null) return
+                val decl = type.declaration
+                // Skip kotlin.* built-ins; they don't need imports.
+                val qn = decl.qualifiedName?.asString()
+                if (qn != null &&
+                    !qn.startsWith("kotlin.") &&
+                    !qn.startsWith("java.lang.") &&
+                    qn !in alreadyImported
+                ) {
+                    imports.add(qn)
+                }
+                // Recurse into type arguments (covers generics and function types).
+                type.arguments.forEach { arg -> addFromType(arg.type?.resolve()) }
+            }
+            fn.returnType?.resolve()?.let { addFromType(it) }
+            fn.extensionReceiver?.resolve()?.let { addFromType(it) }
+            fn.parameters.forEach { p -> addFromType(p.type.resolve()) }
+        }
+
         entries.objects.forEach { obj ->
             obj.cls.qualifiedName?.asString()?.let { imports.add(it) }
         }
@@ -374,19 +408,15 @@ class KlangScriptProcessor(
                         firstParamType.declaration.qualifiedName?.asString()?.let { imports.add(it) }
                     }
                 }
+                collectTypeImports(method.fn)
             }
         }
         entries.functions.forEach { fn ->
             fn.fn.qualifiedName?.asString()?.let { imports.add(it) }
+            collectTypeImports(fn.fn)
         }
         imports.sorted().forEach { appendLine("import ${escapeQualifiedNameKeywords(it)}") }
         if (imports.isNotEmpty()) appendLine()
-
-        // === Registration function ===
-        appendLine("/**")
-        appendLine(" * Registers all @KlangScript annotated symbols for the '$libraryName' library.")
-        appendLine(" */")
-        appendLine("fun KlangScriptExtensionBuilder.register${capitalizedName}Generated() {")
 
         // ── Duplicate (name, receiver) collision check ───────────────────────
         // Prevents silently overwriting a registration when two annotated
@@ -429,25 +459,35 @@ class KlangScriptProcessor(
         }
 
         // ── Pass 2: Build RegistrationItems and render ────────────────────
+        //
+        // The JVM has a 64KB limit per method. For large libraries (e.g. sprudel),
+        // the full registration body overflows that limit when emitted as a single
+        // function. Collect each logical block (object / type extension / top-level
+        // function) as its own rendered snippet, then distribute snippets across
+        // helper chunks so no individual helper method exceeds the limit.
+        val registrationBlocks = mutableListOf<String>()
 
         // Objects
         for (obj in entries.objects) {
             val normalMethods = obj.methods.filter { !isRawArgsMethod(it.fn) }
             val rawArgsMethods = obj.methods.filter { isRawArgsMethod(it.fn) }
 
-            appendLine()
-            appendLine("    // @Object(\"${obj.name}\") on ${obj.cls.simpleName.asString()}")
-            appendLine("    registerObject(\"${obj.name}\", ${obj.cls.simpleName.asString()}) {")
-            for (method in normalMethods) {
-                val item = buildMethodItem(method, obj.cls, isTypeExtension = false)
-                appendLine(item.renderRegistration().prependIndent("        "))
-            }
-            appendLine("    }")
+            val block = buildString {
+                appendLine()
+                appendLine("    // @Object(\"${obj.name}\") on ${obj.cls.simpleName.asString()}")
+                appendLine("    registerObject(\"${obj.name}\", ${obj.cls.simpleName.asString()}) {")
+                for (method in normalMethods) {
+                    val item = buildMethodItem(method, obj.cls, isTypeExtension = false)
+                    appendLine(item.renderRegistration().prependIndent("        "))
+                }
+                appendLine("    }")
 
-            for (method in rawArgsMethods) {
-                val item = buildRawArgsItem(method, obj.cls)
-                appendLine(item.renderRegistration().prependIndent("    "))
+                for (method in rawArgsMethods) {
+                    val item = buildRawArgsItem(method, obj.cls)
+                    appendLine(item.renderRegistration().prependIndent("    "))
+                }
             }
+            registrationBlocks.add(block)
         }
 
         // Type extensions
@@ -455,30 +495,72 @@ class KlangScriptProcessor(
             val typeName = ext.typeDecl.simpleName.asString()
             val allFileLevelMethods = ext.methods.all { it.fn.parentDeclaration !is KSClassDeclaration }
 
-            appendLine()
-            appendLine("    // @TypeExtensions($typeName::class) on ${ext.cls.simpleName.asString()}")
+            val block = buildString {
+                appendLine()
+                appendLine("    // @TypeExtensions($typeName::class) on ${ext.cls.simpleName.asString()}")
 
-            if (allFileLevelMethods) {
-                for (method in ext.methods) {
-                    val item = buildFileLevelExtItem(method, ext.typeDecl)
-                    appendLine(item.renderRegistration().prependIndent("    "))
+                if (allFileLevelMethods) {
+                    for (method in ext.methods) {
+                        val item = buildFileLevelExtItem(method, ext.typeDecl)
+                        appendLine(item.renderRegistration().prependIndent("    "))
+                    }
+                } else {
+                    appendLine("    registerType<$typeName> {")
+                    for (method in ext.methods) {
+                        val item = buildMethodItem(method, ext.cls, isTypeExtension = true)
+                        appendLine(item.renderRegistration().prependIndent("        "))
+                    }
+                    appendLine("    }")
                 }
-            } else {
-                appendLine("    registerType<$typeName> {")
-                for (method in ext.methods) {
-                    val item = buildMethodItem(method, ext.cls, isTypeExtension = true)
-                    appendLine(item.renderRegistration().prependIndent("        "))
-                }
-                appendLine("    }")
             }
+            registrationBlocks.add(block)
         }
 
         // Top-level functions
         for (fn in entries.functions) {
+            val block = buildString {
+                appendLine()
+                appendLine("    // @Function on ${fn.fn.simpleName.asString()}")
+                val item = buildTopLevelFunctionItem(fn)
+                appendLine(item.renderRegistration().prependIndent("    "))
+            }
+            registrationBlocks.add(block)
+        }
+
+        // Distribute blocks across chunks, keeping each chunk's body under a conservative
+        // byte budget that translates to well under the JVM 64KB method-code limit.
+        // Source size is a loose proxy for bytecode size; 20_000 chars per chunk keeps
+        // headroom for generics, when-dispatch, and indentation overhead.
+        val chunkSizeCharsBudget = 20_000
+        val chunks = mutableListOf<MutableList<String>>()
+        var currentChunk = mutableListOf<String>()
+        var currentSize = 0
+        for (block in registrationBlocks) {
+            if (currentSize + block.length > chunkSizeCharsBudget && currentChunk.isNotEmpty()) {
+                chunks.add(currentChunk)
+                currentChunk = mutableListOf()
+                currentSize = 0
+            }
+            currentChunk.add(block)
+            currentSize += block.length
+        }
+        if (currentChunk.isNotEmpty()) chunks.add(currentChunk)
+
+        // Emit each chunk as a private helper function.
+        chunks.forEachIndexed { idx, chunkBlocks ->
+            appendLine("private fun KlangScriptExtensionBuilder.register${capitalizedName}GeneratedChunk$idx() {")
+            chunkBlocks.forEach { append(it) }
+            appendLine("}")
             appendLine()
-            appendLine("    // @Function on ${fn.fn.simpleName.asString()}")
-            val item = buildTopLevelFunctionItem(fn)
-            appendLine(item.renderRegistration().prependIndent("    "))
+        }
+
+        // === Main registration function — delegates to chunk helpers ===
+        appendLine("/**")
+        appendLine(" * Registers all @KlangScript annotated symbols for the '$libraryName' library.")
+        appendLine(" */")
+        appendLine("fun KlangScriptExtensionBuilder.register${capitalizedName}Generated() {")
+        chunks.forEachIndexed { idx, _ ->
+            appendLine("    register${capitalizedName}GeneratedChunk$idx()")
         }
 
         // Auto-register docs when called from a library builder
@@ -518,9 +600,9 @@ class KlangScriptProcessor(
         // Vararg → legacy helper
         if (isVararg) {
             val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
-            val returnType = resolveKotlinType(fn.returnType?.resolve())
+            val returnType = resolveCastType(fn.returnType?.resolve())
             val fnCall =
-                "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}(${selfArg}*args.toTypedArray()${if (hasCallInfo) ", callInfo" else ""})"
+                "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}(${selfArg}*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
             return VarargItem(
                 scriptName = method.name,
                 specsExpr = specsExpr,
@@ -569,7 +651,12 @@ class KlangScriptProcessor(
         val params = scriptParams.map { p ->
             (p.name?.asString() ?: "p") to resolveCastType(p.type.resolve())
         }
-        val callArgsStr = scriptParams.map { it.name?.asString() ?: "p" }.joinToString(", ")
+        // Use named-arg syntax so Kotlin parameter order can differ from script
+        // order (e.g. callInfo in the middle) without generated code caring.
+        val callArgsStr = scriptParams.joinToString(", ") { p ->
+            val name = p.name?.asString() ?: "p"
+            "$name = $name"
+        }
         val fullCallArgs = if (isTypeExtension) {
             if (callArgsStr.isEmpty()) "this" else "this, $callArgsStr"
         } else callArgsStr
@@ -600,7 +687,7 @@ class KlangScriptProcessor(
         )
     }
 
-    private fun buildFileLevelExtItem(method: MethodEntry, typeDecl: KSClassDeclaration): FileLevelExtItem {
+    private fun buildFileLevelExtItem(method: MethodEntry, typeDecl: KSClassDeclaration): RegistrationItem {
         val fn = method.fn
         val allParams = getScriptParams(fn)
         val typeName = typeDecl.simpleName.asString()
@@ -613,6 +700,64 @@ class KlangScriptProcessor(
 
         val specsExpr = paramSpecsListExpression(scriptParams)
         val hasDefaults = scriptParams.any { it.hasDefault }
+        val hasCallInfo = hasCallInfoParam(fn)
+        val isVararg = scriptParams.any { it.isVararg }
+
+        // Vararg file-level extension → legacy helper (same as non-file-level ext).
+        // The arity-dispatch path below can't handle vararg params cleanly because
+        // named-arg calls to varargs are prohibited unless using spread syntax.
+        if (isVararg) {
+            val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
+            val returnType = resolveCastType(fn.returnType?.resolve())
+            // File-level ext has an explicit receiver param that we need to pass through.
+            val selfArgForVararg = if (hasExtensionReceiver) "typedReceiver." else ""
+            val fnCall = if (hasExtensionReceiver) {
+                "${selfArgForVararg}$fnName(*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
+            } else {
+                "$fnName(typedReceiver, *args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
+            }
+            // For the `cls =` argument of convertArgToKotlin we must pass a KClass,
+            // but function types like `(SprudelPattern) -> SprudelPattern` can't use
+            // `::class`. In that case pass `Function1::class` and let the unchecked
+            // cast on the list give the structural type.
+            val clsForConvert = varargClsLiteral(scriptParams.first { it.isVararg }.type.resolve())
+
+            // Render inline as a raw block — VarargItem is top-level-shaped
+            // (registerVarargFunction*) and doesn't support the file-level
+            // receiver cast path.
+            val rendered = buildString {
+                appendLine("registerExtensionMethodWithSpecs(")
+                appendLine("    receiver = $typeName::class,")
+                appendLine("    name = \"${method.name}\",")
+                appendLine("    paramSpecs = emptyList(),")
+                appendLine(") { receiver, args, loc ->")
+                appendLine("    @Suppress(\"UNCHECKED_CAST\")")
+                val recvType = if (hasExtensionReceiver) {
+                    fn.extensionReceiver?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
+                } else {
+                    fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
+                } ?: "Any"
+                appendLine("    val typedReceiver = wrapAsRuntimeValue(receiver).convertToKotlin($recvType::class, loc)")
+                if (hasCallInfo) {
+                    appendLine("    val callInfo = CallInfo(")
+                    appendLine("        callLocation = loc,")
+                    appendLine("        receiverLocation = (receiver as? StringValue)?.location ?: (receiver as? NumberValue)?.location,")
+                    appendLine("        paramLocations = args.map { arg -> (arg as? StringValue)?.location ?: (arg as? NumberValue)?.location },")
+                    appendLine("    )")
+                }
+                appendLine("    val kotlinArgs = List(args.size) { index ->")
+                appendLine("        convertArgToKotlin(fn = \"${method.name}\", args = args, index = index, cls = $clsForConvert, nullable = true, loc = loc)")
+                appendLine("    } as List<$paramType>")
+                val callExpr = if (hasExtensionReceiver) {
+                    "typedReceiver.$fnName(*kotlinArgs.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
+                } else {
+                    "$fnName(typedReceiver, *kotlinArgs.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
+                }
+                appendLine("    wrapAsRuntimeValue($callExpr)")
+                append("}")
+            }
+            return RawBlockItem(scriptName = method.name, specsExpr = "emptyList()", rendered = rendered)
+        }
 
         val receiverTypeName = if (hasExtensionReceiver) {
             fn.extensionReceiver?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
@@ -665,8 +810,8 @@ class KlangScriptProcessor(
         // Vararg → legacy
         if (isVararg) {
             val paramType = getVarargComponentType(params.first { it.isVararg })
-            val returnType = resolveKotlinType(fn.returnType?.resolve())
-            val fnCall = "$fnName(*args.toTypedArray()${if (hasCallInfo) ", callInfo" else ""})"
+            val returnType = resolveCastType(fn.returnType?.resolve())
+            val fnCall = "$fnName(*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
             return VarargItem(
                 scriptName = entry.name,
                 specsExpr = specsExpr,
@@ -708,7 +853,12 @@ class KlangScriptProcessor(
         val paramPairs = params.map { p ->
             (p.name?.asString() ?: "p") to resolveCastType(p.type.resolve())
         }
-        val callArgs = params.map { it.name?.asString() ?: "p" }.joinToString(", ")
+        // Use named-arg syntax so Kotlin parameter order can differ from script
+        // order (e.g. callInfo in the middle) without generated code caring.
+        val callArgs = params.joinToString(", ") { p ->
+            val name = p.name?.asString() ?: "p"
+            "$name = $name"
+        }
 
         return FixedMethodItem(
             scriptName = entry.name,
@@ -980,29 +1130,36 @@ class KlangScriptProcessor(
             }
         }
 
-        val lastParam = params.last()
-        val lastType = lastParam.type.resolve().declaration.simpleName.asString()
-        return if (lastType == CALL_INFO_TYPE) params.dropLast(1) else params
+        // CallInfo can appear anywhere in the parameter list. It is always passed by
+        // the generated registration code via named-arg syntax, so its position is
+        // flexible. This is useful for putting a trailing lambda last while keeping
+        // callInfo optional in the middle.
+        return params.filter { it.type.resolve().declaration.simpleName.asString() != CALL_INFO_TYPE }
     }
 
     private fun hasCallInfoParam(fn: KSFunctionDeclaration): Boolean {
         val params = fn.parameters
         if (params.isEmpty()) return false
-
-        // Validate: CallInfo must be last
-        params.forEachIndexed { index, param ->
-            val typeName = param.type.resolve().declaration.simpleName.asString()
-            if (typeName == CALL_INFO_TYPE && index != params.lastIndex) {
-                logger.error("CallInfo must be the last parameter", fn)
-            }
-        }
-
-        return params.last().type.resolve().declaration.simpleName.asString() == CALL_INFO_TYPE
+        return params.any { it.type.resolve().declaration.simpleName.asString() == CALL_INFO_TYPE }
     }
 
     private fun getVarargComponentType(param: KSValueParameter): String {
         val type = param.type.resolve()
-        return resolveKotlinType(type)
+        return resolveCastType(type)
+    }
+
+    /**
+     * Build the `cls = ...` literal for convertArgToKotlin when a vararg param
+     * carries a function type (e.g. PatternMapperFn = (SprudelPattern) ->
+     * SprudelPattern). `::class` isn't valid on a function type, so we fall back
+     * to `FunctionN::class` and the downstream list cast gives the real structure.
+     */
+    private fun varargClsLiteral(type: KSType): String {
+        val effective = type.resolveAlias()
+        val simpleName = effective.declaration.simpleName.asString()
+        val isFunctionType = simpleName.startsWith("Function") &&
+                simpleName.removePrefix("Function").toIntOrNull() != null
+        return if (isFunctionType) "$simpleName::class" else "$simpleName::class"
     }
 
     /**

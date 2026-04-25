@@ -125,7 +125,7 @@ fun SprudelPattern.scale(name: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.scale(name: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().scale(name, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).scale(name, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the scale context for resolving note indices.
@@ -160,7 +160,7 @@ private val noteMutation = voiceModifier { input ->
     } ?: this
 }
 
-fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
         source.reinterpretVoice {
             it.resolveNote().copy(soundIndex = null, value = null)
@@ -173,13 +173,6 @@ fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelP
         }
     }
 }
-
-
-internal val _note by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(noteMutation).note() }
-
-internal val SprudelPattern._note by dslPatternExtension { p, args, /* callInfo */ _ -> applyNote(p, args) }
-
-internal val String._note by dslStringExtension { p, args, callInfo -> p._note(args, callInfo) }
 
 /**
  * Creates a pattern of musical notes from a mini-notation string or sequence of note names.
@@ -201,19 +194,21 @@ internal val String._note by dslStringExtension { p, args, callInfo -> p._note(a
  * @tags note, pitch, frequency, MIDI, note name, pattern-creator
  */
 @SprudelDsl
-fun note(vararg note: PatternLike): SprudelPattern = _note(note.toList().asSprudelDslArgs())
-
-/** Reinterprets the current value of this pattern as a note name. */
-@SprudelDsl
-fun SprudelPattern.note(): SprudelPattern = this._note(emptyList())
+@KlangScript.Function
+fun note(vararg note: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    note.toList().asSprudelDslArgs(callInfo).toPattern(noteMutation).note(callInfo = callInfo)
 
 /** Applies note values from arguments (or reinterprets current value as a note name). */
 @SprudelDsl
-fun SprudelPattern.note(noteName: PatternLike): SprudelPattern = this._note(listOf(noteName).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.note(noteName: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyNote(this, listOfNotNull(noteName).asSprudelDslArgs(callInfo))
 
 /** Applies note values to a string pattern. */
 @SprudelDsl
-fun String.note(noteName: PatternLike): SprudelPattern = this._note(listOf(noteName).asSprudelDslArgs())
+@KlangScript.Function
+fun String.note(noteName: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).note(noteName, callInfo)
 
 // -- n() --------------------------------------------------------------------------------------------------------------
 
@@ -224,7 +219,7 @@ private val nMutation = voiceModifier {
     )
 }
 
-fun applyN(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyN(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
         // TODO: test this
         source.reinterpretVoice {
@@ -241,7 +236,6 @@ fun applyN(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPatt
         }
     }
 }
-
 
 /**
  * Sets the sound index on this pattern.
@@ -262,20 +256,16 @@ fun applyN(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPatt
  * @category tonal
  * @tags n, note number, sample index, pitch index, pattern-creator
  */
-internal val _n by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(nMutation).n() }
-
-internal val SprudelPattern._n by dslPatternExtension { p, args, /* callInfo */ _ -> applyN(p, args) }
-
-internal val String._n by dslStringExtension { p, args, callInfo -> p._n(args, callInfo) }
-
 @SprudelDsl
-fun SprudelPattern.n(index: PatternLike? = null): SprudelPattern =
-    this._n(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.n(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyN(this, listOfNotNull(index).asSprudelDslArgs(callInfo))
 
 /** Sets the sound index on this string pattern. */
 @SprudelDsl
-fun String.n(index: PatternLike? = null): SprudelPattern =
-    this._n(listOfNotNull(index).asSprudelDslArgs())
+@KlangScript.Function
+fun String.n(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).n(index, callInfo)
 
 /**
  * Creates a pattern of sound indices.
@@ -284,7 +274,9 @@ fun String.n(index: PatternLike? = null): SprudelPattern =
  * @param-tool index SprudelScaleDegreeEditor
  */
 @SprudelDsl
-fun n(index: PatternLike): SprudelPattern = _n(listOf(index).asSprudelDslArgs())
+@KlangScript.Function
+fun n(index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    listOf(index).asSprudelDslArgs(callInfo).toPattern(nMutation).n(callInfo = callInfo)
 
 // -- sound() / s() ----------------------------------------------------------------------------------------------------
 
@@ -304,7 +296,7 @@ private val soundMutation = voiceModifier {
     )
 }
 
-fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
         // TODO: test this
         source.reinterpretVoice {
@@ -319,19 +311,6 @@ fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprudel
         }
     }
 }
-
-
-internal val SprudelPattern._sound by dslPatternExtension { p, args, /* callInfo */ _ -> applySound(p, args) }
-
-internal val _sound by dslPatternFunction { args, /* callInfo */ _ -> args.toPattern(soundMutation).sound() }
-
-internal val String._sound by dslStringExtension { p, args, callInfo -> p._sound(args, callInfo) }
-
-internal val SprudelPattern._s by dslPatternExtension { p, args, callInfo -> p._sound(args, callInfo) }
-
-internal val _s by dslPatternFunction { args, callInfo -> _sound(args, callInfo) }
-
-internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(args, callInfo) }
 
 /**
  * Creates a pattern selecting a sound (instrument or sample bank) by name.
@@ -361,8 +340,9 @@ internal val String._s by dslStringExtension { p, args, callInfo -> p._sound(arg
  * @tags sound, sample, instrument, s, pattern-creator
  */
 @SprudelDsl
-fun SprudelPattern.sound(name: PatternLike? = null): SprudelPattern =
-    this._sound(listOfNotNull(name).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.sound(name: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applySound(this, listOfNotNull(name).asSprudelDslArgs(callInfo))
 
 /**
  * Modifies or reinterprets the sounds of a string pattern.
@@ -373,8 +353,9 @@ fun SprudelPattern.sound(name: PatternLike? = null): SprudelPattern =
  * @tags sound, sample, instrument, s, pattern-creator
  */
 @SprudelDsl
-fun String.sound(name: PatternLike? = null): SprudelPattern =
-    this._sound(listOfNotNull(name).asSprudelDslArgs())
+@KlangScript.Function
+fun String.sound(name: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sound(name, callInfo)
 
 /**
  * Creates a pattern of sounds.
@@ -383,7 +364,9 @@ fun String.sound(name: PatternLike? = null): SprudelPattern =
  * @param-tool name SprudelSampleSequenceEditor
  */
 @SprudelDsl
-fun sound(name: PatternLike): SprudelPattern = _sound(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun sound(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    listOf(name).asSprudelDslArgs(callInfo).toPattern(soundMutation).sound(callInfo = callInfo)
 
 /** Alias for [sound]. Creates a pattern selecting a sound (instrument or sample bank) by name.
  *
@@ -408,13 +391,15 @@ fun sound(name: PatternLike): SprudelPattern = _sound(listOf(name).asSprudelDslA
  * @tags sound, sample, instrument, s, pattern-creator
  */
 @SprudelDsl
-fun SprudelPattern.s(name: PatternLike? = null): SprudelPattern =
-    this._s(listOfNotNull(name).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.s(name: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.sound(name, callInfo)
 
 /** Alias for [sound] on a string pattern. */
 @SprudelDsl
-fun String.s(name: PatternLike? = null): SprudelPattern =
-    this._s(listOfNotNull(name).asSprudelDslArgs())
+@KlangScript.Function
+fun String.s(name: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).s(name, callInfo)
 
 /**
  * Alias for [sound]. Creates a sound pattern.
@@ -423,7 +408,9 @@ fun String.s(name: PatternLike? = null): SprudelPattern =
  * @param-tool name SprudelSampleSequenceEditor
  */
 @SprudelDsl
-fun s(name: PatternLike): SprudelPattern = _s(listOf(name).asSprudelDslArgs())
+@KlangScript.Function
+fun s(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    sound(name, callInfo)
 
 // -- bank() -----------------------------------------------------------------------------------------------------------
 
@@ -461,7 +448,7 @@ fun SprudelPattern.bank(name: PatternLike? = null, callInfo: CallInfo? = null): 
 @SprudelDsl
 @KlangScript.Function
 fun String.bank(name: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().bank(name, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).bank(name, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sample bank for each event.
@@ -523,7 +510,7 @@ fun SprudelPattern.legato(amount: PatternLike? = null, callInfo: CallInfo? = nul
 @SprudelDsl
 @KlangScript.Function
 fun String.legato(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().legato(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).legato(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the legato factor for each event.
@@ -558,7 +545,7 @@ fun SprudelPattern.clip(amount: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.clip(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().legato(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).legato(amount, callInfo)
 
 /**
  * Alias for [legato]. Returns a [PatternMapperFn] that sets the legato factor for each event.
@@ -623,7 +610,7 @@ fun SprudelPattern.vibrato(hz: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.vibrato(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().vibrato(hz, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(hz, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the vibrato frequency in Hz.
@@ -658,7 +645,7 @@ fun SprudelPattern.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): Spr
 @SprudelDsl
 @KlangScript.Function
 fun String.vib(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().vibrato(hz, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vibrato(hz, callInfo)
 
 /**
  * Alias for [vibrato]. Returns a [PatternMapperFn] that sets the vibrato frequency in Hz.
@@ -722,7 +709,7 @@ fun SprudelPattern.vibratoMod(depth: PatternLike? = null, callInfo: CallInfo? = 
 @SprudelDsl
 @KlangScript.Function
 fun String.vibratoMod(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().vibratoMod(depth, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vibratoMod(depth, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the vibrato depth in semitones.
@@ -757,7 +744,7 @@ fun SprudelPattern.vibmod(depth: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.vibmod(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().vibratoMod(depth, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).vibratoMod(depth, callInfo)
 
 /**
  * Alias for [vibratoMod]. Returns a [PatternMapperFn] that sets the vibrato depth.
@@ -818,7 +805,7 @@ fun SprudelPattern.pattack(seconds: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.pattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().pattack(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pattack(seconds, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope attack time.
@@ -852,7 +839,7 @@ fun SprudelPattern.patt(seconds: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.patt(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().pattack(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pattack(seconds, callInfo)
 
 /** Alias for [pattack]. Returns a [PatternMapperFn] that sets the pitch envelope attack time. */
 @SprudelDsl
@@ -903,7 +890,7 @@ fun SprudelPattern.pdecay(seconds: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.pdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().pdecay(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pdecay(seconds, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope decay time.
@@ -937,7 +924,7 @@ fun SprudelPattern.pdec(seconds: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.pdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().pdecay(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pdecay(seconds, callInfo)
 
 /** Alias for [pdecay]. Returns a [PatternMapperFn] that sets the pitch envelope decay time. */
 @SprudelDsl
@@ -987,7 +974,7 @@ fun SprudelPattern.prelease(seconds: PatternLike? = null, callInfo: CallInfo? = 
 @SprudelDsl
 @KlangScript.Function
 fun String.prelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().prelease(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).prelease(seconds, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope release time.
@@ -1021,7 +1008,7 @@ fun SprudelPattern.prel(seconds: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.prel(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().prelease(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).prelease(seconds, callInfo)
 
 /** Alias for [prelease]. Returns a [PatternMapperFn] that sets the pitch envelope release time. */
 @SprudelDsl
@@ -1072,7 +1059,7 @@ fun SprudelPattern.penv(semitones: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.penv(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().penv(semitones, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).penv(semitones, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope depth in semitones.
@@ -1106,7 +1093,7 @@ fun SprudelPattern.pamt(semitones: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.pamt(semitones: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().penv(semitones, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).penv(semitones, callInfo)
 
 /** Alias for [penv]. Returns a [PatternMapperFn] that sets the pitch envelope depth. */
 @SprudelDsl
@@ -1156,7 +1143,7 @@ fun SprudelPattern.pcurve(curve: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.pcurve(curve: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().pcurve(curve, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pcurve(curve, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope curve shape.
@@ -1190,7 +1177,7 @@ fun SprudelPattern.pcrv(curve: PatternLike? = null, callInfo: CallInfo? = null):
 @SprudelDsl
 @KlangScript.Function
 fun String.pcrv(curve: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().pcurve(curve, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pcurve(curve, callInfo)
 
 /** Alias for [pcurve]. Returns a [PatternMapperFn] that sets the pitch envelope curve shape. */
 @SprudelDsl
@@ -1240,7 +1227,7 @@ fun SprudelPattern.panchor(anchor: PatternLike? = null, callInfo: CallInfo? = nu
 @SprudelDsl
 @KlangScript.Function
 fun String.panchor(anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().panchor(anchor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).panchor(anchor, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the pitch envelope anchor point.
@@ -1274,7 +1261,7 @@ fun SprudelPattern.panc(anchor: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.panc(anchor: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().panchor(anchor, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).panchor(anchor, callInfo)
 
 /** Alias for [panchor]. Returns a [PatternMapperFn] that sets the pitch envelope anchor point. */
 @SprudelDsl
@@ -1326,7 +1313,7 @@ fun SprudelPattern.accelerate(amount: PatternLike? = null, callInfo: CallInfo? =
 @SprudelDsl
 @KlangScript.Function
 fun String.accelerate(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().accelerate(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).accelerate(amount, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the playback acceleration (pitch ramp).
@@ -1484,7 +1471,7 @@ fun SprudelPattern.transpose(amount: PatternLike, callInfo: CallInfo? = null): S
 @SprudelDsl
 @KlangScript.Function
 fun String.transpose(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().transpose(amount, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).transpose(amount, callInfo)
 
 /** Returns a [PatternMapperFn] that transposes each event by the given semitones or interval name. */
 @SprudelDsl
@@ -1539,7 +1526,7 @@ fun SprudelPattern.freq(hz: PatternLike? = null, callInfo: CallInfo? = null): Sp
 @SprudelDsl
 @KlangScript.Function
 fun String.freq(hz: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().freq(hz, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).freq(hz, callInfo)
 
 /** Chains a freq step onto this [PatternMapperFn]. */
 @SprudelDsl
@@ -1661,7 +1648,7 @@ fun SprudelPattern.scaleTranspose(steps: PatternLike, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.scaleTranspose(steps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().scaleTranspose(steps, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).scaleTranspose(steps, callInfo)
 
 /** Returns a [PatternMapperFn] that transposes each event by the given number of scale degrees. */
 @SprudelDsl
@@ -1741,7 +1728,7 @@ fun SprudelPattern.chord(name: PatternLike, callInfo: CallInfo? = null): Sprudel
 @SprudelDsl
 @KlangScript.Function
 fun String.chord(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().chord(name, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).chord(name, callInfo)
 
 // -- rootNotes() ------------------------------------------------------------------------------------------------------
 
@@ -1822,7 +1809,7 @@ fun SprudelPattern.rootNotes(octave: PatternLike? = null, callInfo: CallInfo? = 
 @SprudelDsl
 @KlangScript.Function
 fun String.rootNotes(octave: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().rootNotes(octave, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).rootNotes(octave, callInfo)
 
 /** Returns a [PatternMapperFn] that extracts root notes from chord events, forcing to the given octave. */
 @SprudelDsl
@@ -1984,12 +1971,12 @@ fun SprudelPattern.voicing(low: String, high: String, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.voicing(callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().voicing(callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).voicing(callInfo)
 
 /** Expands chord events in a string pattern into voiced notes within the given range. */
 @SprudelDsl
 fun String.voicing(low: String, high: String, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().voicing(low, high, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).voicing(low, high, callInfo)
 
 /** Returns a [PatternMapperFn] that applies voicing to chord events. */
 @SprudelDsl

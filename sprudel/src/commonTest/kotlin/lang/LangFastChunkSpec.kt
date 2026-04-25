@@ -10,8 +10,8 @@ import io.peekandpoke.klang.sprudel.EPSILON
 
 class LangFastChunkSpec : StringSpec({
 
-    "seq(\"0 1 2 3\").fastChunk(4) { it.add(10) } doesn't repeat pattern" {
-        val subject = seq("0 1 2 3").fastChunk(4) { it.add(10) }
+    "seq(\"0 1 2 3\").fastChunk(4, transform = { it.add(10) }) doesn't repeat pattern" {
+        val subject = seq("0 1 2 3").fastChunk(4, transform = { it.add(10) })
 
         assertSoftly {
             repeat(12) { cycle ->
@@ -85,8 +85,8 @@ class LangFastChunkSpec : StringSpec({
         }
     }
 
-    "s(\"bd sd\").fastChunk(2) { it.gain(0.8) } works with sound patterns" {
-        val subject = s("bd sd").fastChunk(2) { it.gain(0.8) }
+    "s(\"bd sd\").fastChunk(2, transform = { it.gain(0.8) }) works with sound patterns" {
+        val subject = s("bd sd").fastChunk(2, transform = { it.gain(0.8) })
 
         assertSoftly {
             repeat(12) { cycle ->
@@ -123,8 +123,8 @@ class LangFastChunkSpec : StringSpec({
         }
     }
 
-    "note(\"c4 d4 e4 f4\").fastchunk(4) { it.transpose(12) } lowercase alias works" {
-        val subject = note("c4 d4 e4 f4").fastchunk(4) { it.transpose(12) }
+    "note(\"c4 d4 e4 f4\").fastchunk(4, transform = { it.transpose(12) }) lowercase alias works" {
+        val subject = note("c4 d4 e4 f4").fastchunk(4, transform = { it.transpose(12) })
 
         assertSoftly {
             repeat(12) { cycle ->
@@ -173,8 +173,8 @@ class LangFastChunkSpec : StringSpec({
         }
     }
 
-    "seq(\"<0 5> 1 2\").fastChunk(3) { it.add(10) } with varying pattern" {
-        val subject = seq("<0 5> 1 2").fastChunk(3) { it.add(10) }
+    "seq(\"<0 5> 1 2\").fastChunk(3, transform = { it.add(10) }) with varying pattern" {
+        val subject = seq("<0 5> 1 2").fastChunk(3, transform = { it.add(10) })
 
         assertSoftly {
             repeat(12) { cycle ->

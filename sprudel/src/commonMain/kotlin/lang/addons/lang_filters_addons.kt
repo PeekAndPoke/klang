@@ -103,7 +103,7 @@ fun SprudelPattern.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.notchf(freq: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().notchf(freq, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).notchf(freq, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a Notch Filter.
@@ -204,7 +204,7 @@ fun SprudelPattern.nresonance(q: PatternLike? = null, callInfo: CallInfo? = null
 @SprudelDsl
 @KlangScript.Function
 fun String.nresonance(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nresonance(q, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nresonance(q, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets notch filter resonance.
@@ -285,7 +285,7 @@ fun SprudelPattern.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): S
 @SprudelDsl
 @KlangScript.Function
 fun String.notchq(q: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().notchq(q, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).notchq(q, callInfo)
 
 /**
  * Alias for [nresonance]. Returns a [PatternMapperFn] that sets notch filter resonance.
@@ -367,7 +367,7 @@ fun SprudelPattern.nfattack(seconds: PatternLike? = null, callInfo: CallInfo? = 
 @SprudelDsl
 @KlangScript.Function
 fun String.nfattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfattack(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfattack(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope attack time. */
 @SprudelDsl
@@ -408,7 +408,7 @@ fun SprudelPattern.nfa(seconds: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.nfa(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfa(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfa(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope attack time (alias for [nfattack]). */
 @SprudelDsl
@@ -460,7 +460,7 @@ fun SprudelPattern.nfdecay(seconds: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.nfdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfdecay(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfdecay(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope decay time. */
 @SprudelDsl
@@ -501,7 +501,7 @@ fun SprudelPattern.nfd(seconds: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.nfd(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfd(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfd(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope decay time (alias for [nfdecay]). */
 @SprudelDsl
@@ -554,7 +554,7 @@ fun SprudelPattern.nfsustain(level: PatternLike? = null, callInfo: CallInfo? = n
 @SprudelDsl
 @KlangScript.Function
 fun String.nfsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfsustain(level, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfsustain(level, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level. */
 @SprudelDsl
@@ -595,7 +595,7 @@ fun SprudelPattern.nfs(level: PatternLike? = null, callInfo: CallInfo? = null): 
 @SprudelDsl
 @KlangScript.Function
 fun String.nfs(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfs(level, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfs(level, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope sustain level (alias for [nfsustain]). */
 @SprudelDsl
@@ -647,7 +647,7 @@ fun SprudelPattern.nfrelease(seconds: PatternLike? = null, callInfo: CallInfo? =
 @SprudelDsl
 @KlangScript.Function
 fun String.nfrelease(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfrelease(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfrelease(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope release time. */
 @SprudelDsl
@@ -688,7 +688,7 @@ fun SprudelPattern.nfr(seconds: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.nfr(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfr(seconds, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfr(seconds, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope release time (alias for [nfrelease]). */
 @SprudelDsl
@@ -761,7 +761,7 @@ fun SprudelPattern.nfenv(depth: PatternLike? = null, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun String.nfenv(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfenv(depth, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfenv(depth, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope depth. */
 @SprudelDsl
@@ -802,7 +802,7 @@ fun SprudelPattern.nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): 
 @SprudelDsl
 @KlangScript.Function
 fun String.nfe(depth: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern().nfe(depth, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).nfe(depth, callInfo)
 
 /** Creates a [PatternMapperFn] that sets the notch filter envelope depth (alias for [nfenv]). */
 @SprudelDsl
