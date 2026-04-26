@@ -6,6 +6,8 @@ import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onMouseEnter
+import io.peekandpoke.ultra.html.onMouseLeave
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.ui
@@ -66,9 +68,12 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
         val backgroundColor: Color?,
     )
 
+    private var isHovered: Boolean by value(false)
+
     override fun VDom.render() {
         val isDisabled = props.disabled
         val iconColor = if (isDisabled) Color.grey else props.color
+        val hovered = isHovered && !isDisabled
 
         div {
             css {
@@ -81,6 +86,8 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
 
             if (!isDisabled) {
                 onClick { props.onClick() }
+                onMouseEnter { isHovered = true }
+                onMouseLeave { isHovered = false }
             }
 
             ui.basic.inverted.white.circular.icon.label {
@@ -107,10 +114,12 @@ class RoundButton(ctx: Ctx<Props>) : Component<RoundButton.Props>(ctx) {
                         fontSize = props.size * 0.5
                         color = iconColor
                         put("padding", "0px !important")
-                        // Glow effect - stronger glow scaled to button size
+                        put("transition", "filter 220ms ease, text-shadow 220ms ease")
+                        // Idle state reads as a dimmed ember; hover lifts to full
+                        // brightness with a wider glow so the button "lights up".
                         if (!isDisabled) {
-                            // Blur radius: 25% of button size for strong glow
-                            val glowBlur = props.size * 0.25
+                            put("filter", if (hovered) "brightness(1.0)" else "brightness(0.65)")
+                            val glowBlur = props.size * if (hovered) 0.32 else 0.25
                             put("text-shadow", "0 0 $glowBlur")
                         }
                     }

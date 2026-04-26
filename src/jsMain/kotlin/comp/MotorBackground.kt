@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.common.math.PerlinNoise2D
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.addons.threejs.ThreeJs
@@ -64,22 +65,30 @@ fun Tag.MotorBackground(
  */
 class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
+    companion object {
+        // Picked once per session so sibling components (e.g. the start-page
+        // power button) can match the eventual background light tint.
+        // laf.bronze (#362820) is a warm overlay-background tone, too dark to
+        // read as a light — substitute a brighter shade in the same hue.
+        val lightColorHex: String by lazy {
+            val brightBronze = "#cd9b6a"
+            val palette = listOf(
+                KlangTheme.Hex.excellent, KlangTheme.Hex.good, KlangTheme.Hex.moderate, KlangTheme.Hex.warning,
+                KlangTheme.Hex.critical, KlangTheme.Hex.gold, brightBronze,
+            )
+            palette.random()
+        }
+    }
+
     ////  ADDON  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private val threeAddon: ThreeJsAddon? by subscribingTo(addons.threeJs)
     private val laf by subscribingTo(KlangTheme)
 
-    /** Picks one accent colour per mount and tints all three lights with it. */
-    private fun pickLightColor(): Int {
-        // laf.bronze (#362820) is a warm overlay-background tone, too dark to read
-        // as a light. Use a brighter shade in the same hue when bronze is rolled.
-        val brightBronze = "#cd9b6a"
-        val palette = listOf(
-            laf.excellent, laf.good, laf.moderate, laf.warning,
-            laf.critical, laf.gold, brightBronze,
-        )
-        return palette.random().removePrefix("#").toInt(16)
-    }
+    /** 2D Perlin source for the brushed-metal grain — fixed seed keeps the texture reproducible. */
+    private val grainNoise = PerlinNoise2D()
+
+    private fun pickLightColor(): Int = lightColorHex.removePrefix("#").toInt(16)
 
     ////  SCENE STATE  ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -102,14 +111,24 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     private var hoverWandering = false
     private var hoverEnvelope = 0.0
 
+    // Lissajous phase that only advances while hovering, so re-entering hover
+    // resumes the pattern instead of jumping based on absolute elapsed time.
+    private var wanderTime = 0.0
+
+    // Position the lissajous rides on top of. Non-zero only when hover
+    // interrupts a scan-return — lets the wander continue from wherever the
+    // light is at that moment, then decays toward 0 so we recenter naturally.
+    private var wanderOriginX = 0.0
+    private var wanderOriginY = 0.0
+
     private val defaultIntensity = 1.62
     private val hoverIntensity = 3.0
     private var targetIntensity = 0.0
 
     // Light "radius" — pulling the light further from the plate widens the
     // illuminated area, so hover reads as the light growing bigger.
-    private val defaultLightZ = 2.5
-    private val hoverLightZ = 2.8
+    private val defaultLightZ = 3.2
+    private val hoverLightZ = 3.6
     private var targetLightZ = defaultLightZ
     private var targetFillIntensity = 0.0
 
@@ -152,6 +171,17 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         targetIntensity = hoverIntensity
         targetLightZ = hoverLightZ
         hoverWandering = true
+        // If a scan-return is in progress, abort it and pick up the wander
+        // from the current light position with full envelope — otherwise the
+        // light first crawls to centre and visibly stalls before the lissajous
+        // ramps up from zero.
+        if (scanning) {
+            scanning = false
+            returning = false
+            wanderOriginX = mouseX
+            wanderOriginY = mouseY
+            hoverEnvelope = 1.0
+        }
     }
 
     /** Reverts the hover effect. Call from the element's mouse-leave. */
@@ -257,7 +287,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
         // Start dark — light turns on when powerOn() is called
         val main = addon.createPointLight(color = lightColor, intensity = 0.0, distance = 0.0, decay = 1.0)
-        main.position.set(0.0, 0.0, 2.5)
+        main.position.set(0.0, 0.0, defaultLightZ)
         ctx.scene.add(main)
         mainLight = main
 
@@ -366,18 +396,24 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
             } else {
                 if (dist < nearThreshold) pickAttractor()
             }
-        } else if (hoverWandering) {
-            // Slow lissajous-like wander while any button is hovered.
-            // Envelope ramps up from 0 so the first move eases in instead of snapping.
-            hoverEnvelope += (1.0 - hoverEnvelope) * 0.015
-            val t = frame.elapsedMs * 0.001
-            targetX = sin(t * 0.4) * 0.35 * hoverEnvelope
-            targetY = cos(t * 0.33) * 0.15 * hoverEnvelope
         } else {
-            // Not scanning, not hovering — envelope and target decay to center.
-            hoverEnvelope *= 0.97
-            targetX *= 0.97
-            targetY *= 0.97
+            // Slow lissajous-like wander while any button is hovered.
+            // Envelope ramps up while hovering, decays while not — driving
+            // targetX/Y from the same formula in both phases keeps state
+            // continuous, so a re-hover during decay resumes wandering smoothly
+            // instead of stalling near the current position.
+            if (hoverWandering) {
+                hoverEnvelope += (1.0 - hoverEnvelope) * 0.015
+                wanderTime += delta * 0.001
+            } else {
+                hoverEnvelope *= 0.97
+            }
+            // Origin offset (set by hoverStart when interrupting a scan-return)
+            // decays so the wander recenters smoothly.
+            wanderOriginX *= 0.97
+            wanderOriginY *= 0.97
+            targetX = wanderOriginX + sin(wanderTime * 0.4) * 0.35 * hoverEnvelope
+            targetY = wanderOriginY + cos(wanderTime * 0.33) * 0.15 * hoverEnvelope
         }
 
         // Smooth position follow
@@ -573,14 +609,14 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
         // Pre-render text as a soft-edged alpha mask — gradient gives engraving normals.
         val engraveMask = buildEngraveMask(width, height)
-        val engraveStrength = 1.6
+        val engraveStrength = 2.5
 
         // Curtain-fold brushed metal — scratches radiate from a focal point far
         // above the canvas. At x = centre they're perfectly vertical, toward the
         // sides they fan out smoothly, giving a hanging-curtain look.
         val cx = width / 2.0
         val focalDist = height.toDouble() * 0.9   // focal point ~1× height above top → strong fan at bottom
-        val scratchDensity = 400.0                 // angular density of scratches
+        val scratchDensity = 300.0                 // angular density of scratches
 
         for (py in 0 until height) {
             val dy = py + focalDist
@@ -607,9 +643,17 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 // the surface has calm and busier regions instead of uniform static.
                 val patchAmp = hashCell(px / 24 + 101, py / 24 + 53)
                 val grainScale = 0.006 + patchAmp * 0.045
-                val grainX = (Random.nextDouble() - 0.5) * grainScale
-                val grainY = (Random.nextDouble() - 0.5) * grainScale
-                val wobble = sin(px * 0.004 + py * 0.3) * 0.02
+                // Smooth Perlin grain instead of per-pixel TV static. Scale
+                // ≈ 0.18 → ~5.5px per noise cell; two uncorrelated samples
+                // drive the X and Y normal offsets. Final * 0.05 = the prior
+                // ±0.5 range scaled down to ~10% of its previous strength.
+                val grainX = grainNoise.noise(px * 0.18, py * 0.18) * grainScale * 0.05
+                val grainY = grainNoise.noise(px * 0.18 + 113.7, py * 0.18 - 91.3) * grainScale * 0.05
+                // Two superposed slow sines with different frequencies break up
+                // the per-row uniformity without reintroducing horizontal bands —
+                // the py coefficients are tiny so the vertical period is far
+                // larger than the texture height.
+                val wobble = (sin(px * 0.004 + py * 0.002) + sin(px * 0.013 - py * 0.001) * 0.6) * 0.006
 
                 // Tilt the normal perpendicular to the local scratch direction.
                 var nx = perpX * brushTilt + grainX + wobble * 0.3
@@ -672,3 +716,4 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         return tex
     }
 }
+
