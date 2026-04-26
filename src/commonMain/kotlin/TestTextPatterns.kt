@@ -72,7 +72,7 @@ stack(                                                                 //////// 
     .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.1)                                       //////// //////// ////////
     .orbit(1).gain(0.65).adsr("0.005:0.2:0.7:0.15").pan(0.3)                                              
     .superimpose(transpose("<0 12 0 -12>/8").pan(0.7)).phaser(1/13).phaserdepth(0.25).phasercenter(3500).phasersweep(1000)                 ////////
-    .detune(sine.range(0.05, 0.45).early(1.5).slow(24)).hpf(120).lpf(3800)                                                                  ////////
+    .detune(sine.range(0.05, 0.45).early(1.5).slow(24)).hpf(120).lpf(4200)                                                                  ////////
     .filterWhen(x => x > 31.4 && x % 64 > 15.4) // .solo()                                                                                   ////////
   ,                                                                                                                                           ////////
   note("<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1 e1] [a1 g#1 b1 c2]] [[d2 d2]!4 [c2 c2]!4] [[b1]!q [g#1]!2 [a1]!3 ~]>")

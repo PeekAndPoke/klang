@@ -427,6 +427,59 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     }
 
     /**
+     * Renders "KLANG AUDIO MOTÖR" with a tilt-back projection so it sits on the
+     * same plane as the brushed-metal scratches (which radiate from a focal point
+     * above). The text is drawn into an off-screen buffer at full size, then
+     * blitted back row-by-row with a horizontal taper (top narrower) and a
+     * vertical compression — the bottom edge stays where the natural baseline
+     * would be, the top tilts away from the viewer.
+     *
+     * Caller is responsible for clip / blur / fillStyle setup on `tctx`.
+     */
+    private fun drawPerspectiveTitleText(
+        tctx: CanvasRenderingContext2D,
+        width: Int,
+        height: Int,
+        fillStyle: String,
+    ) {
+        val fontSize = (height * 0.135).coerceAtLeast(48.0)
+        val textCy = height * 0.18
+
+        // Buffer just tall enough for ascenders / descenders.
+        val bufH = (fontSize * 1.4).toInt().coerceAtLeast(2)
+        val buf = document.createElement("canvas") as HTMLCanvasElement
+        buf.width = width
+        buf.height = bufH
+        val bctx = buf.getContext("2d") as CanvasRenderingContext2D
+        bctx.fillStyle = fillStyle
+        applyTitleTextStyle(bctx, height)
+        bctx.fillText("KLANG AUDIO MOTÖR", width / 2.0, bufH / 2.0)
+
+        // Tilt-back: top tapers (further away) and overall height compresses;
+        // pivot at the bottom edge so the baseline stays put. Tuned to match
+        // the brushed scratches' implied focal point ~1× height above the plate.
+        val topXScale = 0.85
+        val yCompress = 0.87
+        val cx = width / 2.0
+        val scaledBufH = (bufH * yCompress).toInt().coerceAtLeast(2)
+        val outBottomY = textCy + bufH / 2.0
+        val outTopY = outBottomY - scaledBufH
+        for (i in 0 until scaledBufH) {
+            val rowFrac = i.toDouble() / (scaledBufH - 1).toDouble()
+            val xScale = topXScale + (1.0 - topXScale) * rowFrac
+            val dstW = width * xScale
+            val dstX = cx - dstW / 2.0
+            val dstY = outTopY + i
+            val srcY = rowFrac * (bufH - 1)
+            tctx.asDynamic().drawImage(
+                buf,
+                0.0, srcY, width.toDouble(), 1.0,
+                dstX, dstY, dstW, 1.0,
+            )
+        }
+    }
+
+    /**
      * Albedo map for the plane — uniform dark metal grey with a dim teal title stamped in.
      * The title inherits the material's metalness so it reads as the same metal as the plate,
      * tinted just enough to be legible under the scene's cyan-leaning lighting.
@@ -450,9 +503,8 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         tctx.asDynamic().filter = "blur(1px)"
         // Off-white text — with the noise normals and metallic reflection this reads
         // as a faceted glass/crystal inlay; slightly dimmed so highlights don't blow out.
-        tctx.fillStyle = "#b8b8b8"
-        applyTitleTextStyle(tctx, height)
-        tctx.fillText("KLANG AUDIO MOTÖR", width / 2.0, textCy)
+        // Drawn with a tilt-back projection so it shares the plate's perspective.
+        drawPerspectiveTitleText(tctx, width, height, "#b8b8b8")
         tctx.restore()
 
         val tex = addon.createCanvasTexture(cnv)
@@ -483,9 +535,9 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         tctx.rect(0.0, 0.0, width.toDouble(), textBottomY)
         tctx.clip()
         tctx.asDynamic().filter = "blur(3px)"
-        tctx.fillStyle = "white"
-        applyTitleTextStyle(tctx, height)
-        tctx.fillText("KLANG AUDIO MOTÖR", width / 2.0, textCy)
+        // Match the albedo map's tilt-back projection so the engraved relief
+        // follows the same perspective as the painted text.
+        drawPerspectiveTitleText(tctx, width, height, "white")
         tctx.restore()
 
         val img = tctx.getImageData(0.0, 0.0, width.toDouble(), height.toDouble())
@@ -541,7 +593,7 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
                 val scratchIdx = (angle * scratchDensity).toInt()
                 val h1 = hashCell(31, scratchIdx)
                 val h2 = hashCell(67, scratchIdx * 2 + 7)
-                val brushTilt = (h1 - 0.5) * 0.13 + (h2 - 0.5) * 0.06
+                val brushTilt = (h1 - 0.5) * 0.09 + (h2 - 0.5) * 0.045
 
                 // Scratch direction = radial from focal point (unit vector).
                 val len = sqrt(dx * dx + dy * dy)
