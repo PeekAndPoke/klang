@@ -20,6 +20,18 @@ private object FunctionBuilderTestFixtures {
 }
 
 /**
+ * JVM-style Double.toString(): always include a decimal point.
+ *
+ * Kotlin/JS strips trailing `.0` from whole-number doubles (`(800.0).toString() == "800"`),
+ * which breaks tests that assert against JVM-style output. This helper makes the format
+ * deterministic across both targets so the assertions stay platform-agnostic.
+ */
+private fun Double.fmt(): String {
+    val s = toString()
+    return if ('.' in s || 'e' in s || 'E' in s) s else "$s.0"
+}
+
+/**
  * Phase 4 — end-to-end coverage for the new createFunction builder.
  *
  * Exercises:
@@ -277,8 +289,8 @@ class FunctionBuilderTest : StringSpec({
             ) { args, _ ->
                 // Arity-dispatch body — fewer args means we'd use the Kotlin default.
                 when (args.size) {
-                    1 -> wrapAsRuntimeValue("filter(${(args[0] as NumberValue).value})")
-                    2 -> wrapAsRuntimeValue("filter(${(args[0] as NumberValue).value}, ${(args[1] as NumberValue).value})")
+                    1 -> wrapAsRuntimeValue("filter(${(args[0] as NumberValue).value.fmt()})")
+                    2 -> wrapAsRuntimeValue("filter(${(args[0] as NumberValue).value.fmt()}, ${(args[1] as NumberValue).value.fmt()})")
                     else -> error("unexpected args.size = ${args.size}")
                 }
             }

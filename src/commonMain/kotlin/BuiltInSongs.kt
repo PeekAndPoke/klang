@@ -171,7 +171,7 @@ stack(
         .gain(waves).hpf(120).lpf(5000).lpadsr("1.0:3.0:0.4:15.0").lpenv(10)
         .bandf(perlin.range(120, 500).slow(22)).bandq(rand.range(0.5, 1.5))
          .pan(sine.range(0.1, 0.4).slow(4)).superimpose(x => x.pan(sine.range(0.9, 0.6).slow(5)))
-          .superimpose(x => x.sound("pink").adsr("0.3:0.8:0.2:1.5").valocity(0.2).hpf(2500).lpf(8000))
+          .superimpose(x => x.sound("pink").adsr("0.3:0.8:0.2:1.5").velocity(0.2).hpf(2500).lpf(8000))
            
              , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                n(randrun(16)).fast(4).sound("glockenspiel").scale("f2:pentatonic").pan(0.3)
@@ -228,7 +228,7 @@ stack(                                                                          
     .notchf(snd).notchq(0.5).lpf("<1800!48 2600!16>").hpf(160).warmth(saw.range(0.5, 0.2).slow(5*32))
     .distort("0.3:gentle:2").distort(sine.range(0.15, 0.3).slow(10*32))
     .adsr("0.01:0.2:0.5:0.035").clip(0.75).crush(saw.range(8, 4).slow(32))  // . solo()
-    .gain(0.36).orbit(1).pan(0.275),
+    .gain(0.33).orbit(1).pan(0.275),
   // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1.02 0.95!3 0.98 0.95!3".fast(2))
     .scale("e2:minor").sound("saw").warmth(saw.range(0.5, 0.2).slow(5*32))
@@ -236,10 +236,10 @@ stack(                                                                          
     .adsr("0.01:0.2:0.5:0.045").clip(0.75)  // . solo()
     .gain(0.42).orbit(2).pan(0.725),
   // Drums
-  sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!24 [bd [bd,sd] bd [bd,sd]]!8>")
-    .orbit(3).gain(0.9).crush(6).crushos(2).hpf(60).lpf("2400:1").lpe("<2!128 2.3!128 2.7!128>").adsr("0.01:0:1.0:0.1"),
+  sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!24 [bd [bd,sd] bd [bd,sd]]!8>") // . solo()
+    .orbit(3).gain(0.8).crush(10).crushos(2).hpf(60).lpf("2400:1").lpe("<2!128 2.3!128 2.7!128>").adsr("0.01:0:1.0:0.1"),
   sound("<[hh hh oh hh]!24 [cr hh cr hh]!16>") //. solo()
-    .orbit(4).gain(0.4).fast(2).crush(7).crushos(2).hpf(300).lpf("3500:1:2").adsr("0.01:0:1.0:0.1")
+    .orbit(4).gain(0.4).fast(2).crush(8).crushos(2).hpf(300).lpf("3500:1:2").adsr("0.01:0:1.0:0.1")
   // Master
 ).compressor("-10:2:10:0.02:0.25").analog(feel).engine("pedal").room("0.01:5")
 
@@ -270,7 +270,7 @@ stack(                                                                          
         Song(
             id = "$PREFIX-a-synth-worth-lying-for",
             title = "A Synth Worth Lying For",
-            rpm = 30.0,
+            rpm = 31.0,
             code = TestTextPatterns.aTruthWorthLyingFor,
             icon = "guitar",
         )

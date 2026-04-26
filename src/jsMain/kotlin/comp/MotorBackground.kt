@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.comp
 
+import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.addons.registry.AddonRegistry.Companion.addons
 import io.peekandpoke.kraft.addons.threejs.ThreeJs
 import io.peekandpoke.kraft.addons.threejs.ThreeJsAddon
@@ -66,6 +67,19 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
     ////  ADDON  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private val threeAddon: ThreeJsAddon? by subscribingTo(addons.threeJs)
+    private val laf by subscribingTo(KlangTheme)
+
+    /** Picks one accent colour per mount and tints all three lights with it. */
+    private fun pickLightColor(): Int {
+        // laf.bronze (#362820) is a warm overlay-background tone, too dark to read
+        // as a light. Use a brighter shade in the same hue when bronze is rolled.
+        val brightBronze = "#cd9b6a"
+        val palette = listOf(
+            laf.excellent, laf.good, laf.moderate, laf.warning,
+            laf.critical, laf.gold, brightBronze,
+        )
+        return palette.random().removePrefix("#").toInt(16)
+    }
 
     ////  SCENE STATE  ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -237,15 +251,17 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
 
         // ── Lighting ──
 
-        ctx.scene.add(addon.createAmbientLight(color = 0x191C22, intensity = 0.5))
+        val lightColor = pickLightColor()
+
+        ctx.scene.add(addon.createAmbientLight(color = lightColor, intensity = 0.5))
 
         // Start dark — light turns on when powerOn() is called
-        val main = addon.createPointLight(color = 0x56b6c2, intensity = 0.0, distance = 0.0, decay = 1.0)
+        val main = addon.createPointLight(color = lightColor, intensity = 0.0, distance = 0.0, decay = 1.0)
         main.position.set(0.0, 0.0, 2.5)
         ctx.scene.add(main)
         mainLight = main
 
-        val fill = addon.createDirectionalLight(color = 0x6677aa, intensity = 0.0)
+        val fill = addon.createDirectionalLight(color = lightColor, intensity = 0.0)
         fill.position.set(-1.0, -0.5, 0.5)
         ctx.scene.add(fill)
         fillLight = fill
