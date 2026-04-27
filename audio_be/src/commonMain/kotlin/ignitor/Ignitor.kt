@@ -447,7 +447,13 @@ const val SAFE_MIN: Float = 1e-15f
  */
 const val SAFE_MAX: Float = 1e15f
 
-/** Clamp a divisor's magnitude to `≥ SAFE_MIN`, preserving sign. Substitutes `0f` and `NaN` with `+SAFE_MIN`. */
+/**
+ * Clamp a divisor's magnitude to `≥ SAFE_MIN`, preserving sign.
+ *
+ * Substitutes `0f` and `NaN` with `+SAFE_MIN`. `±Inf` passes through unchanged
+ * (since `±Inf` is already a valid divisor — `a / ±Inf = ±0`); the resulting
+ * `0` or any `NaN` from `Inf - Inf` patterns is scrubbed downstream by [safeOut].
+ */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun safeDiv(d: Float): Float = when {
     d.isNaN() -> SAFE_MIN

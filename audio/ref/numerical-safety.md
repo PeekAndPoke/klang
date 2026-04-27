@@ -82,6 +82,29 @@ The constants live in `audio_be/src/commonMain/kotlin/ignitor/Ignitor.kt`.
 - `SAFE_MAX² = 1e30` is still finite Float (`Float.MAX_VALUE ≈ 3.4e38`), so
   even an unclamped square between two max-safe values doesn't overflow.
 
+## Known gaps (2026-04-27)
+
+The arithmetic batch applied the safety contract to the new ops (`Div`, `Mod`,
+`Recip`, `Times`, `Pow`, `Exp`, `Sq`, `mul-by-const`). Pre-existing ignitor
+runtimes were *not* updated and still have the same class of hazard:
+
+| File:fn                                                     | Issue                                                                                                                                   | Audible consequence                                                   |
+|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
+| `PitchModFactories.kt::vibratoModIgnitor` (line ~57)        | `2.0.pow(sin(lfoPhase) * depthSemitones / 12.0)` overflows Float for very large `depthSemitones`. No upper clamp on user input.         | `+Inf` → poisons oscillator phase accumulator → voice silent forever. |
+| `PitchModFactories.kt::accelerateModIgnitor` (lines ~93–99) | `2.0.pow(amountVal / totalFrames)` accumulated multiplicatively per sample. For large `amount`, `ratio` reaches `2^1000` and overflows. | Same.                                                                 |
+| `PitchModFactories.kt::pitchEnvelopeModIgnitor` (line ~161) | `2.0.pow(amountVal * envLevel / 12.0)` for `                                                                                            | amount                                                                | > ~440` overflows. | Same. |
+| `PitchModFactories.kt::fmModIgnitor` (line ~218)            | `effectiveDepth / freqHz` only guards `freqHz <= 0`, not `freqHz` close to 0 (sub-Hz from heavy detune).                                | Phase-mod ratio in the millions → carrier phase corrupted.            |
+
+Fix pattern (when addressing): wrap the offending arithmetic in `safeOut(...)`
+or — for division by `freqHz` — use `safeDiv(freqHz)`. These factories run at
+audio rate and feed into stateful phase accumulators, so any `Inf`/`NaN` is
+permanent.
+
+The filter, envelope, and effect runtimes are all **already correctly guarded**
+(verified by review): cutoffs clamped before `tan()`, IIR state has
+`flushDenormal`, feedback paths bounded by explicit clamps. The pitch-mod
+factories are the only surviving hazard surface.
+
 ## Why not also do hardware FTZ?
 
 We could (and probably should, eventually) also enable FTZ/DAZ on JVM/JS where

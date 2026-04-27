@@ -18,6 +18,30 @@
 - **Master limiter**: −1 dB threshold, 20:1 ratio, 1 ms attack, 100 ms release — always last in chain.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
 
+## Numerical Safety Contract + Distort DC-Lock Fix (2026-04-27)
+
+Established `SAFE_MIN = 1e-15f` / `SAFE_MAX = 1e15f` as the engine's numerical
+safety bounds (matches SuperCollider/ChucK convention — see
+`audio/ref/numerical-safety.md` for the reasoning and framework precedents).
+
+Two helpers in `Ignitor.kt`: `safeDiv(d)` (sign-preserving magnitude clamp ≥ SAFE_MIN,
+scrubs NaN) and `safeOut(v)` (output clamp to ±SAFE_MAX, scrubs NaN to 0).
+Applied to divisor-class ops (`Div`, `Mod`, `Recip`) and output-clamp ops
+(`Times`, `Pow`, `Exp`, `Sq`, `mul-by-const`).
+
+Distort/clip path now applies the DC blocker **unconditionally** (was previously
+only for `diode`/`rectify` shapes). Fixes user-reported rail-lock at extreme
+drive amounts where output got stuck at -1 due to envelope-decay asymmetries.
+Trade-off: transient overshoots up to ~2x at sharp transitions of square-like
+signals — existing tests updated, master limiter handles the spike.
+
+**Known gap (not fixed in this batch)**: the pitch-mod factories
+(`vibratoModIgnitor`, `accelerateModIgnitor`, `pitchEnvelopeModIgnitor`, FM mod
+in `PitchModFactories.kt`) all use unguarded `2.0.pow(...)` or `effectiveDepth /
+freqHz` arithmetic that can overflow Float for extreme user inputs and poison
+oscillator phase accumulators. Same kind of hazard the safety contract was
+designed to catch — should be addressed in a follow-up.
+
 ## Ignitor Composable Architecture (2026-03-19)
 
 New package `audio_be/.../ignitor/` — composable per-voice effect combinators.
