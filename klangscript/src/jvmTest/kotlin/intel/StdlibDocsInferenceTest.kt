@@ -155,8 +155,8 @@ class StdlibDocsInferenceTest : StringSpec({
         reg.register(sprudelAbs)
 
         val symbol = reg.get("abs")!!
-        // Should have both: Math.abs (from stdlib) + top-level abs (from sprudel)
-        symbol.variants.size shouldBe 2
+        // stdlib contributes Math.abs (Number) + IgnitorDsl.abs (signal) — sprudel adds a top-level.
+        symbol.variants.size shouldBe 3
 
         // Receiver-aware lookup distinguishes them
         val mathAbs = reg.getCallable("abs", KlangType("Math"))

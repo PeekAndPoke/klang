@@ -202,10 +202,10 @@ class GeneratedRegistrationTest : StringSpec({
         sqrtDoc.category shouldBe "math"
         sqrtDoc.library shouldBe "stdlib"
         sqrtDoc.tags shouldBe listOf("arithmetic", "calculation")
-        sqrtDoc.variants shouldHaveSize 1
 
-        val callable = sqrtDoc.variants[0] as KlangCallable
-        callable.receiver?.simpleName shouldBe "Math"
+        val callable = sqrtDoc.variants
+            .filterIsInstance<KlangCallable>()
+            .first { it.receiver?.simpleName == "Math" }
         callable.params shouldHaveSize 1
         callable.params[0].name shouldBe "x"
         callable.params[0].type.simpleName shouldBe "Number"
@@ -217,7 +217,9 @@ class GeneratedRegistrationTest : StringSpec({
 
     "generated docs for min have two params" {
         val minDoc = generatedStdlibDocs["min"]!!
-        val callable = minDoc.variants[0] as KlangCallable
+        val callable = minDoc.variants
+            .filterIsInstance<KlangCallable>()
+            .first { it.receiver?.simpleName == "Math" }
         callable.params shouldHaveSize 2
         callable.params[0].name shouldBe "a"
         callable.params[1].name shouldBe "b"

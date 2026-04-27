@@ -6,6 +6,20 @@
 
 ## Per-Playback Numerical Attributes (CPS etc.)
 
+> **Status (2026-04-26)**: Postponed — nice-to-have, no real application today.
+>
+> The original motivation (e.g. tempo-synced tremolo via `Osc.cps()`) is already covered by `oscp()`,
+> which accepts control patterns and snapshots the value at each note-on event. For live-coding
+> workflows you only configure a voice once at note-on, and any in-note time variation can be
+> expressed inside the IgnitorDsl from start values via envelopes, LFOs, and arithmetic.
+>
+> Cases this feature *would* unlock that the snapshot model can't:
+> - Long-held notes that need to follow a mid-note tempo change
+> - External real-time controllers (modwheel / hardware knob) bending notes already in flight
+> - Cross-voice phase-lock (better solved by a global audio-clock intrinsic if ever needed)
+>
+> None of these are current pain points. Revisit when a concrete need emerges.
+
 Let the frontend push named numerical values (like `cps`) to the audio backend per-playback.
 Ignitors read these at audio rate for tempo-synced effects.
 
@@ -69,16 +83,6 @@ Future `splitSignalAndJoin()` would share the same source buffer (true signal sp
 - KlangScript: vararg arrow functions, call each with self, collect IgnitorDsl results
 - Register manually (like `Osc.register()`) since it needs to invoke KlangScript lambdas
 - Result: `Plus(Plus(b0, b1), b2).div(Constant(numBranches))`
-
----
-
-## Additional Arithmetic
-
-- `exp()` — `e^self` for exponential curves (dB-to-linear, envelope shaping)
-- `abs()` — absolute value
-- `neg()` — negate signal (flip polarity)
-
-Each needs: IgnitorDsl subtype, runtime Ignitor extension, KlangScript extension method, collectParams.
 
 ---
 

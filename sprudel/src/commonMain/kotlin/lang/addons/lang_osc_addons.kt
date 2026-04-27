@@ -44,6 +44,7 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @param key The oscillator parameter name (e.g. "analog", "warmth", "density").
  * @param value The parameter value.
  * @return A new pattern with the oscillator parameter set.
+ * @alias oscp
  * @category tonal
  * @tags oscillator, parameter, osc, addon
  */
@@ -52,47 +53,75 @@ private fun applyOscparam(source: SprudelPattern, args: List<SprudelDslArg<Any?>
 fun SprudelPattern.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyOscparam(this, listOf(key, value).asSprudelDslArgs(callInfo))
 
-/** Parses this string as a pattern and sets an oscillator parameter. */
+/**
+ * Parses this string as a pattern and sets an oscillator parameter.
+ *
+ * @alias oscp
+ */
 @SprudelDsl
 @KlangScript.Function
 fun String.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
 
-/** Creates a [PatternMapperFn] that sets an oscillator parameter. */
+/**
+ * Creates a [PatternMapperFn] that sets an oscillator parameter.
+ *
+ * @alias oscp
+ */
 @SprudelDsl
 @KlangScript.Function
 fun oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.oscparam(key, value, callInfo) }
 
-/** Chains an oscillator-parameter-set onto this [PatternMapperFn]. */
+/**
+ * Chains an oscillator-parameter-set onto this [PatternMapperFn].
+ *
+ * @alias oscp
+ */
 @SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.oscparam(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.oscparam(key, value, callInfo) }
 
-/** Alias for [oscparam]. */
+/**
+ * Alias for [oscparam].
+ *
+ * @alias oscparam
+ */
 @SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.oscparam(key, value, callInfo)
 
-/** Alias for [oscparam]. Parses this string as a pattern and sets an oscillator parameter. */
+/**
+ * Alias for [oscparam]. Parses this string as a pattern and sets an oscillator parameter.
+ *
+ * @alias oscparam
+ */
 @SprudelDsl
 @KlangScript.Function
 fun String.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).oscp(key, value, callInfo)
+    this.toVoiceValuePattern(callInfo?.receiverLocation).oscparam(key, value, callInfo)
 
-/** Alias for [oscparam]. Creates a [PatternMapperFn] that sets an oscillator parameter. */
+/**
+ * Alias for [oscparam]. Creates a [PatternMapperFn] that sets an oscillator parameter.
+ *
+ * @alias oscparam
+ */
 @SprudelDsl
 @KlangScript.Function
 fun oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.oscp(key, value, callInfo) }
+    { p -> p.oscparam(key, value, callInfo) }
 
-/** Alias for [oscparam]. Chains an oscillator-parameter-set onto this [PatternMapperFn]. */
+/**
+ * Alias for [oscparam]. Chains an oscillator-parameter-set onto this [PatternMapperFn].
+ *
+ * @alias oscparam
+ */
 @SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.oscp(key: String, value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.oscp(key, value, callInfo) }
+    this.chain { p -> p.oscparam(key, value, callInfo) }
 
 // -- analog() ---------------------------------------------------------------------------------------------------------
 

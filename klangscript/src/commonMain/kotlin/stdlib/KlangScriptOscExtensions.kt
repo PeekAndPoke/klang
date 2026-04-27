@@ -3,6 +3,14 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.lerp
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.minus
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.mod
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.neg
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.plus
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.pow
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.recip
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.times
 
 /**
  * Accepts [IgnitorDsl] or [Number]. Numbers are converted to [IgnitorDsl.Constant] automatically.
@@ -258,28 +266,233 @@ object KlangScriptOscExtensions {
 
     // ── Arithmetic ───────────────────────────────────────────────────────────
 
-    /** Adds two ignitor signals together (summing). */
+    /**
+     * Adds two ignitor signals together (summing).
+     *
+     * @alias add
+     */
     @KlangScript.Method
     fun plus(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Plus(left = self, right = other.toIgnitorDsl())
 
-    /** Subtracts another signal from this one. */
+    /**
+     * Adds two ignitor signals together (summing). Alias for [plus].
+     *
+     * @alias plus
+     */
+    @KlangScript.Method
+    fun add(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Plus(left = self, right = other.toIgnitorDsl())
+
+    /**
+     * Subtracts another signal from this one.
+     *
+     * @alias sub
+     */
     @KlangScript.Method
     fun minus(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Plus(left = self, right = IgnitorDsl.Mul(left = other.toIgnitorDsl(), right = IgnitorDsl.Constant(-1.0)))
+        IgnitorDsl.Minus(left = self, right = other.toIgnitorDsl())
 
-    /** Multiplies two ignitor signals (ring modulation / amplitude modulation). */
+    /**
+     * Subtracts another signal from this one. Alias for [minus].
+     *
+     * @alias minus
+     */
+    @KlangScript.Method
+    fun sub(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Minus(left = self, right = other.toIgnitorDsl())
+
+    /**
+     * Multiplies two ignitor signals (ring modulation / amplitude modulation).
+     *
+     * @alias mul
+     */
     @KlangScript.Method
     fun times(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Times(left = self, right = other.toIgnitorDsl())
 
-    /** Scales the signal by a factor (IgnitorDsl or Number). */
+    /**
+     * Scales the signal by a factor (IgnitorDsl or Number). Alias for [times].
+     *
+     * @alias times
+     */
     @KlangScript.Method
     fun mul(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
-        IgnitorDsl.Mul(left = self, right = other.toIgnitorDsl())
+        IgnitorDsl.Times(left = self, right = other.toIgnitorDsl())
 
-    /** Divides the signal by a divisor (IgnitorDsl or Number). */
+    /**
+     * Divides the signal by a divisor (IgnitorDsl or Number).
+     *
+     * Zero divisors are substituted with `1e-30` to keep the engine `NaN`-free.
+     */
     @KlangScript.Method
     fun div(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.Div(left = self, right = other.toIgnitorDsl())
+
+    /**
+     * Negates this signal (flips polarity).
+     *
+     * @alias negate
+     */
+    @KlangScript.Method
+    fun neg(self: IgnitorDsl): IgnitorDsl =
+        IgnitorDsl.Neg(inner = self)
+
+    /**
+     * Negates this signal (flips polarity). Alias for [neg].
+     *
+     * @alias neg
+     */
+    @KlangScript.Method
+    fun negate(self: IgnitorDsl): IgnitorDsl =
+        IgnitorDsl.Neg(inner = self)
+
+    /** Absolute value of this signal (full-wave rectification). */
+    @KlangScript.Method
+    fun abs(self: IgnitorDsl): IgnitorDsl =
+        IgnitorDsl.Abs(inner = self)
+
+    /**
+     * Raises this signal to the power of [exp] (per-sample).
+     * Signed-magnitude: negative bases produce `-(|base|^exp)` to avoid `NaN`.
+     *
+     * @alias power
+     */
+    @KlangScript.Method
+    fun pow(self: IgnitorDsl, exp: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Pow(base = self, exp = exp.toIgnitorDsl())
+
+    /**
+     * Raises this signal to the power of [exp]. Alias for [pow].
+     *
+     * @alias pow
+     */
+    @KlangScript.Method
+    fun power(self: IgnitorDsl, exp: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Pow(base = self, exp = exp.toIgnitorDsl())
+
+    /** Per-sample minimum of this signal and [other]. */
+    @KlangScript.Method
+    fun min(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Min(left = self, right = other.toIgnitorDsl())
+
+    /** Per-sample maximum of this signal and [other]. */
+    @KlangScript.Method
+    fun max(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Max(left = self, right = other.toIgnitorDsl())
+
+    /** Bounds this signal to the range `[lo, hi]` per sample. */
+    @KlangScript.Method
+    fun clamp(self: IgnitorDsl, lo: IgnitorDslLike, hi: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Clamp(inner = self, lo = lo.toIgnitorDsl(), hi = hi.toIgnitorDsl())
+
+    /** `e^x` per sample. */
+    @KlangScript.Method
+    fun exp(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Exp(inner = self)
+
+    /** Natural logarithm per sample. Signed-magnitude; `log(0) = 0` (no `-Inf`). */
+    @KlangScript.Method
+    fun log(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Log(inner = self)
+
+    /** Square root per sample. Signed-magnitude (no `NaN` for negatives). */
+    @KlangScript.Method
+    fun sqrt(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Sqrt(inner = self)
+
+    /** Sign of this signal: `-1`, `0`, or `+1`. */
+    @KlangScript.Method
+    fun sign(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Sign(inner = self)
+
+    /** `tanh(x)` per sample (smooth saturation curve). */
+    @KlangScript.Method
+    fun tanh(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Tanh(inner = self)
+
+    /**
+     * Linear interpolation: `this·(1−t) + other·t`.
+     *
+     * @alias mix
+     */
+    @KlangScript.Method
+    fun lerp(self: IgnitorDsl, other: IgnitorDslLike, t: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Lerp(left = self, right = other.toIgnitorDsl(), t = t.toIgnitorDsl())
+
+    /**
+     * Crossfade: `this·(1−t) + other·t`. Alias for [lerp].
+     *
+     * @alias lerp
+     */
+    @KlangScript.Method
+    fun mix(self: IgnitorDsl, other: IgnitorDslLike, t: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Lerp(left = self, right = other.toIgnitorDsl(), t = t.toIgnitorDsl())
+
+    /** Maps this signal from `[-1, 1]` to `[lo, hi]` per sample. Standard LFO scaler. */
+    @KlangScript.Method
+    fun range(self: IgnitorDsl, lo: IgnitorDslLike, hi: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Range(inner = self, lo = lo.toIgnitorDsl(), hi = hi.toIgnitorDsl())
+
+    /** Maps this signal from `[0, 1]` to `[-1, 1]` per sample. */
+    @KlangScript.Method
+    fun bipolar(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Bipolar(inner = self)
+
+    /** Maps this signal from `[-1, 1]` to `[0, 1]` per sample. */
+    @KlangScript.Method
+    fun unipolar(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Unipolar(inner = self)
+
+    /** Per-sample floor. */
+    @KlangScript.Method
+    fun floor(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Floor(inner = self)
+
+    /** Per-sample ceiling. */
+    @KlangScript.Method
+    fun ceil(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Ceil(inner = self)
+
+    /** Per-sample round to nearest integer. */
+    @KlangScript.Method
+    fun round(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Round(inner = self)
+
+    /** Per-sample fractional part: `x − floor(x)`. */
+    @KlangScript.Method
+    fun frac(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Frac(inner = self)
+
+    /**
+     * Per-sample modulo. Zero divisors substituted with `1e-30` to avoid `NaN`.
+     *
+     * @alias rem
+     */
+    @KlangScript.Method
+    fun mod(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Mod(left = self, right = other.toIgnitorDsl())
+
+    /**
+     * Per-sample modulo. Alias for [mod] (matches Kotlin's `rem`).
+     *
+     * @alias mod
+     */
+    @KlangScript.Method
+    fun rem(self: IgnitorDsl, other: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Mod(left = self, right = other.toIgnitorDsl())
+
+    /**
+     * Per-sample reciprocal: `1 / x`. Zero inputs substituted with `1e-30` to avoid `NaN`.
+     *
+     * @alias reciprocal
+     */
+    @KlangScript.Method
+    fun recip(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Recip(inner = self)
+
+    /**
+     * Per-sample reciprocal: `1 / x`. Alias for [recip].
+     *
+     * @alias recip
+     */
+    @KlangScript.Method
+    fun reciprocal(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Recip(inner = self)
+
+    /** Per-sample square: `x · x`. */
+    @KlangScript.Method
+    fun sq(self: IgnitorDsl): IgnitorDsl = IgnitorDsl.Sq(inner = self)
+
+    /** Per-sample conditional: when this signal `> 0` use [whenTrue], else [whenFalse]. */
+    @KlangScript.Method
+    fun select(self: IgnitorDsl, whenTrue: IgnitorDslLike, whenFalse: IgnitorDslLike): IgnitorDsl =
+        IgnitorDsl.Select(cond = self, whenTrue = whenTrue.toIgnitorDsl(), whenFalse = whenFalse.toIgnitorDsl())
 }

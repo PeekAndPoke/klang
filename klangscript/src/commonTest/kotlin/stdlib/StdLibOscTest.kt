@@ -63,7 +63,7 @@ class StdLibOscTest : StringSpec({
     "Osc.sine(Osc.freq().mul(2)) produces Sine with doubled Freq" {
         val dsl = evalIgnitorDsl("Osc.sine(Osc.freq().mul(2))")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
-        dsl.freq shouldBe IgnitorDsl.Mul(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
+        dsl.freq shouldBe IgnitorDsl.Times(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0))
     }
 
     "Osc.saw() returns Sawtooth" {
@@ -289,9 +289,9 @@ class StdLibOscTest : StringSpec({
         (dsl.right as IgnitorDsl.Constant).value shouldBe 1.0
     }
 
-    "mul with number creates Constant" {
+    "mul with number creates Constant (lowers to Times)" {
         val dsl = evalIgnitorDsl("Osc.sine().mul(0.5)")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Mul>()
+        dsl.shouldBeInstanceOf<IgnitorDsl.Times>()
         dsl.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
         (dsl.right as IgnitorDsl.Constant).value shouldBe 0.5
     }
@@ -303,15 +303,11 @@ class StdLibOscTest : StringSpec({
         (dsl.right as IgnitorDsl.Constant).value shouldBe 2.0
     }
 
-    "minus creates Plus(self, Mul(other, Constant(-1)))" {
+    "minus creates Minus(left, right)" {
         val dsl = evalIgnitorDsl("Osc.sine().minus(Osc.saw())")
-        dsl.shouldBeInstanceOf<IgnitorDsl.Plus>()
+        dsl.shouldBeInstanceOf<IgnitorDsl.Minus>()
         dsl.left.shouldBeInstanceOf<IgnitorDsl.Sine>()
-        dsl.right.shouldBeInstanceOf<IgnitorDsl.Mul>()
-        val mul = dsl.right as IgnitorDsl.Mul
-        mul.left.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
-        mul.right.shouldBeInstanceOf<IgnitorDsl.Constant>()
-        (mul.right as IgnitorDsl.Constant).value shouldBe -1.0
+        dsl.right.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

@@ -58,10 +58,10 @@ class CompositionPropertiesSpec : StringSpec({
     // Shared source semantics — memoisation guarantees identical samples to both readers.
     // ═══════════════════════════════════════════════════════════════════════════
 
-    "shared Sine node: Plus(s, s) is bit-identical to Mul(s, Constant(2.0))" {
+    "shared Sine node: Plus(s, s) is bit-identical to Times(s, Constant(2.0))" {
         val s = IgnitorDsl.Sine()
         val plusTree = IgnitorDsl.Plus(s, s)
-        val mulTree = IgnitorDsl.Mul(s, IgnitorDsl.Constant(2.0))
+        val mulTree = IgnitorDsl.Times(s, IgnitorDsl.Constant(2.0))
 
         val plus = plusTree.toExciter()
         val mul = mulTree.toExciter()
@@ -78,7 +78,7 @@ class CompositionPropertiesSpec : StringSpec({
     "shared node used 3x: sum equals 3·s" {
         val s = IgnitorDsl.Sine()
         val threeSum = IgnitorDsl.Plus(IgnitorDsl.Plus(s, s), s)
-        val tripled = IgnitorDsl.Mul(s, IgnitorDsl.Constant(3.0))
+        val tripled = IgnitorDsl.Times(s, IgnitorDsl.Constant(3.0))
 
         val a = render(threeSum.toExciter(), 440.0, createCtx())
         val b = render(tripled.toExciter(), 440.0, createCtx())

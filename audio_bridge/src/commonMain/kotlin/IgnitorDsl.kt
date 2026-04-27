@@ -406,18 +406,6 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Scales the left signal by the right signal (per-sample multiplication). */
-    @Serializable
-    @SerialName("mul")
-    data class Mul(
-        val left: IgnitorDsl,
-        val right: IgnitorDsl = Constant(1.0),
-    ) : IgnitorDsl {
-        override fun collectParams(out: MutableList<Param>) {
-            left.collectParams(out); right.collectParams(out)
-        }
-    }
-
     /** Divides the left signal by the right signal (per-sample division). */
     @Serializable
     @SerialName("div")
@@ -427,6 +415,276 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /** Subtractive combinator. Subtracts the right signal from the left sample-by-sample. */
+    @Serializable
+    @SerialName("minus")
+    data class Minus(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /** Negates the inner signal (flips polarity). */
+    @Serializable
+    @SerialName("neg")
+    data class Neg(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Absolute value of the inner signal (full-wave rectification). */
+    @Serializable
+    @SerialName("abs")
+    data class Abs(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Raises [base] to the power of [exp] sample-by-sample.
+     *
+     * Uses signed-magnitude semantics: for negative [base], computes
+     * `-(|base|^exp)`. Preserves sign and avoids `NaN` for any real
+     * exponent — keeps the engine numerically stable at audio rate.
+     */
+    @Serializable
+    @SerialName("pow")
+    data class Pow(val base: IgnitorDsl, val exp: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            base.collectParams(out); exp.collectParams(out)
+        }
+    }
+
+    /** Per-sample minimum of two signals. */
+    @Serializable
+    @SerialName("min")
+    data class Min(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /** Per-sample maximum of two signals. */
+    @Serializable
+    @SerialName("max")
+    data class Max(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /** Bounds the inner signal to `[lo, hi]` per sample. */
+    @Serializable
+    @SerialName("clamp")
+    data class Clamp(
+        val inner: IgnitorDsl,
+        val lo: IgnitorDsl = Constant(-1.0),
+        val hi: IgnitorDsl = Constant(1.0),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); lo.collectParams(out); hi.collectParams(out)
+        }
+    }
+
+    /** `e^x` per sample. */
+    @Serializable
+    @SerialName("exp")
+    data class Exp(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Natural logarithm per sample.
+     *
+     * Signed-magnitude: for negative inputs computes `-ln(|x|)`.
+     * `log(0)` is treated as `0` to avoid `-Inf` poisoning the audio path.
+     */
+    @Serializable
+    @SerialName("log")
+    data class Log(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Square root per sample.
+     *
+     * Signed-magnitude: for negative inputs computes `-√|x|` to keep the engine `NaN`-free.
+     */
+    @Serializable
+    @SerialName("sqrt")
+    data class Sqrt(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Sign of the inner signal (`-1`, `0`, or `+1`). */
+    @Serializable
+    @SerialName("sign")
+    data class Sign(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Hyperbolic tangent per sample (smooth saturation curve). */
+    @Serializable
+    @SerialName("tanh")
+    data class Tanh(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Linear interpolation per sample: `left·(1−t) + right·t`.
+     *
+     * Crossfades between [left] and [right] under per-sample weight [t] (typically `[0, 1]`).
+     */
+    @Serializable
+    @SerialName("lerp")
+    data class Lerp(
+        val left: IgnitorDsl,
+        val right: IgnitorDsl,
+        val t: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out); t.collectParams(out)
+        }
+    }
+
+    /**
+     * Maps the inner signal from `[-1, 1]` to `[lo, hi]` per sample.
+     *
+     * Standard LFO scaler. Output = `lo + (inner + 1)·0.5·(hi − lo)`.
+     */
+    @Serializable
+    @SerialName("range")
+    data class Range(
+        val inner: IgnitorDsl,
+        val lo: IgnitorDsl,
+        val hi: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); lo.collectParams(out); hi.collectParams(out)
+        }
+    }
+
+    /** Maps the inner signal from `[0, 1]` to `[-1, 1]` per sample. */
+    @Serializable
+    @SerialName("bipolar")
+    data class Bipolar(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Maps the inner signal from `[-1, 1]` to `[0, 1]` per sample. */
+    @Serializable
+    @SerialName("unipolar")
+    data class Unipolar(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample floor: largest integer `≤ x`. */
+    @Serializable
+    @SerialName("floor")
+    data class Floor(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample ceiling: smallest integer `≥ x`. */
+    @Serializable
+    @SerialName("ceil")
+    data class Ceil(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample round to nearest integer (banker's rounding ties to even). */
+    @Serializable
+    @SerialName("round")
+    data class Round(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample fractional part: `x − floor(x)`. */
+    @Serializable
+    @SerialName("frac")
+    data class Frac(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Per-sample modulo: `left mod right`.
+     *
+     * Zero divisors are substituted with a tiny epsilon (1e-30) so the engine
+     * never produces `NaN`. The master limiter handles the resulting spike.
+     */
+    @Serializable
+    @SerialName("mod")
+    data class Mod(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /**
+     * Per-sample reciprocal: `1 / x`.
+     *
+     * Zero inputs are substituted with a tiny epsilon (1e-30) so the engine
+     * never produces `NaN`. The master limiter handles the resulting spike.
+     */
+    @Serializable
+    @SerialName("recip")
+    data class Recip(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample square: `x · x`. */
+    @Serializable
+    @SerialName("sq")
+    data class Sq(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Per-sample conditional: returns [whenTrue] when [cond] `> 0`, else [whenFalse].
+     *
+     * Both branches are evaluated at audio rate (no short-circuit), so the gate is
+     * deterministic and stateful sources advance regardless of which branch is selected.
+     */
+    @Serializable
+    @SerialName("select")
+    data class Select(
+        val cond: IgnitorDsl,
+        val whenTrue: IgnitorDsl,
+        val whenFalse: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            cond.collectParams(out); whenTrue.collectParams(out); whenFalse.collectParams(out)
         }
     }
 
@@ -794,11 +1052,84 @@ operator fun IgnitorDsl.plus(other: IgnitorDsl) = IgnitorDsl.Plus(left = this, r
 /** Multiplies two ignitor signals together (ring modulation). */
 operator fun IgnitorDsl.times(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
 
-/** Scales this signal by a modulatable [other] factor. */
-fun IgnitorDsl.mul(other: IgnitorDsl) = IgnitorDsl.Mul(left = this, right = other)
+/** Scales this signal by a modulatable [other] factor. Alias for [times]. */
+fun IgnitorDsl.mul(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
 
 /** Divides this signal by a modulatable [other] divisor. */
 fun IgnitorDsl.div(other: IgnitorDsl) = IgnitorDsl.Div(left = this, right = other)
+
+/** Subtracts [other] from this signal sample-by-sample. */
+fun IgnitorDsl.minus(other: IgnitorDsl) = IgnitorDsl.Minus(left = this, right = other)
+
+/** Negates this signal (flips polarity). */
+fun IgnitorDsl.neg() = IgnitorDsl.Neg(inner = this)
+
+/** Absolute value of this signal (full-wave rectification). */
+fun IgnitorDsl.abs() = IgnitorDsl.Abs(inner = this)
+
+/** Raises this signal to the power of [exp]. Signed-magnitude (no NaN for negative bases). */
+fun IgnitorDsl.pow(exp: IgnitorDsl) = IgnitorDsl.Pow(base = this, exp = exp)
+
+/** Per-sample minimum of this signal and [other]. */
+fun IgnitorDsl.min(other: IgnitorDsl) = IgnitorDsl.Min(left = this, right = other)
+
+/** Per-sample maximum of this signal and [other]. */
+fun IgnitorDsl.max(other: IgnitorDsl) = IgnitorDsl.Max(left = this, right = other)
+
+/** Bounds this signal to the range `[lo, hi]` per sample. */
+fun IgnitorDsl.clamp(lo: IgnitorDsl, hi: IgnitorDsl) = IgnitorDsl.Clamp(inner = this, lo = lo, hi = hi)
+
+/** `e^x` per sample. */
+fun IgnitorDsl.exp() = IgnitorDsl.Exp(inner = this)
+
+/** Natural logarithm per sample. Signed-magnitude; `log(0) = 0` (no `-Inf`). */
+fun IgnitorDsl.log() = IgnitorDsl.Log(inner = this)
+
+/** Square root per sample. Signed-magnitude (no `NaN` for negatives). */
+fun IgnitorDsl.sqrt() = IgnitorDsl.Sqrt(inner = this)
+
+/** Sign of this signal: `-1`, `0`, or `+1`. */
+fun IgnitorDsl.sign() = IgnitorDsl.Sign(inner = this)
+
+/** `tanh(x)` per sample (smooth saturation curve). */
+fun IgnitorDsl.tanh() = IgnitorDsl.Tanh(inner = this)
+
+/** Linear interpolation: `this·(1−t) + other·t`. */
+fun IgnitorDsl.lerp(other: IgnitorDsl, t: IgnitorDsl) = IgnitorDsl.Lerp(left = this, right = other, t = t)
+
+/** Maps this signal from `[-1, 1]` to `[lo, hi]` per sample. */
+fun IgnitorDsl.range(lo: IgnitorDsl, hi: IgnitorDsl) = IgnitorDsl.Range(inner = this, lo = lo, hi = hi)
+
+/** Maps this signal from `[0, 1]` to `[-1, 1]` per sample. */
+fun IgnitorDsl.bipolar() = IgnitorDsl.Bipolar(inner = this)
+
+/** Maps this signal from `[-1, 1]` to `[0, 1]` per sample. */
+fun IgnitorDsl.unipolar() = IgnitorDsl.Unipolar(inner = this)
+
+/** Per-sample floor. */
+fun IgnitorDsl.floor() = IgnitorDsl.Floor(inner = this)
+
+/** Per-sample ceiling. */
+fun IgnitorDsl.ceil() = IgnitorDsl.Ceil(inner = this)
+
+/** Per-sample round to nearest integer. */
+fun IgnitorDsl.round() = IgnitorDsl.Round(inner = this)
+
+/** Per-sample fractional part: `x − floor(x)`. */
+fun IgnitorDsl.frac() = IgnitorDsl.Frac(inner = this)
+
+/** Per-sample modulo. Zero divisors substituted with `1e-30` to avoid `NaN`. */
+fun IgnitorDsl.mod(other: IgnitorDsl) = IgnitorDsl.Mod(left = this, right = other)
+
+/** Per-sample reciprocal: `1 / x`. Zero inputs substituted with `1e-30` to avoid `NaN`. */
+fun IgnitorDsl.recip() = IgnitorDsl.Recip(inner = this)
+
+/** Per-sample square: `x · x`. */
+fun IgnitorDsl.sq() = IgnitorDsl.Sq(inner = this)
+
+/** Per-sample conditional: when this signal `> 0` use [whenTrue], else [whenFalse]. */
+fun IgnitorDsl.select(whenTrue: IgnitorDsl, whenFalse: IgnitorDsl) =
+    IgnitorDsl.Select(cond = this, whenTrue = whenTrue, whenFalse = whenFalse)
 
 // Frequency
 
@@ -1002,8 +1333,31 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     // Binary nodes
     is IgnitorDsl.Plus -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
     is IgnitorDsl.Times -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Mul -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
     is IgnitorDsl.Div -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Minus -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Pow -> maxOf(base.maxReleaseSec(), exp.maxReleaseSec())
+    is IgnitorDsl.Min -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Max -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Neg -> inner.maxReleaseSec()
+    is IgnitorDsl.Abs -> inner.maxReleaseSec()
+    is IgnitorDsl.Clamp -> maxOf(inner.maxReleaseSec(), lo.maxReleaseSec(), hi.maxReleaseSec())
+    is IgnitorDsl.Exp -> inner.maxReleaseSec()
+    is IgnitorDsl.Log -> inner.maxReleaseSec()
+    is IgnitorDsl.Sqrt -> inner.maxReleaseSec()
+    is IgnitorDsl.Sign -> inner.maxReleaseSec()
+    is IgnitorDsl.Tanh -> inner.maxReleaseSec()
+    is IgnitorDsl.Lerp -> maxOf(left.maxReleaseSec(), right.maxReleaseSec(), t.maxReleaseSec())
+    is IgnitorDsl.Range -> maxOf(inner.maxReleaseSec(), lo.maxReleaseSec(), hi.maxReleaseSec())
+    is IgnitorDsl.Bipolar -> inner.maxReleaseSec()
+    is IgnitorDsl.Unipolar -> inner.maxReleaseSec()
+    is IgnitorDsl.Floor -> inner.maxReleaseSec()
+    is IgnitorDsl.Ceil -> inner.maxReleaseSec()
+    is IgnitorDsl.Round -> inner.maxReleaseSec()
+    is IgnitorDsl.Frac -> inner.maxReleaseSec()
+    is IgnitorDsl.Mod -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Recip -> inner.maxReleaseSec()
+    is IgnitorDsl.Sq -> inner.maxReleaseSec()
+    is IgnitorDsl.Select -> maxOf(cond.maxReleaseSec(), whenTrue.maxReleaseSec(), whenFalse.maxReleaseSec())
     is IgnitorDsl.Fm -> maxOf(carrier.maxReleaseSec(), modulator.maxReleaseSec())
     // Leaf nodes — no release info
     is IgnitorDsl.Freq -> 0.0
