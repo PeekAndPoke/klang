@@ -12,7 +12,9 @@ import kotlin.math.pow
  *
  * - Exponential drive curve for perceptually even control
  * - Per-shape output normalization to prevent volume jumps
- * - DC blocking filter for asymmetric shapes (diode, rectify)
+ * - **DC blocker always applied** when amount > 0 — defends against rail-lock
+ *   at extreme drive even with symmetric shapes (was previously only applied
+ *   to asymmetric shapes like `diode` and `rectify`).
  * - Optional oversampling to reduce aliasing from nonlinear processing
  */
 class DistortionRenderer(
@@ -24,7 +26,6 @@ class DistortionRenderer(
     private val drive: Double = 10.0.pow(amount * 1.2)
     private val waveshaper: (Double) -> Double
     private val outputGain: Double
-    private val needsDcBlock: Boolean
 
     private val dcBlockCoeff = 0.995
     private var dcBlockX1 = 0.0
@@ -37,7 +38,6 @@ class DistortionRenderer(
         val resolved = resolveDistortionShape(shape)
         waveshaper = resolved.fn
         outputGain = resolved.outputGain
-        needsDcBlock = resolved.needsDcBlock
     }
 
     override fun render(ctx: BlockContext) {
@@ -61,31 +61,25 @@ class DistortionRenderer(
         }
 
         // DC blocker runs at original rate after decimation
-        if (needsDcBlock) {
-            applyDcBlock(ctx)
-        }
+        applyDcBlock(ctx)
     }
 
     private fun renderDirect(ctx: BlockContext) {
         val d = drive
         val g = outputGain
         val fn = waveshaper
-        val dcBlock = needsDcBlock
         val buf = ctx.audioBuffer
 
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
             val x = buf[idx].toDouble() * d
-            var y = fn(x) * g
+            val y = fn(x) * g
 
-            if (dcBlock) {
-                val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                dcBlockX1 = y
-                dcBlockY1 = flushDenormal(dcOut)
-                y = dcOut
-            }
+            val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
+            dcBlockX1 = y
+            dcBlockY1 = flushDenormal(dcOut)
 
-            buf[idx] = y.toFloat()
+            buf[idx] = dcOut.toFloat()
         }
     }
 

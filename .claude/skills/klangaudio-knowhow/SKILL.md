@@ -23,13 +23,14 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 
 **Then read only the ref file(s) relevant to your task:**
 
-| Task                                                                         | Read                             |
-|------------------------------------------------------------------------------|----------------------------------|
-| Understanding overall architecture, data flow, comm-link, platform backends  | `audio/ref/architecture.md`      |
-| Working with VoiceData fields, FilterDefs, ADSR, scheduled voices            | `audio/ref/data-model.md`        |
-| Working on voice synthesis, oscillators, SynthVoice, SampleVoice, modulation | `audio/ref/voice-synthesis.md`   |
-| Working on effects, Orbits mixing, KlangAudioRenderer pipeline               | `audio/ref/effects-mixing.md`    |
-| Working on sample loading, decoding, caching (audio_fe)                      | `audio/ref/sample-management.md` |
+| Task                                                                                                | Read                             |
+|-----------------------------------------------------------------------------------------------------|----------------------------------|
+| Understanding overall architecture, data flow, comm-link, platform backends                         | `audio/ref/architecture.md`      |
+| Working with VoiceData fields, FilterDefs, ADSR, scheduled voices                                   | `audio/ref/data-model.md`        |
+| Working on voice synthesis, oscillators, SynthVoice, SampleVoice, modulation                        | `audio/ref/voice-synthesis.md`   |
+| Working on effects, Orbits mixing, KlangAudioRenderer pipeline                                      | `audio/ref/effects-mixing.md`    |
+| Working on sample loading, decoding, caching (audio_fe)                                             | `audio/ref/sample-management.md` |
+| Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX` choice, framework precedents (SC/JUCE) | `audio/ref/numerical-safety.md`  |
 
 ## Testing
 

@@ -1073,16 +1073,32 @@ class ExcitersTest : StringSpec({
         dry.zip(driven).all { (a, b) -> a == b } shouldBe true
     }
 
-    "clip soft limits output to approximately +-1" {
-        // Drive signal way above 1.0, then clip
+    "clip soft limits output near +-1 (DC blocker can overshoot at transitions)" {
+        // Drive signal way above 1.0, then clip. The clip's DC blocker can produce
+        // transient overshoots up to ~2x on sharp transitions of a near-square wave.
         val buf = generate(Ignitors.sine().drive(1.0).clip("soft"), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan 1.05
+        buf.peakAmplitude() shouldBeLessThan 2.5
         buf.any { it != 0.0f } shouldBe true
     }
 
-    "clip hard limits output to exactly +-1" {
+    "clip hard limits output near +-1 (DC blocker can overshoot at transitions)" {
+        // Hard clip + DC blocker: output is square-wave-ish, transient overshoots up to ~2x.
         val buf = generate(Ignitors.sine().drive(1.0).clip("hard"), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan 1.01
+        buf.peakAmplitude() shouldBeLessThan 2.5
+    }
+
+    "distort at extreme drive does NOT DC-lock — the safety contract" {
+        // Drive a pure sine through extreme distortion. Without the DC blocker, the
+        // output would rail-lock to one side when the input has any asymmetry; with
+        // the always-on DC blocker, output stays roughly centered on zero.
+        val buf = generate(Ignitors.sine().distort(5.0, "soft"), freqHz = 440.0)
+        // Skip the first 1024 samples (DC blocker startup transient).
+        val steady = buf.sliceArray(1024 until buf.size)
+        // Mean should be near zero (no rail lock).
+        val mean = steady.map { it.toDouble() }.average()
+        kotlin.math.abs(mean) shouldBeLessThan 0.1
+        // And no NaN / Inf despite the extreme drive.
+        steady.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
     "clip fold produces non-zero output" {

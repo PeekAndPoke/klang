@@ -41,14 +41,19 @@ operator fun Ignitor.plus(other: Ignitor): Ignitor = Ignitor { buffer, freqHz, c
     }
 }
 
-/** Ring-modulate two signals by per-sample multiplication. Uses a scratch buffer for the second signal. */
+/**
+ * Ring-modulate two signals by per-sample multiplication. Uses a scratch buffer for the second signal.
+ *
+ * Output magnitude is clamped to `±SAFE_MAX` and `NaN` is scrubbed to `0` per sample.
+ * See `audio/ref/numerical-safety.md` for the safety contract.
+ */
 operator fun Ignitor.times(other: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     ctx.scratchBuffers.use { tmp ->
         other.generate(tmp, freqHz, ctx)
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = buffer[i] * tmp[i]
+            buffer[i] = safeOut(buffer[i] * tmp[i])
         }
     }
 }
@@ -64,7 +69,7 @@ fun Ignitor.mul(factor: Double): Ignitor {
         val f = factor.toFloat()
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = buffer[i] * f
+            buffer[i] = safeOut(buffer[i] * f)
         }
     }
 }
@@ -72,8 +77,9 @@ fun Ignitor.mul(factor: Double): Ignitor {
 /**
  * Divide signal amplitude per-sample by an audio-rate [divisor].
  *
- * Zero divisors are substituted with a tiny epsilon (`1e-30`) so the engine
- * never produces `NaN`. The master limiter handles the resulting spike.
+ * Divisor magnitudes below `SAFE_MIN` are clamped (sign preserved) so the engine
+ * never produces `NaN`/`Inf`. The output is also clamped to `±SAFE_MAX`.
+ * See `audio/ref/numerical-safety.md`.
  */
 fun Ignitor.div(divisor: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
@@ -81,14 +87,19 @@ fun Ignitor.div(divisor: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
         divisor.generate(tmp, freqHz, ctx)
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            val d = tmp[i]
-            buffer[i] = buffer[i] / if (d == 0f) DIV_EPSILON else d
+            buffer[i] = safeOut(buffer[i] / safeDiv(tmp[i]))
         }
     }
 }
 
-/** Divide signal amplitude by a constant [divisor]. Delegates to [mul] with the reciprocal. */
-fun Ignitor.div(divisor: Double): Ignitor = mul(1.0 / divisor)
+/**
+ * Divide signal amplitude by a constant [divisor].
+ * Zero divisor is substituted with `±SAFE_MIN`; output clamped to `±SAFE_MAX`.
+ */
+fun Ignitor.div(divisor: Double): Ignitor {
+    val safeFactor = 1.0 / safeDiv(divisor.toFloat()).toDouble()
+    return mul(safeFactor)
+}
 
 /** Subtract another signal from this one (per-sample). Uses a scratch buffer for the second signal. */
 fun Ignitor.minus(other: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
@@ -123,7 +134,9 @@ fun Ignitor.abs(): Ignitor = Ignitor { buffer, freqHz, ctx ->
 
 /**
  * Raise this signal to the power of [exp] (per-sample).
+ *
  * Signed-magnitude: negative bases produce `-(|base|^exp)` to avoid `NaN`.
+ * `0^negative = +Inf` is caught by the output clamp (`±SAFE_MAX`).
  */
 fun Ignitor.pow(exp: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
@@ -133,7 +146,8 @@ fun Ignitor.pow(exp: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
         for (i in ctx.offset until end) {
             val b = buffer[i].toDouble()
             val e = tmp[i].toDouble()
-            buffer[i] = if (b >= 0.0) b.pow(e).toFloat() else -((-b).pow(e)).toFloat()
+            val raw = if (b >= 0.0) b.pow(e) else -((-b).pow(e))
+            buffer[i] = safeOut(raw.toFloat())
         }
     }
 }
@@ -188,12 +202,12 @@ fun Ignitor.clamp(lo: Ignitor, hi: Ignitor): Ignitor = Ignitor { buffer, freqHz,
     }
 }
 
-/** `e^x` per sample. */
+/** `e^x` per sample. Output clamped to `±SAFE_MAX` (caught for large `x`, e.g. `exp(40) ≈ 2.4e17`). */
 fun Ignitor.exp(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = exp(buffer[i].toDouble()).toFloat()
+        buffer[i] = safeOut(exp(buffer[i].toDouble()).toFloat())
     }
 }
 
@@ -338,8 +352,10 @@ fun Ignitor.frac(): Ignitor = Ignitor { buffer, freqHz, ctx ->
 }
 
 /**
- * Per-sample modulo. Zero divisor → epsilon to keep the engine `NaN`-free.
- * Uses one scratch buffer for the divisor.
+ * Per-sample modulo (Kotlin `rem` semantics — sign follows the dividend).
+ *
+ * Divisor magnitudes below `SAFE_MIN` are clamped (sign preserved). Uses one scratch buffer.
+ * See `audio/ref/numerical-safety.md`.
  */
 fun Ignitor.mod(other: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
@@ -347,30 +363,32 @@ fun Ignitor.mod(other: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
         other.generate(tmp, freqHz, ctx)
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            val d = tmp[i]
-            val safeD = if (d == 0f) DIV_EPSILON else d
-            buffer[i] = buffer[i] % safeD
+            buffer[i] = buffer[i] % safeDiv(tmp[i])
         }
     }
 }
 
-/** Per-sample reciprocal `1/x`. Zero inputs → epsilon to avoid `Inf`/`NaN`. */
+/**
+ * Per-sample reciprocal `1/x`.
+ *
+ * Input magnitudes below `SAFE_MIN` are clamped (sign preserved) so the output
+ * stays at `±SAFE_MAX` rather than overflowing to `±Inf`.
+ */
 fun Ignitor.recip(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        val v = buffer[i]
-        buffer[i] = 1f / if (v == 0f) DIV_EPSILON else v
+        buffer[i] = safeOut(1f / safeDiv(buffer[i]))
     }
 }
 
-/** Per-sample square: `x · x`. */
+/** Per-sample square: `x · x`. Output clamped to `±SAFE_MAX` (caught for `|x| > ~3.16e7`). */
 fun Ignitor.sq(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
         val v = buffer[i]
-        buffer[i] = v * v
+        buffer[i] = safeOut(v * v)
     }
 }
 
@@ -394,14 +412,59 @@ fun Ignitor.select(whenTrue: Ignitor, whenFalse: Ignitor): Ignitor = Ignitor { b
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Numerical Safety Bounds
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Klang's safety contract — see `audio/ref/numerical-safety.md` for the full story.
+//
+// Every arithmetic operator that can produce `NaN`/`Inf` clamps either its inputs
+// (divisor-class ops: Div, Mod, Recip) or its output (output-clamp ops: Times,
+// Pow, Exp, Sq, Mul-by-constant). Naturally bounded ops (Plus, Minus, Lerp,
+// Range, Clamp, Min, Max, Abs, Neg, Sign, Floor, Ceil, Round, Frac, Tanh, Sqrt,
+// Log) need no extra guard.
+//
+// Values match the SuperCollider / ChucK / STK convention (`zapgremlins`,
+// `CK_DDN_*`): ±300 dBFS, well below any audible signal, well above subnormal.
+// `1 / SAFE_MIN = SAFE_MAX` ensures a reciprocal of the smallest allowed
+// divisor lands exactly at the largest allowed output — round-trip safe.
+
 /**
- * Epsilon used to substitute a zero divisor in [div], [mod], and [recip].
+ * Smallest allowed magnitude for a divisor (or reciprocal input) in audio arithmetic.
  *
- * Picked small enough that `1 / EPSILON` lands well above the audio range
- * (the master limiter clamps the resulting spike) and large enough to avoid
- * subnormal-float performance penalties.
+ * Values closer to zero are clamped to `±SAFE_MIN` (sign preserved) to prevent
+ * `1/x` from overflowing. ≈ -300 dBFS — well below any audible signal.
  */
-private const val DIV_EPSILON: Float = 1e-30f
+const val SAFE_MIN: Float = 1e-15f
+
+/**
+ * Largest allowed output magnitude for ops that can grow values (`Times`, `Pow`,
+ * `Exp`, `Sq`, `Mul-by-constant`).
+ *
+ * Outputs above this are clamped to `±SAFE_MAX`. ≈ +300 dBFS — vastly above any
+ * musical signal, well below `Float.MAX_VALUE` (`≈ 3.4e38`). Squaring two
+ * `SAFE_MAX` values gives `1e30`, still finite Float.
+ */
+const val SAFE_MAX: Float = 1e15f
+
+/** Clamp a divisor's magnitude to `≥ SAFE_MIN`, preserving sign. Substitutes `0f` and `NaN` with `+SAFE_MIN`. */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun safeDiv(d: Float): Float = when {
+    d.isNaN() -> SAFE_MIN
+    d > SAFE_MIN -> d
+    d < -SAFE_MIN -> d
+    d < 0f -> -SAFE_MIN
+    else -> SAFE_MIN
+}
+
+/** Clamp an output value to `[-SAFE_MAX, +SAFE_MAX]`. Scrubs `NaN` to `0`. */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun safeOut(v: Float): Float = when {
+    v.isNaN() -> 0f
+    v > SAFE_MAX -> SAFE_MAX
+    v < -SAFE_MAX -> -SAFE_MAX
+    else -> v
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Frequency Modifiers

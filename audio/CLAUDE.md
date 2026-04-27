@@ -63,13 +63,14 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 
 ## Reference Files — Read Only What You Need
 
-| Topic                                                                | File                       |
-|----------------------------------------------------------------------|----------------------------|
-| Architecture, data flow, comm-link protocol, platform backends       | `ref/architecture.md`      |
-| VoiceData fields (all parameters), FilterDefs, ADSR, ScheduledVoice  | `ref/data-model.md`        |
-| Voice interface, AbstractVoice, SynthVoice, SampleVoice, oscillators | `ref/voice-synthesis.md`   |
-| KlangAudioRenderer, Cylinders, effects (Delay/Reverb/Compressor/…)   | `ref/effects-mixing.md`    |
-| Samples registry, audio decoders, URL caching (audio_fe)             | `ref/sample-management.md` |
+| Topic                                                                              | File                       |
+|------------------------------------------------------------------------------------|----------------------------|
+| Architecture, data flow, comm-link protocol, platform backends                     | `ref/architecture.md`      |
+| VoiceData fields (all parameters), FilterDefs, ADSR, ScheduledVoice                | `ref/data-model.md`        |
+| Voice interface, AbstractVoice, SynthVoice, SampleVoice, oscillators               | `ref/voice-synthesis.md`   |
+| KlangAudioRenderer, Cylinders, effects (Delay/Reverb/Compressor/…)                 | `ref/effects-mixing.md`    |
+| Samples registry, audio decoders, URL caching (audio_fe)                           | `ref/sample-management.md` |
+| Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX`, framework precedents | `ref/numerical-safety.md`  |
 
 ## Build & Test
 
