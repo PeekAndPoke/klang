@@ -82,28 +82,59 @@ The constants live in `audio_be/src/commonMain/kotlin/ignitor/Ignitor.kt`.
 - `SAFE_MAX² = 1e30` is still finite Float (`Float.MAX_VALUE ≈ 3.4e38`), so
   even an unclamped square between two max-safe values doesn't overflow.
 
-## Known gaps (2026-04-27)
+## Closed gaps
 
-The arithmetic batch applied the safety contract to the new ops (`Div`, `Mod`,
-`Recip`, `Times`, `Pow`, `Exp`, `Sq`, `mul-by-const`). Pre-existing ignitor
-runtimes were *not* updated and still have the same class of hazard:
+All known gaps as of 2026-04-27 have been addressed. Kept here for
+historical reference and to make the regression-test surface obvious.
 
-| File:fn                                                     | Issue                                                                                                                                   | Audible consequence                                                   |
-|-------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------|
-| `PitchModFactories.kt::vibratoModIgnitor` (line ~57)        | `2.0.pow(sin(lfoPhase) * depthSemitones / 12.0)` overflows Float for very large `depthSemitones`. No upper clamp on user input.         | `+Inf` → poisons oscillator phase accumulator → voice silent forever. |
-| `PitchModFactories.kt::accelerateModIgnitor` (lines ~93–99) | `2.0.pow(amountVal / totalFrames)` accumulated multiplicatively per sample. For large `amount`, `ratio` reaches `2^1000` and overflows. | Same.                                                                 |
-| `PitchModFactories.kt::pitchEnvelopeModIgnitor` (line ~161) | `2.0.pow(amountVal * envLevel / 12.0)` for `                                                                                            | amount                                                                | > ~440` overflows. | Same. |
-| `PitchModFactories.kt::fmModIgnitor` (line ~218)            | `effectiveDepth / freqHz` only guards `freqHz <= 0`, not `freqHz` close to 0 (sub-Hz from heavy detune).                                | Phase-mod ratio in the millions → carrier phase corrupted.            |
+| File:fn                                         | Issue                                                                                                                                                                | Closed by (date / fix)                                                                                              |
+|-------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| `PitchModFactories.kt::vibratoModIgnitor`       | `2.0.pow(...)` overflowed Float for large `depthSemitones`, poisoning phase accumulators.                                                                            | 2026-04-27 — wrapped in `safeOut(...)`.                                                                             |
+| `PitchModFactories.kt::accelerateModIgnitor`    | `2.0.pow(amountVal * progress)` accumulated multiplicatively past `Float.MAX_VALUE`.                                                                                 | 2026-04-27 — `safeOut(ratio.toFloat())` per sample.                                                                 |
+| `PitchModFactories.kt::pitchEnvelopeModIgnitor` | `2.0.pow(amountVal * envLevel / 12.0)` overflowed for `                                                                                                              | amount                                                                                                              | > ~440`.                                               | 2026-04-27 — wrapped in `safeOut(...)`.                             |
+| `PitchModFactories.kt::fmModIgnitor`            | `effectiveDepth / freqHz` only guarded `freqHz <= 0`, not sub-Hz pitches from heavy detune.                                                                          | 2026-04-27 — `safeDiv(freqHz.toFloat())` + `safeOut` on output.                                                     |
+| `DspUtil.kt::wrapPhase`                         | O(N) `while (p >= period) p -= period` loop hung the audio thread when given any extreme phase (Inf/NaN, or huge phase increments from upstream pitch-mod overflow). | 2026-04-27 — O(1) modulo fallback for out-of-range; recover `0.0` for `Inf`/`NaN`. Common-case fast path preserved. |
 
-Fix pattern (when addressing): wrap the offending arithmetic in `safeOut(...)`
-or — for division by `freqHz` — use `safeDiv(freqHz)`. These factories run at
-audio rate and feed into stateful phase accumulators, so any `Inf`/`NaN` is
-permanent.
+The filter, envelope, and effect runtimes were all verified correctly guarded
+in the same review (cutoffs clamped before `tan()`, IIR state has
+`flushDenormal`, feedback paths bounded by explicit clamps). No outstanding
+gaps in the audio-rate path as of this commit.
 
-The filter, envelope, and effect runtimes are all **already correctly guarded**
-(verified by review): cutoffs clamped before `tan()`, IIR state has
-`flushDenormal`, feedback paths bounded by explicit clamps. The pitch-mod
-factories are the only surviving hazard surface.
+## Why this matters — the lesson
+
+The arithmetic safety contract sets a per-op invariant: "your output magnitude
+is in `±SAFE_MAX`, never `NaN`/`Inf`." That's necessary but not sufficient.
+**Downstream consumers also have to handle the bounded-but-huge case in O(1)
+time.** This is the trap we walked into:
+
+1. The arithmetic batch added `safeOut`/`safeDiv` to the new ops.
+2. A code review found four pitch-mod factories (`vibrato`, `accelerate`,
+   `pitchEnvelope`, FM) doing unguarded `2.0.pow(...)` and `/ freqHz`. We
+   patched those — applying the same `safeOut`/`safeDiv` discipline.
+3. We added a stress test: extreme `depth=10000` vibrato feeding into a sine
+   oscillator — to verify the safety clamp prevents voice silencing.
+4. The test **hung the build**. Cause: the per-op contract correctly clamped
+   the pitch ratio at `SAFE_MAX = 1e15`. But that "safe" ratio fed into
+   `wrapPhase`, which used `while (p >= period) p -= period` — O(N) where N
+   is the overshoot count. With a phase increment of `~6e13`, the loop
+   iterated `~10¹³` times **per sample**.
+5. Fix: make `wrapPhase` O(1) for any input via a modulo fallback when the
+   phase is way out of range, plus an `Inf`/`NaN` recovery path. Common case
+   (overshoot by ≤1 period) keeps the fast subtraction path.
+
+**Generalised principle for any new audio-rate code:**
+
+> "Safe" means **finite** and within `±SAFE_MAX` — it does NOT mean **small**.
+> Any code that consumes a value bounded by the safety contract must run in
+> O(1) regardless of the value's magnitude. Subtraction loops, retry loops,
+> fixed-point Newton iterations, and any state mutation that scales with
+> input magnitude are landmines. Use modulo, branchless arithmetic, or
+> single-step bounded iteration.
+
+When adding a new oscillator, filter, or modulator: ask **"what does my
+algorithm do if the upstream signal is `+SAFE_MAX`?"** If the answer is
+"loops a billion times" or "overflows my own state", add a guard. The
+`wrapPhase` fix is the canonical pattern.
 
 ## Why not also do hardware FTZ?
 
@@ -129,8 +160,17 @@ JVM has `-XX:UseFTZForFloats` but it's not portable across vendors.
 
 ## History
 
-- 2026-04-27: research surveyed across JUCE, SuperCollider, Faust, ChucK/STK,
-  Pure Data, CSound, Web Audio. Findings written up here.
-  See `docs/agent-tasks-archive/2026-04/20260427-ignitor-dsl-arithmetic-batch.md`
-  and the original research scratch file at
-  `tmp/audio-safety-bounds-research.md`.
+- 2026-04-27 (initial): research surveyed across JUCE, SuperCollider, Faust,
+  ChucK/STK, Pure Data, CSound, Web Audio. `SAFE_MIN = 1e-15f` /
+  `SAFE_MAX = 1e15f` adopted (matching `zapgremlins`). Contract applied to the
+  new arithmetic ops shipped in the IgnitorDsl arithmetic batch. Distort path
+  switched to unconditional DC-block.
+- 2026-04-27 (follow-up): code review identified four pre-existing pitch-mod
+  factories with the same hazard class. Closed all four with
+  `safeOut`/`safeDiv`. Stress test exposed `wrapPhase` as a downstream O(N)
+  consumer of bounded-but-huge inputs; rewritten as O(1) modulo with
+  `Inf`/`NaN` recovery. New runtime tests for arithmetic ops + pitch-mod
+  factories landed (60 + 12 tests).
+
+See `docs/agent-tasks-archive/2026-04/20260427-ignitor-dsl-arithmetic-batch.md`
+and the original research scratch file at `tmp/audio-safety-bounds-research.md`.

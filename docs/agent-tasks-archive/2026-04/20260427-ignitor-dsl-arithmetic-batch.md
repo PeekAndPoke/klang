@@ -143,16 +143,94 @@ New file `audio_be/src/commonTest/kotlin/ignitor/IgnitorArithmeticTest.kt` —
 `1e20 * 1e20` etc. — all assert `allFinite()` + `≤ SAFE_MAX`. Also covers
 deeply-nested chains and `1/sin near zero crossing` (audio-rate scenario).
 
-## Known gaps surfaced by the post-batch review
+## Phase 10 — Pitch-mod factories closed + `wrapPhase` O(1) (2026-04-27, follow-up)
 
-The pitch-mod factories in `audio_be/.../ignitor/PitchModFactories.kt`
-(`vibratoModIgnitor`, `accelerateModIgnitor`, `pitchEnvelopeModIgnitor`, FM mod)
-all do unguarded `2.0.pow(...)` or `effectiveDepth / freqHz` arithmetic that
-can overflow Float for extreme user inputs and poison phase accumulators. Same
-class of hazard the safety contract was designed to catch — but these
-ignitors weren't part of the batch and were not updated. Documented in
-`audio/ref/numerical-safety.md` under "Known gaps". To be addressed in a
-follow-up.
+The post-batch review identified four pre-existing pitch-mod factories with the
+same overflow class as the new arithmetic ops. All closed in this phase, plus
+a deeper latent bug surfaced by stress-testing the fix.
+
+### Pitch-mod factories — `safeOut`/`safeDiv` applied
+
+| File:fn                                         | Fix                                                                                                                       |
+|-------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| `PitchModFactories.kt::vibratoModIgnitor`       | `safeOut(2.0.pow(...).toFloat())` per sample.                                                                             |
+| `PitchModFactories.kt::accelerateModIgnitor`    | `safeOut(ratio.toFloat())` per sample (Double `ratio` accumulator can grow past `Double.MAX_VALUE` for extreme `amount`). |
+| `PitchModFactories.kt::pitchEnvelopeModIgnitor` | `safeOut(2.0.pow(...).toFloat())` per sample.                                                                             |
+| `PitchModFactories.kt::fmModIgnitor`            | `safeDiv(freqHz.toFloat()).toDouble()` for the divisor (sub-Hz pitches), `safeOut(...)` on output.                        |
+
+KDocs updated to document the safety guarantee and reference
+`audio/ref/numerical-safety.md`.
+
+### `wrapPhase` — latent O(N) hazard exposed by stress test
+
+A new test (`PitchModSafetyTest.kt::"extreme vibrato through ModApplyingIgnitor
+keeps oscillator alive"`) feeds `depth = 10000` into `vibratoModIgnitor`. With
+the new `safeOut` clamp the per-sample ratio caps at `SAFE_MAX = 1e15`. That
+ratio multiplies the carrier phase increment, producing per-sample phase
+deltas of `~6e13` radians.
+
+`DspUtil.kt::wrapPhase` was implemented as:
+
+```kotlin
+while (p >= period) p -= period  // O(N) — loops 1e13 times per sample
+```
+
+The build hung. Per-op safety was intact (no NaN/Inf produced), but the
+*downstream consumer* of the safe value couldn't handle a magnitude near
+`SAFE_MAX` in O(1).
+
+**Fix** (`DspUtil.kt:22-43`): O(1) modulo fallback when phase is way out of
+range, plus `if (!phase.isFinite()) return 0.0` recovery. Common-case fast
+subtraction path preserved for normal oscillators (the comment about JS `%`
+performance still applies in the hot loop).
+
+```kotlin
+inline fun wrapPhase(phase: Double, period: Double): Double {
+  if (!phase.isFinite()) return 0.0
+  var p = phase
+  if (p >= 2.0 * period || p < -period) {
+    p -= period * floor(p / period)   // way out of range — O(1) modulo
+  } else {
+    if (p >= period) p -= period       // common case — fast subtract
+    else if (p < 0.0) p += period
+  }
+  return p
+}
+```
+
+### Tests added
+
+- `audio_be/.../ignitor/PitchModSafetyTest.kt` — 12 new tests covering normal
+  use, extreme inputs (`depth = 10000`, `amount = 1000`, sub-Hz `freqHz`), and
+  oscillator-composition (the test that exposed `wrapPhase`).
+
+### Generalised lesson — recorded in `audio/ref/numerical-safety.md`
+
+> "Safe" means **finite** and within `±SAFE_MAX`. It does NOT mean **small**.
+> Any audio-rate consumer of a value clamped to `±SAFE_MAX` must run in O(1)
+> regardless of the value's magnitude. Subtraction loops, retry loops, fixed-
+> point Newton iterations, or any state mutation scaling with input magnitude
+> are latent landmines. Use modulo, branchless arithmetic, or single-step
+> bounded iteration.
+
+When adding a new oscillator, filter, or modulator, ask: *"what does my
+algorithm do if the upstream signal is `+SAFE_MAX`?"* If the answer is "loops
+a billion times" or "overflows my own state", add a guard. `wrapPhase` is the
+canonical pattern.
+
+### Verification
+
+`./gradlew :audio_bridge:jvmTest :audio_be:jvmTest :klangscript:jvmTest` —
+**BUILD SUCCESSFUL in 1m 11s**. All previously-passing tests still pass; the
+12 new pitch-mod safety tests pass; the previously-hanging extreme-vibrato
+test now completes in ~milliseconds.
+
+### Follow-up scheduled
+
+Remote agent `trig_01TwxoCYLAx9KGuyyk2SupDf` queued for **2026-05-11 09:00
+Berlin (07:00 UTC)**. One-time, read-only verification — scans recent
+commits for new safety hazards, runs tests, reports findings via the
+routine's run page (no commits, no PRs, no GitHub issues).
 
 ## Out of scope (and why)
 

@@ -1073,18 +1073,22 @@ class ExcitersTest : StringSpec({
         dry.zip(driven).all { (a, b) -> a == b } shouldBe true
     }
 
-    "clip soft limits output near +-1 (DC blocker can overshoot at transitions)" {
-        // Drive signal way above 1.0, then clip. The clip's DC blocker can produce
-        // transient overshoots up to ~2x on sharp transitions of a near-square wave.
+    "clip soft bounds output to within ±1 via the post-tanh soft-cap" {
+        // Drive signal way above 1.0, then clip. The post-tanh soft-cap (2026-04-28)
+        // bounds the DC-blocker's edge transients smoothly to ±1; this used to be a
+        // ~2× overshoot. Tiny excursion above 1.0 (≤ ~1.05) is allowed for fastTanh
+        // float-rounding plus any decimation-filter ripple.
         val buf = generate(Ignitors.sine().drive(1.0).clip("soft"), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan 2.5
-        buf.any { it != 0.0f } shouldBe true
+        buf.peakAmplitude() shouldBeLessThan 1.05
+        buf.peakAmplitude() shouldBeGreaterThan 0.5  // still loud — the cap isn't silencing it
     }
 
-    "clip hard limits output near +-1 (DC blocker can overshoot at transitions)" {
-        // Hard clip + DC blocker: output is square-wave-ish, transient overshoots up to ~2x.
+    "clip hard bounds output to within ±1 via the post-tanh soft-cap" {
+        // Hard clip → DC-blocker → fastTanh: even the worst-case rail-edge transient
+        // is bounded to ~±1, no longer the ~2× spike of the pre-2026-04-28 path.
         val buf = generate(Ignitors.sine().drive(1.0).clip("hard"), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan 2.5
+        buf.peakAmplitude() shouldBeLessThan 1.05
+        buf.peakAmplitude() shouldBeGreaterThan 0.5
     }
 
     "distort at extreme drive does NOT DC-lock — the safety contract" {
@@ -1099,6 +1103,9 @@ class ExcitersTest : StringSpec({
         kotlin.math.abs(mean) shouldBeLessThan 0.1
         // And no NaN / Inf despite the extreme drive.
         steady.none { it.isNaN() || it.isInfinite() } shouldBe true
+        // Post-tanh soft-cap (2026-04-28) bounds the rail-edge overshoot. Without
+        // it, this test would have peaked near ±2.
+        steady.peakAmplitude() shouldBeLessThan 1.05
     }
 
     "clip fold produces non-zero output" {

@@ -35,6 +35,10 @@ fun deviationToRatioIgnitor(userMod: Ignitor): Ignitor = Ignitor { buffer, freqH
  * Produces `2^(sin(lfoPhase) * depthSemitones / 12)` per sample.
  * At depth=0: output = 1.0 (no change). At depth=1, ±1 semitone wobble.
  *
+ * Output is passed through [safeOut] — extreme `depthSemitones` values cannot
+ * produce `+Inf` ratios that would poison the oscillator phase accumulator.
+ * See `audio/ref/numerical-safety.md`.
+ *
  * @param rate LFO frequency in Hz
  * @param depth modulation depth in semitones
  */
@@ -54,7 +58,7 @@ fun vibratoModIgnitor(rate: Ignitor, depth: Ignitor): Ignitor {
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = 2.0.pow(sin(lfoPhase) * depthSemitones / 12.0).toFloat()
+            buffer[i] = safeOut(2.0.pow(sin(lfoPhase) * depthSemitones / 12.0).toFloat())
             lfoPhase += lfoInc
             if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
         }
@@ -69,6 +73,10 @@ fun vibratoModIgnitor(rate: Double, depth: Double): Ignitor =
  *
  * Produces `2^(amount * progress)` per sample, where progress ramps 0→1 over voice duration.
  * At progress=0: output = 1.0. At progress=1: output = `2^amount`.
+ *
+ * Output is passed through [safeOut] — large `amount` values can grow `ratio`
+ * past `Float.MAX_VALUE` (overflowing to `+Inf`); the safety clamp keeps the
+ * oscillator phase accumulator finite. See `audio/ref/numerical-safety.md`.
  *
  * @param amount pitch change exponent over full voice duration. Positive = pitch rises.
  */
@@ -94,7 +102,7 @@ fun accelerateModIgnitor(amount: Ignitor): Ignitor {
         var ratio = 2.0.pow(amountVal * startProgress)
 
         for (i in ctx.offset until end) {
-            buffer[i] = ratio.toFloat()
+            buffer[i] = safeOut(ratio.toFloat())
             ratio *= step
         }
     }
@@ -107,6 +115,10 @@ fun accelerateModIgnitor(amount: Double): Ignitor =
  * Pitch envelope — ADSR-shaped pitch ratio.
  *
  * Produces `2^(amount * envLevel / 12)` per sample.
+ *
+ * Output is passed through [safeOut] — extreme `amount` values cannot produce
+ * `+Inf` ratios that would poison the oscillator phase accumulator.
+ * See `audio/ref/numerical-safety.md`.
  *
  * @param amount semitones of pitch shift at peak
  * @param attackSec attack time
@@ -158,7 +170,7 @@ fun pitchEnvelopeModIgnitor(
                 envLevel = 1.0 - (1.0 - anchorVal) * decayProgress
             }
 
-            buffer[i] = 2.0.pow((amountVal * envLevel) / 12.0).toFloat()
+            buffer[i] = safeOut(2.0.pow((amountVal * envLevel) / 12.0).toFloat())
         }
     }
 }
@@ -168,6 +180,10 @@ fun pitchEnvelopeModIgnitor(
  *
  * Generates the [modulator] at `freqHz * ratio`, scales by `depth / freqHz`, applies
  * an optional ADSR envelope to the depth. Output: `1.0 + modOutput * effectiveDepth / freqHz`.
+ *
+ * The `freqHz` divisor goes through [safeDiv] to handle sub-Hz pitches (e.g. heavy
+ * detune toward zero) without producing huge phase-mod ratios. Final output goes
+ * through [safeOut]. See `audio/ref/numerical-safety.md`.
  *
  * @param modulator the modulation signal source (any Ignitor subtree)
  * @param ratio frequency ratio between modulator and carrier
@@ -214,8 +230,10 @@ fun fmModIgnitor(
             val modFreq = freqHz * ratioVal
             modulator.generate(modBuf, modFreq, ctx)
 
+            // Sub-Hz freqHz (from heavy detune) would otherwise blow up `effectiveDepth / freqHz`.
+            val safeFreq = safeDiv(freqHz.toFloat()).toDouble()
             for (i in ctx.offset until end) {
-                buffer[i] = (1.0 + modBuf[i].toDouble() * effectiveDepth / freqHz).toFloat()
+                buffer[i] = safeOut((1.0 + modBuf[i].toDouble() * effectiveDepth / safeFreq).toFloat())
             }
         }
     }

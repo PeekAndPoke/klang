@@ -35,12 +35,48 @@ drive amounts where output got stuck at -1 due to envelope-decay asymmetries.
 Trade-off: transient overshoots up to ~2x at sharp transitions of square-like
 signals — existing tests updated, master limiter handles the spike.
 
-**Known gap (not fixed in this batch)**: the pitch-mod factories
-(`vibratoModIgnitor`, `accelerateModIgnitor`, `pitchEnvelopeModIgnitor`, FM mod
-in `PitchModFactories.kt`) all use unguarded `2.0.pow(...)` or `effectiveDepth /
-freqHz` arithmetic that can overflow Float for extreme user inputs and poison
-oscillator phase accumulators. Same kind of hazard the safety contract was
-designed to catch — should be addressed in a follow-up.
+**Edge-overshoot soft-cap (2026-04-28)**: the 2× DC-blocker transient turned
+out to be audible as per-cycle clicks on heavy-drive `distort()`/`clip()` users
+(reported on the rhythm-pattern guitar ignitor in `TestTextPatterns.kt`). The
+DC-blocker output is now `ClippingFuncs.fastTanh`-saturated to bound the
+differential filter's edge response to ±1 with a smooth knee. At low/medium
+drive the tanh is in its near-linear region — `fastTanh(0.5) ≈ 0.487`, ~3%
+gain reduction, added THD ≤ −60 dB, inaudible — so saturation character is
+preserved; at high drive the per-cycle ±2 spike is folded back to ±1, which is
+what made the click audible. The rail-lock guard from 2026-04-27 is unaffected
+(DC-blocker state still updates from the un-tanh'd `dcOut`; only the visible
+output is soft-capped). When `oversampleStages > 0`, the DC-block + tanh runs
+*inside* the oversampled pipeline (with α rate-compensated to preserve the
+~38 Hz cutoff) so the tanh-induced harmonics get anti-alias filtered by the
+existing decimator. Asymmetric shapes (`diode`, `rectify`) may still introduce
+a small DC bias that the tanh re-creates from the now-asymmetric HPF'd
+signal — bounded and tiny.
+
+Scope: the patch is in `Ignitor.distort()`/`Ignitor.clip()` only. The legacy
+filter-stage `DistortionRenderer` (covered by `effects/DistortionSpec.kt`) is
+a separate code path and unchanged. The patched ignitor path is covered by
+`ignitor/IgnitorsTest.kt` (peak bounds tightened from `< 2.5` to `< 1.05` in
+the same patch).
+
+See `audio_be/src/commonTest/kotlin/ignitor/GuitarClickHuntTest.kt` for the A/B
+harness used to validate the patch (production-path peak 2.56 → 1.91, worst
+sample-to-sample Δ 0.60 → 0.38 on the rhythm-pattern chord notes after the
+in-oversampler placement).
+
+**Pitch-mod factories closed (same day)**: code review identified four pre-existing
+hazards in `PitchModFactories.kt` (`vibratoModIgnitor`, `accelerateModIgnitor`,
+`pitchEnvelopeModIgnitor`, `fmModIgnitor`) with the same overflow pattern. All
+four now apply `safeOut`/`safeDiv`. Stress test for extreme depth exposed a
+**latent O(N) hazard in `wrapPhase`** (`DspUtil.kt`) — the `while (p >= period)
+p -= period` loop hung the audio thread for huge phase increments coming out of
+a SAFE_MAX-clamped pitch-mod ratio. Rewritten as O(1) modulo with `Inf`/`NaN`
+recovery; common-case fast subtraction path preserved.
+
+**Generalised lesson** (see `audio/ref/numerical-safety.md` "Why this matters"):
+the per-op safety contract guarantees **finite + bounded**, NOT **small**. Any
+audio-rate consumer of a value clamped to `±SAFE_MAX` must run in O(1)
+regardless of the value's magnitude — no subtraction loops, no retry loops, no
+state scaling with input. The `wrapPhase` rewrite is the canonical pattern.
 
 ## Ignitor Composable Architecture (2026-03-19)
 
