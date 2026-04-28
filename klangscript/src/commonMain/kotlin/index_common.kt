@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.script
 
 import io.peekandpoke.klang.script.stdlib.KlangStdLib
-import io.peekandpoke.ultra.common.MutableTypedAttributes
 import kotlin.reflect.KClass
 
 /** Singleton standard library instance. */
@@ -10,13 +9,12 @@ val stdlibLib: KlangScriptLibrary = KlangStdLib.create()
 /**
  * Create a [KlangScriptEngine] with the standard library pre-registered.
  *
- * @param attrs Mutable typed attributes for engine-level state. The app can set
- *   values (e.g. IgnitorRegistrar) on it before or after building.
+ * Mutate `attrs` and call `registerLibrary(...)` from inside [builder] to configure the engine.
+ *
  * @param builder Optional configuration block for additional registrations
  * @return A fully configured engine
  */
 fun klangScript(
-    attrs: MutableTypedAttributes = MutableTypedAttributes.empty(),
     builder: KlangScriptEngine.Builder.() -> Unit = {},
 ): KlangScriptEngine {
     val engineBuilder = KlangScriptEngine.Builder()
@@ -24,7 +22,7 @@ fun klangScript(
     engineBuilder.registerLibrary(stdlibLib)
     engineBuilder.apply(builder)
 
-    return engineBuilder.build(attrs)
+    return engineBuilder.build()
 }
 
 /**

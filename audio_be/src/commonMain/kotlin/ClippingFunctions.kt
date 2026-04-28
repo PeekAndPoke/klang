@@ -145,4 +145,31 @@ object ClippingFuncs {
             -(1.0 - kotlin.math.exp(x))
         }
     }
+
+    /**
+     * Soft brick-wall limiter — identity in the linear region, smooth saturation above.
+     *
+     * **Shape:** C¹-continuous piecewise.
+     *  - For `|x| ≤ threshold`: identity (no compression).
+     *  - For `|x| > threshold`: `sign(x) · (T + (1−T) · fastTanh((|x|−T)/(1−T)))`.
+     *
+     * Both value and slope match at the threshold (no cliff click), output asymptotes
+     * to ±1.
+     *
+     * **Use Case:** Bounding the output of a distortion / DC-blocker chain to ±1
+     * without compressing the bulk of the signal — typical [threshold] of 0.90
+     * leaves clean audio untouched and only acts on rail-edge transients above ±1
+     * (e.g. the 2× DC-blocker overshoot on heavily-saturated inputs).
+     *
+     * @param x input sample.
+     * @param threshold linear-region cutoff in [0, 1). Default 0.95. Lower = more
+     *   saturation character on bulk peaks; higher = more identity, hard-clip-ish.
+     */
+    inline fun softCap(x: Double, threshold: Double = 0.90): Double {
+        val absX = if (x < 0.0) -x else x
+        if (absX <= threshold) return x
+        val headroom = 1.0 - threshold
+        val saturated = threshold + headroom * fastTanh((absX - threshold) / headroom)
+        return if (x < 0.0) -saturated else saturated
+    }
 }

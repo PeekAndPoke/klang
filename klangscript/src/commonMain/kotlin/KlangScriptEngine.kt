@@ -3,7 +3,14 @@ package io.peekandpoke.klang.script
 import io.peekandpoke.klang.script.builder.KlangScriptExtension
 import io.peekandpoke.klang.script.builder.KlangScriptExtensionBuilder
 import io.peekandpoke.klang.script.parser.KlangScriptParser
-import io.peekandpoke.klang.script.runtime.*
+import io.peekandpoke.klang.script.runtime.CallStack
+import io.peekandpoke.klang.script.runtime.Environment
+import io.peekandpoke.klang.script.runtime.ExecutionContext
+import io.peekandpoke.klang.script.runtime.Interpreter
+import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
+import io.peekandpoke.klang.script.runtime.LibraryLoader
+import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
+import io.peekandpoke.klang.script.runtime.RuntimeValue
 import io.peekandpoke.ultra.common.MutableTypedAttributes
 
 /**
@@ -209,19 +216,23 @@ class KlangScriptEngine private constructor(
      *
      * The builder collects all registrations (libraries, functions, types, methods)
      * and applies them when build() is called, producing an immutable engine.
+     *
+     * The [attrs] bag holds engine-level state (e.g. a player registrar callback). Mutate
+     * it directly from extension functions during configuration — it is handed to the
+     * built engine as-is.
      */
     class Builder(
         private val registry: KlangScriptExtensionBuilder = KlangScriptExtensionBuilder(),
+        /** Engine-level typed attributes. Mutate during builder configuration. */
+        val attrs: MutableTypedAttributes = MutableTypedAttributes.empty(),
     ) : KlangScriptExtensionBuilder by registry {
 
         /**
          * Build the configured KlangScript engine.
          *
-         * @param attrs Mutable typed attributes for engine-level state. The app can set
-         *   values (e.g. KlangPlayer) on it after building. Native methods access it via the engine reference.
          * @return The configured KlangScript engine
          */
-        fun build(attrs: MutableTypedAttributes = MutableTypedAttributes.empty()): KlangScriptEngine {
+        fun build(): KlangScriptEngine {
             return KlangScriptEngine(
                 native = registry.buildNativeRegistry(),
                 attrs = attrs,

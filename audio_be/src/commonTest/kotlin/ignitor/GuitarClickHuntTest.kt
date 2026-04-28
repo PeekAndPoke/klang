@@ -121,6 +121,18 @@ class GuitarClickHuntTest : StringSpec({
     fun renderVoice(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): FloatArray =
         renderVoiceFromIgnitor(dsl.toExciter(), freqHz, gateMs, releaseMs)
 
+    /**
+     * Renders the ignitor through the engine's `IgniteRenderer` wrapper (which hard-clips
+     * to ±1 per output sample). Use this to verify the in-engine ±1 invariant.
+     */
+    fun renderVoiceThroughWrapper(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): FloatArray {
+        val out = renderVoiceFromIgnitor(dsl.toExciter(), freqHz, gateMs, releaseMs)
+        for (i in out.indices) {
+            out[i] = out[i].coerceIn(-1.0f, 1.0f)
+        }
+        return out
+    }
+
     data class Metrics(
         val peakAbs: Float,
         val attackPeak: Float,
@@ -316,6 +328,29 @@ class GuitarClickHuntTest : StringSpec({
                 println("  TOTAL NaN=$totalNan Inf=$totalInf")
             }
         }
+        println()
+    }
+
+    "guitar click hunt — full guitar through IgniteRenderer wrap (the in-engine path)" {
+        println()
+        println("================================================================")
+        println("In-engine path: full ignitor + IgniteRenderer hard-clip wrapper.")
+        println("This is what users actually hear — peak should be ≤ 1.0 (hard cap).")
+        println("================================================================")
+
+        val perNote = mutableListOf<Pair<Int, Metrics>>()
+        for (m in rhythmMidis) {
+            val out = renderVoiceThroughWrapper(fullGuitar(), midiToHz(m), gateMs = 250, releaseMs = 200)
+            perNote += m to analyze(out, sampleRate * 250 / 1000)
+        }
+
+        val worstPeak = perNote.maxBy { it.second.peakAbs }
+        val worstDelta = perNote.maxBy { it.second.peakDelta }
+        val worstRatio = perNote.maxBy { it.second.deltaRatio }
+        println()
+        println("  worst peakAbs @ MIDI ${worstPeak.first}: ${worstPeak.second.shortString()}")
+        println("  worst maxΔ    @ MIDI ${worstDelta.first}: ${worstDelta.second.shortString()}")
+        println("  worst Δ-ratio @ MIDI ${worstRatio.first}: ${worstRatio.second.shortString()}")
         println()
     }
 

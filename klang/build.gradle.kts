@@ -54,6 +54,9 @@ kotlin {
                 api(project(":audio_be"))
                 api(project(":audio_bridge"))
 
+                // Scripting (for KlangScriptEngine.Builder.setPlayer)
+                api(project(":klangscript"))
+
                 // Useful tools
                 api(project(":tones"))
             }

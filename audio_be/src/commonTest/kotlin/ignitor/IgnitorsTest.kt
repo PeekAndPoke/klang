@@ -1073,22 +1073,64 @@ class ExcitersTest : StringSpec({
         dry.zip(driven).all { (a, b) -> a == b } shouldBe true
     }
 
-    "clip soft bounds output to within ±1 via the post-tanh soft-cap" {
-        // Drive signal way above 1.0, then clip. The post-tanh soft-cap (2026-04-28)
-        // bounds the DC-blocker's edge transients smoothly to ±1; this used to be a
-        // ~2× overshoot. Tiny excursion above 1.0 (≤ ~1.05) is allowed for fastTanh
-        // float-rounding plus any decimation-filter ripple.
+    "clip soft direct output is finite and stays in the documented envelope" {
+        // Direct call (no IgniteRenderer wrapper): the clip stage itself does
+        // shape + DC-block. The DC-blocker's 2× edge transient on rail-to-rail
+        // signals lifts peaks toward ±2 — the IgniteRenderer wrap is what bounds
+        // them to ±1 in the live engine. See `clip via IgniteRenderer wrap …`
+        // below for the bound-to-±1 invariant.
         val buf = generate(Ignitors.sine().drive(1.0).clip("soft"), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan 1.05
-        buf.peakAmplitude() shouldBeGreaterThan 0.5  // still loud — the cap isn't silencing it
+        buf.peakAmplitude() shouldBeLessThan 2.5
+        buf.any { it != 0.0f } shouldBe true
+        buf.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
-    "clip hard bounds output to within ±1 via the post-tanh soft-cap" {
-        // Hard clip → DC-blocker → fastTanh: even the worst-case rail-edge transient
-        // is bounded to ~±1, no longer the ~2× spike of the pre-2026-04-28 path.
+    "clip hard direct output is finite and stays in the documented envelope" {
+        // Same reasoning as `clip soft direct …` above.
         val buf = generate(Ignitors.sine().drive(1.0).clip("hard"), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan 1.05
-        buf.peakAmplitude() shouldBeGreaterThan 0.5
+        buf.peakAmplitude() shouldBeLessThan 2.5
+        buf.none { it.isNaN() || it.isInfinite() } shouldBe true
+    }
+
+    "clip via IgniteRenderer wrap bounds output to within ±1 (the in-engine invariant)" {
+        // The IgniteRenderer applies a single fastTanh wrap to the entire ignitor
+        // output. This is what bounds heavy-distort/clip chains to ±1 in the live
+        // engine (per-stage clip/distort no longer caps — see IgnitorEffects.kt).
+        val signal = Ignitors.sine().drive(1.0).clip("soft")
+        val ctx = io.peekandpoke.klang.audio_be.voices.strip.BlockContext(
+            audioBuffer = FloatArray(defaultBlockFrames),
+            freqModBuffer = DoubleArray(defaultBlockFrames),
+            scratchBuffers = ScratchBuffers(defaultBlockFrames),
+            sampleRate = sampleRate,
+            startFrame = 0,
+            endFrame = defaultBlockFrames,
+            gateEndFrame = defaultBlockFrames,
+            freqHz = 440.0,
+            signal = signal,
+            signalCtx = IgniteContext(
+                sampleRate = sampleRate,
+                voiceDurationFrames = defaultBlockFrames,
+                gateEndFrame = defaultBlockFrames,
+                releaseFrames = 0,
+                voiceEndFrame = defaultBlockFrames,
+                scratchBuffers = ScratchBuffers(defaultBlockFrames),
+            ),
+            cylinders = io.peekandpoke.klang.audio_be.cylinders.Cylinders(
+                blockFrames = defaultBlockFrames, sampleRate = sampleRate,
+            ),
+        ).apply {
+            offset = 0; length = defaultBlockFrames; blockStart = 0
+        }
+        val renderer = io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer(
+            signal = signal,
+            signalCtx = ctx.signalCtx,
+            freqHz = 440.0,
+            startFrame = 0,
+        )
+        renderer.render(ctx)
+        ctx.audioBuffer.peakAmplitude() shouldBeLessThan 1.05
+        ctx.audioBuffer.peakAmplitude() shouldBeGreaterThan 0.5  // still loud — wrapper isn't silencing
+        ctx.audioBuffer.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
     "distort at extreme drive does NOT DC-lock — the safety contract" {
@@ -1103,9 +1145,10 @@ class ExcitersTest : StringSpec({
         kotlin.math.abs(mean) shouldBeLessThan 0.1
         // And no NaN / Inf despite the extreme drive.
         steady.none { it.isNaN() || it.isInfinite() } shouldBe true
-        // Post-tanh soft-cap (2026-04-28) bounds the rail-edge overshoot. Without
-        // it, this test would have peaked near ±2.
-        steady.peakAmplitude() shouldBeLessThan 1.05
+        // Direct call (no IgniteRenderer wrap) — peak is bounded by the
+        // DC-blocker's 2× edge response, not by ±1. See the IgniteRenderer
+        // wrap test for the in-engine ±1 invariant.
+        steady.peakAmplitude() shouldBeLessThan 2.5
     }
 
     "clip fold produces non-zero output" {

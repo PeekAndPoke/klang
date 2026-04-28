@@ -7,11 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlin.js.json
 
 /**
- * Create a KlangPlayer for JS
+ * Create a KlangPlayer for JS. Suspends until the audio backend has completed warmup.
  */
-actual fun klangPlayer(
+actual suspend fun klangPlayer(
     options: KlangPlayer.Options,
-    onReady: (KlangPlayer) -> Unit,
 ): KlangPlayer {
     val sampleRate = resolveBestSampleRate(options.sampleRate)
 
@@ -19,14 +18,16 @@ actual fun klangPlayer(
 
     val effectiveOptions = options.copy(sampleRate = sampleRate)
 
-    return KlangPlayer(
+    val player = KlangPlayer(
         options = effectiveOptions,
         backendFactory = { config -> JsAudioBackend(config) },
-        onReady = onReady,
         fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = Dispatchers.Default,
         callbackDispatcher = Dispatchers.Default,
     )
+
+    player.backendReady.await()
+    return player
 }
 
 fun resolveBestSampleRate(desired: Int): Int {

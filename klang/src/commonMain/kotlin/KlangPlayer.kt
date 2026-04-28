@@ -27,8 +27,6 @@ class KlangPlayer(
     private val backendFactory: suspend (config: AudioBackend.Config) -> AudioBackend,
     /** The coroutines scope on which the player runs */
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-    /** Called when the backend is ready to receive samples */
-    val onReady: (KlangPlayer) -> Unit,
     /** The dispatcher used for the event fetcher */
     private val fetcherDispatcher: CoroutineDispatcher,
     /** The dispatcher used for the audio backend */
@@ -108,9 +106,6 @@ class KlangPlayer(
 
             // Store backend reference for visualizer access
             _activeBackend = backend
-
-            // Call the onReady callback
-            onReady(this@KlangPlayer)
 
             launch(backendDispatcher.limitedParallelism(1)) {
                 backend.run(this)

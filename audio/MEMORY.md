@@ -35,33 +35,60 @@ drive amounts where output got stuck at -1 due to envelope-decay asymmetries.
 Trade-off: transient overshoots up to ~2x at sharp transitions of square-like
 signals — existing tests updated, master limiter handles the spike.
 
-**Edge-overshoot soft-cap (2026-04-28)**: the 2× DC-blocker transient turned
-out to be audible as per-cycle clicks on heavy-drive `distort()`/`clip()` users
-(reported on the rhythm-pattern guitar ignitor in `TestTextPatterns.kt`). The
-DC-blocker output is now `ClippingFuncs.fastTanh`-saturated to bound the
-differential filter's edge response to ±1 with a smooth knee. At low/medium
-drive the tanh is in its near-linear region — `fastTanh(0.5) ≈ 0.487`, ~3%
-gain reduction, added THD ≤ −60 dB, inaudible — so saturation character is
-preserved; at high drive the per-cycle ±2 spike is folded back to ±1, which is
-what made the click audible. The rail-lock guard from 2026-04-27 is unaffected
-(DC-blocker state still updates from the un-tanh'd `dcOut`; only the visible
-output is soft-capped). When `oversampleStages > 0`, the DC-block + tanh runs
-*inside* the oversampled pipeline (with α rate-compensated to preserve the
-~38 Hz cutoff) so the tanh-induced harmonics get anti-alias filtered by the
-existing decimator. Asymmetric shapes (`diode`, `rectify`) may still introduce
-a small DC bias that the tanh re-creates from the now-asymmetric HPF'd
-signal — bounded and tiny.
+**Edge-overshoot bounder moved to ignitor output (2026-04-28)**: the 2×
+DC-blocker transient was audible as per-cycle clicks on heavy-drive
+`distort()`/`clip()` users (reported on the rhythm-pattern guitar ignitor in
+`TestTextPatterns.kt`). The fix is a single `coerceIn(-1f, 1f)` (hard clip)
+pass at the **`IgniteRenderer` boundary** — caps the entire ignitor output
+once per output sample at base rate. This is cheaper than tanh-saturating
+inside each `distort()`/`clip()` stage at oversampled rate, and identity for
+`|x| ≤ 1` so existing tests + clean ignitors are untouched.
 
-Scope: the patch is in `Ignitor.distort()`/`Ignitor.clip()` only. The legacy
-filter-stage `DistortionRenderer` (covered by `effects/DistortionSpec.kt`) is
-a separate code path and unchanged. The patched ignitor path is covered by
-`ignitor/IgnitorsTest.kt` (peak bounds tightened from `< 2.5` to `< 1.05` in
-the same patch).
+- **Why hard clip vs soft tanh wrap**: tanh compresses everywhere
+  (`tanh(1)=0.78`, ~22% reduction at peak), changing exact-amplitude
+  expectations across ~20 voice/envelope tests. Hard clip is identity for
+  `|x| ≤ 1` (preserves all those expectations) and only acts on the rare
+  rail-edge transients above ±1 — exactly the click case. Cheaper too
+  (`coerceIn` is 2 FLOPs vs `fastTanh`'s ~6).
 
-See `audio_be/src/commonTest/kotlin/ignitor/GuitarClickHuntTest.kt` for the A/B
-harness used to validate the patch (production-path peak 2.56 → 1.91, worst
-sample-to-sample Δ 0.60 → 0.38 on the rhythm-pattern chord notes after the
-in-oversampler placement).
+- **Why at the wrapper, not per-stage**: per-stage cap would fire inside the
+  ignitor on `dcOut` peaks of ~±2; the wrapper fires on the final ignitor
+  output (post the user's internal LPF/HPF/ADSR), once per output sample at
+  base rate (vs `factor×` per oversampled sample inside each distort). Per-stage
+  code is back to the pre-2026-04-28 simple `dcOut.toFloat()` write — no
+  in-oversampler placement, no α rate-compensation, no per-stage tanh.
+
+- **Trade-off**: hard clip adds a small derivative-discontinuity at ±1, which
+  technically aliases. Mitigated because the wrapper sees the signal *after*
+  the user's internal LPF/HPF (already band-limited), and the master limiter
+  on the cylinder bus handles residuals.
+
+- **Industry context** (researched while designing this): Surge XT and Vital
+  don't post-DC-block at all — Klang's click symptom only exists because of
+  the 2026-04-27 rail-lock guard. ChowDSP / Jatin Chowdhury use
+  Antiderivative Antialiasing (ADAA) to side-step both oversampling *and*
+  post-shape DC issues — captured as future direction.
+
+- **Future**: ADAA migration to replace the oversampler+DC-block stack
+  entirely (see `chowdsp_waveshapers` and `jatinchowdhury18/ADAA`). Drive
+  smoothing (Surge XT's `lipol` pattern) for parameter-change clicks. Soft
+  saturator option (tanh) at the wrapper as opt-in for "warmth" character.
+
+- **Scope**: the wrapper lives in `audio_be/.../voices/strip/ignite/IgniteRenderer.kt`.
+  `Ignitor.distort()`/`Ignitor.clip()` are responsible only for shape +
+  DC-block (no longer for bounding to ±1) — see
+  `audio_be/.../ignitor/IgnitorEffects.kt`. The legacy filter-stage
+  `DistortionRenderer` (covered by `effects/DistortionSpec.kt`) is a separate
+  code path and unchanged. End-to-end coverage: `IgnitorsTest.kt` has both a
+  direct-call test (asserts `< 2.5`, the pre-cap envelope) and an
+  IgniteRenderer-wrapped test (asserts `< 1.05`, the in-engine invariant).
+
+- **Regression harness — grow it over time**:
+  `audio_be/src/commonTest/kotlin/ignitor/GuitarClickHuntTest.kt` is the
+  click-hunt harness. **Standing intent: keep adding setups to it whenever a
+  new click symptom is reported or a new ignitor archetype is introduced.** It
+  is the safety net for any future change to `distort`/`clip`/`IgniteRenderer`
+  / DC-blocker / oversampler.
 
 **Pitch-mod factories closed (same day)**: code review identified four pre-existing
 hazards in `PitchModFactories.kt` (`vibratoModIgnitor`, `accelerateModIgnitor`,

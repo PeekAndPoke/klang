@@ -29,22 +29,13 @@ import kotlin.math.tan
  * for symmetric shapes at extreme drive where any input asymmetry causes the
  * output to rail-lock toward `±1` and produce a DC bias that can damage speakers.
  *
- * **DC-blocker output is `fastTanh`-saturated** to bound the differential filter's
- * 2× transient overshoot on rail-to-rail edges (square-like signals at high drive).
- * Without this cap, every input zero-crossing produces a ±2 spike that sounds like
- * a per-cycle click. For |x|<0.5 `fastTanh` follows `x − x³/3` — barely affected
- * (≤ 4% gain reduction at |x|=0.5, inaudible — added THD ≤ −60 dB), so low/medium
- * drive timbre is preserved; only the rail-edge transients past ±1 get folded back.
- *
- * Note: the soft cap applies regardless of [shape] — even with `shape="hard"`, fast
- * transients in the DC-blocker output are bounded smoothly. Asymmetric shapes
- * (`diode`, `rectify`) may still introduce a small DC bias that the tanh re-creates
- * from the now-asymmetric HPF'd signal — bounded and small, but worth knowing.
- *
- * When [oversampleStages] > 0, the DC-block + tanh pipeline runs *inside* the
- * oversampled section so the tanh-induced harmonics are anti-alias filtered by the
- * existing decimator. The DC-blocker pole is rate-compensated to preserve the
- * base-rate cutoff (~38 Hz at 48 kHz) at the higher rate.
+ * **Output is bounded to ±1 by a C¹-piecewise soft cap** ([ClippingFuncs.softCap]).
+ * Below the linear-region threshold the cap is identity (clean signals
+ * untouched); above, the rail-edge transients from the DC blocker's 2× HF gain
+ * are smoothly compressed toward ±1 with continuous value + slope at the
+ * threshold (no cliff click). The cap is per-stage so chained ignitor
+ * combinators (downstream filters, mix points) see a well-behaved bounded
+ * input — without it, a heavy-distort branch can dominate a mix.
  *
  * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm saturation, 1.0 = heavy distortion,
  *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Default: 0.0 (bypass).
@@ -59,10 +50,9 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
     val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     // DC blocker state — always applied to guard against rail-lock at extreme drive.
-    // When oversampling is on, the blocker runs at the oversampled rate; α is compensated
-    // so the cutoff in seconds matches the base-rate 0.995 (~38 Hz @ 48 kHz).
-    val baseDcCoeff = 0.995
-    val dcBlockCoeff = if (oversampler != null) baseDcCoeff.pow(1.0 / oversampler.factor) else baseDcCoeff
+    // Runs at base rate after oversampler decimation (or directly when no oversampler),
+    // so a single coefficient is correct in both branches.
+    val dcBlockCoeff = 0.995
     var dcBlockX1 = 0.0
     var dcBlockY1 = 0.0
 
@@ -85,16 +75,18 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
             val os = oversampler
 
             if (os != null) {
-                // Drive → shape → DC-block → tanh, all at oversampled rate, so the
-                // tanh's new harmonics get anti-alias filtered by the decimator.
+                // Oversampler processes work in place at oversampled rate.
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                    val y = waveshaper(sample.toDouble() * drive) * outputGain
+                    (waveshaper(sample.toDouble() * drive) * outputGain).toFloat()
+                }
+                // DC-block at base rate after decimation, then soft-cap to ±1.
+                for (i in ctx.offset until end) {
+                    val y = work[i].toDouble()
                     val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                     dcBlockX1 = y
                     dcBlockY1 = flushDenormal(dcOut)
-                    ClippingFuncs.fastTanh(dcOut).toFloat()
+                    output[i] = ClippingFuncs.softCap(dcOut).toFloat()
                 }
-                for (i in ctx.offset until end) output[i] = work[i]
             } else {
                 for (i in ctx.offset until end) {
                     val x = work[i].toDouble() * drive
@@ -102,7 +94,7 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
                     val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                     dcBlockX1 = y
                     dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.fastTanh(dcOut).toFloat()
+                    output[i] = ClippingFuncs.softCap(dcOut).toFloat()
                 }
             }
         }
@@ -177,9 +169,8 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  *
  * **DC blocker is always applied** to guard against rail-lock when the input is
  * already heavily saturated (e.g. after `drive`). See [distort] for the rationale.
- * Output is `fastTanh`-saturated to bound the DC blocker's 2× edge transient on
- * square-like signals — see [distort] for the full story (including the
- * oversampled-pipeline placement and the asymmetric-shape note).
+ * Output is bounded to ±1 by a C¹-piecewise soft cap ([ClippingFuncs.softCap])
+ * — identity in the linear region, smooth saturation above. See [distort].
  *
  * @param shape Waveshaper function. Default: "soft" (tanh).
  *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
@@ -191,8 +182,7 @@ fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     val outputGain = resolved.outputGain
     val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
-    val baseDcCoeff = 0.995
-    val dcBlockCoeff = if (oversampler != null) baseDcCoeff.pow(1.0 / oversampler.factor) else baseDcCoeff
+    val dcBlockCoeff = 0.995
     var dcBlockX1 = 0.0
     var dcBlockY1 = 0.0
 
@@ -204,22 +194,23 @@ fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
             val os = oversampler
 
             if (os != null) {
-                // shape → DC-block → tanh, all at oversampled rate.
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                    val y = clipFn(sample.toDouble()) * outputGain
+                    (clipFn(sample.toDouble()) * outputGain).toFloat()
+                }
+                for (i in ctx.offset until end) {
+                    val y = work[i].toDouble()
                     val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                     dcBlockX1 = y
                     dcBlockY1 = flushDenormal(dcOut)
-                    ClippingFuncs.fastTanh(dcOut).toFloat()
+                    output[i] = ClippingFuncs.softCap(dcOut).toFloat()
                 }
-                for (i in ctx.offset until end) output[i] = work[i]
             } else {
                 for (i in ctx.offset until end) {
                     val y = clipFn(work[i].toDouble()) * outputGain
                     val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                     dcBlockX1 = y
                     dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.fastTanh(dcOut).toFloat()
+                    output[i] = ClippingFuncs.softCap(dcOut).toFloat()
                 }
             }
         }

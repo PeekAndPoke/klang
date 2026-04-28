@@ -474,10 +474,12 @@ import * from "sprudel"
 //   8    +leadC +pad
 //   8    +leadD +pad
 //   16   +leadE +pad +wind   (leadE loops once; wind fades in over 16)
-//   2    pause       silence
-//   2    hit         unison hit at beat 1, then tail
-//   16   quiet       melody3 with sparse rhythm + bass
-//   = 100 cycles total, then arrange loops back to warm
+//   2    hit         unison hit at beat 1
+//   2    pause       silence (stab tail rings into the quiet section)
+//   64   quietBuild  smooth morph: mel3 fades out, mel1 fades in,
+//                    beats + bass build via gain saws, syncopated 90s
+//                    dance pad stabs enter in the 2nd half
+//   = 148 cycles total, then arrange loops back to warm
 
 // ── Continuous core: kick + hat + bass ──────────────────────────────
 let kick = s("bd!4").gain(1.0).hpf(40).adsr("0.04:0.18:0.0:0.02").orbit(1)
@@ -514,12 +516,12 @@ let leadC = leadStyle(note(`<[a5 c6 b5 a5] [d6 c6 a5 g5] [bb5 a5 g5 f5] [g5 e5 c
                               [g5 bb5 d6 g5] [a5 c6 f5 a5] [a5 e6 c6 a5] [d5 f5 a5 d6]>`))
 let leadD = leadStyle(note(`<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5 f5 e5]
                               [d6 g6 d6 bb5] [c6 a6 f6 a5] [a5 e6 c6 e6] [d6 f6 a5 d6]>`))
-let leadE = leadStyle(note(`<[a6 ~ d6 ~] [a5 ~ d5 ~] [f5 ~ g5 ~] [e5 ~ ~ c5]
+let leadE = leadStyle(note(`<[a6 e6 d6 c6] [a5 f5 d5 c5] [f5 d5 g5 bb4] [e5 g5 d5 c5]
                               [d5@2 a4@2] [c5@2 g4@2] [a4@2 e4@2] [d4@4]>`))
 
 // ── Pad ─────────────────────────────────────────────────────────────
 let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing()
-    .sound("supersaw").unison(2).detune(0.05).lpf(1300)
+    .sound("superpulse").unison(2).detune(0.15).lpf(2300)
     .adsr("0.05:0.2:0.7:0.1").legato(1.0)
     .pan(0.3).superimpose(pan(0.7).transpose(12))
     .phaser(0.4).phaserdepth(saw.range(0.0, 0.6).slow(16))
@@ -594,10 +596,18 @@ let quietBuild = stack(
     // Open hat — gain swells in
     s("[~ ~ ~ oh]!4").gain(saw.range(0.0, 0.22).slow(64))
         .hpf(5000).orbit(2),
-    // Melody 3 — degrades OUT (events removed more and more)
-    mel3.degradeBy(saw.range(0, 1).slow(64)),
-    // Melody 1 — un-degrades IN (events removed less and less)
-    mel1.degradeBy(saw.range(1, 0).slow(64)),
+    // Melody 3 — velocity fades from full to silent
+    mel3.velocity(saw.range(1.5, -0.5).min(0).max(1).slow(64)).euclidrot(3, 8, 1),
+    // Melody 1 — velocity fades from silent to full
+    mel1.velocity(saw.range(-0.5, 1.5).min(0).max(1).slow(64)).euclidrot(3, 8, 2),
+    // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
+    // enter at section-local cycle 32 (= second half of the build)
+    chord("<Am Dm Bb C Gm F Am Dm>").voicing()
+        .struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
+        .sound("superpulse").unison(2).detune(0.15).lpf(2200)
+        .adsr("0.005:0.08:0.25:0.08").legato(0.7)
+        .gain(0.18).orbit(5).room(0.4).rsize(6)
+        .filterWhen(t => t >= 32),
 )
 
 // ── Sections ────────────────────────────────────────────────────────

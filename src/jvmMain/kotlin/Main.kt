@@ -4,10 +4,13 @@ import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_engine.play
+import io.peekandpoke.klang.audio_engine.setPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
+import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import kotlinx.coroutines.delay
 
 /**
@@ -19,19 +22,24 @@ suspend fun main() {
     println("VM Vendor:    ${System.getProperty("java.vendor")}")
     println("VM Version:   ${System.getProperty("java.vm.version")}")
 
-    val pattern = SprudelPattern.compile(TestTextPatterns.cMajorNotes)!!
-
     val samples = Samples.create(catalogue = SampleCatalogue.default)
     val playerOptions = KlangPlayer.Options(
         samples = samples,
         sampleRate = 48_000,
     )
 
-    val player = klangPlayer(options = playerOptions) {}
+    val player = klangPlayer(options = playerOptions)
+
+    val scripting = klangScript {
+        setPlayer(player)
+        registerLibrary(sprudelLib)
+    }
+
+    val pattern = SprudelPattern.compile(scripting, TestTextPatterns.aTruthWorthLyingFor)!!
 
     println("Starting playback...")
     val playback = player.play(pattern)
-    playback.start(KlangCyclicPlayback.Options(rpm = 32.4))
+    playback.start(KlangCyclicPlayback.Options(rpm = 32.0))
 
     delay(600_000)
     playback.stop()
