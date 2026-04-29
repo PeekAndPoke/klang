@@ -6,10 +6,14 @@ import kotlin.math.PI
 import kotlin.math.tan
 
 // ─────────────────────────────────────────────────────────────────────────────────────
-// Shared first-order IIR coefficient helpers — used by `OnePoleLPF/HPF` here AND by
-// `Ignitor.onePoleLowpass/onePoleHighpass` in `ignitor/IgnitorFilters.kt`.
+// First-order IIR filters and shared coefficient helpers.
 //
-// **History (do not re-litigate):**
+// Three first-order filters live here:
+//   • OnePoleLPF — bilinear-prewarped lowpass (parameterized by cutoffHz)
+//   • OnePoleHPF — bilinear-prewarped highpass (parameterized by cutoffHz, true −3 dB at fc)
+//   • DcBlocker — degenerate raw-pole HPF (parameterized by raw IIR pole; cheaper)
+//
+// **OnePoleLPF / OnePoleHPF history (do not re-litigate):**
 //
 // Before 2026-04-29 the coefficients used the matched-Z mapping `α = 1 − exp(−2π·fc/fs)`
 // (LPF) and `a = exp(−2π·fc/fs)` (HPF). The HPF additionally used the topology
@@ -17,23 +21,37 @@ import kotlin.math.tan
 // the gain droops at high cutoffs (`a → 0`), letting through less HF than expected.
 // Combined with the matched-Z bias, the actual −3 dB knee sat well off `cutoffHz`.
 //
-// **Current implementation** (post-2026-04-29):
-//
-// - **Bilinear pre-warp**: `K = tan(π·fc/fs)` for both filters. Standard TPT mapping —
-//   accurate to ~fs/4, beyond which all bilinear designs warp.
+// Current (post-2026-04-29):
+// - **Bilinear pre-warp**: `K = tan(π·fc/fs)` for both filters. Standard TPT mapping,
+//   accurate to ~fs/4 (beyond which all bilinear designs warp).
 // - **LPF**: same topology `y[n] = α·x[n] + (1 − α)·y[n-1]` with `α = K/(1+K)`.
 //   Per-sample cost identical to the old version.
 // - **HPF**: switched to canonical bilinear form `y[n] = b0·(x[n] − x[n-1]) + a1·y[n-1]`
-//   with `b0 = 1/(1+K)`, `a1 = (1−K)/(1+K)`. +1 mul per sample vs old. True −3 dB at
-//   `fc`, no Nyquist droop.
+//   with `b0 = 1/(1+K)`, `a1 = (1−K)/(1+K)`. +1 mul/sample. True −3 dB at `fc`, no
+//   Nyquist droop.
+//
+// **DcBlocker history (added 2026-04-29):**
+//
+// `DcBlocker` is a degenerate first-order HPF: `y[n] = x[n] − x[n-1] + a·y[n-1]`
+// (no input-scaling `b0`). Cheaper than `OnePoleHPF` by 1 mul/sample, parameterized
+// by the raw IIR pole `a` instead of cutoffHz (kept this way for back-compat with
+// the public `Ignitor.dcBlock(coefficient)` API). Replaced 9 open-coded inline copies
+// of the same recurrence in `IgnitorEffects.distort()`, `Ignitor.clip()`, and
+// `voices/strip/filter/DistortionRenderer` with a single source of truth.
+//
+// **2× edge transient**: rail-to-rail input produces a ~2× peak transient through
+// the raw-pole topology (railed input − railed previous + nearly-railed feedback).
+// `Ignitor.distort()` and `Ignitor.clip()` pair `DcBlocker` with `ClippingFuncs.softCap()`
+// downstream to bound output to ±1. The master-out DcBlocker in `KlangAudioRenderer`
+// runs on post-limiter samples (already ±1-bounded), so no softCap needed there.
 //
 // **NaN/Inf guard**: `Double.coerceIn` returns NaN if input is NaN, which would corrupt
-// IIR state forever (`flushDenormal` only catches sub-denormal magnitudes, not NaN).
-// Guarded explicitly to keep voices alive when modulation goes wild.
+// IIR state forever (`flushDenormal` only catches sub-denormal magnitudes). Guarded
+// explicitly in both `bilinearK` and `DcBlocker` constructor.
 //
-// Per-sample loop bodies stay inlined at each call site (3–4 lines — Kotlin can't pass
-// `Double&`, so further extraction would be noisier than DRYer). The setup helpers
-// share the NaN guard and the bilinear-K computation.
+// **Block-based API**: all filters use `process(buffer, offset, length)` so JIT keeps
+// state in registers across the loop. State load/store happens at function entry/exit,
+// not per sample.
 // ─────────────────────────────────────────────────────────────────────────────────────
 
 /** Bilinear-prewarped angle factor `K = tan(π·fc/fs)` with NaN/Inf-safe cutoff clamp. */
@@ -49,6 +67,13 @@ internal inline fun onePoleLpfCoeff(cutoffHz: Double, sampleRate: Double): Doubl
     val k = bilinearK(cutoffHz, sampleRate)
     return k / (1.0 + k)
 }
+
+/**
+ * Default raw IIR pole for [LowPassHighPassFilters.DcBlocker]. `≈ 35 Hz @ 44.1k, 38 Hz @ 48k`.
+ * Used by `Ignitor.distort()` and `Ignitor.clip()` to suppress DC accumulation from
+ * asymmetric waveshapers. Matches the historic `0.995` literal that lived inline.
+ */
+internal const val DEFAULT_DC_BLOCK_COEFF: Double = 0.995
 
 object LowPassHighPassFilters {
 
@@ -134,6 +159,68 @@ object LowPassHighPassFilters {
                 xPrev = x
                 buffer[i] = y
             }
+        }
+    }
+
+    /**
+     * Lightweight DC blocker — degenerate first-order HPF with raw pole and
+     * no input scaling: `y[n] = x[n] − x[n-1] + a·y[n-1]`. One mul/sample cheaper than
+     * [OnePoleHPF]. Produces a ~2× edge transient on rail-to-rail input — call sites
+     * post-distort/post-clip pair this with `ClippingFuncs.softCap()` to bound output to ±1.
+     *
+     * Coefficient is the raw IIR pole: `a ≈ 1 − 2π·fc/fs`. At `a = 0.995, fs = 44.1k`
+     * the −3 dB knee is ~35 Hz; at `a = 0.999`, ~7 Hz. NaN/Inf and out-of-range values
+     * are guarded — non-finite or `a ∉ [0, 1)` falls back to [DEFAULT_DC_BLOCK_COEFF].
+     *
+     * Block-based API matches the [AudioFilter] convention so JIT keeps state in
+     * registers across the loop. See file header for the dedup history.
+     */
+    class DcBlocker(coefficient: Double = DEFAULT_DC_BLOCK_COEFF) {
+        private val coeff: Double = if (coefficient.isFinite()) {
+            coefficient.coerceIn(0.0, 0.99999)
+        } else {
+            DEFAULT_DC_BLOCK_COEFF
+        }
+        private var xPrev = 0.0
+        private var y = 0.0
+
+        /** In-place: applies DC blocking to `buffer[offset..offset+length)`. */
+        fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+            var xp = xPrev
+            var yc = y
+            val a = coeff
+            val end = offset + length
+            for (i in offset until end) {
+                val x = buffer[i]
+                val out = x - xp + a * yc
+                xp = x
+                yc = flushDenormal(out)
+                buffer[i] = out
+            }
+            xPrev = xp
+            y = yc
+        }
+
+        /** Reads [input], writes DC-blocked result to [output]. Both buffers must cover [offset..offset+length). */
+        fun process(input: AudioBuffer, output: AudioBuffer, offset: Int, length: Int) {
+            var xp = xPrev
+            var yc = y
+            val a = coeff
+            val end = offset + length
+            for (i in offset until end) {
+                val x = input[i]
+                val out = x - xp + a * yc
+                xp = x
+                yc = flushDenormal(out)
+                output[i] = out
+            }
+            xPrev = xp
+            y = yc
+        }
+
+        fun reset() {
+            xPrev = 0.0
+            y = 0.0
         }
     }
 

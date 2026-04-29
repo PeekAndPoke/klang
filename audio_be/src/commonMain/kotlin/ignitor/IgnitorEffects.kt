@@ -4,6 +4,8 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
+import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.resolveDistortionShape
 import kotlin.math.PI
@@ -50,12 +52,11 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
     val outputGain = resolved.outputGain
     val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
-    // DC blocker state — always applied to guard against rail-lock at extreme drive.
-    // Runs at base rate after oversampler decimation (or directly when no oversampler),
-    // so a single coefficient is correct in both branches.
-    val dcBlockCoeff = 0.995
-    var dcBlockX1 = 0.0
-    var dcBlockY1 = 0.0
+    // DC blocker — always applied to guard against rail-lock at extreme drive.
+    // Runs at base rate after oversampler decimation (or directly when no oversampler).
+    // The block-based class keeps state in registers across the inner loop.
+    // The downstream `softCap` bounds the raw-pole 2× edge transient to ±1.
+    val dcBlocker = LowPassHighPassFilters.DcBlocker()
 
     return Ignitor { output, freqHz, ctx ->
         ctx.scratchBuffers.use { work ->
@@ -76,27 +77,23 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
             val os = oversampler
 
             if (os != null) {
-                // Oversampler processes work in place at oversampled rate.
+                // Pass 1: oversampled waveshape into work (in-place).
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
                     (waveshaper(sample * drive) * outputGain)
                 }
-                // DC-block at base rate after decimation, then soft-cap to ±1.
-                for (i in ctx.offset until end) {
-                    val y = work[i]
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.softCap(dcOut)
-                }
             } else {
+                // Pass 1 (direct): drive + waveshape into work (in-place).
                 for (i in ctx.offset until end) {
-                    val x = work[i] * drive
-                    val y = waveshaper(x) * outputGain
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.softCap(dcOut)
+                    work[i] = waveshaper(work[i] * drive) * outputGain
                 }
+            }
+
+            // Pass 2: DC-block in-place.
+            dcBlocker.process(work, ctx.offset, ctx.length)
+
+            // Pass 3: soft-cap into output.
+            for (i in ctx.offset until end) {
+                output[i] = ClippingFuncs.softCap(work[i])
             }
         }
     }
@@ -183,9 +180,8 @@ fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
     val outputGain = resolved.outputGain
     val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
-    val dcBlockCoeff = 0.995
-    var dcBlockX1 = 0.0
-    var dcBlockY1 = 0.0
+    // DC blocker pre-softCap. See `Ignitor.distort` for the rationale.
+    val dcBlocker = LowPassHighPassFilters.DcBlocker()
 
     return Ignitor { output, freqHz, ctx ->
         ctx.scratchBuffers.use { work ->
@@ -195,24 +191,23 @@ fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
             val os = oversampler
 
             if (os != null) {
+                // Pass 1: oversampled clip into work (in-place).
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
                     (clipFn(sample) * outputGain)
                 }
-                for (i in ctx.offset until end) {
-                    val y = work[i]
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.softCap(dcOut)
-                }
             } else {
+                // Pass 1 (direct): clip into work (in-place).
                 for (i in ctx.offset until end) {
-                    val y = clipFn(work[i]) * outputGain
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.softCap(dcOut)
+                    work[i] = clipFn(work[i]) * outputGain
                 }
+            }
+
+            // Pass 2: DC-block in-place.
+            dcBlocker.process(work, ctx.offset, ctx.length)
+
+            // Pass 3: soft-cap into output.
+            for (i in ctx.offset until end) {
+                output[i] = ClippingFuncs.softCap(work[i])
             }
         }
     }
@@ -668,31 +663,29 @@ fun Ignitor.shimmer(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * One-pole highpass DC blocker.
+ * One-pole highpass DC blocker — degenerate first-order HPF with raw pole.
  *
  * Removes DC offset accumulation from waveshaping, feedback, and asymmetric clipping.
  * Essential after distortion shapes that produce asymmetric output (diode, rectify).
  *
- * @param coefficient Filter coefficient controlling the cutoff frequency.
- *   0.995 = ~20 Hz cutoff (good for feedback paths). 0.999 = ~5 Hz cutoff (master output).
- *   Higher = lower cutoff, less signal removed. Default: 0.995.
+ * Cutoff approximation: `fc ≈ (1 − a)·fs / (2π)`. Reference points:
+ *   - `coefficient = 0.995` → ~35 Hz @ 44.1k, ~38 Hz @ 48k (good for feedback paths)
+ *   - `coefficient = 0.999` → ~7 Hz  @ 44.1k, ~7.6 Hz @ 48k (good for master output)
+ *
+ * Higher coefficient = lower cutoff = less low-frequency content removed.
+ *
+ * Implementation delegates to [LowPassHighPassFilters.DcBlocker]; see that class for
+ * the dedup history (this used to be one of 9 inline copies before 2026-04-29).
+ *
+ * @param coefficient Raw IIR pole. NaN/Inf or out-of-range values fall back to 0.995. Default: 0.995.
  */
-fun Ignitor.dcBlock(coefficient: Double = 0.995): Ignitor {
-    var x1 = 0.0
-    var y1 = 0.0
+fun Ignitor.dcBlock(coefficient: Double = DEFAULT_DC_BLOCK_COEFF): Ignitor {
+    val dcBlocker = LowPassHighPassFilters.DcBlocker(coefficient)
 
     return Ignitor { output, freqHz, ctx ->
         ctx.scratchBuffers.use { input ->
             this.generate(input, freqHz, ctx)
-
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                val x = input[i]
-                val y = x - x1 + coefficient * y1
-                x1 = x
-                y1 = flushDenormal(y)
-                output[i] = y
-            }
+            dcBlocker.process(input, output, ctx.offset, ctx.length)
         }
     }
 }

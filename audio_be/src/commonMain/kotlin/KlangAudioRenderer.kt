@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.effects.Compressor
+import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 
 /**
@@ -26,13 +27,23 @@ class KlangAudioRenderer(
         releaseSeconds = 0.1,
     )
 
+    // Master-out DC blockers. ~7 Hz cutoff (coefficient = 0.999 at 44.1k / ~7.6 Hz at 48k).
+    // Run AFTER the limiter so input is already ±1-bounded — no rail-edge transient,
+    // no need for downstream softCap. Removes any DC bias from the cylinder mix that
+    // would otherwise eat headroom asymmetrically through the clip-and-interleave step.
+    // Added 2026-04-29; see filters/LowPassHighPassFilters.kt header for DcBlocker history.
+    private val dcBlockerL = LowPassHighPassFilters.DcBlocker(coefficient = 0.999)
+    private val dcBlockerR = LowPassHighPassFilters.DcBlocker(coefficient = 0.999)
+
     /**
-     * Clears stateful post-chain elements (currently just the limiter envelope).
-     * Used at the end of the warmup handshake so the limiter's gain-reduction state
-     * does not survive into the first real playback block.
+     * Clears stateful post-chain elements (limiter envelope + DC blocker IIR state).
+     * Used at the end of the warmup handshake so post-chain state does not survive
+     * into the first real playback block.
      */
     fun resetPostChain() {
         limiter.reset()
+        dcBlockerL.reset()
+        dcBlockerR.reset()
     }
 
     /**
@@ -62,7 +73,14 @@ class KlangAudioRenderer(
         // This handles the bulk of the loudness management musically
         limiter.process(mix.left, mix.right, blockFrames)
 
-        // 5. Post-Process (Transparent Clip + Interleave)
+        // 5. Master-out DC blockers (per channel, in-place).
+        // Strips DC bias accumulated through the cylinder mix so the clip-and-interleave
+        // below has full ±1 headroom symmetrically. Input is post-limiter (already ±1),
+        // so no rail-edge transient and no softCap needed.
+        dcBlockerL.process(mix.left, 0, blockFrames)
+        dcBlockerR.process(mix.right, 0, blockFrames)
+
+        // 6. Post-Process (Transparent Clip + Interleave)
         val left = mix.left
         val right = mix.right
 

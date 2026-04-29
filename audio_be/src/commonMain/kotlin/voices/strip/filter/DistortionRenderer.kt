@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
 import io.peekandpoke.klang.audio_be.Oversampler
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.resolveDistortionShape
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
@@ -14,8 +14,14 @@ import kotlin.math.pow
  * - Per-shape output normalization to prevent volume jumps
  * - **DC blocker always applied** when amount > 0 — defends against rail-lock
  *   at extreme drive even with symmetric shapes (was previously only applied
- *   to asymmetric shapes like `diode` and `rectify`).
- * - Optional oversampling to reduce aliasing from nonlinear processing
+ *   to asymmetric shapes like `diode` and `rectify`). Uses the shared
+ *   [LowPassHighPassFilters.DcBlocker] (block-based, replaced 3 inline copies
+ *   in 2026-04-29 — see that file's header).
+ * - Optional oversampling to reduce aliasing from nonlinear processing.
+ *
+ * Note: this renderer does NOT apply `softCap` after the DC blocker, unlike
+ * `Ignitor.distort()` and `Ignitor.clip()`. The voice-strip pipeline has its
+ * own downstream bounding stages.
  */
 class DistortionRenderer(
     private val amount: Double,
@@ -27,9 +33,7 @@ class DistortionRenderer(
     private val waveshaper: (Double) -> Double
     private val outputGain: Double
 
-    private val dcBlockCoeff = 0.995
-    private var dcBlockX1 = 0.0
-    private var dcBlockY1 = 0.0
+    private val dcBlocker = LowPassHighPassFilters.DcBlocker()
 
     private val oversampler: Oversampler? =
         if (oversampleStages > 0) Oversampler(oversampleStages) else null
@@ -45,53 +49,23 @@ class DistortionRenderer(
 
         val os = oversampler
         if (os != null) {
-            renderOversampled(ctx, os)
+            // Pass 1: oversampled waveshape into the audio buffer (in-place).
+            os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                (waveshaper(sample * drive) * outputGain)
+            }
         } else {
-            renderDirect(ctx)
-        }
-    }
-
-    private fun renderOversampled(ctx: BlockContext, os: Oversampler) {
-        val d = drive
-        val g = outputGain
-        val fn = waveshaper
-
-        os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-            (fn(sample * d) * g)
+            // Pass 1 (direct): drive + waveshape into the audio buffer (in-place).
+            val d = drive
+            val g = outputGain
+            val fn = waveshaper
+            val buf = ctx.audioBuffer
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                buf[i] = fn(buf[i] * d) * g
+            }
         }
 
-        // DC blocker runs at original rate after decimation
-        applyDcBlock(ctx)
-    }
-
-    private fun renderDirect(ctx: BlockContext) {
-        val d = drive
-        val g = outputGain
-        val fn = waveshaper
-        val buf = ctx.audioBuffer
-
-        for (i in 0 until ctx.length) {
-            val idx = ctx.offset + i
-            val x = buf[idx] * d
-            val y = fn(x) * g
-
-            val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-            dcBlockX1 = y
-            dcBlockY1 = flushDenormal(dcOut)
-
-            buf[idx] = dcOut
-        }
-    }
-
-    private fun applyDcBlock(ctx: BlockContext) {
-        val buf = ctx.audioBuffer
-        for (i in 0 until ctx.length) {
-            val idx = ctx.offset + i
-            val y = buf[idx]
-            val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-            dcBlockX1 = y
-            dcBlockY1 = flushDenormal(dcOut)
-            buf[idx] = dcOut
-        }
+        // Pass 2: DC-block in-place.
+        dcBlocker.process(ctx.audioBuffer, ctx.offset, ctx.length)
     }
 }
