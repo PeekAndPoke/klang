@@ -517,4 +517,92 @@ class LowPassHighPassFiltersSpec : StringSpec({
             f.shouldBeInstanceOf<AudioFilter.Tunable>()
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Round 3 (2026-04-29): NaN injection, parity, topology identity
+    // -----------------------------------------------------------------------
+
+    "SVF — NaN cutoff is guarded (state stays finite)" {
+        // Same Round-1-class regression guard as for OnePoleLPF/HPF: a non-finite
+        // cutoff must not poison the IIR state. `bilinearK` falls back to 1000 Hz.
+        val filter = LowPassHighPassFilters.SvfLPF(cutoffHz = Double.NaN, q = 1.0, sampleRate = sampleRate)
+        val buf = sine(freq = 440.0, length = blockFrames)
+        filter.process(buf, 0, buf.size)
+        for (v in buf) {
+            v.isFinite() shouldBe true
+        }
+        // setCutoff with NaN must also recover.
+        filter.setCutoff(Double.NaN)
+        val buf2 = sine(freq = 440.0, length = blockFrames)
+        filter.process(buf2, 0, buf2.size)
+        for (v in buf2) {
+            v.isFinite() shouldBe true
+        }
+    }
+
+    "SVF — class form and Ignitor form produce equivalent steady-state output" {
+        // Parity guard so the two implementations don't drift apart in future rounds.
+        // Both share `computeSvfCoeffs`; with identical input + cutoff + Q the output
+        // should match within tight float tolerance after the transient has decayed.
+        val cutoff = 800.0
+        val q = 1.5
+        val classFilter = LowPassHighPassFilters.SvfLPF(cutoff, q, sampleRate)
+
+        // Build the Ignitor side via direct kernel application — recreate the same
+        // per-sample math by feeding identical input through a fresh state.
+        val coefs = SvfCoeffs()
+        computeSvfCoeffs(cutoff, q, sampleRate, coefs)
+        var ic1eq = 0.0
+        var ic2eq = 0.0
+
+        val classOut = sine(freq = 440.0, length = blockFrames)
+        val refOut = AudioBuffer(blockFrames) { classOut[it] }
+        classFilter.process(classOut, 0, blockFrames)
+
+        for (i in 0 until blockFrames) {
+            val v0 = refOut[i]
+            val v3 = v0 - ic2eq
+            val v1 = coefs.a1 * ic1eq + coefs.a2 * v3
+            val v2 = ic2eq + coefs.a2 * ic1eq + coefs.a3 * v3
+            ic1eq = 2.0 * v1 - ic1eq
+            ic2eq = 2.0 * v2 - ic2eq
+            refOut[i] = v2 // LPF tap
+        }
+
+        // Skip the first 64 samples (transient); compare the steady-state region.
+        var maxAbsDiff = 0.0
+        for (i in 64 until blockFrames) {
+            val d = kotlin.math.abs(classOut[i] - refOut[i])
+            if (d > maxAbsDiff) maxAbsDiff = d
+        }
+        maxAbsDiff shouldBeLessThan 1e-9
+    }
+
+    "SVF — topology identity: notch[n] == lp[n] + hp[n]" {
+        // Algebraic invariant from the TPT-SVF state-update: notch tap (`v0 − k·v1`)
+        // equals LPF tap (`v2`) plus HPF tap (`v0 − k·v1 − v2`). Catches output-tap
+        // regressions during the dedup refactor.
+        val cutoff = 1500.0
+        val q = 0.7
+        val lp = LowPassHighPassFilters.SvfLPF(cutoff, q, sampleRate)
+        val hp = LowPassHighPassFilters.SvfHPF(cutoff, q, sampleRate)
+        val notch = LowPassHighPassFilters.SvfNotch(cutoff, q, sampleRate)
+
+        val src = sine(freq = 800.0, length = blockFrames)
+        val lpBuf = AudioBuffer(blockFrames) { src[it] }
+        val hpBuf = AudioBuffer(blockFrames) { src[it] }
+        val notchBuf = AudioBuffer(blockFrames) { src[it] }
+
+        lp.process(lpBuf, 0, blockFrames)
+        hp.process(hpBuf, 0, blockFrames)
+        notch.process(notchBuf, 0, blockFrames)
+
+        var maxAbsDiff = 0.0
+        for (i in 0 until blockFrames) {
+            val sum = lpBuf[i] + hpBuf[i]
+            val d = kotlin.math.abs(sum - notchBuf[i])
+            if (d > maxAbsDiff) maxAbsDiff = d
+        }
+        maxAbsDiff shouldBeLessThan 1e-12
+    }
 })

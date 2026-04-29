@@ -7,7 +7,6 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.AudioEngine
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
-import io.peekandpoke.klang.audio_be.filters.FormantFilter
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
@@ -310,7 +309,7 @@ class VoiceFactory(
         is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(cutoffHz, q, sampleRateDouble)
         is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble)
         is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble)
-        is FilterDef.Formant -> FormantFilter(bands = bands, sampleRate = sampleRateDouble)
+        is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, sampleRateDouble)
     }
 
     private fun FilterDef.toModulator(

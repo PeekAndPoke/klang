@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.bilinearK
+import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.PI
@@ -49,15 +51,23 @@ data class FilterEnvelope(
 /**
  * State Variable Filter (SVF) combinator.
  *
- * The SVF topology computes lowpass, highpass, bandpass, and notch simultaneously;
- * [mode] selects which output is used. Each instance creates per-voice filter state
- * in its closure. Optional [env] modulates cutoff at control rate (once per block).
+ * The TPT/Zavalishin canonical Cytomic form computes lowpass, highpass, bandpass, and
+ * notch simultaneously; [mode] selects which output is used. Each instance creates
+ * per-voice filter state in its closure. Optional [env] modulates cutoff over the
+ * voice's lifetime — when active, coefficients are computed at block start AND end
+ * and Bresenham-style linearly interpolated per sample to avoid the ~187 Hz block-rate
+ * stair-stepping that per-block-only recompute would produce.
+ *
+ * Coefficient math is shared with `BaseSvf` via `computeSvfCoeffs`. NaN/Inf-safe
+ * cutoff (via `bilinearK`); Q is clamped to `[0.1, 50.0]` with `isFinite` fallback.
  *
  * @param mode Filter type: [SvfMode.LOWPASS], [SvfMode.HIGHPASS], [SvfMode.BANDPASS], or [SvfMode.NOTCH].
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
  *   Typical: 200–8000 for LP, 100–2000 for HP, 300–5000 for BP/Notch.
  * @param q Resonance / Q factor. 0.707 = flat (Butterworth), higher = sharper peak.
  *   Clamped to [0.1, 50.0]. Default: 0.707. Typical range: 0.5–10.0.
+ *   Note: BPF tap uses constant-skirt convention — peak gain at fc equals Q.
+ *   `bandpass(q=10)` ⇒ ~+20 dB at the centre.
  * @param env Optional ADSR envelope to modulate cutoff over time. Default: none.
  */
 fun Ignitor.svf(
@@ -68,10 +78,8 @@ fun Ignitor.svf(
 ): Ignitor {
     var ic1eq = 0.0
     var ic2eq = 0.0
-    var a1 = 0.0
-    var a2 = 0.0
-    var a3 = 0.0
-    var k = 0.0
+    val coefs = SvfCoeffs()
+    val coefsEnd = SvfCoeffs() // Used only when hasEnv: end-of-block coefs for lerp
     var initialized = false
     val hasEnv = env.depth != 0.0
 
@@ -83,27 +91,58 @@ fun Ignitor.svf(
             // Read cutoff and Q per block (control rate)
             val baseCutoff = Ignitors.readParam(cutoffHz, freqHz, ctx)
             val qVal = Ignitors.readParam(q, freqHz, ctx)
+            val sr = ctx.sampleRate.toDouble()
+            val length = ctx.length
 
-            val effectiveCutoff = if (hasEnv) {
-                val envValue = computeFilterEnvelope(ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec)
-                baseCutoff * (1.0 + env.depth * envValue)
-            } else {
-                baseCutoff
-            }
+            // Per-sample coefficient deltas (Bresenham accumulator). When env is off they're
+            // zero and the inner loop just adds zero each sample — no measurable cost.
+            var a1 = 0.0
+            var a2 = 0.0
+            var a3 = 0.0
+            var k = 0.0
+            var a1Step = 0.0
+            var a2Step = 0.0
+            var a3Step = 0.0
+            var kStep = 0.0
 
-            if (!initialized || hasEnv || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
-                val nyquist = 0.5 * ctx.sampleRate
-                val fc = effectiveCutoff.coerceIn(5.0, nyquist - 1.0)
-                val Q = qVal.coerceIn(0.1, 50.0)
-                val g = tan(PI * fc / ctx.sampleRate)
-                k = 1.0 / Q
-                a1 = 1.0 / (1.0 + g * (g + k))
-                a2 = g * a1
-                a3 = g * a2
+            if (hasEnv) {
+                // Env active: compute coefs at block start AND block end, lerp across.
+                // Two `tan` calls per block instead of one; per-sample cost is 4 adds.
+                val envStart = computeFilterEnvelope(
+                    ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
+                    sampleOffsetWithinBlock = 0,
+                )
+                val envEnd = computeFilterEnvelope(
+                    ctx, env.attackSec, env.decaySec, env.sustainLevel, env.releaseSec,
+                    sampleOffsetWithinBlock = length,
+                )
+                val cutoffStart = baseCutoff * (1.0 + env.depth * envStart)
+                val cutoffEnd = baseCutoff * (1.0 + env.depth * envEnd)
+
+                computeSvfCoeffs(cutoffStart, qVal, sr, coefs)
+                computeSvfCoeffs(cutoffEnd, qVal, sr, coefsEnd)
+
+                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k
+
+                if (length > 0) {
+                    val invLen = 1.0 / length
+                    a1Step = (coefsEnd.a1 - coefs.a1) * invLen
+                    a2Step = (coefsEnd.a2 - coefs.a2) * invLen
+                    a3Step = (coefsEnd.a3 - coefs.a3) * invLen
+                    kStep = (coefsEnd.k - coefs.k) * invLen
+                }
                 initialized = true
+            } else if (!initialized || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
+                // No env, but a parameter may be modulating — recompute once per block.
+                computeSvfCoeffs(baseCutoff, qVal, sr, coefs)
+                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k
+                initialized = true
+            } else {
+                // Static params, already initialized — reuse cached coefs.
+                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k
             }
 
-            val end = ctx.offset + ctx.length
+            val end = ctx.offset + length
             for (i in ctx.offset until end) {
                 val v0 = input[i]
                 val v3 = v0 - ic2eq
@@ -118,6 +157,12 @@ fun Ignitor.svf(
                     SvfMode.BANDPASS -> v1
                     SvfMode.NOTCH -> v0 - k * v1
                 }
+
+                // Bresenham coef lerp (inner-loop adds; zero when env is off).
+                a1 += a1Step
+                a2 += a2Step
+                a3 += a3Step
+                k += kStep
             }
         }
     }
@@ -463,13 +508,14 @@ internal fun computeFilterEnvelope(
     decaySec: Double,
     sustainLevel: Double,
     releaseSec: Double,
+    sampleOffsetWithinBlock: Int = 0,
 ): Double {
     val attackFrames = (attackSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
     val decayFrames = (decaySec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
     val releaseFrames = (releaseSec.coerceAtLeast(0.0) * ctx.sampleRate).toInt()
     val clampedSustain = sustainLevel.coerceIn(0.0, 1.0)
 
-    val absPos = ctx.voiceElapsedFrames
+    val absPos = ctx.voiceElapsedFrames + sampleOffsetWithinBlock
     val gateEndPos = ctx.gateEndFrame
 
     val envValue = if (absPos >= gateEndPos) {
