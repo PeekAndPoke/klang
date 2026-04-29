@@ -20,131 +20,46 @@ class LangMinMaxClampSpec : StringSpec({
 
     "min dsl interface" {
         val pat = "0 1 2 3 4"
-        val cap = "2"
-
-        dslInterfaceTests(
-            "pattern.min(cap)" to
-                    seq(pat).min(cap),
-            "string.min(cap)" to
-                    pat.min(cap),
-            "min(cap)" to
-                    seq(pat).apply(min(cap)),
-            "script pattern.min(cap)" to
-                    SprudelPattern.compile("""seq("$pat").min("$cap")"""),
-            "script string.min(cap)" to
-                    SprudelPattern.compile(""""$pat".min("$cap")"""),
-            "script min(cap)" to
-                    SprudelPattern.compile("""seq("$pat").apply(min("$cap"))"""),
-        ) { _, events ->
-            events.shouldHaveSize(5)
-            events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)   // min(0, 2) = 0
-            events[1].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)   // min(1, 2) = 1
-            events[2].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // min(2, 2) = 2
-            events[3].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // min(3, 2) = 2
-            events[4].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // min(4, 2) = 2
-        }
-    }
-
-    "min() caps numeric values" {
-        val p = seq(0.0, 1.0, 2.5, 3.0, 4.5).min(2.0)
-        val events = p.queryArc(0.0, 1.0)
-
-        events shouldHaveSize 5
-        events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        events[1].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-        events[2].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
-        events[3].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
-        events[4].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
-    }
-
-    "min() with control pattern varies the cap" {
-        // first cycle cap = 1, second cycle cap = 3
-        val p = seq("0 1 2 3").min("<1 3>")
-        val events = p.queryArc(0.0, 2.0)
-
-        assertSoftly {
-            events shouldHaveSize 8
-            // cycle 0, cap = 1
-            events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            events[1].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            events[2].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            events[3].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            // cycle 1, cap = 3
-            events[4].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-            events[5].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            events[6].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
-            events[7].data.value?.asDouble shouldBe (3.0 plusOrMinus EPSILON)
-        }
-    }
-
-    "apply(mul().min())" {
-        val p = seq("1 2 3").apply(mul("2").min("4"))
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events shouldHaveSize 3
-            events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // min(1*2, 4)=2
-            events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)   // min(2*2, 4)=4
-            events[2].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)   // min(3*2, 4)=4
-        }
-    }
-
-    "script apply(mul().min())" {
-        val p = SprudelPattern.compile("""seq("1 2 3").apply(mul("2").min("4"))""")!!
-        val events = p.queryArc(0.0, 1.0)
-
-        assertSoftly {
-            events shouldHaveSize 3
-            events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
-            events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)
-            events[2].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)
-        }
-    }
-
-    // ========== max() tests ==========
-
-    "max dsl interface" {
-        val pat = "0 1 2 3 4"
         val floor = "2"
 
         dslInterfaceTests(
-            "pattern.max(floor)" to
-                    seq(pat).max(floor),
-            "string.max(floor)" to
-                    pat.max(floor),
-            "max(floor)" to
-                    seq(pat).apply(max(floor)),
-            "script pattern.max(floor)" to
-                    SprudelPattern.compile("""seq("$pat").max("$floor")"""),
-            "script string.max(floor)" to
-                    SprudelPattern.compile(""""$pat".max("$floor")"""),
-            "script max(floor)" to
-                    SprudelPattern.compile("""seq("$pat").apply(max("$floor"))"""),
+            "pattern.min(floor)" to
+                    seq(pat).min(floor),
+            "string.min(floor)" to
+                    pat.min(floor),
+            "min(floor)" to
+                    seq(pat).apply(min(floor)),
+            "script pattern.min(floor)" to
+                    SprudelPattern.compile("""seq("$pat").min("$floor")"""),
+            "script string.min(floor)" to
+                    SprudelPattern.compile(""""$pat".min("$floor")"""),
+            "script min(floor)" to
+                    SprudelPattern.compile("""seq("$pat").apply(min("$floor"))"""),
         ) { _, events ->
             events.shouldHaveSize(5)
-            events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // max(0, 2) = 2
-            events[1].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // max(1, 2) = 2
-            events[2].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // max(2, 2) = 2
-            events[3].data.value?.asDouble shouldBe (3.0 plusOrMinus EPSILON)   // max(3, 2) = 3
-            events[4].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)   // max(4, 2) = 4
+            events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // 0 raised to floor 2
+            events[1].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // 1 raised to floor 2
+            events[2].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // 2 == floor 2
+            events[3].data.value?.asDouble shouldBe (3.0 plusOrMinus EPSILON)   // 3 above floor → unchanged
+            events[4].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)   // 4 above floor → unchanged
         }
     }
 
-    "max() floors numeric values" {
-        val p = seq(-1.0, 0.0, 0.5, 1.0, 2.0).max(0.0)
+    "min() floors numeric values" {
+        val p = seq(-1.0, 0.0, 0.5, 1.0, 2.0).min(0.0)
         val events = p.queryArc(0.0, 1.0)
 
         events shouldHaveSize 5
-        events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        events[1].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
-        events[2].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
-        events[3].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-        events[4].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
+        events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)   // -1 raised to 0
+        events[1].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)   //  0 == floor
+        events[2].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)   //  0.5 unchanged
+        events[3].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)   //  1 unchanged
+        events[4].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   //  2 unchanged
     }
 
-    "max() with control pattern varies the floor" {
+    "min() with control pattern varies the floor" {
         // first cycle floor = 2, second cycle floor = 0
-        val p = seq("0 1 2 3").max("<2 0>")
+        val p = seq("0 1 2 3").min("<2 0>")
         val events = p.queryArc(0.0, 2.0)
 
         assertSoftly {
@@ -162,20 +77,20 @@ class LangMinMaxClampSpec : StringSpec({
         }
     }
 
-    "apply(sub().max())" {
-        val p = seq("1 2 3").apply(sub("2").max("0"))
+    "apply(sub().min())" {
+        val p = seq("1 2 3").apply(sub("2").min("0"))
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
             events shouldHaveSize 3
-            events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)   // max(1-2, 0)=0
-            events[1].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)   // max(2-2, 0)=0
-            events[2].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)   // max(3-2, 0)=1
+            events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)   // (1-2)=-1, floor 0 → 0
+            events[1].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)   // (2-2)= 0, floor 0 → 0
+            events[2].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)   // (3-2)= 1, above floor → 1
         }
     }
 
-    "script apply(sub().max())" {
-        val p = SprudelPattern.compile("""seq("1 2 3").apply(sub("2").max("0"))""")!!
+    "script apply(sub().min())" {
+        val p = SprudelPattern.compile("""seq("1 2 3").apply(sub("2").min("0"))""")!!
         val events = p.queryArc(0.0, 1.0)
 
         assertSoftly {
@@ -183,6 +98,91 @@ class LangMinMaxClampSpec : StringSpec({
             events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             events[1].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
             events[2].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+        }
+    }
+
+    // ========== max() tests ==========
+
+    "max dsl interface" {
+        val pat = "0 1 2 3 4"
+        val cap = "2"
+
+        dslInterfaceTests(
+            "pattern.max(cap)" to
+                    seq(pat).max(cap),
+            "string.max(cap)" to
+                    pat.max(cap),
+            "max(cap)" to
+                    seq(pat).apply(max(cap)),
+            "script pattern.max(cap)" to
+                    SprudelPattern.compile("""seq("$pat").max("$cap")"""),
+            "script string.max(cap)" to
+                    SprudelPattern.compile(""""$pat".max("$cap")"""),
+            "script max(cap)" to
+                    SprudelPattern.compile("""seq("$pat").apply(max("$cap"))"""),
+        ) { _, events ->
+            events.shouldHaveSize(5)
+            events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)   // 0 below cap → unchanged
+            events[1].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)   // 1 below cap → unchanged
+            events[2].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // 2 == cap
+            events[3].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // 3 lowered to cap 2
+            events[4].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // 4 lowered to cap 2
+        }
+    }
+
+    "max() caps numeric values" {
+        val p = seq(0.0, 1.0, 2.5, 3.0, 4.5).max(2.0)
+        val events = p.queryArc(0.0, 1.0)
+
+        events shouldHaveSize 5
+        events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
+        events[1].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+        events[2].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
+        events[3].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
+        events[4].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
+    }
+
+    "max() with control pattern varies the cap" {
+        // first cycle cap = 1, second cycle cap = 3
+        val p = seq("0 1 2 3").max("<1 3>")
+        val events = p.queryArc(0.0, 2.0)
+
+        assertSoftly {
+            events shouldHaveSize 8
+            // cycle 0, cap = 1
+            events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
+            events[1].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+            events[2].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+            events[3].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+            // cycle 1, cap = 3
+            events[4].data.value?.asDouble shouldBe (0.0 plusOrMinus EPSILON)
+            events[5].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+            events[6].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
+            events[7].data.value?.asDouble shouldBe (3.0 plusOrMinus EPSILON)
+        }
+    }
+
+    "apply(mul().max())" {
+        val p = seq("1 2 3").apply(mul("2").max("4"))
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events shouldHaveSize 3
+            events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)   // (1*2)=2, below cap → 2
+            events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)   // (2*2)=4, == cap   → 4
+            events[2].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)   // (3*2)=6, capped   → 4
+        }
+    }
+
+    "script apply(mul().max())" {
+        val p = SprudelPattern.compile("""seq("1 2 3").apply(mul("2").max("4"))""")!!
+        val events = p.queryArc(0.0, 1.0)
+
+        assertSoftly {
+            events shouldHaveSize 3
+            events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
+            events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)
+            events[2].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)
         }
     }
 

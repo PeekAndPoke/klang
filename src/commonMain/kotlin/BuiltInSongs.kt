@@ -507,7 +507,7 @@ let leadStyle = mel =>
        .lpf(sine.range(2200, 4400).slow(24)).resonance(2)
        .adsr("0.005:0.1:0.4:0.08").clip(0.7).distort(0.4).postgain(0.2)
        .delay(0.18).delaytime(pure(3/16).div(cps)).delayfeedback(0.32)
-       .gain(0.4).orbit(3).room(0.2).rsize(3)
+       .gain(0.5).orbit(3).room(0.2).rsize(3)
 let leadA = leadStyle(note(`<[a4 c5 b4 a4] [d5 c5 a4 g4] [bb4 a4 g4 f4] [g4 e4 c4 a4]
                               [g4 bb4 d5 bb4] [f4 a4 c5 a4] [a4 c5 e5 c5] [d4 f4 a4 d5]>`))
 let leadB = leadStyle(note(`<[a5 e5 a5 c5] [d5 a5 d5 f5] [bb4 d5 bb5 d5] [c5 g5 c5 e5]
@@ -526,7 +526,7 @@ let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing()
     .pan(0.3).superimpose(pan(0.7).transpose(12))
     .phaser(0.4).phaserdepth(saw.range(0.0, 0.6).slow(16))
     .phasersweep(900).phasercenter(1400)
-    .gain(0.125).orbit(5).room(0.4).rsize(6)
+    .gain(0.1).orbit(5).room(0.4).rsize(6)
 
 // ── THE WIND (riser used inside a 16-cycle section so saw ramps once)
 let riser = note("c").fast(2).sound("white")

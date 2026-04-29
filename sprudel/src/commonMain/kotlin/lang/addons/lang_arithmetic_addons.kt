@@ -271,28 +271,28 @@ private fun applyMinValue(pattern: SprudelPattern, args: List<SprudelDslArg<Any?
     applyArithmetic(pattern, args) { a, b ->
         val ar = a.asRational ?: return@applyArithmetic null
         val br = b.asRational ?: return@applyArithmetic null
-        if (ar <= br) a else b
+        if (ar >= br) a else b
     }
 
 /**
- * Returns the elementwise minimum of each event's numeric value and [other].
+ * Enforces a minimum allowed value of [other] on each event.
  *
- * Caps values at [other] — anything greater becomes [other]. Useful for limiting modulation
- * peaks. Supports control patterns: pass a mini-notation string or another [SprudelPattern]
- * as [other] to vary the cap per cycle or event.
+ * Anything below [other] is raised to [other]; values at or above [other] pass through
+ * unchanged. Supports control patterns: pass a mini-notation string or another
+ * [SprudelPattern] as [other] to vary the floor per cycle or event.
  *
  * ```KlangScript(Playable)
- * seq("0 1 2 3 4").min(2).scale("c4:major").n()   // becomes: 0 1 2 2 2
+ * seq("0 1 2 3 4").min(2).scale("c4:major").n()   // becomes: 2 2 2 3 4
  * ```
  *
  * ```KlangScript(Playable)
- * sine.range(0, 2).min("<1 0.5>")   // alternate the cap each cycle
+ * sine.range(-1, 1).min(0)   // half-wave rectify a sine
  * ```
  *
- * @param other The upper cap. May be a number, string mini-notation, or a [SprudelPattern].
- * @return A new pattern with each numeric value capped at [other].
+ * @param other The minimum allowed value (floor). May be a number, string mini-notation, or a [SprudelPattern].
+ * @return A new pattern with each numeric value floored at [other].
  * @category arithmetic
- * @tags min, minimum, cap, ceiling, clamp, arithmetic, value, addon
+ * @tags min, minimum, floor, clamp, arithmetic, value, addon
  */
 @SprudelDsl
 @KlangScript.Function
@@ -300,10 +300,10 @@ fun SprudelPattern.min(other: PatternLike, callInfo: CallInfo? = null): SprudelP
     applyMinValue(this, listOfNotNull(other).asSprudelDslArgs(callInfo))
 
 /**
- * Caps each numeric value of a string pattern at [other].
+ * Enforces a minimum allowed value of [other] on each numeric value of a string pattern.
  *
  * ```KlangScript(Playable)
- * "0 1 2 3 4".min(2).scale("c4:major").n()   // becomes: 0 1 2 2 2
+ * "0 1 2 3 4".min(2).scale("c4:major").n()   // becomes: 2 2 2 3 4
  * ```
  */
 @SprudelDsl
@@ -312,10 +312,10 @@ fun String.min(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).min(other, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that caps each numeric value at [other].
+ * Creates a [PatternMapperFn] that enforces a minimum allowed value of [other].
  *
  * ```KlangScript(Playable)
- * seq("0 1 2 3 4").apply(min(2)).scale("c4:major").n()   // becomes: 0 1 2 2 2
+ * seq("0 1 2 3 4").apply(min(2)).scale("c4:major").n()   // becomes: 2 2 2 3 4
  * ```
  */
 @SprudelDsl
@@ -324,10 +324,10 @@ fun min(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.min(other, callInfo) }
 
 /**
- * Chains a `min` cap onto this [PatternMapperFn], capping every numeric value at [other].
+ * Chains a `min` floor onto this [PatternMapperFn], enforcing [other] as the minimum value.
  *
  * ```KlangScript(Playable)
- * seq("1 2 3").apply(mul(2).min(4))  // min(1*2,4)=2, min(2*2,4)=4, min(3*2,4)=4
+ * seq("1 2 3").apply(sub(2).min(0))  // min(1-2,0)=0, min(2-2,0)=0, min(3-2,0)=1
  * ```
  */
 @SprudelDsl
@@ -341,28 +341,28 @@ private fun applyMaxValue(pattern: SprudelPattern, args: List<SprudelDslArg<Any?
     applyArithmetic(pattern, args) { a, b ->
         val ar = a.asRational ?: return@applyArithmetic null
         val br = b.asRational ?: return@applyArithmetic null
-        if (ar >= br) a else b
+        if (ar <= br) a else b
     }
 
 /**
- * Returns the elementwise maximum of each event's numeric value and [other].
+ * Enforces a maximum allowed value of [other] on each event.
  *
- * Floors values at [other] — anything smaller becomes [other]. Useful for ensuring modulation
- * stays above a threshold. Supports control patterns: pass a mini-notation string or another
- * [SprudelPattern] as [other] to vary the floor per cycle or event.
+ * Anything above [other] is lowered to [other]; values at or below [other] pass through
+ * unchanged. Supports control patterns: pass a mini-notation string or another
+ * [SprudelPattern] as [other] to vary the cap per cycle or event.
  *
  * ```KlangScript(Playable)
- * seq("0 1 2 3 4").max(2).scale("c4:major").n()   // becomes: 2 2 2 3 4
+ * seq("0 1 2 3 4").max(2).scale("c4:major").n()   // becomes: 0 1 2 2 2
  * ```
  *
  * ```KlangScript(Playable)
- * sine.range(-1, 1).max(0)   // half-wave rectify a sine
+ * sine.range(0, 2).max("<1 0.5>")   // alternate the cap each cycle
  * ```
  *
- * @param other The lower floor. May be a number, string mini-notation, or a [SprudelPattern].
- * @return A new pattern with each numeric value floored at [other].
+ * @param other The maximum allowed value (cap). May be a number, string mini-notation, or a [SprudelPattern].
+ * @return A new pattern with each numeric value capped at [other].
  * @category arithmetic
- * @tags max, maximum, floor, clamp, arithmetic, value, addon
+ * @tags max, maximum, cap, ceiling, clamp, arithmetic, value, addon
  */
 @SprudelDsl
 @KlangScript.Function
@@ -370,10 +370,10 @@ fun SprudelPattern.max(other: PatternLike, callInfo: CallInfo? = null): SprudelP
     applyMaxValue(this, listOfNotNull(other).asSprudelDslArgs(callInfo))
 
 /**
- * Floors each numeric value of a string pattern at [other].
+ * Enforces a maximum allowed value of [other] on each numeric value of a string pattern.
  *
  * ```KlangScript(Playable)
- * "0 1 2 3 4".max(2).scale("c4:major").n()   // becomes: 2 2 2 3 4
+ * "0 1 2 3 4".max(2).scale("c4:major").n()   // becomes: 0 1 2 2 2
  * ```
  */
 @SprudelDsl
@@ -382,10 +382,10 @@ fun String.max(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).max(other, callInfo)
 
 /**
- * Creates a [PatternMapperFn] that floors each numeric value at [other].
+ * Creates a [PatternMapperFn] that enforces a maximum allowed value of [other].
  *
  * ```KlangScript(Playable)
- * seq("0 1 2 3 4").apply(max(2)).scale("c4:major").n()   // becomes: 2 2 2 3 4
+ * seq("0 1 2 3 4").apply(max(2)).scale("c4:major").n()   // becomes: 0 1 2 2 2
  * ```
  */
 @SprudelDsl
@@ -394,10 +394,10 @@ fun max(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.max(other, callInfo) }
 
 /**
- * Chains a `max` floor onto this [PatternMapperFn], flooring every numeric value at [other].
+ * Chains a `max` cap onto this [PatternMapperFn], enforcing [other] as the maximum value.
  *
  * ```KlangScript(Playable)
- * seq("1 2 3").apply(sub(2).max(0))  // max(1-2,0)=0, max(2-2,0)=0, max(3-2,0)=1
+ * seq("1 2 3").apply(mul(2).max(4))  // max(1*2,4)=2, max(2*2,4)=4, max(3*2,4)=4
  * ```
  */
 @SprudelDsl
