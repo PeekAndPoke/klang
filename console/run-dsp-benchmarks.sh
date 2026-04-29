@@ -13,9 +13,11 @@ DATETIME=$(date +"%Y-%m-%d_%H%M%S")
 DOCS_DIR="docs/benchmarks"
 mkdir -p "$DOCS_DIR"
 
-JVM_FILE="$DOCS_DIR/dsp_${DATETIME}_jvm.md"
-NODE_FILE="$DOCS_DIR/dsp_${DATETIME}_nodejs.md"
-COMPARE_FILE="$DOCS_DIR/compare_${DATETIME}.md"
+# Filenames lead with the timestamp so plain alphabetical sort groups each run together
+# (compare/jvm/nodejs adjacent under each datetime).
+JVM_FILE="$DOCS_DIR/${DATETIME}_jvm.md"
+NODE_FILE="$DOCS_DIR/${DATETIME}_nodejs.md"
+COMPARE_FILE="$DOCS_DIR/${DATETIME}_compare.md"
 
 echo "=== Running JVM benchmark ==="
 ./gradlew :audio_benchmark:jvmRun --quiet 2>/dev/null | sed -n '/^# Audio Benchmark/,$ p' > "$JVM_FILE"
