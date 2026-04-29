@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 
 /**
@@ -17,9 +18,9 @@ class ParamIgnitor(
     val default: Double,
 ) : Ignitor {
 
-    private val defaultF = default.toFloat()
+    private val defaultF = default
 
-    override fun generate(buffer: FloatArray, freqHz: Double, ctx: IgniteContext) {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         buffer.fill(defaultF, ctx.offset, ctx.offset + ctx.length)
     }
 }

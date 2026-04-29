@@ -60,16 +60,16 @@ class CrushRenderer(amount: Double, oversampleStages: Int = 0) : BlockRenderer {
         val buf = ctx.audioBuffer
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
-            val q = floor(buf[idx].toDouble() * hl) / hl
-            buf[idx] = q.coerceIn(-1.0, 1.0).toFloat()
+            val q = floor(buf[idx] * hl) / hl
+            buf[idx] = q.coerceIn(-1.0, 1.0)
         }
     }
 
     private fun renderOversampled(ctx: BlockContext, os: Oversampler) {
         val hl = halfLevels
         os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-            val q = floor(sample.toDouble() * hl) / hl
-            q.coerceIn(-1.0, 1.0).toFloat()
+            val q = floor(sample * hl) / hl
+            q.coerceIn(-1.0, 1.0)
         }
     }
 }

@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -26,14 +27,14 @@ class PitchModFactoriesSpec : StringSpec({
         voiceElapsedFrames = 0
     }
 
-    fun render(ig: Ignitor, freqHz: Double = 440.0, ctx: IgniteContext = createCtx()): FloatArray {
-        val buf = FloatArray(ctx.length)
+    fun render(ig: Ignitor, freqHz: Double = 440.0, ctx: IgniteContext = createCtx()): AudioBuffer {
+        val buf = AudioBuffer(ctx.length)
         ig.generate(buf, freqHz, ctx)
         return buf
     }
 
-    fun FloatArray.mean(): Double = sumOf { it.toDouble() } / size
-    fun FloatArray.rms(): Double {
+    fun AudioBuffer.mean(): Double = sumOf { it.toDouble() } / size
+    fun AudioBuffer.rms(): Double {
         var s = 0.0; for (x in this) s += x.toDouble() * x.toDouble(); return sqrt(s / size)
     }
 
@@ -44,7 +45,7 @@ class PitchModFactoriesSpec : StringSpec({
     "vibratoMod: depth=0 produces all ones (no modulation)" {
         val mod = vibratoModIgnitor(rate = 5.0, depth = 0.0)
         val out = render(mod)
-        for (s in out) s shouldBe 1.0f
+        for (s in out) s shouldBe 1.0
     }
 
     "vibratoMod: output is centered near 1.0 (ratio space)" {
@@ -65,7 +66,7 @@ class PitchModFactoriesSpec : StringSpec({
     "vibratoMod: larger depth produces larger deviation from 1.0" {
         val small = vibratoModIgnitor(rate = 5.0, depth = 0.25)
         val large = vibratoModIgnitor(rate = 5.0, depth = 2.0)
-        fun deviationRms(buf: FloatArray): Double {
+        fun deviationRms(buf: AudioBuffer): Double {
             var s = 0.0; for (x in buf) {
                 val d = x.toDouble() - 1.0; s += d * d
             }; return sqrt(s / buf.size)
@@ -80,7 +81,7 @@ class PitchModFactoriesSpec : StringSpec({
     "accelerateMod: amount=0 produces all ones" {
         val mod = accelerateModIgnitor(amount = 0.0)
         val out = render(mod)
-        for (s in out) s shouldBe 1.0f
+        for (s in out) s shouldBe 1.0
     }
 
     "accelerateMod: starts near 1.0 at voice start (progress=0)" {
@@ -112,7 +113,7 @@ class PitchModFactoriesSpec : StringSpec({
             amount = ParamIgnitor("amount", 0.0),
         )
         val out = render(mod)
-        for (s in out) s shouldBe 1.0f
+        for (s in out) s shouldBe 1.0
     }
 
     "pitchEnvelopeMod: produces non-zero deviation when amount is non-zero" {
@@ -136,7 +137,7 @@ class PitchModFactoriesSpec : StringSpec({
             depth = ParamIgnitor("depth", 0.0),
         )
         val out = render(mod)
-        for (s in out) s shouldBe 1.0f
+        for (s in out) s shouldBe 1.0
     }
 
     "fmMod: output is centered near 1.0 (ratio space)" {
@@ -162,7 +163,7 @@ class PitchModFactoriesSpec : StringSpec({
             depth = ParamIgnitor("depth", 400.0),
         )
 
-        fun deviationRms(buf: FloatArray): Double {
+        fun deviationRms(buf: AudioBuffer): Double {
             var s = 0.0; for (x in buf) {
                 val d = x.toDouble() - 1.0; s += d * d
             }; return sqrt(s / buf.size)

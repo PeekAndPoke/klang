@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
@@ -35,7 +36,7 @@ class VoiceFactory(
     private val sampleRateDouble: Double,
     private val ignitorRegistry: IgnitorRegistry,
     private val cylinders: Cylinders,
-    private val voiceBuffer: FloatArray,
+    private val voiceBuffer: AudioBuffer,
     private val freqModBuffer: DoubleArray,
     private val scratchBuffers: ScratchBuffers,
 ) {

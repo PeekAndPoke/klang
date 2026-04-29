@@ -2,7 +2,6 @@ package io.peekandpoke.klang.audio_be.effects
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
-import io.kotest.matchers.floats.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import kotlin.math.abs
@@ -35,8 +34,8 @@ class DelayLineSpec : StringSpec({
         val output = StereoBuffer(blockSize)
 
         // Place impulse at sample 0 of the first block
-        send.left[0] = 1.0f
-        send.right[0] = 1.0f
+        send.left[0] = 1.0
+        send.right[0] = 1.0
 
         var foundLeft = false
         var impulseBlockIndex = -1
@@ -48,7 +47,7 @@ class DelayLineSpec : StringSpec({
             delay.process(send, output, blockSize)
 
             for (i in 0 until blockSize) {
-                if (!foundLeft && abs(output.left[i]) > 0.5f) {
+                if (!foundLeft && abs(output.left[i]) > 0.5) {
                     foundLeft = true
                     impulseBlockIndex = block
                     impulseSampleIndex = i
@@ -73,16 +72,16 @@ class DelayLineSpec : StringSpec({
 
         // Collect peak amplitudes for multiple repeats
         val totalBlocks = ((delaySamples * 5) / blockSize) + 2
-        val peaks = mutableListOf<Float>()
-        var currentPeak = 0.0f
+        val peaks = mutableListOf<Double>()
+        var currentPeak = 0.0
         var samplesSinceLastPeak = 0
         var totalSamples = 0
 
         val send = StereoBuffer(blockSize)
         val output = StereoBuffer(blockSize)
 
-        send.left[0] = 1.0f
-        send.right[0] = 1.0f
+        send.left[0] = 1.0
+        send.right[0] = 1.0
 
         for (block in 0 until totalBlocks) {
             if (block > 0) send.clear()
@@ -98,9 +97,9 @@ class DelayLineSpec : StringSpec({
                 totalSamples++
 
                 // Check at each delay period
-                if (totalSamples % delaySamples == 0 && currentPeak > 0.001f) {
+                if (totalSamples % delaySamples == 0 && currentPeak > 0.001) {
                     peaks.add(currentPeak)
-                    currentPeak = 0.0f
+                    currentPeak = 0.0
                     samplesSinceLastPeak = 0
                 }
             }
@@ -128,8 +127,8 @@ class DelayLineSpec : StringSpec({
         val send = StereoBuffer(blockSize)
         val output = StereoBuffer(blockSize)
 
-        send.left[0] = 1.0f
-        send.right[0] = 1.0f
+        send.left[0] = 1.0
+        send.right[0] = 1.0
 
         for (block in 0 until totalBlocks) {
             if (block > 0) send.clear()
@@ -137,7 +136,7 @@ class DelayLineSpec : StringSpec({
             delay.process(send, output, blockSize)
 
             for (i in 0 until blockSize) {
-                if (abs(output.left[i]) > 0.01f) {
+                if (abs(output.left[i]) > 0.01) {
                     if (lastNonZeroBlock != block) {
                         peakCount++
                         lastNonZeroBlock = block
@@ -160,8 +159,8 @@ class DelayLineSpec : StringSpec({
         val output = StereoBuffer(blockSize)
 
         // Send a loud impulse
-        send.left[0] = 1.0f
-        send.right[0] = 1.0f
+        send.left[0] = 1.0
+        send.right[0] = 1.0
 
         // Process many blocks so feedback has time to accumulate
         for (block in 0 until 200) {
@@ -171,8 +170,8 @@ class DelayLineSpec : StringSpec({
 
             // Check that no output sample exceeds the safety limit of 2.0
             for (i in 0 until blockSize) {
-                abs(output.left[i]) shouldBeLessThan 2.01f
-                abs(output.right[i]) shouldBeLessThan 2.01f
+                abs(output.left[i]) shouldBeLessThan 2.01
+                abs(output.right[i]) shouldBeLessThan 2.01
             }
         }
     }
@@ -185,8 +184,8 @@ class DelayLineSpec : StringSpec({
         val send = StereoBuffer(blockSize)
         val output = StereoBuffer(blockSize)
 
-        send.left[0] = 1.0f
-        send.right[0] = 1.0f
+        send.left[0] = 1.0
+        send.right[0] = 1.0
 
         delay.process(send, output, blockSize)
 
@@ -213,8 +212,8 @@ class DelayLineSpec : StringSpec({
         val send = StereoBuffer(blockSize)
         val output = StereoBuffer(blockSize)
 
-        send.left[0] = 1.0f
-        send.right[0] = 1.0f
+        send.left[0] = 1.0
+        send.right[0] = 1.0
 
         // Should not throw
         repeat(10) { block ->
@@ -230,12 +229,12 @@ class DelayLineSpec : StringSpec({
 
         // Re-send impulse and check immediate area
         val freshSend = StereoBuffer(blockSize)
-        freshSend.left[0] = 1.0f
+        freshSend.left[0] = 1.0
         val freshOutput = StereoBuffer(blockSize)
         delay.process(freshSend, freshOutput, blockSize)
 
         for (i in 0 until blockSize) {
-            if (abs(freshOutput.left[i]) > 0.001f) {
+            if (abs(freshOutput.left[i]) > 0.001) {
                 hasOutput = true
                 break
             }
@@ -251,8 +250,8 @@ class DelayLineSpec : StringSpec({
         val send = StereoBuffer(blockSize)
         val output = StereoBuffer(blockSize)
 
-        send.left[0] = 1.0f
-        send.right[0] = 1.0f
+        send.left[0] = 1.0
+        send.right[0] = 1.0
 
         // Process a few blocks, then change delay time mid-stream
         repeat(5) { block ->

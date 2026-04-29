@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 
 class CompressorSpec : StringSpec({
@@ -21,7 +22,7 @@ class CompressorSpec : StringSpec({
         )
 
         // Create a buffer with loud signal (above threshold)
-        val buffer = FloatArray(1000) { 0.5f } // ~-6 dB
+        val buffer = AudioBuffer(1000) { 0.5 } // ~-6 dB
 
         compressor.process(buffer, 0, 1000)
 
@@ -41,7 +42,7 @@ class CompressorSpec : StringSpec({
         )
 
         // Create a buffer with quiet signal (below threshold)
-        val buffer = FloatArray(1000) { 0.01f } // ~-40 dB
+        val buffer = AudioBuffer(1000) { 0.01 } // ~-40 dB
         val original = buffer.copyOf()
 
         compressor.process(buffer, 0, 1000)
@@ -89,14 +90,14 @@ class CompressorSpec : StringSpec({
         )
 
         // Process some audio
-        val buffer = FloatArray(100) { 0.5f }
+        val buffer = AudioBuffer(100) { 0.5 }
         compressor.process(buffer, 0, 100)
 
         // Reset
         compressor.reset()
 
         // Process quiet signal - should not be affected by previous state
-        val quietBuffer = FloatArray(100) { 0.01f }
+        val quietBuffer = AudioBuffer(100) { 0.01 }
         val original = quietBuffer.copyOf()
         compressor.process(quietBuffer, 0, 100)
 
@@ -115,8 +116,8 @@ class CompressorSpec : StringSpec({
             releaseSeconds = 0.1
         )
 
-        val left = FloatArray(1000) { 0.5f }
-        val right = FloatArray(1000) { 0.5f }
+        val left = AudioBuffer(1000) { 0.5 }
+        val right = AudioBuffer(1000) { 0.5 }
 
         compressor.process(left, right, 1000)
 
@@ -148,7 +149,7 @@ class CompressorSpec : StringSpec({
         )
 
         // Create signal right at threshold
-        val bufferHard = FloatArray(1000) { 0.1f } // ~-20 dB
+        val bufferHard = AudioBuffer(1000) { 0.1 } // ~-20 dB
         val bufferSoft = bufferHard.copyOf()
 
         hardKnee.process(bufferHard, 0, 1000)

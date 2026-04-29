@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.voices
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
@@ -17,7 +18,7 @@ class PitchModulationTest : StringSpec({
     val bf = 512
 
     /** Compute RMS of a float array slice. */
-    fun rms(buf: FloatArray, from: Int = 0, to: Int = buf.size): Double {
+    fun rms(buf: AudioBuffer, from: Int = 0, to: Int = buf.size): Double {
         var sum = 0.0
         for (i in from until to) {
             sum += buf[i].toDouble() * buf[i].toDouble()
@@ -26,7 +27,7 @@ class PitchModulationTest : StringSpec({
     }
 
     /** Compute RMS of the element-wise difference of two buffers. */
-    fun diffRms(a: FloatArray, b: FloatArray, from: Int = 0, to: Int = a.size): Double {
+    fun diffRms(a: AudioBuffer, b: AudioBuffer, from: Int = 0, to: Int = a.size): Double {
         var sum = 0.0
         for (i in from until to) {
             val d = a[i].toDouble() - b[i].toDouble()

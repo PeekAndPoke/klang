@@ -26,7 +26,7 @@ import kotlin.math.sin
 fun deviationToRatioIgnitor(userMod: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
     userMod.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
-    for (i in ctx.offset until end) buffer[i] = buffer[i] + 1.0f
+    for (i in ctx.offset until end) buffer[i] = buffer[i] + 1.0
 }
 
 /**
@@ -51,14 +51,14 @@ fun vibratoModIgnitor(rate: Ignitor, depth: Ignitor): Ignitor {
 
         if (depthSemitones <= 0.0) {
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
             return@Ignitor
         }
 
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = safeOut(2.0.pow(sin(lfoPhase) * depthSemitones / 12.0).toFloat())
+            buffer[i] = safeOut(2.0.pow(sin(lfoPhase) * depthSemitones / 12.0))
             lfoPhase += lfoInc
             if (lfoPhase >= TWO_PI) lfoPhase -= TWO_PI
         }
@@ -87,13 +87,13 @@ fun accelerateModIgnitor(amount: Ignitor): Ignitor {
         val end = ctx.offset + ctx.length
 
         if (amountVal == 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
             return@Ignitor
         }
 
-        val totalFrames = ctx.voiceDurationFrames.toDouble()
+        val totalFrames = ctx.voiceDurationFramesD
         if (totalFrames <= 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
             return@Ignitor
         }
 
@@ -102,7 +102,7 @@ fun accelerateModIgnitor(amount: Ignitor): Ignitor {
         var ratio = 2.0.pow(amountVal * startProgress)
 
         for (i in ctx.offset until end) {
-            buffer[i] = safeOut(ratio.toFloat())
+            buffer[i] = safeOut(ratio)
             ratio *= step
         }
     }
@@ -140,7 +140,7 @@ fun pitchEnvelopeModIgnitor(
         val end = ctx.offset + ctx.length
 
         if (amountVal == 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
             return@Ignitor
         }
 
@@ -170,7 +170,7 @@ fun pitchEnvelopeModIgnitor(
                 envLevel = 1.0 - (1.0 - anchorVal) * decayProgress
             }
 
-            buffer[i] = safeOut(2.0.pow((amountVal * envLevel) / 12.0).toFloat())
+            buffer[i] = safeOut(2.0.pow((amountVal * envLevel) / 12.0))
         }
     }
 }
@@ -202,7 +202,7 @@ fun fmModIgnitor(
         val end = ctx.offset + ctx.length
 
         if (freqHz <= 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
             return@Ignitor
         }
 
@@ -210,7 +210,7 @@ fun fmModIgnitor(
         val depthVal = Ignitors.readParam(depth, freqHz, ctx)
 
         if (depthVal == 0.0) {
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
             return@Ignitor
         }
 
@@ -231,9 +231,9 @@ fun fmModIgnitor(
             modulator.generate(modBuf, modFreq, ctx)
 
             // Sub-Hz freqHz (from heavy detune) would otherwise blow up `effectiveDepth / freqHz`.
-            val safeFreq = safeDiv(freqHz.toFloat()).toDouble()
+            val safeFreq = safeDiv(freqHz)
             for (i in ctx.offset until end) {
-                buffer[i] = safeOut((1.0 + modBuf[i].toDouble() * effectiveDepth / safeFreq).toFloat())
+                buffer[i] = safeOut((1.0 + modBuf[i] * effectiveDepth / safeFreq))
             }
         }
     }

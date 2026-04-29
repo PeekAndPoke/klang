@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 
 class ScratchBuffersSpec : StringSpec({
 
@@ -28,7 +29,7 @@ class ScratchBuffersSpec : StringSpec({
     "buffer is released after use block - subsequent use gets same buffer back" {
         val scratch = ScratchBuffers(blockFrames)
 
-        var firstRef: FloatArray? = null
+        var firstRef: AudioBuffer? = null
         scratch.use { buf ->
             firstRef = buf
         }
@@ -61,7 +62,7 @@ class ScratchBuffersSpec : StringSpec({
     "reset resets the stack pointer - next use gets first buffer" {
         val scratch = ScratchBuffers(blockFrames)
 
-        var firstRef: FloatArray? = null
+        var firstRef: AudioBuffer? = null
         scratch.use { buf ->
             firstRef = buf
         }
@@ -82,13 +83,13 @@ class ScratchBuffersSpec : StringSpec({
         scratch.use { a ->
             scratch.use { b ->
                 // Fill a with 1.0, b with 2.0
-                a.fill(1.0f)
-                b.fill(2.0f)
+                a.fill(1.0)
+                b.fill(2.0)
 
                 // Verify they are independent
                 for (i in 0 until blockFrames) {
-                    a[i] shouldBe 1.0f
-                    b[i] shouldBe 2.0f
+                    a[i] shouldBe 1.0
+                    b[i] shouldBe 2.0
                 }
             }
         }

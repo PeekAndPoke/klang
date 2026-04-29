@@ -22,13 +22,13 @@ class KatalystCompressorEffectSpec : StringSpec({
         val effect = KatalystCompressorEffect()
         val ctx = createCtx()
 
-        ctx.mixBuffer.left.fill(0.5f)
-        ctx.mixBuffer.right.fill(0.5f)
+        ctx.mixBuffer.left.fill(0.5)
+        ctx.mixBuffer.right.fill(0.5)
 
         effect.process(ctx)
 
-        ctx.mixBuffer.left[0] shouldBe 0.5f
-        ctx.mixBuffer.right[0] shouldBe 0.5f
+        ctx.mixBuffer.left[0] shouldBe 0.5
+        ctx.mixBuffer.right[0] shouldBe 0.5
     }
 
     "compresses loud signal when compressor is configured" {
@@ -43,7 +43,7 @@ class KatalystCompressorEffectSpec : StringSpec({
         )
 
         val ctx = createCtx()
-        val loudSignal = 0.9f
+        val loudSignal = 0.9
         ctx.mixBuffer.left.fill(loudSignal)
         ctx.mixBuffer.right.fill(loudSignal)
 
@@ -72,7 +72,7 @@ class KatalystCompressorEffectSpec : StringSpec({
 
         val ctx = createCtx()
         // Very quiet signal, well below threshold
-        val quietSignal = 0.01f
+        val quietSignal = 0.01
         ctx.mixBuffer.left.fill(quietSignal)
         ctx.mixBuffer.right.fill(quietSignal)
 
@@ -80,7 +80,7 @@ class KatalystCompressorEffectSpec : StringSpec({
 
         // Should pass through essentially unchanged
         val outputLevel = abs(ctx.mixBuffer.left[blockFrames - 1])
-        (abs(outputLevel - quietSignal) < 0.001f) shouldBe true
+        (abs(outputLevel - quietSignal) < 0.001) shouldBe true
     }
 
     "compressor can be set to null to disable" {
@@ -90,9 +90,9 @@ class KatalystCompressorEffectSpec : StringSpec({
         effect.compressor = null
 
         val ctx = createCtx()
-        ctx.mixBuffer.left.fill(0.5f)
+        ctx.mixBuffer.left.fill(0.5)
         effect.process(ctx)
 
-        ctx.mixBuffer.left[0] shouldBe 0.5f
+        ctx.mixBuffer.left[0] shouldBe 0.5
     }
 })

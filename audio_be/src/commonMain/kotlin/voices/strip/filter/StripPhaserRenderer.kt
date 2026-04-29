@@ -46,7 +46,7 @@ class StripPhaserRenderer(
             val tanValue = tan(PI * modFreq * inverseSampleRate)
             val alpha = (tanValue - 1.0) / (tanValue + 1.0)
 
-            var signal = buf[idx].toDouble() + lastOutput * feedback
+            var signal = buf[idx] + lastOutput * feedback
 
             for (s in 0 until stages) {
                 val x = signal
@@ -57,7 +57,7 @@ class StripPhaserRenderer(
 
             lastOutput = flushDenormal(signal)
 
-            buf[idx] = (buf[idx] + signal * depth).toFloat()
+            buf[idx] = (buf[idx] + signal * depth)
         }
     }
 }

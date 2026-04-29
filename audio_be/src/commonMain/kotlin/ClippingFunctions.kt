@@ -157,7 +157,7 @@ object ClippingFuncs {
      * to ±1.
      *
      * **Use Case:** Bounding the output of a distortion / DC-blocker chain to ±1
-     * without compressing the bulk of the signal — typical [threshold] of 0.90
+     * without compressing the bulk of the signal — typical [threshold] of 0.95
      * leaves clean audio untouched and only acts on rail-edge transients above ±1
      * (e.g. the 2× DC-blocker overshoot on heavily-saturated inputs).
      *
@@ -165,7 +165,7 @@ object ClippingFuncs {
      * @param threshold linear-region cutoff in [0, 1). Default 0.95. Lower = more
      *   saturation character on bulk peaks; higher = more identity, hard-clip-ish.
      */
-    inline fun softCap(x: Double, threshold: Double = 0.90): Double {
+    inline fun softCap(x: Double, threshold: Double = 0.95): Double {
         val absX = if (x < 0.0) -x else x
         if (absX <= threshold) return x
         val headroom = 1.0 - threshold

@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.resolveDistortionShape
@@ -89,7 +90,7 @@ class GuitarClickHuntTest : StringSpec({
 
     // ── Voice rendering ──
 
-    fun renderVoiceFromIgnitor(ig: Ignitor, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): FloatArray {
+    fun renderVoiceFromIgnitor(ig: Ignitor, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): AudioBuffer {
         val gateFrames = sampleRate * gateMs / 1000
         val releaseFrames = sampleRate * releaseMs / 1000
         val totalFrames = gateFrames + releaseFrames
@@ -103,8 +104,8 @@ class GuitarClickHuntTest : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
         )
 
-        val out = FloatArray(totalFrames)
-        val tmp = FloatArray(blockFrames)
+        val out = AudioBuffer(totalFrames)
+        val tmp = AudioBuffer(blockFrames)
         var pos = 0
         while (pos < totalFrames) {
             val n = minOf(blockFrames, totalFrames - pos)
@@ -118,34 +119,34 @@ class GuitarClickHuntTest : StringSpec({
         return out
     }
 
-    fun renderVoice(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): FloatArray =
+    fun renderVoice(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): AudioBuffer =
         renderVoiceFromIgnitor(dsl.toExciter(), freqHz, gateMs, releaseMs)
 
     /**
      * Renders the ignitor through the engine's `IgniteRenderer` wrapper (which hard-clips
      * to ±1 per output sample). Use this to verify the in-engine ±1 invariant.
      */
-    fun renderVoiceThroughWrapper(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): FloatArray {
+    fun renderVoiceThroughWrapper(dsl: IgnitorDsl, freqHz: Double, gateMs: Int = 250, releaseMs: Int = 200): AudioBuffer {
         val out = renderVoiceFromIgnitor(dsl.toExciter(), freqHz, gateMs, releaseMs)
         for (i in out.indices) {
-            out[i] = out[i].coerceIn(-1.0f, 1.0f)
+            out[i] = out[i].coerceIn(-1.0, 1.0)
         }
         return out
     }
 
     data class Metrics(
-        val peakAbs: Float,
-        val attackPeak: Float,
-        val gateEndDelta: Float,
-        val tail: Float,
-        val peakDelta: Float,
+        val peakAbs: Double,
+        val attackPeak: Double,
+        val gateEndDelta: Double,
+        val tail: Double,
+        val peakDelta: Double,
         val peakDeltaFrame: Int,
         val peakDeltaWhere: String,
-        val p99Delta: Float,
+        val p99Delta: Double,
         val nans: Int,
         val infs: Int,
     ) {
-        val deltaRatio: Float get() = if (p99Delta > 0f) peakDelta / p99Delta else 0f
+        val deltaRatio: Double get() = if (p99Delta > 0.0) peakDelta / p99Delta else 0.0
 
         fun shortString(): String = buildString {
             append("peak=").append(fmt(peakAbs))
@@ -159,20 +160,20 @@ class GuitarClickHuntTest : StringSpec({
             if (infs > 0) append(" Inf=").append(infs)
         }
 
-        private fun fmt(f: Float): String {
+        private fun fmt(f: Double): String {
             if (f.isNaN()) return "NaN"
             if (f.isInfinite()) return "Inf"
             return ((f * 1000).toInt() / 1000.0).toString()
         }
     }
 
-    fun analyze(samples: FloatArray, gateEndFrame: Int): Metrics {
-        var peak = 0f
+    fun analyze(samples: AudioBuffer, gateEndFrame: Int): Metrics {
+        var peak = 0.0
         var nans = 0
         var infs = 0
-        var peakDelta = 0f
+        var peakDelta = 0.0
         var peakDeltaIdx = 0
-        val deltas = FloatArray(samples.size - 1)
+        val deltas = AudioBuffer(samples.size - 1)
         for (i in 1 until samples.size) {
             val v = samples[i]
             if (v.isNaN()) nans++
@@ -192,10 +193,10 @@ class GuitarClickHuntTest : StringSpec({
             else -> "MID(${(peakDeltaIdx * 1000 / sampleRate)}ms)"
         }
         val sorted = deltas.copyOf().also { it.sort() }
-        val p99 = if (sorted.isEmpty()) 0f else sorted[(sorted.size * 0.99).toInt().coerceAtMost(sorted.size - 1)]
+        val p99 = if (sorted.isEmpty()) 0.0 else sorted[(sorted.size * 0.99).toInt().coerceAtMost(sorted.size - 1)]
 
         val attackFrames = sampleRate / 1000  // 1ms
-        var attackPeak = 0f
+        var attackPeak = 0.0
         for (i in 0 until minOf(attackFrames, samples.size)) {
             val a = abs(samples[i]); if (a > attackPeak) attackPeak = a
         }
@@ -203,14 +204,14 @@ class GuitarClickHuntTest : StringSpec({
         val gateWin = sampleRate * 2 / 1000   // ±2ms
         val gateLo = (gateEndFrame - gateWin).coerceAtLeast(1)
         val gateHi = (gateEndFrame + gateWin).coerceAtMost(samples.size - 1)
-        var gateDelta = 0f
+        var gateDelta = 0.0
         for (i in gateLo..gateHi) {
             val d = abs(samples[i] - samples[i - 1])
             if (d > gateDelta) gateDelta = d
         }
 
         val tailFrames = sampleRate / 2000    // last 0.5ms
-        var tail = 0f
+        var tail = 0.0
         for (i in (samples.size - tailFrames).coerceAtLeast(0) until samples.size) {
             val a = abs(samples[i]); if (a > tail) tail = a
         }
@@ -617,18 +618,18 @@ internal fun Ignitor.distortVariant(
                     val po = xi - px1 + a * py1
                     px1 = xi
                     py1 = flushDenormal(po)
-                    work[i] = po.toFloat()
+                    work[i] = po
                 }
             }
 
             val os = oversampler
             if (os != null) {
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                    (waveshaper(sample.toDouble() * driveGain) * outputGain).toFloat()
+                    (waveshaper(sample.toDouble() * driveGain) * outputGain)
                 }
             } else {
                 for (i in ctx.offset until end) {
-                    work[i] = (waveshaper(work[i].toDouble() * driveGain) * outputGain).toFloat()
+                    work[i] = (waveshaper(work[i].toDouble() * driveGain) * outputGain)
                 }
             }
 
@@ -638,7 +639,7 @@ internal fun Ignitor.distortVariant(
                         val y = work[i].toDouble()
                         val out = y - x1 + a * y1
                         x1 = y; y1 = flushDenormal(out)
-                        output[i] = out.toFloat()
+                        output[i] = out
                     }
                 }
 
@@ -649,7 +650,7 @@ internal fun Ignitor.distortVariant(
                         x1 = y; y1 = flushDenormal(out)
                         // Soft-cap at ±1: tanh of the DC-blocked signal. Bounds the
                         // 2× overshoot back to ~1, smooth knee → no aliasing introduced.
-                        output[i] = tanh(out).toFloat()
+                        output[i] = tanh(out)
                     }
                 }
 
@@ -675,7 +676,7 @@ internal fun Ignitor.distortVariant(
                         val out = b0 * xi + b1 * bx1 + b2 * bx2 - ar1 * by1 - ar2 * by2
                         bx2 = bx1; bx1 = xi
                         by2 = by1; by1 = flushDenormal(out)
-                        output[i] = out.toFloat()
+                        output[i] = out
                     }
                 }
 

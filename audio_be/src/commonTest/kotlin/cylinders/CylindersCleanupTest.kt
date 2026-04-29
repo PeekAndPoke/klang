@@ -40,8 +40,8 @@ class OrbitsCleanupTest : StringSpec({
         // Create cylinder 1 with signal
         val voice1 = createTestVoice(cylinderId = 1)
         val orbit1 = cylinders.getOrInit(1, voice1)
-        orbit1.mixBuffer.left[0] = 0.5f
-        orbit1.mixBuffer.right[0] = 0.5f
+        orbit1.mixBuffer.left[0] = 0.5
+        orbit1.mixBuffer.right[0] = 0.5
 
         // Clear fusion mix
         fusionMix.clear()
@@ -50,8 +50,8 @@ class OrbitsCleanupTest : StringSpec({
         cylinders.processAndMix(fusionMix)
 
         // Master should only have cylinder 1's signal (cylinder 0 was skipped)
-        fusionMix.left[0] shouldBe 0.5f
-        fusionMix.right[0] shouldBe 0.5f
+        fusionMix.left[0] shouldBe 0.5
+        fusionMix.right[0] shouldBe 0.5
     }
 
     "round-robin cleanup checks one cylinder per block" {
@@ -136,8 +136,8 @@ class OrbitsCleanupTest : StringSpec({
         cylinders.processAndMix(fusionMix)
 
         // Should complete without error
-        fusionMix.left[0] shouldBe 0.0f
-        fusionMix.right[0] shouldBe 0.0f
+        fusionMix.left[0] shouldBe 0.0
+        fusionMix.right[0] shouldBe 0.0
     }
 
     "inactive cylinder with signal is not mixed" {
@@ -151,8 +151,8 @@ class OrbitsCleanupTest : StringSpec({
         cylinder.tryDeactivate()
 
         // Add signal AFTER deactivation
-        cylinder.mixBuffer.left[0] = 1.0f
-        cylinder.mixBuffer.right[0] = 1.0f
+        cylinder.mixBuffer.left[0] = 1.0
+        cylinder.mixBuffer.right[0] = 1.0
 
         // Clear fusion
         fusionMix.clear()
@@ -161,8 +161,8 @@ class OrbitsCleanupTest : StringSpec({
         cylinders.processAndMix(fusionMix)
 
         // Master should be silent (inactive cylinder was skipped)
-        fusionMix.left[0] shouldBe 0.0f
-        fusionMix.right[0] shouldBe 0.0f
+        fusionMix.left[0] shouldBe 0.0
+        fusionMix.right[0] shouldBe 0.0
     }
 
     "cleanup only checks existing cylinders" {
@@ -192,13 +192,13 @@ class OrbitsCleanupTest : StringSpec({
         val orbit1 = cylinders.getOrInit(1, createTestVoice(1))
         val orbit2 = cylinders.getOrInit(2, createTestVoice(2))
 
-        orbit0.mixBuffer.left[0] = 0.1f
-        orbit1.mixBuffer.left[0] = 0.2f
-        orbit2.mixBuffer.left[0] = 0.3f
+        orbit0.mixBuffer.left[0] = 0.1
+        orbit1.mixBuffer.left[0] = 0.2
+        orbit2.mixBuffer.left[0] = 0.3
 
-        orbit0.mixBuffer.right[0] = 0.1f
-        orbit1.mixBuffer.right[0] = 0.2f
-        orbit2.mixBuffer.right[0] = 0.3f
+        orbit0.mixBuffer.right[0] = 0.1
+        orbit1.mixBuffer.right[0] = 0.2
+        orbit2.mixBuffer.right[0] = 0.3
 
         fusionMix.clear()
 
@@ -223,14 +223,14 @@ class OrbitsCleanupTest : StringSpec({
         orbit0.isActive shouldBe false
 
         // Add signal to the now-inactive cylinder
-        orbit0.mixBuffer.left[0] = 1.0f
-        orbit0.mixBuffer.right[0] = 1.0f
+        orbit0.mixBuffer.left[0] = 1.0
+        orbit0.mixBuffer.right[0] = 1.0
 
         fusionMix.clear()
 
         // Second block: should NOT mix the inactive cylinder
         cylinders.processAndMix(fusionMix)
-        fusionMix.left[0] shouldBe 0.0f
-        fusionMix.right[0] shouldBe 0.0f
+        fusionMix.left[0] shouldBe 0.0
+        fusionMix.right[0] shouldBe 0.0
     }
 })

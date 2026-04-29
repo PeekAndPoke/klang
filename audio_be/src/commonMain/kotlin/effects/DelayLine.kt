@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.effects
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import kotlin.math.abs
 import kotlin.math.min
@@ -45,7 +46,7 @@ class DelayLine(
      * Used to detect effect tails that should keep the cylinder alive.
      */
     fun hasTail(threshold: Double = 0.00001): Boolean {
-        val thresholdF = threshold.toFloat()
+        val thresholdF = threshold
         for (i in 0 until bufferSize) {
             if (abs(buffer.left[i]) > thresholdF || abs(buffer.right[i]) > thresholdF) {
                 return true
@@ -74,24 +75,24 @@ class DelayLine(
     }
 
     private fun processInternal(
-        buffer: FloatArray,
-        input: FloatArray,
-        output: FloatArray,
+        buffer: AudioBuffer,
+        input: AudioBuffer,
+        output: AudioBuffer,
         offset: Int,
         length: Int,
         startWritePos: Int,
     ) {
-        var pos = startWritePos
+        var pos: Int = startWritePos
 
         // Allow shorter delays (e.g. ~1ms) for flanging/chorus effects.
         // 10ms (0.01) was too restrictive.
-        val minSamples = (0.0001 * sampleRate)
+        val minSamples: Double = (0.0001 * sampleRate)
 
         // Use Double for delaySamples to support fractional delay
-        val delaySamples = (delayTimeSeconds * sampleRate).coerceIn(minSamples, (bufferSize - 2).toDouble())
+        val delaySamples: Double = (delayTimeSeconds * sampleRate).coerceIn(minSamples, (bufferSize - 2.0))
 
         // Integer part and fractional part for interpolation
-        val delayInt = delaySamples.toInt()
+        val delayInt: Int = delaySamples.toInt()
         val alpha = delaySamples - delayInt // Fraction between 0.0 and 1.0
 
         for (i in 0 until length) {
@@ -107,8 +108,8 @@ class DelayLine(
             var readIndex2 = readIndex1 - 1
             if (readIndex2 < 0) readIndex2 += bufferSize
 
-            val s1 = buffer[readIndex1].toDouble()
-            val s2 = buffer[readIndex2].toDouble()
+            val s1 = buffer[readIndex1]
+            val s2 = buffer[readIndex2]
 
             // Linear Interpolation: s1 + alpha * (s2 - s1)
             // This allows the delay time to exist "between" samples
@@ -116,17 +117,17 @@ class DelayLine(
 
             // --- 2. Feedback loop with Safety Clamping ---
 
-            var newSample = input[inputIndex].toDouble() + (delayedSignal * feedback)
+            var newSample = input[inputIndex] + (delayedSignal * feedback)
 
             // Hard clip safety to prevent feedback explosions
             if (abs(newSample) > limit) {
                 newSample = if (newSample > 0) limit else -limit
             }
 
-            buffer[pos] = newSample.toFloat()
+            buffer[pos] = newSample
 
             // --- 3. Output ---
-            output[inputIndex] = (output[inputIndex] + delayedSignal).toFloat()
+            output[inputIndex] = (output[inputIndex] + delayedSignal)
 
             // Advance pointer (no wrap check needed here due to chunking)
             pos++

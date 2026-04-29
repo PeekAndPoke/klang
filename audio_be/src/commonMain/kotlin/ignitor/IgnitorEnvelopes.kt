@@ -71,7 +71,7 @@ fun Ignitor.adsr(
 
                 if (currentLevel < 0.0) currentLevel = 0.0
 
-                output[i] = (input[i] * currentLevel).toFloat()
+                output[i] = (input[i] * currentLevel)
                 absPos++
             }
         }

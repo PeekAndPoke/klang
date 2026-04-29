@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 
@@ -42,13 +43,13 @@ class CompositionPropertiesSpec : StringSpec({
         voiceElapsedFrames = 0
     }
 
-    fun render(ig: Ignitor, freqHz: Double, ctx: IgniteContext): FloatArray {
-        val buf = FloatArray(blockFrames)
+    fun render(ig: Ignitor, freqHz: Double, ctx: IgniteContext): AudioBuffer {
+        val buf = AudioBuffer(blockFrames)
         ig.generate(buf, freqHz, ctx)
         return buf
     }
 
-    fun FloatArray.rms(): Double {
+    fun AudioBuffer.rms(): Double {
         var s = 0.0
         for (x in this) s += x.toDouble() * x.toDouble()
         return kotlin.math.sqrt(s / size)
@@ -267,7 +268,7 @@ class CompositionPropertiesSpec : StringSpec({
         // The summed output should differ from 2×single (because one arm has vibrato).
         var diffs = 0
         for (i in 0 until blockFrames) {
-            if (kotlin.math.abs(plusBuf[i] - 2.0f * singleBuf[i]) > 0.001f) diffs++
+            if (kotlin.math.abs(plusBuf[i] - 2.0 * singleBuf[i]) > 0.001) diffs++
         }
         (diffs > 0) shouldBe true
     }
@@ -343,7 +344,7 @@ class CompositionPropertiesSpec : StringSpec({
 
         var diffs = 0
         for (i in 0 until blockFrames) {
-            if (kotlin.math.abs(buf[i] - plainBuf[i]) > 0.001f) diffs++
+            if (kotlin.math.abs(buf[i] - plainBuf[i]) > 0.001) diffs++
         }
         (diffs > 0) shouldBe true
     }

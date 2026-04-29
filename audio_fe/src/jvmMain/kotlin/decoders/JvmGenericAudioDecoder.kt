@@ -46,25 +46,25 @@ object JvmGenericAudioDecoder {
                 val channels = target.channels
 
                 if (pcmBytes.isEmpty()) {
-                    return MonoSamplePcm(target.sampleRate.toInt(), FloatArray(0))
+                    return MonoSamplePcm(target.sampleRate.toInt(), DoubleArray(0))
                 }
 
                 val frames = pcmBytes.size / (2 * channels)
-                val mono = FloatArray(frames)
+                val mono = DoubleArray(frames)
 
                 var byteIdx = 0
                 for (i in 0 until frames) {
-                    var sum = 0.0f
+                    var sum = 0.0
                     repeat(channels) {
                         if (byteIdx + 1 < pcmBytes.size) {
                             val lo = pcmBytes[byteIdx].toInt() and 0xff
                             val hi = pcmBytes[byteIdx + 1].toInt()
                             val s = ((hi shl 8) or lo).toShort().toInt()
-                            sum += (s / 32768.0f)
+                            sum += (s / 32768.0)
                         }
                         byteIdx += 2
                     }
-                    mono[i] = (sum / channels.toFloat())
+                    mono[i] = sum / channels.toDouble()
                 }
 
                 return MonoSamplePcm(sampleRate = target.sampleRate.toInt(), pcm = mono)

@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices.strip
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
@@ -27,7 +28,7 @@ class BlockContext(
     // ═══════════════════════════════════════════════════════════════════════════
 
     /** Main audio signal buffer (Ignite writes, Filter reads/writes). Updated per block. */
-    var audioBuffer: FloatArray,
+    var audioBuffer: AudioBuffer,
     /** Pitch modulation multipliers (Pitch writes, Excite reads via IgniteContext.phaseMod) */
     val freqModBuffer: DoubleArray,
     /** Shared scratch buffer pool for Ignitor composition operators */

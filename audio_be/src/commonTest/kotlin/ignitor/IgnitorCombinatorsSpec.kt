@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.accelerate
 import io.peekandpoke.klang.audio_bridge.fm
@@ -45,25 +46,25 @@ class ExciterCombinatorsSpec : StringSpec({
         freqHz: Double = 440.0,
         blockFrames: Int = defaultBlockFrames,
         ctx: IgniteContext? = null,
-    ): FloatArray {
+    ): AudioBuffer {
         val c = ctx ?: createCtx(blockFrames)
-        val buffer = FloatArray(blockFrames)
+        val buffer = AudioBuffer(blockFrames)
         sig.generate(buffer, freqHz, c)
         return buffer
     }
 
-    fun FloatArray.rms(): Double {
+    fun AudioBuffer.rms(): Double {
         var sum = 0.0
         for (sample in this) sum += sample.toDouble() * sample.toDouble()
         return sqrt(sum / size)
     }
 
-    fun FloatArray.peakAmplitude(): Double =
-        maxOf((maxOrNull() ?: 0.0f).toDouble(), -(minOrNull() ?: 0.0f).toDouble())
+    fun AudioBuffer.peakAmplitude(): Double =
+        maxOf((maxOrNull() ?: 0.0).toDouble(), -(minOrNull() ?: 0.0).toDouble())
 
-    fun FloatArray.dcOffset(): Double = map { it.toDouble() }.average()
+    fun AudioBuffer.dcOffset(): Double = map { it.toDouble() }.average()
 
-    fun FloatArray.uniqueValues(): Int = toSet().size
+    fun AudioBuffer.uniqueValues(): Int = toSet().size
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Effects: distort
@@ -183,7 +184,7 @@ class ExciterCombinatorsSpec : StringSpec({
             Ignitors.sine().generate(buffer, freqHz, ctx)
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                buffer[i] = buffer[i] + 0.5f // Add DC offset
+                buffer[i] = buffer[i] + 0.5 // Add DC offset
             }
         }
 
@@ -285,15 +286,15 @@ class ExciterCombinatorsSpec : StringSpec({
         val buf = generate(sig, blockFrames = blockFrames, ctx = ctx)
 
         // Start should be near zero (attack beginning)
-        val startRms = FloatArray(441) { buf[it] }.rms()  // first 10ms
+        val startRms = AudioBuffer(441) { buf[it] }.rms()  // first 10ms
         startRms shouldBeLessThan 0.2
 
         // Middle of attack (~50ms) should be building up
-        val midAttackRms = FloatArray(441) { buf[2205 + it] }.rms()  // 50ms in
+        val midAttackRms = AudioBuffer(441) { buf[2205 + it] }.rms()  // 50ms in
         midAttackRms shouldBeGreaterThan startRms
 
         // After attack+decay (>200ms), should be at sustain level
-        val sustainRms = FloatArray(441) { buf[22050 + it] }.rms()  // 500ms in
+        val sustainRms = AudioBuffer(441) { buf[22050 + it] }.rms()  // 500ms in
         // Sustain level is 0.5, sine RMS is ~0.707 * amplitude, so ~0.354
         sustainRms shouldBe (0.354 plusOrMinus 0.05)
     }
@@ -310,7 +311,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
         // With zero attack, output should be at full level from the start
         // Check RMS of first 10ms
-        val startRms = FloatArray(441) { buf[it] }.rms()
+        val startRms = AudioBuffer(441) { buf[it] }.rms()
         // Sine at gain 1.0 has RMS ~0.707
         startRms shouldBeGreaterThan 0.5
     }
@@ -345,7 +346,7 @@ class ExciterCombinatorsSpec : StringSpec({
         val wet = generate(IgnitorDsl.Sine().accelerate(2.0).toExciter(), freqHz = 440.0, blockFrames = blockFrames)
 
         // Count zero crossings in first half vs second half
-        fun zeroCrossingsInRange(buf: FloatArray, start: Int, end: Int): Int {
+        fun zeroCrossingsInRange(buf: AudioBuffer, start: Int, end: Int): Int {
             var count = 0
             for (i in (start + 1) until end) {
                 if ((buf[i - 1] >= 0.0 && buf[i] < 0.0) || (buf[i - 1] < 0.0 && buf[i] >= 0.0)) {

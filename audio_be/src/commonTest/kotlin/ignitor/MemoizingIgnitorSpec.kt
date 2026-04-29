@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeExactly
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 
 class MemoizingIgnitorSpec : StringSpec({
 
@@ -29,9 +30,9 @@ class MemoizingIgnitorSpec : StringSpec({
      */
     class CountingIgnitor : Ignitor {
         var calls = 0
-        override fun generate(buffer: FloatArray, freqHz: Double, ctx: IgniteContext) {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             calls++
-            val stamp = calls.toFloat()
+            val stamp = calls.toDouble()
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 buffer[i] = stamp
@@ -43,23 +44,23 @@ class MemoizingIgnitorSpec : StringSpec({
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe)
         val ctx = createCtx()
-        val out = FloatArray(blockFrames)
+        val out = AudioBuffer(blockFrames)
 
         memo.generate(out, 440.0, ctx)
 
         probe.calls shouldBeExactly 1
-        out[0] shouldBe 1.0f
+        out[0] shouldBe 1.0
     }
 
     "single consumer: generates directly into buffer (no cache overhead)" {
         val probe = CountingIgnitor()
         val memo = MemoizingIgnitor(probe) // consumers=1 by default
         val ctx = createCtx()
-        val out = FloatArray(blockFrames)
+        val out = AudioBuffer(blockFrames)
 
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 1
-        out[0] shouldBe 1.0f
+        out[0] shouldBe 1.0
     }
 
     "multi-consumer: second call within same block uses cache (probe not re-run)" {
@@ -67,14 +68,14 @@ class MemoizingIgnitorSpec : StringSpec({
         val memo = MemoizingIgnitor(probe)
         memo.incConsumers() // simulate shared node (2 consumers)
         val ctx = createCtx()
-        val out1 = FloatArray(blockFrames)
-        val out2 = FloatArray(blockFrames)
+        val out1 = AudioBuffer(blockFrames)
+        val out2 = AudioBuffer(blockFrames)
 
         memo.generate(out1, 440.0, ctx)
         memo.generate(out2, 440.0, ctx)
 
         probe.calls shouldBeExactly 1
-        out2[0] shouldBe 1.0f
+        out2[0] shouldBe 1.0
         for (i in 0 until blockFrames) out2[i] shouldBe out1[i]
     }
 
@@ -83,7 +84,7 @@ class MemoizingIgnitorSpec : StringSpec({
         val memo = MemoizingIgnitor(probe)
         memo.incConsumers()
         val ctx = createCtx()
-        val out = FloatArray(blockFrames)
+        val out = AudioBuffer(blockFrames)
 
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 1
@@ -91,7 +92,7 @@ class MemoizingIgnitorSpec : StringSpec({
         ctx.voiceElapsedFrames = blockFrames
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 2
-        out[0] shouldBe 2.0f
+        out[0] shouldBe 2.0
     }
 
     "changing freqHz invalidates cache (e.g. detune path)" {
@@ -99,7 +100,7 @@ class MemoizingIgnitorSpec : StringSpec({
         val memo = MemoizingIgnitor(probe)
         memo.incConsumers()
         val ctx = createCtx()
-        val out = FloatArray(blockFrames)
+        val out = AudioBuffer(blockFrames)
 
         memo.generate(out, 440.0, ctx)
         probe.calls shouldBeExactly 1
@@ -113,7 +114,7 @@ class MemoizingIgnitorSpec : StringSpec({
         val memo = MemoizingIgnitor(probe)
         memo.incConsumers()
         val ctx = createCtx()
-        val out = FloatArray(blockFrames * 2)
+        val out = AudioBuffer(blockFrames * 2)
 
         ctx.offset = 0
         ctx.length = blockFrames
@@ -131,17 +132,17 @@ class MemoizingIgnitorSpec : StringSpec({
         memo.incConsumers() // 2
         memo.incConsumers() // 3
         val ctx = createCtx()
-        val a = FloatArray(blockFrames)
-        val b = FloatArray(blockFrames)
-        val c = FloatArray(blockFrames)
+        val a = AudioBuffer(blockFrames)
+        val b = AudioBuffer(blockFrames)
+        val c = AudioBuffer(blockFrames)
 
         memo.generate(a, 440.0, ctx)
         memo.generate(b, 440.0, ctx)
         memo.generate(c, 440.0, ctx)
 
         probe.calls shouldBeExactly 1
-        a[0] shouldBe 1.0f
-        b[0] shouldBe 1.0f
-        c[0] shouldBe 1.0f
+        a[0] shouldBe 1.0
+        b[0] shouldBe 1.0
+        c[0] shouldBe 1.0
     }
 })

@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.AudioEngine
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
@@ -36,7 +38,7 @@ object VoiceTestHelpers {
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = FloatArray(blockFrames),
+            voiceBuffer = AudioBuffer(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
@@ -134,7 +136,7 @@ object VoiceTestHelpers {
         )
 
         val blockCtx = BlockContext(
-            audioBuffer = FloatArray(blockFrames), // placeholder, updated per block
+            audioBuffer = AudioBuffer(blockFrames), // placeholder, updated per block
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
             sampleRate = sampleRate,
@@ -267,7 +269,7 @@ object VoiceTestHelpers {
      * Useful as default when you don't care about filtering.
      */
     object NoOpFilter : AudioFilter {
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             // Do nothing
         }
     }
@@ -281,7 +283,7 @@ object VoiceTestHelpers {
 
         val processCalls = mutableListOf<ProcessCall>()
 
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             processCalls.add(ProcessCall(offset, length, processCalls.size))
         }
 
@@ -319,7 +321,7 @@ object TestSamples {
     fun silence(size: Int, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
-            pcm = FloatArray(size) { 0.0f },
+            pcm = AudioBuffer(size) { 0.0 },
             meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
         )
     }
@@ -327,7 +329,7 @@ object TestSamples {
     fun impulse(size: Int, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
-            pcm = FloatArray(size) { if (it == 0) 1.0f else 0.0f },
+            pcm = AudioBuffer(size) { if (it == 0) 1.0 else 0.0 },
             meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
         )
     }
@@ -335,7 +337,7 @@ object TestSamples {
     fun ramp(size: Int, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
-            pcm = FloatArray(size) { it.toFloat() / (size - 1) },
+            pcm = AudioBuffer(size) { it.toDouble() / (size - 1) },
             meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
         )
     }
@@ -343,17 +345,17 @@ object TestSamples {
     fun sine(size: Int, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
-            pcm = FloatArray(size) {
-                sin(2.0 * PI * it / size).toFloat()
+            pcm = AudioBuffer(size) {
+                sin(2.0 * PI * it / size)
             },
             meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
         )
     }
 
-    fun constant(size: Int, value: Float = 0.5f, sampleRate: Int = 44100): MonoSamplePcm {
+    fun constant(size: Int, value: Double = 0.5, sampleRate: Int = 44100): MonoSamplePcm {
         return MonoSamplePcm(
             sampleRate = sampleRate,
-            pcm = FloatArray(size) { value },
+            pcm = AudioBuffer(size) { value },
             meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
         )
     }
@@ -366,21 +368,21 @@ object TestIgnitors {
     val constant = Ignitor { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = 1.0f
+            buffer[i] = 1.0
         }
     }
 
     val ramp = Ignitor { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = (i - ctx.offset).toFloat() / ctx.length
+            buffer[i] = (i - ctx.offset).toDouble() / ctx.length
         }
     }
 
     val silence = Ignitor { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            buffer[i] = 0.0f
+            buffer[i] = 0.0
         }
     }
 }

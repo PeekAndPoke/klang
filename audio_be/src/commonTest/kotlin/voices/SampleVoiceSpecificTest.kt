@@ -14,7 +14,7 @@ import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
 class SampleVoiceSpecificTest : StringSpec({
 
     "SampleVoice plays back sample data correctly" {
-        val sample = TestSamples.constant(size = 200, value = 0.5f) // Constant 0.5, longer than block
+        val sample = TestSamples.constant(size = 200, value = 0.5) // Constant 0.5, longer than block
 
         val voice = createVoice(
             signal = SampleIgnitor(
@@ -33,7 +33,7 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // With "always on" envelope, first 100 samples should be 0.5
-        ctx.voiceBuffer.all { it == 0.5f } shouldBe true
+        ctx.voiceBuffer.all { it == 0.5 } shouldBe true
     }
 
     "SampleVoice with rate > 1 plays faster" {
@@ -130,10 +130,10 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // First 50 samples should have audio
-        (ctx.voiceBuffer[25] > 0.0f) shouldBe true
+        (ctx.voiceBuffer[25] > 0.0) shouldBe true
 
         // After sample ends, should be silent
-        ctx.voiceBuffer[75] shouldBe 0.0f
+        ctx.voiceBuffer[75] shouldBe 0.0
     }
 
     "SampleVoice with explicit looping wraps correctly" {
@@ -184,14 +184,14 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // First 50 frames should have audio
-        (ctx.voiceBuffer[25] > 0.0f) shouldBe true
+        (ctx.voiceBuffer[25] > 0.0) shouldBe true
 
         // After stopFrame, should be silent
-        ctx.voiceBuffer[75] shouldBe 0.0f
+        ctx.voiceBuffer[75] shouldBe 0.0
     }
 
     "SampleVoice playhead advances correctly" {
-        val sample = TestSamples.constant(size = 100, value = 1.0f)
+        val sample = TestSamples.constant(size = 100, value = 1.0)
 
         // Create voice with initial playhead
         val voice = createVoice(
@@ -289,7 +289,7 @@ class SampleVoiceSpecificTest : StringSpec({
     }
 
     "SampleVoice with envelope modulates sample output" {
-        val sample = TestSamples.constant(size = 200, value = 1.0f) // Longer sample
+        val sample = TestSamples.constant(size = 200, value = 1.0) // Longer sample
 
         val voice = createVoice(
             signal = SampleIgnitor(
@@ -339,10 +339,10 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // First 5 samples should have audio
-        (ctx.voiceBuffer[2] > 0.0f) shouldBe true
+        (ctx.voiceBuffer[2] > 0.0) shouldBe true
 
         // After sample ends, should be silent
-        ctx.voiceBuffer[7] shouldBe 0.0f
+        ctx.voiceBuffer[7] shouldBe 0.0
     }
 
     "SampleVoice with negative playhead is handled" {
@@ -365,11 +365,11 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Negative playhead samples should be 0
-        ctx.voiceBuffer[0] shouldBe 0.0f
-        ctx.voiceBuffer[9] shouldBe 0.0f
+        ctx.voiceBuffer[0] shouldBe 0.0
+        ctx.voiceBuffer[9] shouldBe 0.0
 
         // After playhead reaches 0, should have audio
-        (ctx.voiceBuffer[15] >= 0.0f) shouldBe true
+        (ctx.voiceBuffer[15] >= 0.0) shouldBe true
     }
 
     "SampleVoice preserves playhead across renders" {

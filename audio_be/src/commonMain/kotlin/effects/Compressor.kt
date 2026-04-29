@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.effects
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.ln
@@ -76,11 +77,11 @@ class Compressor(
     /**
      * Process a stereo buffer in-place.
      */
-    fun process(left: FloatArray, right: FloatArray, blockSize: Int) {
+    fun process(left: AudioBuffer, right: AudioBuffer, blockSize: Int) {
         val makeupLinear = if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * ln(10.0) / 20.0) else 1.0
 
         for (i in 0 until blockSize) {
-            val inputLevel = max(abs(left[i].toDouble()), abs(right[i].toDouble()))
+            val inputLevel = max(abs(left[i]), abs(right[i]))
 
             // Convert to dB (with floor to avoid log(0))
             val inputDb = if (inputLevel > 1e-10) {
@@ -106,19 +107,19 @@ class Compressor(
 
             // Apply gain reduction and makeup gain
             val totalGain = gainReduction * makeupLinear
-            left[i] = (left[i] * totalGain).toFloat()
-            right[i] = (right[i] * totalGain).toFloat()
+            left[i] = (left[i] * totalGain)
+            right[i] = (right[i] * totalGain)
         }
     }
 
     /**
      * Process a mono buffer in-place.
      */
-    fun process(buffer: FloatArray, offset: Int, length: Int) {
+    fun process(buffer: AudioBuffer, offset: Int, length: Int) {
         val makeupLinear = if (abs(makeupGainDb) > 0.01) exp(makeupGainDb * ln(10.0) / 20.0) else 1.0
 
         for (i in 0 until length) {
-            val inputLevel = abs(buffer[offset + i].toDouble())
+            val inputLevel = abs(buffer[offset + i])
 
             // Convert to dB
             val inputDb = if (inputLevel > 1e-10) {
@@ -143,7 +144,7 @@ class Compressor(
             }
 
             // Apply gain reduction and makeup gain
-            buffer[offset + i] = (buffer[offset + i] * (gainReduction * makeupLinear)).toFloat()
+            buffer[offset + i] = (buffer[offset + i] * (gainReduction * makeupLinear))
         }
     }
 

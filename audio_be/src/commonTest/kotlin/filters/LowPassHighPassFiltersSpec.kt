@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -14,15 +15,15 @@ class LowPassHighPassFiltersSpec : StringSpec({
     val sampleRate = 44100.0
     val blockFrames = 4096
 
-    /** Generate a sine wave at [freq] Hz into a FloatArray of [length] samples. */
-    fun sine(freq: Double, length: Int, amplitude: Float = 1.0f): FloatArray {
-        return FloatArray(length) { i ->
-            (amplitude * sin(2.0 * PI * freq * i / sampleRate)).toFloat()
+    /** Generate a sine wave at [freq] Hz into a AudioBuffer of [length] samples. */
+    fun sine(freq: Double, length: Int, amplitude: Double = 1.0): AudioBuffer {
+        return AudioBuffer(length) { i ->
+            (amplitude * sin(2.0 * PI * freq * i / sampleRate))
         }
     }
 
-    /** RMS of an entire FloatArray. */
-    fun rms(buf: FloatArray): Double {
+    /** RMS of an entire AudioBuffer. */
+    fun rms(buf: AudioBuffer): Double {
         if (buf.isEmpty()) return 0.0
         val sumSq = buf.fold(0.0) { acc, v -> acc + v * v }
         return sqrt(sumSq / buf.size)
@@ -82,23 +83,23 @@ class LowPassHighPassFiltersSpec : StringSpec({
 
     "OnePoleLPF - zero-length buffer does not crash" {
         val filter = LowPassHighPassFilters.OnePoleLPF(cutoffHz = 1000.0, sampleRate = sampleRate)
-        val buf = FloatArray(0)
+        val buf = AudioBuffer(0)
         filter.process(buf, 0, 0)
         // No exception means success
     }
 
     "OnePoleLPF - processes with offset correctly" {
         val filter = LowPassHighPassFilters.OnePoleLPF(cutoffHz = 1000.0, sampleRate = sampleRate)
-        val buf = FloatArray(blockFrames * 2)
+        val buf = AudioBuffer(blockFrames * 2)
         // Fill second half with a high-freq sine
         for (i in blockFrames until blockFrames * 2) {
-            buf[i] = sin(2.0 * PI * 10000.0 * i / sampleRate).toFloat()
+            buf[i] = sin(2.0 * PI * 10000.0 * i / sampleRate)
         }
         // Process only the second half
         filter.process(buf, blockFrames, blockFrames)
         // First half should remain zeros
         for (i in 0 until blockFrames) {
-            buf[i] shouldBe 0.0f
+            buf[i] shouldBe 0.0
         }
     }
 
@@ -155,7 +156,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
 
     "OnePoleHPF - zero-length buffer does not crash" {
         val filter = LowPassHighPassFilters.OnePoleHPF(cutoffHz = 1000.0, sampleRate = sampleRate)
-        val buf = FloatArray(0)
+        val buf = AudioBuffer(0)
         filter.process(buf, 0, 0)
     }
 
@@ -239,7 +240,7 @@ class LowPassHighPassFiltersSpec : StringSpec({
 
     "SvfLPF - zero-length buffer does not crash" {
         val filter = LowPassHighPassFilters.SvfLPF(cutoffHz = 1000.0, q = 1.0, sampleRate = sampleRate)
-        filter.process(FloatArray(0), 0, 0)
+        filter.process(AudioBuffer(0), 0, 0)
     }
 
     // -----------------------------------------------------------------------

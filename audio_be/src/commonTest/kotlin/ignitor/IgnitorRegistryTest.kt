@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.VoiceData
 
@@ -120,9 +121,9 @@ class IgnitorRegistryTest : StringSpec({
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
 
-        val buffer = FloatArray(blockFrames)
+        val buffer = AudioBuffer(blockFrames)
         signal!!.generate(buffer, 440.0, ctx)
-        buffer.any { it != 0.0f } shouldBe true
+        buffer.any { it != 0.0 } shouldBe true
     }
 
     "createExciter returns null for unknown name" {
@@ -167,9 +168,9 @@ class IgnitorRegistryTest : StringSpec({
         for (name in listOf("sgpad", "sgbell", "sgbuzz")) {
             val dsl = registry.get(name)!!
             val sig = dsl.toExciter()
-            val buffer = FloatArray(blockFrames)
+            val buffer = AudioBuffer(blockFrames)
             sig.generate(buffer, 440.0, ctx)
-            buffer.any { it != 0.0f } shouldBe true
+            buffer.any { it != 0.0 } shouldBe true
         }
     }
 })

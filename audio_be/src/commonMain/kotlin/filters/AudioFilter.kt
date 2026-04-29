@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.filters
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 /**
  * Audio filter interface.
  */
@@ -20,5 +22,5 @@ interface AudioFilter {
         fun setCutoff(cutoffHz: Double)
     }
 
-    fun process(buffer: FloatArray, offset: Int, length: Int)
+    fun process(buffer: AudioBuffer, offset: Int, length: Int)
 }

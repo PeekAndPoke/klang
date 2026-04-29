@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 /**
  * Ignitor that plays back pre-recorded PCM audio samples.
  *
@@ -14,7 +16,7 @@ package io.peekandpoke.klang.audio_be.ignitor
  * [IgniteContext.phaseMod], consistent with how noise generators ignore freqHz.
  */
 class SampleIgnitor(
-    private val pcm: FloatArray,
+    private val pcm: DoubleArray,
     private val rate: Double,
     private var playhead: Double,
     private val loopStart: Double,
@@ -27,7 +29,7 @@ class SampleIgnitor(
     private val drift = AnalogDrift(analog)
     private val loopLength = if (isLooping && loopEnd > loopStart) loopEnd - loopStart else 0.0
 
-    override fun generate(buffer: FloatArray, freqHz: Double, ctx: IgniteContext) {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val pcmMax = pcm.size - 1
         val phaseMod = ctx.phaseMod
 
@@ -44,16 +46,16 @@ class SampleIgnitor(
                 }
 
                 if (ph < 0.0 || ph >= stopFrame) {
-                    buffer[idxOut] = 0.0f
+                    buffer[idxOut] = 0.0
                 } else {
                     val base = ph.toInt()
                     if (base >= pcmMax) {
-                        buffer[idxOut] = 0.0f
+                        buffer[idxOut] = 0.0
                     } else {
                         val frac = ph - base.toDouble()
                         val a = pcm[base]
                         val b = pcm[base + 1]
-                        buffer[idxOut] = (a + (b - a) * frac).toFloat()
+                        buffer[idxOut] = (a + (b - a) * frac)
                     }
                 }
 
@@ -71,16 +73,16 @@ class SampleIgnitor(
                 }
 
                 if (ph < 0.0 || ph >= stopFrame) {
-                    buffer[idxOut] = 0.0f
+                    buffer[idxOut] = 0.0
                 } else {
                     val base = ph.toInt()
                     if (base >= pcmMax) {
-                        buffer[idxOut] = 0.0f
+                        buffer[idxOut] = 0.0
                     } else {
                         val frac = ph - base.toDouble()
                         val a = pcm[base]
                         val b = pcm[base + 1]
-                        buffer[idxOut] = (a + (b - a) * frac).toFloat()
+                        buffer[idxOut] = (a + (b - a) * frac)
                     }
                 }
 

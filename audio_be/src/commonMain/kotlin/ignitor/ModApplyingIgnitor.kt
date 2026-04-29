@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 /**
  * Wraps a source [Ignitor] with a pre-computed pitch modulation signal.
  *
@@ -17,7 +19,7 @@ package io.peekandpoke.klang.audio_be.ignitor
  */
 internal class ModApplyingIgnitor(val inner: Ignitor, val mod: Ignitor) : Ignitor {
 
-    override fun generate(buffer: FloatArray, freqHz: Double, ctx: IgniteContext) {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { modBuf ->
             mod.generate(modBuf, freqHz, ctx)
 
@@ -27,11 +29,11 @@ internal class ModApplyingIgnitor(val inner: Ignitor, val mod: Ignitor) : Ignito
 
                 if (existing != null) {
                     for (i in ctx.offset until end) {
-                        ratioArray[i] = modBuf[i].toDouble() * existing[i]
+                        ratioArray[i] = modBuf[i] * existing[i]
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        ratioArray[i] = modBuf[i].toDouble()
+                        ratioArray[i] = modBuf[i]
                     }
                 }
 

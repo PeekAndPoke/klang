@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.effects
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.CrushRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
 import kotlin.math.PI
@@ -14,7 +15,7 @@ class CrushRendererSpec : StringSpec({
 
     "CrushRenderer with amount=0 passes signal through unchanged" {
         val renderer = CrushRenderer(amount = 0.0)
-        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f)
+        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9)
         val original = buffer.copyOf()
         renderer.renderInPlace(buffer)
         for (i in buffer.indices) {
@@ -27,7 +28,7 @@ class CrushRendererSpec : StringSpec({
         // and produce outputs of ≈ ±1.414 — a 3 dB gain bump. Now it must bypass.
         for (amount in listOf(0.01, 0.25, 0.5, 0.7, 0.99)) {
             val renderer = CrushRenderer(amount = amount)
-            val buffer = floatArrayOf(0.1f, -0.3f, 0.6f, -0.9f, 0.99f, -0.99f)
+            val buffer = doubleArrayOf(0.1, -0.3, 0.6, -0.9, 0.99, -0.99)
             val original = buffer.copyOf()
             renderer.renderInPlace(buffer)
             for (i in buffer.indices) {
@@ -39,11 +40,11 @@ class CrushRendererSpec : StringSpec({
     "CrushRenderer never inflates magnitude for any amount in [1, 16]" {
         // Stronger property test: for any musically valid amount, no input sample
         // in [-1, 1] should produce an output with magnitude > 1.
-        val inputs = floatArrayOf(0.0f, 0.1f, 0.25f, 0.5f, 0.75f, 0.9f, 0.99f, 1.0f)
+        val inputs = doubleArrayOf(0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99, 1.0)
         val amounts = listOf(1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.5, 8.0, 16.0)
         for (amount in amounts) {
             for (sign in intArrayOf(1, -1)) {
-                val buffer = FloatArray(inputs.size) { i -> sign * inputs[i] }
+                val buffer = AudioBuffer(inputs.size) { i -> sign * inputs[i] }
                 CrushRenderer(amount = amount).renderInPlace(buffer)
                 for (s in buffer) {
                     abs(s.toDouble()) shouldBeLessThan 1.0001
@@ -55,7 +56,7 @@ class CrushRendererSpec : StringSpec({
     "CrushRenderer quantizes to discrete levels" {
         // amount=2 → 2^2 = 4 levels; halfLevels = 2. Grid step = 0.5.
         val renderer = CrushRenderer(amount = 2.0)
-        val buffer = floatArrayOf(0.1f, 0.4f, 0.6f, 0.9f, -0.2f, -0.7f)
+        val buffer = doubleArrayOf(0.1, 0.4, 0.6, 0.9, -0.2, -0.7)
         renderer.renderInPlace(buffer)
         // Every output must be a multiple of 0.5.
         for (s in buffer) {
@@ -67,9 +68,9 @@ class CrushRendererSpec : StringSpec({
     "CrushRenderer zero input → zero output" {
         // floor(0 * hl) / hl == 0, so the quantizer has a grid point at zero.
         val renderer = CrushRenderer(amount = 2.0)
-        val buffer = FloatArray(16) { 0.0f }
+        val buffer = AudioBuffer(16) { 0.0 }
         renderer.renderInPlace(buffer)
-        for (s in buffer) s shouldBe 0.0f
+        for (s in buffer) s shouldBe 0.0
     }
 
     "CrushRenderer has an asymmetric DC bias on a symmetric sine (crunch character)" {
@@ -81,8 +82,8 @@ class CrushRendererSpec : StringSpec({
         val sampleRate = 48000.0
         val cyclesInBlock = 10
         val freq = sampleRate * cyclesInBlock / blockFrames  // = 100 Hz
-        val buffer = FloatArray(blockFrames) { i ->
-            (sin(2.0 * PI * freq * i / sampleRate) * 0.8).toFloat()
+        val buffer = AudioBuffer(blockFrames) { i ->
+            (sin(2.0 * PI * freq * i / sampleRate) * 0.8)
         }
         val renderer = CrushRenderer(amount = 1.0) // halfLevels = 1, expected bias ≈ −0.5
         renderer.renderInPlace(buffer)
@@ -94,7 +95,7 @@ class CrushRendererSpec : StringSpec({
 
     "CrushRenderer oversampled path preserves bypass for amount=0" {
         val renderer = CrushRenderer(amount = 0.0, oversampleStages = 1)
-        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f)
+        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9)
         val original = buffer.copyOf()
         renderer.renderInPlace(buffer)
         for (i in buffer.indices) {
@@ -107,8 +108,8 @@ class CrushRendererSpec : StringSpec({
         val freq = 3000.0
         val blockFrames = 512
 
-        val bufDirect = FloatArray(blockFrames) { i ->
-            (sin(2.0 * PI * freq * i / sampleRate) * 0.8).toFloat()
+        val bufDirect = AudioBuffer(blockFrames) { i ->
+            (sin(2.0 * PI * freq * i / sampleRate) * 0.8)
         }
         val direct = CrushRenderer(amount = 2.0, oversampleStages = 0)
         direct.renderInPlace(bufDirect)
@@ -125,8 +126,8 @@ class CrushRendererSpec : StringSpec({
         val freq = 3000.0
         val blockFrames = 512
 
-        val bufOs = FloatArray(blockFrames) { i ->
-            (sin(2.0 * PI * freq * i / sampleRate) * 0.8).toFloat()
+        val bufOs = AudioBuffer(blockFrames) { i ->
+            (sin(2.0 * PI * freq * i / sampleRate) * 0.8)
         }
         val os = CrushRenderer(amount = 2.0, oversampleStages = 2) // 4x
         os.renderInPlace(bufOs)
@@ -144,7 +145,7 @@ class CrushRendererSpec : StringSpec({
 
     "CrushRenderer oversampled path preserves rough signal level" {
         val blockFrames = 256
-        val buffer = FloatArray(blockFrames) { 0.6f }
+        val buffer = AudioBuffer(blockFrames) { 0.6 }
         val os = CrushRenderer(amount = 4.0, oversampleStages = 1)
         os.renderInPlace(buffer)
 
@@ -158,8 +159,8 @@ class CrushRendererSpec : StringSpec({
     "CrushRenderer continuous `levels`: fractional amount differs from integer amount" {
         // Drop of toInt() means amount=2.5 produces a different grid than amount=2.0.
         // The old implementation floored levels itself to 4 for both, giving identical output.
-        val a = FloatArray(32) { 0.8f }
-        val b = FloatArray(32) { 0.8f }
+        val a = AudioBuffer(32) { 0.8 }
+        val b = AudioBuffer(32) { 0.8 }
 
         CrushRenderer(amount = 2.0).renderInPlace(a)
         CrushRenderer(amount = 2.5).renderInPlace(b)

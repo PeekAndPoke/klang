@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
@@ -41,13 +42,13 @@ object Ignitors {
                 // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase).toFloat()
+                        buffer[i] = sin(phase)
                         phase += phaseInc * d.nextMultiplier()
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase).toFloat()
+                        buffer[i] = sin(phase)
                         phase += phaseInc * phaseMod[i] * d.nextMultiplier()
                         phase = wrapPhase(phase, TWO_PI)
                     }
@@ -56,13 +57,13 @@ object Ignitors {
                 // Clean digital path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase).toFloat()
+                        buffer[i] = sin(phase)
                         phase += phaseInc
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase).toFloat()
+                        buffer[i] = sin(phase)
                         phase += phaseInc * phaseMod[i]
                         phase = wrapPhase(phase, TWO_PI)
                     }
@@ -94,7 +95,7 @@ object Ignitors {
                         val dt = inc * d.nextMultiplier()
                         var out = 2.0 * phase - 1.0
                         out -= polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -103,7 +104,7 @@ object Ignitors {
                         val dt = inc * phaseMod[i] * d.nextMultiplier()
                         var out = 2.0 * phase - 1.0
                         if (dt > BLEP_MIN_DT) out -= polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -114,7 +115,7 @@ object Ignitors {
                     for (i in ctx.offset until end) {
                         var out = 2.0 * phase - 1.0
                         out -= polyBlep(phase, inc)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -123,7 +124,7 @@ object Ignitors {
                         val dt = inc * phaseMod[i]
                         var out = 2.0 * phase - 1.0
                         if (dt > BLEP_MIN_DT) out -= polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -155,7 +156,7 @@ object Ignitors {
                         val dt = inc * d.nextMultiplier()
                         var out = 1.0 - 2.0 * phase
                         out += polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -164,7 +165,7 @@ object Ignitors {
                         val dt = inc * phaseMod[i] * d.nextMultiplier()
                         var out = 1.0 - 2.0 * phase
                         if (dt > BLEP_MIN_DT) out += polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -175,7 +176,7 @@ object Ignitors {
                     for (i in ctx.offset until end) {
                         var out = 1.0 - 2.0 * phase
                         out += polyBlep(phase, inc)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -184,7 +185,7 @@ object Ignitors {
                         val dt = inc * phaseMod[i]
                         var out = 1.0 - 2.0 * phase
                         if (dt > BLEP_MIN_DT) out += polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -218,7 +219,7 @@ object Ignitors {
                         var out = if (phase < 0.5) 1.0 else -1.0
                         out += polyBlep(phase, dt)                  // transition at 0
                         out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)   // transition at 0.5
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -230,7 +231,7 @@ object Ignitors {
                             out += polyBlep(phase, dt)
                             out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)
                         }
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -243,7 +244,7 @@ object Ignitors {
                         var out = if (phase < 0.5) 1.0 else -1.0
                         out += polyBlep(phase, inc)                  // transition at 0
                         out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), inc)   // transition at 0.5
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -255,7 +256,7 @@ object Ignitors {
                             out += polyBlep(phase, dt)
                             out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)
                         }
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -286,14 +287,14 @@ object Ignitors {
                     for (i in ctx.offset until end) {
                         // Piecewise linear: rising from -1 to +1 in first half, falling in second half
                         val out = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc * d.nextMultiplier()
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
                         val out = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc * phaseMod[i] * d.nextMultiplier()
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -304,14 +305,14 @@ object Ignitors {
                     for (i in ctx.offset until end) {
                         // Piecewise linear: rising from -1 to +1 in first half, falling in second half
                         val out = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
                         val out = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc * phaseMod[i]
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -325,7 +326,7 @@ object Ignitors {
         return Ignitor { buffer, _, ctx ->
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                buffer[i] = (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                buffer[i] = (rng.nextDouble() * 2.0 - 1.0)
             }
         }
     }
@@ -350,13 +351,13 @@ object Ignitors {
                 // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0).toFloat()
+                        buffer[i] = (2.0 * phase - 1.0)
                         phase += inc * d.nextMultiplier()
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0).toFloat()
+                        buffer[i] = (2.0 * phase - 1.0)
                         phase += inc * phaseMod[i] * d.nextMultiplier()
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -365,13 +366,13 @@ object Ignitors {
                 // Clean digital path (unchanged)
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0).toFloat()
+                        buffer[i] = (2.0 * phase - 1.0)
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0).toFloat()
+                        buffer[i] = (2.0 * phase - 1.0)
                         phase += inc * phaseMod[i]
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -401,14 +402,14 @@ object Ignitors {
                 // Analog drift path: humanized timing irregularity
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0f else 0.0f
+                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * d.nextMultiplier()
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0f else 0.0f
+                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * phaseMod[i] * d.nextMultiplier()
                         phase = wrapPhase(phase, TWO_PI)
@@ -418,14 +419,14 @@ object Ignitors {
                 // Clean digital path (unchanged)
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0f else 0.0f
+                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0f else 0.0f
+                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * phaseMod[i]
                         phase = wrapPhase(phase, TWO_PI)
@@ -458,25 +459,25 @@ object Ignitors {
                 if (dr.active) {
                     if (phaseMod == null) {
                         for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
+                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
                             val dt = inc * dr.nextMultiplier()
                             var out = if (phase < d) 1.0 else -1.0
                             out += polyBlep(phase, dt)
                             out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
-                            buffer[i] = out.toFloat()
+                            buffer[i] = out
                             phase += dt
                             phase = wrapPhase(phase, 1.0)
                         }
                     } else {
                         for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
+                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
                             val dt = inc * phaseMod[i] * dr.nextMultiplier()
                             var out = if (phase < d) 1.0 else -1.0
                             if (dt > BLEP_MIN_DT) {
                                 out += polyBlep(phase, dt)
                                 out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
                             }
-                            buffer[i] = out.toFloat()
+                            buffer[i] = out
                             phase += dt
                             phase = wrapPhase(phase, 1.0)
                         }
@@ -484,24 +485,24 @@ object Ignitors {
                 } else {
                     if (phaseMod == null) {
                         for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
+                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
                             var out = if (phase < d) 1.0 else -1.0
                             out += polyBlep(phase, inc)
                             out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), inc)
-                            buffer[i] = out.toFloat()
+                            buffer[i] = out
                             phase += inc
                             phase = wrapPhase(phase, 1.0)
                         }
                     } else {
                         for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
+                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
                             val dt = inc * phaseMod[i]
                             var out = if (phase < d) 1.0 else -1.0
                             if (dt > BLEP_MIN_DT) {
                                 out += polyBlep(phase, dt)
                                 out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
                             }
-                            buffer[i] = out.toFloat()
+                            buffer[i] = out
                             phase += dt
                             phase = wrapPhase(phase, 1.0)
                         }
@@ -520,7 +521,7 @@ object Ignitors {
             for (i in ctx.offset until end) {
                 val white = rng.nextDouble() * 2.0 - 1.0
                 out = (out + 0.02 * white) / 1.02
-                buffer[i] = out.toFloat()
+                buffer[i] = out
             }
         }
     }
@@ -547,7 +548,7 @@ object Ignitors {
                 b5 = -0.7616 * b5 - white * 0.0168980
                 val pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362
                 b6 = white * 0.115926
-                buffer[i] = (pink * 0.11).toFloat()
+                buffer[i] = (pink * 0.11)
             }
         }
     }
@@ -560,10 +561,10 @@ object Ignitors {
         return Ignitor { buffer, _, ctx ->
             ctx.scratchBuffers.use { rateBuf ->
                 rate.generate(rateBuf, 0.0, ctx)
-                val step = rateBuf[ctx.offset].toDouble() * PERLIN_STEP
+                val step = rateBuf[ctx.offset] * PERLIN_STEP
                 val end = ctx.offset + ctx.length
                 for (i in ctx.offset until end) {
-                    buffer[i] = noise.noise(pos).toFloat()
+                    buffer[i] = noise.noise(pos)
                     pos += step
                 }
             }
@@ -578,11 +579,11 @@ object Ignitors {
         return Ignitor { buffer, _, ctx ->
             ctx.scratchBuffers.use { rateBuf ->
                 rate.generate(rateBuf, 0.0, ctx)
-                val step = rateBuf[ctx.offset].toDouble() * PERLIN_STEP
+                val step = rateBuf[ctx.offset] * PERLIN_STEP
                 val end = ctx.offset + ctx.length
                 for (i in ctx.offset until end) {
                     // BerlinNoise outputs 0..1, scale to -1..1
-                    buffer[i] = (noise.noise(pos) * 2.0 - 1.0).toFloat()
+                    buffer[i] = (noise.noise(pos) * 2.0 - 1.0)
                     pos += step
                 }
             }
@@ -594,12 +595,12 @@ object Ignitors {
         return Ignitor { buffer, _, ctx ->
             ctx.scratchBuffers.use { densityBuf ->
                 density.generate(densityBuf, 0.0, ctx)
-                val d = densityBuf[ctx.offset].toDouble().coerceIn(0.0, 1.0)
+                val d = densityBuf[ctx.offset].coerceIn(0.0, 1.0)
                 val rateHz = d * maxRateHz
                 val p = (rateHz / ctx.sampleRateD).coerceIn(0.0, 1.0)
                 val end = ctx.offset + ctx.length
                 for (i in ctx.offset until end) {
-                    buffer[i] = if (rng.nextDouble() < p) rng.nextDouble().toFloat() else 0.0f
+                    buffer[i] = if (rng.nextDouble() < p) rng.nextDouble() else 0.0
                 }
             }
         }
@@ -640,12 +641,12 @@ object Ignitors {
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
@@ -666,7 +667,7 @@ object Ignitors {
                                 val baseDt = detunes[0]
                                 for (i in ctx.offset until end) {
                                     val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] = ((2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                    buffer[i] = ((2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[0] = p
@@ -678,7 +679,7 @@ object Ignitors {
                                 for (i in ctx.offset until end) {
                                     val dt = baseDt * d.nextMultiplier()
                                     buffer[i] =
-                                        (buffer[i] + (2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                        (buffer[i] + (2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[n] = p
@@ -691,12 +692,12 @@ object Ignitors {
                                 val dt = detunes[0]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((2.0 * p - 1.0) * voiceGain).toFloat()
+                                        buffer[i] = ((2.0 * p - 1.0) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
+                                        buffer[i] = ((2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -709,12 +710,12 @@ object Ignitors {
                                 val dt = detunes[n]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -739,7 +740,7 @@ object Ignitors {
                                 p += dt; p = wrapPhase(p, 1.0)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -777,12 +778,12 @@ object Ignitors {
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() * TWO_PI }
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
@@ -801,7 +802,7 @@ object Ignitors {
                                 var p = phases[0]
                                 val baseInc = detunes[0]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (sin(p) * voiceGain).toFloat()
+                                    buffer[i] = (sin(p) * voiceGain)
                                     p += baseInc * d.nextMultiplier()
                                     p = wrapPhase(p, TWO_PI)
                                 }
@@ -812,7 +813,7 @@ object Ignitors {
                                 var p = phases[n]
                                 val baseInc = detunes[n]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + sin(p) * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + sin(p) * voiceGain)
                                     p += baseInc * d.nextMultiplier()
                                     p = wrapPhase(p, TWO_PI)
                                 }
@@ -825,7 +826,7 @@ object Ignitors {
                                 var p = phases[0]
                                 val inc = detunes[0]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (sin(p) * voiceGain).toFloat()
+                                    buffer[i] = (sin(p) * voiceGain)
                                     p += inc; p = wrapPhase(p, TWO_PI)
                                 }
                                 phases[0] = p
@@ -836,7 +837,7 @@ object Ignitors {
                                 var p = phases[n]
                                 val inc = detunes[n]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + sin(p) * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + sin(p) * voiceGain)
                                     p += inc; p = wrapPhase(p, TWO_PI)
                                 }
                                 phases[n] = p
@@ -856,7 +857,7 @@ object Ignitors {
                                 p += inc; p = wrapPhase(p, TWO_PI)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -894,12 +895,12 @@ object Ignitors {
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
@@ -924,7 +925,7 @@ object Ignitors {
                                         out += polyBlep(p, dt)
                                         out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                     }
-                                    buffer[i] = (out * voiceGain).toFloat()
+                                    buffer[i] = (out * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[0] = p
@@ -940,7 +941,7 @@ object Ignitors {
                                         out += polyBlep(p, dt)
                                         out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                     }
-                                    buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + out * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[n] = p
@@ -953,7 +954,7 @@ object Ignitors {
                                 val dt = detunes[0]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((if (p < 0.5) 1.0 else -1.0) * voiceGain).toFloat()
+                                        buffer[i] = ((if (p < 0.5) 1.0 else -1.0) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
@@ -961,7 +962,7 @@ object Ignitors {
                                         var out = if (p < 0.5) 1.0 else -1.0
                                         out += polyBlep(p, dt)
                                         out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
-                                        buffer[i] = (out * voiceGain).toFloat()
+                                        buffer[i] = (out * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -974,7 +975,7 @@ object Ignitors {
                                 val dt = detunes[n]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (if (p < 0.5) 1.0 else -1.0) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (if (p < 0.5) 1.0 else -1.0) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
@@ -982,7 +983,7 @@ object Ignitors {
                                         var out = if (p < 0.5) 1.0 else -1.0
                                         out += polyBlep(p, dt)
                                         out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
-                                        buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + out * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -1010,7 +1011,7 @@ object Ignitors {
                                 p += dt; p = wrapPhase(p, 1.0)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -1048,12 +1049,12 @@ object Ignitors {
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
@@ -1073,7 +1074,7 @@ object Ignitors {
                                 val baseDt = detunes[0]
                                 for (i in ctx.offset until end) {
                                     val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (out * voiceGain).toFloat()
+                                    buffer[i] = (out * voiceGain)
                                     p += baseDt * d.nextMultiplier()
                                     p = wrapPhase(p, 1.0)
                                 }
@@ -1085,7 +1086,7 @@ object Ignitors {
                                 val baseDt = detunes[n]
                                 for (i in ctx.offset until end) {
                                     val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + out * voiceGain)
                                     p += baseDt * d.nextMultiplier()
                                     p = wrapPhase(p, 1.0)
                                 }
@@ -1099,7 +1100,7 @@ object Ignitors {
                                 val dt = detunes[0]
                                 for (i in ctx.offset until end) {
                                     val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (out * voiceGain).toFloat()
+                                    buffer[i] = (out * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[0] = p
@@ -1111,7 +1112,7 @@ object Ignitors {
                                 val dt = detunes[n]
                                 for (i in ctx.offset until end) {
                                     val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + out * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[n] = p
@@ -1131,7 +1132,7 @@ object Ignitors {
                                 p += dt; p = wrapPhase(p, 1.0)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -1169,12 +1170,12 @@ object Ignitors {
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
@@ -1194,7 +1195,7 @@ object Ignitors {
                                 val baseDt = detunes[0]
                                 for (i in ctx.offset until end) {
                                     val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] = ((1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                    buffer[i] = ((1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[0] = p
@@ -1206,7 +1207,7 @@ object Ignitors {
                                 for (i in ctx.offset until end) {
                                     val dt = baseDt * d.nextMultiplier()
                                     buffer[i] =
-                                        (buffer[i] + (1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                        (buffer[i] + (1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[n] = p
@@ -1219,12 +1220,12 @@ object Ignitors {
                                 val dt = detunes[0]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((1.0 - 2.0 * p) * voiceGain).toFloat()
+                                        buffer[i] = ((1.0 - 2.0 * p) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain).toFloat()
+                                        buffer[i] = ((1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -1237,12 +1238,12 @@ object Ignitors {
                                 val dt = detunes[n]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -1267,7 +1268,7 @@ object Ignitors {
                                 p += dt; p = wrapPhase(p, 1.0)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -1290,7 +1291,7 @@ object Ignitors {
     ): Ignitor {
         // Max delay line: supports down to ~20 Hz at 48kHz (2400 samples)
         val maxDelay = 2500
-        val delayLine = FloatArray(maxDelay)
+        val delayLine = AudioBuffer(maxDelay)
         var writePos = 0
         var excited = false
         var drift: AnalogDrift? = null
@@ -1322,7 +1323,7 @@ object Ignitors {
             val end = ctx.offset + ctx.length
 
             // Delay length in fractional samples (determines pitch)
-            val baseDelay = (sr / actualFreq).coerceIn(2.0, (maxDelay - 1).toDouble())
+            val baseDelay = (sr / actualFreq).coerceIn(2.0, (maxDelay - 1.0))
 
             // Excite on first call: fill delay line with noise
             if (!excited) {
@@ -1340,9 +1341,9 @@ object Ignitors {
 
                 for (j in 0 until delayLen) {
                     delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                        (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                        (rng.nextDouble() * 2.0 - 1.0)
                     } else {
-                        0.0f
+                        0.0
                     }
                 }
                 writePos = delayLen % maxDelay
@@ -1353,7 +1354,7 @@ object Ignitors {
                 var dl = baseDelay
                 if (phaseMod != null) dl /= phaseMod[i]
                 if (d.active) dl /= d.nextMultiplier()
-                dl = dl.coerceIn(2.0, (maxDelay - 1).toDouble())
+                dl = dl.coerceIn(2.0, (maxDelay - 1.0))
 
                 // Read with linear interpolation
                 val readPosF = writePos - dl
@@ -1361,10 +1362,10 @@ object Ignitors {
                 val readIdx = readPosWrapped.toInt() % maxDelay
                 val frac = readPosWrapped - readPosWrapped.toInt()
                 val nextIdx = (readIdx + 1) % maxDelay
-                val sample = delayLine[readIdx] + (delayLine[nextIdx] - delayLine[readIdx]) * frac.toFloat()
+                val sample = delayLine[readIdx] + (delayLine[nextIdx] - delayLine[readIdx]) * frac
 
                 // One-pole lowpass (brightness)
-                lpState = lpState + lpAlpha * (sample.toDouble() - lpState)
+                lpState = lpState + lpAlpha * (sample - lpState)
                 lpState = flushDenormal(lpState)
                 var filtered = lpState
 
@@ -1377,7 +1378,7 @@ object Ignitors {
                 }
 
                 // Write back with decay
-                delayLine[writePos] = (filtered * decayVal).toFloat()
+                delayLine[writePos] = (filtered * decayVal)
 
                 // Output
                 buffer[i] = sample
@@ -1408,7 +1409,7 @@ object Ignitors {
 
         // Per-voice state
         class StringState(
-            val delayLine: FloatArray = FloatArray(maxDelay),
+            val delayLine: AudioBuffer = AudioBuffer(maxDelay),
             var writePos: Int = 0,
             var excited: Boolean = false,
             var lpState: Double = 0.0,
@@ -1435,7 +1436,7 @@ object Ignitors {
                     strings = Array(v) { i -> if (i < old.size) old[i] else StringState() }
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 // Read control-rate params once per block
@@ -1457,7 +1458,7 @@ object Ignitors {
                     val sd = s.drift ?: initAnalogDrift(analog, actualFreq, ctx).also { s.drift = it }
                     val detuneSemitones = getUnisonDetune(v, spread, n)
                     val detunedFreq = applySemitoneDetuneToFrequency(actualFreq, detuneSemitones)
-                    val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1).toDouble())
+                    val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1.0))
 
                     // Excite each string independently
                     if (!s.excited) {
@@ -1470,9 +1471,9 @@ object Ignitors {
 
                         for (j in 0 until delayLen) {
                             s.delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                                (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                                (rng.nextDouble() * 2.0 - 1.0)
                             } else {
-                                0.0f
+                                0.0
                             }
                         }
                         s.writePos = delayLen % maxDelay
@@ -1485,7 +1486,7 @@ object Ignitors {
                         var dl = baseDelay
                         if (phaseMod != null) dl /= phaseMod[i]
                         if (sd.active) dl /= sd.nextMultiplier()
-                        dl = dl.coerceIn(2.0, (maxDelay - 1).toDouble())
+                        dl = dl.coerceIn(2.0, (maxDelay - 1.0))
 
                         // Read with linear interpolation
                         val readPosF = s.writePos - dl
@@ -1493,10 +1494,10 @@ object Ignitors {
                         val readIdx = readPosWrapped.toInt() % maxDelay
                         val frac = readPosWrapped - readPosWrapped.toInt()
                         val nextIdx = (readIdx + 1) % maxDelay
-                        val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac.toFloat()
+                        val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac
 
                         // One-pole lowpass (brightness)
-                        s.lpState = s.lpState + lpAlpha * (sample.toDouble() - s.lpState)
+                        s.lpState = s.lpState + lpAlpha * (sample - s.lpState)
                         s.lpState = flushDenormal(s.lpState)
                         var filtered = s.lpState
 
@@ -1509,10 +1510,10 @@ object Ignitors {
                         }
 
                         // Write back with decay
-                        s.delayLine[s.writePos] = (filtered * decayVal).toFloat()
+                        s.delayLine[s.writePos] = (filtered * decayVal)
 
                         // Sum to output
-                        val out = (sample * voiceGain).toFloat()
+                        val out = (sample * voiceGain)
                         if (isFirst) {
                             buffer[i] = out
                         } else {
@@ -1528,7 +1529,7 @@ object Ignitors {
 
     /** Silence: fills buffer with zeros. */
     fun silence(): Ignitor = Ignitor { buffer, _, ctx ->
-        buffer.fill(0.0f, ctx.offset, ctx.offset + ctx.length)
+        buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length)
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -1545,7 +1546,7 @@ object Ignitors {
         if (freq is ParamIgnitor) return freq.default
         return ctx.scratchBuffers.use { buf ->
             freq.generate(buf, voiceFreqHz, ctx)
-            buf[ctx.offset].toDouble()
+            buf[ctx.offset]
         }
     }
 
@@ -1557,7 +1558,7 @@ object Ignitors {
         if (analog is ParamIgnitor) return AnalogDrift(analog.default)
         return ctx.scratchBuffers.use { tmp ->
             analog.generate(tmp, freqHz, ctx)
-            AnalogDrift(tmp[ctx.offset].toDouble())
+            AnalogDrift(tmp[ctx.offset])
         }
     }
 
@@ -1565,7 +1566,7 @@ object Ignitors {
     internal fun readParam(param: Ignitor, freqHz: Double, ctx: IgniteContext): Double {
         if (param is FreqIgnitor) return freqHz
         if (param is ParamIgnitor) return param.default
-        return ctx.scratchBuffers.use { tmp -> param.generate(tmp, freqHz, ctx); tmp[ctx.offset].toDouble() }
+        return ctx.scratchBuffers.use { tmp -> param.generate(tmp, freqHz, ctx); tmp[ctx.offset] }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

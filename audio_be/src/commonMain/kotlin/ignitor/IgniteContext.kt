@@ -44,6 +44,9 @@ class IgniteContext(
     /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */
     val sampleRateD: Double = sampleRate.toDouble()
 
+    /** Pre-computed Double to avoid repeated Int→Double conversion in hot loops */
+    val voiceDurationFramesD: Double = voiceDurationFrames.toDouble()
+
     /** Seconds since voice start */
     val voiceElapsedSecs: Double get() = voiceElapsedFrames.toDouble() / sampleRate
 

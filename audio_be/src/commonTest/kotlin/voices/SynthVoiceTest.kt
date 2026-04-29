@@ -23,7 +23,7 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext()
         voice.render(ctx)
 
-        ctx.voiceBuffer.all { it == 1.0f } shouldBe true
+        ctx.voiceBuffer.all { it == 1.0 } shouldBe true
     }
 
     "SynthVoice with silence signal produces no output" {
@@ -34,7 +34,7 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext()
         voice.render(ctx)
 
-        ctx.voiceBuffer.all { it == 0.0f } shouldBe true
+        ctx.voiceBuffer.all { it == 0.0 } shouldBe true
     }
 
     "SynthVoice with ramp signal produces ramping output" {
@@ -56,7 +56,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal = Ignitor { buffer, _, ctx ->
             receivedPhaseMod = ctx.phaseMod
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
         }
 
         val voice = createSynthVoice(
@@ -78,7 +78,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal = Ignitor { buffer, _, ctx ->
             receivedPhaseMod = ctx.phaseMod
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
         }
 
         val voice = createSynthVoice(
@@ -168,7 +168,7 @@ class SynthVoiceTest : StringSpec({
             receivedOffset = ctx.offset
             receivedLength = ctx.length
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
         }
 
         val voice = createSynthVoice(
@@ -190,7 +190,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal = Ignitor { buffer, _, ctx ->
             receivedLength = ctx.length
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
         }
 
         val voice = createSynthVoice(
@@ -211,7 +211,7 @@ class SynthVoiceTest : StringSpec({
         val trackingSignal = Ignitor { buffer, _, ctx ->
             elapsedFrames.add(ctx.voiceElapsedFrames)
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0f
+            for (i in ctx.offset until end) buffer[i] = 1.0
         }
 
         val voice = createSynthVoice(

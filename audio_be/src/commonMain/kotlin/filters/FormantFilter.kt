@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.filters
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import kotlin.math.pow
 
@@ -27,21 +28,21 @@ class FormantFilter(
     }
 
     // Pre-allocated scratch buffers (resized once if block size changes)
-    private var scratchBuffer: FloatArray = FloatArray(0)
-    private var bandBuffer: FloatArray = FloatArray(0)
+    private var scratchBuffer: AudioBuffer = AudioBuffer(0)
+    private var bandBuffer: AudioBuffer = AudioBuffer(0)
 
-    override fun process(buffer: FloatArray, offset: Int, length: Int) {
+    override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
         // Resize scratch buffers if needed (only on first call or block size change)
         if (scratchBuffer.size < length) {
-            scratchBuffer = FloatArray(length)
-            bandBuffer = FloatArray(length)
+            scratchBuffer = AudioBuffer(length)
+            bandBuffer = AudioBuffer(length)
         }
 
         // 1. Copy input to scratch buffer (because we will overwrite 'buffer')
         buffer.copyInto(scratchBuffer, 0, offset, offset + length)
 
         // 2. Clear output buffer
-        buffer.fill(0.0f, offset, offset + length)
+        buffer.fill(0.0, offset, offset + length)
 
         // 3. Process each band in parallel
         for (band in filters) {
@@ -53,7 +54,7 @@ class FormantFilter(
 
             // Sum into main buffer with gain
             for (i in 0 until length) {
-                buffer[offset + i] = (buffer[offset + i] + bandBuffer[i] * band.gain).toFloat()
+                buffer[offset + i] = (buffer[offset + i] + bandBuffer[i] * band.gain)
             }
         }
     }

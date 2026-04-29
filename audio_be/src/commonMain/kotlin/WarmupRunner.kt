@@ -70,7 +70,7 @@ class WarmupRunner(
                 pitchHz = 440.0,
                 sample = MonoSamplePcm(
                     sampleRate = sampleRate,
-                    pcm = FloatArray(256),
+                    pcm = DoubleArray(256),
                     meta = SampleMetadata.default,
                 ),
             )

@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -133,7 +134,7 @@ class VoiceScheduler(
     private var lastProcessedFrame: Int = 0
 
     // Scratch buffers — pre-allocated to avoid per-block heap allocation on the audio thread
-    private val voiceBuffer = FloatArray(options.blockFrames)
+    private val voiceBuffer = AudioBuffer(options.blockFrames)
     private val freqModBuffer = DoubleArray(options.blockFrames)
     private val scratchBuffers = ScratchBuffers(options.blockFrames)
     private val activeSoloSourceIds = mutableSetOf<String>()
@@ -200,7 +201,7 @@ class VoiceScheduler(
                     req = req,
                     note = msg.note,
                     pitchHz = msg.pitchHz,
-                    sample = MonoSamplePcm(sampleRate = msg.sampleRate, pcm = FloatArray(msg.totalSize)),
+                    sample = MonoSamplePcm(sampleRate = msg.sampleRate, pcm = DoubleArray(msg.totalSize)),
                 )
 
                 msg.data.copyInto(destination = entry.sample.pcm, destinationOffset = msg.chunkOffset)

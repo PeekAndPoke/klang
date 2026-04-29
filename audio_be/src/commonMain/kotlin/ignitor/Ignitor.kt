@@ -1,5 +1,8 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.AudioSample
+
 import kotlin.math.ceil
 import kotlin.math.exp
 import kotlin.math.floor
@@ -22,7 +25,7 @@ fun interface Ignitor {
      * @param freqHz base frequency in Hz (used by oscillators; effects may ignore it)
      * @param ctx per-voice rendering context (timing, block params, scratch buffers)
      */
-    fun generate(buffer: FloatArray, freqHz: Double, ctx: IgniteContext)
+    fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -66,7 +69,7 @@ fun Ignitor.mul(factor: Double): Ignitor {
     if (factor == 1.0) return this
     return Ignitor { buffer, freqHz, ctx ->
         this.generate(buffer, freqHz, ctx)
-        val f = factor.toFloat()
+        val f = factor
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             buffer[i] = safeOut(buffer[i] * f)
@@ -97,7 +100,7 @@ fun Ignitor.div(divisor: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
  * Zero divisor is substituted with `±SAFE_MIN`; output clamped to `±SAFE_MAX`.
  */
 fun Ignitor.div(divisor: Double): Ignitor {
-    val safeFactor = 1.0 / safeDiv(divisor.toFloat()).toDouble()
+    val safeFactor = 1.0 / safeDiv(divisor)
     return mul(safeFactor)
 }
 
@@ -128,7 +131,7 @@ fun Ignitor.abs(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
         val v = buffer[i]
-        buffer[i] = if (v < 0f) -v else v
+        buffer[i] = if (v < 0.0) -v else v
     }
 }
 
@@ -144,10 +147,10 @@ fun Ignitor.pow(exp: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
         exp.generate(tmp, freqHz, ctx)
         val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
-            val b = buffer[i].toDouble()
-            val e = tmp[i].toDouble()
+            val b = buffer[i]
+            val e = tmp[i]
             val raw = if (b >= 0.0) b.pow(e) else -((-b).pow(e))
-            buffer[i] = safeOut(raw.toFloat())
+            buffer[i] = safeOut(raw)
         }
     }
 }
@@ -207,7 +210,7 @@ fun Ignitor.exp(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = safeOut(exp(buffer[i].toDouble()).toFloat())
+        buffer[i] = safeOut(exp(buffer[i]))
     }
 }
 
@@ -223,9 +226,9 @@ fun Ignitor.log(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     for (i in ctx.offset until end) {
         val v = buffer[i]
         buffer[i] = when {
-            v > 0f -> ln(v.toDouble()).toFloat()
-            v < 0f -> -ln((-v).toDouble()).toFloat()
-            else -> 0f
+            v > 0.0 -> ln(v)
+            v < 0.0 -> -ln((-v))
+            else -> 0.0
         }
     }
 }
@@ -236,7 +239,7 @@ fun Ignitor.sqrt(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
         val v = buffer[i]
-        buffer[i] = if (v >= 0f) sqrt(v.toDouble()).toFloat() else -sqrt((-v).toDouble()).toFloat()
+        buffer[i] = if (v >= 0.0) sqrt(v) else -sqrt((-v))
     }
 }
 
@@ -247,9 +250,9 @@ fun Ignitor.sign(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     for (i in ctx.offset until end) {
         val v = buffer[i]
         buffer[i] = when {
-            v > 0f -> 1f
-            v < 0f -> -1f
-            else -> 0f
+            v > 0.0 -> 1.0
+            v < 0.0 -> -1.0
+            else -> 0.0
         }
     }
 }
@@ -259,7 +262,7 @@ fun Ignitor.tanh(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = tanh(buffer[i].toDouble()).toFloat()
+        buffer[i] = tanh(buffer[i])
     }
 }
 
@@ -273,7 +276,7 @@ fun Ignitor.lerp(other: Ignitor, t: Ignitor): Ignitor = Ignitor { buffer, freqHz
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 val tv = tBuf[i]
-                buffer[i] = buffer[i] * (1f - tv) + otherBuf[i] * tv
+                buffer[i] = buffer[i] * (1.0 - tv) + otherBuf[i] * tv
             }
         }
     }
@@ -290,7 +293,7 @@ fun Ignitor.range(lo: Ignitor, hi: Ignitor): Ignitor = Ignitor { buffer, freqHz,
             for (i in ctx.offset until end) {
                 val l = loBuf[i]
                 val h = hiBuf[i]
-                buffer[i] = l + (buffer[i] + 1f) * 0.5f * (h - l)
+                buffer[i] = l + (buffer[i] + 1.0) * 0.5 * (h - l)
             }
         }
     }
@@ -301,7 +304,7 @@ fun Ignitor.bipolar(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = buffer[i] * 2f - 1f
+        buffer[i] = buffer[i] * 2.0 - 1.0
     }
 }
 
@@ -310,7 +313,7 @@ fun Ignitor.unipolar(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = (buffer[i] + 1f) * 0.5f
+        buffer[i] = (buffer[i] + 1.0) * 0.5
     }
 }
 
@@ -319,7 +322,7 @@ fun Ignitor.floor(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = floor(buffer[i].toDouble()).toFloat()
+        buffer[i] = floor(buffer[i])
     }
 }
 
@@ -328,7 +331,7 @@ fun Ignitor.ceil(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = ceil(buffer[i].toDouble()).toFloat()
+        buffer[i] = ceil(buffer[i])
     }
 }
 
@@ -337,7 +340,7 @@ fun Ignitor.round(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = round(buffer[i].toDouble()).toFloat()
+        buffer[i] = round(buffer[i])
     }
 }
 
@@ -346,8 +349,8 @@ fun Ignitor.frac(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        val v = buffer[i].toDouble()
-        buffer[i] = (v - floor(v)).toFloat()
+        val v = buffer[i]
+        buffer[i] = (v - floor(v))
     }
 }
 
@@ -378,7 +381,7 @@ fun Ignitor.recip(): Ignitor = Ignitor { buffer, freqHz, ctx ->
     this.generate(buffer, freqHz, ctx)
     val end = ctx.offset + ctx.length
     for (i in ctx.offset until end) {
-        buffer[i] = safeOut(1f / safeDiv(buffer[i]))
+        buffer[i] = safeOut(1.0 / safeDiv(buffer[i]))
     }
 }
 
@@ -406,7 +409,7 @@ fun Ignitor.select(whenTrue: Ignitor, whenFalse: Ignitor): Ignitor = Ignitor { b
             whenFalse.generate(fBuf, freqHz, ctx)
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                buffer[i] = if (buffer[i] > 0f) tBuf[i] else fBuf[i]
+                buffer[i] = if (buffer[i] > 0.0) tBuf[i] else fBuf[i]
             }
         }
     }
@@ -435,38 +438,38 @@ fun Ignitor.select(whenTrue: Ignitor, whenFalse: Ignitor): Ignitor = Ignitor { b
  * Values closer to zero are clamped to `±SAFE_MIN` (sign preserved) to prevent
  * `1/x` from overflowing. ≈ -300 dBFS — well below any audible signal.
  */
-const val SAFE_MIN: Float = 1e-15f
+const val SAFE_MIN: AudioSample = 1e-15
 
 /**
  * Largest allowed output magnitude for ops that can grow values (`Times`, `Pow`,
  * `Exp`, `Sq`, `Mul-by-constant`).
  *
  * Outputs above this are clamped to `±SAFE_MAX`. ≈ +300 dBFS — vastly above any
- * musical signal, well below `Float.MAX_VALUE` (`≈ 3.4e38`). Squaring two
- * `SAFE_MAX` values gives `1e30`, still finite Float.
+ * musical signal, well below `Double.MAX_VALUE` (`≈ 1.8e308`). Squaring two
+ * `SAFE_MAX` values gives `1e30`, still finite Double.
  */
-const val SAFE_MAX: Float = 1e15f
+const val SAFE_MAX: AudioSample = 1e15
 
 /**
  * Clamp a divisor's magnitude to `≥ SAFE_MIN`, preserving sign.
  *
- * Substitutes `0f` and `NaN` with `+SAFE_MIN`. `±Inf` passes through unchanged
+ * Substitutes `0.0` and `NaN` with `+SAFE_MIN`. `±Inf` passes through unchanged
  * (since `±Inf` is already a valid divisor — `a / ±Inf = ±0`); the resulting
  * `0` or any `NaN` from `Inf - Inf` patterns is scrubbed downstream by [safeOut].
  */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun safeDiv(d: Float): Float = when {
+internal inline fun safeDiv(d: AudioSample): AudioSample = when {
     d.isNaN() -> SAFE_MIN
     d > SAFE_MIN -> d
     d < -SAFE_MIN -> d
-    d < 0f -> -SAFE_MIN
+    d < 0.0 -> -SAFE_MIN
     else -> SAFE_MIN
 }
 
 /** Clamp an output value to `[-SAFE_MAX, +SAFE_MAX]`. Scrubs `NaN` to `0`. */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun safeOut(v: Float): Float = when {
-    v.isNaN() -> 0f
+internal inline fun safeOut(v: AudioSample): AudioSample = when {
+    v.isNaN() -> 0.0
     v > SAFE_MAX -> SAFE_MAX
     v < -SAFE_MAX -> -SAFE_MAX
     else -> v
@@ -481,7 +484,7 @@ fun Ignitor.detune(semitones: Ignitor): Ignitor {
     return Ignitor { buffer, freqHz, ctx ->
         ctx.scratchBuffers.use { semiBuf ->
             semitones.generate(semiBuf, freqHz, ctx)
-            val s = semiBuf[ctx.offset].toDouble()
+            val s = semiBuf[ctx.offset]
             val ratio = 2.0.pow(s / 12.0)
             this.generate(buffer, freqHz * ratio, ctx)
         }

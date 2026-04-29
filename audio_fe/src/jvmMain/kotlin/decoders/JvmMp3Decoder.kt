@@ -69,7 +69,7 @@ object JvmMp3Decoder {
 
             return MonoSamplePcm(
                 sampleRate = sampleRate,
-                pcm = pcmData,
+                pcm = DoubleArray(pcmData.size) { pcmData[it].toDouble() },
             )
         } catch (e: Exception) {
             e.printStackTrace()

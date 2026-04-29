@@ -2,10 +2,11 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
-import io.kotest.matchers.floats.shouldBeGreaterThan
-import io.kotest.matchers.floats.shouldBeLessThan
-import io.kotest.matchers.floats.shouldBeLessThanOrEqual
+import io.kotest.matchers.doubles.shouldBeGreaterThan
+import io.kotest.matchers.doubles.shouldBeLessThan
+import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.exp as kexp
@@ -34,9 +35,9 @@ class IgnitorArithmeticTest : StringSpec({
         voiceElapsedFrames = 0
     }
 
-    /** Render a signal to a FloatArray. freq is irrelevant for pure-arithmetic chains. */
-    fun render(sig: Ignitor, freqHz: Double = 0.0): FloatArray {
-        val buf = FloatArray(blockFrames)
+    /** Render a signal to a AudioBuffer. freq is irrelevant for pure-arithmetic chains. */
+    fun render(sig: Ignitor, freqHz: Double = 0.0): AudioBuffer {
+        val buf = AudioBuffer(blockFrames)
         sig.generate(buf, freqHz, ctx())
         return buf
     }
@@ -45,7 +46,7 @@ class IgnitorArithmeticTest : StringSpec({
     fun const(value: Double): Ignitor = ParamIgnitor("c", value)
 
     /** Verify every sample in [buf] is finite (no NaN, no ±Inf). */
-    fun FloatArray.allFinite(): Boolean = this.all { !it.isNaN() && !it.isInfinite() }
+    fun AudioBuffer.allFinite(): Boolean = this.all { !it.isNaN() && !it.isInfinite() }
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Unary arithmetic
@@ -207,7 +208,7 @@ class IgnitorArithmeticTest : StringSpec({
 
     "log of 0 is 0 (no -Inf)" {
         val out = render(const(0.0).log())
-        out[0] shouldBe 0f
+        out[0] shouldBe 0.0
         out.allFinite() shouldBe true
     }
 
@@ -224,27 +225,27 @@ class IgnitorArithmeticTest : StringSpec({
     }
 
     "sign of positive is 1" {
-        render(const(0.7).sign())[0] shouldBe 1f
+        render(const(0.7).sign())[0] shouldBe 1.0
     }
 
     "sign of negative is -1" {
-        render(const(-0.3).sign())[0] shouldBe -1f
+        render(const(-0.3).sign())[0] shouldBe -1.0
     }
 
     "sign of zero is 0" {
-        render(const(0.0).sign())[0] shouldBe 0f
+        render(const(0.0).sign())[0] shouldBe 0.0
     }
 
     "tanh saturates positive" {
         val out = render(const(5.0).tanh())
         out[0].toDouble() shouldBe (ktanh(5.0) plusOrMinus 1e-5)
-        out[0].shouldBeLessThan(1.0001f)
+        out[0].shouldBeLessThan(1.0001)
     }
 
     "tanh saturates negative" {
         val out = render(const(-5.0).tanh())
         out[0].toDouble() shouldBe (ktanh(-5.0) plusOrMinus 1e-5)
-        out[0].shouldBeGreaterThan(-1.0001f)
+        out[0].shouldBeGreaterThan(-1.0001)
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -346,8 +347,10 @@ class IgnitorArithmeticTest : StringSpec({
     "recip of zero is finite (clamped to SAFE_MAX)" {
         val out = render(const(0.0).recip())
         out.allFinite() shouldBe true
-        // Should be exactly +SAFE_MAX (since 0 → +SAFE_MIN → 1/SAFE_MIN = SAFE_MAX)
-        out[0] shouldBe SAFE_MAX
+        // Should be very close to +SAFE_MAX (0 → +SAFE_MIN → 1/SAFE_MIN ≈ SAFE_MAX).
+        // Not exactly equal in Double — `1.0 / 1e-15` rounds to ~9.999999999999999e14,
+        // which is just below SAFE_MAX (1e15).
+        out[0] shouldBe (SAFE_MAX plusOrMinus 1.0)
     }
 
     "recip of subnormal-small input is finite" {
@@ -414,7 +417,7 @@ class IgnitorArithmeticTest : StringSpec({
 
     "1/sin near zero crossing stays finite (audio-rate scenario)" {
         // A sine going through zero would normally produce ±Inf via recip.
-        val out = FloatArray(blockFrames)
+        val out = AudioBuffer(blockFrames)
         Ignitors.sine().recip().generate(out, 440.0, ctx())
         out.allFinite() shouldBe true
     }

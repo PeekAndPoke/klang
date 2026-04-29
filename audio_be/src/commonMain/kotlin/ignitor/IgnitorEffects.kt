@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
@@ -77,24 +78,24 @@ fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: I
             if (os != null) {
                 // Oversampler processes work in place at oversampled rate.
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                    (waveshaper(sample.toDouble() * drive) * outputGain).toFloat()
+                    (waveshaper(sample * drive) * outputGain)
                 }
                 // DC-block at base rate after decimation, then soft-cap to ±1.
                 for (i in ctx.offset until end) {
-                    val y = work[i].toDouble()
+                    val y = work[i]
                     val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                     dcBlockX1 = y
                     dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.softCap(dcOut).toFloat()
+                    output[i] = ClippingFuncs.softCap(dcOut)
                 }
             } else {
                 for (i in ctx.offset until end) {
-                    val x = work[i].toDouble() * drive
+                    val x = work[i] * drive
                     val y = waveshaper(x) * outputGain
                     val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                     dcBlockX1 = y
                     dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.softCap(dcOut).toFloat()
+                    output[i] = ClippingFuncs.softCap(dcOut)
                 }
             }
         }
@@ -144,7 +145,7 @@ fun Ignitor.drive(amount: Ignitor, type: String = "linear"): Ignitor {
             }
 
             for (i in ctx.offset until end) {
-                output[i] = (work[i] * driveGain).toFloat()
+                output[i] = (work[i] * driveGain)
             }
         }
     }
@@ -195,22 +196,22 @@ fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
 
             if (os != null) {
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                    (clipFn(sample.toDouble()) * outputGain).toFloat()
+                    (clipFn(sample) * outputGain)
                 }
                 for (i in ctx.offset until end) {
-                    val y = work[i].toDouble()
+                    val y = work[i]
                     val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                     dcBlockX1 = y
                     dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.softCap(dcOut).toFloat()
+                    output[i] = ClippingFuncs.softCap(dcOut)
                 }
             } else {
                 for (i in ctx.offset until end) {
-                    val y = clipFn(work[i].toDouble()) * outputGain
+                    val y = clipFn(work[i]) * outputGain
                     val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
                     dcBlockX1 = y
                     dcBlockY1 = flushDenormal(dcOut)
-                    output[i] = ClippingFuncs.softCap(dcOut).toFloat()
+                    output[i] = ClippingFuncs.softCap(dcOut)
                 }
             }
         }
@@ -264,8 +265,8 @@ fun Ignitor.crush(amount: Ignitor): Ignitor {
             for (i in ctx.offset until end) {
                 // Midtread symmetric quantizer (round, not floor) — no DC bias.
                 // Clamp output to [-1, 1] to catch non-integer halfLevels inflation.
-                val q = round(work[i].toDouble() * halfLevels) / halfLevels
-                output[i] = q.coerceIn(-1.0, 1.0).toFloat()
+                val q = round(work[i] * halfLevels) / halfLevels
+                output[i] = q.coerceIn(-1.0, 1.0)
             }
         }
     }
@@ -297,7 +298,7 @@ fun Ignitor.crush(amount: Double): Ignitor {
  *   Typical range: 2.0–8.0. Default: 0.0 (inactive).
  */
 fun Ignitor.coarse(amount: Ignitor): Ignitor {
-    var lastValue = 0.0f
+    var lastValue = 0.0
     var counter = 0.0
 
     return Ignitor { output, freqHz, ctx ->
@@ -402,7 +403,7 @@ fun Ignitor.phaser(
                 val tanValue = tan(PI * modFreq * inverseSampleRate)
                 val alpha = (tanValue - 1.0) / (tanValue + 1.0)
 
-                val dry = input[i].toDouble()
+                val dry = input[i]
                 var signal = dry + lastOutput * feedback
 
                 for (s in 0 until stages) {
@@ -414,7 +415,7 @@ fun Ignitor.phaser(
                 lastOutput = flushDenormal(signal)
 
                 // Crossfade: dry · (1 − blend) + wet · blend
-                output[i] = (dry * (1.0 - blendVal) + signal * blendVal).toFloat()
+                output[i] = (dry * (1.0 - blendVal) + signal * blendVal)
             }
         }
     }
@@ -488,7 +489,7 @@ fun Ignitor.tremolo(
 
                 val lfoNorm = (sin(phase) + 1.0) * 0.5
                 val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
-                output[i] = (input[i] * gain).toFloat()
+                output[i] = (input[i] * gain)
             }
         }
     }
@@ -531,7 +532,7 @@ fun Ignitor.shimmer(
     pitches: List<Double> = listOf(0.0, 7.0, 12.0),
 ): Ignitor {
     val ringSize = 96_000
-    val ring = FloatArray(ringSize)
+    val ring = AudioBuffer(ringSize)
     var writePos = 0
 
     val maxGrains = 8
@@ -576,11 +577,11 @@ fun Ignitor.shimmer(
             val lpfOneMinusA = 1.0 - lpfA
 
             for (i in ctx.offset until end) {
-                val dry = input[i].toDouble()
+                val dry = input[i]
 
                 var write = dry + feedbackTap * fbVal
                 if (write > 2.0) write = 2.0 else if (write < -2.0) write = -2.0
-                ring[writePos] = write.toFloat()
+                ring[writePos] = write
                 writePos++
                 if (writePos >= ringSize) writePos = 0
 
@@ -616,7 +617,7 @@ fun Ignitor.shimmer(
                     val idx1 = pos.toInt()
                     val frac = pos - idx1
                     val idx2 = if (idx1 + 1 >= ringSize) 0 else idx1 + 1
-                    val sample = ring[idx1].toDouble() + frac * (ring[idx2].toDouble() - ring[idx1].toDouble())
+                    val sample = ring[idx1] + frac * (ring[idx2] - ring[idx1])
 
                     val phase = grainElapsed[g] * invGrainTotal
                     val win = 0.5 - 0.5 * cos(TWO_PI * phase)
@@ -633,7 +634,7 @@ fun Ignitor.shimmer(
                 feedbackTap = lpfState
 
                 // Crossfade: dry · (1 − blend) + wet · blend
-                output[i] = (dry * (1.0 - blendVal) + wet * blendVal).toFloat()
+                output[i] = (dry * (1.0 - blendVal) + wet * blendVal)
             }
         }
     }
@@ -686,11 +687,11 @@ fun Ignitor.dcBlock(coefficient: Double = 0.995): Ignitor {
 
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                val x = input[i].toDouble()
+                val x = input[i]
                 val y = x - x1 + coefficient * y1
                 x1 = x
                 y1 = flushDenormal(y)
-                output[i] = y.toFloat()
+                output[i] = y
             }
         }
     }

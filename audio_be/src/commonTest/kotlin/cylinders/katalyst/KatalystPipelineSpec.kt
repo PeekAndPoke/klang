@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_be.cylinders.katalyst
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.floats.plusOrMinus
+import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.StereoBuffer
 import io.peekandpoke.klang.audio_be.effects.Compressor
@@ -60,15 +60,15 @@ class BusPipelineSpec : StringSpec({
         val pipeline = createPipeline()
         val ctx = createCtx()
 
-        ctx.mixBuffer.left.fill(0.5f)
-        ctx.mixBuffer.right.fill(0.3f)
+        ctx.mixBuffer.left.fill(0.5)
+        ctx.mixBuffer.right.fill(0.3)
 
         for (effect in pipeline) {
             effect.process(ctx)
         }
 
-        ctx.mixBuffer.left[0] shouldBe (0.5f plusOrMinus 1e-6f)
-        ctx.mixBuffer.right[0] shouldBe (0.3f plusOrMinus 1e-6f)
+        ctx.mixBuffer.left[0] shouldBe (0.5 plusOrMinus 1e-6)
+        ctx.mixBuffer.right[0] shouldBe (0.3 plusOrMinus 1e-6)
     }
 
     "delay-only pipeline adds delayed signal to mix" {
@@ -77,8 +77,8 @@ class BusPipelineSpec : StringSpec({
 
         // Feed signal through multiple blocks
         repeat(50) {
-            ctx.delaySendBuffer.left.fill(0.5f)
-            ctx.delaySendBuffer.right.fill(0.5f)
+            ctx.delaySendBuffer.left.fill(0.5)
+            ctx.delaySendBuffer.right.fill(0.5)
             ctx.mixBuffer.clear()
 
             for (effect in pipeline) {
@@ -87,7 +87,7 @@ class BusPipelineSpec : StringSpec({
         }
 
         // After enough blocks, delayed signal should appear
-        val hasSignal = ctx.mixBuffer.left.any { it != 0.0f }
+        val hasSignal = ctx.mixBuffer.left.any { it != 0.0 }
         hasSignal shouldBe true
     }
 
@@ -97,8 +97,8 @@ class BusPipelineSpec : StringSpec({
 
         // Reverb comb filters need time to build up signal
         repeat(20) {
-            ctx.reverbSendBuffer.left.fill(0.5f)
-            ctx.reverbSendBuffer.right.fill(0.5f)
+            ctx.reverbSendBuffer.left.fill(0.5)
+            ctx.reverbSendBuffer.right.fill(0.5)
             ctx.mixBuffer.clear()
 
             for (effect in pipeline) {
@@ -106,7 +106,7 @@ class BusPipelineSpec : StringSpec({
             }
         }
 
-        val hasSignal = ctx.mixBuffer.left.any { it != 0.0f }
+        val hasSignal = ctx.mixBuffer.left.any { it != 0.0 }
         hasSignal shouldBe true
     }
 
@@ -116,8 +116,8 @@ class BusPipelineSpec : StringSpec({
 
         // Process enough blocks for the compressor envelope to converge
         repeat(20) {
-            ctx.mixBuffer.left.fill(0.9f)
-            ctx.mixBuffer.right.fill(0.9f)
+            ctx.mixBuffer.left.fill(0.9)
+            ctx.mixBuffer.right.fill(0.9)
             for (effect in pipeline) {
                 effect.process(ctx)
             }
@@ -125,7 +125,7 @@ class BusPipelineSpec : StringSpec({
 
         // Signal should be compressed
         val outputLevel = abs(ctx.mixBuffer.left[blockFrames - 1])
-        (outputLevel < 0.9f) shouldBe true
+        (outputLevel < 0.9) shouldBe true
     }
 
     "full pipeline chains all effects: delay + reverb + phaser + compressor" {
@@ -139,12 +139,12 @@ class BusPipelineSpec : StringSpec({
 
         // Feed signal through all send buffers
         repeat(50) {
-            ctx.mixBuffer.left.fill(0.5f)
-            ctx.mixBuffer.right.fill(0.5f)
-            ctx.delaySendBuffer.left.fill(0.3f)
-            ctx.delaySendBuffer.right.fill(0.3f)
-            ctx.reverbSendBuffer.left.fill(0.2f)
-            ctx.reverbSendBuffer.right.fill(0.2f)
+            ctx.mixBuffer.left.fill(0.5)
+            ctx.mixBuffer.right.fill(0.5)
+            ctx.delaySendBuffer.left.fill(0.3)
+            ctx.delaySendBuffer.right.fill(0.3)
+            ctx.reverbSendBuffer.left.fill(0.2)
+            ctx.reverbSendBuffer.right.fill(0.2)
 
             for (effect in pipeline) {
                 effect.process(ctx)
@@ -153,7 +153,7 @@ class BusPipelineSpec : StringSpec({
 
         // After processing, signal should be modified by the chain
         // (not exactly 0.5 due to delay/reverb/phaser/compressor processing)
-        val isModified = ctx.mixBuffer.left.any { abs(it - 0.5f) > 0.001f }
+        val isModified = ctx.mixBuffer.left.any { abs(it - 0.5) > 0.001 }
         isModified shouldBe true
     }
 
@@ -162,19 +162,19 @@ class BusPipelineSpec : StringSpec({
         val pipeline = createPipeline(phaserDepth = 0.8)
         val ctx = createCtx()
 
-        ctx.mixBuffer.left.fill(0.5f)
-        ctx.mixBuffer.right.fill(0.5f)
+        ctx.mixBuffer.left.fill(0.5)
+        ctx.mixBuffer.right.fill(0.5)
 
         for (effect in pipeline) {
             effect.process(ctx)
         }
 
         // Phaser should modify the signal
-        val phaserModified = ctx.mixBuffer.left.any { it != 0.5f }
+        val phaserModified = ctx.mixBuffer.left.any { it != 0.5 }
         phaserModified shouldBe true
 
         // But send buffers should be untouched (delay/reverb were inactive)
-        ctx.delaySendBuffer.left[0] shouldBe 0.0f
-        ctx.reverbSendBuffer.left[0] shouldBe 0.0f
+        ctx.delaySendBuffer.left[0] shouldBe 0.0
+        ctx.reverbSendBuffer.left[0] shouldBe 0.0
     }
 })

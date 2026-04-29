@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
@@ -26,7 +27,7 @@ class VibratoConsistencyTest : StringSpec({
     val sr = 48_000
     val rate = 5.0
 
-    fun diffRms(a: FloatArray, b: FloatArray): Double {
+    fun diffRms(a: AudioBuffer, b: AudioBuffer): Double {
         var sum = 0.0
         for (i in a.indices) {
             val d = a[i].toDouble() - b[i].toDouble()
@@ -39,7 +40,7 @@ class VibratoConsistencyTest : StringSpec({
      * Render through the Sprudel path: VoiceFactory passes vibratoMod (semitones) directly
      * to Voice.Vibrato(depth), and VibratoRenderer applies the ET conversion.
      */
-    fun renderSprudelPath(depthSemitones: Double): FloatArray {
+    fun renderSprudelPath(depthSemitones: Double): AudioBuffer {
         val voice = createSynthVoice(
             blockFrames = bf,
             sampleRate = sr,
@@ -56,7 +57,7 @@ class VibratoConsistencyTest : StringSpec({
      * Render through the Ignitor DSL path: IgnitorDsl.Sine().vibrato(rate, depth) → toExciter
      * with build-time mod bubbling. Depth is in semitones.
      */
-    fun renderIgnitorDslPath(depthSemitones: Double): FloatArray {
+    fun renderIgnitorDslPath(depthSemitones: Double): AudioBuffer {
         val dsl = IgnitorDsl.Sine().vibrato(rate, depthSemitones)
         val signal = dsl.toExciter()
 

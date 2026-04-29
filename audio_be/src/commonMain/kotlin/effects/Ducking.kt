@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.effects
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.max
@@ -52,15 +53,15 @@ class Ducking(
      * to both channels, preserving the stereo image.
      */
     fun processStereo(
-        inputL: FloatArray,
-        inputR: FloatArray,
-        sidechainL: FloatArray,
-        sidechainR: FloatArray,
+        inputL: AudioBuffer,
+        inputR: AudioBuffer,
+        sidechainL: AudioBuffer,
+        sidechainR: AudioBuffer,
         blockSize: Int,
     ) {
         for (i in 0 until blockSize) {
             // Linked stereo detection: use peak of both channels
-            val sidechainLevel = max(abs(sidechainL[i].toDouble()), abs(sidechainR[i].toDouble()))
+            val sidechainLevel = max(abs(sidechainL[i]), abs(sidechainR[i]))
 
             val targetGain = if (sidechainLevel > 0.01) {
                 1.0 - (depth * min(1.0, sidechainLevel * 2.0))
@@ -74,8 +75,8 @@ class Ducking(
                 currentGain + attackCoeff * (targetGain - currentGain)
             }
 
-            inputL[i] = (inputL[i] * currentGain).toFloat()
-            inputR[i] = (inputR[i] * currentGain).toFloat()
+            inputL[i] = (inputL[i] * currentGain)
+            inputR[i] = (inputR[i] * currentGain)
         }
     }
 
@@ -86,9 +87,9 @@ class Ducking(
      * @param sidechain The trigger signal (e.g., kick drum on another cylinder)
      * @param blockSize Number of samples to process
      */
-    fun process(input: FloatArray, sidechain: FloatArray, blockSize: Int) {
+    fun process(input: AudioBuffer, sidechain: AudioBuffer, blockSize: Int) {
         for (i in 0 until blockSize) {
-            val sidechainLevel = abs(sidechain[i].toDouble())
+            val sidechainLevel = abs(sidechain[i])
 
             val targetGain = if (sidechainLevel > 0.01) {
                 1.0 - (depth * min(1.0, sidechainLevel * 2.0))
@@ -102,7 +103,7 @@ class Ducking(
                 currentGain + attackCoeff * (targetGain - currentGain)
             }
 
-            input[i] = (input[i] * currentGain).toFloat()
+            input[i] = (input[i] * currentGain)
         }
     }
 

@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.div
@@ -31,14 +32,14 @@ class IgnitorDslRuntimeTest : StringSpec({
         }
     }
 
-    fun generateBlock(signalGen: Ignitor, freqHz: Double = 440.0): FloatArray {
-        val buffer = FloatArray(blockFrames)
+    fun generateBlock(signalGen: Ignitor, freqHz: Double = 440.0): AudioBuffer {
+        val buffer = AudioBuffer(blockFrames)
         val ctx = createCtx()
         signalGen.generate(buffer, freqHz, ctx)
         return buffer
     }
 
-    fun FloatArray.hasNonZeroSamples(): Boolean = any { it != 0.0f }
+    fun AudioBuffer.hasNonZeroSamples(): Boolean = any { it != 0.0 }
 
     "Freq DSL maps to FreqIgnitor" {
         val sig = IgnitorDsl.Freq.toExciter()
@@ -46,10 +47,10 @@ class IgnitorDslRuntimeTest : StringSpec({
     }
 
     "FreqIgnitor fills buffer with voice frequency" {
-        val buffer = FloatArray(blockFrames)
+        val buffer = AudioBuffer(blockFrames)
         val ctx = createCtx()
         FreqIgnitor.generate(buffer, 440.0, ctx)
-        buffer.all { it == 440.0f } shouldBe true
+        buffer.all { it == 440.0 } shouldBe true
     }
 
     "Constant(0.0) as freq produces 0 Hz (silence), not voice frequency" {
@@ -57,7 +58,7 @@ class IgnitorDslRuntimeTest : StringSpec({
         val sig = dsl.toExciter()
         val buffer = generateBlock(sig, freqHz = 440.0)
         // 0 Hz sine stays at sin(0) = 0, so all samples should be zero
-        buffer.all { it == 0.0f } shouldBe true
+        buffer.all { it == 0.0 } shouldBe true
     }
 
     "Sine DSL produces non-zero output" {
@@ -87,7 +88,7 @@ class IgnitorDslRuntimeTest : StringSpec({
 
     "Silence DSL produces zero output" {
         val sig = IgnitorDsl.Silence.toExciter()
-        generateBlock(sig).all { it == 0.0f } shouldBe true
+        generateBlock(sig).all { it == 0.0 } shouldBe true
     }
 
     "Plus composition produces non-zero output" {
@@ -140,10 +141,10 @@ class IgnitorDslRuntimeTest : StringSpec({
             voiceElapsedFrames = 0
         }
 
-        fun FloatArray.zeroCrossings(): Int {
+        fun AudioBuffer.zeroCrossings(): Int {
             var count = 0
             for (i in 1 until size) {
-                if ((this[i - 1] >= 0f && this[i] < 0f) || (this[i - 1] < 0f && this[i] >= 0f)) count++
+                if ((this[i - 1] >= 0.0 && this[i] < 0.0) || (this[i - 1] < 0.0 && this[i] >= 0.0)) count++
             }
             return count
         }
@@ -151,13 +152,13 @@ class IgnitorDslRuntimeTest : StringSpec({
         // Normal sine at voice frequency
         val normalDsl = IgnitorDsl.Sine()
         val normalSig = normalDsl.toExciter()
-        val normalBuf = FloatArray(blockFrames)
+        val normalBuf = AudioBuffer(blockFrames)
         normalSig.generate(normalBuf, 440.0, ctx())
 
         // Sine with freq = Freq / 2 (should be 220 Hz)
         val halfFreqDsl = IgnitorDsl.Sine(freq = IgnitorDsl.Div(left = IgnitorDsl.Freq, right = IgnitorDsl.Constant(2.0)))
         val halfFreqSig = halfFreqDsl.toExciter()
-        val halfBuf = FloatArray(blockFrames)
+        val halfBuf = AudioBuffer(blockFrames)
         halfFreqSig.generate(halfBuf, 440.0, ctx())
 
         val normalCrossings = normalBuf.zeroCrossings()

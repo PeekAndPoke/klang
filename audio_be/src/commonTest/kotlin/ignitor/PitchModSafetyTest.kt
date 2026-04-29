@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 
 /**
@@ -32,15 +33,15 @@ class PitchModSafetyTest : StringSpec({
         voiceElapsedFrames = elapsedFrames
     }
 
-    fun render(sig: Ignitor, freqHz: Double = 440.0, c: IgniteContext = ctx()): FloatArray {
-        val buf = FloatArray(blockFrames)
+    fun render(sig: Ignitor, freqHz: Double = 440.0, c: IgniteContext = ctx()): AudioBuffer {
+        val buf = AudioBuffer(blockFrames)
         sig.generate(buf, freqHz, c)
         return buf
     }
 
-    fun FloatArray.allFinite(): Boolean = this.all { !it.isNaN() && !it.isInfinite() }
+    fun AudioBuffer.allFinite(): Boolean = this.all { !it.isNaN() && !it.isInfinite() }
 
-    fun FloatArray.allInBounds(): Boolean = this.all { abs(it) <= SAFE_MAX }
+    fun AudioBuffer.allInBounds(): Boolean = this.all { abs(it) <= SAFE_MAX }
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Vibrato
@@ -51,7 +52,7 @@ class PitchModSafetyTest : StringSpec({
         val out = render(sig)
         out.allFinite() shouldBe true
         // 1 semitone = ~5.95% pitch change; ratio in [2^(-1/12), 2^(1/12)] ≈ [0.944, 1.059]
-        out.all { it in 0.93f..1.07f } shouldBe true
+        out.all { it in 0.93..1.07 } shouldBe true
     }
 
     "vibrato with extreme depthSemitones stays finite" {
@@ -65,7 +66,7 @@ class PitchModSafetyTest : StringSpec({
     "vibrato with zero depth outputs exactly 1.0" {
         val sig = vibratoModIgnitor(rate = 5.0, depth = 0.0)
         val out = render(sig)
-        out.all { it == 1.0f } shouldBe true
+        out.all { it == 1.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -91,7 +92,7 @@ class PitchModSafetyTest : StringSpec({
     "accelerate with zero amount outputs exactly 1.0" {
         val sig = accelerateModIgnitor(amount = 0.0)
         val out = render(sig)
-        out.all { it == 1.0f } shouldBe true
+        out.all { it == 1.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -117,7 +118,7 @@ class PitchModSafetyTest : StringSpec({
             amount = ParamIgnitor("amt", 0.0),
         )
         val out = render(sig)
-        out.all { it == 1.0f } shouldBe true
+        out.all { it == 1.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -154,7 +155,7 @@ class PitchModSafetyTest : StringSpec({
         )
         val out = render(sig, freqHz = 0.0)
         // freqHz <= 0 short-circuits to all-1.0 output.
-        out.all { it == 1.0f } shouldBe true
+        out.all { it == 1.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -169,7 +170,7 @@ class PitchModSafetyTest : StringSpec({
         val out = render(osc, freqHz = 440.0)
         out.allFinite() shouldBe true
         // Output isn't silent — at least one sample is non-zero (oscillator is still running).
-        out.any { it != 0.0f } shouldBe true
+        out.any { it != 0.0 } shouldBe true
     }
 })
 

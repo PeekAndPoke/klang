@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
@@ -21,7 +22,7 @@ class FilterModulationTest : StringSpec({
 
     val noopSignal = Ignitor { buffer, _, ctx ->
         val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) buffer[i] = 0.0f
+        for (i in ctx.offset until end) buffer[i] = 0.0
     }
 
     fun createSignalCtx(
@@ -47,7 +48,7 @@ class FilterModulationTest : StringSpec({
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = FloatArray(blockFrames),
+            voiceBuffer = AudioBuffer(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
@@ -65,7 +66,7 @@ class FilterModulationTest : StringSpec({
             cutoffHistory.add(cutoffHz)
         }
 
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             // No-op
         }
 
@@ -77,7 +78,7 @@ class FilterModulationTest : StringSpec({
 
     // Helper to create a dummy sample
     fun createSample(): MonoSamplePcm {
-        val pcm = FloatArray(100) { 0.5f }
+        val pcm = AudioBuffer(100) { 0.5 }
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = pcm,

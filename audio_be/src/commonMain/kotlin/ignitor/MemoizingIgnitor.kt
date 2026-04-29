@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 /**
  * Wraps an [Ignitor] so that its output is computed at most once per block.
  *
@@ -24,7 +26,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
 
     private var consumers: Int = 1
-    private var cache: FloatArray = FloatArray(0)
+    private var cache: AudioBuffer = AudioBuffer(0)
 
     // Cache key components. Sentinel values guarantee a miss on the first call.
     private var cachedVoiceElapsedFrames: Int = Int.MIN_VALUE
@@ -36,7 +38,7 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
         consumers++
     }
 
-    override fun generate(buffer: FloatArray, freqHz: Double, ctx: IgniteContext) {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         if (consumers <= 1) {
             inner.generate(buffer, freqHz, ctx)
             return
@@ -49,7 +51,7 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
 
         if (miss) {
             if (cache.size < buffer.size) {
-                cache = FloatArray(buffer.size)
+                cache = AudioBuffer(buffer.size)
             }
             inner.generate(cache, freqHz, ctx)
             cachedVoiceElapsedFrames = ctx.voiceElapsedFrames

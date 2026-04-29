@@ -57,7 +57,7 @@ class DistortionRenderer(
         val fn = waveshaper
 
         os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-            (fn(sample.toDouble() * d) * g).toFloat()
+            (fn(sample * d) * g)
         }
 
         // DC blocker runs at original rate after decimation
@@ -72,14 +72,14 @@ class DistortionRenderer(
 
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
-            val x = buf[idx].toDouble() * d
+            val x = buf[idx] * d
             val y = fn(x) * g
 
             val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
             dcBlockX1 = y
             dcBlockY1 = flushDenormal(dcOut)
 
-            buf[idx] = dcOut.toFloat()
+            buf[idx] = dcOut
         }
     }
 
@@ -87,11 +87,11 @@ class DistortionRenderer(
         val buf = ctx.audioBuffer
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
-            val y = buf[idx].toDouble()
+            val y = buf[idx]
             val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
             dcBlockX1 = y
             dcBlockY1 = flushDenormal(dcOut)
-            buf[idx] = dcOut.toFloat()
+            buf[idx] = dcOut
         }
     }
 }

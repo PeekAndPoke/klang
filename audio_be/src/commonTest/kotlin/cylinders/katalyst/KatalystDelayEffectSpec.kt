@@ -29,12 +29,12 @@ class KatalystDelayEffectSpec : StringSpec({
         val ctx = createCtx()
 
         // Put signal in send buffer
-        ctx.delaySendBuffer.left[0] = 0.5f
+        ctx.delaySendBuffer.left[0] = 0.5
 
         effect.process(ctx)
 
         // Mix buffer should be untouched
-        ctx.mixBuffer.left[0] shouldBe 0.0f
+        ctx.mixBuffer.left[0] shouldBe 0.0
     }
 
     "processes delay when delay time is above threshold" {
@@ -43,21 +43,21 @@ class KatalystDelayEffectSpec : StringSpec({
 
         // Put signal in send buffer
         for (i in 0 until blockFrames) {
-            ctx.delaySendBuffer.left[i] = 0.5f
-            ctx.delaySendBuffer.right[i] = 0.3f
+            ctx.delaySendBuffer.left[i] = 0.5
+            ctx.delaySendBuffer.right[i] = 0.3
         }
 
         // Process multiple blocks to allow delay to fill
         repeat(50) {
-            ctx.delaySendBuffer.left.fill(0.5f)
-            ctx.delaySendBuffer.right.fill(0.3f)
+            ctx.delaySendBuffer.left.fill(0.5)
+            ctx.delaySendBuffer.right.fill(0.3)
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
 
         // After enough blocks, delayed signal should appear in mix buffer
-        val hasSignalL = ctx.mixBuffer.left.any { it != 0.0f }
-        val hasSignalR = ctx.mixBuffer.right.any { it != 0.0f }
+        val hasSignalL = ctx.mixBuffer.left.any { it != 0.0 }
+        val hasSignalR = ctx.mixBuffer.right.any { it != 0.0 }
 
         hasSignalL shouldBe true
         hasSignalR shouldBe true

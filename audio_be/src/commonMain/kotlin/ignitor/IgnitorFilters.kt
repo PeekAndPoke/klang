@@ -104,7 +104,7 @@ fun Ignitor.svf(
 
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                val v0 = input[i].toDouble()
+                val v0 = input[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
@@ -116,7 +116,7 @@ fun Ignitor.svf(
                     SvfMode.HIGHPASS -> v0 - k * v1 - v2
                     SvfMode.BANDPASS -> v1
                     SvfMode.NOTCH -> v0 - k * v1
-                }.toFloat()
+                }
             }
         }
     }
@@ -247,9 +247,9 @@ fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor {
 
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                y += alpha * (input[i].toDouble() - y)
+                y += alpha * (input[i] - y)
                 y = flushDenormal(y)
-                output[i] = y.toFloat()
+                output[i] = y
             }
         }
     }
@@ -289,11 +289,11 @@ fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor {
 
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                val x = input[i].toDouble()
+                val x = input[i]
                 y = a * (y + x - xPrev)
                 y = flushDenormal(y)
                 xPrev = x
-                output[i] = y.toFloat()
+                output[i] = y
             }
         }
     }
@@ -339,7 +339,7 @@ fun Ignitor.formant(bands: List<FormantBand>): Ignitor {
 
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                output[i] = 0.0f
+                output[i] = 0.0
             }
 
             for (band in bandStates) {
@@ -355,13 +355,13 @@ fun Ignitor.formant(bands: List<FormantBand>): Ignitor {
                 }
 
                 for (i in ctx.offset until end) {
-                    val v0 = input[i].toDouble()
+                    val v0 = input[i]
                     val v3 = v0 - band.ic2eq
                     val v1 = band.a1 * band.ic1eq + band.a2 * v3
                     val v2 = band.ic2eq + band.a2 * band.ic1eq + band.a3 * v3
                     band.ic1eq = flushDenormal(2.0 * v1 - band.ic1eq)
                     band.ic2eq = flushDenormal(2.0 * v2 - band.ic2eq)
-                    output[i] = (output[i] + v1 * band.linearGain).toFloat()
+                    output[i] = (output[i] + v1 * band.linearGain)
                 }
             }
         }
@@ -403,9 +403,9 @@ fun Ignitor.withWarmth(warmthFactor: Double): Ignitor {
 
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                val raw = input[i].toDouble()
+                val raw = input[i]
                 val smoothed = raw + alpha * (lastSample - raw)
-                output[i] = smoothed.toFloat()
+                output[i] = smoothed
                 lastSample = flushDenormal(smoothed)
             }
         }

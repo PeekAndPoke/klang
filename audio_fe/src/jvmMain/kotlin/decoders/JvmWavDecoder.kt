@@ -131,7 +131,7 @@ object JvmWavDecoder {
 
                 // saveDebugWav(mono, sampleRate)
 
-                return MonoSamplePcm(sampleRate, mono)
+                return MonoSamplePcm(sampleRate, DoubleArray(mono.size) { mono[it].toDouble() })
             } else {
                 // Unknown chunk, safely skip it
                 val nextPos = buffer.position() + chunkSize

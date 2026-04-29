@@ -223,7 +223,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
     }
 
     private fun isMixBufferSilent(): Boolean {
-        val threshold = 0.00001f
+        val threshold = 0.00001
         for (sample in mixBuffer.left) {
             if (sample > threshold || sample < -threshold) return false
         }

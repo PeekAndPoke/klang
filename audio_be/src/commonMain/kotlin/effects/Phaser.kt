@@ -54,7 +54,7 @@ class Phaser(sampleRate: Int) {
 
             // 2. Process Stereo Channels
             // Left
-            var inL = left[i].toDouble() + lastOutputLeft * feedback
+            var inL = left[i] + lastOutputLeft * feedback
             for (s in 0 until stages) {
                 val x = inL
                 val output = alpha * x + z1[0][s]
@@ -62,10 +62,10 @@ class Phaser(sampleRate: Int) {
                 inL = output
             }
             lastOutputLeft = flushDenormal(inL)
-            left[i] = (left[i] + inL * depth).toFloat()
+            left[i] = (left[i] + inL * depth)
 
             // Right
-            var inR = right[i].toDouble() + lastOutputRight * feedback
+            var inR = right[i] + lastOutputRight * feedback
             for (s in 0 until stages) {
                 val x = inR
                 val output = alpha * x + z1[1][s]
@@ -73,7 +73,7 @@ class Phaser(sampleRate: Int) {
                 inR = output
             }
             lastOutputRight = flushDenormal(inR)
-            right[i] = (right[i] + inR * depth).toFloat()
+            right[i] = (right[i] + inR * depth)
         }
     }
 }

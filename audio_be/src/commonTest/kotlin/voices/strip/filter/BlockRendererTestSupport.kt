@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -10,7 +12,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  * Convenience for testing: runs a [BlockRenderer] on a raw buffer without full voice setup.
  * Creates a minimal [BlockContext] wrapping the buffer.
  */
-fun BlockRenderer.renderInPlace(buffer: FloatArray, sampleRate: Int = 44100) {
+fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100) {
     val ctx = BlockContext(
         audioBuffer = buffer,
         freqModBuffer = DoubleArray(buffer.size),

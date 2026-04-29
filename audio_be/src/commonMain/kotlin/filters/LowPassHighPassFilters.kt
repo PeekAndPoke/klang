@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.filters
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.PI
 import kotlin.math.exp
@@ -41,13 +42,13 @@ object LowPassHighPassFilters {
             lowPass = 1.0 - exp(-2.0 * PI * cutoff / sampleRate)
         }
 
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val x = buffer[i].toDouble()
+                val x = buffer[i]
                 y += lowPass * (x - y)
                 y = flushDenormal(y)
-                buffer[i] = y.toFloat()
+                buffer[i] = y
             }
         }
     }
@@ -67,14 +68,14 @@ object LowPassHighPassFilters {
             a = exp(-2.0 * PI * cutoff / sampleRate)
         }
 
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val x = buffer[i].toDouble()
+                val x = buffer[i]
                 y = a * (y + x - xPrev)
                 y = flushDenormal(y)
                 xPrev = x
-                buffer[i] = y.toFloat()
+                buffer[i] = y
             }
         }
     }
@@ -108,61 +109,61 @@ object LowPassHighPassFilters {
     }
 
     class SvfLPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val v0 = buffer[i].toDouble()
+                val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
                 ic1eq = flushDenormal(2.0 * v1 - ic1eq)
                 ic2eq = flushDenormal(2.0 * v2 - ic2eq)
-                buffer[i] = v2.toFloat()
+                buffer[i] = v2
             }
         }
     }
 
     class SvfHPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val v0 = buffer[i].toDouble()
+                val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
                 ic1eq = flushDenormal(2.0 * v1 - ic1eq)
                 ic2eq = flushDenormal(2.0 * v2 - ic2eq)
-                buffer[i] = (v0 - k * v1 - v2).toFloat()
+                buffer[i] = (v0 - k * v1 - v2)
             }
         }
     }
 
     class SvfBPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val v0 = buffer[i].toDouble()
+                val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
                 ic1eq = flushDenormal(2.0 * v1 - ic1eq)
                 ic2eq = flushDenormal(2.0 * v2 - ic2eq)
-                buffer[i] = v1.toFloat()
+                buffer[i] = v1
             }
         }
     }
 
     class SvfNotch(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
-                val v0 = buffer[i].toDouble()
+                val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
                 ic1eq = flushDenormal(2.0 * v1 - ic1eq)
                 ic2eq = flushDenormal(2.0 * v2 - ic2eq)
-                buffer[i] = (v0 - k * v1).toFloat()
+                buffer[i] = (v0 - k * v1)
             }
         }
     }
