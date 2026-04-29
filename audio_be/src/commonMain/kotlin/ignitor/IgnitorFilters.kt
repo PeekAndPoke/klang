@@ -1,8 +1,9 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.filters.bilinearK
+import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.PI
-import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.tan
 
@@ -231,6 +232,9 @@ fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = Filte
  * Gentler slope than the SVF (6 dB/oct vs 12 dB/oct). Good for subtle tone shaping.
  * Cutoff is read once per block (control rate).
  *
+ * Same matched-Z one-pole leaky integrator as `LowPassHighPassFilters.OnePoleLPF` —
+ * coefficient math is shared via `onePoleLpfCoeff`. See that file for review notes.
+ *
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
  *   Lower = darker/warmer, higher = more transparent. Typical: 1000–8000.
  */
@@ -242,12 +246,11 @@ fun Ignitor.onePoleLowpass(cutoffHz: Ignitor): Ignitor {
             this.generate(input, freqHz, ctx)
 
             val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
-            val nyquist = 0.5 * ctx.sampleRate
-            val alpha = 1.0 - exp(-2.0 * PI * fc.coerceIn(5.0, nyquist - 1.0) / ctx.sampleRate)
+            val a = onePoleLpfCoeff(fc, ctx.sampleRate.toDouble())
 
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                y += alpha * (input[i] - y)
+                y += a * (input[i] - y)
                 y = flushDenormal(y)
                 output[i] = y
             }
@@ -272,6 +275,9 @@ fun Ignitor.onePoleLowpass(cutoffHz: Double): Ignitor = onePoleLowpass(ParamIgni
  * Gentler slope than the SVF (6 dB/oct). Good for removing low-end rumble.
  * Cutoff is read once per block (control rate).
  *
+ * Same canonical bilinear topology as `LowPassHighPassFilters.OnePoleHPF` — see that
+ * file's header for the review history and topology rationale.
+ *
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1].
  *   Frequencies below this are attenuated. Typical: 30–500.
  */
@@ -284,13 +290,15 @@ fun Ignitor.onePoleHighpass(cutoffHz: Ignitor): Ignitor {
             this.generate(input, freqHz, ctx)
 
             val fc = Ignitors.readParam(cutoffHz, freqHz, ctx)
-            val nyquist = 0.5 * ctx.sampleRate
-            val a = exp(-2.0 * PI * fc.coerceIn(5.0, nyquist - 1.0) / ctx.sampleRate)
+            val k = bilinearK(fc, ctx.sampleRate.toDouble())
+            val invOnePlusK = 1.0 / (1.0 + k)
+            val b0 = invOnePlusK
+            val a1 = (1.0 - k) * invOnePlusK
 
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 val x = input[i]
-                y = a * (y + x - xPrev)
+                y = b0 * (x - xPrev) + a1 * y
                 y = flushDenormal(y)
                 xPrev = x
                 output[i] = y

@@ -24,7 +24,7 @@ object BuiltInSongs {
 import * from "stdlib"                                                                                                      //
 import * from "sprudel"                                                                                                    ////
                                                                                                                           //  //
-let feel = 1.0   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                //    //
+let feel = 3.0   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                //    //
 let snd  = 550   // 100 .. 2000                                                                                         //      //
                                                                                                                        //        //
 stack(                                                                                                    //////////////          //////////////
@@ -38,7 +38,7 @@ stack(                                                                          
     .apply(                                                                                                     // //               // //
       x => x.velocity(0.7).detune(0.07),                                                                       //                       //
       x => x.shuffle("<1!64 0!16 1!1 4/8!14 1!33>").seed(sinOfNight.add(1).mul(24 * 60 * 15))            
-        .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.35!32>").lpf(5500).pan(0.8))          
+        .superimpose(transpose(12).detune(0.07).velocity("<0!32 0.35!32>").lpf(5500).pan(0.7))          
         .superimpose(transpose(24).detune(0.10).velocity("<0!96 0.20!32>").lpf(6000).pan(0.33))  
     ).phaser(1/8).phaserdepth("<0.0!64 0.5!16 0.0!48>").phasersweep(1000).phasercenter(1500),
   // Pad

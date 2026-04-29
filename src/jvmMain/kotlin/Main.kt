@@ -35,11 +35,12 @@ suspend fun main() {
         registerLibrary(sprudelLib)
     }
 
-    val pattern = SprudelPattern.compile(scripting, TestTextPatterns.aTruthWorthLyingFor)!!
+//    val pattern = SprudelPattern.compile(scripting, TestTextPatterns.aTruthWorthLyingFor)!!
+    val pattern = SprudelPattern.compile(scripting, TestTextPatterns.tetris)!!
 
     println("Starting playback...")
     val playback = player.play(pattern)
-    playback.start(KlangCyclicPlayback.Options(rpm = 32.0))
+    playback.start(KlangCyclicPlayback.Options(rpm = 40.0))
 
     delay(600_000)
     playback.stop()
