@@ -565,7 +565,7 @@ let hitStab = chord("Dm").voicing()
 let hitHat = s("[hh ~]!4").gain(0.25).hpf(7000).adsr("0.001:0.04:0.0:0.04").orbit(2)
 let hit = stack(
     hitHat,
-    stack(hitKick, hitBass, hitSub, hitCrash, hitStab).filterWhen(t => t % 2 < 1),
+    stack(hitKick, hitBass, hitSub, hitCrash, hitStab).filterWhen(t => t % 4 < 1),
 )
 
 // ── QUIET BUILD-UP: 64 cycles, smooth saw-based morph ──────────────
@@ -610,16 +610,16 @@ let quietBuild = stack(
     s("[~ hh sd oh]!4").gain(saw.range(0.0, 0.22).slow(64))
         .hpf(5000).orbit(2),
     // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(1.25, 0.9).min(0).max(1).slow(64)).euclidrot(3, 8, 1),
+    mel3.velocity(saw.range(0.6, 0.8).min(0).max(1).slow(64)).euclidrot(3, 8, 1),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(-0.25, 0.9).min(0).max(1.5).slow(64)).struct("[4!1]!4").euclidrot(3, 8, 1).vib(4).vibmod(0.10),
+    mel1.velocity(saw.range(-0.25, 0.8).min(0).max(1.5).slow(64)).struct("[4!1]!4").euclidrot(3, 8, 1).vib(4).vibmod(0.10),
     // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
     // enter at section-local cycle 32 (= second half of the build)
     chord("<Am Dm Bb C Gm F Am Dm>").voicing()
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
-        .sound("superpulse").unison(2).detune(0.15).lpf(2000)
+        .sound("superpulse").unison(2).detune(0.15).hpf(200).lpf(2200)
         .adsr("0.005:0.08:0.25:0.08").legato(0.7)
-        .gain(0.18).orbit(5).room(0.4).rsize(6)
+        .gain(0.20).orbit(5).room(0.4).rsize(6)
         .filterWhen(t => t % 64 >= 48),
     // Tetris-style techno bassline — driving 8ths with octave jumps,
     // pattern: root - 5 - octave - 5 - 3rd - 5 - root - 5 per chord
@@ -654,7 +654,7 @@ let darkBuild = stack(
         .sound("saw").legato(0.7)
         .hpf(80).lpf(saw.range(900, 280).slow(64)).adsr("0.002:0.08:0.5:0.05")
         .distort("0.7:hard:4").postgain(0.5)
-        .warmth(saw.range(0.6, 0.2).slow(64))
+        .warmth(saw.range(0.6, 0.2).slow(64)) 
         .gain(saw.fast(4).range(0.4, 0.7))
         .orbit(0),
     // Clap
@@ -665,9 +665,9 @@ let darkBuild = stack(
     chord("<Am [Dm|Dm|Dm|D] <Bb!2 [Bb|Bb2]> C Gm [F|Dm] Am Dm>").voicing()
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
         .sound("superpulse").unison(2).detune(0.15)
-        .lpf(sine.range(2000, 800).slow(32))
+        .lpf(sine.range(2000, 1200).slow(32))
         .adsr("0.005:0.08:0.25:0.08").legato(0.7)
-        .gain(0.12).orbit(5).room(0.4).rsize(6),
+        .gain(0.17).orbit(5).room(0.4).rsize(6),
     // Tetris bassline — same pattern, pumps, LPF closes, more grit
     note(`<[a1 e2 a2 e2 c2 e2 a1 e2] [d2 a2 d3 a2 f2 a2 d2 a2]
           [bb1 f2 bb2 f2 d2 f2 bb1 f2] [c2 g2 c3 g2 e2 g2 c2 g2]
@@ -675,7 +675,7 @@ let darkBuild = stack(
           [a1 e2 a2 e2 c2 e2 a1 e2] [d2 a2 d3 a2 f2 a2 d2 a2]>`)
         .sound("supersaw").unison(8).warmth(saw.range(0.3, 0.7).slow(64)).pan(0.3)
         .superimpose(pan(0.7), transpose("<0 12 0 -12>/8"))
-        .gain(saw.range(0.25, 0.5).fast(4)).distort(saw.range(0.5, 0.75).slow(64))
+        .gain(saw.range(0.4, 0.5).fast(4)).distort(saw.range(0.5, 0.75).slow(64))
         .phaser(1/13).phaserdepth(0.25).phasercenter(3500).phasersweep(1000)
         .detune(sine.range(0.1, 0.5).slow(64))
         .hpf(90).lpf(saw.range(2000, 4500).slow(64)).adsr("0.005:0.2:0.5:0.1")
@@ -685,9 +685,9 @@ let darkBuild = stack(
  //       .struct("[x@3 x@3 x@4 x@3 x@3]")
         .sound("supersine").unison(3).detune(0.04).legato(1.5).adsr("0.5:0.4:0.7:1.0")
         .hpf(1000).lpf(3500).bandf(sine.range(2000, 4000).slow(8)).lpenv(2).vib(pure(1).div(cps)).vibmod(0.05)
-        .gain(saw.range(0.0, 0.20).slow(64))
+        .gain(saw.range(0.0, 0.22).slow(64))
         .pan(sine.range(0.05, 0.95).slow(48))
-        .delay(0.4).delaytime(pure(3/8).div(cps)).delayfeedback(0.45)
+        .delay(0.4).delaytime(pure(2/8).div(cps)).delayfeedback(0.45)
         .orbit(10).room(0.7).rsize(10),
 )
 
@@ -711,12 +711,9 @@ arrange(
   [8, s3],            // 48-55: + leadC + pad
   [8, s4],            // 56-63: + leadD + pad
   [16, finale],       // 64-79: + leadE (loops once) + pad + 16-cycle wind fade
-  [2, hit],           // 80-81: unison hit lands on beat 1 right as wind ends
-  [2, pause],         // 82-83: silence (stab tail rings into the quiet section)
-  [64, quietBuild],   // 84-147: smooth morph — mel3 fades OUT, mel1 fades IN
-                      //         beats + bass build via saw-controlled gains
-  [64, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters
-                      //          close down, spheric stabs drift in stereo
+  [4, hit],           // 80-83: unison hit lands on beat 1 right as wind ends
+  [64, quietBuild],   // 84-147: smooth morph — two melodies fade in
+  [64, darkBuild]     // 148-211: no melodies — bass + bassline pump, filters close upen up, spheric stabs drift in stereo
 ).compressor("-15:6:6:0.005:0.15")
  .room(0.1).rsize(4).analog(1.0)
 

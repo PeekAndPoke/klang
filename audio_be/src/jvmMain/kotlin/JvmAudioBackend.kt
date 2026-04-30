@@ -81,8 +81,7 @@ class JvmAudioBackend(
         // println("AudioSystem SourceDataLine: $line ${line.isActive}")
 
         // Buffer size: 500ms should be safe enough for JVM
-        val bufferMs = 250
-        val bufferFrames = (sampleRate * bufferMs / 1000.0).toInt()
+        val bufferFrames = 1024 // (sampleRate * bufferMs / 1000.0).toInt()
         // 4 bytes per frame (Stereo 16-bit)
         val bufferBytes = bufferFrames * 4
 
