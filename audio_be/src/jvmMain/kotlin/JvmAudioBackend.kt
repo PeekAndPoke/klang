@@ -27,11 +27,7 @@ class JvmAudioBackend(
     private val klangTime = KlangTime.create()
 
     // 1. Setup DSP Graph
-    val cylinders = Cylinders(
-        maxCylinders = 64,
-        blockFrames = blockSize,
-        sampleRate = sampleRate
-    )
+    val cylinders = Cylinders(blockFrames = blockSize, sampleRate = sampleRate)
 
     val ignitorRegistry = IgnitorRegistry().apply {
         registerDefaults()

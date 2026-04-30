@@ -206,8 +206,8 @@ class OrbitsCleanupTest : StringSpec({
         cylinders.processAndMix(fusionMix)
 
         // All three should be summed
-        fusionMix.left[0].toDouble() shouldBe (0.6 plusOrMinus 0.0001)
-        fusionMix.right[0].toDouble() shouldBe (0.6 plusOrMinus 0.0001)
+        fusionMix.left[0] shouldBe (0.6 plusOrMinus 0.0001)
+        fusionMix.right[0] shouldBe (0.6 plusOrMinus 0.0001)
     }
 
     "cylinder deactivated by cleanup is not mixed on next block" {

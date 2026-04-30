@@ -180,11 +180,13 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "dcBlock() - removes DC offset from signal" {
         // Create a sine with DC offset by using a custom exciter
-        val dcOffsetExciter = Ignitor { buffer, freqHz, ctx ->
-            Ignitors.sine().generate(buffer, freqHz, ctx)
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                buffer[i] = buffer[i] + 0.5 // Add DC offset
+        val dcOffsetExciter: Ignitor = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                Ignitors.sine().generate(buffer, freqHz, ctx)
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    buffer[i] = buffer[i] + 0.5 // Add DC offset
+                }
             }
         }
 

@@ -7,6 +7,7 @@ import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel._applyControlFromParams
@@ -14,10 +15,10 @@ import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
-import io.peekandpoke.klang.sprudel.pattern.BindPattern
 import io.peekandpoke.klang.sprudel.pattern.ControlPattern
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
 import io.peekandpoke.klang.sprudel.pattern.StackPattern
+import io.peekandpoke.klang.sprudel.sampleAt
 import io.peekandpoke.klang.tones.Tones
 import io.peekandpoke.klang.tones.chord.Chord
 import io.peekandpoke.klang.tones.distance.Distance
@@ -1210,7 +1211,7 @@ private fun applyPAnchor(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * note("c4").panchor(1).penv(12)   // pitch peaks at note end
  * ```
  *
- * @param offset Sustain pitch offset. -1.0 to 1.0. 0.0 = pitch returns to original note, other values offset the sustain pitch. Default: 0.0.
+ * @param anchor Sustain pitch offset. -1.0 to 1.0. 0.0 = pitch returns to original note, other values offset the sustain pitch. Default: 0.0.
  *
  * @alias panc
  * @category tonal
@@ -1824,176 +1825,228 @@ fun PatternMapperFn.rootNotes(octave: PatternLike? = null, callInfo: CallInfo? =
 // -- voicing() --------------------------------------------------------------------------------------------------------
 
 /**
- * Helper to get voiced notes for a chord.
- * Attempts to use voice leading, then falls back to intelligent chord structure preservation.
+ * Helper to get voiced notes for a chord, picking the [rank]-th candidate.
+ *
+ * Delegates to [io.peekandpoke.klang.tones.voicing.Voicing.getRanked] which guarantees ≥1
+ * voicing for any chord string [io.peekandpoke.klang.tones.chord.Chord.get] can parse, by
+ * falling back to chord-from-intervals at octave 4 when the dictionary search is empty.
+ *
+ * @param rank 0 = best, 1 = second-best, etc. Clamped into [0, ranked.lastIndex].
  */
 internal fun getVoicedNotes(
     chordName: String,
     range: List<String>,
     lastVoicing: List<String>,
-): List<String> {
-    try {
-        // 1. Try strict voice leading within range using the library
-        // This handles cases where we want specific smooth transitions
-        val voicing = io.peekandpoke.klang.tones.voicing.Voicing.get(
-            chord = chordName,
-            range = range,
-            lastVoicing = lastVoicing
-        )
-
-        if (voicing.isNotEmpty()) {
-            return voicing
-        }
-
-        // 2. Fallback: intelligent default voicing
-        // If the library couldn't find a voicing (e.g. strict range or unknown chord shape in dictionary),
-        // we construct the chord manually from its intervals.
-        val chordObj = Chord.get(chordName)
-        val tonic = chordObj.tonic
-
-        if (!chordObj.empty && !tonic.isNullOrEmpty()) {
-            // Chord.notes returns flat pitch classes (e.g. "C", "E"), which loses inversion info.
-            // Also, we cannot reliably parse octaves from chord names (e.g. "C2" is C sus2, not C octave 2).
-            // So we default to Octave 4 as the center.
-            val root = tonic + "4"
-
-            // By transposing intervals from "C4" (or whatever tonic is + 4), we get correct relative pitches
-            // and preserve inversions defined in the Chord definition.
-            return chordObj.intervals.map { interval ->
-                Distance.transpose(root, interval)
-            }
-        }
-
-        // 3. Last resort: raw notes forced to octave 4
-        // This ensures that valid chords (where intervals might be missing for some reason) still play
-        // in a hearable range, instead of defaulting to octave 0/1.
-        if (chordObj.notes.isNotEmpty()) {
-            return chordObj.notes.map { it + "4" }
-        }
-
-        return emptyList()
-    } catch (_: Exception) {
-        return emptyList()
-    }
+    rank: Int = 0,
+): List<String> = try {
+    val ranked = io.peekandpoke.klang.tones.voicing.Voicing.getRanked(
+        chord = chordName,
+        range = range,
+        lastVoicing = lastVoicing,
+    )
+    if (ranked.isEmpty()) emptyList() else ranked[rank.coerceIn(0, ranked.lastIndex)]
+} catch (_: Exception) {
+    emptyList()
 }
 
 /**
  * Applies voice leading to chord patterns.
- * Uses the Tones library's Voicing module for smooth transitions between chords.
+ *
+ * Uses the Tones library's Voicing module for smooth transitions between chords. The optional
+ * [lowPattern] / [highPattern] / [rankPattern] are sampled per source event to vary the voicing
+ * range and pick the Nth-best candidate.
+ *
+ * Inlines BindPattern's intersection logic so we can sample the control patterns with the live
+ * [SprudelPattern.QueryContext] at each source event's onset.
  */
-private fun applyVoicing(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    // Parse optional range arguments
-    val rangeArgs = args.filter { it.value is String }
-    val range = when {
-        rangeArgs.size >= 2 -> listOf(
-            rangeArgs[0].value.toString(),
-            rangeArgs[1].value.toString()
-        )
+private fun applyVoicing(
+    source: SprudelPattern,
+    lowPattern: SprudelPattern? = null,
+    highPattern: SprudelPattern? = null,
+    rankPattern: SprudelPattern? = null,
+): SprudelPattern {
+    return object : SprudelPattern {
+        override val weight: Double get() = source.weight
+        override val numSteps: Rational? get() = source.numSteps
+        override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
-        else -> listOf("C3", "C5") // Default range
-    }
+        override fun queryArcContextual(
+            from: Rational,
+            to: Rational,
+            ctx: SprudelPattern.QueryContext,
+        ): List<SprudelPatternEvent> {
+            val outerEvents = source.queryArcContextual(from, to, ctx)
+            val result = mutableListOf<SprudelPatternEvent>()
 
-    // Track last voicing for voice leading
-    var lastVoicing: List<String> = emptyList()
+            // Voice-leading state shared across the source events in this query.
+            var lastVoicing: List<String> = emptyList()
 
-    // No need to collapse to rootSource anymore
+            for (outerEvent in outerEvents) {
+                val intersectStart = maxOf(from, outerEvent.part.begin)
+                val intersectEnd = minOf(to, outerEvent.part.end)
+                if (intersectEnd <= intersectStart) continue
 
-    // Use BindPattern to expand events with voice leading
-    return BindPattern(source) { event ->
-        val chordName = event.data.chord
+                val chordName = outerEvent.data.chord
 
-        if (chordName == null) {
-            // No chord, return unchanged
-            AtomicPattern(data = event.data, sourceLocations = event.sourceLocations)
-        } else {
-            // Get voicing (either from voice leading or fallback)
-            val voicedNotes = getVoicedNotes(chordName, range, lastVoicing)
+                val innerPattern: SprudelPattern = if (chordName == null) {
+                    AtomicPattern(data = outerEvent.data, sourceLocations = outerEvent.sourceLocations)
+                } else {
+                    val sampleTime = outerEvent.whole.begin
 
-            if (voicedNotes.isEmpty()) {
-                // No voicing and no default notes (invalid chord?), return unchanged (root)
-                AtomicPattern(data = event.data, sourceLocations = event.sourceLocations)
-            } else {
-                // Update last voicing for next iteration
-                // We update it even with fallback notes to reset the voice leading context
-                lastVoicing = voicedNotes
+                    val low = lowPattern?.sampleAt(sampleTime, ctx)?.data?.value?.asString ?: "C3"
+                    val high = highPattern?.sampleAt(sampleTime, ctx)?.data?.value?.asString ?: "C5"
+                    val range = listOf(low, high)
 
-                // Create stack pattern with the voicing notes
-                val voicedEvents = voicedNotes.map { noteName ->
-                    AtomicPattern(
-                        data = event.data.copy(
-                            note = noteName,
-                            freqHz = Tones.noteToFreq(noteName),
-                            chord = null, // Do not preserve chord property to match JS behavior
-                            gain = event.data.gain,
-                        ),
-                        sourceLocations = event.sourceLocations
-                    )
+                    val rankInt = rankPattern
+                        ?.sampleAt(sampleTime, ctx)?.data?.value?.asDouble?.toInt()
+                        ?: 0
+
+                    val voicedNotes = getVoicedNotes(chordName, range, lastVoicing, rankInt)
+
+                    if (voicedNotes.isEmpty()) {
+                        AtomicPattern(data = outerEvent.data, sourceLocations = outerEvent.sourceLocations)
+                    } else {
+                        lastVoicing = voicedNotes
+                        StackPattern(
+                            voicedNotes.map { noteName ->
+                                AtomicPattern(
+                                    data = outerEvent.data.copy(
+                                        note = noteName,
+                                        freqHz = Tones.noteToFreq(noteName),
+                                        chord = null,
+                                    ),
+                                    sourceLocations = outerEvent.sourceLocations,
+                                )
+                            }
+                        )
+                    }
                 }
-                StackPattern(voicedEvents)
+
+                val innerEvents = innerPattern.queryArcContextual(intersectStart, intersectEnd, ctx)
+                for (innerEvent in innerEvents) {
+                    val clippedPart = innerEvent.part.clipTo(outerEvent.part)
+                    if (clippedPart != null) {
+                        result.add(innerEvent.copy(part = clippedPart))
+                    }
+                }
             }
+
+            return result
         }
     }
 }
+
+/** Converts a [rank] [PatternLike] argument into a control [SprudelPattern], or null if no rank is given. */
+private fun toControlPattern(value: PatternLike?, callInfo: CallInfo?): SprudelPattern? =
+    value?.let { listOf<Any?>(it).asSprudelDslArgs(callInfo).toPattern() }
 
 /**
  * Expands chord patterns into voiced notes using voice leading.
  *
  * Converts each event carrying a chord name (set via [chord]) into a stack of notes that
  * form the chord, applying smooth voice leading to minimise large jumps between chords.
- * An optional pair of note-string arguments sets the register range (default `"C3"` to `"C5"`).
+ *
+ * All three parameters are optional and accept any [PatternLike] — constants, mininotation
+ * patterns, or continuous control patterns. They are sampled per chord event, so range and
+ * rank can vary in time.
+ *
+ * - `rank` picks which candidate voicing to use: `0` (default) is the best fit by voice
+ *   leading, `1` is the second-best, etc. Out-of-range values clamp to the last available
+ *   candidate; non-integer values are floored.
+ * - `low` and `high` set the search-range bottom and top as note-name strings (`"C3"`,
+ *   `"E5"`, …). When omitted, the default range is `"C3"` to `"C5"`.
  *
  * ```KlangScript(Playable)
- * chord("C:major Am:minor F:major G:major").voicing()         // voiced I-vi-IV-V
+ * chord("C:major Am:minor F:major G:major").voicing()                                // best voicing (rank = 0), default range
  * ```
  *
  * ```KlangScript(Playable)
- * chord("Cmaj7 Am7 Fmaj7").voicing("C3", "C5")  // voiced within C3–C5 range
+ * chord("C:major Am:minor F:major G:major").voicing(rank = 1)                        // second-best every event
  * ```
  *
- * @param range Voicing range or strategy name. Controls how chord notes are distributed across octaves. Default: uses close voicing.
+ * ```KlangScript(Playable)
+ * chord("<C Am F G>").voicing(rank = "<0 1 0 2>")                                    // rank varies per cycle
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * chord("<C Am F G>").voicing(rank = sine.range(0, 3).segment(4))                    // rank from a control pattern
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * chord("Cmaj7 Am7 Fmaj7").voicing(low = "C3", high = "C5")                          // explicit fixed range
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * chord("<C F G C>").voicing(low = "<C3 D3 E3 F3>", high = "<C5 D5 E5 F5>")          // range slides up per cycle
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * chord("Dm7 G7").voicing(rank = 1, low = "C3", high = "C5")                         // second-best, in C3–C5
+ * ```
+ *
+ * @param rank Which candidate voicing to pick: `0` = best (default), `1` = second-best, etc. Floored, then clamped to the candidate count. [PatternLike], sampled per event.
+ * @param low Bottom of the voicing range as a note name (e.g. `"C3"`). [PatternLike], sampled per event. Default: `"C3"`.
+ * @param high Top of the voicing range as a note name (e.g. `"C5"`). [PatternLike], sampled per event. Default: `"C5"`.
  *
  * @category tonal
- * @tags voicing, voice leading, chord, harmony
+ * @tags voicing, voice leading, chord, harmony, rank, range
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.voicing(callInfo: CallInfo? = null): SprudelPattern =
-    applyVoicing(this, emptyList<SprudelDslArg<Any?>>())
+fun SprudelPattern.voicing(
+    rank: PatternLike? = null,
+    low: PatternLike? = null,
+    high: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    applyVoicing(
+        source = this,
+        lowPattern = toControlPattern(low, callInfo),
+        highPattern = toControlPattern(high, callInfo),
+        rankPattern = toControlPattern(rank, callInfo),
+    )
 
-/** Expands chord events in this pattern into voiced notes within the given range. */
-@SprudelDsl
-fun SprudelPattern.voicing(low: String, high: String, callInfo: CallInfo? = null): SprudelPattern =
-    applyVoicing(this, listOf(low, high).asSprudelDslArgs(callInfo))
-
-/** Expands chord events in a string pattern into voiced notes with voice leading. */
-@SprudelDsl
-@KlangScript.Function
-fun String.voicing(callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).voicing(callInfo)
-
-/** Expands chord events in a string pattern into voiced notes within the given range. */
-@SprudelDsl
-fun String.voicing(low: String, high: String, callInfo: CallInfo? = null): SprudelPattern =
-    this.toVoiceValuePattern(callInfo?.receiverLocation).voicing(low, high, callInfo)
-
-/** Returns a [PatternMapperFn] that applies voicing to chord events. */
+/**
+ * Expands chord events in a string pattern into voiced notes with voice leading.
+ *
+ * See [SprudelPattern.voicing] for the meaning of [rank], [low], and [high].
+ */
 @SprudelDsl
 @KlangScript.Function
-fun voicing(callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.voicing(callInfo) }
+fun String.voicing(
+    rank: PatternLike? = null,
+    low: PatternLike? = null,
+    high: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).voicing(rank, low, high, callInfo)
 
-/** Returns a [PatternMapperFn] that applies voicing to chord events within the given range. */
-@SprudelDsl
-fun voicing(low: String, high: String, callInfo: CallInfo? = null): PatternMapperFn =
-    { p -> p.voicing(low, high, callInfo) }
-
-/** Chains a voicing step onto this [PatternMapperFn]. */
+/**
+ * Returns a [PatternMapperFn] that applies voicing to chord events.
+ *
+ * See [SprudelPattern.voicing] for the meaning of [rank], [low], and [high].
+ */
 @SprudelDsl
 @KlangScript.Function
-fun PatternMapperFn.voicing(callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.voicing(callInfo) }
+fun voicing(
+    rank: PatternLike? = null,
+    low: PatternLike? = null,
+    high: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    { p -> p.voicing(rank, low, high, callInfo) }
 
-/** Chains a voicing step onto this [PatternMapperFn], within the given range. */
+/**
+ * Chains a voicing step onto this [PatternMapperFn].
+ *
+ * See [SprudelPattern.voicing] for the meaning of [rank], [low], and [high].
+ */
 @SprudelDsl
-fun PatternMapperFn.voicing(low: String, high: String, callInfo: CallInfo? = null): PatternMapperFn =
-    this.chain { p -> p.voicing(low, high, callInfo) }
+@KlangScript.Function
+fun PatternMapperFn.voicing(
+    rank: PatternLike? = null,
+    low: PatternLike? = null,
+    high: PatternLike? = null,
+    callInfo: CallInfo? = null,
+): PatternMapperFn =
+    this.chain { p -> p.voicing(rank, low, high, callInfo) }

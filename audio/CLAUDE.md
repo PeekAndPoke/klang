@@ -71,6 +71,7 @@ audio_jsworklet ←─ JS AudioWorklet thread entry point
 | KlangAudioRenderer, Cylinders, effects (Delay/Reverb/Compressor/…)                 | `ref/effects-mixing.md`    |
 | Samples registry, audio decoders, URL caching (audio_fe)                           | `ref/sample-management.md` |
 | Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX`, framework precedents | `ref/numerical-safety.md`  |
+| Performance rules (no SAM Ignitors, no per-block alloc, JS hot-path patterns)      | `ref/performance.md`       |
 
 ## Build & Test
 

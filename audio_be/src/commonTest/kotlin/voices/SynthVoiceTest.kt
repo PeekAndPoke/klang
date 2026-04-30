@@ -5,6 +5,8 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
@@ -53,10 +55,12 @@ class SynthVoiceTest : StringSpec({
     "SynthVoice passes pitch modulation to signal" {
         var receivedPhaseMod: DoubleArray? = null
 
-        val trackingSignal = Ignitor { buffer, _, ctx ->
-            receivedPhaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+        val trackingSignal: Ignitor = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                receivedPhaseMod = ctx.phaseMod
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) buffer[i] = 1.0
+            }
         }
 
         val voice = createSynthVoice(
@@ -75,10 +79,12 @@ class SynthVoiceTest : StringSpec({
     "SynthVoice without pitch modulation passes null to signal" {
         var receivedPhaseMod: DoubleArray? = null
 
-        val trackingSignal = Ignitor { buffer, _, ctx ->
-            receivedPhaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+        val trackingSignal: Ignitor = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                receivedPhaseMod = ctx.phaseMod
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) buffer[i] = 1.0
+            }
         }
 
         val voice = createSynthVoice(
@@ -164,11 +170,13 @@ class SynthVoiceTest : StringSpec({
         var receivedOffset = -1
         var receivedLength = -1
 
-        val trackingSignal = Ignitor { buffer, _, ctx ->
-            receivedOffset = ctx.offset
-            receivedLength = ctx.length
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+        val trackingSignal: Ignitor = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                receivedOffset = ctx.offset
+                receivedLength = ctx.length
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) buffer[i] = 1.0
+            }
         }
 
         val voice = createSynthVoice(
@@ -187,10 +195,12 @@ class SynthVoiceTest : StringSpec({
     "SynthVoice with partial block renders correct length" {
         var receivedLength = -1
 
-        val trackingSignal = Ignitor { buffer, _, ctx ->
-            receivedLength = ctx.length
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+        val trackingSignal: Ignitor = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                receivedLength = ctx.length
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) buffer[i] = 1.0
+            }
         }
 
         val voice = createSynthVoice(
@@ -208,10 +218,12 @@ class SynthVoiceTest : StringSpec({
     "SynthVoice tracks elapsed frames across multiple renders" {
         val elapsedFrames = mutableListOf<Int>()
 
-        val trackingSignal = Ignitor { buffer, _, ctx ->
-            elapsedFrames.add(ctx.voiceElapsedFrames)
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) buffer[i] = 1.0
+        val trackingSignal: Ignitor = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                elapsedFrames.add(ctx.voiceElapsedFrames)
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) buffer[i] = 1.0
+            }
         }
 
         val voice = createSynthVoice(

@@ -31,6 +31,7 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
 | Working on effects, Orbits mixing, KlangAudioRenderer pipeline                                      | `audio/ref/effects-mixing.md`    |
 | Working on sample loading, decoding, caching (audio_fe)                                             | `audio/ref/sample-management.md` |
 | Numerical safety (NaN/Inf/subnormals), `SAFE_MIN`/`SAFE_MAX` choice, framework precedents (SC/JUCE) | `audio/ref/numerical-safety.md`  |
+| Performance rules — no SAM Ignitors, no per-block alloc, Kotlin/JS hot-path patterns                | `audio/ref/performance.md`       |
 
 ## Testing
 
@@ -47,6 +48,9 @@ Documentation lives in `audio/` (top-level docs dir, not a Kotlin module) and `a
   (range-check overhead on every operation), `Char` (heap-allocated wrapper). Use `Int` for frame counts, buffer
   indices, loop counters, MIDI notes (max ~2.1B frames = ~12.4 hours at 48kHz). Use `Double` for time values.
   Convert banned types from external APIs to `Int`/`Double` at the boundary immediately.
+- **Stateful Ignitors must be classes, not SAM lambdas.** `interface Ignitor` is intentionally NOT a `fun interface`.
+  Anything with mutable cross-block state lives in a `private class XxxIgnitor : Ignitor` with explicit fields.
+  See `audio/ref/performance.md` for the full rationale (closure-captured `var` becomes Kotlin/JS ObjectRef).
 - Real-time audio: no heap allocations in hot paths; block-based processing (128–256 frames/block).
 - `audio_bridge` is the dependency root — all other audio modules depend on it.
 

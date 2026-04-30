@@ -8,6 +8,12 @@ import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
+import io.peekandpoke.klang.audio_be.ignitor.FilterEnvelope
+import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors
+import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
+import io.peekandpoke.klang.audio_be.ignitor.lowpass
 import io.peekandpoke.ultra.common.toFixed
 import kotlin.math.PI
 import kotlin.math.sin
@@ -169,6 +175,33 @@ class EffectBenchmark(
             step
         }
 
+        // ── Ignitor combinators (sine source → svf filter, freshly built per iteration) ──
+
+        private fun svfIgnitorCase(
+            name: String,
+            build: () -> Ignitor,
+        ): Case = Case(name) { sr, bf ->
+            val ignitor = build()
+            val scratch = ScratchBuffers(bf)
+            val ctx = IgniteContext(
+                sampleRate = sr,
+                voiceDurationFrames = Int.MAX_VALUE / 2,
+                gateEndFrame = Int.MAX_VALUE / 2,
+                releaseFrames = sr / 10,
+                voiceEndFrame = Int.MAX_VALUE / 2,
+                scratchBuffers = scratch,
+                offset = 0,
+                length = bf,
+                voiceElapsedFrames = 0,
+            )
+            val buffer = AudioBuffer(bf)
+            val step: () -> Unit = {
+                ignitor.generate(buffer, 440.0, ctx)
+                ctx.voiceElapsedFrames += bf
+            }
+            step
+        }
+
         // ── Stereo dynamics (separate left/right buffers, in-place) ─────────────
 
         private fun compressorCase(
@@ -196,6 +229,19 @@ class EffectBenchmark(
             monoFilterCase("SvfHPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfHPF(1000.0, 1.0, sr) },
             monoFilterCase("SvfBPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfBPF(1000.0, 1.0, sr) },
             monoFilterCase("SvfNotch (1k, q=1)") { sr -> LowPassHighPassFilters.SvfNotch(1000.0, 1.0, sr) },
+
+            // Ignitor.svf combinator (sine → lowpass), env-off vs env-on. Comparable to
+            // class-form `SvfLPF` but exercises the closure-based DSL hot path.
+            svfIgnitorCase("Ignitor.svf LPF (no env, 1k, q=1)") {
+                Ignitors.sine().lowpass(1000.0, 1.0)
+            },
+            svfIgnitorCase("Ignitor.svf LPF (env, 1k, q=1)") {
+                Ignitors.sine().lowpass(
+                    cutoffHz = 1000.0,
+                    q = 1.0,
+                    env = FilterEnvelope(depth = 0.5, attackSec = 0.05, decaySec = 0.1, sustainLevel = 0.7, releaseSec = 0.5),
+                )
+            },
 
             // Stereo effects with separate input/output
             stereoIoCase("Reverb (default)") { sr ->

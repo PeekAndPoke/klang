@@ -22,7 +22,12 @@ class KlangAudioRenderer(
         sampleRate = sampleRate,
         thresholdDb = -1.0,    // Ceiling at -1dB
         ratio = 20.0,          // Brickwall ratio
-        kneeDb = 0.0,
+        // 2 dB soft knee — 2026-04-30 fix for britzeling on heavily-distorted content.
+        // With kneeDb=0 the gain curve had a C¹ kink at the threshold corner; every
+        // envelope crossing of -1 dBFS injected high-order harmonics at audio rate.
+        // The 2 dB knee makes the corner smooth without changing the brickwall character
+        // (asymptotic slopes are unchanged: 0 below threshold, ~-0.95 above).
+        kneeDb = 2.0,
         attackSeconds = 0.001, // 1ms allows transients to retain punch before clamping
         releaseSeconds = 0.1,
     )

@@ -31,10 +31,7 @@ class KlangAudioWorklet : AudioWorkletProcessor() {
         val klangTime = KlangTime.create()  // Creates AudioWorklet-specific time source
 
         // Core DSP components
-        val cylinders = Cylinders(
-            blockFrames = blockFrames,
-            sampleRate = sampleRate
-        )
+        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
 
         val ignitorRegistry = IgnitorRegistry().apply {
             registerDefaults()

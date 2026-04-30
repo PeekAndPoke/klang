@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 /**
  * ADSR amplitude envelope combinator.
  *
@@ -19,14 +21,22 @@ fun Ignitor.adsr(
     decaySec: Ignitor,
     sustainLevel: Ignitor,
     releaseSec: Ignitor,
-): Ignitor {
-    var currentLevel = 0.0
-    var releaseStartLevel = 0.0
-    var releaseStarted = false
+): Ignitor = AdsrIgnitor(this, attackSec, decaySec, sustainLevel, releaseSec)
 
-    return Ignitor { output, freqHz, ctx ->
+private class AdsrIgnitor(
+    private val upstream: Ignitor,
+    private val attackSec: Ignitor,
+    private val decaySec: Ignitor,
+    private val sustainLevel: Ignitor,
+    private val releaseSec: Ignitor,
+) : Ignitor {
+    private var currentLevel: Double = 0.0
+    private var releaseStartLevel: Double = 0.0
+    private var releaseStarted: Boolean = false
+
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { input ->
-            this.generate(input, freqHz, ctx)
+            upstream.generate(input, freqHz, ctx)
 
             val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx).coerceAtLeast(0.0)
             val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx).coerceAtLeast(0.0)
@@ -47,7 +57,6 @@ fun Ignitor.adsr(
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 if (absPos >= gateEndPos) {
-                    // Release phase
                     if (!releaseStarted) {
                         releaseStartLevel = currentLevel
                         releaseStarted = true
@@ -56,7 +65,6 @@ fun Ignitor.adsr(
                     val relRate = releaseStartLevel / relDenom
                     currentLevel = releaseStartLevel - (relPos * relRate)
                 } else {
-                    // Attack / Decay / Sustain
                     releaseStarted = false
                     currentLevel = when {
                         absPos < attackFrames -> absPos * attRate
@@ -71,7 +79,7 @@ fun Ignitor.adsr(
 
                 if (currentLevel < 0.0) currentLevel = 0.0
 
-                output[i] = (input[i] * currentLevel)
+                buffer[i] = (input[i] * currentLevel)
                 absPos++
             }
         }

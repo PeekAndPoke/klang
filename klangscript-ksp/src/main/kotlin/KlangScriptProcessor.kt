@@ -174,7 +174,7 @@ class KlangScriptProcessor(
                     val extType = fn.extensionReceiver?.resolve()
                     if (extType != null) {
                         var decl = extType.declaration
-                        while (decl is KSTypeAlias) decl = (decl as KSTypeAlias).type.resolve().declaration
+                        while (decl is KSTypeAlias) decl = decl.type.resolve().declaration
                         val cls = decl as? KSClassDeclaration
 
                         // Auto-map Kotlin platform types to their KlangScript runtime

@@ -20,9 +20,11 @@ class FilterModulationTest : StringSpec({
     val sampleRate = 44100
     val blockFrames = 100
 
-    val noopSignal = Ignitor { buffer, _, ctx ->
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) buffer[i] = 0.0
+    val noopSignal: Ignitor = object : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) buffer[i] = 0.0
+        }
     }
 
     fun createSignalCtx(

@@ -598,91 +598,94 @@ internal fun Ignitor.distortVariant(
     var by2 = 0.0
     var biquadInit = false
 
-    return Ignitor { output, freqHz, ctx ->
-        ctx.scratchBuffers.use { work ->
-            this.generate(work, freqHz, ctx)
+    val upstream = this
+    return object : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            ctx.scratchBuffers.use { work ->
+                upstream.generate(work, freqHz, ctx)
 
-            if (amount <= 0.0) {
+                if (amount <= 0.0) {
+                    val end = ctx.offset + ctx.length
+                    for (i in ctx.offset until end) buffer[i] = work[i]
+                    return@use
+                }
+
+                val driveGain = 10.0.pow(amount * 1.2)
                 val end = ctx.offset + ctx.length
-                for (i in ctx.offset until end) output[i] = work[i]
-                return@use
-            }
 
-            val driveGain = 10.0.pow(amount * 1.2)
-            val end = ctx.offset + ctx.length
-
-            // Pre-shape DC block (PRE_BLOCK only).
-            if (variant == DistortVariant.PRE_BLOCK) {
-                for (i in ctx.offset until end) {
-                    val xi = work[i].toDouble()
-                    val po = xi - px1 + a * py1
-                    px1 = xi
-                    py1 = flushDenormal(po)
-                    work[i] = po
-                }
-            }
-
-            val os = oversampler
-            if (os != null) {
-                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                    (waveshaper(sample.toDouble() * driveGain) * outputGain)
-                }
-            } else {
-                for (i in ctx.offset until end) {
-                    work[i] = (waveshaper(work[i].toDouble() * driveGain) * outputGain)
-                }
-            }
-
-            when (variant) {
-                DistortVariant.STOCK -> {
-                    for (i in ctx.offset until end) {
-                        val y = work[i].toDouble()
-                        val out = y - x1 + a * y1
-                        x1 = y; y1 = flushDenormal(out)
-                        output[i] = out
-                    }
-                }
-
-                DistortVariant.POST_TANH -> {
-                    for (i in ctx.offset until end) {
-                        val y = work[i].toDouble()
-                        val out = y - x1 + a * y1
-                        x1 = y; y1 = flushDenormal(out)
-                        // Soft-cap at ±1: tanh of the DC-blocked signal. Bounds the
-                        // 2× overshoot back to ~1, smooth knee → no aliasing introduced.
-                        output[i] = tanh(out)
-                    }
-                }
-
-                DistortVariant.BIQUAD_HPF -> {
-                    if (!biquadInit) {
-                        // 2nd-order Butterworth HPF, fc=5Hz, Q=0.707.
-                        val fc = 5.0
-                        val w0 = 2.0 * PI * fc / ctx.sampleRateD
-                        val cosw = kotlin.math.cos(w0)
-                        val sinw = kotlin.math.sin(w0)
-                        val q = 0.707
-                        val alpha = sinw / (2.0 * q)
-                        val a0 = 1.0 + alpha
-                        b0 = ((1.0 + cosw) / 2.0) / a0
-                        b1 = -(1.0 + cosw) / a0
-                        b2 = ((1.0 + cosw) / 2.0) / a0
-                        ar1 = (-2.0 * cosw) / a0
-                        ar2 = (1.0 - alpha) / a0
-                        biquadInit = true
-                    }
+                // Pre-shape DC block (PRE_BLOCK only).
+                if (variant == DistortVariant.PRE_BLOCK) {
                     for (i in ctx.offset until end) {
                         val xi = work[i].toDouble()
-                        val out = b0 * xi + b1 * bx1 + b2 * bx2 - ar1 * by1 - ar2 * by2
-                        bx2 = bx1; bx1 = xi
-                        by2 = by1; by1 = flushDenormal(out)
-                        output[i] = out
+                        val po = xi - px1 + a * py1
+                        px1 = xi
+                        py1 = flushDenormal(po)
+                        work[i] = po
                     }
                 }
 
-                DistortVariant.PRE_BLOCK -> {
+                val os = oversampler
+                if (os != null) {
+                    os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                        (waveshaper(sample.toDouble() * driveGain) * outputGain)
+                    }
+                } else {
                     for (i in ctx.offset until end) {
-                        output[i] = work[i]
+                        work[i] = (waveshaper(work[i].toDouble() * driveGain) * outputGain)
+                    }
+                }
+
+                when (variant) {
+                    DistortVariant.STOCK -> {
+                        for (i in ctx.offset until end) {
+                            val y = work[i].toDouble()
+                            val out = y - x1 + a * y1
+                            x1 = y; y1 = flushDenormal(out)
+                            buffer[i] = out
+                        }
+                    }
+
+                    DistortVariant.POST_TANH -> {
+                        for (i in ctx.offset until end) {
+                            val y = work[i].toDouble()
+                            val out = y - x1 + a * y1
+                            x1 = y; y1 = flushDenormal(out)
+                            // Soft-cap at ±1: tanh of the DC-blocked signal. Bounds the
+                            // 2× overshoot back to ~1, smooth knee → no aliasing introduced.
+                            buffer[i] = tanh(out)
+                        }
+                    }
+
+                    DistortVariant.BIQUAD_HPF -> {
+                        if (!biquadInit) {
+                            // 2nd-order Butterworth HPF, fc=5Hz, Q=0.707.
+                            val fc = 5.0
+                            val w0 = 2.0 * PI * fc / ctx.sampleRateD
+                            val cosw = kotlin.math.cos(w0)
+                            val sinw = kotlin.math.sin(w0)
+                            val q = 0.707
+                            val alpha = sinw / (2.0 * q)
+                            val a0 = 1.0 + alpha
+                            b0 = ((1.0 + cosw) / 2.0) / a0
+                            b1 = -(1.0 + cosw) / a0
+                            b2 = ((1.0 + cosw) / 2.0) / a0
+                            ar1 = (-2.0 * cosw) / a0
+                            ar2 = (1.0 - alpha) / a0
+                            biquadInit = true
+                        }
+                        for (i in ctx.offset until end) {
+                            val xi = work[i].toDouble()
+                            val out = b0 * xi + b1 * bx1 + b2 * bx2 - ar1 * by1 - ar2 * by2
+                            bx2 = bx1; bx1 = xi
+                            by2 = by1; by1 = flushDenormal(out)
+                            buffer[i] = out
+                        }
+                    }
+
+                    DistortVariant.PRE_BLOCK -> {
+                        for (i in ctx.offset until end) {
+                            buffer[i] = work[i]
+                        }
                     }
                 }
             }

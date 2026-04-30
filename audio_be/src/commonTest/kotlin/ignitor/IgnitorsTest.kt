@@ -9,6 +9,7 @@ import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.random.Random
@@ -61,10 +62,10 @@ class ExcitersTest : StringSpec({
     }
 
     /** Find peak absolute amplitude */
-    fun AudioBuffer.peakAmplitude(): Double = maxOf((maxOrNull() ?: 0.0).toDouble(), -(minOrNull() ?: 0.0).toDouble())
+    fun AudioBuffer.peakAmplitude(): Double = maxOf((maxOrNull() ?: 0.0), -(minOrNull() ?: 0.0))
 
     /** Check that the waveform is roughly symmetric around zero (mean close to 0) */
-    fun AudioBuffer.dcOffset(): Double = map { it.toDouble() }.average()
+    fun AudioBuffer.dcOffset(): Double = map { it }.average()
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Triangle
@@ -113,7 +114,7 @@ class ExcitersTest : StringSpec({
         val rampLen = 100
         if (rampStart + rampLen < buf.size) {
             // Slope should be roughly constant
-            val slopes = (0 until rampLen - 1).map { (buf[rampStart + it + 1] - buf[rampStart + it]).toDouble() }
+            val slopes = (0 until rampLen - 1).map { (buf[rampStart + it + 1] - buf[rampStart + it]) }
             val avgSlope = slopes.average()
             // All slopes should be close to the average (linear = constant slope)
             for (slope in slopes) {
@@ -135,7 +136,7 @@ class ExcitersTest : StringSpec({
         sig.generate(buf2, 440.0, ctx)
 
         // Last sample of block 1 and first sample of block 2 should be close (continuous)
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 0.05
     }
 
@@ -186,7 +187,7 @@ class ExcitersTest : StringSpec({
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 0.05
     }
 
@@ -236,7 +237,7 @@ class ExcitersTest : StringSpec({
         sig.generate(buf2, 440.0, ctx)
 
         // Sawtooth is continuous within a ramp — only jumps at reset
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 1.5
     }
 
@@ -254,7 +255,7 @@ class ExcitersTest : StringSpec({
         val g = 0.5
         val buf = generate(Ignitors.square().withGain(gain(g)), freqHz = 440.0)
         // Most samples should be close to +gain or -gain
-        val nearGain = buf.count { abs(abs(it.toDouble()) - g) < 0.05 }
+        val nearGain = buf.count { abs(abs(it) - g) < 0.05 }
         // Allow ~5% of samples near transitions to deviate
         nearGain shouldBeGreaterThanOrEqual (buf.size * 0.9).toInt()
     }
@@ -282,7 +283,7 @@ class ExcitersTest : StringSpec({
         sig.generate(buf2, 440.0, ctx)
 
         // Square can jump at transitions, but block boundary shouldn't cause extra glitches
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 1.5
     }
 
@@ -304,7 +305,7 @@ class ExcitersTest : StringSpec({
         val g = 1.0
         val buf = generate(Ignitors.whiteNoise(Random(42)).withGain(gain(g)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan g + 0.001
+            abs(sample) shouldBeLessThan g + 0.001
         }
     }
 
@@ -317,7 +318,7 @@ class ExcitersTest : StringSpec({
         val g = 0.3
         val buf = generate(Ignitors.whiteNoise(Random(42)).withGain(gain(g)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan g + 0.001
+            abs(sample) shouldBeLessThan g + 0.001
         }
         buf.peakAmplitude() shouldBeGreaterThan g * 0.8
     }
@@ -402,7 +403,7 @@ class ExcitersTest : StringSpec({
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 1.5
     }
 
@@ -439,7 +440,7 @@ class ExcitersTest : StringSpec({
         val g = 0.3
         val buf = generate(Ignitors.impulse().withGain(gain(g)), freqHz = 440.0)
         val clickValue = buf.first { it != 0.0 }
-        clickValue.toDouble() shouldBe (g plusOrMinus 0.001)
+        clickValue shouldBe (g plusOrMinus 0.001)
     }
 
     "impulse - phase continuity across blocks" {
@@ -508,7 +509,7 @@ class ExcitersTest : StringSpec({
         val buf = AudioBuffer(blockSize)
         sig.generate(buf, 440.0, ctx)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -519,7 +520,7 @@ class ExcitersTest : StringSpec({
     "brown noise - output is bounded" {
         val buf = generate(Ignitors.brownNoise(Random(42)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
     }
 
@@ -544,7 +545,7 @@ class ExcitersTest : StringSpec({
     "pink noise - output is bounded" {
         val buf = generate(Ignitors.pinkNoise(Random(42)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
     }
 
@@ -650,7 +651,7 @@ class ExcitersTest : StringSpec({
     "dust - output is non-negative" {
         val buf = generate(Ignitors.dust(Random(42), density = density(0.5)), freqHz = 440.0)
         for (sample in buf) {
-            sample.toDouble() shouldBeGreaterThan -0.001
+            sample shouldBeGreaterThan -0.001
         }
     }
 
@@ -695,7 +696,7 @@ class ExcitersTest : StringSpec({
 
         // Output should be bounded (no NaN/Infinity from unbounded phase)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -708,7 +709,7 @@ class ExcitersTest : StringSpec({
         sig.generate(buf, 440.0, ctx)
 
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -721,7 +722,7 @@ class ExcitersTest : StringSpec({
         sig.generate(buf, 440.0, ctx)
 
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -734,7 +735,7 @@ class ExcitersTest : StringSpec({
         sig.generate(buf, 440.0, ctx)
 
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -788,7 +789,7 @@ class ExcitersTest : StringSpec({
 
         // Should produce continuous output (no NaN, no extreme jumps)
         for (sample in buf1 + buf2) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
     }
 
@@ -801,7 +802,7 @@ class ExcitersTest : StringSpec({
         sig.generate(buf, 440.0, ctx)
 
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
     }
 
@@ -1116,7 +1117,7 @@ class ExcitersTest : StringSpec({
                 voiceEndFrame = defaultBlockFrames,
                 scratchBuffers = ScratchBuffers(defaultBlockFrames),
             ),
-            cylinders = io.peekandpoke.klang.audio_be.cylinders.Cylinders(
+            cylinders = Cylinders(
                 blockFrames = defaultBlockFrames, sampleRate = sampleRate,
             ),
         ).apply {
@@ -1142,8 +1143,8 @@ class ExcitersTest : StringSpec({
         // Skip the first 1024 samples (DC blocker startup transient).
         val steady = buf.sliceArray(1024 until buf.size)
         // Mean should be near zero (no rail lock).
-        val mean = steady.map { it.toDouble() }.average()
-        kotlin.math.abs(mean) shouldBeLessThan 0.1
+        val mean = steady.average()
+        abs(mean) shouldBeLessThan 0.1
         // And no NaN / Inf despite the extreme drive.
         steady.none { it.isNaN() || it.isInfinite() } shouldBe true
         // Direct call (no IgniteRenderer wrap) — peak is bounded by the
@@ -1169,5 +1170,4 @@ class ExcitersTest : StringSpec({
         // Notch at exactly the signal frequency should reduce amplitude
         notched.peakAmplitude() shouldBeLessThan dry.peakAmplitude()
     }
-
 })

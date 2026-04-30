@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.pow
 import kotlin.math.sin
 
@@ -23,10 +25,14 @@ import kotlin.math.sin
  * Converts a deviation-space mod Ignitor (0.0 = no change) to ratio space (1.0 = no change)
  * by adding 1.0 to every sample. Used by the [IgnitorDsl.PitchMod] handler.
  */
-fun deviationToRatioIgnitor(userMod: Ignitor): Ignitor = Ignitor { buffer, freqHz, ctx ->
-    userMod.generate(buffer, freqHz, ctx)
-    val end = ctx.offset + ctx.length
-    for (i in ctx.offset until end) buffer[i] = buffer[i] + 1.0
+fun deviationToRatioIgnitor(userMod: Ignitor): Ignitor = DeviationToRatioIgnitor(userMod)
+
+private class DeviationToRatioIgnitor(private val userMod: Ignitor) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        userMod.generate(buffer, freqHz, ctx)
+        val end = ctx.offset + ctx.length
+        for (i in ctx.offset until end) buffer[i] = buffer[i] + 1.0
+    }
 }
 
 /**
@@ -42,21 +48,23 @@ fun deviationToRatioIgnitor(userMod: Ignitor): Ignitor = Ignitor { buffer, freqH
  * @param rate LFO frequency in Hz
  * @param depth modulation depth in semitones
  */
-fun vibratoModIgnitor(rate: Ignitor, depth: Ignitor): Ignitor {
-    var lfoPhase = 0.0
+private class VibratoModIgnitor(
+    private val rate: Ignitor,
+    private val depth: Ignitor,
+) : Ignitor {
+    private var lfoPhase: Double = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val rateVal = Ignitors.readParam(rate, freqHz, ctx)
         val depthSemitones = Ignitors.readParam(depth, freqHz, ctx)
+        val end = ctx.offset + ctx.length
 
         if (depthSemitones <= 0.0) {
-            val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) buffer[i] = 1.0
-            return@Ignitor
+            return
         }
 
         val lfoInc = TWO_PI * rateVal / ctx.sampleRateD
-        val end = ctx.offset + ctx.length
         for (i in ctx.offset until end) {
             buffer[i] = safeOut(2.0.pow(sin(lfoPhase) * depthSemitones / 12.0))
             lfoPhase += lfoInc
@@ -64,6 +72,8 @@ fun vibratoModIgnitor(rate: Ignitor, depth: Ignitor): Ignitor {
         }
     }
 }
+
+fun vibratoModIgnitor(rate: Ignitor, depth: Ignitor): Ignitor = VibratoModIgnitor(rate, depth)
 
 fun vibratoModIgnitor(rate: Double, depth: Double): Ignitor =
     vibratoModIgnitor(ParamIgnitor("rate", rate), ParamIgnitor("depth", depth))
@@ -80,21 +90,22 @@ fun vibratoModIgnitor(rate: Double, depth: Double): Ignitor =
  *
  * @param amount pitch change exponent over full voice duration. Positive = pitch rises.
  */
-fun accelerateModIgnitor(amount: Ignitor): Ignitor {
-    return Ignitor { buffer, freqHz, ctx ->
-        val amountVal = Ignitors.readParam(amount, freqHz, ctx)
+fun accelerateModIgnitor(amount: Ignitor): Ignitor = AccelerateModIgnitor(amount)
 
+private class AccelerateModIgnitor(private val amount: Ignitor) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val amountVal = Ignitors.readParam(amount, freqHz, ctx)
         val end = ctx.offset + ctx.length
 
         if (amountVal == 0.0) {
             for (i in ctx.offset until end) buffer[i] = 1.0
-            return@Ignitor
+            return
         }
 
         val totalFrames = ctx.voiceDurationFramesD
         if (totalFrames <= 0.0) {
             for (i in ctx.offset until end) buffer[i] = 1.0
-            return@Ignitor
+            return
         }
 
         val startProgress = ctx.voiceElapsedFrames.toDouble() / totalFrames
@@ -134,14 +145,23 @@ fun pitchEnvelopeModIgnitor(
     amount: Ignitor,
     curve: Ignitor = ParamIgnitor("curve", 0.0),
     anchor: Ignitor = ParamIgnitor("anchor", 0.0),
-): Ignitor {
-    return Ignitor { buffer, freqHz, ctx ->
+): Ignitor = PitchEnvelopeModIgnitor(attackSec, decaySec, releaseSec, amount, curve, anchor)
+
+private class PitchEnvelopeModIgnitor(
+    private val attackSec: Ignitor,
+    private val decaySec: Ignitor,
+    private val releaseSec: Ignitor,
+    private val amount: Ignitor,
+    private val curve: Ignitor,
+    private val anchor: Ignitor,
+) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val amountVal = Ignitors.readParam(amount, freqHz, ctx)
         val end = ctx.offset + ctx.length
 
         if (amountVal == 0.0) {
             for (i in ctx.offset until end) buffer[i] = 1.0
-            return@Ignitor
+            return
         }
 
         val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx)
@@ -197,13 +217,23 @@ fun fmModIgnitor(
     envDecaySec: Ignitor = ParamIgnitor("envDecaySec", 0.0),
     envSustainLevel: Ignitor = ParamIgnitor("envSustainLevel", 1.0),
     envReleaseSec: Ignitor = ParamIgnitor("envReleaseSec", 0.0),
-): Ignitor {
-    return Ignitor { buffer, freqHz, ctx ->
+): Ignitor = FmModIgnitor(modulator, ratio, depth, envAttackSec, envDecaySec, envSustainLevel, envReleaseSec)
+
+private class FmModIgnitor(
+    private val modulator: Ignitor,
+    private val ratio: Ignitor,
+    private val depth: Ignitor,
+    private val envAttackSec: Ignitor,
+    private val envDecaySec: Ignitor,
+    private val envSustainLevel: Ignitor,
+    private val envReleaseSec: Ignitor,
+) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         val end = ctx.offset + ctx.length
 
         if (freqHz <= 0.0) {
             for (i in ctx.offset until end) buffer[i] = 1.0
-            return@Ignitor
+            return
         }
 
         val ratioVal = Ignitors.readParam(ratio, freqHz, ctx)
@@ -211,7 +241,7 @@ fun fmModIgnitor(
 
         if (depthVal == 0.0) {
             for (i in ctx.offset until end) buffer[i] = 1.0
-            return@Ignitor
+            return
         }
 
         val envAttackSecVal = Ignitors.readParam(envAttackSec, freqHz, ctx)

@@ -365,24 +365,30 @@ object TestSamples {
  * Test signal generators (Ignitor interface).
  */
 object TestIgnitors {
-    val constant = Ignitor { buffer, _, ctx ->
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            buffer[i] = 1.0
+    val constant: Ignitor = object : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                buffer[i] = 1.0
+            }
         }
     }
 
-    val ramp = Ignitor { buffer, _, ctx ->
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            buffer[i] = (i - ctx.offset).toDouble() / ctx.length
+    val ramp: Ignitor = object : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                buffer[i] = (i - ctx.offset).toDouble() / ctx.length
+            }
         }
     }
 
-    val silence = Ignitor { buffer, _, ctx ->
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            buffer[i] = 0.0
+    val silence: Ignitor = object : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                buffer[i] = 0.0
+            }
         }
     }
 }
