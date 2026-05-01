@@ -7,14 +7,12 @@ import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
-import kotlin.time.Duration.Companion.milliseconds
 
 class JvmAudioBackend(
     config: AudioBackend.Config,
@@ -80,8 +78,12 @@ class JvmAudioBackend(
 
         // println("AudioSystem SourceDataLine: $line ${line.isActive}")
 
-        // Buffer size: 500ms should be safe enough for JVM
-        val bufferFrames = 1024 // (sampleRate * bufferMs / 1000.0).toInt()
+        // Hardware buffer ≈ 250 ms — matches JS `latencyHint = "playback"` profile
+        // (prioritise glitch-free playback over minimum latency). Backed by a single
+        // pinned audio thread (see klang/.../index_jvm.kt) and natural pacing via
+        // line.write(), so no extra coroutine sleep is needed.
+        val bufferMs = 250
+        val bufferFrames = (sampleRate * bufferMs / 1000.0).toInt()
         // 4 bytes per frame (Stereo 16-bit)
         val bufferBytes = bufferFrames * 4
 
@@ -147,11 +149,11 @@ class JvmAudioBackend(
                 currentFrame += blockSize
 
                 // 3. Write to Hardware
-                // This call blocks if the hardware buffer is full, pacing the loop
+                // This call blocks if the hardware buffer is full — that IS the loop
+                // pacing. No coroutine sleep needed; an explicit delay() would only
+                // add scheduler jitter on top of the already-deterministic backpressure
+                // and force a per-block thread reschedule. See `audio/ref/performance.md`.
                 line.write(outBytes, 0, outBytes.size)
-
-                // 60 FPS
-                delay(10.milliseconds)
             }
         } finally {
             // Cleanup

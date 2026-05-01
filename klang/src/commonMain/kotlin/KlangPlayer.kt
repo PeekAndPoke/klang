@@ -107,7 +107,10 @@ class KlangPlayer(
             // Store backend reference for visualizer access
             _activeBackend = backend
 
-            launch(backendDispatcher.limitedParallelism(1)) {
+            // backendDispatcher is a single-thread pinned dispatcher (see index_jvm.kt
+            // / index_js.kt). No `limitedParallelism(1)` needed — and it would only
+            // add per-resume re-enqueue overhead on top of an already-serial dispatcher.
+            launch(backendDispatcher) {
                 backend.run(this)
             }
         }
