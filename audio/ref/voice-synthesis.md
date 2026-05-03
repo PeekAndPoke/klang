@@ -188,3 +188,41 @@ class PitchEnvelope(attack: Double, decay: Double, release: Double, env: Double,
 class FilterModulator(filter: AudioFilter, envelope: FilterEnvelope)
 // Applies FilterEnvelope to filter cutoff dynamically
 ```
+
+## Envelope / voice-lifetime semantics
+
+> **The longest amplitude tail wins. Modulator envelopes are best-effort within.**
+
+Two classes of envelope, with different roles in deciding when a voice ends:
+
+- **Amplitude envelopes** determine voice lifetime. The longest one wins.
+    - The voice amp ADSR (`data.adsr` → `Voice.Envelope`) — the VCA stage.
+    - Any `IgnitorDsl.Adsr` node inside the ignitor tree — wraps an audio
+      signal directly, so cutting it off mid-decay would click.
+    - Voice end frame = `gateEndFrame + max(amp.release, ignitorAmpRelease)`.
+
+- **Modulator envelopes** do **not** extend voice lifetime:
+    - Filter modulator envelope (`lpadsr` / `hpadsr` / `bpadsr` / `notchadsr`)
+      — modulates filter cutoff at control rate.
+    - FM envelope — modulates FM depth.
+    - Pitch envelope — modulates pitch.
+    - These run their attack/decay/sustain during the gate phase and start
+      their release at gate-off, but get cut off when the voice ends if
+      their release is longer than the amp release. No clicks result —
+      they only modulate parameters, never the audio amplitude directly.
+
+**To make a long filter sweep audible after gate-off, set an amp release
+≥ the filter envelope's release.** Same applies to FM and pitch envelopes.
+This keeps the API behaviour predictable: the amp envelope IS the voice
+length — no implicit extension by modulators.
+
+**Why this rule:** amplitude tails cut short produce audible clicks, so
+the engine extends voice lifetime to cover them. Modulator tails cut short
+just stop modulating — no artefact, just less colour. So the engine doesn't
+spend CPU keeping a silent voice alive purely to finish a filter sweep
+nobody can hear.
+
+**Implementation reference:** `voices/VoiceFactory.kt:205-212` (oscillator
+path — extends amp ADSR to cover ignitor-internal `Adsr` nodes via
+`IgnitorDsl.maxReleaseSec()` at `audio_bridge/.../IgnitorDsl.kt:1304`).
+Per-block envelope math at `voices/strip/EnvelopeCalc.kt:14-34`.
