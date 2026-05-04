@@ -42,6 +42,7 @@ fun Tag.KlangCodeEditorComp(
     maxHighlightsPerEvent: Int = 10,
     pauseHighlightsWhen: (() -> Boolean)? = null,
     extraVoiceHandler: ((KlangPlaybackSignal.VoicesScheduled.VoiceEvent) -> Unit)? = null,
+    currentSource: String? = null,
 ): ComponentRef<KlangCodeEditorComp> = comp(
     KlangCodeEditorComp.Props(
         ctrl = ctrl,
@@ -50,6 +51,7 @@ fun Tag.KlangCodeEditorComp(
         maxHighlightsPerEvent = maxHighlightsPerEvent,
         pauseHighlightsWhen = pauseHighlightsWhen,
         extraVoiceHandler = extraVoiceHandler,
+        currentSource = currentSource,
     )
 ) {
     KlangCodeEditorComp(it)
@@ -68,6 +70,13 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
         val pauseHighlightsWhen: (() -> Boolean)?,
         /** Called in addition to the internal highlight buffer — useful for parallel highlight surfaces (e.g. a block editor). */
         val extraVoiceHandler: ((KlangPlaybackSignal.VoicesScheduled.VoiceEvent) -> Unit)?,
+        /**
+         * Source identity of the file shown in this editor. Highlight events whose
+         * [SourceLocation.source] doesn't match are silently dropped — keeps imported-
+         * library locations from drawing ghost marks at positions the user can't see.
+         * `null` (the default) matches main-script locations.
+         */
+        val currentSource: String?,
     )
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,6 +120,7 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
             onMount {
                 editorRef { editor -> editor.editorView?.let { highlightBuffer.attachTo(it) } }
                 highlightBuffer.maxHighlightsPerEvent = props.maxHighlightsPerEvent
+                highlightBuffer.currentSource = props.currentSource
             }
             onUnmount {
                 highlightBuffer.detach()
@@ -131,6 +141,17 @@ class KlangCodeEditorComp(ctx: Ctx<Props>) : Component<KlangCodeEditorComp.Props
     /** Updates the highlight-buffer's per-event cap and re-emits current voice signals to pick up the change. */
     fun setMaxHighlightsPerEvent(n: Int) {
         highlightBuffer.maxHighlightsPerEvent = n
+        highlightBuffer.cancelAll()
+        props.ctrl.reemitVoiceSignals()
+    }
+
+    /**
+     * Updates the source identity used by the highlight buffer to filter incoming events.
+     * Pass `null` to match main-script locations, or a library URI (e.g. `peekandpoke/tetris`)
+     * to view-only highlights from that library's source.
+     */
+    fun setCurrentSource(source: String?) {
+        highlightBuffer.currentSource = source
         highlightBuffer.cancelAll()
         props.ctrl.reemitVoiceSignals()
     }

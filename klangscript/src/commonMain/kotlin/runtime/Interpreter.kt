@@ -303,8 +303,10 @@ class Interpreter(
             )
         }
 
-        // Parse library source code
-        val libraryProgram = KlangScriptParser.parse(librarySource)
+        // Parse library source code — pass the library name as the source so all
+        // SourceLocations produced from imported code carry it. The editor uses
+        // this to filter highlight events to the file currently displayed.
+        val libraryProgram = KlangScriptParser.parse(librarySource, importStmt.libraryName)
 
         // Create an isolated environment / scope for library evaluation,
         // starting with the native environment of the engine.

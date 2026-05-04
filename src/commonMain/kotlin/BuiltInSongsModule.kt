@@ -38,6 +38,7 @@ fun KlangScriptExtensionBuilder.registerBuiltInSong(song: Song, importName: Stri
 fun KlangScriptExtensionBuilder.registerBuiltInSongsAsModules() {
     registerBuiltInSong(BuiltInSongs.derSchmetterling, "peekandpoke/der-schmetterling")
     registerBuiltInSong(BuiltInSongs.tetris, "peekandpoke/tetris")
+    registerBuiltInSong(BuiltInSongs.tetrisRemix, "peekandpoke/tetris-echo")
     registerBuiltInSong(BuiltInSongs.soundOfTheSea, "peekandpoke/sound-of-the-sea")
     registerBuiltInSong(BuiltInSongs.sakura, "peekandpoke/sakura")
     registerBuiltInSong(BuiltInSongs.aTruthWorthLyingFor, "peekandpoke/a-truth-worth-lying-for")

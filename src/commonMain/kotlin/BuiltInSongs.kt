@@ -12,6 +12,7 @@ import io.peekandpoke.klang.builtinsongs.sakuraSong
 import io.peekandpoke.klang.builtinsongs.smallTownBoySong
 import io.peekandpoke.klang.builtinsongs.soundOfTheSeaSong
 import io.peekandpoke.klang.builtinsongs.strangerThingsSong
+import io.peekandpoke.klang.builtinsongs.tetrisRemixSong
 import io.peekandpoke.klang.builtinsongs.tetrisSong
 
 /**
@@ -28,6 +29,7 @@ object BuiltInSongs {
 
     val derSchmetterling: Song = derSchmetterlingSong
     val tetris: Song = tetrisSong
+    val tetrisRemix: Song = tetrisRemixSong
     val soundOfTheSea: Song = soundOfTheSeaSong
     val sakura: Song = sakuraSong
     val aTruthWorthLyingFor: Song = aTruthWorthLyingForSong
@@ -41,6 +43,7 @@ object BuiltInSongs {
     val songs: List<Song> = listOf(
         derSchmetterling,
         tetris,
+        tetrisRemix,
         soundOfTheSea,
         sakura,
         aTruthWorthLyingFor,
