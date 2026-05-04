@@ -95,7 +95,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     // ==========================================
     DocSection(
         title = "Variables & Constants",
-        description = "Use `let` for values that change and `const` for values that don't. KlangScript supports numbers, strings, booleans, and null — no `undefined`.",
+        description = "Use `let` for values that change, `const` for values that don't, and `export name = expr` for top-level constants that a library exposes to importers. KlangScript supports numbers, strings, booleans, and null — no `undefined`.",
         examples = listOf(
             DocExample(
                 title = "let and const",
@@ -156,6 +156,26 @@ val klangScriptDocSections: List<DocSection> = listOf(
                     |console.log("0b1010 =", binary)
                 """.trimMargin(),
                 jsCompat = JsCompat.Compatible,
+            ),
+            DocExample(
+                title = "export — a const that is also a public export",
+                description = "`export name = expr` is a top-level form: it defines an immutable binding (like `const`) AND marks it as visible to importers. Use it in a library file to expose its public surface in one line, instead of `const name = expr; export { name }`.",
+                code = """
+                    |import * from "stdlib"
+                    |
+                    |// `export name = expr` — defines an immutable binding AND
+                    |// marks it for export. Top-level only.
+                    |export bpm = 120
+                    |export key = "A minor"
+                    |export title = "My First Beat"
+                    |
+                    |// Locally, `export` bindings work like `const`:
+                    |console.log(`${"$"}{title} — ${"$"}{key} at ${"$"}{bpm} BPM`)
+                    |
+                    |// And like `const`, they cannot be reassigned:
+                    |//   bpm = 140  // ❌ Cannot reassign constant variable 'bpm'
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
             ),
         ),
     ),
@@ -831,7 +851,7 @@ val klangScriptDocSections: List<DocSection> = listOf(
     // ==========================================
     DocSection(
         title = "Imports & the Standard Library",
-        description = "The standard library provides Math, console, and more. Use import/export to organize code into modules.",
+        description = "The standard library provides Math, console, and more. Use `import` and `export` to organize code into modules and to use other people's modules as building blocks.",
         examples = listOf(
             DocExample(
                 title = "Wildcard import and Math",
@@ -870,23 +890,69 @@ val klangScriptDocSections: List<DocSection> = listOf(
                 jsCompat = JsCompat.Compatible,
             ),
             DocExample(
-                title = "Selective and aliased imports",
-                description = "Import only what you need, or rename imports to avoid conflicts. Namespace imports keep everything under a prefix.",
+                title = "Selective import — pull specific names",
+                description = "`import { name } from \"lib\"` brings only the named exports into scope. Cleaner than wildcard when you only need a few things.",
+                code = """
+                    |// Selective import shape — pull only what you need:
+                    |//   import { double, square } from "math-utils"
+                    |//   import { double, square, halve } from "math-utils"
+                    |
+                    |// In this REPL, only stdlib is registered, so the demo uses wildcard:
+                    |import * from "stdlib"
+                    |console.log("sqrt(16):", Math.sqrt(16))
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "Aliased import — rename on import",
+                description = "`as` lets you rename a symbol when you import it. Useful when two libraries export the same name, or when you want a shorter local handle.",
+                code = """
+                    |// Aliased import shape — rename at the call site:
+                    |//   import { double as twice } from "math-utils"
+                    |//   import { round as r, sqrt as s } from "math-utils"
+                    |
+                    |// In this REPL, only stdlib is registered, so the demo uses wildcard:
+                    |import * from "stdlib"
+                    |console.log("sqrt(16):", Math.sqrt(16))
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "Namespace import — group everything under a prefix",
+                description = "`import * as ns from \"lib\"` pulls the whole library in under a single namespace object. Conflict-free; a clean default for utility libraries you use a lot from.",
+                code = """
+                    |// Namespace import shape — keep everything under a prefix:
+                    |//   import * as utils from "math-utils"
+                    |//   utils.double(7)
+                    |//   utils.square(8)
+                    |
+                    |// In this REPL, only stdlib is registered, so the demo uses wildcard:
+                    |import * from "stdlib"
+                    |console.log("sqrt(16):", Math.sqrt(16))
+                """.trimMargin(),
+                jsCompat = JsCompat.Incompatible,
+            ),
+            DocExample(
+                title = "Defining a library — `export` and namespaced imports",
+                description = "When you write a klangscript file as a library, declare its public surface with `export name = expr`. Module identifiers can be namespaced (`peekandpoke/<name>`) and versioned (`@1.0`) — the parser is opaque to that, so the syntax always parses; resolution depends on what your engine has registered.",
                 code = """
                     |import * from "stdlib"
                     |
-                    |// Selective import from a custom module:
-                    |// import { midiToFreq } from "music-utils"
-                    |// Aliased: import { abs as absolute } from "stdlib"
-                    |// Namespace: import * as M from "stdlib"
+                    |// In a library file, `export` lines are the public surface:
+                    |export bpm = 120
+                    |export key = "A minor"
+                    |export title = "Lead pattern"
                     |
-                    |// With stdlib, use Math directly:
-                    |const hypotenuse = Math.sqrt(Math.pow(3, 2) + Math.pow(4, 2))
-                    |console.log("3-4-5 triangle:", hypotenuse)
+                    |// Importers (in another file) pull them by name. Some shapes:
+                    |//   import { title, bpm }              from "my-song"
+                    |//   import { bpm as tempo }            from "my-song"   // rename
+                    |//   import * as song                   from "my-song"   // namespace
+                    |//
+                    |// Module identifiers can be namespaced and versioned:
+                    |//   import { song } from "peekandpoke/der-schmetterling"
+                    |//   import { song } from "peekandpoke/der-schmetterling@1.0"
                     |
-                    |const midiToFreq = (note) => Math.round(440 * Math.pow(2, (note - 69) / 12))
-                    |console.log("C4 (60):", midiToFreq(60), "Hz")
-                    |console.log("A4 (69):", midiToFreq(69), "Hz")
+                    |console.log(`${"$"}{title} — ${"$"}{key} at ${"$"}{bpm} BPM`)
                 """.trimMargin(),
                 jsCompat = JsCompat.Incompatible,
             ),

@@ -137,7 +137,7 @@ class KlangScriptDocsPage(ctx: NoProps) : PureComponent(ctx) {
                 +"Filter:"
             }
 
-            for (option in Filter.values()) {
+            for (option in Filter.entries) {
                 filterButton(option)
             }
         }
@@ -173,7 +173,7 @@ class KlangScriptDocsPage(ctx: NoProps) : PureComponent(ctx) {
                 marginBottom = 2.rem
             }
 
-            ui.dividing.header {
+            ui.dividing.header H2 {
                 css { put("color", "${laf.textPrimary} !important") }
                 +section.title
             }
@@ -201,7 +201,7 @@ class KlangScriptDocsPage(ctx: NoProps) : PureComponent(ctx) {
 
                         val exampleTitle = example.title
                         if (exampleTitle != null) {
-                            ui.sub.header {
+                            ui.header H3 {
                                 css {
                                     put("color", "${laf.textSecondary} !important")
                                     margin = Margin(0.px)

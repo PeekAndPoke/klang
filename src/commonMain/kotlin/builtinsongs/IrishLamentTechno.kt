@@ -108,7 +108,7 @@ let hit = stack(
 // ── QUIET BUILD-UP: 64 cycles, smooth saw-based morph ──────────────
 // melody3 (peak of original lament) degrades out; melody1 (opening of
 // lament) un-degrades in. Rhythm + bass elements ramp via saw signals.
-let melody3a = note(`<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5  f5 e5] [d5 a4 d5 f5]  [c5 g4 bb4 a4] [d5 c5 a4 g4] [d4@2 d4 ~]>`)
+let melody3a = note(`<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5  f5 e5] [d5 a4 d5  f5] [c5 g4 bb4 a4] [d5 c5 a4 g4] [d4@2  d4 ~]>`)
 let melody1  = note(`<[d4 f4 e4 d4] [c4 a4 g4 f4] [d4 g4 f4 e4] [c4 bb4 a4 g4] [d5 c5 bb4 a4] [g4 e4 d4 e4]  [a4 g4 f4 e4] [f4 c4 a4 ~]>`)
 
 let mel3 = melody3a.sound("saw").legato(0.75).hpf(80).lpf(2200).adsr("0.25:0.1:0.6:0.85").gain(0.15).orbit(0).pan(0.4)
@@ -238,6 +238,7 @@ arrange(
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing
 // Composed by: Claude, Motör, peekandpoke
+
 
 
 
