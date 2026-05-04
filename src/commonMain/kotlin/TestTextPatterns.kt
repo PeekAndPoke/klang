@@ -123,34 +123,35 @@ stack(
     .sound("pulse").warmth(0.75).crush(5).gain(0.05).clip(0.35).pan(berlin.slow(2)).adsr("0.03:0.08:0.2:0.1") // .solo()
     .filterWhen(x => x >= wait * 12 && x < (wait * 6 + keep))
   , // Melody -----------------------------------------------------------------------------------------------------------------
-  n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -3] [-1 0 2 6 4 2 0 -1]>")
+  n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -1] [-2 -1 2 6 4 2 0 -1]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.35).slow(16)).spread(1.0 ).tremolo("0.1:8").tremolodepth(saw.range(0,0.1).slow(256))
-    .gain(0.9).distort(0.25).warmth(0.5).postgain(0.2).adsr("0.01:0.2:0.8:0.155")
+    .gain(0.8).distort(0.25).warmth(0.5).postgain(0.2).adsr("0.01:0.2:0.8:0.155")
     .pan(sine.range(0.3, 0.7).slow(16)) // . solo()
-    .hpf(300).lpf(800).lpenv(perlin.range(3.0, 4.0).slow(8)).analog(2)
-    .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep))
+    .superimpose(bandf(notch).bandq(1.0).gain(0.125).transpose(12))
+    .hpf(260).lpf(800).lpenv(perlin.range(2.5, 4.0).slow(8)).analog(2)
+    .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.8).struct("x!8")
     .orbit(2).s("supersaw").unison(4).detune(saw.range(0.05, 0.45).slow(64)).warmth(0.3)
-    .gain(1.0).adsr("0.005:0.5:0.5:0.4").postgain(0.4).pan(saw.range(0.5, 0.1).slow(keep * 2))
+    .gain(1.0).adsr("0.01:0.6:0.5:0.4").postgain(0.4).pan(saw.range(0.5, 0.1).slow(keep * 2))
     .superimpose(x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").pan(saw.range(0.5, 0.9).slow(keep * 2)).legato(1.05))    
-    .lpf(4 * 440).hpf(100).notchf(notch).notchq(0.75)
+    .lpf(4 * 440).hpf(90).notchf(notch).notchq(0.75)
     .superimpose(x => x.gain(saw.slow(64).pow(2.0).mul(3)).crush("1.5".add(berlin2.mul(0.25).slow(4))).lpf(4 * 440).hpf(200).postgain(0.4))
-    .velocity(cat(saw.pow(2).slow(32), pure(1).slow(256))).analog(1.5)  // . solo()
+    .velocity(cat(saw.pow(2).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2))).analog(1.5)  // . solo()
     .filterWhen(x => x < (wait * 4 + keep)) // . mute()
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------
-  sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ cr]>")
-    .orbit(4).gain(0.85).pan(0.4).adsr("0.01:0.2:0.8:2.0").fast(2).degrade(0.1).lpf(4800)
+  sound("<[hh hh oh hh] [hh hh ~ hh] [hh hh oh hh] [hh hh ~ <cr!7 rd>]>")
+    .orbit(4).gain(0.8).pan(0.4).adsr("0.04:0.2:0.8:2.0").fast(2).degrade(0.1).lpf(4800)
     .filterWhen(x => x >= wait * 1 && x < (wait * 2 + keep))
   , // Perc 1 -----------------------------------------------------------------------------------------------------------------------
   sound("[bd bd bd ~  bd ~ bd ~] [bd bd sd:5 ~  bd ~ bd|sd:5 ~]").slow("[8 8 8 8 8 8 4 [2 4]]/32").fast(2)
-    .orbit(5).gain(0.75).pan(0.5).adsr("0.02:0.2:0.5:1").degrade(0.01).hpf(120).lpf(5500)        
+    .orbit(5).gain(0.95).pan(0.5).adsr("0.03:0.2:0.5:1").degrade(0.01).hpf(120).lpf(5500)        
     .filterWhen(x => x >= wait * 1.75 && x < (wait * 1 + keep))
   , // Shore ---------------------------------------------------------------------------------------------------------
-  note("c").fast(8).sound("brown")
-    .orbit(0).gain(0.10).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
-    .bandf(perlin.range(440, 440 * 4).segment(16).slow(64)).bandq(sine.range(0.05, 5.0).slow(32).early(16))
+  note("c").fast(7).sound("brown")
+    .orbit(0).gain(0.08).pan(perlin.early(1.7).range(0.3, 0.7).slow(21)).adsr("0.2:1.0:1.0:2.5")
+    .bandf(perlin.range(440, 440 * 4).segment(16).slow(48)).bandq(sine.range(0.05, 5.0).slow(32).early(16))
   ,
 ).delay("0.1::0.5").delaytime(pure(1/8).div(cps)).room("0.05:10.0").compressor("-15:2:6:0.01:0.2").analog(1)
 
@@ -187,12 +188,12 @@ let guitar = Osc.register("guitar", (() => {
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = 3, freqSpread = pSpread, analog = pAnalog).mul(0.3)
     .plus(Osc.zawtooth(freq = Osc.freq().mul(2)).mul(0.15))   // Zawtooth for raw grit
-    .plus(Osc.square(freq = Osc.freq().mul(2.999)).mul(0.05)) // Square for aggressive mid bite
+    .plus(Osc.square(freq = Osc.freq().mul(2.999)).mul(0.04)) // Square for aggressive mid bite
 
   return signal
-    .lowpass(Osc.sine(0.4).plus(1).times(2500).plus(3000), 1.25)                    // Pre-distortion: sweeping lowpass adds dynamic character
+    .lowpass(Osc.sine(2.0).plus(1).times(2500).plus(3000), 1.25)                    // Pre-distortion: sweeping lowpass adds dynamic character
     .plus(signal.mul(0.15).highpass(110).lowpass(300))                              // Re-add low end after bandpass
-    .plus(Osc.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.3))  // Noise burst
+    .plus(Osc.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.5))  // Noise burst
     .bandpass(900, 0.10)                                                            // Gentle mid-focus before distortion
     .distort(pDrive, "chebyshev", 4)                                                // Overdrive + Oversample
     .lowpass(pBrightness, 1.0)                                                      // Post-distortion: control fizz + warmth roll-off
@@ -212,7 +213,7 @@ stack( // Gitarre! -------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(2).fast(4).scale("C4:chromatic").pan(0.7).notchf("1300").lpf("4750").clip(0.975)  // . solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightnes", 5500).oscp("spread", 0.02).hpf(400).postgain(0.21)
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightnes", 5500).oscp("spread", 0.03).hpf(400).postgain(0.21)
     .transpose(tp).filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
@@ -220,7 +221,7 @@ stack( // Gitarre! -------------------------------------------------------------
       n(`<[0 0 0 0 0 0 0 2 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
   ).orbit(3).fast(1).scale("C2:chromatic").gain(1.0).clip(1.00).release(0.15).hpf(120).postgain(0.225)
-    .s(guitar).oscparam("drive", drive).oscparam("brightness", 3750).oscp("spread", 0.10)
+    .s(guitar).oscparam("drive", drive).oscparam("brightness", 3750).oscp("spread", 0.12)
     .transpose(tp).pan(0.2).superimpose(pan(0.8)).velocity("<[1.0 0.9 0.9 0.9]>")
     .filterWhen(t => t % stay >= 4)  // .solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------
