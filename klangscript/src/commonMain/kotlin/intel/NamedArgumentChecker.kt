@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.ast.ConstDeclaration
 import io.peekandpoke.klang.script.ast.ContinueStatement
 import io.peekandpoke.klang.script.ast.DoWhileStatement
 import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportDeclaration
 import io.peekandpoke.klang.script.ast.ExportStatement
 import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.ast.ExpressionStatement
@@ -72,6 +73,7 @@ class NamedArgumentChecker(
             is ExpressionStatement -> visitExpression(stmt.expression, out)
             is LetDeclaration -> stmt.initializer?.let { visitExpression(it, out) }
             is ConstDeclaration -> visitExpression(stmt.initializer, out)
+            is ExportDeclaration -> visitExpression(stmt.initializer, out)
             is ReturnStatement -> stmt.value?.let { visitExpression(it, out) }
             is WhileStatement -> {
                 visitExpression(stmt.condition, out)

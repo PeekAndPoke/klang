@@ -6,6 +6,14 @@
 - **Production**: Kotlin/JS builds working ✅
 - **Parser**: Hand-rolled recursive descent (replaced better-parse due to Kotlin/JS issue #66)
 
+## Recent Work (2026-05)
+
+- Added `ExportDeclaration` — new top-level form `export name = expr` (immutable binding +
+  auto-export under same name). Parser, AST, interpreter, klangblocks (`KBExportStmt` +
+  round-trip), feature catalog, and language docs all updated. Existing
+  `export { a, b as c }` form remains. Foundation for Projekt Klangbuch's named-part
+  imports across modules.
+
 ## Recent Work (2026-03)
 
 - Implemented "medium" language features: `if/else` expression, `while`/`do-while`/`for` loops,

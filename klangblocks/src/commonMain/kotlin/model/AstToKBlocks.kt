@@ -16,6 +16,7 @@ import io.peekandpoke.klang.script.ast.ConstDeclaration
 import io.peekandpoke.klang.script.ast.ContinueStatement
 import io.peekandpoke.klang.script.ast.DoWhileStatement
 import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportDeclaration
 import io.peekandpoke.klang.script.ast.ExportStatement
 import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.ast.ExpressionStatement
@@ -74,6 +75,12 @@ object AstToKBlocks {
         )
 
         is ConstDeclaration -> KBConstStmt(
+            id = uuid(),
+            name = stmt.name,
+            value = convertExpr(stmt.initializer),
+        )
+
+        is ExportDeclaration -> KBExportStmt(
             id = uuid(),
             name = stmt.name,
             value = convertExpr(stmt.initializer),
@@ -317,6 +324,7 @@ private fun Statement.toSourceString(): String = when (this) {
 
     is ImportStatement -> "import * from \"$libraryName\""
     is ExportStatement -> "export { ${exports.joinToString(", ") { (local, exp) -> if (local == exp) local else "$local as $exp" }} }"
+    is ExportDeclaration -> "export $name = ${initializer.toSourceString()}"
 }
 
 private val idCounter = io.peekandpoke.klang.common.infra.KlangAtomicInt(0)

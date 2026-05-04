@@ -141,8 +141,8 @@ class OrbitBusPipelineSpec : StringSpec({
 
         cylinder.phaser.phaser.rate shouldBe 2.0
         cylinder.phaser.phaser.depth shouldBe 0.5
-        cylinder.phaser.phaser.centerFreq shouldBe 800.0
-        cylinder.phaser.phaser.sweepRange shouldBe 600.0
+        cylinder.phaser.phaser.center shouldBe 800.0
+        cylinder.phaser.phaser.sweep shouldBe 600.0
     }
 
     "updateFromVoice configures ducking" {

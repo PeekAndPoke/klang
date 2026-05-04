@@ -32,6 +32,7 @@ private fun compilePattern(code: String): RenderWavCommand.CompileResult? {
             name
         }
         registerLibrary(sprudelLib)
+        registerBuiltInSongsAsModules()
     }
 
     // Pre-import standard libraries so user code doesn't need to

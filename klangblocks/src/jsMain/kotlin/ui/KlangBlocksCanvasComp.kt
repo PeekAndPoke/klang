@@ -1,6 +1,13 @@
 package io.peekandpoke.klang.blocks.ui
 
-import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.blocks.model.KBAssignStmt
+import io.peekandpoke.klang.blocks.model.KBBlankLine
+import io.peekandpoke.klang.blocks.model.KBChainStmt
+import io.peekandpoke.klang.blocks.model.KBConstStmt
+import io.peekandpoke.klang.blocks.model.KBExportStmt
+import io.peekandpoke.klang.blocks.model.KBExprStmt
+import io.peekandpoke.klang.blocks.model.KBImportStmt
+import io.peekandpoke.klang.blocks.model.KBLetStmt
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -12,7 +19,11 @@ import io.peekandpoke.ultra.html.onMouseDown
 import kotlinx.css.paddingBottom
 import kotlinx.css.paddingTop
 import kotlinx.css.px
-import kotlinx.html.*
+import kotlinx.html.DIV
+import kotlinx.html.Tag
+import kotlinx.html.div
+import kotlinx.html.id
+import kotlinx.html.span
 
 @Suppress("FunctionName")
 fun Tag.KlangBlocksCanvasComp(
@@ -105,6 +116,10 @@ class KlangBlocksCanvasComp(ctx: Ctx<Props>) : Component<KlangBlocksCanvasComp.P
                             }
 
                             is KBConstStmt -> {
+                                KlangBlocksVariableStmtComp(stmt = stmt, ctx = ctx)
+                            }
+
+                            is KBExportStmt -> {
                                 KlangBlocksVariableStmtComp(stmt = stmt, ctx = ctx)
                             }
 

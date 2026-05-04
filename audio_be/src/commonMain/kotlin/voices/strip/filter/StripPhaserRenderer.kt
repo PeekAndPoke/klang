@@ -1,63 +1,46 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
-import io.peekandpoke.klang.audio_be.TWO_PI
-import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
-import kotlin.math.PI
-import kotlin.math.sin
-import kotlin.math.tan
 
 /**
- * Per-voice phaser effect — 4-stage allpass cascade with sine LFO modulation.
- * Includes denormal flushing on all IIR state.
+ * Per-voice phaser — thin [BlockRenderer] wrapper around a single mono [PhaserCore].
+ *
+ * **Output**: additive — `output = dry + wet · depth`. Matches the cylinder-bus
+ * Phaser and the strudel-side `phaserDepth` semantic where `depth` adds an
+ * effect on top of the source. The Ignitor-DSL phaser uses crossfade with a
+ * differently-named `blend` parameter; they share `PhaserCore` for the
+ * per-sample math but differ in output mixing.
+ *
+ * `depth = 0` bypasses entirely.
  */
 class StripPhaserRenderer(
-    private val rate: Double,
+    rate: Double,
     private val depth: Double,
-    private val center: Double,
-    private val sweep: Double,
+    center: Double,
+    sweep: Double,
     sampleRate: Int,
 ) : BlockRenderer {
-
-    private val stages = 4
-    private var lfoPhase: Double = 0.0
-    private val filterState = DoubleArray(stages)
-    private var lastOutput: Double = 0.0
-    private val feedback: Double = 0.5
-    private val inverseSampleRate = 1.0 / sampleRate
-    private val lfoIncrement = rate * TWO_PI * inverseSampleRate
+    private val core = PhaserCore(PhaserCore.DEFAULT_STAGES, sampleRate).apply {
+        this.rate = rate
+        this.center = center
+        this.sweep = sweep
+        // feedback uses PhaserCore's default (0.5) — voice-side phaser doesn't
+        // expose feedback as a per-note parameter today.
+    }
 
     override fun render(ctx: BlockContext) {
         if (depth <= 0.0) return
 
         val buf = ctx.audioBuffer
+        val d = depth
+
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
-
-            lfoPhase += lfoIncrement
-            if (lfoPhase > TWO_PI) lfoPhase -= TWO_PI
-
-            val lfoValue = (sin(lfoPhase) + 1.0) * 0.5
-
-            var modFreq = center + (lfoValue - 0.5) * sweep
-            modFreq = modFreq.coerceIn(100.0, 18000.0)
-
-            val tanValue = tan(PI * modFreq * inverseSampleRate)
-            val alpha = (tanValue - 1.0) / (tanValue + 1.0)
-
-            var signal = buf[idx] + lastOutput * feedback
-
-            for (s in 0 until stages) {
-                val x = signal
-                val output = alpha * x + filterState[s]
-                filterState[s] = flushDenormal(x - alpha * output)
-                signal = output
-            }
-
-            lastOutput = flushDenormal(signal)
-
-            buf[idx] = (buf[idx] + signal * depth)
+            val dry = buf[idx]
+            val wet = core.step(dry)
+            buf[idx] = dry + wet * d
         }
     }
 }

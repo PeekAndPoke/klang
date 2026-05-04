@@ -21,8 +21,8 @@ class KatalystPhaserEffectSpec : StringSpec({
         val ph = Phaser(sampleRate)
         ph.depth = depth
         ph.rate = rate
-        ph.centerFreq = 1000.0
-        ph.sweepRange = 1000.0
+        ph.center = 1000.0
+        ph.sweep = 1000.0
         ph.feedback = 0.5
         return KatalystPhaserEffect(ph)
     }

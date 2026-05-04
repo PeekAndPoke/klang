@@ -16,6 +16,7 @@ import io.peekandpoke.klang.script.ast.ConstDeclaration
 import io.peekandpoke.klang.script.ast.ContinueStatement
 import io.peekandpoke.klang.script.ast.DoWhileStatement
 import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportDeclaration
 import io.peekandpoke.klang.script.ast.ExportStatement
 import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.ast.ExpressionStatement
@@ -208,6 +209,14 @@ class Interpreter(
 
             // Export statement: mark symbols for export
             is ExportStatement -> executeExport(statement)
+
+            // Export declaration: const-like binding + auto-export under same name
+            is ExportDeclaration -> {
+                val value = evaluate(statement.initializer)
+                env.define(statement.name, value, mutable = false)
+                env.markExports(listOf(statement.name to statement.name))
+                NullValue
+            }
 
             // Return statement: throw ReturnException to exit function
             is ReturnStatement -> {

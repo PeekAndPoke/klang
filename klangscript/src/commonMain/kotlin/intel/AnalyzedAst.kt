@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.ast.ConstDeclaration
 import io.peekandpoke.klang.script.ast.ContinueStatement
 import io.peekandpoke.klang.script.ast.DoWhileStatement
 import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportDeclaration
 import io.peekandpoke.klang.script.ast.ExportStatement
 import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.ast.ExpressionStatement
@@ -273,6 +274,7 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
             is ExpressionStatement -> visitExpr(stmt.expression)
             is LetDeclaration -> stmt.initializer?.let { visitExpr(it) }
             is ConstDeclaration -> visitExpr(stmt.initializer)
+            is ExportDeclaration -> visitExpr(stmt.initializer)
             is ReturnStatement -> stmt.value?.let { visitExpr(it) }
             is WhileStatement -> {
                 visitExpr(stmt.condition)

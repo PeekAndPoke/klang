@@ -37,8 +37,8 @@ class BusPipelineSpec : StringSpec({
         val phaser = KatalystPhaserEffect(Phaser(sampleRate).apply {
             depth = phaserDepth
             rate = 2.0
-            centerFreq = 1000.0
-            sweepRange = 1000.0
+            center = 1000.0
+            sweep = 1000.0
             feedback = 0.5
         })
         val compressor = KatalystCompressorEffect().apply {

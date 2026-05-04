@@ -15,6 +15,7 @@ import io.peekandpoke.klang.script.ast.ConstDeclaration
 import io.peekandpoke.klang.script.ast.ContinueStatement
 import io.peekandpoke.klang.script.ast.DoWhileStatement
 import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportDeclaration
 import io.peekandpoke.klang.script.ast.ExportStatement
 import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.ast.ExpressionStatement
@@ -1660,7 +1661,13 @@ class KlangScriptParser private constructor(
     private fun parseStatement(): Statement {
         return when {
             match(TokenType.IMPORT) -> parseImportStatement()
-            match(TokenType.EXPORT) -> parseExportStatement()
+            match(TokenType.EXPORT) -> {
+                if (check(TokenType.LEFT_BRACE)) {
+                    parseExportStatement()
+                } else {
+                    parseExportDeclaration()
+                }
+            }
             match(TokenType.LET) -> parseLetDeclaration()
             match(TokenType.CONST) -> parseConstDeclaration()
             match(TokenType.RETURN) -> parseReturnStatement()
@@ -1805,6 +1812,21 @@ class KlangScriptParser private constructor(
         consume(TokenType.RIGHT_BRACE, "Expected '}'")
 
         return ExportStatement(exports, exportToken.toSourceLocation())
+    }
+
+    /**
+     * Parse export declaration: export name = expr
+     *
+     * Combined immutable binding + export marker. The bound name is `const`-like
+     * (cannot be reassigned) and is exported under its own name.
+     */
+    private fun parseExportDeclaration(): ExportDeclaration {
+        val exportToken = previous() // EXPORT consumed
+        val name = consume(TokenType.IDENTIFIER, "Expected name after 'export'")
+        consume(TokenType.EQUALS, "Expected '=' after export name")
+        val initializer = parseExpression()
+
+        return ExportDeclaration(name.text, initializer, exportToken.toSourceLocation())
     }
 
     /**

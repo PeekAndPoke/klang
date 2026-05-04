@@ -4,17 +4,16 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.resolveDistortionShape
-import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.sin
-import kotlin.math.tan
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -398,20 +397,17 @@ private class PhaserIgnitor(
     private val center: Ignitor,
     private val sweep: Ignitor,
 ) : Ignitor {
-    private val stages = 4
-    private var lfoPhase: Double = 0.0
-    private val filterState = DoubleArray(stages)
-    private var lastOutput: Double = 0.0
-    private val feedback = 0.5
+    // Lazy-init: PhaserCore needs sampleRate at construction, but we only see
+    // ctx.sampleRate on the first generate() call.
+    private var core: PhaserCore? = null
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val phaser = core ?: PhaserCore(PhaserCore.DEFAULT_STAGES, ctx.sampleRate).also { core = it }
+
         ctx.scratchBuffers.use { input ->
             upstream.generate(input, freqHz, ctx)
 
-            val rateVal = Ignitors.readParam(rate, freqHz, ctx)
             val blendVal = Ignitors.readParam(blend, freqHz, ctx).coerceIn(0.0, 1.0)
-            val centerVal = Ignitors.readParam(center, freqHz, ctx)
-            val sweepVal = Ignitors.readParam(sweep, freqHz, ctx)
             val end = ctx.offset + ctx.length
 
             if (blendVal <= 0.0) {
@@ -421,33 +417,17 @@ private class PhaserIgnitor(
                 return@use
             }
 
-            val inverseSampleRate = 1.0 / ctx.sampleRate
-            val lfoIncrement = rateVal * TWO_PI * inverseSampleRate
+            // Push current control-rate values into the kernel once per block.
+            phaser.rate = Ignitors.readParam(rate, freqHz, ctx)
+            phaser.center = Ignitors.readParam(center, freqHz, ctx)
+            phaser.sweep = Ignitors.readParam(sweep, freqHz, ctx)
 
+            val d = blendVal
+            val dInv = 1.0 - d
             for (i in ctx.offset until end) {
-                lfoPhase += lfoIncrement
-                if (lfoPhase > TWO_PI) lfoPhase -= TWO_PI
-                val lfoValue = (sin(lfoPhase) + 1.0) * 0.5
-
-                var modFreq = centerVal + (lfoValue - 0.5) * sweepVal
-                modFreq = modFreq.coerceIn(100.0, 18000.0)
-
-                val tanValue = tan(PI * modFreq * inverseSampleRate)
-                val alpha = (tanValue - 1.0) / (tanValue + 1.0)
-
                 val dry = input[i]
-                var signal = dry + lastOutput * feedback
-
-                for (s in 0 until stages) {
-                    val stageOut = alpha * signal + filterState[s]
-                    filterState[s] = flushDenormal(signal - alpha * stageOut)
-                    signal = stageOut
-                }
-
-                lastOutput = flushDenormal(signal)
-
-                // Crossfade: dry · (1 − blend) + wet · blend
-                buffer[i] = (dry * (1.0 - blendVal) + signal * blendVal)
+                val wet = phaser.step(dry)
+                buffer[i] = dry * dInv + wet * d
             }
         }
     }

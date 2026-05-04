@@ -33,10 +33,11 @@ suspend fun main() {
     val scripting = klangScript {
         setPlayer(player)
         registerLibrary(sprudelLib)
+        registerBuiltInSongsAsModules()
     }
 
-    val pattern = SprudelPattern.compile(scripting, TestTextPatterns.aTruthWorthLyingFor)!!
-//    val pattern = SprudelPattern.compile(scripting, TestTextPatterns.tetris)!!
+    val pattern = SprudelPattern.compile(scripting, BuiltInSongs.aTruthWorthLyingFor.code)!!
+//    val pattern = SprudelPattern.compile(scripting, BuiltInSongs.tetris.code)!!
 
     println("Starting playback...")
     val playback = player.play(pattern)

@@ -116,6 +116,7 @@ object Player {
         val engineBuilder = KlangScriptEngine.Builder()
         engineBuilder.registerLibrary(stdlib)
         engineBuilder.registerLibrary(sprudelLib)
+        engineBuilder.registerBuiltInSongsAsModules()
         if (player != null) engineBuilder.setPlayer(player)
         return engineBuilder.build()
     }

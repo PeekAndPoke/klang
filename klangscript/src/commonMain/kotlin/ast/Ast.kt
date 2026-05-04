@@ -170,6 +170,46 @@ data class ExportStatement(
 ) : Statement(location)
 
 /**
+ * An export declaration: combined immutable binding + export marker
+ *
+ * Declares a constant at the top level and marks it as visible to importers
+ * under its own name. Equivalent to `const name = expr; export { name }` but
+ * expressed in a single statement so the authorial intent (this is a
+ * deliberately public part of the module) is obvious at the declaration site.
+ *
+ * **Syntax:** `export <name> = <expression>`
+ *
+ * **Semantics:**
+ * - Binds `name` in the current environment as immutable (cannot be reassigned).
+ * - Marks `name` as exported under its own name.
+ * - Intended for top-level use in a library file. Nested usage inside a function
+ *   body or block currently produces a local immutable binding plus an
+ *   ineffective export marker (consistent with the existing `export { ... }`
+ *   form, which is also silently ineffective inside nested scopes).
+ *
+ * Example:
+ * ```javascript
+ * export bass = n("0 -2 4 5").scale("e2:minor")
+ * export song = stack(bass).gain(0.8)
+ * ```
+ *
+ * **Equivalent to:**
+ * ```javascript
+ * const bass = n("0 -2 4 5").scale("e2:minor")
+ * const song = stack(bass).gain(0.8)
+ * export { bass, song }
+ * ```
+ *
+ * @param name The exported binding name
+ * @param initializer Expression producing the value (required)
+ */
+data class ExportDeclaration(
+    val name: String,
+    val initializer: Expression,
+    override val location: SourceLocation? = null,
+) : Statement(location)
+
+/**
  * An import statement for loading library code
  *
  * Imports symbols from a library into the current scope.

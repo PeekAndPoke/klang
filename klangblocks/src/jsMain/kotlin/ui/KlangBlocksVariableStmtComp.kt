@@ -1,13 +1,36 @@
 package io.peekandpoke.klang.blocks.ui
 
-import io.peekandpoke.klang.blocks.model.*
+import io.peekandpoke.klang.blocks.model.DropDestination
+import io.peekandpoke.klang.blocks.model.KBArgValue
+import io.peekandpoke.klang.blocks.model.KBConstStmt
+import io.peekandpoke.klang.blocks.model.KBEmptyArg
+import io.peekandpoke.klang.blocks.model.KBExportStmt
+import io.peekandpoke.klang.blocks.model.KBLetStmt
+import io.peekandpoke.klang.blocks.model.KBNestedChainArg
+import io.peekandpoke.klang.blocks.model.KBNumberArg
+import io.peekandpoke.klang.blocks.model.KBStmt
+import io.peekandpoke.klang.blocks.model.KBStringArg
 import io.peekandpoke.klang.common.math.formatAsIntOrDouble
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.vdom.VDom
-import io.peekandpoke.ultra.html.*
-import kotlinx.css.*
+import io.peekandpoke.ultra.html.css
+import io.peekandpoke.ultra.html.key
+import io.peekandpoke.ultra.html.onClick
+import io.peekandpoke.ultra.html.onMouseDown
+import io.peekandpoke.ultra.html.onMouseOut
+import io.peekandpoke.ultra.html.onMouseOver
+import io.peekandpoke.ultra.html.onMouseUp
+import kotlinx.css.FontWeight
+import kotlinx.css.Padding
+import kotlinx.css.borderRadius
+import kotlinx.css.fontSize
+import kotlinx.css.fontWeight
+import kotlinx.css.gap
+import kotlinx.css.opacity
+import kotlinx.css.padding
+import kotlinx.css.px
 import kotlinx.html.DIV
 import kotlinx.html.Tag
 import kotlinx.html.div
@@ -38,6 +61,21 @@ fun Tag.KlangBlocksVariableStmtComp(
         stmtId = stmt.id,
         stmt = stmt,
         keyword = "const",
+        name = stmt.name,
+        value = stmt.value,
+        ctx = ctx,
+    )
+) { KlangBlocksVariableStmtComp(it) }
+
+@Suppress("FunctionName")
+fun Tag.KlangBlocksVariableStmtComp(
+    stmt: KBExportStmt,
+    ctx: KlangBlocksCtx,
+) = comp(
+    KlangBlocksVariableStmtComp.Props(
+        stmtId = stmt.id,
+        stmt = stmt,
+        keyword = "export",
         name = stmt.name,
         value = stmt.value,
         ctx = ctx,

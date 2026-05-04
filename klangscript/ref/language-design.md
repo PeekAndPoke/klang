@@ -37,8 +37,16 @@ let h = x => ({ key: x })          // object literal (must wrap in parens)
 import * from "lib"
 import * as math from "lib"
 import { x, y as z } from "lib"
-export { x, y as z }
+export { x, y as z }       // re-export of existing top-level bindings
+export name = expr         // combined immutable binding + auto-export under same name
 ```
+
+The `export name = expr` form is the preferred way for library/module files to expose
+named parts: it makes the public surface obvious at the declaration site and the bound
+name is immutable (like `const`). Module identifier strings can be namespaced and / or
+versioned (e.g. `"peekandpoke/der-schmetterling@1.0"`) — the parser treats them as
+opaque, so namespaced URIs work today even though the resolver only handles
+locally-registered libraries in v0.
 
 **Built-in methods:**
 

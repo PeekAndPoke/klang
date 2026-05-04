@@ -225,6 +225,7 @@ private class IndexBuilder(
             is ExpressionStatement -> visitExpression(stmt.expression, stmt, level + 1)
             is LetDeclaration -> stmt.initializer?.let { visitExpression(it, stmt, level + 1) }
             is ConstDeclaration -> visitExpression(stmt.initializer, stmt, level + 1)
+            is ExportDeclaration -> visitExpression(stmt.initializer, stmt, level + 1)
             is ReturnStatement -> stmt.value?.let { visitExpression(it, stmt, level + 1) }
             is WhileStatement -> {
                 visitExpression(stmt.condition, stmt, level + 1)
