@@ -94,9 +94,5 @@ export song = stack(
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
 ).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25").analog(0.5)
-
-// Last expression — the engine returns this when running the file directly.
-song
-            
-    """,
+            """,
 )

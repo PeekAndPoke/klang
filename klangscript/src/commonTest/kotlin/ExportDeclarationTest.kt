@@ -92,6 +92,52 @@ class ExportDeclarationTest : StringSpec({
         result shouldBe NumberValue(42.0)
     }
 
+    "should evaluate to the bound value (unlike let/const which return null)" {
+        val engine = klangScript()
+
+        // The export declaration itself returns the bound value, so a script
+        // that ends with `export song = stack(...)` returns the song without
+        // needing a trailing `song` reference.
+        val result = engine.execute("""export answer = 42""")
+
+        result shouldBe NumberValue(42.0)
+    }
+
+    "as last statement of a multi-line script: returns the bound value" {
+        val engine = klangScript()
+
+        // Mirrors the real Klangbuch shape: setup lines, intermediate bindings,
+        // then `export song = ...` as the final line. Script returns the song.
+        val result = engine.execute(
+            """
+                let a = 10
+                let b = 32
+                let parts = a + b
+                export song = parts
+            """.trimIndent()
+        )
+
+        result shouldBe NumberValue(42.0)
+    }
+
+    "with a string value: returns the string" {
+        val engine = klangScript()
+        engine.execute("""export greeting = "hello"""") shouldBe StringValue("hello")
+    }
+
+    "with a computed expression value: returns the computed result" {
+        val engine = klangScript()
+        engine.execute("""export sum = 1 + 2 + 3 + 4""") shouldBe NumberValue(10.0)
+    }
+
+    "let / const remain null-returning (regression — only export changed)" {
+        val engine = klangScript()
+        engine.execute("""let a = 42""")    // Last statement is a let → returns null
+            .toString() shouldBe "null"
+        engine.execute("""const b = 42""")  // Last statement is a const → returns null
+            .toString() shouldBe "null"
+    }
+
     "should be immutable like const (assignment throws)" {
         val engine = klangScript()
 

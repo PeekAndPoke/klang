@@ -43,12 +43,12 @@ object BuiltInSongs {
     val songs: List<Song> = listOf(
         derSchmetterling,
         tetris,
-        tetrisRemix,
         soundOfTheSea,
         sakura,
         aTruthWorthLyingFor,
         strangerThings,
         irishLamentTechno,
+        tetrisRemix,
         irishLament,
         finalFantasy7Prelude,
         smallTownBoy,

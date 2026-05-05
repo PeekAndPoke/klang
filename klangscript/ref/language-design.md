@@ -48,6 +48,11 @@ versioned (e.g. `"peekandpoke/der-schmetterling@1.0"`) — the parser treats the
 opaque, so namespaced URIs work today even though the resolver only handles
 locally-registered libraries in v0.
 
+**Unlike `let` and `const`, `export name = expr` evaluates to the bound value.**
+That's so a script ending with `export song = stack(...)` returns the song without
+needing a trailing `song` reference — useful when the file is loaded both as a library
+and as a standalone song.
+
 **Built-in methods:**
 
 - Array: `length()`, `push()`, `pop()`, `shift()`, `unshift()`, `slice()`, `concat()`, `join()`, `reverse()`,

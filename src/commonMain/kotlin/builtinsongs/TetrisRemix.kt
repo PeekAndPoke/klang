@@ -18,12 +18,13 @@ import io.peekandpoke.klang.Song
  */
 internal val tetrisRemixSong = Song(
     id = "${BuiltInSongs.PREFIX}-synthris-echo",
-    title = "Echo um Echo",
+    title = "Remix: Echo um Echo",
     rpm = 30.0,
     icon = "headphones",
     code = """
 import * from "stdlib"
 import * from "sprudel"
+// Here we import parts of the original Tetris, so we can remix them
 import { leadPattern, bassPattern, sub as tetrisSub } from "peekandpoke/tetris"
 
 // ── Lead: the Korobeiniki melody, drowned in echo ──────────────────────
@@ -45,9 +46,9 @@ export bass = note(bassPattern).slow(2).struct("[x!8]")
 
 // ── Drum kit: dub one-drop ──────────────────────────────────────────────
 // Kick on 1 only, snare on 3, hat on offbeats. Lots of space.
-export kick  = sound("[bd ~ ~ ~]!4").orbit(3).gain(1.0).hpf(40).adsr("0.05:0.18:0.0:0.05") // . solo()
+export kick  = sound("[bd ~ ~ ~]!4").orbit(3).gain(1.0).hpf(40).adsr("0.02:0.18:0.0:0.05") // . solo()
 export hat   = sound("[~ hh ~ hh]!4").orbit(4).gain(0.32).hpf(7000).adsr("0.001:0.02:0.0:0.02")
-export snare = sound("[~ ~ sd ~]!4").orbit(5).gain(0.55).hpf(200).adsr("0.005:0.12:0.0:0.05").room(0.4).rsize(6)
+export snare = sound("[~ ~ sd sd ~ ~ sd ~]!2").orbit(5).gain(0.55).hpf(200).adsr("0.005:0.12:0.0:0.05").room(0.4).rsize(6)
 
 // ── Skank: off-beat reggae chord stab ──────────────────────────────────
 // The Bring-It-Together; off-beat = 16th-note 2 of every 4-step cycle.
@@ -62,13 +63,9 @@ export skank = chord("<Am Em F Dm Am Em F G7>").voicing()
 export sub = tetrisSub.struct("[x!4]").lpf(300).postgain(0.3)
 
 // ── Song: dub plate with broad reverb tail and gentle bus compression ──
-export song = stack(kick, snare, hat, skank, lead, bass, sub)
-    .compressor("-10:2:10:0.02:0.25").analog(1.5)
+export song = stack(kick, snare, hat, skank, lead, bass, sub).compressor("-10:2:10:0.02:0.25").analog(1.5)
 
 // Composed by: peekandpoke + Claude (echo of Korobeiniki, by way of King Tubby)
-
-song
-            
             
             """,
 )
