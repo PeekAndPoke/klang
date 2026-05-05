@@ -9,6 +9,7 @@ import io.peekandpoke.klang.script.ast.NumberLiteral
 import io.peekandpoke.klang.script.builder.registerLibrary
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.runtime.KlangScriptAssignmentError
+import io.peekandpoke.klang.script.runtime.NullValue
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.StringValue
 
@@ -132,10 +133,8 @@ class ExportDeclarationTest : StringSpec({
 
     "let / const remain null-returning (regression — only export changed)" {
         val engine = klangScript()
-        engine.execute("""let a = 42""")    // Last statement is a let → returns null
-            .toString() shouldBe "null"
-        engine.execute("""const b = 42""")  // Last statement is a const → returns null
-            .toString() shouldBe "null"
+        engine.execute("""let a = 42""") shouldBe NullValue
+        engine.execute("""const b = 42""") shouldBe NullValue
     }
 
     "should be immutable like const (assignment throws)" {
