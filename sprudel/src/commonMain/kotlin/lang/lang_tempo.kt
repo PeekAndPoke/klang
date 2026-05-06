@@ -77,8 +77,6 @@ internal fun applySlow(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return result
 }
 
-
-
 /**
  * Slows down a pattern by the given factor.
  *
@@ -157,8 +155,6 @@ internal fun applyFast(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
 
     return result
 }
-
-
 
 /**
  * Speeds up the pattern by the given factor.
@@ -293,8 +289,6 @@ private fun applyRevv(pattern: SprudelPattern): SprudelPattern {
     return pattern._withQuerySpan(negateSpan)._withHapSpan(negateSpan)
 }
 
-
-
 /**
  * Reverses the pattern in absolute time across all cycles.
  *
@@ -352,8 +346,6 @@ private fun applyPalindrome(pattern: SprudelPattern): SprudelPattern {
     // Matches JS: pat.lastOf(2, rev) -> equivalent to slowcatPrime(pat, rev(pat))
     return applySlowcatPrime(listOf(pattern, applyRev(pattern, listOf(SprudelDslArg(1, null)))))
 }
-
-
 
 /**
  * Plays the pattern forward then backward, creating a two-cycle palindrome.
@@ -566,8 +558,6 @@ internal fun applyCompress(pattern: SprudelPattern, args: List<SprudelDslArg<Any
     }
 }
 
-
-
 /**
  * Compresses the pattern into a sub-range of each cycle, leaving silence outside that range.
  *
@@ -651,8 +641,6 @@ private fun applyFocus(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
         }
     }
 }
-
-
 
 /**
  * Zooms in on a sub-range of a cycle, stretching that portion to fill the whole cycle.
@@ -746,8 +734,6 @@ private fun applyPly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
-
-
 
 /**
  * Repeats each event `n` times within its original timespan.
@@ -857,7 +843,6 @@ private fun applyPlyWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
 
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
-
 
 /**
  * Repeats each event `n` times within its timespan, applying `transform` cumulatively.
@@ -1001,7 +986,6 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
     return if (newSteps != null) result.withSteps(newSteps) else result
 }
 
-
 /**
  * Repeats each event `n` times within its timespan, passing the iteration index to `transform`.
  *
@@ -1104,7 +1088,6 @@ private fun applyHurry(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     }
 }
 
-
 /**
  * Speeds up the pattern like `fast()` and multiplies the `speed` audio parameter by the same factor.
  *
@@ -1161,8 +1144,6 @@ internal fun applyFastGap(pattern: SprudelPattern, args: List<SprudelDslArg<Any?
 
     return FastGapPattern(source = pattern, factorProvider = factorProvider)
 }
-
-
 
 /**
  * Speeds up the pattern by `factor` but plays it only once per cycle, leaving a gap.
@@ -1248,7 +1229,6 @@ private fun applyInside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
     return applyFast(transformed, listOf(factorArg))
 }
 
-
 /**
  * Applies a transformation inside a zoomed-in view of the cycle.
  *
@@ -1312,7 +1292,6 @@ private fun applyOutside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
     return applySlow(transformed, listOf(SprudelDslArg.of(factor)))
 }
 
-
 /**
  * Applies a transformation outside the current cycle, across a wider temporal context.
  *
@@ -1367,7 +1346,6 @@ private fun applySwingBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
         SwingPattern(source = source, swing = swingValue, n = nVal)
     }
 }
-
 
 /**
  * Creates a swing or shuffle rhythm by adjusting event timing and duration within subdivisions.
@@ -1495,7 +1473,6 @@ private fun applyBrak(pattern: SprudelPattern): SprudelPattern {
         fastcat(x, silence).late(0.25.toRational())
     })
 }
-
 
 /**
  * Makes every other cycle syncopated — a classic breakbeat effect.

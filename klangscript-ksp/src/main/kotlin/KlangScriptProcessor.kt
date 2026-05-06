@@ -182,7 +182,9 @@ class KlangScriptProcessor(
                         // `fun String.gain(...)` without needing `receiver = StringValue::class`.
                         val mapped = cls?.let { mapReceiverType(resolver, it) }
                         mapped ?: cls
-                    } else null
+                    } else {
+                        null
+                    }
                 }
             }
 
@@ -662,7 +664,9 @@ class KlangScriptProcessor(
         val scriptParams = if (isTypeExtension && allParams.isNotEmpty()) allParams.drop(1) else allParams
         val selfArg = if (isTypeExtension) {
             if (isFileLevelFn) "typedReceiver, " else "this, "
-        } else ""
+        } else {
+            ""
+        }
 
         val isVararg = scriptParams.any { it.isVararg }
         val specsExpr = paramSpecsListExpression(scriptParams)
@@ -672,7 +676,7 @@ class KlangScriptProcessor(
             val paramType = getVarargComponentType(scriptParams.first { it.isVararg })
             val returnType = resolveCastType(fn.returnType?.resolve())
             val fnCall =
-                "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}(${selfArg}*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
+                "$fnQualifier${escapeIdentifier(fn.simpleName.asString())}($selfArg*args.toTypedArray()${if (hasCallInfo) ", callInfo = callInfo" else ""})"
             return VarargItem(
                 scriptName = method.name,
                 specsExpr = specsExpr,
@@ -695,7 +699,9 @@ class KlangScriptProcessor(
             val receiverCast = if (isTypeExtension) {
                 val receiverTypeName = fn.parameters.firstOrNull()?.type?.resolve()?.let { resolveKotlinType(it, followTypeAlias = false) }
                 receiverTypeName?.let { ArityDispatchItem.ReceiverCast(it, useConvertToKotlin = false) }
-            } else null
+            } else {
+                null
+            }
 
             return ArityDispatchItem(
                 scriptName = method.name,
@@ -729,7 +735,9 @@ class KlangScriptProcessor(
         }
         val fullCallArgs = if (isTypeExtension) {
             if (callArgsStr.isEmpty()) "this" else "this, $callArgsStr"
-        } else callArgsStr
+        } else {
+            callArgsStr
+        }
 
         return FixedMethodItem(
             scriptName = method.name,
@@ -764,7 +772,9 @@ class KlangScriptProcessor(
         val fnName = escapeIdentifier(fn.simpleName.asString())
         val hasExtensionReceiver = fn.extensionReceiver != null
 
-        val scriptParams = if (hasExtensionReceiver) allParams else {
+        val scriptParams = if (hasExtensionReceiver) {
+            allParams
+        } else {
             if (allParams.isNotEmpty()) allParams.drop(1) else allParams
         }
 
@@ -841,7 +851,9 @@ class KlangScriptProcessor(
 
         val selfArg = if (receiverTypeName != null) {
             if (hasExtensionReceiver) "" else "typedReceiver, "
-        } else ""
+        } else {
+            ""
+        }
         val fnCallPrefix = if (hasExtensionReceiver && receiverTypeName != null) "typedReceiver." else ""
 
         return FileLevelExtItem(
@@ -1419,12 +1431,12 @@ class KlangScriptProcessor(
                 val thunk = safeDefaultThunk(p)
                 if (thunk != null) parts.add("default = $thunk")
             }
-            "${indent}    ParamSpec(${parts.joinToString(", ")})"
+            "$indent    ParamSpec(${parts.joinToString(", ")})"
         }
         return buildString {
             appendLine("listOf(")
             appendLine(specs.joinToString(",\n"))
-            append("${indent})")
+            append("$indent)")
         }
     }
 

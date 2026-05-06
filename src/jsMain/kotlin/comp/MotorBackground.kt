@@ -716,4 +716,3 @@ class MotorBackground(ctx: NoProps) : PureComponent(ctx) {
         return tex
     }
 }
-

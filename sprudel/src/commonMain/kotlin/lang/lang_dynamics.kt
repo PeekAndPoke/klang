@@ -170,7 +170,6 @@ private fun applyVelocity(source: SprudelPattern, args: List<SprudelDslArg<Any?>
     return source._liftOrReinterpretNumericalField(args, velocityMutation)
 }
 
-
 /**
  * Sets the gain 'velocity'. It is multiplied with the gain of the events.
  *
@@ -310,7 +309,6 @@ private val postgainMutation = voiceModifier { copy(postGain = it?.asDoubleOrNul
 private fun applyPostgain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretNumericalField(args, postgainMutation)
 }
-
 
 /**
  * Sets the post-gain (applied after voice processing) for each event in the pattern.
@@ -565,7 +563,6 @@ private fun applyUnison(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return source._liftOrReinterpretStringField(args, unisonMutation)
 }
 
-
 /**
  * Sets the number of unison voices for oscillator stacking effects (e.g. supersaw).
  *
@@ -704,7 +701,6 @@ private fun applyDetune(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return source._liftOrReinterpretStringField(args, detuneMutation)
 }
 
-
 /**
  * Sets the oscillator frequency spread in cents for unison/supersaw effects.
  *
@@ -777,7 +773,6 @@ private val spreadMutation = voiceModifier { withOscParam("panSpread", it?.asDou
 private fun applySpread(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, spreadMutation)
 }
-
 
 /**
  * Sets the stereo pan spread for unison/supersaw voices (0 = mono, 1 = full stereo spread).
@@ -852,7 +847,6 @@ private val densityMutation = voiceModifier { withOscParam("density", it?.asDoub
 private fun applyDensity(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, densityMutation)
 }
-
 
 /**
  * Sets the oscillator density for supersaw or noise density for dust/crackle generators.
@@ -993,7 +987,6 @@ private fun applyAttack(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     return source._liftOrReinterpretStringField(args, attackMutation)
 }
 
-
 /**
  * Sets the ADSR envelope attack time in seconds for synthesised notes.
  *
@@ -1068,7 +1061,6 @@ private fun applyDecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     return source._liftOrReinterpretStringField(args, decayMutation)
 }
 
-
 /**
  * Sets the ADSR envelope decay time in seconds for synthesised notes.
  *
@@ -1141,7 +1133,6 @@ private val sustainMutation = voiceModifier { copy(sustain = it?.asDoubleOrNull(
 private fun applySustain(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, sustainMutation)
 }
-
 
 /**
  * Sets the ADSR envelope sustain level (0–1) for synthesised notes.
@@ -1216,7 +1207,6 @@ private val releaseMutation = voiceModifier { copy(release = it?.asDoubleOrNull(
 private fun applyRelease(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, releaseMutation)
 }
-
 
 /**
  * Sets the ADSR envelope release time in seconds for synthesised notes.
@@ -1309,7 +1299,6 @@ private fun applyAdsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     }
 }
 
-
 /**
  * Sets all four ADSR envelope parameters at once via a colon-separated string
  * `"attack:decay:sustain:release"`.
@@ -1395,7 +1384,6 @@ private val orbitMutation = voiceModifier {
 private fun applyOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftOrReinterpretStringField(args, orbitMutation)
 }
-
 
 /**
  * Routes the pattern to an audio output orbit (channel group) for independent effect processing.
@@ -1527,7 +1515,6 @@ private val duckOrbitMutation = voiceModifier {
 private fun applyDuckOrbit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, duckOrbitMutation)
 }
-
 
 /**
  * Sets the target orbit to listen to for sidechain ducking.
@@ -1668,7 +1655,6 @@ private fun applyDuckAttack(source: SprudelPattern, args: List<SprudelDslArg<Any
     return source._liftNumericField(args, duckAttackMutation)
 }
 
-
 /**
  * Sets the duck release (return-to-normal) time in seconds for sidechain ducking.
  *
@@ -1808,7 +1794,6 @@ private val duckDepthMutation = voiceModifier { copy(duckDepth = it?.asDoubleOrN
 private fun applyDuckDepth(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._liftNumericField(args, duckDepthMutation)
 }
-
 
 /**
  * Sets the ducking depth (0.0 = no ducking, 1.0 = full silence) for sidechain ducking.

@@ -608,7 +608,6 @@ class Oscilloscope(ctx: Ctx<Props>) : Component<Oscilloscope.Props>(ctx) {
         restore()
     }
 
-
     private fun toggleExpanded() {
         if (!expanded) {
             createOverlay()

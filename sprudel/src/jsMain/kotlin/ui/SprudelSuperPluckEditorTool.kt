@@ -108,7 +108,7 @@ private class SprudelSuperPluckEditorComp(ctx: Ctx<Props>) : Component<SprudelSu
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String =
-        "\"${voices}:${freqSpread.fmt()}:${decay.fmt()}:${brightness.fmt()}:${pickPosition.fmt()}:${stiffness.fmt()}\""
+        "\"$voices:${freqSpread.fmt()}:${decay.fmt()}:${brightness.fmt()}:${pickPosition.fmt()}:${stiffness.fmt()}\""
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = currentValue != buildValue()

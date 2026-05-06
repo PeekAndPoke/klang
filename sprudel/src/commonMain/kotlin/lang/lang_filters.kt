@@ -1495,7 +1495,6 @@ private fun applyBandq(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     return source._liftOrReinterpretNumericalField(args, bandqMutation)
 }
 
-
 /**
  * Sets the Q factor (bandwidth) of the Band Pass Filter.
  *

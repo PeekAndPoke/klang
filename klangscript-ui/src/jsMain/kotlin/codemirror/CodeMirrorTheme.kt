@@ -253,5 +253,4 @@ class CodeMirrorTheme {
         fontStyle?.let { this.fontStyle = it }
         textDecoration?.let { this.textDecoration = it }
     }
-
 }

@@ -37,7 +37,6 @@ class MarkdownDisplay(ctx: Ctx<Props>) : Component<MarkdownDisplay.Props>(ctx) {
         val key: String,
     )
 
-
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
     private val marked by subscribingTo(addons.marked) {

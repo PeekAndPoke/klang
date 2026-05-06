@@ -370,8 +370,8 @@ class SidebarMenu(ctx: NoProps) : PureComponent(ctx) {
         val activeDifficulty = currentDifficultyFilter()
         val activeScope = currentScopeFilter()
         val activeCompletion = currentCompletionFilter()
-        val hasNoFilters = activeDifficulty == null && activeScope == null
-                && activeCompletion == TutorialsListPage.CompletionFilter.All
+        val hasNoFilters = activeDifficulty == null && activeScope == null &&
+                activeCompletion == TutorialsListPage.CompletionFilter.All
 
         menuItemsList {
             menuItem(currentRoute.route == Nav.tutorials && hasNoFilters, "All Tutorials", { list }) {

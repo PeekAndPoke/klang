@@ -443,12 +443,16 @@ class MiniNotationParser(
                             ci == C_AT || ci == C_LPAREN || ci == C_RPAREN || ci == C_PIPE ||
                             ci == C_QUESTION || ci == C_BANG || ci == C_LBRACE || ci == C_RBRACE ||
                             ci == C_EQUALS || ci == C_TAB || ci == C_LF || ci == C_CR
-                        ) break
+                        ) {
+                            break
+                        }
                         if (ci == C_SLASH) {
                             val next = if (i + 1 < input.length) codes[i + 1] else -1
                             if (next == -1 || next in C_0..C_9 || next == C_DOT ||
                                 next == C_SPACE || next == C_TAB || next == C_LF || next == C_CR
-                            ) break
+                            ) {
+                                break
+                            }
                         }
                         i++; column++
                     }

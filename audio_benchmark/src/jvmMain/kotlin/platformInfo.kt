@@ -17,5 +17,5 @@ actual fun platformInfo(): String {
         null
     } ?: arch
 
-    return "JVM $jvm ($jvmVendor) / $os / $cpu (${cores} cores)"
+    return "JVM $jvm ($jvmVendor) / $os / $cpu ($cores cores)"
 }

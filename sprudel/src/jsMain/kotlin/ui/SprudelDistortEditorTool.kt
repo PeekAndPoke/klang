@@ -221,7 +221,6 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
                 }
             }
 
-
             // Oversampling buttons
             ui.form {
                 noui.field {

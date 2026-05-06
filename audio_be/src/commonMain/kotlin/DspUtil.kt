@@ -39,8 +39,9 @@ inline fun wrapPhase(phase: Double, period: Double): Double {
         p -= period * floor(p / period)
     } else {
         // Common case: at most one overshoot in either direction.
-        if (p >= period) p -= period
-        else if (p < 0.0) p += period
+        if (p >= period) {
+            p -= period
+        } else if (p < 0.0) p += period
     }
     return p
 }
@@ -78,9 +79,13 @@ inline fun polyBlep(t: Double, dt: Double): Double {
  */
 @Suppress("NOTHING_TO_INLINE")
 inline fun smallNumFastMod(value: Double, period: Double): Double {
-    return if (value >= period) value - period
-    else if (value < 0.0) value + period
-    else value
+    return if (value >= period) {
+        value - period
+    } else if (value < 0.0) {
+        value + period
+    } else {
+        value
+    }
 }
 
 /**
