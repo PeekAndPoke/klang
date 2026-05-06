@@ -2,7 +2,7 @@
 
 package io.peekandpoke.klang
 
-@Suppress("MayBeConstant", "unused")
+@Suppress("unused")
 object TestTextPatterns {
     val cMajorNotes = """
         note("c3 d3 e3 f3 g3 a3 b3 c4")
