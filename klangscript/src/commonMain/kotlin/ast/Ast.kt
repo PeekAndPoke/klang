@@ -170,6 +170,46 @@ data class ExportStatement(
 ) : Statement(location)
 
 /**
+ * An export declaration: combined immutable binding + export marker
+ *
+ * Declares a constant at the top level and marks it as visible to importers
+ * under its own name. Equivalent to `const name = expr; export { name }` but
+ * expressed in a single statement so the authorial intent (this is a
+ * deliberately public part of the module) is obvious at the declaration site.
+ *
+ * **Syntax:** `export <name> = <expression>`
+ *
+ * **Semantics:**
+ * - Binds `name` in the current environment as immutable (cannot be reassigned).
+ * - Marks `name` as exported under its own name.
+ * - Intended for top-level use in a library file. Nested usage inside a function
+ *   body or block currently produces a local immutable binding plus an
+ *   ineffective export marker (consistent with the existing `export { ... }`
+ *   form, which is also silently ineffective inside nested scopes).
+ *
+ * Example:
+ * ```javascript
+ * export bass = n("0 -2 4 5").scale("e2:minor")
+ * export song = stack(bass).gain(0.8)
+ * ```
+ *
+ * **Equivalent to:**
+ * ```javascript
+ * const bass = n("0 -2 4 5").scale("e2:minor")
+ * const song = stack(bass).gain(0.8)
+ * export { bass, song }
+ * ```
+ *
+ * @param name The exported binding name
+ * @param initializer Expression producing the value (required)
+ */
+data class ExportDeclaration(
+    val name: String,
+    val initializer: Expression,
+    override val location: SourceLocation? = null,
+) : Statement(location)
+
+/**
  * An import statement for loading library code
  *
  * Imports symbols from a library into the current scope.
@@ -449,19 +489,50 @@ data class Identifier(
 ) : Expression(location)
 
 /**
+ * A single argument at a call site.
+ *
+ * A [CallExpression] carries a list of [Argument]s. Each argument is either
+ * positional (bound by index) or named (bound by parameter name).
+ *
+ * A call must use either all positional or all named arguments — mixing is
+ * rejected at classification time by the interpreter and by the analyzer.
+ */
+sealed class Argument {
+    /** The expression producing the argument's value. */
+    abstract val value: Expression
+
+    /** Source location of the argument — the name token for named, the value for positional. */
+    abstract val location: SourceLocation?
+
+    /** Positional: `foo(expr)` — bound by index. */
+    data class Positional(
+        override val value: Expression,
+        override val location: SourceLocation? = value.location,
+    ) : Argument()
+
+    /** Named: `foo(name = expr)` — bound to the parameter matching [name]. */
+    data class Named(
+        val name: String,
+        override val value: Expression,
+        val nameLocation: SourceLocation? = null,
+        override val location: SourceLocation? = nameLocation ?: value.location,
+    ) : Argument()
+}
+
+/**
  * A function call expression
  *
  * Represents calling a function with zero or more arguments.
  * The callee can be any expression (typically an Identifier).
  *
  * Examples:
- * - print("hello") -> callee: Identifier("print"), arguments: [StringLiteral("hello")]
- * - add(1, 2, 3) -> callee: Identifier("add"), arguments: [NumberLiteral(1), NumberLiteral(2), NumberLiteral(3)]
- * - upper(getName()) -> nested function call
+ * - print("hello") -> callee: Identifier("print"), arguments: [Positional(StringLiteral("hello"))]
+ * - add(1, 2, 3) -> callee: Identifier("add"), arguments: [Positional, Positional, Positional]
+ * - filter(cutoff = 800) -> callee: Identifier("filter"), arguments: [Named("cutoff", ...)]
  */
 data class CallExpression(
     val callee: Expression,
-    val arguments: List<Expression>,
+    val arguments: List<Argument>,
     override val location: SourceLocation? = null,
 ) : Expression(location)
 

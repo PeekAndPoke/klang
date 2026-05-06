@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
+import io.peekandpoke.klang.audio_be.AudioSample
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
@@ -17,7 +18,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
  */
 class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : BlockRenderer {
 
-    private var lastValue: Float = 0.0f
+    private var lastValue: AudioSample = 0.0
 
     private val oversampler: Oversampler? =
         if (oversampleStages > 0) Oversampler(oversampleStages) else null
@@ -71,7 +72,7 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
      * Per-sample hold transform used in the oversampled path. State (`lastValue`,
      * `counter`) persists across samples and blocks, matching [renderDirect].
      */
-    private fun holdStep(sample: Float): Float {
+    private fun holdStep(sample: AudioSample): AudioSample {
         if (counter >= 1.0) {
             lastValue = sample
             counter -= 1.0

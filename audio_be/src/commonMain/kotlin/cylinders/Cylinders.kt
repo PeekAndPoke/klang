@@ -7,11 +7,14 @@ import io.peekandpoke.klang.audio_be.voices.Voice
  * Mixing Channels / Effect Buses
  */
 class Cylinders(
-    maxCylinders: Int = 64,
     private val blockFrames: Int,
     private val sampleRate: Int,
     private val silentBlocksBeforeTailCheck: Int = 10,
+    maxCylinders: Int = MAX_CYLINDERS,
 ) {
+    companion object {
+        const val MAX_CYLINDERS = 256
+    }
     private val maxCylinders = maxCylinders.coerceIn(1, 255)
     private val id2cylinder = mutableMapOf<Int, Cylinder>()
     private var cleanupIndex = 0

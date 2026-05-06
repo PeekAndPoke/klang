@@ -58,7 +58,7 @@ class EnvelopeRenderer(
 
             if (currentEnv < 0.0) currentEnv = 0.0
 
-            ctx.audioBuffer[idx] = (ctx.audioBuffer[idx] * currentEnv).toFloat()
+            ctx.audioBuffer[idx] = (ctx.audioBuffer[idx] * currentEnv)
             absPos++
         }
 

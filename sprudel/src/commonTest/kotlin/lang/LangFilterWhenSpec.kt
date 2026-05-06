@@ -25,7 +25,7 @@ class LangFilterWhenSpec : StringSpec({
     "filterWhen() works as pattern extension" {
         // filterWhen(predicate)
         // Keep events starting in the second half of the cycle
-        val p = note("a b c d").filterWhen { it >= 0.5 }
+        val p = note("a b c d").filterWhen(predicate = { it >= 0.5 })
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -36,7 +36,7 @@ class LangFilterWhenSpec : StringSpec({
     "filterWhen() works as string extension" {
         // "a b c d" -> durations 0.25 each. Starts at 0.0, 0.25, 0.5, 0.75
         // Keep < 0.5 -> "a" and "b"
-        val p = "a b c d".filterWhen { it < 0.5 }.note()
+        val p = "a b c d".filterWhen(predicate = { it < 0.5 }).note()
 
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 2
@@ -45,7 +45,7 @@ class LangFilterWhenSpec : StringSpec({
     }
 
     "filterWhen() works as top-level PatternMapperFn" {
-        val p = note("a b c d").apply(filterWhen { it >= 0.75 })
+        val p = note("a b c d").apply(filterWhen(predicate = { it >= 0.75 }))
 
         // Only the last quarter of the cycle passes
         p.queryArc(0.0, 1.0).size shouldBe 1
@@ -55,7 +55,7 @@ class LangFilterWhenSpec : StringSpec({
         // oneCycle: s("bd*4").filterWhen((t) => t < 1)
         // We simulate this by checking if it filters correctly across multiple cycles
         // This predicate receives the absolute time
-        val p = note("a").filterWhen { it < 1.0 }
+        val p = note("a").filterWhen(predicate = { it < 1.0 })
 
         // Cycle 0: Start 0.0 -> Keep
         p.queryArc(0.0, 1.0).size shouldBe 1

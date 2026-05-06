@@ -30,7 +30,7 @@ class TremoloRenderer(
             val lfoNorm = (sin(phase) + 1.0) * 0.5
             val gain = 1.0 - (depth * (1.0 - lfoNorm))
 
-            buf[idx] = (buf[idx] * gain).toFloat()
+            buf[idx] = (buf[idx] * gain)
         }
     }
 }

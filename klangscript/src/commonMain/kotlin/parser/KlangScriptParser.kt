@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.parser
 
 import io.peekandpoke.klang.common.SourceLocation
+import io.peekandpoke.klang.script.ast.Argument
 import io.peekandpoke.klang.script.ast.ArrayLiteral
 import io.peekandpoke.klang.script.ast.ArrowFunction
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
@@ -14,6 +15,7 @@ import io.peekandpoke.klang.script.ast.ConstDeclaration
 import io.peekandpoke.klang.script.ast.ContinueStatement
 import io.peekandpoke.klang.script.ast.DoWhileStatement
 import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportDeclaration
 import io.peekandpoke.klang.script.ast.ExportStatement
 import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.ast.ExpressionStatement
@@ -886,6 +888,14 @@ class KlangScriptParser private constructor(
 
     private fun check(type: TokenType): Boolean = !isAtEnd() && peek().type == type
 
+    /** Lookahead: is the token at [pos + offset] of [type]? */
+    private fun checkAt(offset: Int, type: TokenType): Boolean {
+        val idx = pos + offset
+        if (idx >= tokens.size) return false
+        val tok = tokens[idx]
+        return tok.type != TokenType.EOF && tok.type == type
+    }
+
     private fun match(vararg types: TokenType): Boolean {
         for (type in types) {
             if (check(type)) {
@@ -1476,19 +1486,52 @@ class KlangScriptParser private constructor(
     }
 
     /**
-     * Parse function call arguments
-     * Handles trailing commas
+     * Parse function call arguments. Handles trailing commas.
+     *
+     * Each argument is either:
+     *   - Named: `IDENTIFIER = expr` — bound by parameter name
+     *   - Positional: `expr`        — bound by index
+     *
+     * The call-site all-or-nothing rule (every argument must be the same kind)
+     * is enforced at the interpreter / analyzer layer, not here, so a mixed
+     * call still parses cleanly and produces a good error location later.
      */
-    private fun parseArguments(): List<Expression> {
-        val args = mutableListOf<Expression>()
+    private fun parseArguments(): List<Argument> {
+        val args = mutableListOf<Argument>()
 
         if (!check(TokenType.RIGHT_PAREN)) {
             do {
-                args.add(parseExpression())
+                args.add(parseArgument())
             } while (match(TokenType.COMMA) && !check(TokenType.RIGHT_PAREN))
         }
 
         return args
+    }
+
+    /**
+     * Parse a single argument — named if it starts with `IDENTIFIER =`, else positional.
+     *
+     * Named detection uses 2-token lookahead so we don't confuse it with:
+     *   - `==` / `===` comparisons    (EQ / STRICT_EQ tokens, not EQUALS)
+     *   - `+=`, `-=`, ...             (compound-assign tokens, not EQUALS)
+     *   - assignment-as-argument      (wrap in parens: `foo((x = 1))`)
+     *
+     * Only a bare `IDENTIFIER` followed by `EQUALS` at the start of an argument slot
+     * is treated as a named argument; everything else falls through to
+     * `parseExpression()` which handles assignment / ternary / arrow-fn / etc.
+     */
+    private fun parseArgument(): Argument {
+        if (check(TokenType.IDENTIFIER) && checkAt(1, TokenType.EQUALS)) {
+            val nameToken = advance()                    // consume IDENTIFIER
+            advance()                                    // consume EQUALS
+            val value = parseExpression()
+            return Argument.Named(
+                name = nameToken.text,
+                value = value,
+                nameLocation = nameToken.toSourceLocation(),
+            )
+        }
+        return Argument.Positional(parseExpression())
     }
 
     /**
@@ -1618,7 +1661,13 @@ class KlangScriptParser private constructor(
     private fun parseStatement(): Statement {
         return when {
             match(TokenType.IMPORT) -> parseImportStatement()
-            match(TokenType.EXPORT) -> parseExportStatement()
+            match(TokenType.EXPORT) -> {
+                if (check(TokenType.LEFT_BRACE)) {
+                    parseExportStatement()
+                } else {
+                    parseExportDeclaration()
+                }
+            }
             match(TokenType.LET) -> parseLetDeclaration()
             match(TokenType.CONST) -> parseConstDeclaration()
             match(TokenType.RETURN) -> parseReturnStatement()
@@ -1763,6 +1812,21 @@ class KlangScriptParser private constructor(
         consume(TokenType.RIGHT_BRACE, "Expected '}'")
 
         return ExportStatement(exports, exportToken.toSourceLocation())
+    }
+
+    /**
+     * Parse export declaration: export name = expr
+     *
+     * Combined immutable binding + export marker. The bound name is `const`-like
+     * (cannot be reassigned) and is exported under its own name.
+     */
+    private fun parseExportDeclaration(): ExportDeclaration {
+        val exportToken = previous() // EXPORT consumed
+        val name = consume(TokenType.IDENTIFIER, "Expected name after 'export'")
+        consume(TokenType.EQUALS, "Expected '=' after export name")
+        val initializer = parseExpression()
+
+        return ExportDeclaration(name.text, initializer, exportToken.toSourceLocation())
     }
 
     /**

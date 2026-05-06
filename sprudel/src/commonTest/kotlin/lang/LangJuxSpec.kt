@@ -13,11 +13,11 @@ class LangJuxSpec : StringSpec({
         val pat = "c e"
         val transform: PatternMapperFn = { it.rev() }
         dslInterfaceTests(
-            "pattern.jux(fn)" to note(pat).jux(transform),
+            "pattern.jux(fn)" to note(pat).jux(transform = transform),
             "script pattern.jux(fn)" to SprudelPattern.compile("""note("$pat").jux(x => x.rev())"""),
-            "string.jux(fn)" to pat.jux(transform),
+            "string.jux(fn)" to pat.jux(transform = transform),
             "script string.jux(fn)" to SprudelPattern.compile(""""$pat".jux(x => x.rev())"""),
-            "jux(fn)" to note(pat).apply(jux(transform)),
+            "jux(fn)" to note(pat).apply(jux(transform = transform)),
             "script jux(fn)" to SprudelPattern.compile("""note("$pat").apply(jux(x => x.rev()))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
@@ -28,7 +28,7 @@ class LangJuxSpec : StringSpec({
     "jux() creates stereo effect with transformations" {
         // Original: hard left (-1)
         // Transformed: hard right (1), reversed
-        val p = note("c e").jux { it.rev() }
+        val p = note("c e").jux(transform = { it.rev() })
         val events = p.queryArc(0.0, 1.0)
 
         events shouldHaveSize 4
@@ -47,7 +47,7 @@ class LangJuxSpec : StringSpec({
     }
 
     "jux() defaults to identity transform if no function provided (just splitting)" {
-        val p = note("c").jux { it }
+        val p = note("c").jux(transform = { it })
         val events = p.queryArc(0.0, 1.0)
 
         events shouldHaveSize 2

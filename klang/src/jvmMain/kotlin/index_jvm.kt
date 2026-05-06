@@ -9,22 +9,26 @@ import javax.sound.sampled.SourceDataLine
 import kotlin.math.abs
 
 /**
- * High-priority dispatcher for real-time audio processing.
- * Uses 2 threads at maximum priority to minimize latency and ensure consistent audio playback.
+ * Single pinned high-priority audio thread. One thread, MAX priority, non-daemon.
+ *
+ * Real-time audio cannot tolerate thread migration. With a multi-thread pool the
+ * audio coroutine bounces between threads on every `delay()`/suspend, evicting all
+ * the renderer's hot state from the previous core's L1/L2 — block-rendering time
+ * spikes intermittently and audio underruns. A single-thread executor pins the
+ * loop to one OS thread, keeping caches warm. See `audio/ref/performance.md`.
  */
 private val audioDispatcher = createHighPriorityDispatcher(
-    threadCount = 2,
+    threadCount = 1,
     namePrefix = "klang-audio-",
     priority = Thread.MAX_PRIORITY,
     daemon = false,
 )
 
 /**
- * Create a KlangPlayer for the JVM
+ * Create a KlangPlayer for the JVM. Suspends until the audio backend has completed warmup.
  */
-actual fun klangPlayer(
+actual suspend fun klangPlayer(
     options: KlangPlayer.Options,
-    onReady: (KlangPlayer) -> Unit,
 ): KlangPlayer {
     val sampleRate = resolveBestSampleRate(options.sampleRate)
 
@@ -32,14 +36,16 @@ actual fun klangPlayer(
 
     println("[KlangPlayer][JVM] using sample rate $sampleRate")
 
-    return KlangPlayer(
+    val player = KlangPlayer(
         options = effectiveOptions,
         backendFactory = { config -> JvmAudioBackend(config) },
-        onReady = onReady,
         fetcherDispatcher = Dispatchers.Default,
         backendDispatcher = audioDispatcher,
         callbackDispatcher = Dispatchers.Default,
     )
+
+    player.backendReady.await()
+    return player
 }
 
 /**

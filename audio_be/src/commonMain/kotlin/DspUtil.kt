@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be
 
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.pow
 
 // ── DSP Constants ────────────────────────────────────────────────────────────
@@ -19,14 +20,28 @@ const val DENORMAL_THRESHOLD = 1e-15
 @Suppress("NOTHING_TO_INLINE")
 inline fun flushDenormal(v: Double): Double = if (abs(v) < DENORMAL_THRESHOLD) 0.0 else v
 
-/** Wraps phase into [0, period). Uses subtraction instead of modulo (%) because
- *  JS `%` on doubles is much slower than a conditional subtract for the common case
- *  where phase overshoots by exactly one period per sample. */
+/**
+ * Wraps phase into [0, period).
+ *
+ * Fast path: when [phase] overshoots by ≤1 period (the common case for stable oscillators),
+ * uses a single conditional subtract — JS `%` on doubles is much slower than this for the
+ * normal hot-loop case. Off-path: when [phase] is way out of range (e.g. an upstream pitch
+ * mod produced an extreme ratio) or non-finite, falls back to a single modulo step (and
+ * recovers `0.0` for `Inf`/`NaN`) so we never enter an O(N) subtract loop or hang the audio
+ * thread. See `audio/ref/numerical-safety.md`.
+ */
 @Suppress("NOTHING_TO_INLINE")
 inline fun wrapPhase(phase: Double, period: Double): Double {
+    if (!phase.isFinite()) return 0.0
     var p = phase
-    while (p >= period) p -= period
-    while (p < 0.0) p += period
+    if (p >= 2.0 * period || p < -period) {
+        // Way out of range — use modulo so we don't loop millions of times.
+        p -= period * floor(p / period)
+    } else {
+        // Common case: at most one overshoot in either direction.
+        if (p >= period) p -= period
+        else if (p < 0.0) p += period
+    }
     return p
 }
 

@@ -13,16 +13,13 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.sprudel.pattern.*
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.pattern.ControlPattern
+import io.peekandpoke.klang.sprudel.pattern.ControlValueProvider
+import io.peekandpoke.klang.sprudel.pattern.EmptyPattern
+import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 
 // --- Init Property ---
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangHelpersInit = false
-
 // --- Source ID Generation ---
 
 private var sourceIdCounter = 0
@@ -44,17 +41,6 @@ internal fun generateSourceId(sourceLocation: SourceLocation? = null): String {
         // Fallback to counter for patterns without source locations
         "id_${++sourceIdCounter}"
     }
-}
-
-// --- Registry ---
-
-object SprudelRegistry {
-    val symbols = mutableMapOf<String, Any>()
-    val patternCreationFunctions = mutableMapOf<String, SprudelDslTopLevelFn<SprudelPattern>>()
-    val patternExtensionMethods = mutableMapOf<String, SprudelDslPatternExtFn<SprudelPattern>>()
-    val stringExtensionMethods = mutableMapOf<String, SprudelDslPatternExtFn<String>>()
-    val patternMapperFunctions = mutableMapOf<String, SprudelDslTopLevelFn<PatternMapperFn>>()
-    val patternMapperExtensionMethods = mutableMapOf<String, SprudelDslPatternMapperExtFn<PatternMapperFn>>()
 }
 
 data class SprudelDslArg<out T>(
@@ -274,6 +260,24 @@ fun List<SprudelDslArg<Any?>>.extractWeightedPairs(): Pair<List<SprudelDslArg<An
     }
     return items to weights
 }
+
+/**
+ * Parse a raw string as a mini-notation voice-value pattern.
+ *
+ * This is the standard "string → SprudelPattern" conversion used everywhere
+ * in the DSL: interprets the string as mini-notation, creates AtomicPatterns
+ * with [voiceValueModifier] for each note/sample token.
+ *
+ * Used by user-facing `String.gain(...)`, `String.pan(...)`, etc. as a
+ * replacement for the `dslStringExtension` delegate's internal parse step.
+ */
+fun String.toVoiceValuePattern(baseLocation: SourceLocation? = null): SprudelPattern =
+    parseMiniNotation(input = this, baseLocation = baseLocation) { text, loc ->
+        AtomicPattern(
+            data = SprudelVoiceData.empty.voiceValueModifier(text),
+            sourceLocations = loc,
+        )
+    }
 
 /**
  * Converts a single argument into a SprudelPattern.

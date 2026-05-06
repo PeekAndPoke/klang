@@ -13,11 +13,11 @@ class LangJuxBySpec : StringSpec({
         val pat = "c e"
         val transform: PatternMapperFn = { it.rev() }
         dslInterfaceTests(
-            "pattern.juxBy(0.5, fn)" to note(pat).juxBy(0.5, transform),
+            "pattern.juxBy(0.5, fn)" to note(pat).juxBy(0.5, transform = transform),
             "script pattern.juxBy(0.5, fn)" to SprudelPattern.compile("""note("$pat").juxBy(0.5, x => x.rev())"""),
-            "string.juxBy(0.5, fn)" to pat.juxBy(0.5, transform),
+            "string.juxBy(0.5, fn)" to pat.juxBy(0.5, transform = transform),
             "script string.juxBy(0.5, fn)" to SprudelPattern.compile(""""$pat".juxBy(0.5, x => x.rev())"""),
-            "juxBy(0.5, fn)" to note(pat).apply(juxBy(0.5, transform)),
+            "juxBy(0.5, fn)" to note(pat).apply(juxBy(0.5, transform = transform)),
             "script juxBy(0.5, fn)" to SprudelPattern.compile("""note("$pat").apply(juxBy(0.5, x => x.rev()))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
@@ -27,7 +27,7 @@ class LangJuxBySpec : StringSpec({
 
     "juxBy() allows adjustable stereo width" {
         // Width 0.5 -> Left: -0.5, Right: 0.5
-        val p = note("c").juxBy(0.5) { it.note("e") }
+        val p = note("c").juxBy(0.5, transform = { it.note("e") })
         val events = p.queryArc(0.0, 1.0)
 
         events shouldHaveSize 2

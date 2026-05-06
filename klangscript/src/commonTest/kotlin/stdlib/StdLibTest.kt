@@ -433,19 +433,22 @@ class StdLibTest : StringSpec({
 
     // ===== Error Handling =====
 
-    "Math.sqrt() with too many arguments still works" {
+    "Math.sqrt() with too many arguments errors (Phase 5: paramSpecs are strict)" {
+        // Phase 5: native fns now declare paramSpecs, so passing extra positional
+        // args is rejected rather than silently ignored. Stricter is intentional.
         val engine = klangScript {
             registerLibrary(KlangStdLib.create())
         }
 
-        val result = engine.execute(
-            """
-                import * from "stdlib"
-                Math.sqrt(16, 25)
-            """.trimIndent()
-        )
-
-        result shouldBe NumberValue(4.0)
+        val err = io.kotest.assertions.throwables.shouldThrow<io.peekandpoke.klang.script.runtime.KlangScriptArgumentError> {
+            engine.execute(
+                """
+                    import * from "stdlib"
+                    Math.sqrt(16, 25)
+                """.trimIndent()
+            )
+        }
+        err.message!! shouldContain "too many arguments"
     }
 
     "Math.sqrt() with non-number throws error" {

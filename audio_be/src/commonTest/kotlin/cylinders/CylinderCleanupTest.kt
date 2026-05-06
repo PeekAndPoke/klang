@@ -51,8 +51,8 @@ class OrbitCleanupTest : StringSpec({
         cylinder.isActive shouldBe true
 
         // Add some signal to the buffer
-        cylinder.mixBuffer.left[0] = 0.5f
-        cylinder.mixBuffer.right[0] = 0.5f
+        cylinder.mixBuffer.left[0] = 0.5
+        cylinder.mixBuffer.right[0] = 0.5
 
         // Try to deactivate
         cylinder.tryDeactivate()
@@ -67,8 +67,8 @@ class OrbitCleanupTest : StringSpec({
 
         // Fill with values just below threshold
         for (i in 0 until blockFrames) {
-            cylinder.mixBuffer.left[i] = 0.000005f
-            cylinder.mixBuffer.right[i] = 0.000005f
+            cylinder.mixBuffer.left[i] = 0.000005
+            cylinder.mixBuffer.right[i] = 0.000005
         }
 
         cylinder.tryDeactivate()
@@ -83,8 +83,8 @@ class OrbitCleanupTest : StringSpec({
 
         // Fill with values just above threshold
         for (i in 0 until blockFrames) {
-            cylinder.mixBuffer.left[i] = 0.0002f
-            cylinder.mixBuffer.right[i] = 0.0002f
+            cylinder.mixBuffer.left[i] = 0.0002
+            cylinder.mixBuffer.right[i] = 0.0002
         }
 
         cylinder.tryDeactivate()
@@ -98,8 +98,8 @@ class OrbitCleanupTest : StringSpec({
         makeOrbitActive(cylinder)
 
         // Left channel has signal, right is silent
-        cylinder.mixBuffer.left[64] = 0.1f
-        cylinder.mixBuffer.right.fill(0.0f)
+        cylinder.mixBuffer.left[64] = 0.1
+        cylinder.mixBuffer.right.fill(0.0)
 
         cylinder.tryDeactivate()
 
@@ -112,8 +112,8 @@ class OrbitCleanupTest : StringSpec({
         makeOrbitActive(cylinder)
 
         // Right channel has signal, left is silent
-        cylinder.mixBuffer.left.fill(0.0f)
-        cylinder.mixBuffer.right[64] = 0.1f
+        cylinder.mixBuffer.left.fill(0.0)
+        cylinder.mixBuffer.right[64] = 0.1
 
         cylinder.tryDeactivate()
 
@@ -126,8 +126,8 @@ class OrbitCleanupTest : StringSpec({
         makeOrbitActive(cylinder)
 
         // Fill with negative values above threshold
-        cylinder.mixBuffer.left[0] = -0.5f
-        cylinder.mixBuffer.right[0] = -0.3f
+        cylinder.mixBuffer.left[0] = -0.5
+        cylinder.mixBuffer.right[0] = -0.3
 
         cylinder.tryDeactivate()
 
@@ -145,7 +145,7 @@ class OrbitCleanupTest : StringSpec({
         cylinder.isActive shouldBe false
 
         // Add signal to buffer
-        cylinder.mixBuffer.left[0] = 0.5f
+        cylinder.mixBuffer.left[0] = 0.5
 
         // Try to deactivate again - should exit early
         cylinder.tryDeactivate()
@@ -176,7 +176,7 @@ class OrbitCleanupTest : StringSpec({
 
         // Silent except for one sample in the middle
         cylinder.mixBuffer.clear()
-        cylinder.mixBuffer.left[64] = 0.01f
+        cylinder.mixBuffer.left[64] = 0.01
 
         cylinder.tryDeactivate()
 
@@ -190,7 +190,7 @@ class OrbitCleanupTest : StringSpec({
 
         // Silent except for last sample
         cylinder.mixBuffer.clear()
-        cylinder.mixBuffer.right[blockFrames - 1] = 0.001f
+        cylinder.mixBuffer.right[blockFrames - 1] = 0.001
 
         cylinder.tryDeactivate()
 

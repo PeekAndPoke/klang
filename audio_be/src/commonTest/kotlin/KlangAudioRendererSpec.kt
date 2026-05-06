@@ -78,60 +78,60 @@ class KlangAudioRendererSpec : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "clip: sample at 0.0 maps to Short 0" {
-        clipSample(0.0f) shouldBe 0.toShort()
+        clipSample(0.0) shouldBe 0.toShort()
     }
 
     "clip: sample at 1.0 maps to Short.MAX_VALUE" {
-        clipSample(1.0f) shouldBe Short.MAX_VALUE
+        clipSample(1.0) shouldBe Short.MAX_VALUE
     }
 
     "clip: sample at -1.0 maps to -Short.MAX_VALUE (not Short.MIN_VALUE)" {
-        // -1.0f * 32767 = -32767, which is within [-1.0, 1.0] branch
-        val result = clipSample(-1.0f)
+        // -1.0 * 32767 = -32767, which is within [-1.0, 1.0] branch
+        val result = clipSample(-1.0)
         result shouldBe (-Short.MAX_VALUE.toInt()).toShort()
     }
 
     "clip: sample at 0.5 maps to half of Short.MAX_VALUE" {
-        val result = clipSample(0.5f)
-        val expected = (0.5f * Short.MAX_VALUE.toFloat()).toInt().toShort()
+        val result = clipSample(0.5)
+        val expected = (0.5 * Short.MAX_VALUE).toInt().toShort()
         result shouldBe expected
     }
 
     "clip: sample at -0.5 maps to negative half of Short.MAX_VALUE" {
-        val result = clipSample(-0.5f)
-        val expected = (-0.5f * Short.MAX_VALUE.toFloat()).toInt().toShort()
+        val result = clipSample(-0.5)
+        val expected = (-0.5 * Short.MAX_VALUE).toInt().toShort()
         result shouldBe expected
     }
 
     "clip: sample > 1.0 clamps to Short.MAX_VALUE" {
-        clipSample(1.5f) shouldBe Short.MAX_VALUE
-        clipSample(2.0f) shouldBe Short.MAX_VALUE
-        clipSample(100.0f) shouldBe Short.MAX_VALUE
+        clipSample(1.5) shouldBe Short.MAX_VALUE
+        clipSample(2.0) shouldBe Short.MAX_VALUE
+        clipSample(100.0) shouldBe Short.MAX_VALUE
     }
 
     "clip: sample < -1.0 clamps to Short.MIN_VALUE" {
-        clipSample(-1.5f) shouldBe Short.MIN_VALUE
-        clipSample(-2.0f) shouldBe Short.MIN_VALUE
-        clipSample(-100.0f) shouldBe Short.MIN_VALUE
+        clipSample(-1.5) shouldBe Short.MIN_VALUE
+        clipSample(-2.0) shouldBe Short.MIN_VALUE
+        clipSample(-100.0) shouldBe Short.MIN_VALUE
     }
 
     "clip: sample just inside bounds are scaled, not clamped" {
-        val justBelow1 = 0.999f
+        val justBelow1 = 0.999
         val result = clipSample(justBelow1)
-        val expected = (justBelow1 * Short.MAX_VALUE.toFloat()).toInt().toShort()
+        val expected = (justBelow1 * Short.MAX_VALUE).toInt().toShort()
         result shouldBe expected
 
-        val justAboveMinus1 = -0.999f
+        val justAboveMinus1 = -0.999
         val resultNeg = clipSample(justAboveMinus1)
-        val expectedNeg = (justAboveMinus1 * Short.MAX_VALUE.toFloat()).toInt().toShort()
+        val expectedNeg = (justAboveMinus1 * Short.MAX_VALUE).toInt().toShort()
         resultNeg shouldBe expectedNeg
     }
 
     "clip: sample just outside bounds are clamped" {
-        val justAbove1 = 1.0001f
+        val justAbove1 = 1.0001
         clipSample(justAbove1) shouldBe Short.MAX_VALUE
 
-        val justBelowMinus1 = -1.0001f
+        val justBelowMinus1 = -1.0001
         clipSample(justBelowMinus1) shouldBe Short.MIN_VALUE
     }
 
@@ -141,13 +141,13 @@ class KlangAudioRendererSpec : StringSpec({
 
     "interleave: output is [L0, R0, L1, R1, ...]" {
         val frames = 4
-        val left = floatArrayOf(0.1f, 0.2f, 0.3f, 0.4f)
-        val right = floatArrayOf(0.5f, 0.6f, 0.7f, 0.8f)
+        val left = doubleArrayOf(0.1, 0.2, 0.3, 0.4)
+        val right = doubleArrayOf(0.5, 0.6, 0.7, 0.8)
         val out = ShortArray(frames * 2)
 
         clipAndInterleave(left, right, frames, out)
 
-        val maxShort = Short.MAX_VALUE.toFloat()
+        val maxShort = Short.MAX_VALUE
 
         for (i in 0 until frames) {
             val expectedL = (left[i] * maxShort).toInt().toShort()
@@ -159,8 +159,8 @@ class KlangAudioRendererSpec : StringSpec({
 
     "interleave: left-only signal has zeros at odd indices" {
         val frames = 4
-        val left = floatArrayOf(0.5f, 0.5f, 0.5f, 0.5f)
-        val right = floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f)
+        val left = doubleArrayOf(0.5, 0.5, 0.5, 0.5)
+        val right = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
         val out = ShortArray(frames * 2)
 
         clipAndInterleave(left, right, frames, out)
@@ -173,8 +173,8 @@ class KlangAudioRendererSpec : StringSpec({
 
     "interleave: right-only signal has zeros at even indices" {
         val frames = 4
-        val left = floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f)
-        val right = floatArrayOf(0.5f, 0.5f, 0.5f, 0.5f)
+        val left = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
+        val right = doubleArrayOf(0.5, 0.5, 0.5, 0.5)
         val out = ShortArray(frames * 2)
 
         clipAndInterleave(left, right, frames, out)
@@ -187,29 +187,29 @@ class KlangAudioRendererSpec : StringSpec({
 
     "interleave with clipping: mixed in-range and out-of-range samples" {
         val frames = 4
-        val left = floatArrayOf(0.5f, 1.5f, -0.5f, -1.5f)
-        val right = floatArrayOf(-1.5f, -0.5f, 1.5f, 0.5f)
+        val left = doubleArrayOf(0.5, 1.5, -0.5, -1.5)
+        val right = doubleArrayOf(-1.5, -0.5, 1.5, 0.5)
         val out = ShortArray(frames * 2)
 
         clipAndInterleave(left, right, frames, out)
 
-        val maxShort = Short.MAX_VALUE.toFloat()
+        val maxShort = Short.MAX_VALUE
 
         // Frame 0: L=0.5 (scaled), R=-1.5 (clamped)
-        out[0] shouldBe (0.5f * maxShort).toInt().toShort()
+        out[0] shouldBe (0.5 * maxShort).toInt().toShort()
         out[1] shouldBe Short.MIN_VALUE
 
         // Frame 1: L=1.5 (clamped), R=-0.5 (scaled)
         out[2] shouldBe Short.MAX_VALUE
-        out[3] shouldBe (-0.5f * maxShort).toInt().toShort()
+        out[3] shouldBe (-0.5 * maxShort).toInt().toShort()
 
         // Frame 2: L=-0.5 (scaled), R=1.5 (clamped)
-        out[4] shouldBe (-0.5f * maxShort).toInt().toShort()
+        out[4] shouldBe (-0.5 * maxShort).toInt().toShort()
         out[5] shouldBe Short.MAX_VALUE
 
         // Frame 3: L=-1.5 (clamped), R=0.5 (scaled)
         out[6] shouldBe Short.MIN_VALUE
-        out[7] shouldBe (0.5f * maxShort).toInt().toShort()
+        out[7] shouldBe (0.5 * maxShort).toInt().toShort()
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -227,31 +227,31 @@ class KlangAudioRendererSpec : StringSpec({
             releaseSeconds = 0.1,
         )
 
-        val loudAmplitude = 2.0f
+        val loudAmplitude = 2.0
 
         // Process many blocks to converge the envelope follower
-        var prevMax = Float.MAX_VALUE
+        var prevMax = Double.MAX_VALUE
         repeat(200) {
-            val left = FloatArray(blockFrames) { loudAmplitude }
-            val right = FloatArray(blockFrames) { loudAmplitude }
+            val left = AudioBuffer(blockFrames) { loudAmplitude }
+            val right = AudioBuffer(blockFrames) { loudAmplitude }
             limiter.process(left, right, blockFrames)
             prevMax = left.maxOrNull()!!
         }
 
         // After convergence, two consecutive blocks should produce nearly identical levels
-        val block1 = FloatArray(blockFrames) { loudAmplitude }
-        val block1R = FloatArray(blockFrames) { loudAmplitude }
+        val block1 = AudioBuffer(blockFrames) { loudAmplitude }
+        val block1R = AudioBuffer(blockFrames) { loudAmplitude }
         limiter.process(block1, block1R, blockFrames)
 
-        val block2 = FloatArray(blockFrames) { loudAmplitude }
-        val block2R = FloatArray(blockFrames) { loudAmplitude }
+        val block2 = AudioBuffer(blockFrames) { loudAmplitude }
+        val block2R = AudioBuffer(blockFrames) { loudAmplitude }
         limiter.process(block2, block2R, blockFrames)
 
         val level1 = block1.last()
         val level2 = block2.last()
 
         // Steady-state: levels should be nearly identical
-        abs(level1 - level2) shouldBeLessThan 0.001f
+        abs(level1 - level2) shouldBeLessThan 0.001
         // And compressed well below the input
         level1 shouldBeLessThan loudAmplitude
     }
@@ -270,14 +270,14 @@ class KlangAudioRendererSpec : StringSpec({
 
         // Feed a very loud signal (amplitude 3.0, ~9.5 dB) through multiple blocks
         // to let the envelope follower converge
-        val loudAmplitude = 3.0f
+        val loudAmplitude = 3.0
 
-        var lastLeft = FloatArray(blockFrames) { loudAmplitude }
-        var lastRight = FloatArray(blockFrames) { loudAmplitude }
+        var lastLeft = AudioBuffer(blockFrames) { loudAmplitude }
+        var lastRight = AudioBuffer(blockFrames) { loudAmplitude }
 
         repeat(100) {
-            lastLeft = FloatArray(blockFrames) { loudAmplitude }
-            lastRight = FloatArray(blockFrames) { loudAmplitude }
+            lastLeft = AudioBuffer(blockFrames) { loudAmplitude }
+            lastRight = AudioBuffer(blockFrames) { loudAmplitude }
             limiter.process(lastLeft, lastRight, blockFrames)
         }
 
@@ -287,8 +287,8 @@ class KlangAudioRendererSpec : StringSpec({
 
         // The limiter with -1dB threshold and 20:1 ratio should compress 3.0 significantly
         // -1 dB linear ~= 0.891, so output should be around that level
-        maxOutput shouldBeLessThan 1.2f  // well below the input of 3.0
-        minOutput shouldBeGreaterThan 0.0f  // still positive (same-sign input)
+        maxOutput shouldBeLessThan 1.2  // well below the input of 3.0
+        minOutput shouldBeGreaterThan 0.0  // still positive (same-sign input)
     }
 
     "limiter preserves quiet signals below threshold" {
@@ -302,23 +302,23 @@ class KlangAudioRendererSpec : StringSpec({
         )
 
         // A quiet signal at -20 dB (amplitude ~0.1) should pass through nearly unchanged
-        val quietAmplitude = 0.1f
+        val quietAmplitude = 0.1
 
         // Warm up with quiet signal
         repeat(50) {
-            val left = FloatArray(blockFrames) { quietAmplitude }
-            val right = FloatArray(blockFrames) { quietAmplitude }
+            val left = AudioBuffer(blockFrames) { quietAmplitude }
+            val right = AudioBuffer(blockFrames) { quietAmplitude }
             limiter.process(left, right, blockFrames)
         }
 
-        val left = FloatArray(blockFrames) { quietAmplitude }
-        val right = FloatArray(blockFrames) { quietAmplitude }
+        val left = AudioBuffer(blockFrames) { quietAmplitude }
+        val right = AudioBuffer(blockFrames) { quietAmplitude }
         limiter.process(left, right, blockFrames)
 
         // Quiet signals below -1 dB threshold should be essentially unity-gained
         for (i in 0 until blockFrames) {
             val diff = abs(left[i] - quietAmplitude)
-            diff shouldBeLessThan 0.01f  // negligible change
+            diff shouldBeLessThan 0.01  // negligible change
         }
     }
 
@@ -351,12 +351,12 @@ class KlangAudioRendererSpec : StringSpec({
  * Replicates the renderer's clip logic for a single float sample.
  * This matches the exact branching in KlangAudioRenderer.renderBlock.
  */
-private fun clipSample(sample: Float): Short {
-    val maxShort = Short.MAX_VALUE.toFloat()
+private fun clipSample(sample: AudioSample): Short {
+    val maxShort = Short.MAX_VALUE
 
-    val out = if (sample >= -1.0f && sample <= 1.0f) {
+    val out = if (sample >= -1.0 && sample <= 1.0) {
         (sample * maxShort).toInt()
-    } else if (sample > 1.0f) {
+    } else if (sample > 1.0) {
         Short.MAX_VALUE.toInt()
     } else {
         Short.MIN_VALUE.toInt()
@@ -369,24 +369,24 @@ private fun clipSample(sample: Float): Short {
  * Replicates the renderer's clip + interleave logic.
  * This matches the exact loop in KlangAudioRenderer.renderBlock (step 5).
  */
-private fun clipAndInterleave(left: FloatArray, right: FloatArray, blockFrames: Int, out: ShortArray) {
-    val maxShort = Short.MAX_VALUE.toFloat()
+private fun clipAndInterleave(left: AudioBuffer, right: AudioBuffer, blockFrames: Int, out: ShortArray) {
+    val maxShort = Short.MAX_VALUE
 
     for (i in 0 until blockFrames) {
         val lSample = left[i]
         val rSample = right[i]
 
-        val lOut = if (lSample >= -1.0f && lSample <= 1.0f) {
+        val lOut = if (lSample >= -1.0 && lSample <= 1.0) {
             (lSample * maxShort).toInt()
-        } else if (lSample > 1.0f) {
+        } else if (lSample > 1.0) {
             Short.MAX_VALUE.toInt()
         } else {
             Short.MIN_VALUE.toInt()
         }
 
-        val rOut = if (rSample >= -1.0f && rSample <= 1.0f) {
+        val rOut = if (rSample >= -1.0 && rSample <= 1.0) {
             (rSample * maxShort).toInt()
-        } else if (rSample > 1.0f) {
+        } else if (rSample > 1.0) {
             Short.MAX_VALUE.toInt()
         } else {
             Short.MIN_VALUE.toInt()
@@ -398,13 +398,13 @@ private fun clipAndInterleave(left: FloatArray, right: FloatArray, blockFrames: 
     }
 }
 
-private infix fun Float.shouldBeLessThan(other: Float) {
+private infix fun Double.shouldBeLessThan(other: Double) {
     if (this >= other) {
         throw AssertionError("Expected $this to be less than $other")
     }
 }
 
-private infix fun Float.shouldBeGreaterThan(other: Float) {
+private infix fun Double.shouldBeGreaterThan(other: Double) {
     if (this <= other) {
         throw AssertionError("Expected $this to be greater than $other")
     }

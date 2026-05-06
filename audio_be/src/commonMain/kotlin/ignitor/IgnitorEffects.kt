@@ -1,14 +1,19 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.effects.PhaserCore
+import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
+import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.resolveDistortionShape
-import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.sin
-import kotlin.math.tan
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -20,7 +25,19 @@ import kotlin.math.tan
  *
  * Drives the signal into a nonlinear transfer function, generating new harmonics.
  * Amount is read once per block (control rate). Bypasses when amount <= 0.
- * Includes a DC blocker for asymmetric shapes (diode, rectify).
+ *
+ * **DC blocker is always applied** when the effect is engaged — not just for
+ * asymmetric shapes (`diode`, `rectify`) that need it for correctness, but also
+ * for symmetric shapes at extreme drive where any input asymmetry causes the
+ * output to rail-lock toward `±1` and produce a DC bias that can damage speakers.
+ *
+ * **Output is bounded to ±1 by a C¹-piecewise soft cap** ([ClippingFuncs.softCap]).
+ * Below the linear-region threshold the cap is identity (clean signals
+ * untouched); above, the rail-edge transients from the DC blocker's 2× HF gain
+ * are smoothly compressed toward ±1 with continuous value + slope at the
+ * threshold (no cliff click). The cap is per-stage so chained ignitor
+ * combinators (downstream filters, mix points) see a well-behaved bounded
+ * input — without it, a heavy-distort branch can dominate a mix.
  *
  * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm saturation, 1.0 = heavy distortion,
  *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Default: 0.0 (bypass).
@@ -28,56 +45,63 @@ import kotlin.math.tan
  *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
  *   "diode" (asymmetric), "fold" (wave folding), "chebyshev", "rectify", "exp".
  */
-fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: Int = 0): Ignitor {
-    val resolved = resolveDistortionShape(shape)
-    val waveshaper = resolved.fn
-    val outputGain = resolved.outputGain
-    val needsDcBlock = resolved.needsDcBlock
-    val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
+fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: Int = 0): Ignitor =
+    DistortIgnitor(this, amount, shape, oversampleStages)
 
-    // DC blocker state
-    val dcBlockCoeff = 0.995
-    var dcBlockX1 = 0.0
-    var dcBlockY1 = 0.0
+private class DistortIgnitor(
+    private val upstream: Ignitor,
+    private val amount: Ignitor,
+    shape: String,
+    oversampleStages: Int,
+) : Ignitor {
+    private val waveshaper: (Double) -> Double
+    private val outputGain: Double
+    private val oversampler: Oversampler?
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    // DC blocker — always applied to guard against rail-lock at extreme drive.
+    // Runs at base rate after oversampler decimation (or directly when no oversampler).
+    // The block-based class keeps state in registers across the inner loop.
+    // The downstream `softCap` bounds the raw-pole 2× edge transient to ±1.
+    private val dcBlocker = LowPassHighPassFilters.DcBlocker()
 
-        val amt = Ignitors.readParam(amount, freqHz, ctx)
-        if (amt <= 0.0) return@Ignitor
+    init {
+        val resolved = resolveDistortionShape(shape)
+        waveshaper = resolved.fn
+        outputGain = resolved.outputGain
+        oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
+    }
 
-        val drive = 10.0.pow(amt * 1.2)
-        val os = oversampler
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { work ->
+            upstream.generate(work, freqHz, ctx)
 
-        if (os != null) {
-            os.process(buffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                (waveshaper(sample.toDouble() * drive) * outputGain).toFloat()
-            }
-            // DC blocker at original rate after decimation
-            if (needsDcBlock) {
-                val end = ctx.offset + ctx.length
-                for (i in ctx.offset until end) {
-                    val y = buffer[i].toDouble()
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    buffer[i] = dcOut.toFloat()
-                }
-            }
-        } else {
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                val x = buffer[i].toDouble() * drive
-                var y = waveshaper(x) * outputGain
 
-                if (needsDcBlock) {
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    y = dcOut
+            if (amt <= 0.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = work[i]
                 }
+                return@use
+            }
 
-                buffer[i] = y.toFloat()
+            val drive = 10.0.pow(amt * 1.2)
+            val os = oversampler
+
+            if (os != null) {
+                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                    (waveshaper(sample * drive) * outputGain)
+                }
+            } else {
+                for (i in ctx.offset until end) {
+                    work[i] = waveshaper(work[i] * drive) * outputGain
+                }
+            }
+
+            dcBlocker.process(work, ctx.offset, ctx.length)
+
+            for (i in ctx.offset until end) {
+                buffer[i] = ClippingFuncs.softCap(work[i])
             }
         }
     }
@@ -105,21 +129,36 @@ fun Ignitor.distort(amount: Double, shape: String = "soft", oversampleStages: In
  *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Default: 0.0 (bypass).
  * @param type Drive type. Default: "linear". Future: "tube", "fet", "tape".
  */
-fun Ignitor.drive(amount: Ignitor, type: String = "linear"): Ignitor {
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+fun Ignitor.drive(amount: Ignitor, type: String = "linear"): Ignitor =
+    DriveIgnitor(this, amount, type)
 
-        val amt = Ignitors.readParam(amount, freqHz, ctx)
-        if (amt <= 0.0) return@Ignitor
+private class DriveIgnitor(
+    private val upstream: Ignitor,
+    private val amount: Ignitor,
+    private val type: String,
+) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { work ->
+            upstream.generate(work, freqHz, ctx)
 
-        val driveGain = when (type.lowercase()) {
-            "linear" -> 10.0.pow(amt * 1.2)
-            else -> 10.0.pow(amt * 1.2) // default to linear, future: tube, fet, tape
-        }
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            buffer[i] = (buffer[i] * driveGain).toFloat()
+            if (amt <= 0.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = work[i]
+                }
+                return@use
+            }
+
+            val driveGain = when (type.lowercase()) {
+                "linear" -> 10.0.pow(amt * 1.2)
+                else -> 10.0.pow(amt * 1.2) // default to linear, future: tube, fet, tape
+            }
+
+            for (i in ctx.offset until end) {
+                buffer[i] = (work[i] * driveGain)
+            }
         }
     }
 }
@@ -140,55 +179,59 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  *
  * Unlike [distort], this does not boost the signal before shaping — it only clips
  * whatever amplitude is already there. Use [drive] before clip() for a two-stage chain.
- * Includes DC blocker for asymmetric shapes (diode, rectify).
+ *
+ * **DC blocker is always applied** to guard against rail-lock when the input is
+ * already heavily saturated (e.g. after `drive`). See [distort] for the rationale.
+ * Output is bounded to ±1 by a C¹-piecewise soft cap ([ClippingFuncs.softCap])
+ * — identity in the linear region, smooth saturation above. See [distort].
  *
  * @param shape Waveshaper function. Default: "soft" (tanh).
  *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
  *   "diode" (asymmetric), "fold" (wave folding), "chebyshev", "rectify", "exp".
  */
-fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
-    val resolved = resolveDistortionShape(shape)
-    val clipFn = resolved.fn
-    val outputGain = resolved.outputGain
-    val needsDcBlock = resolved.needsDcBlock
-    val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
+fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
+    ClipIgnitor(this, shape, oversampleStages)
 
-    val dcBlockCoeff = 0.995
-    var dcBlockX1 = 0.0
-    var dcBlockY1 = 0.0
+private class ClipIgnitor(
+    private val upstream: Ignitor,
+    shape: String,
+    oversampleStages: Int,
+) : Ignitor {
+    private val clipFn: (Double) -> Double
+    private val outputGain: Double
+    private val oversampler: Oversampler?
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    // DC blocker pre-softCap. See `Ignitor.distort` for the rationale.
+    private val dcBlocker = LowPassHighPassFilters.DcBlocker()
 
-        val os = oversampler
+    init {
+        val resolved = resolveDistortionShape(shape)
+        clipFn = resolved.fn
+        outputGain = resolved.outputGain
+        oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
+    }
 
-        if (os != null) {
-            os.process(buffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                (clipFn(sample.toDouble()) * outputGain).toFloat()
-            }
-            if (needsDcBlock) {
-                val end = ctx.offset + ctx.length
-                for (i in ctx.offset until end) {
-                    val y = buffer[i].toDouble()
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    buffer[i] = dcOut.toFloat()
-                }
-            }
-        } else {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { work ->
+            upstream.generate(work, freqHz, ctx)
+
             val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                var y = clipFn(buffer[i].toDouble()) * outputGain
+            val os = oversampler
 
-                if (needsDcBlock) {
-                    val dcOut = y - dcBlockX1 + dcBlockCoeff * dcBlockY1
-                    dcBlockX1 = y
-                    dcBlockY1 = flushDenormal(dcOut)
-                    y = dcOut
+            if (os != null) {
+                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
+                    (clipFn(sample) * outputGain)
                 }
+            } else {
+                for (i in ctx.offset until end) {
+                    work[i] = clipFn(work[i]) * outputGain
+                }
+            }
 
-                buffer[i] = y.toFloat()
+            dcBlocker.process(work, ctx.offset, ctx.length)
+
+            for (i in ctx.offset until end) {
+                buffer[i] = ClippingFuncs.softCap(work[i])
             }
         }
     }
@@ -216,27 +259,34 @@ fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor {
  *   4.0 = 16 levels, 8.0 = 256 levels, 16.0 = 65536 levels (subtle).
  *   Internally: `levels = 2^amount`. Typical range: 2.0–8.0.
  */
-fun Ignitor.crush(amount: Ignitor): Ignitor {
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+fun Ignitor.crush(amount: Ignitor): Ignitor = CrushIgnitor(this, amount)
 
-        val amt = Ignitors.readParam(amount, freqHz, ctx)
+private class CrushIgnitor(
+    private val upstream: Ignitor,
+    private val amount: Ignitor,
+) : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { work ->
+            upstream.generate(work, freqHz, ctx)
 
-        // Continuous levels — no toInt() so modulating `amt` sweeps the grid smoothly.
-        val levels = 2.0.pow(amt)
-        // Bypass: need at least 2 levels (amt >= 1) for the quantizer to be
-        // remotely bounded by the input range. Sub-1.0 amounts would inflate by
-        // factor `1/halfLevels`, which can exceed 2×.
-        if (levels < 2.0) return@Ignitor
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        val halfLevels = levels / 2.0
+            val levels = 2.0.pow(amt)
+            if (levels < 2.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = work[i]
+                }
+                return@use
+            }
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            // Midtread symmetric quantizer (round, not floor) — no DC bias.
-            // Clamp output to [-1, 1] to catch non-integer halfLevels inflation.
-            val q = round(buffer[i].toDouble() * halfLevels) / halfLevels
-            buffer[i] = q.coerceIn(-1.0, 1.0).toFloat()
+            val halfLevels = levels / 2.0
+            for (i in ctx.offset until end) {
+                // Midtread symmetric quantizer (round, not floor) — no DC bias.
+                // Clamp output to [-1, 1] to catch non-integer halfLevels inflation.
+                val q = round(work[i] * halfLevels) / halfLevels
+                buffer[i] = q.coerceIn(-1.0, 1.0)
+            }
         }
     }
 }
@@ -266,30 +316,42 @@ fun Ignitor.crush(amount: Double): Ignitor {
  *   2.0 = every 2nd sample held, 4.0 = every 4th (strong aliasing), 10.0+ = extreme lo-fi.
  *   Typical range: 2.0–8.0. Default: 0.0 (inactive).
  */
-fun Ignitor.coarse(amount: Ignitor): Ignitor {
-    var lastValue = 0.0f
-    var counter = 0.0
+private class CoarseIgnitor(
+    private val upstream: Ignitor,
+    private val amount: Ignitor,
+) : Ignitor {
+    private var lastValue: Double = 0.0
+    private var counter: Double = 0.0
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { work ->
+            upstream.generate(work, freqHz, ctx)
 
-        val amt = Ignitors.readParam(amount, freqHz, ctx)
-        if (amt <= 1.0) return@Ignitor
+            val amt = Ignitors.readParam(amount, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val idx = i - ctx.offset
-
-            if (counter >= 1.0 || (idx == 0 && counter == 0.0)) {
-                lastValue = buffer[i]
-                counter -= 1.0
+            if (amt <= 1.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = work[i]
+                }
+                return@use
             }
 
-            buffer[i] = lastValue
-            counter += (1.0 / amt)
+            val invAmt = 1.0 / amt
+            for (i in ctx.offset until end) {
+                val idx = i - ctx.offset
+                if (counter >= 1.0 || (idx == 0 && counter == 0.0)) {
+                    lastValue = work[i]
+                    counter -= 1.0
+                }
+                buffer[i] = lastValue
+                counter += invAmt
+            }
         }
     }
 }
+
+fun Ignitor.coarse(amount: Ignitor): Ignitor = CoarseIgnitor(this, amount)
 
 /**
  * Sample-rate reducer (convenience overload with fixed amount).
@@ -323,57 +385,50 @@ fun Ignitor.coarse(amount: Double): Ignitor {
  */
 fun Ignitor.phaser(
     rate: Ignitor,
-    depth: Ignitor,
+    blend: Ignitor,
     center: Ignitor = ParamIgnitor("center", 1000.0),
     sweep: Ignitor = ParamIgnitor("sweep", 1000.0),
-): Ignitor {
-    val stages = 4
-    var lfoPhase = 0.0
-    val filterState = DoubleArray(stages)
-    var lastOutput = 0.0
-    val feedback = 0.5
+): Ignitor = PhaserIgnitor(this, rate, blend, center, sweep)
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+private class PhaserIgnitor(
+    private val upstream: Ignitor,
+    private val rate: Ignitor,
+    private val blend: Ignitor,
+    private val center: Ignitor,
+    private val sweep: Ignitor,
+) : Ignitor {
+    // Lazy-init: PhaserCore needs sampleRate at construction, but we only see
+    // ctx.sampleRate on the first generate() call.
+    private var core: PhaserCore? = null
 
-        val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-        val depthVal = Ignitors.readParam(depth, freqHz, ctx)
-        val centerVal = Ignitors.readParam(center, freqHz, ctx)
-        val sweepVal = Ignitors.readParam(sweep, freqHz, ctx)
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        val phaser = core ?: PhaserCore(PhaserCore.DEFAULT_STAGES, ctx.sampleRate).also { core = it }
 
-        if (depthVal <= 0.0) return@Ignitor
+        ctx.scratchBuffers.use { input ->
+            upstream.generate(input, freqHz, ctx)
 
-        val inverseSampleRate = 1.0 / ctx.sampleRate
-        val lfoIncrement = rateVal * TWO_PI * inverseSampleRate
+            val blendVal = Ignitors.readParam(blend, freqHz, ctx).coerceIn(0.0, 1.0)
+            val end = ctx.offset + ctx.length
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            // LFO
-            lfoPhase += lfoIncrement
-            if (lfoPhase > TWO_PI) lfoPhase -= TWO_PI
-            val lfoValue = (sin(lfoPhase) + 1.0) * 0.5
-
-            // Modulated frequency
-            var modFreq = centerVal + (lfoValue - 0.5) * sweepVal
-            modFreq = modFreq.coerceIn(100.0, 18000.0)
-
-            // All-pass coefficient
-            val tanValue = tan(PI * modFreq * inverseSampleRate)
-            val alpha = (tanValue - 1.0) / (tanValue + 1.0)
-
-            // All-pass cascade with feedback
-            var signal = buffer[i].toDouble() + lastOutput * feedback
-
-            for (s in 0 until stages) {
-                val output = alpha * signal + filterState[s]
-                filterState[s] = flushDenormal(signal - alpha * output)
-                signal = output
+            if (blendVal <= 0.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = input[i]
+                }
+                return@use
             }
 
-            lastOutput = flushDenormal(signal)
+            // Push current control-rate values into the kernel once per block.
+            phaser.rate = Ignitors.readParam(rate, freqHz, ctx)
+            phaser.center = Ignitors.readParam(center, freqHz, ctx)
+            phaser.sweep = Ignitors.readParam(sweep, freqHz, ctx)
 
-            // Mix wet with dry
-            buffer[i] = (buffer[i] + signal * depthVal).toFloat()
+            val d = blendVal
+            val dInv = 1.0 - d
+            for (i in ctx.offset until end) {
+                val dry = input[i]
+                val wet = phaser.step(dry)
+                buffer[i] = dry * dInv + wet * d
+            }
         }
     }
 }
@@ -382,20 +437,20 @@ fun Ignitor.phaser(
  * 4-stage all-pass cascade phaser (convenience overload with fixed values).
  *
  * @param rate LFO speed in Hz. Typical range: 0.1–5.0.
- * @param depth Wet/dry mix. 0.0 = bypass, 1.0 = full effect.
+ * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default: 0.5.
  * @param center Center frequency in Hz. Default: 1000.0. Clamped to [100, 18000].
  * @param sweep Modulation width in Hz. Default: 1000.0. Clamped to [100, 18000].
  */
 fun Ignitor.phaser(
     rate: Double,
-    depth: Double,
+    blend: Double = 0.5,
     center: Double = 1000.0,
     sweep: Double = 1000.0,
 ): Ignitor {
-    if (depth <= 0.0) return this
+    if (blend <= 0.0) return this
     return phaser(
         ParamIgnitor("rate", rate),
-        ParamIgnitor("depth", depth),
+        ParamIgnitor("blend", blend),
         ParamIgnitor("center", center),
         ParamIgnitor("sweep", sweep),
     )
@@ -420,27 +475,40 @@ fun Ignitor.phaser(
 fun Ignitor.tremolo(
     rate: Ignitor,
     depth: Ignitor,
-): Ignitor {
-    var phase = 0.0
+): Ignitor = TremoloIgnitor(this, rate, depth)
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+private class TremoloIgnitor(
+    private val upstream: Ignitor,
+    private val rate: Ignitor,
+    private val depth: Ignitor,
+) : Ignitor {
+    private var phase: Double = 0.0
 
-        val rateVal = Ignitors.readParam(rate, freqHz, ctx)
-        val depthVal = Ignitors.readParam(depth, freqHz, ctx)
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { input ->
+            upstream.generate(input, freqHz, ctx)
 
-        if (depthVal <= 0.0) return@Ignitor
+            val rateVal = Ignitors.readParam(rate, freqHz, ctx)
+            val depthVal = Ignitors.readParam(depth, freqHz, ctx)
+            val end = ctx.offset + ctx.length
 
-        val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
+            if (depthVal <= 0.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = input[i]
+                }
+                return@use
+            }
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            phase += phaseInc
-            if (phase > TWO_PI) phase -= TWO_PI
+            val phaseInc = (TWO_PI * rateVal) / ctx.sampleRate
 
-            val lfoNorm = (sin(phase) + 1.0) * 0.5
-            val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
-            buffer[i] = (buffer[i] * gain).toFloat()
+            for (i in ctx.offset until end) {
+                phase += phaseInc
+                if (phase > TWO_PI) phase -= TWO_PI
+
+                val lfoNorm = (sin(phase) + 1.0) * 0.5
+                val gain = 1.0 - (depthVal * (1.0 - lfoNorm))
+                buffer[i] = (input[i] * gain)
+            }
         }
     }
 }
@@ -460,33 +528,203 @@ fun Ignitor.tremolo(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Shimmer — granular pitch-shift cloud with feedback (Aetherizer-style)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Granular shimmer effect — short overlapping grains read back from a ring buffer at
+ * pitched rates, with a feedback loop through a tone lowpass.
+ *
+ * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
+ *   Formula: `out = dry · (1 − blend) + wet · blend`.
+ * @param feedback Wet → grain-buffer feedback. 0.0 = single pass, 0.9 = long cascading tails.
+ *   Hard-clamped to 0.95 for stability.
+ * @param tone One-pole LPF cutoff (Hz) in the feedback path. Lower = darker. Clamped to [200, 16000].
+ * @param pitches Semitone transpositions for grains. Each grain is assigned a pitch from this
+ *   list in round-robin order. Default: `[0, 7, 12]` (root + fifth + octave).
+ */
+fun Ignitor.shimmer(
+    blend: Ignitor,
+    feedback: Ignitor,
+    tone: Ignitor,
+    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
+): Ignitor = ShimmerIgnitor(this, blend, feedback, tone, pitches)
+
+// NOTE: shimmer is WIP — internal grain bookkeeping may still change. Keep the
+// per-block logic readable; revisit perf rules (audio/ref/performance.md) once
+// the grain scheduler is finalised.
+private class ShimmerIgnitor(
+    private val upstream: Ignitor,
+    private val blend: Ignitor,
+    private val feedback: Ignitor,
+    private val tone: Ignitor,
+    pitches: List<Double>,
+) : Ignitor {
+    private val ringSize = 96_000
+    private val ring = AudioBuffer(ringSize)
+    private var writePos: Int = 0
+
+    private val maxGrains = 8
+    private val grainActive = BooleanArray(maxGrains)
+    private val grainReadPos = DoubleArray(maxGrains)
+    private val grainRate = DoubleArray(maxGrains)
+    private val grainElapsed = IntArray(maxGrains)
+    private val grainTotal = IntArray(maxGrains)
+
+    private val intervalRates = DoubleArray(pitches.size) { 2.0.pow(pitches[it] / 12.0) }
+    private var nextIntervalIdx: Int = 0
+
+    private val grainsPerSecond = 12.0
+    private val grainSizeSec = 0.150
+    private var samplesUntilNextGrain: Int = 0
+
+    private var feedbackTap: Double = 0.0
+    private var lpfState: Double = 0.0
+
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { input ->
+            upstream.generate(input, freqHz, ctx)
+
+            val blendVal = Ignitors.readParam(blend, freqHz, ctx).coerceIn(0.0, 1.0)
+            val fbVal = Ignitors.readParam(feedback, freqHz, ctx).coerceIn(0.0, 0.95)
+            val toneVal = Ignitors.readParam(tone, freqHz, ctx).coerceIn(200.0, 16000.0)
+            val end = ctx.offset + ctx.length
+
+            if (blendVal <= 0.0 && fbVal <= 0.0) {
+                for (i in ctx.offset until end) {
+                    buffer[i] = input[i]
+                }
+                return@use
+            }
+
+            val sampleRate = ctx.sampleRate
+            val grainPeriodSamples = (sampleRate / grainsPerSecond).toInt().coerceAtLeast(1)
+            val grainTotalSamples = (sampleRate * grainSizeSec).toInt().coerceAtLeast(1)
+            val invGrainTotal = 1.0 / grainTotalSamples
+
+            val lpfA = exp(-TWO_PI * toneVal / sampleRate)
+            val lpfOneMinusA = 1.0 - lpfA
+
+            for (i in ctx.offset until end) {
+                val dry = input[i]
+
+                var write = dry + feedbackTap * fbVal
+                if (write > 2.0) write = 2.0 else if (write < -2.0) write = -2.0
+                ring[writePos] = write
+                writePos++
+                if (writePos >= ringSize) writePos = 0
+
+                if (samplesUntilNextGrain <= 0) {
+                    samplesUntilNextGrain = grainPeriodSamples
+                    val rate = intervalRates[nextIntervalIdx]
+                    nextIntervalIdx = (nextIntervalIdx + 1) % intervalRates.size
+
+                    var slot = -1
+                    for (g in 0 until maxGrains) {
+                        if (!grainActive[g]) {
+                            slot = g; break
+                        }
+                    }
+                    if (slot >= 0) {
+                        val lookback = rate * grainTotalSamples
+                        var start = writePos - lookback
+                        while (start < 0.0) start += ringSize
+                        grainReadPos[slot] = start
+                        grainRate[slot] = rate
+                        grainElapsed[slot] = 0
+                        grainTotal[slot] = grainTotalSamples
+                        grainActive[slot] = true
+                    }
+                }
+                samplesUntilNextGrain--
+
+                var wet = 0.0
+                for (g in 0 until maxGrains) {
+                    if (!grainActive[g]) continue
+
+                    val pos = grainReadPos[g]
+                    val idx1 = pos.toInt()
+                    val frac = pos - idx1
+                    val idx2 = if (idx1 + 1 >= ringSize) 0 else idx1 + 1
+                    val sample = ring[idx1] + frac * (ring[idx2] - ring[idx1])
+
+                    val phase = grainElapsed[g] * invGrainTotal
+                    val win = 0.5 - 0.5 * cos(TWO_PI * phase)
+                    wet += sample * win
+
+                    var nextPos = pos + grainRate[g]
+                    while (nextPos >= ringSize) nextPos -= ringSize
+                    grainReadPos[g] = nextPos
+                    grainElapsed[g]++
+                    if (grainElapsed[g] >= grainTotal[g]) grainActive[g] = false
+                }
+
+                lpfState = flushDenormal(lpfOneMinusA * wet + lpfA * lpfState)
+                feedbackTap = lpfState
+
+                buffer[i] = (dry * (1.0 - blendVal) + wet * blendVal)
+            }
+        }
+    }
+}
+
+/**
+ * Granular shimmer (convenience overload with fixed values).
+ *
+ * @param blend Crossfade: 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only). Default: 0.5.
+ * @param feedback Cascade feedback. 0.0 = single pass, 0.9 = long tails. Default: 0.5.
+ * @param tone Feedback-path LPF cutoff in Hz. Default: 4000.0.
+ * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]`.
+ */
+fun Ignitor.shimmer(
+    blend: Double = 0.5,
+    feedback: Double = 0.5,
+    tone: Double = 4000.0,
+    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
+): Ignitor {
+    if (blend <= 0.0 && feedback <= 0.0) return this
+    return shimmer(
+        ParamIgnitor("blend", blend),
+        ParamIgnitor("feedback", feedback),
+        ParamIgnitor("tone", tone),
+        pitches,
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // DC Blocker
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * One-pole highpass DC blocker.
+ * One-pole highpass DC blocker — degenerate first-order HPF with raw pole.
  *
  * Removes DC offset accumulation from waveshaping, feedback, and asymmetric clipping.
  * Essential after distortion shapes that produce asymmetric output (diode, rectify).
  *
- * @param coefficient Filter coefficient controlling the cutoff frequency.
- *   0.995 = ~20 Hz cutoff (good for feedback paths). 0.999 = ~5 Hz cutoff (master output).
- *   Higher = lower cutoff, less signal removed. Default: 0.995.
+ * Cutoff approximation: `fc ≈ (1 − a)·fs / (2π)`. Reference points:
+ *   - `coefficient = 0.995` → ~35 Hz @ 44.1k, ~38 Hz @ 48k (good for feedback paths)
+ *   - `coefficient = 0.999` → ~7 Hz  @ 44.1k, ~7.6 Hz @ 48k (good for master output)
+ *
+ * Higher coefficient = lower cutoff = less low-frequency content removed.
+ *
+ * Implementation delegates to [LowPassHighPassFilters.DcBlocker]; see that class for
+ * the dedup history (this used to be one of 9 inline copies before 2026-04-29).
+ *
+ * @param coefficient Raw IIR pole. NaN/Inf or out-of-range values fall back to 0.995. Default: 0.995.
  */
-fun Ignitor.dcBlock(coefficient: Double = 0.995): Ignitor {
-    var x1 = 0.0
-    var y1 = 0.0
+fun Ignitor.dcBlock(coefficient: Double = DEFAULT_DC_BLOCK_COEFF): Ignitor =
+    DcBlockIgnitor(this, coefficient)
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+private class DcBlockIgnitor(
+    private val upstream: Ignitor,
+    coefficient: Double,
+) : Ignitor {
+    private val dcBlocker = LowPassHighPassFilters.DcBlocker(coefficient)
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            val x = buffer[i].toDouble()
-            val y = x - x1 + coefficient * y1
-            x1 = x
-            y1 = flushDenormal(y)
-            buffer[i] = y.toFloat()
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { input ->
+            upstream.generate(input, freqHz, ctx)
+            dcBlocker.process(input, buffer, ctx.offset, ctx.length)
         }
     }
 }

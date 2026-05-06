@@ -11,7 +11,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 class LangChunkSpec : FunSpec({
 
     test("chunk(4) should transform each quarter sequentially") {
-        val pat = seq("0 0 0 0").chunk(4) { it.add(1) }
+        val pat = seq("0 0 0 0").chunk(4, transform = { it.add(1) })
 
         assertSoftly {
             repeat(16) { cycle ->
@@ -92,7 +92,7 @@ class LangChunkSpec : FunSpec({
     }
 
     test("chunk() should work with Kotlin function call syntax") {
-        val pat = seq("0 1 2 3").chunk(4) { it.add(12) }
+        val pat = seq("0 1 2 3").chunk(4, transform = { it.add(12) })
 
         val events0 = pat.queryArc(0.0, 1.0)
         events0.size shouldBe 4

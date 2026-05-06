@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_bridge
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.json.Json
 
 class IgnitorDslSerializationTest : StringSpec({
@@ -75,7 +76,7 @@ class IgnitorDslSerializationTest : StringSpec({
     }
 
     "WhiteNoise round-trips" {
-        val dsl = IgnitorDsl.WhiteNoise
+        val dsl = IgnitorDsl.WhiteNoise()
         roundTrip(dsl) shouldBe dsl
     }
 
@@ -103,8 +104,129 @@ class IgnitorDslSerializationTest : StringSpec({
         roundTrip(dsl) shouldBe dsl
     }
 
-    "Mul round-trips" {
+    "mul builder produces Times — round-trips" {
         val dsl = IgnitorDsl.Sine().mul(IgnitorDsl.Param("factor", 0.5))
+        dsl.shouldBeInstanceOf<IgnitorDsl.Times>()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Minus round-trips" {
+        val dsl = IgnitorDsl.Sine().minus(IgnitorDsl.Sawtooth())
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Neg round-trips" {
+        val dsl = IgnitorDsl.Sine().neg()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Abs round-trips" {
+        val dsl = IgnitorDsl.Sine().abs()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Pow round-trips" {
+        val dsl = IgnitorDsl.Sine().pow(IgnitorDsl.Constant(2.0))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Min round-trips" {
+        val dsl = IgnitorDsl.Sine().min(IgnitorDsl.Constant(0.5))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Max round-trips" {
+        val dsl = IgnitorDsl.Sine().max(IgnitorDsl.Constant(-0.5))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Clamp round-trips" {
+        val dsl = IgnitorDsl.Sine().clamp(IgnitorDsl.Constant(-0.5), IgnitorDsl.Constant(0.5))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Exp round-trips" {
+        val dsl = IgnitorDsl.Sine().exp()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Log round-trips" {
+        val dsl = IgnitorDsl.Sine().log()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Sqrt round-trips" {
+        val dsl = IgnitorDsl.Sine().sqrt()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Sign round-trips" {
+        val dsl = IgnitorDsl.Sine().sign()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Tanh round-trips" {
+        val dsl = IgnitorDsl.Sine().tanh()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Lerp round-trips" {
+        val dsl = IgnitorDsl.Sine().lerp(IgnitorDsl.Sawtooth(), IgnitorDsl.Constant(0.3))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Range round-trips" {
+        val dsl = IgnitorDsl.Sine().range(IgnitorDsl.Constant(0.5), IgnitorDsl.Constant(5.0))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Bipolar round-trips" {
+        val dsl = IgnitorDsl.Sine().bipolar()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Unipolar round-trips" {
+        val dsl = IgnitorDsl.Sine().unipolar()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Floor round-trips" {
+        val dsl = IgnitorDsl.Sine().floor()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Ceil round-trips" {
+        val dsl = IgnitorDsl.Sine().ceil()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Round round-trips" {
+        val dsl = IgnitorDsl.Sine().round()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Frac round-trips" {
+        val dsl = IgnitorDsl.Sine().frac()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Mod round-trips" {
+        val dsl = IgnitorDsl.Sine().mod(IgnitorDsl.Constant(0.5))
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Recip round-trips" {
+        val dsl = IgnitorDsl.Sine().recip()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Sq round-trips" {
+        val dsl = IgnitorDsl.Sine().sq()
+        roundTrip(dsl) shouldBe dsl
+    }
+
+    "Select round-trips" {
+        val dsl = IgnitorDsl.Sine().select(IgnitorDsl.Constant(1.0), IgnitorDsl.Constant(-1.0))
         roundTrip(dsl) shouldBe dsl
     }
 
@@ -211,12 +333,12 @@ class IgnitorDslSerializationTest : StringSpec({
     }
 
     "BrownNoise round-trips" {
-        val dsl = IgnitorDsl.BrownNoise
+        val dsl = IgnitorDsl.BrownNoise()
         roundTrip(dsl) shouldBe dsl
     }
 
     "PinkNoise round-trips" {
-        val dsl = IgnitorDsl.PinkNoise
+        val dsl = IgnitorDsl.PinkNoise()
         roundTrip(dsl) shouldBe dsl
     }
 

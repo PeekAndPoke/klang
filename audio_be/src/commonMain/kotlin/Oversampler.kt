@@ -30,11 +30,11 @@ class Oversampler(val stages: Int) {
      * 4. Writes results back into buffer[offset..offset+length)
      */
     fun process(
-        buffer: FloatArray,
+        buffer: AudioBuffer,
         offset: Int,
         length: Int,
         scratchBuffers: ScratchBuffers,
-        transform: (Float) -> Float,
+        transform: (AudioSample) -> AudioSample,
     ) {
         val oversampledLen = length * factor
 
@@ -60,33 +60,33 @@ class Oversampler(val stages: Int) {
 
     // ── Linear interpolation upsample ───────────────────────────────────────────
 
-    private fun upsample(buffer: FloatArray, offset: Int, length: Int, work: FloatArray) {
+    private fun upsample(buffer: AudioBuffer, offset: Int, length: Int, work: AudioBuffer) {
         val f = factor
         var prev = lastSample
 
         for (i in 0 until length) {
-            val curr = buffer[offset + i].toDouble()
+            val curr = buffer[offset + i]
             val base = i * f
             val step = (curr - prev) / f
             for (j in 0 until f) {
-                work[base + j] = (prev + step * j).toFloat()
+                work[base + j] = (prev + step * j)
             }
             prev = curr
         }
 
-        lastSample = buffer[offset + length - 1].toDouble()
+        lastSample = buffer[offset + length - 1]
     }
 
     // ── 2x decimation with half-band FIR ────────────────────────────────────────
 
-    private fun decimate2x(state: HalfBandState, work: FloatArray, currentLen: Int): Int {
+    private fun decimate2x(state: HalfBandState, work: AudioBuffer, currentLen: Int): Int {
         val outLen = currentLen / 2
         var outIdx = 0
         for (i in 0 until currentLen) {
-            state.push(work[i].toDouble())
+            state.push(work[i])
             // Output every other sample (odd-indexed after push)
             if (i and 1 == 1) {
-                work[outIdx] = state.output().toFloat()
+                work[outIdx] = state.output()
                 outIdx++
             }
         }

@@ -83,13 +83,13 @@ class AstIndex private constructor(
                 // Check if 'node' is (or is an ancestor of) one of the call's arguments
                 val argIndex = findArgIndex(node, parent)
                 if (argIndex >= 0) {
-                    val arg = parent.arguments[argIndex]
-                    val argRange = offsetMap[arg]
+                    val argExpr = parent.arguments[argIndex].value
+                    val argRange = offsetMap[argExpr]
                     return CallExpressionAtResult(
                         call = parent,
                         functionName = extractFunctionName(parent.callee),
                         argIndex = argIndex,
-                        argument = arg,
+                        argument = argExpr,
                         argFrom = argRange?.first ?: pos,
                         argTo = argRange?.let { it.last + 1 } ?: pos,
                         cursorNode = deepestNode,
@@ -146,10 +146,11 @@ class AstIndex private constructor(
      * the descendant falls under. Returns -1 if the descendant is the callee (not an arg).
      */
     private fun findArgIndex(descendant: AstNode, call: CallExpression): Int {
-        // Walk up from descendant until we find a direct child of the call
+        // Walk up from descendant until we find a direct child of the call.
+        // Compare by argument .value since Argument wrappers are not AstNodes.
         var node: AstNode = descendant
         while (true) {
-            val idx = call.arguments.indexOfFirst { it === node }
+            val idx = call.arguments.indexOfFirst { it.value === node }
             if (idx >= 0) return idx
 
             // If we've reached the call itself, the descendant is the callee
@@ -201,7 +202,7 @@ private class IndexBuilder(
         val start = calleeRange?.first ?: return
 
         // Effective end: last argument's end, or the paren position + 1
-        val lastArgRange = call.arguments.lastOrNull()?.let { offsets[it] }
+        val lastArgRange = call.arguments.lastOrNull()?.value?.let { offsets[it] }
         val parenEnd = call.location?.toEndOffset()
         // Use the furthest end we can find, +1 to account for the closing paren
         val end = maxOf(
@@ -224,6 +225,7 @@ private class IndexBuilder(
             is ExpressionStatement -> visitExpression(stmt.expression, stmt, level + 1)
             is LetDeclaration -> stmt.initializer?.let { visitExpression(it, stmt, level + 1) }
             is ConstDeclaration -> visitExpression(stmt.initializer, stmt, level + 1)
+            is ExportDeclaration -> visitExpression(stmt.initializer, stmt, level + 1)
             is ReturnStatement -> stmt.value?.let { visitExpression(it, stmt, level + 1) }
             is WhileStatement -> {
                 visitExpression(stmt.condition, stmt, level + 1)
@@ -252,7 +254,7 @@ private class IndexBuilder(
             is CallExpression -> {
                 visitExpression(expr.callee, expr, level + 1)
                 for (arg in expr.arguments) {
-                    visitExpression(arg, expr, level + 1)
+                    visitExpression(arg.value, expr, level + 1)
                 }
                 // Compute effective range for CallExpressions with zero-width locations
                 indexCallExpressionRange(expr, level)

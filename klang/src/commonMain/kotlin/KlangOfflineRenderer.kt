@@ -52,7 +52,7 @@ class KlangOfflineRenderer(
 
         // 1. Create DSP graph
         val commLink = KlangCommLink()
-        val cylinders = Cylinders(maxCylinders = 16, blockFrames = blockFrames, sampleRate = sampleRate)
+        val cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate)
         val ignitorRegistry = IgnitorRegistry().apply {
             registerDefaults()
             for ((name, dsl) in customIgnitors) {

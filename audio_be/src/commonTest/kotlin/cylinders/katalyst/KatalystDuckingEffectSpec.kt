@@ -22,13 +22,13 @@ class KatalystDuckingEffectSpec : StringSpec({
         val effect = KatalystDuckingEffect()
         val ctx = createCtx()
 
-        ctx.mixBuffer.left.fill(0.5f)
-        ctx.mixBuffer.right.fill(0.5f)
+        ctx.mixBuffer.left.fill(0.5)
+        ctx.mixBuffer.right.fill(0.5)
 
         effect.process(ctx)
 
-        ctx.mixBuffer.left[0] shouldBe 0.5f
-        ctx.mixBuffer.right[0] shouldBe 0.5f
+        ctx.mixBuffer.left[0] shouldBe 0.5
+        ctx.mixBuffer.right[0] shouldBe 0.5
     }
 
     "does nothing when sidechain buffer is null" {
@@ -37,12 +37,12 @@ class KatalystDuckingEffectSpec : StringSpec({
         effect.ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.1, depth = 1.0)
 
         val ctx = createCtx()
-        ctx.mixBuffer.left.fill(0.5f)
+        ctx.mixBuffer.left.fill(0.5)
         ctx.sidechainBuffer = null
 
         effect.process(ctx)
 
-        ctx.mixBuffer.left[0] shouldBe 0.5f
+        ctx.mixBuffer.left[0] shouldBe 0.5
     }
 
     "reduces signal when sidechain has signal" {
@@ -51,14 +51,14 @@ class KatalystDuckingEffectSpec : StringSpec({
         effect.ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.001, depth = 1.0)
 
         val ctx = createCtx()
-        val inputLevel = 0.5f
+        val inputLevel = 0.5
         ctx.mixBuffer.left.fill(inputLevel)
         ctx.mixBuffer.right.fill(inputLevel)
 
         // Create a loud sidechain signal
         val sidechain = StereoBuffer(blockFrames)
-        sidechain.left.fill(0.9f)
-        sidechain.right.fill(0.9f)
+        sidechain.left.fill(0.9)
+        sidechain.right.fill(0.9)
         ctx.sidechainBuffer = sidechain
 
         effect.process(ctx)
@@ -79,20 +79,20 @@ class KatalystDuckingEffectSpec : StringSpec({
         ctx.sidechainBuffer = sidechain
 
         repeat(100) {
-            ctx.mixBuffer.left.fill(0.5f)
-            ctx.mixBuffer.right.fill(0.5f)
+            ctx.mixBuffer.left.fill(0.5)
+            ctx.mixBuffer.right.fill(0.5)
             sidechain.clear()
             effect.process(ctx)
         }
 
         // After full release, signal should pass through unchanged
-        ctx.mixBuffer.left.fill(0.5f)
-        ctx.mixBuffer.right.fill(0.5f)
+        ctx.mixBuffer.left.fill(0.5)
+        ctx.mixBuffer.right.fill(0.5)
         sidechain.clear()
         effect.process(ctx)
 
         val outputLevel = abs(ctx.mixBuffer.left[blockFrames - 1])
-        (abs(outputLevel - 0.5f) < 0.01f) shouldBe true
+        (abs(outputLevel - 0.5) < 0.01) shouldBe true
     }
 
     "duck orbit ID and ducking instance can be updated" {
@@ -125,13 +125,13 @@ class KatalystDuckingEffectSpec : StringSpec({
         effect.ducking = Ducking(sampleRate = sampleRate, attackSeconds = 0.001, depth = 0.8)
 
         val ctx = createCtx()
-        ctx.mixBuffer.left.fill(1.0f)
-        ctx.mixBuffer.right.fill(1.0f)
+        ctx.mixBuffer.left.fill(1.0)
+        ctx.mixBuffer.right.fill(1.0)
 
         // Asymmetric sidechain — left is louder
         val sidechain = StereoBuffer(blockFrames)
-        sidechain.left.fill(0.9f)
-        sidechain.right.fill(0.1f)
+        sidechain.left.fill(0.9)
+        sidechain.right.fill(0.1)
         ctx.sidechainBuffer = sidechain
 
         effect.process(ctx)
@@ -139,6 +139,6 @@ class KatalystDuckingEffectSpec : StringSpec({
         // Both channels should have identical levels (linked stereo detection)
         val leftLevel = abs(ctx.mixBuffer.left[blockFrames - 1])
         val rightLevel = abs(ctx.mixBuffer.right[blockFrames - 1])
-        (abs(leftLevel - rightLevel) < 0.001f) shouldBe true
+        (abs(leftLevel - rightLevel) < 0.001) shouldBe true
     }
 })

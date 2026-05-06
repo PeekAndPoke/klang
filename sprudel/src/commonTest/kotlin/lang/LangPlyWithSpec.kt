@@ -16,11 +16,11 @@ class LangPlyWithSpec : StringSpec({
         val n = 2
 
         dslInterfaceTests(
-            "pattern.plyWith(n)" to s(pat).plyWith(n) { it },
+            "pattern.plyWith(n)" to s(pat).plyWith(n, { it }),
             "script pattern.plyWith(n)" to SprudelPattern.compile("""s("$pat").plyWith($n, p => p)"""),
-            "string.plyWith(n)" to pat.plyWith(n) { it },
+            "string.plyWith(n)" to pat.plyWith(n, { it }),
             "script string.plyWith(n)" to SprudelPattern.compile(""""$pat".plyWith($n, p => p)"""),
-            "plyWith(n)" to s(pat).apply(plyWith(n) { it }),
+            "plyWith(n)" to s(pat).apply(plyWith(n, { it })),
             "script plyWith(n)" to SprudelPattern.compile("""s("$pat").apply(plyWith($n, p => p))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
@@ -30,7 +30,7 @@ class LangPlyWithSpec : StringSpec({
 
     "plyWith() with soundIndex (n pattern)" {
         // n() sets soundIndex, which works with add()
-        val p = seq("5").plyWith(3) { it.add("1") }
+        val p = seq("5").plyWith(3, { it.add("1") })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
@@ -50,7 +50,7 @@ class LangPlyWithSpec : StringSpec({
     }
 
     "plyWith() with multiple events" {
-        val p = seq("0 2").plyWith(2) { it.add("5") }
+        val p = seq("0 2").plyWith(2, { it.add("5") })
         val events = p.queryArc(0.0, 1.0)
 
         // 2 base events, each repeated 2 times = 4 total
@@ -66,7 +66,7 @@ class LangPlyWithSpec : StringSpec({
     }
 
     "plyWith() with factor 1 returns original" {
-        val p = seq("7").plyWith(1) { it.add("100") } // Function shouldn't be applied for factor=1
+        val p = seq("7").plyWith(1, { it.add("100") }) // Function shouldn't be applied for factor=1
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
@@ -74,7 +74,7 @@ class LangPlyWithSpec : StringSpec({
     }
 
     "plywith() lowercase alias works" {
-        val p = seq("0").plywith(2) { it.add("5") }
+        val p = seq("0").plywith(2, { it.add("5") })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
@@ -84,7 +84,7 @@ class LangPlyWithSpec : StringSpec({
 
     "plyWith() applies function cumulatively" {
         // Test that the function is applied 0, 1, 2, 3 times
-        val p = "10".plyWith(4) { it.add("3") }
+        val p = "10".plyWith(4, { it.add("3") })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -98,7 +98,7 @@ class LangPlyWithSpec : StringSpec({
 
     "plyWith() with note pattern" {
         // Test with note() which sets note field
-        val p = note("c3 d3").plyWith(2) { it.transpose("12") }
+        val p = note("c3 d3").plyWith(2, { it.transpose("12") })
         val events = p.queryArc(0.0, 1.0)
 
         // 2 events, each repeated 2 times = 4 total
@@ -115,7 +115,7 @@ class LangPlyWithSpec : StringSpec({
 
     "plyWith() event timing" {
         // Verify events are evenly distributed
-        val p = seq("0").plyWith(5) { it.add("1") }
+        val p = seq("0").plyWith(5, { it.add("1") })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 5

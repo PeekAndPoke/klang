@@ -1,3 +1,4 @@
+import Deps.Test.configureJvmTests
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 buildscript {
@@ -131,6 +132,9 @@ kotlin {
 }
 
 tasks {
+    // Use JUnit Platform so kotest tests in src/jvmTest/ are discovered.
+    configureJvmTests()
+
     val copyWorkletDev by registering(Copy::class) {
         dependsOn(":audio_jsworklet:jsBrowserDevelopmentWebpack")
         from(project(":audio_jsworklet").layout.buildDirectory.dir("kotlin-webpack/js/developmentExecutable"))

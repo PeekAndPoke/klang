@@ -32,8 +32,18 @@ class KlangDocsRegistry {
     fun register(doc: KlangSymbol) {
         val existing = _symbols[doc.name]
         if (existing != null) {
+            // Merge variants, deduplicating by (name, receiver, library) so that
+            // re-registration from a second KSP processor doesn't produce
+            // duplicate entries in the docs popup — while keeping legitimate
+            // cross-library variants (e.g. "adsr" from stdlib + sprudel).
+            val merged = (existing.variants + doc.variants).distinctBy { variant ->
+                when (variant) {
+                    is KlangCallable -> Triple(variant.name, variant.receiver?.simpleName, variant.library)
+                    is KlangProperty -> Triple(variant.name, variant.owner?.simpleName, variant.library)
+                }
+            }
             _symbols[doc.name] = existing.copy(
-                variants = existing.variants + doc.variants,
+                variants = merged,
                 tags = (existing.tags + doc.tags).distinct(),
                 aliases = (existing.aliases + doc.aliases).distinct(),
             )

@@ -2,29 +2,19 @@ package io.peekandpoke.klang.pages
 
 import io.peekandpoke.klang.BuiltInSongs
 import io.peekandpoke.klang.Nav
-import io.peekandpoke.klang.Player
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
-import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
-import io.peekandpoke.klang.audio_engine.KlangPlayer
-import io.peekandpoke.klang.audio_engine.play
 import io.peekandpoke.klang.blocks.ui.KlangBlocksEditorComp
 import io.peekandpoke.klang.blocks.ui.KlangBlocksHighlightBuffer
-import io.peekandpoke.klang.codemirror.CodeMirrorHighlightBuffer
-import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.comp.FullscreenToggleButton
+import io.peekandpoke.klang.comp.KlangCodeEditorComp
+import io.peekandpoke.klang.comp.KlangCodePlaybackCtrl
 import io.peekandpoke.klang.comp.KlangSymbolDocsComp
 import io.peekandpoke.klang.comp.LcdDisplay
-import io.peekandpoke.klang.comp.withEditorErrorHandling
 import io.peekandpoke.klang.fs
 import io.peekandpoke.klang.script.stdlibLib
 import io.peekandpoke.klang.script.types.KlangSymbol
-import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.HoverPopupCtrl
-import io.peekandpoke.klang.ui.KlangUiToolContext
-import io.peekandpoke.klang.ui.KlangUiToolRegistry
-import io.peekandpoke.klang.ui.codemirror.KlangScriptEditorComp
-import io.peekandpoke.klang.ui.codetools.CodeToolModal
 import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.ComponentRef
@@ -35,8 +25,6 @@ import io.peekandpoke.kraft.popups.PopupsManager
 import io.peekandpoke.kraft.popups.PopupsManager.Companion.popups
 import io.peekandpoke.kraft.routing.Router.Companion.router
 import io.peekandpoke.kraft.semanticui.forms.UiInputField
-import io.peekandpoke.kraft.utils.launch
-import io.peekandpoke.kraft.utils.windowCtrl
 import io.peekandpoke.kraft.vdom.VDom
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
@@ -45,7 +33,7 @@ import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
 import io.peekandpoke.ultra.streams.StreamSource
-import io.peekandpoke.ultra.streams.ops.debounce
+import io.peekandpoke.ultra.streams.ops.distinct
 import io.peekandpoke.ultra.streams.ops.map
 import io.peekandpoke.ultra.streams.ops.persistInLocalStorage
 import kotlinx.css.Cursor
@@ -127,49 +115,29 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     //  STATE  //////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private val ctrl = KlangCodePlaybackCtrl.builder()
+        .code(codeStream())
+        .rpm(rpmStream())
+        .title(songTitleStream())
+        .build()
+
     @Suppress("unused")
     private val laf by subscribingTo(KlangTheme)
-    private val loading: Boolean by subscribingTo(Player.status.map { it == Player.Status.LOADING })
-    private var playback: KlangCyclicPlayback? by value(null)
-    private val isPlaying get() = playback != null
-
-    private val codeEditorRef = ComponentRef.Tracker<KlangScriptEditorComp>()
-    private val blocksEditorRef = ComponentRef.Tracker<KlangBlocksEditorComp>()
-
+    private val state by subscribingTo(ctrl.state)
     private val currentModals by subscribingTo(modals)
 
-    private val codeHighlightBuffer = CodeMirrorHighlightBuffer()
-
-    private var highlightPerEvent by value(10) {
-        codeHighlightBuffer.maxHighlightsPerEvent = it
-        cancelHighlights()
-        playback?.reemitVoiceSignals()
-    }
+    private val codeEditorRef = ComponentRef.Tracker<KlangCodeEditorComp>()
+    private val blocksEditorRef = ComponentRef.Tracker<KlangBlocksEditorComp>()
 
     private val blocksHighlightBuffer = KlangBlocksHighlightBuffer()
 
-    private var songTitle: String by value(songTitleStream()) { songTitleStream(it) }
-
-    private var rpm: Double by value(rpmStream()) {
-        rpmStream(it)
-        cancelHighlights()
-        // Backend tempo sync is driven by the debounced rpmStream subscription below —
-        // each updateRpm call resyncs the current cycle, so we coalesce rapid input.
+    private var highlightPerEvent by value(10) { newValue ->
+        codeEditorRef { it.setMaxHighlightsPerEvent(newValue) }
+        blocksHighlightBuffer.cancelAll()
+        ctrl.reemitVoiceSignals()
     }
 
-    @Suppress("unused")
-    private val rpmBackendSync = rpmStream.debounce(150).subscribeToStream { newRpm ->
-        playback?.updateRpm(newRpm)
-    }
-
-    private var code: String by value(codeStream()) {
-        isCodeModified = it != codeStream()
-    }
-
-    private var isCodeModified by value(false)
-    private var currentCycle: Int by value(0)
-
-    val isBuiltInModified get() = builtIn != null && builtIn.code != code
+    val isBuiltInModified get() = builtIn != null && builtIn.code != state.code
 
     /** Current view: text editor or visual block editor. */
     private var editorMode by value(EditorMode.CODE)
@@ -178,38 +146,6 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
     private val hoverContent: FlowContent.(KlangSymbol) -> Unit = { doc ->
         KlangSymbolDocsComp(symbol = doc, onNavigate = ::navToDoc)
-    }
-
-    private fun openTool(toolName: String, ctx: KlangUiToolContext, argFrom: Int) {
-        val tool = KlangUiToolRegistry.get(toolName) ?: return
-
-        // Base source location of the opening quote — used by editors to match voice events
-        val baseLoc = offsetToSourceLocation(code, argFrom)
-        var attrs = ctx.attrs.plus(KlangUiToolContext.BaseSourceLocation, baseLoc)
-
-        // If playback is active, attach the raw signal stream
-        playback?.let { pb ->
-            attrs = attrs.plus(KlangUiToolContext.PlaybackVoiceEvents, pb.signals)
-        }
-
-        modals.show { handle ->
-            CodeToolModal(handle) {
-                tool.apply {
-                    render(
-                        ctx.copy(
-                            attrs = attrs,
-                            onCommit = {
-                                // Update the code
-                                ctx.onCommit(it)
-                                // update the playback if playing
-                                updatePlayback()
-                            },
-                            onCancel = { handle.close(); ctx.onCancel() }
-                        )
-                    )
-                }
-            }
-        }
     }
 
     private fun navToDoc(doc: KlangSymbol, event: dynamic) {
@@ -222,137 +158,79 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
         }
     }
 
-    private suspend fun getPlayer(): KlangPlayer {
-        return Player.ensure().await()
-    }
-
-    private fun resetToOriginal() {
-        builtIn?.let { b ->
-            code = b.code
-            codeStream(b.code)
-            rpm = b.rpm
-            rpmStream(b.rpm)
-            songTitle = b.title
-            songTitleStream(b.title)
-
-            codeEditorRef { it.setCode(b.code) }
-            blocksEditorRef { it.setCode(b.code) }
+    // Feed voice-scheduled signals into the blocks highlight buffer.
+    // The code editor handles its own highlights via KlangCodeEditorComp.
+    @Suppress("unused")
+    private val blocksVoiceSub by subscribingTo(ctrl.signals) { signal ->
+        if (signal is KlangPlaybackSignal.VoicesScheduled && currentModals.isEmpty()) {
+            signal.voices.forEach { voiceEvent ->
+                val chain = voiceEvent.sourceLocations ?: return@forEach
+                val now = Date.now()
+                val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
+                val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
+                chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
+                    blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
+                }
+            }
         }
     }
 
+    // On rpm changes: persist to localStorage AND cancel highlights to avoid stale timing across tempo shifts.
     @Suppress("unused")
-    private val hasFocus by subscribingTo(windowCtrl.hasFocus) {
-        if (it) playback?.reemitVoiceSignals()
+    private val rpmChange by subscribingTo(ctrl.state.map { it.rpm }.distinct()) { newRpm ->
+        rpmStream(newRpm)
+        codeEditorRef { editor -> editor.cancelHighlights() }
+        blocksHighlightBuffer.cancelAll()
+    }
+
+    // When playback stops by any path (button, unmount, exclusive takeover), drop pending highlights.
+    @Suppress("unused")
+    private val playingChange by subscribingTo(ctrl.state.map { it.isPlaying }.distinct()) { isPlaying ->
+        if (!isPlaying) {
+            codeEditorRef { editor -> editor.cancelHighlights() }
+            blocksHighlightBuffer.cancelAll()
+        }
+    }
+
+    // Persist title changes back to the localStorage-backed stream.
+    @Suppress("unused")
+    private val titlePersist by subscribingTo(ctrl.state.map { it.title }.distinct()) { newTitle ->
+        if (newTitle != null) songTitleStream(newTitle)
     }
 
     init {
         lifecycle {
             onMount {
-                codeEditorRef { editor -> editor.editorView?.let { codeHighlightBuffer.attachTo(it) } }
-                codeHighlightBuffer.maxHighlightsPerEvent = highlightPerEvent
+                codeEditorRef { it.setMaxHighlightsPerEvent(highlightPerEvent) }
             }
             onUnmount {
-                onStop()
-                codeHighlightBuffer.detach()
+                ctrl.stop()
             }
         }
     }
 
     //  IMPL  ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun updatePlayback() {
-        if (isPlaying) {
-            onPlay()
-        }
-    }
-
-    private fun cancelHighlights() {
-        codeHighlightBuffer.cancelAll()
-        blocksHighlightBuffer.cancelAll()
-    }
-
-    private fun scheduleVoiceHighlights(voiceEvent: KlangPlaybackSignal.VoicesScheduled.VoiceEvent) {
-        codeHighlightBuffer.scheduleHighlight(voiceEvent)
-        val chain = voiceEvent.sourceLocations ?: return
-        val now = Date.now()
-        val startFromNowMs = maxOf(1.0, voiceEvent.startTime * 1000.0 - now)
-        val durationMs = maxOf(200.0, minOf(10000.0, (voiceEvent.endTime - voiceEvent.startTime) * 1000.0))
-        chain.locations.asReversed().take(highlightPerEvent).forEach { location ->
-            blocksHighlightBuffer.scheduleHighlight(location, startFromNowMs, durationMs)
-        }
-    }
-
     private fun onPlay() {
-        codeStream(code)
-        isCodeModified = false
-        cancelHighlights()
-
-        when (val s = playback) {
-            null -> launch {
-                if (!loading) {
-                    withEditorErrorHandling(codeEditorRef) {
-                        getPlayer().let { p ->
-                            val engine = Player.createEngine(player = p)
-                            val pattern = SprudelPattern.compile(engine, code)
-                                ?: error("Failed to compile Sprudel pattern from code")
-
-                            playback = p.play(pattern)
-
-                            currentCycle = 0
-
-                            playback?.signals?.invoke { signal ->
-                                when (signal) {
-                                    is KlangPlaybackSignal.CycleCompleted -> {
-                                        currentCycle = signal.cycleIndex + 1
-                                    }
-
-                                    is KlangPlaybackSignal.VoicesScheduled -> {
-                                        // When there is a modal dialog open, we stop highlighting
-                                        if (currentModals.isNotEmpty()) return@invoke
-
-                                        signal.voices.forEach { scheduleVoiceHighlights(it) }
-                                    }
-
-                                    is KlangPlaybackSignal.PreloadingSamples -> {
-                                        console.log("Preloading ${signal.count} samples...")
-                                    }
-
-                                    is KlangPlaybackSignal.SamplesPreloaded -> {
-                                        console.log("Samples loaded in ${signal.durationMs}ms")
-                                    }
-
-                                    else -> {}
-                                }
-                            }
-
-                            playback?.start(
-                                KlangCyclicPlayback.Options(rpm = rpm)
-                            )
-                        }
-                    }
-                }
-            }
-
-            else -> launch {
-                withEditorErrorHandling(codeEditorRef) {
-                    val engine = Player.createEngine()
-                    val pattern = SprudelPattern.compile(engine, code)
-                        ?: error("Failed to compile Sprudel pattern from code")
-                    s.updatePattern(pattern)
-                }
-            }
-        }
+        // Persist the current code before starting (matches original strategy of persist-on-play).
+        codeStream(ctrl.state().code)
+        ctrl.play()
     }
 
-    private fun onStop() {
-        playback?.stop()
-        cancelHighlights()
-        playback = null
-        currentCycle = 0
+    private fun resetToOriginal() {
+        builtIn?.let { b ->
+            ctrl.stop()
+            ctrl.setCode(b.code)
+            ctrl.setRpm(b.rpm)
+            ctrl.setTitle(b.title)
+            codeStream(b.code)
+            codeEditorRef { it.setCode(b.code) }
+            blocksEditorRef { it.setCode(b.code) }
+        }
     }
 
     /** True when the current code contains any comments (they would be lost on Code→Blocks). */
-    private fun codeHasComments(): Boolean = "//" in code || "/*" in code
+    private fun codeHasComments(): Boolean = "//" in state.code || "/*" in state.code
 
     /** Switch to Blocks mode — asks for confirmation first if the code has comments. */
     private fun switchToBlocks(event: PointerEvent) {
@@ -430,10 +308,10 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                         // Play / Update / Stop controls
                         noui.item {
-                            if (!isPlaying) {
+                            if (!state.isPlaying) {
                                 ui.circular.white.button {
                                     onClick { onPlay() }
-                                    if (loading) {
+                                    if (state.isPlayerLoading) {
                                         icon.black.loading.spinner()
                                         +"Loading"
                                     } else {
@@ -448,9 +326,9 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                                 }
                             } else {
                                 ui.circular.white
-                                    .givenNot(isCodeModified) { disabled }.button {
-                                        onClick { updatePlayback() }
-                                        if (isCodeModified) {
+                                    .givenNot(state.isCodeModified) { disabled }.button {
+                                        onClick { onPlay() }
+                                        if (state.isCodeModified) {
                                             icon.redo_alternate {
                                                 css {
                                                     put("--icon-glow-color", laf.critical)
@@ -465,16 +343,16 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                             }
 
                             ui.circular.white
-                                .givenNot(isPlaying) { disabled }
-                                .given(isPlaying) { white }.icon.button {
-                                    onClick { onStop() }
+                                .givenNot(state.isPlaying) { disabled }
+                                .given(state.isPlaying) { white }.icon.button {
+                                    onClick { ctrl.stop() }
                                     title = "Stop playback"
                                     icon.black.stop()
                                 }
                         }
 
                         noui.middle.aligned.item {
-                            LcdDisplay(value = currentCycle, digits = 4, dim = !isPlaying)
+                            LcdDisplay(value = state.currentCycle, digits = 4, dim = !state.isPlaying)
                         }
 
                         if (isBuiltInModified) {
@@ -490,7 +368,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // RPM field
                         noui.item {
                             css { width = 140.px }
-                            UiInputField(rpm, { rpm = it }) {
+                            UiInputField(state.rpm, { ctrl.setRpm(it) }) {
                                 step(0.5)
                                 appear { large }
                                 wrapFieldWith { fluid }
@@ -522,7 +400,7 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
                         // Title field
                         noui.item {
                             css { width = 300.px }
-                            UiInputField(songTitle, { songTitle = it }) {
+                            UiInputField(state.title ?: "", { ctrl.setTitle(it) }) {
                                 placeholder("Song title")
                                 appear { large }
                                 wrapFieldWith { fluid }
@@ -576,28 +454,19 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
 
                     when (editorMode) {
                         EditorMode.CODE -> {
-                            KlangScriptEditorComp(
-                                code = code,
-                                onCodeChanged = { newCode ->
-                                    code = newCode
-                                    codeEditorRef { it.setErrors(emptyList()) }
-                                },
+                            KlangCodeEditorComp(
+                                ctrl = ctrl,
                                 availableLibraries = listOf(stdlibLib, sprudelLib),
-                                hoverPopup = hoverPopup,
-                                hoverContent = hoverContent,
-                                popups = popups,
-                                onNavigate = ::navToDoc,
-                                onOpenTool = { toolName, ctx, argFrom, _ ->
-                                    openTool(toolName = toolName, ctx = ctx, argFrom = argFrom)
-                                },
+                                maxHighlightsPerEvent = highlightPerEvent,
+                                pauseHighlightsWhen = { currentModals.isNotEmpty() },
                             ).track(codeEditorRef)
                         }
 
                         EditorMode.BLOCKS -> {
                             KlangBlocksEditorComp(
                                 availableLibraries = listOf(stdlibLib, sprudelLib),
-                                initialCode = code,
-                                onCodeChanged = { newCode -> code = newCode },
+                                initialCode = state.code,
+                                onCodeChanged = { newCode -> ctrl.setCode(newCode) },
                                 onCodeGenChanged = { result -> blocksHighlightBuffer.codeGenResult = result },
                                 highlights = blocksHighlightBuffer.highlights,
                                 hoverPopup = hoverPopup,
@@ -609,22 +478,4 @@ class CodeSongPage(ctx: Ctx<Props>) : Component<CodeSongPage.Props>(ctx) {
             }
         }
     }
-}
-
-/**
- * Converts a 0-based document [offset] to a [SourceLocation] pointing at that character.
- *
- * Used once when opening a tool to record the base position of the opening quote.
- */
-private fun offsetToSourceLocation(source: String, offset: Int): SourceLocation {
-    var line = 1
-    var col = 1
-    for (i in 0 until offset.coerceAtMost(source.length)) {
-        if (source[i] == '\n') {
-            line++; col = 1
-        } else {
-            col++
-        }
-    }
-    return SourceLocation(source = null, startLine = line, startColumn = col, endLine = line, endColumn = col)
 }

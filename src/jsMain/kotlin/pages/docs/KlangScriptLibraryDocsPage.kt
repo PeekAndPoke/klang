@@ -5,10 +5,15 @@ import io.peekandpoke.klang.comp.KlangScriptReplComp
 import io.peekandpoke.klang.comp.PlayableCodeExample
 import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
+import io.peekandpoke.klang.script.generated.generatedSprudelDocs
 import io.peekandpoke.klang.script.generated.generatedStdlibDocs
 import io.peekandpoke.klang.script.stdlibLib
-import io.peekandpoke.klang.script.types.*
-import io.peekandpoke.klang.sprudel.lang.docs.registerSprudelDocs
+import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangCodeSampleType
+import io.peekandpoke.klang.script.types.KlangDecl
+import io.peekandpoke.klang.script.types.KlangMutability
+import io.peekandpoke.klang.script.types.KlangProperty
+import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import io.peekandpoke.klang.ui.comp.MarkdownDisplay
 import io.peekandpoke.klang.ui.feel.KlangTheme
@@ -24,8 +29,35 @@ import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.icon
 import io.peekandpoke.ultra.semanticui.noui
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
-import kotlinx.html.*
+import kotlinx.css.Align
+import kotlinx.css.Color
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.Overflow
+import kotlinx.css.Padding
+import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
+import kotlinx.css.borderRadius
+import kotlinx.css.color
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.height
+import kotlinx.css.marginBottom
+import kotlinx.css.marginTop
+import kotlinx.css.overflow
+import kotlinx.css.padding
+import kotlinx.css.paddingBottom
+import kotlinx.css.paddingTop
+import kotlinx.css.pct
+import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.html.DIV
+import kotlinx.html.Tag
+import kotlinx.html.b
+import kotlinx.html.code
+import kotlinx.html.div
+import kotlinx.html.p
+import kotlinx.html.pre
 
 /**
  * Registry of known library docs providers.
@@ -33,7 +65,7 @@ import kotlinx.html.*
  * Maps library slug (used in URL) to a function that populates a [KlangDocsRegistry].
  */
 private val libraryDocsProviders: Map<String, (KlangDocsRegistry) -> Unit> = mapOf(
-    "sprudel" to { registry -> registerSprudelDocs(registry) },
+    "sprudel" to { registry -> registry.registerAll(generatedSprudelDocs) },
     "stdlib" to { registry -> registry.registerAll(generatedStdlibDocs) },
 )
 
@@ -299,7 +331,9 @@ class KlangScriptLibraryDocsPage(ctx: Ctx<Props>) : Component<KlangScriptLibrary
                         noui.item {
                             key = param.name
                             b { +param.name }
-                            +" (${param.type}): ${param.description}"
+                            val opt = if (param.isOptional && !param.isVararg) "?" else ""
+                            val def = if (param.defaultDoc != null && !param.isVararg) " = ${param.defaultDoc}" else ""
+                            +" (${param.type}$opt$def): ${param.description}"
                         }
                     }
                 }

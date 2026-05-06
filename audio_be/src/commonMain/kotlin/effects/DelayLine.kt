@@ -1,53 +1,89 @@
 package io.peekandpoke.klang.audio_be.effects
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.StereoBuffer
+import io.peekandpoke.klang.audio_be.effects.DelayLine.Companion.MIN_DELAY_SECONDS
 import kotlin.math.abs
 import kotlin.math.min
 
 /**
- * A modulated Delay Line with linear interpolation and feedback control.
+ * A modulated stereo delay line with linear-interpolation fractional read and
+ * feedback control.
  *
  * **How it works:**
- * A delay line stores incoming audio samples in a circular buffer (ring buffer) and plays them back after
- * a specified duration.
+ * Stores incoming audio samples in a circular ring buffer and plays them back
+ * after a configurable duration. Stereo operation = two independent mono lines
+ * (no cross-feedback / ping-pong).
  *
- * **Key Features:**
- * - **Fractional Delay:** Uses Linear Interpolation to read "between" samples. This allows for:
- *      1. Smooth delay time modulation without clicking artifacts ("zipper noise").
- *      2. Precise tuning for pitch-based effects (Flanger, Chorus, Karplus-Strong).
- * - **Short Delay Support:** Minimum delay is set to ~0.1ms, enabling short-delay effects like Flangers and Comb Filters.
- * - **Feedback Loop:** Feeds the delayed signal back into the input, creating repeating echoes.
- * - **Safety Limiter:** Hard clips the internal buffer to +/- 2.0 to prevent infinite volume explosions
- *   if feedback exceeds 100% (unstable system).
+ * **Key features:**
+ * - **Fractional read** via linear interpolation between adjacent ring-buffer
+ *   samples. Enables smooth modulation of `delayTimeSeconds` (no zipper noise)
+ *   and accurate tuning for pitch-based effects (flanger, chorus, comb filter,
+ *   Karplus-Strong). Interpolation direction: `alpha=0` reads `s1` (newer
+ *   sample, at `pos - delayInt`); `alpha=1` reads `s2` (one sample older).
+ * - **Short-delay support** down to [MIN_DELAY_SECONDS] (~0.1 ms), enabling
+ *   flanger/comb regimes. Note: linear interpolation introduces a mild HF
+ *   roll-off (~−3 dB at Nyquist) that's only audible in short-delay use cases.
+ * - **Feedback** path with smooth saturation safety: rather than a hard clip,
+ *   the recirculated sample is passed through [ClippingFuncs.softCap] to
+ *   prevent runaway accumulation when `feedback ≥ 1.0` while keeping the
+ *   character musical (smooth tanh-style knee). NaN/Inf inputs are scrubbed
+ *   to 0 before clamp so they cannot poison the ring buffer.
  *
- * **Optimizations:**
- * - **Block Processing:** The main loop is split into two chunks (before and after buffer wrap-around).
- *   This removes the expensive modulo/branch check (`if pos >= size`) from the inner sample loop,
- *   improving CPU efficiency significantly.
+ * **Output semantic (caller contract):** [process] writes the **wet (delayed)
+ * signal additively** into `output`. The dry signal is NOT mixed in by this
+ * class. Callers using DelayLine as a send/return effect should clear or
+ * pre-fill `output` before calling. See `KatalystDelayEffect` for the canonical
+ * usage pattern.
+ *
+ * **Performance:**
+ * - Block processing: the inner sample loop has no ring-buffer wrap check.
+ *   `process()` splits the block at the wrap boundary and calls the inner
+ *   loop with two contiguous ranges instead.
+ * - Per-block constants (`delayInt`, `alpha`, etc.) are computed once per
+ *   `process()`, not per channel/chunk.
  */
 class DelayLine(
     maxDelaySeconds: Double,
     val sampleRate: Int,
+    delayTimeSeconds: Double = 0.5,
+    feedback: Double = 0.0,
 ) {
     private val bufferSize = (maxDelaySeconds * sampleRate).toInt()
     private val buffer = StereoBuffer(bufferSize)
     private var writePos = 0
 
-    // Current parameters
-    var delayTimeSeconds: Double = 0.5
-    var feedback: Double = 0.0
+    /** Delay time in seconds. Setter silently ignores non-finite values. */
+    var delayTimeSeconds: Double = delayTimeSeconds
+        set(value) {
+            if (!value.isFinite()) return
+            field = value
+        }
 
-    // Safety saturation threshold to prevent explosion
-    private val limit = 2.0
+    /** Feedback amount. Setter silently ignores non-finite values. Values ≥ 1.0
+     *  are unstable but bounded by [ClippingFuncs.softCap] in the feedback path. */
+    var feedback: Double = feedback
+        set(value) {
+            if (!value.isFinite()) return
+            field = value
+        }
 
     /**
-     * Returns true if the internal delay buffer still contains audio above the given threshold.
-     * Used to detect effect tails that should keep the cylinder alive.
+     * Returns true if the internal ring buffer still contains audio above
+     * [threshold]. Used by cylinder-cleanup logic to detect tails that should
+     * keep the cylinder alive.
+     *
+     * Cost: O(bufferSize × 2) — scans both channels linearly. Not intended for
+     * per-block use; called from cleanup polling.
+     *
+     * Conservative under stable feedback (≤ 1.0): if every sample in the buffer
+     * is below threshold, no future feedback iteration can bring the output
+     * back above threshold, so a `false` return is safe.
      */
     fun hasTail(threshold: Double = 0.00001): Boolean {
-        val thresholdF = threshold.toFloat()
         for (i in 0 until bufferSize) {
-            if (abs(buffer.left[i]) > thresholdF || abs(buffer.right[i]) > thresholdF) {
+            if (abs(buffer.left[i]) > threshold || abs(buffer.right[i]) > threshold) {
                 return true
             }
         }
@@ -55,81 +91,86 @@ class DelayLine(
     }
 
     fun process(input: StereoBuffer, output: StereoBuffer, length: Int) {
-        // Optimization: Split loop into two chunks to handle circular buffer wrapping
-        // This removes the 'if (writePos >= bufferSize)' check from the inner loop
+        // Per-block constants — channel- and chunk-independent. Hoisted out of
+        // the inner loop so they're computed once per process() call rather
+        // than once per channel × chunk (4×).
+        val delaySamples = (delayTimeSeconds * sampleRate)
+            .coerceIn(MIN_DELAY_SECONDS * sampleRate, bufferSize - 2.0)
+        val delayInt = delaySamples.toInt()
+        val alpha = delaySamples - delayInt
+        val fb = feedback
+
+        // Split loop at the ring-buffer wrap boundary so the inner loop has no
+        // 'if (pos >= bufferSize)' check.
         val firstChunkLen = min(length, bufferSize - writePos)
 
-        // Process first chunk (writePos -> buffer end)
-        processInternal(buffer.left, input.left, output.left, 0, firstChunkLen, writePos)
-        processInternal(buffer.right, input.right, output.right, 0, firstChunkLen, writePos)
+        processInternal(buffer.left, input.left, output.left, 0, firstChunkLen, writePos, delayInt, alpha, fb)
+        processInternal(buffer.right, input.right, output.right, 0, firstChunkLen, writePos, delayInt, alpha, fb)
 
-        // Process second chunk (0 -> remaining) if we wrapped around
         if (firstChunkLen < length) {
             val secondChunkLen = length - firstChunkLen
-            processInternal(buffer.left, input.left, output.left, firstChunkLen, secondChunkLen, 0)
-            processInternal(buffer.right, input.right, output.right, firstChunkLen, secondChunkLen, 0)
+            processInternal(buffer.left, input.left, output.left, firstChunkLen, secondChunkLen, 0, delayInt, alpha, fb)
+            processInternal(buffer.right, input.right, output.right, firstChunkLen, secondChunkLen, 0, delayInt, alpha, fb)
         }
 
         writePos = (writePos + length) % bufferSize
     }
 
     private fun processInternal(
-        buffer: FloatArray,
-        input: FloatArray,
-        output: FloatArray,
+        buffer: AudioBuffer,
+        input: AudioBuffer,
+        output: AudioBuffer,
         offset: Int,
         length: Int,
         startWritePos: Int,
+        delayInt: Int,
+        alpha: Double,
+        fb: Double,
     ) {
         var pos = startWritePos
-
-        // Allow shorter delays (e.g. ~1ms) for flanging/chorus effects.
-        // 10ms (0.01) was too restrictive.
-        val minSamples = (0.0001 * sampleRate)
-
-        // Use Double for delaySamples to support fractional delay
-        val delaySamples = (delayTimeSeconds * sampleRate).coerceIn(minSamples, (bufferSize - 2).toDouble())
-
-        // Integer part and fractional part for interpolation
-        val delayInt = delaySamples.toInt()
-        val alpha = delaySamples - delayInt // Fraction between 0.0 and 1.0
 
         for (i in 0 until length) {
             val inputIndex = offset + i
 
-            // --- 1. Read from the past with Linear Interpolation ---
-
-            // Read position for integer part
+            // --- 1. Fractional read: linear interpolation between two ring
+            //         positions. `s1` is newer (at pos - delayInt), `s2` is one
+            //         sample older. alpha=0 → s1, alpha=1 → s2.
             var readIndex1 = pos - delayInt
-            if (readIndex1 < 0) readIndex1 += bufferSize
-
-            // Read position for next sample (for interpolation)
+            if (readIndex1 < 0) {
+                readIndex1 += bufferSize
+            }
             var readIndex2 = readIndex1 - 1
-            if (readIndex2 < 0) readIndex2 += bufferSize
-
-            val s1 = buffer[readIndex1].toDouble()
-            val s2 = buffer[readIndex2].toDouble()
-
-            // Linear Interpolation: s1 + alpha * (s2 - s1)
-            // This allows the delay time to exist "between" samples
-            val delayedSignal = s1 + alpha * (s2 - s1)
-
-            // --- 2. Feedback loop with Safety Clamping ---
-
-            var newSample = input[inputIndex].toDouble() + (delayedSignal * feedback)
-
-            // Hard clip safety to prevent feedback explosions
-            if (abs(newSample) > limit) {
-                newSample = if (newSample > 0) limit else -limit
+            if (readIndex2 < 0) {
+                readIndex2 += bufferSize
             }
 
-            buffer[pos] = newSample.toFloat()
+            val s1 = buffer[readIndex1]
+            val s2 = buffer[readIndex2]
+            val delayedSignal = s1 + alpha * (s2 - s1)
 
-            // --- 3. Output ---
-            output[inputIndex] = (output[inputIndex] + delayedSignal).toFloat()
+            // --- 2. Feedback + safety. Scrub NaN/Inf first so it cannot poison
+            //         the ring buffer (softCap of NaN is NaN — IEEE-754).
+            var newSample = input[inputIndex] + (delayedSignal * fb)
+            if (!newSample.isFinite()) {
+                newSample = 0.0
+            }
+            // Smooth saturation around ±1 instead of a hard clip — softer,
+            // less brittle character on runaway feedback or hot inputs.
+            buffer[pos] = ClippingFuncs.softCap(newSample)
 
-            // Advance pointer (no wrap check needed here due to chunking)
+            // --- 3. Wet output, additive. Caller owns the dry mix.
+            output[inputIndex] = output[inputIndex] + delayedSignal
+
             pos++
         }
+    }
+
+    companion object {
+        /**
+         * Lower bound for [delayTimeSeconds] in seconds. ~0.1 ms — short enough
+         * for flanger/comb regimes, long enough that linear interpolation
+         * doesn't blow up at boundary conditions.
+         */
+        private const val MIN_DELAY_SECONDS: Double = 0.0001
     }
 }

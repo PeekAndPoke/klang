@@ -8,6 +8,8 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.ints.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.math.abs
 import kotlin.random.Random
@@ -42,14 +44,14 @@ class ExcitersTest : StringSpec({
         }
     }
 
-    fun generate(sig: Ignitor, freqHz: Double = 440.0, blockFrames: Int = defaultBlockFrames): FloatArray {
-        val buffer = FloatArray(blockFrames)
+    fun generate(sig: Ignitor, freqHz: Double = 440.0, blockFrames: Int = defaultBlockFrames): AudioBuffer {
+        val buffer = AudioBuffer(blockFrames)
         sig.generate(buffer, freqHz, createCtx(blockFrames))
         return buffer
     }
 
     /** Count zero crossings (sign changes) in the buffer */
-    fun FloatArray.zeroCrossings(): Int {
+    fun AudioBuffer.zeroCrossings(): Int {
         var count = 0
         for (i in 1 until size) {
             if ((this[i - 1] >= 0.0 && this[i] < 0.0) || (this[i - 1] < 0.0 && this[i] >= 0.0)) {
@@ -60,10 +62,10 @@ class ExcitersTest : StringSpec({
     }
 
     /** Find peak absolute amplitude */
-    fun FloatArray.peakAmplitude(): Double = maxOf((maxOrNull() ?: 0.0f).toDouble(), -(minOrNull() ?: 0.0f).toDouble())
+    fun AudioBuffer.peakAmplitude(): Double = maxOf((maxOrNull() ?: 0.0), -(minOrNull() ?: 0.0))
 
     /** Check that the waveform is roughly symmetric around zero (mean close to 0) */
-    fun FloatArray.dcOffset(): Double = map { it.toDouble() }.average()
+    fun AudioBuffer.dcOffset(): Double = map { it }.average()
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Triangle
@@ -112,7 +114,7 @@ class ExcitersTest : StringSpec({
         val rampLen = 100
         if (rampStart + rampLen < buf.size) {
             // Slope should be roughly constant
-            val slopes = (0 until rampLen - 1).map { (buf[rampStart + it + 1] - buf[rampStart + it]).toDouble() }
+            val slopes = (0 until rampLen - 1).map { (buf[rampStart + it + 1] - buf[rampStart + it]) }
             val avgSlope = slopes.average()
             // All slopes should be close to the average (linear = constant slope)
             for (slope in slopes) {
@@ -125,8 +127,8 @@ class ExcitersTest : StringSpec({
         val sig = Ignitors.triangle()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = FloatArray(blockSize)
-        val buf2 = FloatArray(blockSize)
+        val buf1 = AudioBuffer(blockSize)
+        val buf2 = AudioBuffer(blockSize)
 
         // Render two consecutive blocks
         sig.generate(buf1, 440.0, ctx)
@@ -134,7 +136,7 @@ class ExcitersTest : StringSpec({
         sig.generate(buf2, 440.0, ctx)
 
         // Last sample of block 1 and first sample of block 2 should be close (continuous)
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 0.05
     }
 
@@ -178,14 +180,14 @@ class ExcitersTest : StringSpec({
         val sig = Ignitors.sine()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = FloatArray(blockSize)
-        val buf2 = FloatArray(blockSize)
+        val buf1 = AudioBuffer(blockSize)
+        val buf2 = AudioBuffer(blockSize)
 
         sig.generate(buf1, 440.0, ctx)
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 0.05
     }
 
@@ -227,15 +229,15 @@ class ExcitersTest : StringSpec({
         val sig = Ignitors.sawtooth()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = FloatArray(blockSize)
-        val buf2 = FloatArray(blockSize)
+        val buf1 = AudioBuffer(blockSize)
+        val buf2 = AudioBuffer(blockSize)
 
         sig.generate(buf1, 440.0, ctx)
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
         // Sawtooth is continuous within a ramp — only jumps at reset
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 1.5
     }
 
@@ -253,7 +255,7 @@ class ExcitersTest : StringSpec({
         val g = 0.5
         val buf = generate(Ignitors.square().withGain(gain(g)), freqHz = 440.0)
         // Most samples should be close to +gain or -gain
-        val nearGain = buf.count { abs(abs(it.toDouble()) - g) < 0.05 }
+        val nearGain = buf.count { abs(abs(it) - g) < 0.05 }
         // Allow ~5% of samples near transitions to deviate
         nearGain shouldBeGreaterThanOrEqual (buf.size * 0.9).toInt()
     }
@@ -273,15 +275,15 @@ class ExcitersTest : StringSpec({
         val sig = Ignitors.square()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = FloatArray(blockSize)
-        val buf2 = FloatArray(blockSize)
+        val buf1 = AudioBuffer(blockSize)
+        val buf2 = AudioBuffer(blockSize)
 
         sig.generate(buf1, 440.0, ctx)
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
         // Square can jump at transitions, but block boundary shouldn't cause extra glitches
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 1.5
     }
 
@@ -303,7 +305,7 @@ class ExcitersTest : StringSpec({
         val g = 1.0
         val buf = generate(Ignitors.whiteNoise(Random(42)).withGain(gain(g)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan g + 0.001
+            abs(sample) shouldBeLessThan g + 0.001
         }
     }
 
@@ -316,7 +318,7 @@ class ExcitersTest : StringSpec({
         val g = 0.3
         val buf = generate(Ignitors.whiteNoise(Random(42)).withGain(gain(g)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan g + 0.001
+            abs(sample) shouldBeLessThan g + 0.001
         }
         buf.peakAmplitude() shouldBeGreaterThan g * 0.8
     }
@@ -342,8 +344,8 @@ class ExcitersTest : StringSpec({
         val sig2 = Ignitors.sine()
         val ctx = createCtx(128)
 
-        val buf1 = FloatArray(128)
-        val buf2 = FloatArray(128)
+        val buf1 = AudioBuffer(128)
+        val buf2 = AudioBuffer(128)
 
         // Advance sig1 by one block, leave sig2 at start
         sig1.generate(buf1, 440.0, ctx)
@@ -394,14 +396,14 @@ class ExcitersTest : StringSpec({
         val sig = Ignitors.zawtooth()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = FloatArray(blockSize)
-        val buf2 = FloatArray(blockSize)
+        val buf1 = AudioBuffer(blockSize)
+        val buf2 = AudioBuffer(blockSize)
 
         sig.generate(buf1, 440.0, ctx)
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
-        val diff = abs(buf2[0] - buf1[blockSize - 1]).toDouble()
+        val diff = abs(buf2[0] - buf1[blockSize - 1])
         diff shouldBeLessThan 1.5
     }
 
@@ -416,20 +418,20 @@ class ExcitersTest : StringSpec({
     "impulse - one click per cycle" {
         // 440Hz over 100ms = 44 cycles = 44 impulses
         val buf = generate(Ignitors.impulse(), freqHz = 440.0)
-        val impulseCount = buf.count { it == 1.0f }
+        val impulseCount = buf.count { it == 1.0 }
         impulseCount shouldBeInRange 43..45
     }
 
     "impulse - output is only 0 or 1" {
         val buf = generate(Ignitors.impulse(), freqHz = 440.0)
         for (sample in buf) {
-            (sample == 0.0f || sample == 1.0f) shouldBe true
+            (sample == 0.0 || sample == 1.0) shouldBe true
         }
     }
 
     "impulse - mostly silence between clicks" {
         val buf = generate(Ignitors.impulse(), freqHz = 440.0)
-        val silentCount = buf.count { it == 0.0f }
+        val silentCount = buf.count { it == 0.0 }
         // 4410 samples, ~44 impulses, so ~4366 silent samples
         silentCount shouldBeGreaterThanOrEqual 4350
     }
@@ -437,23 +439,23 @@ class ExcitersTest : StringSpec({
     "impulse - custom gain scales click amplitude" {
         val g = 0.3
         val buf = generate(Ignitors.impulse().withGain(gain(g)), freqHz = 440.0)
-        val clickValue = buf.first { it != 0.0f }
-        clickValue.toDouble() shouldBe (g plusOrMinus 0.001)
+        val clickValue = buf.first { it != 0.0 }
+        clickValue shouldBe (g plusOrMinus 0.001)
     }
 
     "impulse - phase continuity across blocks" {
         val sig = Ignitors.impulse()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = FloatArray(blockSize)
-        val buf2 = FloatArray(blockSize)
+        val buf1 = AudioBuffer(blockSize)
+        val buf2 = AudioBuffer(blockSize)
 
         sig.generate(buf1, 440.0, ctx)
         ctx.voiceElapsedFrames = blockSize
         sig.generate(buf2, 440.0, ctx)
 
         // Should still produce correct impulse count across two blocks
-        val totalImpulses = buf1.count { it == 1.0f } + buf2.count { it == 1.0f }
+        val totalImpulses = buf1.count { it == 1.0 } + buf2.count { it == 1.0 }
         // 256 samples at 440Hz ≈ 2.5 cycles ≈ 2-3 impulses
         totalImpulses shouldBeInRange 2..4
     }
@@ -464,13 +466,13 @@ class ExcitersTest : StringSpec({
 
     "silence - all zeros" {
         val buf = generate(Ignitors.silence())
-        buf.all { it == 0.0f } shouldBe true
+        buf.all { it == 0.0 } shouldBe true
     }
 
     "silence - all zeros via DSL runtime" {
         val sig = IgnitorDsl.Silence.toExciter()
         val buf = generate(sig)
-        buf.all { it == 0.0f } shouldBe true
+        buf.all { it == 0.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -504,10 +506,10 @@ class ExcitersTest : StringSpec({
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
-        val buf = FloatArray(blockSize)
+        val buf = AudioBuffer(blockSize)
         sig.generate(buf, 440.0, ctx)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -518,7 +520,7 @@ class ExcitersTest : StringSpec({
     "brown noise - output is bounded" {
         val buf = generate(Ignitors.brownNoise(Random(42)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
     }
 
@@ -543,7 +545,7 @@ class ExcitersTest : StringSpec({
     "pink noise - output is bounded" {
         val buf = generate(Ignitors.pinkNoise(Random(42)), freqHz = 440.0)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
     }
 
@@ -566,7 +568,7 @@ class ExcitersTest : StringSpec({
 
     "perlin noise - produces non-zero output" {
         val buf = generate(Ignitors.perlinNoise(Random(42)))
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     "perlin noise - output is bounded to -1..1" {
@@ -598,7 +600,7 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.PerlinNoise()
         val sig = dsl.toExciter()
         val buf = generate(sig)
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -607,7 +609,7 @@ class ExcitersTest : StringSpec({
 
     "berlin noise - produces non-zero output" {
         val buf = generate(Ignitors.berlinNoise(Random(42)))
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     "berlin noise - output is bounded to -1..1" {
@@ -633,7 +635,7 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.BerlinNoise()
         val sig = dsl.toExciter()
         val buf = generate(sig)
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -642,22 +644,22 @@ class ExcitersTest : StringSpec({
 
     "dust - mostly silence" {
         val buf = generate(Ignitors.dust(Random(42), density = density(0.2)), freqHz = 440.0)
-        val silentCount = buf.count { it == 0.0f }
+        val silentCount = buf.count { it == 0.0 }
         silentCount shouldBeGreaterThanOrEqual (buf.size * 0.8).toInt()
     }
 
     "dust - output is non-negative" {
         val buf = generate(Ignitors.dust(Random(42), density = density(0.5)), freqHz = 440.0)
         for (sample in buf) {
-            sample.toDouble() shouldBeGreaterThan -0.001
+            sample shouldBeGreaterThan -0.001
         }
     }
 
     "dust - higher density produces more impulses" {
         val bufLow = generate(Ignitors.dust(Random(42), density = density(0.1)), freqHz = 440.0)
         val bufHigh = generate(Ignitors.dust(Random(42), density = density(0.9)), freqHz = 440.0)
-        val countLow = bufLow.count { it > 0.0f }
-        val countHigh = bufHigh.count { it > 0.0f }
+        val countLow = bufLow.count { it > 0.0 }
+        val countHigh = bufHigh.count { it > 0.0 }
         countHigh shouldBeGreaterThanOrEqual countLow
     }
 
@@ -667,15 +669,15 @@ class ExcitersTest : StringSpec({
 
     "crackle - mostly silence" {
         val buf = generate(Ignitors.crackle(Random(42), density = density(0.2)), freqHz = 440.0)
-        val silentCount = buf.count { it == 0.0f }
+        val silentCount = buf.count { it == 0.0 }
         silentCount shouldBeGreaterThanOrEqual (buf.size * 0.5).toInt()
     }
 
     "crackle - denser than dust at same density (higher maxRateHz)" {
         val bufDust = generate(Ignitors.dust(Random(42), density = density(0.5)), freqHz = 440.0)
         val bufCrackle = generate(Ignitors.crackle(Random(42), density = density(0.5)), freqHz = 440.0)
-        val countDust = bufDust.count { it > 0.0f }
-        val countCrackle = bufCrackle.count { it > 0.0f }
+        val countDust = bufDust.count { it > 0.0 }
+        val countCrackle = bufCrackle.count { it > 0.0 }
         countCrackle shouldBeGreaterThanOrEqual countDust
     }
 
@@ -689,12 +691,12 @@ class ExcitersTest : StringSpec({
         val ctx = createCtx(blockSize)
         // Set phaseMod to -1.0 (reversed phase direction)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
-        val buf = FloatArray(blockSize)
+        val buf = AudioBuffer(blockSize)
         sig.generate(buf, 440.0, ctx)
 
         // Output should be bounded (no NaN/Infinity from unbounded phase)
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -703,11 +705,11 @@ class ExcitersTest : StringSpec({
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
-        val buf = FloatArray(blockSize)
+        val buf = AudioBuffer(blockSize)
         sig.generate(buf, 440.0, ctx)
 
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -716,11 +718,11 @@ class ExcitersTest : StringSpec({
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
-        val buf = FloatArray(blockSize)
+        val buf = AudioBuffer(blockSize)
         sig.generate(buf, 440.0, ctx)
 
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -729,11 +731,11 @@ class ExcitersTest : StringSpec({
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
-        val buf = FloatArray(blockSize)
+        val buf = AudioBuffer(blockSize)
         sig.generate(buf, 440.0, ctx)
 
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.1
+            abs(sample) shouldBeLessThan 1.1
         }
     }
 
@@ -743,7 +745,7 @@ class ExcitersTest : StringSpec({
 
     "supersaw - produces non-zero output" {
         val buf = generate(Ignitors.superSaw(), freqHz = 440.0)
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     "supersaw - amplitude bounded by voice-normalized output" {
@@ -755,8 +757,8 @@ class ExcitersTest : StringSpec({
         val buf1 = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 1.0)), freqHz = 440.0)
         val buf5 = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 5.0)), freqHz = 440.0)
         // Both should produce output
-        buf1.any { it != 0.0f } shouldBe true
-        buf5.any { it != 0.0f } shouldBe true
+        buf1.any { it != 0.0 } shouldBe true
+        buf5.any { it != 0.0 } shouldBe true
     }
 
     "supersaw - single voice equals sawtooth character" {
@@ -778,8 +780,8 @@ class ExcitersTest : StringSpec({
         val sig = Ignitors.superSaw()
         val blockSize = 128
         val ctx = createCtx(blockSize)
-        val buf1 = FloatArray(blockSize)
-        val buf2 = FloatArray(blockSize)
+        val buf1 = AudioBuffer(blockSize)
+        val buf2 = AudioBuffer(blockSize)
 
         sig.generate(buf1, 440.0, ctx)
         ctx.voiceElapsedFrames = blockSize
@@ -787,7 +789,7 @@ class ExcitersTest : StringSpec({
 
         // Should produce continuous output (no NaN, no extreme jumps)
         for (sample in buf1 + buf2) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
     }
 
@@ -796,11 +798,11 @@ class ExcitersTest : StringSpec({
         val blockSize = 4410
         val ctx = createCtx(blockSize)
         ctx.phaseMod = DoubleArray(blockSize) { -1.0 }
-        val buf = FloatArray(blockSize)
+        val buf = AudioBuffer(blockSize)
         sig.generate(buf, 440.0, ctx)
 
         for (sample in buf) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
     }
 
@@ -812,8 +814,8 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.SuperSaw(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
-        bufDefault.any { it != 0.0f } shouldBe true
-        bufOverride.any { it != 0.0f } shouldBe true
+        bufDefault.any { it != 0.0 } shouldBe true
+        bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
@@ -821,8 +823,8 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.SuperSine(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
-        bufDefault.any { it != 0.0f } shouldBe true
-        bufOverride.any { it != 0.0f } shouldBe true
+        bufDefault.any { it != 0.0 } shouldBe true
+        bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
@@ -830,8 +832,8 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.SuperSquare(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
-        bufDefault.any { it != 0.0f } shouldBe true
-        bufOverride.any { it != 0.0f } shouldBe true
+        bufDefault.any { it != 0.0 } shouldBe true
+        bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
@@ -839,8 +841,8 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.SuperTri(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
-        bufDefault.any { it != 0.0f } shouldBe true
-        bufOverride.any { it != 0.0f } shouldBe true
+        bufDefault.any { it != 0.0 } shouldBe true
+        bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
@@ -848,8 +850,8 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.SuperRamp(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
-        bufDefault.any { it != 0.0f } shouldBe true
-        bufOverride.any { it != 0.0f } shouldBe true
+        bufDefault.any { it != 0.0 } shouldBe true
+        bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
@@ -857,8 +859,8 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.SuperPluck(voices = IgnitorDsl.Param("voices", 3.0))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 7.0)), freqHz = 440.0)
-        bufDefault.any { it != 0.0f } shouldBe true
-        bufOverride.any { it != 0.0f } shouldBe true
+        bufDefault.any { it != 0.0 } shouldBe true
+        bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
@@ -869,7 +871,7 @@ class ExcitersTest : StringSpec({
     "supersaw DSL - oscParams voices=1 produces single-voice output" {
         val dsl = IgnitorDsl.SuperSaw()
         val buf = generate(dsl.toExciter(mapOf("voices" to 1.0)), freqHz = 440.0)
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
         // Single-voice supersaw should have clean saw zero-crossing count
         buf.zeroCrossings() shouldBeGreaterThanOrEqual 40
     }
@@ -883,8 +885,8 @@ class ExcitersTest : StringSpec({
         val bufNull = generate(dsl.toExciter(null), freqHz = 440.0)
         val bufEmpty = generate(dsl.toExciter(emptyMap()), freqHz = 440.0)
         // Both should produce non-zero output (5 voices active)
-        bufNull.any { it != 0.0f } shouldBe true
-        bufEmpty.any { it != 0.0f } shouldBe true
+        bufNull.any { it != 0.0 } shouldBe true
+        bufEmpty.any { it != 0.0 } shouldBe true
         // Both should differ from single-voice (proving default voices > 1)
         val buf1 = generate(dsl.toExciter(mapOf("voices" to 1.0)), freqHz = 440.0)
         bufNull.zip(buf1).any { (a, b) -> a != b } shouldBe true
@@ -899,8 +901,8 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.SuperSaw()
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("voices" to 3.0, "freqSpread" to 0.5)), freqHz = 440.0)
-        bufDefault.any { it != 0.0f } shouldBe true
-        bufOverride.any { it != 0.0f } shouldBe true
+        bufDefault.any { it != 0.0 } shouldBe true
+        bufOverride.any { it != 0.0 } shouldBe true
         // Output should differ due to different voices and spread
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
@@ -913,8 +915,8 @@ class ExcitersTest : StringSpec({
         val dsl = IgnitorDsl.SuperSaw(freqSpread = IgnitorDsl.Param("freqSpread", 0.1))
         val bufDefault = generate(dsl.toExciter(), freqHz = 440.0)
         val bufOverride = generate(dsl.toExciter(mapOf("freqSpread" to 0.5)), freqHz = 440.0)
-        bufDefault.any { it != 0.0f } shouldBe true
-        bufOverride.any { it != 0.0f } shouldBe true
+        bufDefault.any { it != 0.0 } shouldBe true
+        bufOverride.any { it != 0.0 } shouldBe true
         bufDefault.zip(bufOverride).any { (a, b) -> a != b } shouldBe true
     }
 
@@ -925,8 +927,8 @@ class ExcitersTest : StringSpec({
         val bufOverride = generate(sigOverride, freqHz = 440.0)
         val bufDefault = generate(sigDefault, freqHz = 440.0)
         // Higher density should produce more impulses
-        val countOverride = bufOverride.count { it > 0.0f }
-        val countDefault = bufDefault.count { it > 0.0f }
+        val countOverride = bufOverride.count { it > 0.0 }
+        val countDefault = bufDefault.count { it > 0.0 }
         countOverride shouldBeGreaterThanOrEqual countDefault
     }
 
@@ -986,7 +988,7 @@ class ExcitersTest : StringSpec({
 
     "ramp - produces non-zero output" {
         val buf = generate(Ignitors.ramp(), freqHz = 440.0)
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     "ramp - correct frequency" {
@@ -1005,17 +1007,17 @@ class ExcitersTest : StringSpec({
 
     "supersaw - zero voices produces silence" {
         val buf = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", 0.0)), freqHz = 440.0)
-        buf.all { it == 0.0f } shouldBe true
+        buf.all { it == 0.0 } shouldBe true
     }
 
     "supersaw - negative voices produces silence" {
         val buf = generate(Ignitors.superSaw(voices = ParamIgnitor("voices", -5.0)), freqHz = 440.0)
-        buf.all { it == 0.0f } shouldBe true
+        buf.all { it == 0.0 } shouldBe true
     }
 
     "supersine - zero voices produces silence" {
         val buf = generate(Ignitors.superSine(voices = ParamIgnitor("voices", 0.0)), freqHz = 440.0)
-        buf.all { it == 0.0f } shouldBe true
+        buf.all { it == 0.0 } shouldBe true
     }
 
     "plus - two sines summed roughly double amplitude" {
@@ -1045,17 +1047,16 @@ class ExcitersTest : StringSpec({
     "times - signal times itself is squared (always positive)" {
         val buf = generate(Ignitors.sine() * Ignitors.sine(), freqHz = 440.0)
         // Squared sine is always >= 0
-        buf.all { it >= -0.001f } shouldBe true
+        buf.all { it >= -0.001 } shouldBe true
     }
 
-    "div by zero produces silence, not NaN" {
-        val sig = Ignitors.sine() * Ignitors.silence()  // silence = all zeros
+    "div by zero produces finite values via epsilon substitution, not NaN/Inf" {
         val dividend = Ignitors.sine()
         val divResult = dividend.div(Ignitors.silence())
         val buf = generate(divResult, freqHz = 440.0)
-        // Should be all zeros (guarded), not NaN or Infinity
+        // Zero divisor → epsilon (1e-30); result is finite (large) but never NaN/Inf.
+        // The master limiter is responsible for clamping the resulting spike.
         buf.none { it.isNaN() || it.isInfinite() } shouldBe true
-        buf.all { it == 0.0f } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -1074,26 +1075,92 @@ class ExcitersTest : StringSpec({
         dry.zip(driven).all { (a, b) -> a == b } shouldBe true
     }
 
-    "clip soft limits output to approximately +-1" {
-        // Drive signal way above 1.0, then clip
+    "clip soft direct output is finite and stays in the documented envelope" {
+        // Direct call (no IgniteRenderer wrapper): the clip stage itself does
+        // shape + DC-block. The DC-blocker's 2× edge transient on rail-to-rail
+        // signals lifts peaks toward ±2 — the IgniteRenderer wrap is what bounds
+        // them to ±1 in the live engine. See `clip via IgniteRenderer wrap …`
+        // below for the bound-to-±1 invariant.
         val buf = generate(Ignitors.sine().drive(1.0).clip("soft"), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan 1.05
-        buf.any { it != 0.0f } shouldBe true
+        buf.peakAmplitude() shouldBeLessThan 2.5
+        buf.any { it != 0.0 } shouldBe true
+        buf.none { it.isNaN() || it.isInfinite() } shouldBe true
     }
 
-    "clip hard limits output to exactly +-1" {
+    "clip hard direct output is finite and stays in the documented envelope" {
+        // Same reasoning as `clip soft direct …` above.
         val buf = generate(Ignitors.sine().drive(1.0).clip("hard"), freqHz = 440.0)
-        buf.peakAmplitude() shouldBeLessThan 1.01
+        buf.peakAmplitude() shouldBeLessThan 2.5
+        buf.none { it.isNaN() || it.isInfinite() } shouldBe true
+    }
+
+    "clip via IgniteRenderer wrap bounds output to within ±1 (the in-engine invariant)" {
+        // The IgniteRenderer applies a single fastTanh wrap to the entire ignitor
+        // output. This is what bounds heavy-distort/clip chains to ±1 in the live
+        // engine (per-stage clip/distort no longer caps — see IgnitorEffects.kt).
+        val signal = Ignitors.sine().drive(1.0).clip("soft")
+        val ctx = io.peekandpoke.klang.audio_be.voices.strip.BlockContext(
+            audioBuffer = AudioBuffer(defaultBlockFrames),
+            freqModBuffer = DoubleArray(defaultBlockFrames),
+            scratchBuffers = ScratchBuffers(defaultBlockFrames),
+            sampleRate = sampleRate,
+            startFrame = 0,
+            endFrame = defaultBlockFrames,
+            gateEndFrame = defaultBlockFrames,
+            freqHz = 440.0,
+            signal = signal,
+            signalCtx = IgniteContext(
+                sampleRate = sampleRate,
+                voiceDurationFrames = defaultBlockFrames,
+                gateEndFrame = defaultBlockFrames,
+                releaseFrames = 0,
+                voiceEndFrame = defaultBlockFrames,
+                scratchBuffers = ScratchBuffers(defaultBlockFrames),
+            ),
+            cylinders = Cylinders(
+                blockFrames = defaultBlockFrames, sampleRate = sampleRate,
+            ),
+        ).apply {
+            offset = 0; length = defaultBlockFrames; blockStart = 0
+        }
+        val renderer = io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer(
+            signal = signal,
+            signalCtx = ctx.signalCtx,
+            freqHz = 440.0,
+            startFrame = 0,
+        )
+        renderer.render(ctx)
+        ctx.audioBuffer.peakAmplitude() shouldBeLessThan 1.05
+        ctx.audioBuffer.peakAmplitude() shouldBeGreaterThan 0.5  // still loud — wrapper isn't silencing
+        ctx.audioBuffer.none { it.isNaN() || it.isInfinite() } shouldBe true
+    }
+
+    "distort at extreme drive does NOT DC-lock — the safety contract" {
+        // Drive a pure sine through extreme distortion. Without the DC blocker, the
+        // output would rail-lock to one side when the input has any asymmetry; with
+        // the always-on DC blocker, output stays roughly centered on zero.
+        val buf = generate(Ignitors.sine().distort(5.0, "soft"), freqHz = 440.0)
+        // Skip the first 1024 samples (DC blocker startup transient).
+        val steady = buf.sliceArray(1024 until buf.size)
+        // Mean should be near zero (no rail lock).
+        val mean = steady.average()
+        abs(mean) shouldBeLessThan 0.1
+        // And no NaN / Inf despite the extreme drive.
+        steady.none { it.isNaN() || it.isInfinite() } shouldBe true
+        // Direct call (no IgniteRenderer wrap) — peak is bounded by the
+        // DC-blocker's 2× edge response, not by ±1. See the IgniteRenderer
+        // wrap test for the in-engine ±1 invariant.
+        steady.peakAmplitude() shouldBeLessThan 2.5
     }
 
     "clip fold produces non-zero output" {
         val buf = generate(Ignitors.sine().clip("fold"), freqHz = 440.0)
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     "bandpass passes center frequency" {
         val buf = generate(Ignitors.sine().bandpass(440.0, 1.0), freqHz = 440.0)
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
         buf.peakAmplitude() shouldBeGreaterThan 0.3
     }
 
@@ -1103,5 +1170,4 @@ class ExcitersTest : StringSpec({
         // Notch at exactly the signal frequency should reduce amplitude
         notched.peakAmplitude() shouldBeLessThan dry.peakAmplitude()
     }
-
 })

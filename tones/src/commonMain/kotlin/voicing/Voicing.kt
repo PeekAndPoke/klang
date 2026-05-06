@@ -46,6 +46,48 @@ object Voicing {
     }
 
     /**
+     * Get a ranked list of voicings for a chord, best→worst.
+     *
+     * Always returns at least one voicing for any chord string that [Chord.get] can parse.
+     * If the dictionary search returns no candidates (unknown chord shape, range too tight),
+     * falls back to:
+     *   1. A single voicing built from the chord's intervals transposed from `tonic + "4"`
+     *      — preserves inversion/structure defined in [Chord].
+     *   2. The chord's raw notes forced to octave 4 — last resort for chords missing intervals.
+     *   3. An empty list — only when the chord string is truly invalid (no tonic, no notes).
+     *
+     * @param chord The chord symbol (e.g., "Cmaj7").
+     * @param range The pitch range for the voicing (e.g., ["C3", "C5"]).
+     * @param dictionary The voicing dictionary to use.
+     * @param voiceLeading The ranking strategy.
+     * @param lastVoicing The previous voicing, used for ranking.
+     */
+    fun getRanked(
+        chord: String,
+        range: List<String> = defaultRange,
+        dictionary: VoicingDictionary = defaultDictionary,
+        voiceLeading: VoiceLeadingRankFunction = VoiceLeading.topNoteDiffRanked,
+        lastVoicing: List<String> = emptyList(),
+    ): List<List<String>> {
+        val ranked = voiceLeading(search(chord, range, dictionary), lastVoicing)
+        if (ranked.isNotEmpty()) return ranked
+
+        val chordObj = Chord.get(chord)
+        val tonic = chordObj.tonic
+
+        if (!chordObj.empty && !tonic.isNullOrEmpty()) {
+            val root = tonic + "4"
+            return listOf(chordObj.intervals.map { interval -> Distance.transpose(root, interval) })
+        }
+
+        if (chordObj.notes.isNotEmpty()) {
+            return listOf(chordObj.notes.map { it + "4" })
+        }
+
+        return emptyList()
+    }
+
+    /**
      * Search for all possible voicings for a chord in a given range.
      *
      * @param chord The chord symbol (e.g., "Cmaj7").

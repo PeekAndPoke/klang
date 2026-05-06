@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.VoiceData
 
 /**
@@ -23,11 +24,11 @@ class IgnitorDefaultsTest : StringSpec({
         soundName: String,
         oscParams: Map<String, Double>? = null,
         freqHz: Double = 440.0,
-    ): FloatArray {
+    ): AudioBuffer {
         val data = VoiceData.empty.copy(sound = soundName, oscParams = oscParams)
         val exciter = registry.createExciter(soundName, data, freqHz)
             ?: error("Unknown sound: $soundName")
-        val buffer = FloatArray(blockFrames)
+        val buffer = AudioBuffer(blockFrames)
         val ctx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = sampleRate,
@@ -44,7 +45,7 @@ class IgnitorDefaultsTest : StringSpec({
         return buffer
     }
 
-    fun buffersDiffer(a: FloatArray, b: FloatArray): Boolean =
+    fun buffersDiffer(a: AudioBuffer, b: AudioBuffer): Boolean =
         a.zip(b).any { (x, y) -> x != y }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -66,20 +67,20 @@ class IgnitorDefaultsTest : StringSpec({
     for (name in pitchedOscillators) {
         "predefined '$name' produces non-zero output" {
             val buf = createAndGenerate(name)
-            buf.any { it != 0.0f } shouldBe true
+            buf.any { it != 0.0 } shouldBe true
         }
     }
 
     for (name in noiseOscillators) {
         "predefined '$name' produces non-zero output" {
             val buf = createAndGenerate(name, freqHz = 0.0)
-            buf.any { it != 0.0f } shouldBe true
+            buf.any { it != 0.0 } shouldBe true
         }
     }
 
     "predefined 'silence' produces zero output" {
         val buf = createAndGenerate("silence", freqHz = 0.0)
-        buf.all { it == 0.0f } shouldBe true
+        buf.all { it == 0.0 } shouldBe true
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -121,8 +122,8 @@ class IgnitorDefaultsTest : StringSpec({
     "dust responds to oscParam 'density'" {
         val bufLow = createAndGenerate("dust", oscParams = mapOf("density" to 0.05), freqHz = 0.0)
         val bufHigh = createAndGenerate("dust", oscParams = mapOf("density" to 0.9), freqHz = 0.0)
-        val countLow = bufLow.count { it > 0.0f }
-        val countHigh = bufHigh.count { it > 0.0f }
+        val countLow = bufLow.count { it > 0.0 }
+        val countHigh = bufHigh.count { it > 0.0 }
         countHigh shouldBeGreaterThanOrEqual countLow
     }
 
@@ -160,16 +161,16 @@ class IgnitorDefaultsTest : StringSpec({
 
     "sgpad composition produces output" {
         val buf = createAndGenerate("sgpad")
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     "sgbell composition produces output" {
         val buf = createAndGenerate("sgbell")
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 
     "sgbuzz composition produces output" {
         val buf = createAndGenerate("sgbuzz")
-        buf.any { it != 0.0f } shouldBe true
+        buf.any { it != 0.0 } shouldBe true
     }
 })

@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.voices
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
@@ -19,9 +20,11 @@ class FilterModulationTest : StringSpec({
     val sampleRate = 44100
     val blockFrames = 100
 
-    val noopSignal = Ignitor { buffer, _, ctx ->
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) buffer[i] = 0.0f
+    val noopSignal: Ignitor = object : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) buffer[i] = 0.0
+        }
     }
 
     fun createSignalCtx(
@@ -47,7 +50,7 @@ class FilterModulationTest : StringSpec({
             cylinders = Cylinders(blockFrames = blockFrames, sampleRate = sampleRate),
             sampleRate = sampleRate,
             blockFrames = blockFrames,
-            voiceBuffer = FloatArray(blockFrames),
+            voiceBuffer = AudioBuffer(blockFrames),
             freqModBuffer = DoubleArray(blockFrames),
             scratchBuffers = ScratchBuffers(blockFrames),
         ).apply {
@@ -65,7 +68,7 @@ class FilterModulationTest : StringSpec({
             cutoffHistory.add(cutoffHz)
         }
 
-        override fun process(buffer: FloatArray, offset: Int, length: Int) {
+        override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             // No-op
         }
 
@@ -77,7 +80,7 @@ class FilterModulationTest : StringSpec({
 
     // Helper to create a dummy sample
     fun createSample(): MonoSamplePcm {
-        val pcm = FloatArray(100) { 0.5f }
+        val pcm = AudioBuffer(100) { 0.5 }
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = pcm,
@@ -545,5 +548,86 @@ class FilterModulationTest : StringSpec({
         // Halfway through release: envelope = 0.5 - (100/200 * 0.5) = 0.25
         // newCutoff = 1000 * (1.0 + 1.0 * 0.25) = 1250
         spyFilter.currentCutoff shouldBe (1250.0 plusOrMinus 1.0)
+
+        // Render at end of release (frame 500 = gateEnd + 200 = full release done)
+        spyFilter.reset()
+        val ctx3 = createCtx(blockStart = 500)
+        voice.render(ctx3)
+
+        // End of release: envelope = 0.0, cutoff returns to base
+        // newCutoff = 1000 * (1.0 + 1.0 * 0.0) = 1000
+        spyFilter.currentCutoff shouldBe (1000.0 plusOrMinus 1.0)
+
+        // After release (frame 700 — well past releaseFrames). Envelope is clamped
+        // to 0; cutoff stays at base. This is the "modulator runs best-effort within
+        // voice lifetime" rule — once the envelope has finished, the cutoff is
+        // simply held at base for the rest of the voice's life.
+        spyFilter.reset()
+        val ctx4 = createCtx(blockStart = 700)
+        voice.render(ctx4)
+        spyFilter.currentCutoff shouldBe (1000.0 plusOrMinus 1.0)
+    }
+
+    "modulator envelope does NOT keep voice alive past its endFrame" {
+        // Rule: "The longest amplitude tail wins. Modulator envelopes are
+        // best-effort within." If the voice's amp envelope has no release
+        // (endFrame == gateEndFrame), a filter modulator with a long release
+        // does NOT extend voice lifetime — the renderer chain stops being
+        // invoked once the voice is inactive.
+        //
+        // See: audio/ref/voice-synthesis.md → "Envelope / voice-lifetime semantics"
+        val spyFilter = SpyFilter()
+
+        val modulator = Voice.FilterModulator(
+            filter = spyFilter,
+            envelope = Voice.Envelope(
+                attackFrames = 100.0,
+                decayFrames = 100.0,
+                sustainLevel = 0.5,
+                releaseFrames = 4000.0,  // long filter release
+            ),
+            depth = 1.0,
+            baseCutoff = 1000.0,
+        )
+
+        // Voice has NO amp release: endFrame == gateEndFrame.
+        val voice = createSynthVoice(
+            cylinderId = 0,
+            startFrame = 0,
+            endFrame = 300,
+            gateEndFrame = 300,
+            gain = 1.0,
+            pan = 0.5,
+            accelerate = Voice.Accelerate(0.0),
+            vibrato = Voice.Vibrato(0.0, 0.0),
+            filter = spyFilter,
+            envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0),
+            filterModulators = listOf(modulator),
+            delay = Voice.Delay(0.0, 0.0, 0.0),
+            reverb = Voice.Reverb(0.0, 0.0),
+            phaser = Voice.Phaser(0.0, 0.0, 0.0, 0.0),
+            tremolo = Voice.Tremolo(0.0, 0.0, 0.0, 0.0, null),
+            postGain = 1.0,
+            distort = Voice.Distort(0.0),
+            crush = Voice.Crush(0.0),
+            coarse = Voice.Coarse(0.0),
+            signal = noopSignal,
+            freqHz = 440.0,
+        )
+
+        // Render up to gateEndFrame — modulator is updated.
+        voice.render(createCtx(blockStart = 200))
+        spyFilter.cutoffHistory.size shouldBe 1
+
+        // Render past endFrame — voice is inactive. The modulator should NOT
+        // be updated (the renderer chain isn't invoked on a dead voice). If
+        // a future change extends voice lifetime to cover modulator releases,
+        // this test will fail and the contract above must be revisited.
+        spyFilter.reset()
+        voice.render(createCtx(blockStart = 500))
+        spyFilter.cutoffHistory.size shouldBe 0
+
+        voice.render(createCtx(blockStart = 4500))
+        spyFilter.cutoffHistory.size shouldBe 0
     }
 })

@@ -1,16 +1,23 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
+import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
+
+private object NoOpSignalIgnitor : Ignitor {
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) = Unit
+}
 
 /**
  * Convenience for testing: runs a [BlockRenderer] on a raw buffer without full voice setup.
  * Creates a minimal [BlockContext] wrapping the buffer.
  */
-fun BlockRenderer.renderInPlace(buffer: FloatArray, sampleRate: Int = 44100) {
+fun BlockRenderer.renderInPlace(buffer: AudioBuffer, sampleRate: Int = 44100) {
     val ctx = BlockContext(
         audioBuffer = buffer,
         freqModBuffer = DoubleArray(buffer.size),
@@ -20,7 +27,7 @@ fun BlockRenderer.renderInPlace(buffer: FloatArray, sampleRate: Int = 44100) {
         endFrame = buffer.size,
         gateEndFrame = buffer.size,
         freqHz = 440.0,
-        signal = { _, _, _ -> },
+        signal = NoOpSignalIgnitor,
         signalCtx = IgniteContext(
             sampleRate = sampleRate,
             voiceDurationFrames = buffer.size,

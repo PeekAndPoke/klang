@@ -138,7 +138,7 @@ class KlangCommLink(capacity: Int = 8192) {
                 val totalSize: Int,
                 val isLastChunk: Boolean,
                 val chunkOffset: Int,
-                val data: FloatArray,
+                val data: DoubleArray,
             ) : Sample {
                 companion object {
                     const val SERIAL_NAME = "sample-chunk"

@@ -55,8 +55,7 @@ data class KlangLookAndFeel(
     val moderate: String = "#e5c07b",
     val warning: String = "#d19a66",
     val critical: String = "#e06c75",
-
-    ) {
+) {
 
     companion object {
         /** Reads all tokens from the CSS custom properties defined on `:root` in `index.css`. */

@@ -23,6 +23,19 @@ class CodeMirrorHighlightBuffer(
     private val maxSimultaneousHighlights: Int = 2000,
     var maxHighlightsPerEvent: Int = 10,
 ) {
+    /**
+     * Source identity of the file currently displayed in the editor.
+     *
+     * Highlight events whose [SourceLocation.source] doesn't match are silently
+     * dropped — that's how the editor avoids rendering ghost marks at line/column
+     * positions that come from imported libraries (e.g. `peekandpoke/tetris`)
+     * but don't exist in the file the user is currently looking at.
+     *
+     * `null` means "the main script" — matches main-script locations whose
+     * `source` field is `null`.
+     */
+    var currentSource: String? = null
+
     private val minIntervalMs: Double get() = 1000.0 / maxRefreshRatePerLocation
 
     private var view: EditorView? = null
@@ -74,6 +87,7 @@ class CodeMirrorHighlightBuffer(
         val chain = event.sourceLocations ?: return
         chain.locations.asReversed()
             .filter { it.isValid() }
+            .filter { it.source == currentSource }
             .distinct()
             .take(maxHighlightsPerEvent).forEach { location ->
                 scheduleForLocation(location, event)

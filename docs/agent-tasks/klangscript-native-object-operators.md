@@ -9,6 +9,15 @@ unary `-`/`+`/`!`, and direct call `obj(args)`).
 Operators are stored as regular extension methods under canonical reserved names. The interpreter
 checks for these names during operator and call dispatch. No new storage infrastructure is needed.
 
+### Motivating use cases
+
+- **Sprudel patterns**: `pattern + offset`, `pattern * factor`, `-pattern` (sign-flip) — replaces
+  current method-style `add()`, `mul()`, `flipSign()` calls when the operator form is more natural.
+- **Ignitors DSL**: `oscA + oscB` to mix oscillators, `osc * gain` for amplitude scaling, `env * 2`
+  to scale envelope — dramatically more readable than `oscA.mix(oscB)` chains, and matches the
+  mental model of signal-flow graphs.
+- **Continuous patterns**: `sine + cosine`, `lfo * 2` for compound modulation sources.
+
 ---
 
 ## Operator Name Convention
@@ -575,3 +584,43 @@ class NativeObjectOperatorsTest : StringSpec({
   syntax yet). Deferred.
 - `rangeTo` / `contains` / `in` operator — deferred.
 - Right-hand-side dispatch (`5 + nativeObj`) — deferred; left-side only for now.
+
+---
+
+## Future Direction: Unify Function and Property into Symbol (discussed 2026-04-24)
+
+Currently the runtime has two registration paths:
+
+- `@KlangScript.Function` → `nativeFunctions` list / `NativeFunctionEntry`
+- `@KlangScript.Property` → `nativeObjects` map (via `registerObject`)
+
+These map to two distinct annotation types in KSP and two lookup paths in `Environment`.
+Duplicate-name collision detection has to be replicated, KSP has to handle two annotation
+types, and a name can be either callable OR readable but not both.
+
+**Proposed long-term redesign:** collapse both into a single registered entity called
+**`Symbol`**, which can opt into any combination of the operators below. The same
+operator-dispatch infrastructure described in this document is reused — just extended:
+
+| KlangScript expression | Operator name | Current equivalent           |
+|------------------------|---------------|------------------------------|
+| `symbol(args)`         | `invoke`      | `@KlangScript.Function` call |
+| `let x = symbol`       | `get`         | `@KlangScript.Property` read |
+| `symbol = x`           | `set`         | (no equivalent today; rare)  |
+
+A single Symbol can register any subset of `{invoke, get, set}`. This means:
+
+- One name → one Symbol → multiple operators. No name-collision class problem
+  between functions and properties.
+- A name can be both callable and readable when that's natural — e.g., `silence`
+  could be both an empty pattern (`silence` returns `EmptyPattern`) AND a creator
+  (`silence(2)` returns a 2-step gap pattern). Today this requires two separate
+  registrations under different names.
+- Single annotation: `@KlangScript.Symbol` (or keep both annotations as sugar that
+  desugar to Symbol registration with the appropriate operator).
+- One lookup path in `Environment` instead of two.
+
+**No immediate action required.** This is an architectural target, not a refactor. Revisit
+when next touching the registry or when the function/property duality starts to bite (e.g.,
+when adding `set` semantics for assignable native values, or when the docs/completion layer
+needs to merge the two paths anyway).

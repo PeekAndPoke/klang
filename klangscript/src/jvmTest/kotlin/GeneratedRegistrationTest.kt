@@ -202,10 +202,10 @@ class GeneratedRegistrationTest : StringSpec({
         sqrtDoc.category shouldBe "math"
         sqrtDoc.library shouldBe "stdlib"
         sqrtDoc.tags shouldBe listOf("arithmetic", "calculation")
-        sqrtDoc.variants shouldHaveSize 1
 
-        val callable = sqrtDoc.variants[0] as KlangCallable
-        callable.receiver?.simpleName shouldBe "Math"
+        val callable = sqrtDoc.variants
+            .filterIsInstance<KlangCallable>()
+            .first { it.receiver?.simpleName == "Math" }
         callable.params shouldHaveSize 1
         callable.params[0].name shouldBe "x"
         callable.params[0].type.simpleName shouldBe "Number"
@@ -217,7 +217,9 @@ class GeneratedRegistrationTest : StringSpec({
 
     "generated docs for min have two params" {
         val minDoc = generatedStdlibDocs["min"]!!
-        val callable = minDoc.variants[0] as KlangCallable
+        val callable = minDoc.variants
+            .filterIsInstance<KlangCallable>()
+            .first { it.receiver?.simpleName == "Math" }
         callable.params shouldHaveSize 2
         callable.params[0].name shouldBe "a"
         callable.params[1].name shouldBe "b"
@@ -326,5 +328,28 @@ class GeneratedRegistrationTest : StringSpec({
         lib.docs.symbols["Object"] shouldNotBe null
         lib.docs.symbols["sqrt"] shouldNotBe null
         lib.docs.symbols["sine"] shouldNotBe null
+    }
+
+    // ── @KlangScript.Property registration ───────────────────────────────
+
+    "PI top-level property resolves to kotlin.math.PI" {
+        val result = engine().execute("PI")
+        (result as NumberValue).value shouldBe (kotlin.math.PI plusOrMinus 0.0)
+    }
+
+    "E top-level property resolves to kotlin.math.E" {
+        val result = engine().execute("E")
+        (result as NumberValue).value shouldBe (kotlin.math.E plusOrMinus 0.0)
+    }
+
+    "@KlangScript.Property values are usable in expressions" {
+        val result = engine().execute("PI * 2")
+        (result as NumberValue).value shouldBe ((kotlin.math.PI * 2) plusOrMinus 0.0)
+    }
+
+    "@KlangScript.Property values are passable to functions" {
+        val result = engine().execute("Math.sin(PI)")
+        // sin(π) ≈ 0; allow tiny floating-point error
+        (result as NumberValue).value shouldBe (0.0 plusOrMinus 1e-10)
     }
 })

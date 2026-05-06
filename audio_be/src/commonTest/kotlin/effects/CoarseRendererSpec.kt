@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.effects
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.CoarseRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
 
@@ -10,7 +11,7 @@ class CoarseRendererSpec : StringSpec({
 
     "CoarseRenderer with amount<=1 passes signal through unchanged" {
         val renderer = CoarseRenderer(amount = 1.0)
-        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f)
+        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9)
         val original = buffer.copyOf()
         renderer.renderInPlace(buffer)
         for (i in buffer.indices) {
@@ -20,7 +21,7 @@ class CoarseRendererSpec : StringSpec({
 
     "CoarseRenderer direct path holds samples (classic behavior preserved)" {
         val renderer = CoarseRenderer(amount = 4.0)
-        val buffer = FloatArray(32) { it.toFloat() * 0.1f }
+        val buffer = AudioBuffer(32) { it * 0.1 }
         renderer.renderInPlace(buffer)
         // Verify some samples are held (consecutive equal values exist)
         var heldPairs = 0
@@ -32,7 +33,7 @@ class CoarseRendererSpec : StringSpec({
 
     "CoarseRenderer oversampled bypass (amount<=1) unchanged" {
         val renderer = CoarseRenderer(amount = 1.0, oversampleStages = 1)
-        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f)
+        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9)
         val original = buffer.copyOf()
         renderer.renderInPlace(buffer)
         for (i in buffer.indices) {
@@ -42,7 +43,7 @@ class CoarseRendererSpec : StringSpec({
 
     "CoarseRenderer oversampled path produces roughly the same DC level" {
         val blockFrames = 256
-        val buffer = FloatArray(blockFrames) { 0.6f }
+        val buffer = AudioBuffer(blockFrames) { 0.6 }
         val renderer = CoarseRenderer(amount = 4.0, oversampleStages = 1)
         renderer.renderInPlace(buffer)
 

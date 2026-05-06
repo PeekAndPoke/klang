@@ -44,14 +44,14 @@ class OrbitBusPipelineSpec : StringSpec({
 
         // Reverb comb filters need time to build up signal
         repeat(20) {
-            cylinder.reverbSendBuffer.left.fill(0.5f)
-            cylinder.reverbSendBuffer.right.fill(0.5f)
+            cylinder.reverbSendBuffer.left.fill(0.5)
+            cylinder.reverbSendBuffer.right.fill(0.5)
             cylinder.mixBuffer.clear()
             cylinder.processEffects()
         }
 
         // Reverb should add signal to mix buffer
-        val hasSignal = cylinder.mixBuffer.left.any { it != 0.0f }
+        val hasSignal = cylinder.mixBuffer.left.any { it != 0.0 }
         hasSignal shouldBe true
     }
 
@@ -59,12 +59,12 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         // cylinder is NOT active (no updateFromVoice called)
 
-        cylinder.reverbSendBuffer.left.fill(0.5f)
+        cylinder.reverbSendBuffer.left.fill(0.5)
 
         cylinder.processEffects()
 
         // Nothing should happen
-        cylinder.mixBuffer.left[0] shouldBe 0.0f
+        cylinder.mixBuffer.left[0] shouldBe 0.0
     }
 
     "processDucking applies sidechain ducking" {
@@ -76,19 +76,19 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice)
 
-        cylinder.mixBuffer.left.fill(0.5f)
-        cylinder.mixBuffer.right.fill(0.5f)
+        cylinder.mixBuffer.left.fill(0.5)
+        cylinder.mixBuffer.right.fill(0.5)
 
         // Create loud sidechain signal
         val sidechain = StereoBuffer(blockFrames)
-        sidechain.left.fill(0.9f)
-        sidechain.right.fill(0.9f)
+        sidechain.left.fill(0.9)
+        sidechain.right.fill(0.9)
 
         cylinder.processDucking(sidechain)
 
         // Signal should be reduced
         val outputLevel = abs(cylinder.mixBuffer.left[blockFrames - 1])
-        (outputLevel < 0.5f) shouldBe true
+        (outputLevel < 0.5) shouldBe true
     }
 
     "processDucking does nothing with null sidechain" {
@@ -100,12 +100,12 @@ class OrbitBusPipelineSpec : StringSpec({
         )
         cylinder.updateFromVoice(voice)
 
-        cylinder.mixBuffer.left.fill(0.5f)
+        cylinder.mixBuffer.left.fill(0.5)
 
         cylinder.processDucking(null)
 
         // Should be unchanged
-        cylinder.mixBuffer.left[0] shouldBe 0.5f
+        cylinder.mixBuffer.left[0] shouldBe 0.5
     }
 
     "updateFromVoice configures delay parameters" {
@@ -141,8 +141,8 @@ class OrbitBusPipelineSpec : StringSpec({
 
         cylinder.phaser.phaser.rate shouldBe 2.0
         cylinder.phaser.phaser.depth shouldBe 0.5
-        cylinder.phaser.phaser.centerFreq shouldBe 800.0
-        cylinder.phaser.phaser.sweepRange shouldBe 600.0
+        cylinder.phaser.phaser.center shouldBe 800.0
+        cylinder.phaser.phaser.sweep shouldBe 600.0
     }
 
     "updateFromVoice configures ducking" {
@@ -179,14 +179,14 @@ class OrbitBusPipelineSpec : StringSpec({
         val cylinder = createOrbit()
         cylinder.updateFromVoice(VoiceTestHelpers.createSynthVoice())
 
-        cylinder.mixBuffer.left.fill(0.5f)
-        cylinder.delaySendBuffer.left.fill(0.3f)
-        cylinder.reverbSendBuffer.left.fill(0.2f)
+        cylinder.mixBuffer.left.fill(0.5)
+        cylinder.delaySendBuffer.left.fill(0.3)
+        cylinder.reverbSendBuffer.left.fill(0.2)
 
         cylinder.clear()
 
-        cylinder.mixBuffer.left[0] shouldBe 0.0f
-        cylinder.delaySendBuffer.left[0] shouldBe 0.0f
-        cylinder.reverbSendBuffer.left[0] shouldBe 0.0f
+        cylinder.mixBuffer.left[0] shouldBe 0.0
+        cylinder.delaySendBuffer.left[0] shouldBe 0.0
+        cylinder.reverbSendBuffer.left[0] shouldBe 0.0
     }
 })

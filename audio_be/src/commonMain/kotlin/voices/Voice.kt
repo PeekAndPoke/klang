@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
@@ -109,7 +110,7 @@ class Voice(
         val cylinders: Cylinders,
         val sampleRate: Int,
         val blockFrames: Int,
-        val voiceBuffer: FloatArray,
+        val voiceBuffer: AudioBuffer,
         val freqModBuffer: DoubleArray,
         val scratchBuffers: ScratchBuffers,
     ) {

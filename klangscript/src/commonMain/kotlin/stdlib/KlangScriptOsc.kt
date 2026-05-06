@@ -107,17 +107,17 @@ object KlangScriptOsc {
 
     // ── Noise Sources ────────────────────────────────────────────────────────
 
-    /** Creates a white noise source (flat spectrum). */
+    /** Creates a white noise source (flat spectrum). Each call yields a fresh DSL instance. */
     @KlangScript.Method
-    fun whitenoise(): IgnitorDsl = IgnitorDsl.WhiteNoise
+    fun whitenoise(): IgnitorDsl = IgnitorDsl.WhiteNoise()
 
-    /** Creates a brown noise source (1/f^2 spectrum, deeper). */
+    /** Creates a brown noise source (1/f^2 spectrum, deeper). Each call yields a fresh DSL instance. */
     @KlangScript.Method
-    fun brownnoise(): IgnitorDsl = IgnitorDsl.BrownNoise
+    fun brownnoise(): IgnitorDsl = IgnitorDsl.BrownNoise()
 
-    /** Creates a pink noise source (1/f spectrum). */
+    /** Creates a pink noise source (1/f spectrum). Each call yields a fresh DSL instance. */
     @KlangScript.Method
-    fun pinknoise(): IgnitorDsl = IgnitorDsl.PinkNoise
+    fun pinknoise(): IgnitorDsl = IgnitorDsl.PinkNoise()
 
     /** Creates a Perlin noise source (smooth organic noise). */
     @KlangScript.Method

@@ -13,15 +13,15 @@ class LangLastOfSpec : StringSpec({
     "lastOf dsl interface" {
         dslInterfaceTests(
             "pattern.lastOf(n, transform)" to
-                    note("a").lastOf(2) { it.note("b") },
+                    note("a").lastOf(2, { it.note("b") }),
             "script pattern.lastOf(n, transform)" to
                     SprudelPattern.compile("""note("a").lastOf(2, x => x.note("b"))"""),
             "string.lastOf(n, transform)" to
-                    "a".lastOf(2) { it.note("b") },
+                    "a".lastOf(2, { it.note("b") }),
             "script string.lastOf(n, transform)" to
                     SprudelPattern.compile(""""a".lastOf(2, x => x.note("b"))"""),
             "lastOf(n, transform)" to
-                    note("a").apply(lastOf(2) { it.note("b") }),
+                    note("a").apply(lastOf(2, { it.note("b") })),
             "script lastOf(n, transform)" to
                     SprudelPattern.compile("""note("a").apply(lastOf(2, x => x.note("b")))"""),
         ) { _, events ->
@@ -34,7 +34,7 @@ class LangLastOfSpec : StringSpec({
         // cycle 0: "a" (original)
         // cycle 1: "b" (transformed)
         // cycle 2: "a" (original loop)
-        val p = note("a").lastOf(2) { it.note("b") }
+        val p = note("a").lastOf(2, { it.note("b") })
 
         val c0 = p.queryArc(0.0, 1.0)
         c0.size shouldBe 1
@@ -55,7 +55,7 @@ class LangLastOfSpec : StringSpec({
         // 1 -> original
         // 2 -> transform
         // 3 -> original
-        val p = note("a").lastOf(3) { it.note("b") }
+        val p = note("a").lastOf(3, { it.note("b") })
 
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "a"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "a"
@@ -64,21 +64,21 @@ class LangLastOfSpec : StringSpec({
     }
 
     "lastOf() works as string extension" {
-        val p = "a".lastOf(2) { it.note("b") }.note()
+        val p = "a".lastOf(2, { it.note("b") }).note()
 
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "A"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "B"
     }
 
     "lastOf() works as top-level PatternMapper" {
-        val p = note("a").apply(lastOf(2) { it.note("b") })
+        val p = note("a").apply(lastOf(2, { it.note("b") }))
 
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "a"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "b"
     }
 
     "lastOf(1) always applies transform" {
-        val p = note("a").lastOf(1) { it.note("b") }
+        val p = note("a").lastOf(1, { it.note("b") })
 
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "b"
         p.queryArc(1.0, 2.0)[0].data.note shouldBeEqualIgnoringCase "b"
@@ -88,8 +88,8 @@ class LangLastOfSpec : StringSpec({
         // lastOf(2): cycle 0 -> "a" (original), cycle 1 -> "b" (transform)
         // lastOf(2) chained: on cycle 1, where inner gives "b", outer lastOf fires -> "c"
         val p = note("a").apply(
-            lastOf(2) { it.note("b") }
-                .lastOf(2) { it.note("c") }
+            lastOf(2, { it.note("b") })
+                .lastOf(2, { it.note("c") })
         )
 
         p.queryArc(0.0, 1.0)[0].data.note shouldBeEqualIgnoringCase "a"

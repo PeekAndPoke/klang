@@ -43,11 +43,12 @@ class BrowserAudioDecoder : AudioDecoder {
             // console.log("pcmFloat32", pcmFloat32)
 
             // 4. Return
+            // The engine's canonical sample type is Double — widen Float32Array → DoubleArray here
+            // (Kotlin/JS DoubleArray is backed by Float64Array). One-shot per decoded asset.
+            val asFloatArray = pcmFloat32.unsafeCast<FloatArray>()
             MonoSamplePcm(
                 sampleRate = audioBuffer.sampleRate,
-                // OPTIMIZATION: unsafeCast avoids the O(n) loop copy.
-                // In Kotlin/JS, FloatArray is backed by Float32Array.
-                pcm = pcmFloat32.unsafeCast<FloatArray>()
+                pcm = DoubleArray(asFloatArray.size) { asFloatArray[it].toDouble() }
             )
         } catch (e: Throwable) {
             console.error("[BrowserAudioDecoder] Failed to decode audio", e)

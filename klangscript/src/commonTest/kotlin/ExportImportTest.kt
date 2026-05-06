@@ -325,4 +325,36 @@ class ExportImportTest : StringSpec({
             e.message shouldBe "Cannot import non-exported symbols: b, c"
         }
     }
+
+    // ── source-tagging on imported libraries ─────────────────────────────────
+    //
+    // Imported library code must be parsed with the library's URI as `sourceName`
+    // so every SourceLocation produced from it carries `source = "<library-uri>"`.
+    // The editor's highlight buffer uses this tag to suppress ghost marks that
+    // would otherwise render at positions belonging to the imported file.
+
+    "imported library locations carry the library URI in their source field" {
+        val engine = klangScript {
+            registerLibrary(
+                "peekandpoke/test-tag", """
+                    let foo = nonExistentSymbol
+                    export { foo }
+                """.trimIndent()
+            )
+        }
+
+        // Triggering a reference error from inside the library forces an error
+        // that carries the AST-node location all the way out — that's how we
+        // observe what `source` was tagged onto the parsed library AST.
+        try {
+            engine.execute(
+                """
+                    import { foo } from "peekandpoke/test-tag"
+                """.trimIndent()
+            )
+            error("should have thrown KlangScriptReferenceError")
+        } catch (e: io.peekandpoke.klang.script.runtime.KlangScriptReferenceError) {
+            e.location?.source shouldBe "peekandpoke/test-tag"
+        }
+    }
 })

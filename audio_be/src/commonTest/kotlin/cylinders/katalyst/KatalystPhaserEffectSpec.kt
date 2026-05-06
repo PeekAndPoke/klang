@@ -21,8 +21,8 @@ class KatalystPhaserEffectSpec : StringSpec({
         val ph = Phaser(sampleRate)
         ph.depth = depth
         ph.rate = rate
-        ph.centerFreq = 1000.0
-        ph.sweepRange = 1000.0
+        ph.center = 1000.0
+        ph.sweep = 1000.0
         ph.feedback = 0.5
         return KatalystPhaserEffect(ph)
     }
@@ -31,14 +31,14 @@ class KatalystPhaserEffectSpec : StringSpec({
         val effect = createEffect(depth = 0.005)
         val ctx = createCtx()
 
-        ctx.mixBuffer.left.fill(0.5f)
-        ctx.mixBuffer.right.fill(0.5f)
+        ctx.mixBuffer.left.fill(0.5)
+        ctx.mixBuffer.right.fill(0.5)
 
         effect.process(ctx)
 
         // Buffer should be unchanged
-        ctx.mixBuffer.left[0] shouldBe 0.5f
-        ctx.mixBuffer.right[0] shouldBe 0.5f
+        ctx.mixBuffer.left[0] shouldBe 0.5
+        ctx.mixBuffer.right[0] shouldBe 0.5
     }
 
     "modifies mix buffer in-place when active" {
@@ -46,7 +46,7 @@ class KatalystPhaserEffectSpec : StringSpec({
         val ctx = createCtx()
 
         // Fill with constant signal
-        val originalValue = 0.5f
+        val originalValue = 0.5
         ctx.mixBuffer.left.fill(originalValue)
         ctx.mixBuffer.right.fill(originalValue)
 
@@ -62,12 +62,12 @@ class KatalystPhaserEffectSpec : StringSpec({
         val ctx = createCtx()
 
         // Only put signal in mix buffer (not send buffers)
-        ctx.mixBuffer.left.fill(0.5f)
+        ctx.mixBuffer.left.fill(0.5)
 
         effect.process(ctx)
 
         // Send buffers should still be zero
-        ctx.delaySendBuffer.left[0] shouldBe 0.0f
-        ctx.reverbSendBuffer.left[0] shouldBe 0.0f
+        ctx.delaySendBuffer.left[0] shouldBe 0.0
+        ctx.reverbSendBuffer.left[0] shouldBe 0.0
     }
 })

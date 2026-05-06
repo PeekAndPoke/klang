@@ -27,11 +27,11 @@ class KatalystReverbEffectSpec : StringSpec({
         val effect = createEffect(roomSize = 0.005)
         val ctx = createCtx()
 
-        ctx.reverbSendBuffer.left[0] = 0.5f
+        ctx.reverbSendBuffer.left[0] = 0.5
 
         effect.process(ctx)
 
-        ctx.mixBuffer.left[0] shouldBe 0.0f
+        ctx.mixBuffer.left[0] shouldBe 0.0
     }
 
     "processes reverb when room size is above threshold" {
@@ -40,14 +40,14 @@ class KatalystReverbEffectSpec : StringSpec({
 
         // Feed signal through multiple blocks — reverb comb filters need time to build up
         repeat(20) {
-            ctx.reverbSendBuffer.left.fill(0.5f)
-            ctx.reverbSendBuffer.right.fill(0.5f)
+            ctx.reverbSendBuffer.left.fill(0.5)
+            ctx.reverbSendBuffer.right.fill(0.5)
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
 
         // Reverb should add signal to mix buffer
-        val hasSignal = ctx.mixBuffer.left.any { it != 0.0f } || ctx.mixBuffer.right.any { it != 0.0f }
+        val hasSignal = ctx.mixBuffer.left.any { it != 0.0 } || ctx.mixBuffer.right.any { it != 0.0 }
         hasSignal shouldBe true
     }
 
@@ -57,8 +57,8 @@ class KatalystReverbEffectSpec : StringSpec({
 
         // Feed signal through enough blocks for comb filters to fill
         repeat(20) {
-            ctx.reverbSendBuffer.left.fill(0.5f)
-            ctx.reverbSendBuffer.right.fill(0.5f)
+            ctx.reverbSendBuffer.left.fill(0.5)
+            ctx.reverbSendBuffer.right.fill(0.5)
             ctx.mixBuffer.clear()
             effect.process(ctx)
         }
@@ -68,7 +68,7 @@ class KatalystReverbEffectSpec : StringSpec({
         ctx.mixBuffer.clear()
         effect.process(ctx)
 
-        val hasSignal = ctx.mixBuffer.left.any { it != 0.0f }
+        val hasSignal = ctx.mixBuffer.left.any { it != 0.0 }
         hasSignal shouldBe true
     }
 

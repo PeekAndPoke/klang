@@ -55,7 +55,7 @@ class SendRenderer(
             val idx = offset + i
 
             // Read processed signal from voice buffer
-            var signal = audioBuffer[idx].toDouble()
+            var signal = audioBuffer[idx]
 
             // Apply post-gain
             signal *= voice.postGain
@@ -65,18 +65,18 @@ class SendRenderer(
             val right = signal * gainR
 
             // Sum to cylinder mix buffer
-            outL[idx] = (outL[idx] + left).toFloat()
-            outR[idx] = (outR[idx] + right).toFloat()
+            outL[idx] = (outL[idx] + left)
+            outR[idx] = (outR[idx] + right)
 
             // Send to effects buses
             if (sendToDelay) {
-                delaySendL[idx] = (delaySendL[idx] + left * delayAmount).toFloat()
-                delaySendR[idx] = (delaySendR[idx] + right * delayAmount).toFloat()
+                delaySendL[idx] = (delaySendL[idx] + left * delayAmount)
+                delaySendR[idx] = (delaySendR[idx] + right * delayAmount)
             }
 
             if (sendToReverb) {
-                reverbSendL[idx] = (reverbSendL[idx] + left * reverbAmount).toFloat()
-                reverbSendR[idx] = (reverbSendR[idx] + right * reverbAmount).toFloat()
+                reverbSendL[idx] = (reverbSendL[idx] + left * reverbAmount)
+                reverbSendR[idx] = (reverbSendR[idx] + right * reverbAmount)
             }
         }
     }

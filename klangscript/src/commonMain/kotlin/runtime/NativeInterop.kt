@@ -3,6 +3,7 @@ package io.peekandpoke.klang.script.runtime
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.runtime.CallArgs.Companion.resolve
 import kotlin.reflect.KClass
 
 /**
@@ -27,6 +28,13 @@ data class NativeExtensionMethod(
     val methodName: String,
     val receiverClass: KClass<*>,
     val invoker: (receiver: Any, args: List<RuntimeValue>, location: SourceLocation?, engine: KlangScriptEngine) -> RuntimeValue,
+    /**
+     * Optional declared parameters. Drives named-arg resolution through the
+     * interpreter when the user calls this extension method by name.
+     * Receiver is NOT included in this list — it's supplied separately by the
+     * binding logic.
+     */
+    val paramSpecs: List<ParamSpec>? = null,
 )
 
 /**
@@ -335,4 +343,249 @@ inline fun guardNativeCall(
             location = location,
         )
     }
+}
+
+// ========================================================================
+// Named-argument support (Phase 3)
+// ========================================================================
+
+/**
+ * A single argument evaluated at a call site.
+ *
+ * The interpreter evaluates each AST [io.peekandpoke.klang.script.ast.Argument]
+ * in source order, producing one [EvaluatedArgument] per arg. These are then
+ * classified into a [CallArgs] for the all-or-nothing rule.
+ */
+sealed class EvaluatedArgument {
+    abstract val value: RuntimeValue
+
+    /**
+     * Source location used for diagnostics that point at *this* argument —
+     * e.g. the mixed-style error wants to highlight the offending positional
+     * arg when it appears after a named one. Falls back to the call's own
+     * location when the AST didn't carry a source location through.
+     */
+    abstract val location: SourceLocation?
+
+    /** Positional: bound to the parameter at its index. */
+    data class Positional(
+        override val value: RuntimeValue,
+        override val location: SourceLocation?,
+    ) : EvaluatedArgument()
+
+    /** Named: bound to the parameter matching [name]. */
+    data class Named(
+        val name: String,
+        override val value: RuntimeValue,
+        val nameLocation: SourceLocation?,
+    ) : EvaluatedArgument() {
+        override val location: SourceLocation? get() = nameLocation
+    }
+}
+
+/**
+ * Resolved arguments at a call site. A call is either all positional or all
+ * named — never mixed. [resolve] enforces this plus "no duplicate named names".
+ */
+sealed class CallArgs {
+    /** Number of supplied arguments, regardless of style. */
+    abstract val size: Int
+
+    /** Every argument was positional. */
+    data class Positional(val values: List<RuntimeValue>) : CallArgs() {
+        override val size: Int get() = values.size
+    }
+
+    /** Every argument was named. Preserves insertion order for diagnostics. */
+    data class Named(val values: Map<String, RuntimeValue>) : CallArgs() {
+        override val size: Int get() = values.size
+    }
+
+    /** Zero-arg call — trivially both styles. */
+    data object Empty : CallArgs() {
+        override val size: Int get() = 0
+    }
+
+    companion object {
+        /**
+         * Classify a source-ordered list of evaluated arguments into a [CallArgs].
+         *
+         * Throws [KlangScriptArgumentError] if:
+         *  - positional and named are mixed at the same call site, OR
+         *  - the same name is used twice.
+         *
+         * Unknown-parameter errors are raised by the callee, which owns the
+         * parameter name list — not by this resolver.
+         */
+        fun resolve(
+            functionName: String,
+            evaluated: List<EvaluatedArgument>,
+            callLocation: SourceLocation?,
+            callStackTrace: List<CallStackFrame> = emptyList(),
+        ): CallArgs {
+            if (evaluated.isEmpty()) return Empty
+
+            val firstKind = evaluated[0]::class
+            val firstMismatch = evaluated.firstOrNull { it::class != firstKind }
+            if (firstMismatch != null) {
+                throw KlangScriptArgumentError(
+                    functionName = functionName,
+                    message = "Call must use either all positional or all named arguments — no mixing",
+                    location = firstMismatch.location ?: callLocation,
+                    callStackTrace = callStackTrace,
+                )
+            }
+
+            val first = evaluated[0]
+            if (first is EvaluatedArgument.Positional) {
+                return Positional(evaluated.map { (it as EvaluatedArgument.Positional).value })
+            }
+
+            val map = linkedMapOf<String, RuntimeValue>()
+            for (arg in evaluated) {
+                arg as EvaluatedArgument.Named
+                if (arg.name in map) {
+                    throw KlangScriptArgumentError(
+                        functionName = functionName,
+                        message = "Duplicate named argument: '${arg.name}'",
+                        location = arg.nameLocation ?: callLocation,
+                        callStackTrace = callStackTrace,
+                    )
+                }
+                map[arg.name] = arg.value
+            }
+            return Named(map)
+        }
+    }
+}
+
+/**
+ * Declares one parameter of a native callable.
+ *
+ * @property name Parameter name used for named-arg binding.
+ * @property kotlinType Kotlin class the converted value must match.
+ * @property isOptional True if the script-side caller may omit this argument.
+ *   When true *and* [default] is set, the resolver invokes the thunk to fill
+ *   the slot. When true and [default] is null, the slot is left unfilled —
+ *   the bridge must handle the omission itself (e.g. Kotlin's own arity
+ *   dispatch for legacy KSP-generated bridges that can't safely paste a
+ *   default expression into a thunk).
+ * @property isNullable True if the underlying Kotlin parameter type is
+ *   nullable. Drives whether `NullValue` from script collapses to a Kotlin
+ *   `null` (when nullable) or rejects with a type error (when not).
+ * @property default Null ⇒ no thunk; non-null thunk runs only when the arg is
+ *   missing during named-call resolution.
+ * @property isVararg True if this slot captures trailing positional args.
+ *   Vararg slots are inherently optional and need no thunk.
+ */
+data class ParamSpec(
+    val name: String,
+    val kotlinType: KClass<*>,
+    val isOptional: Boolean = false,
+    val isNullable: Boolean = false,
+    val default: (() -> RuntimeValue)? = null,
+    val isVararg: Boolean = false,
+)
+
+/**
+ * Bind a [CallArgs] to a spec list, producing a flat List<RuntimeValue?>
+ * aligned with [specs].
+ *
+ * Slot semantics:
+ *  - Fixed required slot missing → [KlangScriptArgumentError].
+ *  - Fixed optional slot missing → null at that index (caller invokes the default thunk).
+ *  - Vararg slot:
+ *      * Always last in [specs] (enforced at builder time).
+ *      * Positional call: tail past the fixed slots is wrapped into a fresh [ArrayValue].
+ *      * Named call: the named entry must already be an [ArrayValue]; it is passed through.
+ *      * Missing in named call → empty [ArrayValue].
+ *      * Vararg slots are never "required" (always 0+) and never use a default thunk.
+ *
+ * Used by Phase 4+ builder bodies and by the interpreter's
+ * `positionalArgsForNative` to translate named calls into a positional list.
+ */
+fun resolveByParamSpec(
+    functionName: String,
+    specs: List<ParamSpec>,
+    args: CallArgs,
+    callLocation: SourceLocation?,
+    callStackTrace: List<CallStackFrame> = emptyList(),
+): List<RuntimeValue?> {
+    val varargIdx = specs.indexOfFirst { it.isVararg }
+    val hasVararg = varargIdx != -1
+    val fixedCount = if (hasVararg) varargIdx else specs.size
+
+    val result = arrayOfNulls<RuntimeValue>(specs.size)
+
+    when (args) {
+        CallArgs.Empty -> {
+            // Nothing bound; required-check below catches unfilled required fixed params.
+        }
+
+        is CallArgs.Positional -> {
+            if (hasVararg) {
+                // First fixedCount values map to fixed slots; the remainder forms the vararg payload.
+                for (i in 0 until minOf(fixedCount, args.values.size)) {
+                    result[i] = args.values[i]
+                }
+                val tail = if (args.values.size > fixedCount) {
+                    args.values.subList(fixedCount, args.values.size).toMutableList()
+                } else {
+                    mutableListOf()
+                }
+                result[varargIdx] = ArrayValue(tail)
+            } else {
+                if (args.values.size > specs.size) {
+                    throw KlangScriptArgumentError(
+                        functionName = functionName,
+                        message = "too many arguments (${args.values.size}, expected ≤ ${specs.size})",
+                        expected = specs.size,
+                        actual = args.values.size,
+                        location = callLocation,
+                        callStackTrace = callStackTrace,
+                    )
+                }
+                args.values.forEachIndexed { i, v -> result[i] = v }
+            }
+        }
+
+        is CallArgs.Named -> {
+            for ((name, v) in args.values) {
+                val idx = specs.indexOfFirst { it.name == name }
+                if (idx == -1) {
+                    throw KlangScriptArgumentError(
+                        functionName = functionName,
+                        message = "unknown parameter '$name' (expected: ${specs.joinToString(", ") { it.name }})",
+                        location = callLocation,
+                        callStackTrace = callStackTrace,
+                    )
+                }
+                if (specs[idx].isVararg && v !is ArrayValue) {
+                    throw KlangScriptArgumentError(
+                        functionName = functionName,
+                        message = "vararg parameter '$name' requires an array; got ${v::class.simpleName}",
+                        location = callLocation,
+                        callStackTrace = callStackTrace,
+                    )
+                }
+                result[idx] = v
+            }
+            if (hasVararg && result[varargIdx] == null) {
+                result[varargIdx] = ArrayValue(mutableListOf())
+            }
+        }
+    }
+
+    specs.forEachIndexed { i, spec ->
+        if (result[i] == null && !spec.isOptional && !spec.isVararg) {
+            throw KlangScriptArgumentError(
+                functionName = functionName,
+                message = "missing required parameter '${spec.name}'",
+                location = callLocation,
+                callStackTrace = callStackTrace,
+            )
+        }
+    }
+
+    return result.toList()
 }

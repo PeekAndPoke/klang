@@ -13,7 +13,6 @@ import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
 import io.peekandpoke.klang.script.stdlib.KlangScriptOsc
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
-import io.peekandpoke.ultra.common.MutableTypedAttributes
 import kotlinx.coroutines.runBlocking
 
 class KlangCli : CliktCommand(name = "klang") {
@@ -27,15 +26,13 @@ class KlangCli : CliktCommand(name = "klang") {
 private fun compilePattern(code: String): RenderWavCommand.CompileResult? {
     val customIgnitors = mutableListOf<Pair<String, IgnitorDsl>>()
 
-    val attrs = MutableTypedAttributes {
-        add(KlangScriptOsc.REGISTRAR_KEY) { name: String, dsl: IgnitorDsl ->
+    val engine = klangScript {
+        attrs[KlangScriptOsc.REGISTRAR_KEY] = { name: String, dsl: IgnitorDsl ->
             customIgnitors.add(name to dsl)
             name
         }
-    }
-
-    val engine = klangScript(attrs = attrs) {
         registerLibrary(sprudelLib)
+        registerBuiltInSongsAsModules()
     }
 
     // Pre-import standard libraries so user code doesn't need to

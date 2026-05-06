@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers
 import kotlin.math.abs
@@ -119,14 +120,14 @@ class OrbitCompressorSpec : StringSpec({
 
         // Warm up the envelope follower with many blocks of loud signal (~-6 dB, well above threshold)
         repeat(50) {
-            val l = FloatArray(blockFrames) { 0.5f }
-            val r = FloatArray(blockFrames) { 0.5f }
+            val l = AudioBuffer(blockFrames) { 0.5 }
+            val r = AudioBuffer(blockFrames) { 0.5 }
             compressor.process(l, r, blockFrames)
         }
 
         // Measure steady-state compression level
-        val steadyLeft = FloatArray(blockFrames) { 0.5f }
-        val steadyRight = FloatArray(blockFrames) { 0.5f }
+        val steadyLeft = AudioBuffer(blockFrames) { 0.5 }
+        val steadyRight = AudioBuffer(blockFrames) { 0.5 }
         compressor.process(steadyLeft, steadyRight, blockFrames)
         val steadyLevel = steadyLeft.map { abs(it) }.average()
 
@@ -142,8 +143,8 @@ class OrbitCompressorSpec : StringSpec({
         )
 
         // Process immediately after — should be at roughly the same compression level
-        val afterLeft = FloatArray(blockFrames) { 0.5f }
-        val afterRight = FloatArray(blockFrames) { 0.5f }
+        val afterLeft = AudioBuffer(blockFrames) { 0.5 }
+        val afterRight = AudioBuffer(blockFrames) { 0.5 }
         cylinder.compressor.compressor!!.process(afterLeft, afterRight, blockFrames)
         val afterLevel = afterLeft.map { abs(it) }.average()
 

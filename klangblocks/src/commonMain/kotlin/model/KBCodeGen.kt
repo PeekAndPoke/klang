@@ -223,6 +223,15 @@ private fun KBStmt.appendTo(builder: CodeBuilder) {
                 builder.trackBlock(id) { value.appendTo(this, id, 0) }
             }
         }
+
+        is KBExportStmt -> {
+            builder.append("export $name = ")
+            if (value is KBNestedChainArg) {
+                value.appendTo(builder, id, 0)
+            } else {
+                builder.trackBlock(id) { value.appendTo(this, id, 0) }
+            }
+        }
         is KBAssignStmt -> builder.append("$target = ").append(value.toCode())
         is KBExprStmt -> builder.append(expr.toCode())
         is KBBlankLine -> Unit

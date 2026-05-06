@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import kotlin.math.abs
 
 class DuckingSpec : StringSpec({
@@ -17,10 +18,10 @@ class DuckingSpec : StringSpec({
         )
 
         // Create input signal (constant level)
-        val input = FloatArray(100) { 1.0f }
+        val input = AudioBuffer(100) { 1.0 }
 
         // Create sidechain signal (loud trigger)
-        val sidechain = FloatArray(100) { 0.8f }
+        val sidechain = AudioBuffer(100) { 0.8 }
 
         ducking.process(input, sidechain, 100)
 
@@ -37,13 +38,13 @@ class DuckingSpec : StringSpec({
         )
 
         // Process with active sidechain
-        val input1 = FloatArray(100) { 1.0f }
-        val sidechain1 = FloatArray(100) { 1.0f }
+        val input1 = AudioBuffer(100) { 1.0 }
+        val sidechain1 = AudioBuffer(100) { 1.0 }
         ducking.process(input1, sidechain1, 100)
 
         // Process with silent sidechain (should return to normal)
-        val input2 = FloatArray(1000) { 1.0f }
-        val sidechain2 = FloatArray(1000) { 0.0f }
+        val input2 = AudioBuffer(1000) { 1.0 }
+        val sidechain2 = AudioBuffer(1000) { 0.0 }
         ducking.process(input2, sidechain2, 1000)
 
         // Should return close to full volume
@@ -52,9 +53,9 @@ class DuckingSpec : StringSpec({
     }
 
     "Depth parameter controls ducking amount" {
-        val input1 = FloatArray(100) { 1.0f }
-        val input2 = FloatArray(100) { 1.0f }
-        val sidechain = FloatArray(100) { 1.0f }
+        val input1 = AudioBuffer(100) { 1.0 }
+        val input2 = AudioBuffer(100) { 1.0 }
+        val sidechain = AudioBuffer(100) { 1.0 }
 
         val duckingLight = Ducking(sampleRate, 0.01, depth = 0.3)
         val duckingHeavy = Ducking(sampleRate, 0.01, depth = 0.9)
@@ -73,16 +74,16 @@ class DuckingSpec : StringSpec({
         val ducking = Ducking(sampleRate, 0.01, 1.0)
 
         // Duck the signal
-        val input = FloatArray(100) { 1.0f }
-        val sidechain = FloatArray(100) { 1.0f }
+        val input = AudioBuffer(100) { 1.0 }
+        val sidechain = AudioBuffer(100) { 1.0 }
         ducking.process(input, sidechain, 100)
 
         // Reset
         ducking.reset()
 
         // Should process at full volume immediately
-        val input2 = FloatArray(10) { 1.0f }
-        val sidechain2 = FloatArray(10) { 0.0f }
+        val input2 = AudioBuffer(10) { 1.0 }
+        val sidechain2 = AudioBuffer(10) { 0.0 }
         ducking.process(input2, sidechain2, 10)
 
         input2[0].toDouble() shouldBe (1.0 plusOrMinus 0.01)
@@ -95,8 +96,8 @@ class DuckingSpec : StringSpec({
             depth = 0.0
         )
 
-        val input = FloatArray(100) { 1.0f }
-        val sidechain = FloatArray(100) { 1.0f }
+        val input = AudioBuffer(100) { 1.0 }
+        val sidechain = AudioBuffer(100) { 1.0 }
 
         ducking.process(input, sidechain, 100)
 
@@ -108,10 +109,10 @@ class DuckingSpec : StringSpec({
     "processStereo ducks both channels equally (linked stereo)" {
         val ducking = Ducking(sampleRate, 0.01, 0.8)
 
-        val inputLeft = FloatArray(100) { 1.0f }
-        val inputRight = FloatArray(100) { 1.0f }
-        val sidechainLeft = FloatArray(100) { 0.8f }
-        val sidechainRight = FloatArray(100) { 0.8f }
+        val inputLeft = AudioBuffer(100) { 1.0 }
+        val inputRight = AudioBuffer(100) { 1.0 }
+        val sidechainLeft = AudioBuffer(100) { 0.8 }
+        val sidechainRight = AudioBuffer(100) { 0.8 }
 
         ducking.processStereo(inputLeft, inputRight, sidechainLeft, sidechainRight, 100)
 
@@ -129,11 +130,11 @@ class DuckingSpec : StringSpec({
     "processStereo preserves stereo image with asymmetric sidechain" {
         val ducking = Ducking(sampleRate, 0.01, 0.8)
 
-        val inputLeft = FloatArray(100) { 1.0f }
-        val inputRight = FloatArray(100) { 1.0f }
+        val inputLeft = AudioBuffer(100) { 1.0 }
+        val inputRight = AudioBuffer(100) { 1.0 }
         // Sidechain is louder on left — but linked detection should apply equal ducking
-        val sidechainLeft = FloatArray(100) { 0.9f }
-        val sidechainRight = FloatArray(100) { 0.1f }
+        val sidechainLeft = AudioBuffer(100) { 0.9 }
+        val sidechainRight = AudioBuffer(100) { 0.1 }
 
         ducking.processStereo(inputLeft, inputRight, sidechainLeft, sidechainRight, 100)
 
@@ -150,16 +151,16 @@ class DuckingSpec : StringSpec({
         val duckingSlow = Ducking(sampleRate, attackSeconds = 0.1, depth = 0.8)
 
         // Phase 1: Duck both with active sidechain
-        val active1 = FloatArray(100) { 1.0f }
-        val active2 = FloatArray(100) { 1.0f }
-        val sidechainActive = FloatArray(100) { 1.0f }
+        val active1 = AudioBuffer(100) { 1.0 }
+        val active2 = AudioBuffer(100) { 1.0 }
+        val sidechainActive = AudioBuffer(100) { 1.0 }
         duckingFast.process(active1, sidechainActive, 100)
         duckingSlow.process(active2, sidechainActive, 100)
 
         // Phase 2: Release with silent sidechain
-        val recover1 = FloatArray(400) { 1.0f }
-        val recover2 = FloatArray(400) { 1.0f }
-        val sidechainSilent = FloatArray(400) { 0.0f }
+        val recover1 = AudioBuffer(400) { 1.0 }
+        val recover2 = AudioBuffer(400) { 1.0 }
+        val sidechainSilent = AudioBuffer(400) { 0.0 }
         duckingFast.process(recover1, sidechainSilent, 400)
         duckingSlow.process(recover2, sidechainSilent, 400)
 

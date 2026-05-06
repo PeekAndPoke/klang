@@ -195,6 +195,12 @@ data object NullValue : RuntimeValue {
  */
 data class NativeFunctionValue(
     val name: String,
+    /**
+     * Optional declared parameters. When non-null, the interpreter resolves
+     * named-arg calls against this spec list; when null (legacy registrations),
+     * named calls are rejected with a transitional error message.
+     */
+    val paramSpecs: List<ParamSpec>? = null,
     val function: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
 ) : RuntimeValue {
     override val value = null
@@ -429,6 +435,12 @@ data class ArrayValue(
 data class BoundNativeMethod(
     val methodName: String,
     val receiver: NativeObjectValue<*>,
+    /**
+     * Optional declared parameters (excluding the receiver, which is supplied
+     * separately by the binding logic). Same semantics as
+     * [NativeFunctionValue.paramSpecs].
+     */
+    val paramSpecs: List<ParamSpec>? = null,
     val invoker: (List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
 ) : RuntimeValue {
     override val value = null

@@ -68,3 +68,40 @@ x = "changed";
 ```
 
 **Expected:** x is "changed"
+
+### 1.6 Export Declaration ✅ — `export name = expr`
+
+```javascript
+export bass = 42
+export greeting = "hello"
+export song = note("c3 e3 g3").gain(0.5)
+```
+
+**Semantics:**
+
+- Combined immutable binding + auto-export: equivalent to
+  `const name = expr; export { name }` in one statement.
+- The bound name is immutable (reassignment throws an `AssignmentError`).
+- **Evaluates to the bound value** (unlike `let` and `const`, which return `null`).
+  A script that ends with `export song = stack(...)` returns the song without needing
+  a trailing `song` reference.
+- Top-level form: intended for use at the top of a library / module file. Inside a
+  function body or block the binding works locally but the export marker has no effect
+  (consistent with the existing `export { ... }` form).
+
+**Use case:** the canonical way for a klangscript module to expose named parts (lead,
+bass, drum kits, song) so importing modules can pull them by name:
+
+```javascript
+// In a library:
+export lead = note("c3 e3 g3").gain(0.5)
+export bass = note("c2 g2").lpf(800)
+export song = stack(lead, bass)
+
+// In a consumer:
+import { song, bass } from "peekandpoke/der-schmetterling"
+play(song)
+```
+
+**Expected:** the exported bindings are accessible to importers; reassigning them
+throws.

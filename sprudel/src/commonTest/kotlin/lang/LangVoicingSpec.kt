@@ -2,6 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -151,7 +152,7 @@ class LangVoicingSpec : StringSpec({
     }
 
     "voicing() with range works via apply(voicing(low, high))" {
-        val p = chord("Cmaj7").apply(voicing("C3", "C5"))
+        val p = chord("Cmaj7").apply(voicing(low = "C3", high = "C5"))
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -168,11 +169,94 @@ class LangVoicingSpec : StringSpec({
     }
 
     "voicing() with range works in compiled code" {
-        val p = SprudelPattern.compile("""chord("Dm7 G7").apply(voicing("C3", "C5"))""")
+        // KlangScript has no named-args; pass rank=null positionally to reach low/high.
+        val p = SprudelPattern.compile("""chord("Dm7 G7").apply(voicing(null, "C3", "C5"))""")
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         // 2 chords × 4 notes
         events.size shouldBe 8
         events.all { it.data.chord == null } shouldBe true
+    }
+
+    "voicing(rank = 1) differs from default rank" {
+        val rank0 = chord("Cmaj7").voicing().queryArc(0.0, 1.0)
+            .map { it.data.note }
+        val rank1 = chord("Cmaj7").voicing(rank = 1).queryArc(0.0, 1.0)
+            .map { it.data.note }
+
+        rank0.size shouldBe 4
+        rank1.size shouldBe 4
+        rank1 shouldNotBe rank0
+    }
+
+    "voicing(rank = 1.5) floors to rank 1" {
+        val rankFractional = chord("Cmaj7").voicing(rank = 1.5).queryArc(0.0, 1.0)
+            .map { it.data.note }
+        val rankInt = chord("Cmaj7").voicing(rank = 1).queryArc(0.0, 1.0)
+            .map { it.data.note }
+
+        rankFractional shouldBe rankInt
+    }
+
+    "voicing(rank = 2.9) floors to rank 2" {
+        val rankFractional = chord("Cmaj7").voicing(rank = 2.9).queryArc(0.0, 1.0)
+            .map { it.data.note }
+        val rankInt = chord("Cmaj7").voicing(rank = 2).queryArc(0.0, 1.0)
+            .map { it.data.note }
+
+        rankFractional shouldBe rankInt
+    }
+
+    "voicing(rank = -1) clamps to rank 0" {
+        val rankNegative = chord("Cmaj7").voicing(rank = -1).queryArc(0.0, 1.0)
+            .map { it.data.note }
+        val rank0 = chord("Cmaj7").voicing().queryArc(0.0, 1.0)
+            .map { it.data.note }
+
+        rankNegative shouldBe rank0
+    }
+
+    "voicing(rank = 999) clamps to last available rank" {
+        // 999 is far beyond any candidate count — should not crash, should return some voicing.
+        val events = chord("Cmaj7").voicing(rank = 999).queryArc(0.0, 1.0)
+        events.size shouldBe 4
+        events.all { it.data.note != null } shouldBe true
+    }
+
+    "voicing(rank = pattern) varies rank per event in a cycle" {
+        // Two chord events per cycle, alternating rank 0 / rank 1.
+        // Each event samples its own rank — proves the rank pattern is read per event, not once.
+        val p = chord("Cmaj7 Cmaj7").voicing(rank = "0 1")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        // 2 chords × 4 notes
+        events.size shouldBe 8
+
+        val groups = events.groupBy { it.part.begin }
+        groups.size shouldBe 2
+        val notesPerEvent = groups.toSortedMap().map { (_, notes) -> notes.map { it.data.note } }
+
+        // Event 0 (rank 0) and event 1 (rank 1) must differ.
+        notesPerEvent[1] shouldNotBe notesPerEvent[0]
+
+        // Compare against a constant-rank version: event 0 ≡ rank 0, event 1 ≡ rank 1.
+        val rank0 = chord("Cmaj7").voicing().queryArc(0.0, 1.0).map { it.data.note }
+        val rank1 = chord("Cmaj7").voicing(rank = 1).queryArc(0.0, 1.0).map { it.data.note }
+        notesPerEvent[0] shouldBe rank0
+        notesPerEvent[1] shouldBe rank1
+    }
+
+    "voicing(rank = continuous control pattern) produces varied ranks across a cycle" {
+        // sine.range(0, 3).segment(4): 4 discrete values per cycle in [0, 3).
+        // The exact ranks visited depend on sampling, but at least 2 distinct ranks must appear.
+        val p = SprudelPattern.compile(
+            """chord("Cmaj7 Cmaj7 Cmaj7 Cmaj7").voicing(rank = sine.range(0, 3).segment(4))"""
+        )
+        val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
+
+        events.size shouldBe 16
+        val groups = events.groupBy { it.part.begin }
+        val notesPerEvent = groups.toSortedMap().map { (_, notes) -> notes.map { it.data.note }.toSet() }
+        notesPerEvent.toSet().size shouldBeGreaterThanOrEqual 2
     }
 })

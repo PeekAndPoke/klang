@@ -7,6 +7,7 @@ import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal.PlaybackStopped
 import io.peekandpoke.klang.audio_engine.KlangBenchmark
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.playOnce
+import io.peekandpoke.klang.comp.MotorBackground
 import io.peekandpoke.klang.comp.Oscilloscope
 import io.peekandpoke.klang.comp.PlayerMiniStats
 import io.peekandpoke.klang.comp.RoundButton
@@ -320,7 +321,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
                     launch {
                         delay(1000.milliseconds)
                         console.log("Playback stopped, navigating to new song page")
-                        router.navToUri(Nav.editSongCode(BuiltInSongs.tetris.id))
+                        router.navToUri(Nav.editSongCode(BuiltInSongs.derSchmetterling.id))
                     }
                 }
             }
@@ -545,7 +546,7 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
 
             RoundButton(
                 icon = { power_off },
-                color = KlangTheme.excellent,
+                color = Color(MotorBackground.lightColorHex),
                 onClick = {
                     // Background light fade-in is deferred until after "Starting Motör"
                     // finishes — triggered from StateBenchmarking.init instead.

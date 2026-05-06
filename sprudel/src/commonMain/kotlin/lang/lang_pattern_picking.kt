@@ -1,24 +1,25 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.SourceLocationChain
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel._bind
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.parser.parseMiniNotation
-import io.peekandpoke.klang.sprudel.pattern.*
+import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
+import io.peekandpoke.klang.sprudel.pattern.BindPattern
+import io.peekandpoke.klang.sprudel.pattern.MapPattern
+import io.peekandpoke.klang.sprudel.pattern.PickResetPattern
+import io.peekandpoke.klang.sprudel.pattern.PickRestartPattern
+import io.peekandpoke.klang.sprudel.pattern.PickSqueezePattern
 import kotlin.math.floor
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangPatternPickingInit = false
-
 // =====================================================================================================================
 // Helper Functions
 // =====================================================================================================================
@@ -172,22 +173,11 @@ private fun dispatchPick(
     }
 }
 
-internal val _pick by dslPatternMapper { args, callInfo -> { p -> p._pick(args, callInfo) } }
-
-internal val SprudelPattern._pick by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
-
+private fun applyPick(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>, baseLocation: SourceLocation?): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-    // TODO: Fix location tracking
-
-    dispatchPick(lookup = lookup, pat = p, modulo = false, baseLocation = callInfo?.receiverLocation)
-}
-
-internal val String._pick by dslStringExtension { p, args, callInfo -> p._pick(args, callInfo) }
-
-internal val PatternMapperFn._pick by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pick(args, callInfo))
+    return dispatchPick(lookup = lookup, pat = pattern, modulo = false, baseLocation = baseLocation)
 }
 
 /**
@@ -212,7 +202,9 @@ internal val PatternMapperFn._pick by dslPatternMapperExtension { m, args, callI
  * @tags pick, select, index, lookup
  */
 @SprudelDsl
-fun SprudelPattern.pick(vararg args: PatternLike): SprudelPattern = this._pick(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pick(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPick(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /**
  * Selects patterns from a [List] lookup using this pattern's event values as zero-based indices.
@@ -227,7 +219,8 @@ fun SprudelPattern.pick(vararg args: PatternLike): SprudelPattern = this._pick(a
  * ```
  */
 @SprudelDsl
-fun SprudelPattern.pick(lookup: List<PatternLike>): SprudelPattern = this._pick(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pick(lookup: List<PatternLike>): SprudelPattern =
+    applyPick(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Selects patterns from a [Map] lookup using this pattern's event values as string keys.
@@ -243,7 +236,8 @@ fun SprudelPattern.pick(lookup: List<PatternLike>): SprudelPattern = this._pick(
  * ```
  */
 @SprudelDsl
-fun SprudelPattern.pick(lookup: Map<String, PatternLike>): SprudelPattern = this._pick(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pick(lookup: Map<String, PatternLike>): SprudelPattern =
+    applyPick(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Selects patterns from a lookup using this string parsed as a mini-notation index pattern.
@@ -263,7 +257,9 @@ fun SprudelPattern.pick(lookup: Map<String, PatternLike>): SprudelPattern = this
  * @tags pick, select, index, lookup
  */
 @SprudelDsl
-fun String.pick(vararg args: PatternLike): SprudelPattern = this._pick(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pick(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pick(*args, callInfo = callInfo)
 
 /**
  * Selects patterns from a [List] using this string parsed as a mini-notation index pattern.
@@ -276,7 +272,8 @@ fun String.pick(vararg args: PatternLike): SprudelPattern = this._pick(args.toLi
  * ```
  */
 @SprudelDsl
-fun String.pick(lookup: List<PatternLike>): SprudelPattern = this._pick(listOf(lookup).asSprudelDslArgs())
+fun String.pick(lookup: List<PatternLike>): SprudelPattern =
+    this.toVoiceValuePattern().pick(lookup)
 
 /**
  * Selects patterns from a [Map] using this string parsed as a mini-notation key pattern.
@@ -289,7 +286,8 @@ fun String.pick(lookup: List<PatternLike>): SprudelPattern = this._pick(listOf(l
  * ```
  */
 @SprudelDsl
-fun String.pick(lookup: Map<String, PatternLike>): SprudelPattern = this._pick(listOf(lookup).asSprudelDslArgs())
+fun String.pick(lookup: Map<String, PatternLike>): SprudelPattern =
+    this.toVoiceValuePattern().pick(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects patterns from a lookup, clamping out-of-bounds indices.
@@ -309,7 +307,9 @@ fun String.pick(lookup: Map<String, PatternLike>): SprudelPattern = this._pick(l
  * @tags pick, select, index, lookup
  */
 @SprudelDsl
-fun pick(vararg args: PatternLike): PatternMapperFn = _pick(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pick(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pick(*args, callInfo = callInfo) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [List] lookup with clamped integer indices.
@@ -322,7 +322,7 @@ fun pick(vararg args: PatternLike): PatternMapperFn = _pick(args.toList().asSpru
  * ```
  */
 @SprudelDsl
-fun pick(lookup: List<PatternLike>): PatternMapperFn = _pick(listOf(lookup).asSprudelDslArgs())
+fun pick(lookup: List<PatternLike>): PatternMapperFn = { p -> p.pick(lookup) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [Map] lookup using string keys.
@@ -335,44 +335,38 @@ fun pick(lookup: List<PatternLike>): PatternMapperFn = _pick(listOf(lookup).asSp
  * ```
  */
 @SprudelDsl
-fun pick(lookup: Map<String, PatternLike>): PatternMapperFn = _pick(listOf(lookup).asSprudelDslArgs())
+fun pick(lookup: Map<String, PatternLike>): PatternMapperFn = { p -> p.pick(lookup) }
 
 /**
  * Chains a pick onto this [PatternMapperFn]; the chained result picks from the given lookup.
  */
 @SprudelDsl
-fun PatternMapperFn.pick(vararg args: PatternLike): PatternMapperFn = this._pick(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pick(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pick(*args, callInfo = callInfo) }
 
 /**
  * Chains a pick from a [List] lookup onto this [PatternMapperFn]; indices are clamped.
  */
 @SprudelDsl
-fun PatternMapperFn.pick(lookup: List<PatternLike>): PatternMapperFn = this._pick(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pick(lookup: List<PatternLike>): PatternMapperFn =
+    this.chain { p -> p.pick(lookup) }
 
 /**
  * Chains a pick from a [Map] lookup onto this [PatternMapperFn]; string keys are used.
  */
 @SprudelDsl
-fun PatternMapperFn.pick(lookup: Map<String, PatternLike>): PatternMapperFn = this._pick(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pick(lookup: Map<String, PatternLike>): PatternMapperFn =
+    this.chain { p -> p.pick(lookup) }
 
 // -- pickmod() ----------------------------------------------------------------------------------------------------------------------------
 
-internal val _pickmod by dslPatternMapper { args, callInfo -> { p -> p._pickmod(args, callInfo) } }
-
-internal val SprudelPattern._pickmod by dslPatternExtension { p, args, _ ->
-    if (args.isEmpty()) return@dslPatternExtension p
-
+private fun applyPickmod(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
     val lookupLocation = args.firstOrNull()?.location
-
-    dispatchPick(lookup, p, modulo = true, lookupLocation)
-}
-
-internal val String._pickmod by dslStringExtension { p, args, callInfo -> p._pickmod(args, callInfo) }
-
-internal val PatternMapperFn._pickmod by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickmod(args, callInfo))
+    return dispatchPick(lookup, pattern, modulo = true, lookupLocation)
 }
 
 /**
@@ -397,7 +391,9 @@ internal val PatternMapperFn._pickmod by dslPatternMapperExtension { m, args, ca
  * @tags pickmod, pick, modulo, wrap, index, lookup
  */
 @SprudelDsl
-fun SprudelPattern.pickmod(vararg args: PatternLike): SprudelPattern = this._pickmod(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickmod(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickmod(this, args.toList().asSprudelDslArgs(callInfo))
 
 /**
  * Like [pick] but wraps indices with modulo — [List] lookup using this pattern's event values.
@@ -410,7 +406,8 @@ fun SprudelPattern.pickmod(vararg args: PatternLike): SprudelPattern = this._pic
  * ```
  */
 @SprudelDsl
-fun SprudelPattern.pickmod(lookup: List<PatternLike>): SprudelPattern = this._pickmod(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pickmod(lookup: List<PatternLike>): SprudelPattern =
+    applyPickmod(this, listOf(lookup).asSprudelDslArgs())
 
 /**
  * Like [pick] but wraps indices with modulo — [Map] lookup using this pattern's event values.
@@ -423,7 +420,8 @@ fun SprudelPattern.pickmod(lookup: List<PatternLike>): SprudelPattern = this._pi
  * ```
  */
 @SprudelDsl
-fun SprudelPattern.pickmod(lookup: Map<String, PatternLike>): SprudelPattern = this._pickmod(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pickmod(lookup: Map<String, PatternLike>): SprudelPattern =
+    applyPickmod(this, listOf(lookup).asSprudelDslArgs())
 
 /**
  * Like [pick] but wraps indices with modulo — this string is parsed as a mini-notation index pattern.
@@ -439,7 +437,9 @@ fun SprudelPattern.pickmod(lookup: Map<String, PatternLike>): SprudelPattern = t
  * @tags pickmod, pick, modulo, wrap, index, lookup
  */
 @SprudelDsl
-fun String.pickmod(vararg args: PatternLike): SprudelPattern = this._pickmod(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickmod(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickmod(*args, callInfo = callInfo)
 
 /**
  * Like [pick] but wraps indices with modulo — [List] lookup, this string as index pattern.
@@ -452,7 +452,8 @@ fun String.pickmod(vararg args: PatternLike): SprudelPattern = this._pickmod(arg
  * ```
  */
 @SprudelDsl
-fun String.pickmod(lookup: List<PatternLike>): SprudelPattern = this._pickmod(listOf(lookup).asSprudelDslArgs())
+fun String.pickmod(lookup: List<PatternLike>): SprudelPattern =
+    this.toVoiceValuePattern().pickmod(lookup)
 
 /**
  * Like [pick] but wraps indices with modulo — [Map] lookup, this string as key pattern.
@@ -465,7 +466,8 @@ fun String.pickmod(lookup: List<PatternLike>): SprudelPattern = this._pickmod(li
  * ```
  */
 @SprudelDsl
-fun String.pickmod(lookup: Map<String, PatternLike>): SprudelPattern = this._pickmod(listOf(lookup).asSprudelDslArgs())
+fun String.pickmod(lookup: Map<String, PatternLike>): SprudelPattern =
+    this.toVoiceValuePattern().pickmod(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects from a lookup with modulo-wrapped index values.
@@ -483,7 +485,9 @@ fun String.pickmod(lookup: Map<String, PatternLike>): SprudelPattern = this._pic
  * @tags pickmod, pick, modulo, wrap, index, lookup
  */
 @SprudelDsl
-fun pickmod(vararg args: PatternLike): PatternMapperFn = _pickmod(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickmod(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickmod(*args, callInfo = callInfo) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [List] lookup with modulo-wrapped indices.
@@ -496,7 +500,7 @@ fun pickmod(vararg args: PatternLike): PatternMapperFn = _pickmod(args.toList().
  * ```
  */
 @SprudelDsl
-fun pickmod(lookup: List<PatternLike>): PatternMapperFn = _pickmod(listOf(lookup).asSprudelDslArgs())
+fun pickmod(lookup: List<PatternLike>): PatternMapperFn = { p -> p.pickmod(lookup) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [Map] lookup using string keys.
@@ -509,25 +513,29 @@ fun pickmod(lookup: List<PatternLike>): PatternMapperFn = _pickmod(listOf(lookup
  * ```
  */
 @SprudelDsl
-fun pickmod(lookup: Map<String, PatternLike>): PatternMapperFn = _pickmod(listOf(lookup).asSprudelDslArgs())
+fun pickmod(lookup: Map<String, PatternLike>): PatternMapperFn = { p -> p.pickmod(lookup) }
 
 /**
  * Chains a modulo-pick onto this [PatternMapperFn]; indices wrap cyclically.
  */
 @SprudelDsl
-fun PatternMapperFn.pickmod(vararg args: PatternLike): PatternMapperFn = this._pickmod(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickmod(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickmod(*args, callInfo = callInfo) }
 
 /**
  * Chains a modulo-pick from a [List] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
-fun PatternMapperFn.pickmod(lookup: List<PatternLike>): PatternMapperFn = this._pickmod(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickmod(lookup: List<PatternLike>): PatternMapperFn =
+    this.chain { p -> p.pickmod(lookup) }
 
 /**
  * Chains a modulo-pick from a [Map] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
-fun PatternMapperFn.pickmod(lookup: Map<String, PatternLike>): PatternMapperFn = this._pickmod(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickmod(lookup: Map<String, PatternLike>): PatternMapperFn =
+    this.chain { p -> p.pickmod(lookup) }
 
 // -- pickout() ----------------------------------------------------------------------------------------------------------------------------
 
@@ -590,21 +598,11 @@ private fun dispatchPickOuter(
     }
 }
 
-internal val _pickOut by dslPatternMapper { args, callInfo -> { p -> p._pickOut(args, callInfo) } }
-
-internal val SprudelPattern._pickOut by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
-
+private fun applyPickOut(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>, baseLocation: SourceLocation?): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-
-    dispatchPickOuter(lookup, p, modulo = false, callInfo?.receiverLocation)
-}
-
-internal val String._pickOut by dslStringExtension { p, args, callInfo -> p._pickOut(args, callInfo) }
-
-internal val PatternMapperFn._pickOut by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickOut(args, callInfo))
+    return dispatchPickOuter(lookup, pattern, modulo = false, baseLocation)
 }
 
 /**
@@ -628,7 +626,9 @@ internal val PatternMapperFn._pickOut by dslPatternMapperExtension { m, args, ca
  * @tags pickOut, pick, select, index, outer, outerJoin
  */
 @SprudelDsl
-fun SprudelPattern.pickOut(vararg args: PatternLike): SprudelPattern = this._pickOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickOut(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickOut(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /**
  * Like [pick] but uses outer-join semantics — [List] lookup using this pattern's event values.
@@ -641,7 +641,8 @@ fun SprudelPattern.pickOut(vararg args: PatternLike): SprudelPattern = this._pic
  * ```
  */
 @SprudelDsl
-fun SprudelPattern.pickOut(lookup: List<PatternLike>): SprudelPattern = this._pickOut(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pickOut(lookup: List<PatternLike>): SprudelPattern =
+    applyPickOut(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pick] but uses outer-join semantics — [Map] lookup using this pattern's event values as keys.
@@ -655,7 +656,7 @@ fun SprudelPattern.pickOut(lookup: List<PatternLike>): SprudelPattern = this._pi
  */
 @SprudelDsl
 fun SprudelPattern.pickOut(lookup: Map<String, Any>): SprudelPattern =
-    this._pickOut(listOf(lookup).asSprudelDslArgs())
+    applyPickOut(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pick] but uses outer-join semantics — this string is parsed as a mini-notation index pattern.
@@ -671,7 +672,9 @@ fun SprudelPattern.pickOut(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickOut, pick, select, index, outer, outerJoin
  */
 @SprudelDsl
-fun String.pickOut(vararg args: PatternLike): SprudelPattern = this._pickOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickOut(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickOut(*args, callInfo = callInfo)
 
 /**
  * Like [pick] but uses outer-join semantics — [List] lookup, this string as index pattern.
@@ -684,7 +687,8 @@ fun String.pickOut(vararg args: PatternLike): SprudelPattern = this._pickOut(arg
  * ```
  */
 @SprudelDsl
-fun String.pickOut(lookup: List<PatternLike>): SprudelPattern = this._pickOut(listOf(lookup).asSprudelDslArgs())
+fun String.pickOut(lookup: List<PatternLike>): SprudelPattern =
+    this.toVoiceValuePattern().pickOut(lookup)
 
 /**
  * Like [pick] but uses outer-join semantics — [Map] lookup, this string as key pattern.
@@ -697,7 +701,8 @@ fun String.pickOut(lookup: List<PatternLike>): SprudelPattern = this._pickOut(li
  * ```
  */
 @SprudelDsl
-fun String.pickOut(lookup: Map<String, Any>): SprudelPattern = this._pickOut(listOf(lookup).asSprudelDslArgs())
+fun String.pickOut(lookup: Map<String, Any>): SprudelPattern =
+    this.toVoiceValuePattern().pickOut(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects from a lookup with outer-join semantics, clamped indices.
@@ -715,7 +720,9 @@ fun String.pickOut(lookup: Map<String, Any>): SprudelPattern = this._pickOut(lis
  * @tags pickOut, pick, select, index, outer, outerJoin
  */
 @SprudelDsl
-fun pickOut(vararg args: PatternLike): PatternMapperFn = _pickOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickOut(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickOut(*args, callInfo = callInfo) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [List] lookup with outer-join semantics.
@@ -728,7 +735,7 @@ fun pickOut(vararg args: PatternLike): PatternMapperFn = _pickOut(args.toList().
  * ```
  */
 @SprudelDsl
-fun pickOut(lookup: List<PatternLike>): PatternMapperFn = _pickOut(listOf(lookup).asSprudelDslArgs())
+fun pickOut(lookup: List<PatternLike>): PatternMapperFn = { p -> p.pickOut(lookup) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [Map] lookup with outer-join semantics.
@@ -741,43 +748,37 @@ fun pickOut(lookup: List<PatternLike>): PatternMapperFn = _pickOut(listOf(lookup
  * ```
  */
 @SprudelDsl
-fun pickOut(lookup: Map<String, Any>): PatternMapperFn = _pickOut(listOf(lookup).asSprudelDslArgs())
+fun pickOut(lookup: Map<String, Any>): PatternMapperFn = { p -> p.pickOut(lookup) }
 
 /**
  * Chains a pickOut onto this [PatternMapperFn]; outer-join semantics, clamped indices.
  */
 @SprudelDsl
-fun PatternMapperFn.pickOut(vararg args: PatternLike): PatternMapperFn = this._pickOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickOut(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickOut(*args, callInfo = callInfo) }
 
 /**
  * Chains a pickOut from a [List] lookup onto this [PatternMapperFn]; outer-join, clamped indices.
  */
 @SprudelDsl
-fun PatternMapperFn.pickOut(lookup: List<PatternLike>): PatternMapperFn = this._pickOut(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickOut(lookup: List<PatternLike>): PatternMapperFn =
+    this.chain { p -> p.pickOut(lookup) }
 
 /**
  * Chains a pickOut from a [Map] lookup onto this [PatternMapperFn]; outer-join, string keys.
  */
 @SprudelDsl
-fun PatternMapperFn.pickOut(lookup: Map<String, Any>): PatternMapperFn = this._pickOut(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickOut(lookup: Map<String, Any>): PatternMapperFn =
+    this.chain { p -> p.pickOut(lookup) }
 
 // -- pickmodOut() -----------------------------------------------------------------------------------------------------
 
-internal val _pickmodOut by dslPatternMapper { args, callInfo -> { p -> p._pickmodOut(args, callInfo) } }
-
-internal val SprudelPattern._pickmodOut by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
-
+private fun applyPickmodOut(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>, baseLocation: SourceLocation?): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-
-    dispatchPickOuter(lookup, p, modulo = true, callInfo?.receiverLocation)
-}
-
-internal val String._pickmodOut by dslStringExtension { p, args, callInfo -> p._pickmodOut(args, callInfo) }
-
-internal val PatternMapperFn._pickmodOut by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickmodOut(args, callInfo))
+    return dispatchPickOuter(lookup, pattern, modulo = true, baseLocation)
 }
 
 /**
@@ -801,8 +802,9 @@ internal val PatternMapperFn._pickmodOut by dslPatternMapperExtension { m, args,
  * @tags pickmodOut, pickOut, pickmod, modulo, select, index, outer
  */
 @SprudelDsl
-fun SprudelPattern.pickmodOut(vararg args: PatternLike): SprudelPattern =
-    this._pickmodOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickmodOut(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickmodOut(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /**
  * Like [pickOut] but wraps indices with modulo — [List] lookup using this pattern's event values.
@@ -816,7 +818,7 @@ fun SprudelPattern.pickmodOut(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickmodOut(lookup: List<PatternLike>): SprudelPattern =
-    this._pickmodOut(listOf(lookup).asSprudelDslArgs())
+    applyPickmodOut(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pickOut] but wraps indices with modulo — [Map] lookup using this pattern's event values as keys.
@@ -830,7 +832,7 @@ fun SprudelPattern.pickmodOut(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickmodOut(lookup: Map<String, Any>): SprudelPattern =
-    this._pickmodOut(listOf(lookup).asSprudelDslArgs())
+    applyPickmodOut(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pickOut] but wraps indices with modulo — this string is parsed as a mini-notation index pattern.
@@ -846,7 +848,9 @@ fun SprudelPattern.pickmodOut(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickmodOut, pickOut, pickmod, modulo, select, index, outer
  */
 @SprudelDsl
-fun String.pickmodOut(vararg args: PatternLike): SprudelPattern = this._pickmodOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickmodOut(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickmodOut(*args, callInfo = callInfo)
 
 /**
  * Like [pickOut] but wraps indices with modulo — [List] lookup, this string as index pattern.
@@ -859,7 +863,8 @@ fun String.pickmodOut(vararg args: PatternLike): SprudelPattern = this._pickmodO
  * ```
  */
 @SprudelDsl
-fun String.pickmodOut(lookup: List<PatternLike>): SprudelPattern = this._pickmodOut(listOf(lookup).asSprudelDslArgs())
+fun String.pickmodOut(lookup: List<PatternLike>): SprudelPattern =
+    this.toVoiceValuePattern().pickmodOut(lookup)
 
 /**
  * Like [pickOut] but wraps indices with modulo — [Map] lookup, this string as key pattern.
@@ -872,7 +877,8 @@ fun String.pickmodOut(lookup: List<PatternLike>): SprudelPattern = this._pickmod
  * ```
  */
 @SprudelDsl
-fun String.pickmodOut(lookup: Map<String, Any>): SprudelPattern = this._pickmodOut(listOf(lookup).asSprudelDslArgs())
+fun String.pickmodOut(lookup: Map<String, Any>): SprudelPattern =
+    this.toVoiceValuePattern().pickmodOut(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects from a lookup with outer-join semantics and modulo indices.
@@ -890,7 +896,9 @@ fun String.pickmodOut(lookup: Map<String, Any>): SprudelPattern = this._pickmodO
  * @tags pickmodOut, pickOut, pickmod, modulo, select, index, outer
  */
 @SprudelDsl
-fun pickmodOut(vararg args: PatternLike): PatternMapperFn = _pickmodOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickmodOut(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickmodOut(*args, callInfo = callInfo) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [List] lookup with outer-join and modulo indices.
@@ -903,7 +911,7 @@ fun pickmodOut(vararg args: PatternLike): PatternMapperFn = _pickmodOut(args.toL
  * ```
  */
 @SprudelDsl
-fun pickmodOut(lookup: List<PatternLike>): PatternMapperFn = _pickmodOut(listOf(lookup).asSprudelDslArgs())
+fun pickmodOut(lookup: List<PatternLike>): PatternMapperFn = { p -> p.pickmodOut(lookup) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [Map] lookup with outer-join semantics.
@@ -916,26 +924,29 @@ fun pickmodOut(lookup: List<PatternLike>): PatternMapperFn = _pickmodOut(listOf(
  * ```
  */
 @SprudelDsl
-fun pickmodOut(lookup: Map<String, Any>): PatternMapperFn = _pickmodOut(listOf(lookup).asSprudelDslArgs())
+fun pickmodOut(lookup: Map<String, Any>): PatternMapperFn = { p -> p.pickmodOut(lookup) }
 
 /**
  * Chains a pickmodOut onto this [PatternMapperFn]; outer-join semantics, modulo indices.
  */
 @SprudelDsl
-fun PatternMapperFn.pickmodOut(vararg args: PatternLike): PatternMapperFn =
-    this._pickmodOut(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickmodOut(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickmodOut(*args, callInfo = callInfo) }
 
 /**
  * Chains a pickmodOut from a [List] lookup onto this [PatternMapperFn]; outer-join, modulo indices.
  */
 @SprudelDsl
-fun PatternMapperFn.pickmodOut(lookup: List<PatternLike>): PatternMapperFn = this._pickmodOut(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickmodOut(lookup: List<PatternLike>): PatternMapperFn =
+    this.chain { p -> p.pickmodOut(lookup) }
 
 /**
  * Chains a pickmodOut from a [Map] lookup onto this [PatternMapperFn]; outer-join, string keys.
  */
 @SprudelDsl
-fun PatternMapperFn.pickmodOut(lookup: Map<String, Any>): PatternMapperFn = this._pickmodOut(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickmodOut(lookup: Map<String, Any>): PatternMapperFn =
+    this.chain { p -> p.pickmodOut(lookup) }
 
 // -- inhabit() ----------------------------------------------------------------------------------------------------------------------------
 
@@ -989,10 +1000,16 @@ private fun dispatchInhabit(
     }
 }
 
-internal val _inhabit by dslPatternMapper { args, /* callInfo */ _ ->
+private fun applyInhabitExtension(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>, baseLocation: SourceLocation?): SprudelPattern {
+    if (args.isEmpty()) return pattern
+    val first = args[0].value
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+    return dispatchInhabit(lookup, pattern, modulo = false, baseLocation)
+}
+
+private fun applyInhabitTopLevel(args: List<SprudelDslArg<Any?>>, modulo: Boolean): PatternMapperFn {
     if (args.size < 2) {
-        val fn: PatternMapperFn = { silence }
-        return@dslPatternMapper fn
+        return { silence }
     }
 
     val first = args[0].value
@@ -1011,23 +1028,7 @@ internal val _inhabit by dslPatternMapper { args, /* callInfo */ _ ->
     }
 
     val pat = listOf(patArg).toPattern(voiceValueModifier)
-    val fn: PatternMapperFn = { dispatchInhabit(lookup, pat, modulo = false, lookupLocation) }
-    fn
-}
-
-internal val SprudelPattern._inhabit by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
-
-    val first = args[0].value
-    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-
-    dispatchInhabit(lookup, p, modulo = false, callInfo?.receiverLocation)
-}
-
-internal val String._inhabit by dslStringExtension { p, args, callInfo -> p._inhabit(args, callInfo) }
-
-internal val PatternMapperFn._inhabit by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_inhabit(args, callInfo))
+    return { dispatchInhabit(lookup, pat, modulo, lookupLocation) }
 }
 
 /**
@@ -1050,16 +1051,19 @@ internal val PatternMapperFn._inhabit by dslPatternMapperExtension { m, args, ca
  * @tags inhabit, pickSqueeze, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun SprudelPattern.inhabit(vararg args: PatternLike): SprudelPattern = this._inhabit(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.inhabit(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyInhabitExtension(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /** Selects patterns from a [List] lookup by clamped index, squeezing each into this pattern's event timespans. */
 @SprudelDsl
-fun SprudelPattern.inhabit(lookup: List<Any>): SprudelPattern = this._inhabit(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.inhabit(lookup: List<Any>): SprudelPattern =
+    applyInhabitExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /** Selects patterns from a [Map] lookup by string key, squeezing each into this pattern's event timespans. */
 @SprudelDsl
 fun SprudelPattern.inhabit(lookup: Map<String, Any>): SprudelPattern =
-    this._inhabit(listOf(lookup).asSprudelDslArgs())
+    applyInhabitExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Selects patterns from a list by index and squeezes each into the timespan of the trigger.
@@ -1081,15 +1085,19 @@ fun SprudelPattern.inhabit(lookup: Map<String, Any>): SprudelPattern =
  * @tags inhabit, pickSqueeze, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun String.inhabit(vararg args: PatternLike): SprudelPattern = this._inhabit(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.inhabit(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).inhabit(*args, callInfo = callInfo)
 
 /** Selects patterns from a [List] lookup by clamped index, squeezing each into this string pattern's event timespans. */
 @SprudelDsl
-fun String.inhabit(lookup: List<Any>): SprudelPattern = this._inhabit(listOf(lookup).asSprudelDslArgs())
+fun String.inhabit(lookup: List<Any>): SprudelPattern =
+    this.toVoiceValuePattern().inhabit(lookup)
 
 /** Selects patterns from a [Map] lookup by string key, squeezing each into this string pattern's event timespans. */
 @SprudelDsl
-fun String.inhabit(lookup: Map<String, Any>): SprudelPattern = this._inhabit(listOf(lookup).asSprudelDslArgs())
+fun String.inhabit(lookup: Map<String, Any>): SprudelPattern =
+    this.toVoiceValuePattern().inhabit(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects patterns from a lookup by index and squeezes them into event timespans.
@@ -1106,38 +1114,37 @@ fun String.inhabit(lookup: Map<String, Any>): SprudelPattern = this._inhabit(lis
  * @tags inhabit, pickSqueeze, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun inhabit(vararg args: PatternLike): PatternMapperFn = _inhabit(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun inhabit(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    applyInhabitTopLevel(args.toList().asSprudelDslArgs(callInfo), modulo = false)
 
 /** Returns a [PatternMapperFn] that selects from a [List] lookup by clamped index and squeezes into event timespans. */
 @SprudelDsl
-fun inhabit(lookup: List<Any>): PatternMapperFn = _inhabit(listOf(lookup).asSprudelDslArgs())
+fun inhabit(lookup: List<Any>): PatternMapperFn =
+    applyInhabitTopLevel(listOf(lookup).asSprudelDslArgs(), modulo = false)
 
 /** Returns a [PatternMapperFn] that selects from a [Map] lookup by string key and squeezes into event timespans. */
 @SprudelDsl
-fun inhabit(lookup: Map<String, Any>): PatternMapperFn = _inhabit(listOf(lookup).asSprudelDslArgs())
+fun inhabit(lookup: Map<String, Any>): PatternMapperFn =
+    applyInhabitTopLevel(listOf(lookup).asSprudelDslArgs(), modulo = false)
 
 /** Chains an inhabit onto this [PatternMapperFn]; clamped index, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.inhabit(vararg args: PatternLike): PatternMapperFn =
-    this._inhabit(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.inhabit(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain(applyInhabitTopLevel(args.toList().asSprudelDslArgs(callInfo), modulo = false))
 
 /** Chains an inhabit from a [List] lookup onto this [PatternMapperFn]; clamped index, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.inhabit(lookup: List<Any>): PatternMapperFn = this._inhabit(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.inhabit(lookup: List<Any>): PatternMapperFn =
+    this.chain(applyInhabitTopLevel(listOf(lookup).asSprudelDslArgs(), modulo = false))
 
 /** Chains an inhabit from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
 @SprudelDsl
 fun PatternMapperFn.inhabit(lookup: Map<String, Any>): PatternMapperFn =
-    this._inhabit(listOf(lookup).asSprudelDslArgs())
+    this.chain(applyInhabitTopLevel(listOf(lookup).asSprudelDslArgs(), modulo = false))
 
 // -- pickSqueeze() ------------------------------------------------------------------------------------------------------------------------
-
-internal val _pickSqueeze by dslPatternMapper { args, callInfo -> _inhabit(args, callInfo) }
-internal val SprudelPattern._pickSqueeze by dslPatternExtension { p, args, callInfo -> p._inhabit(args, callInfo) }
-internal val String._pickSqueeze by dslStringExtension { p, args, callInfo -> p._pickSqueeze(args, callInfo) }
-internal val PatternMapperFn._pickSqueeze by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_inhabit(args, callInfo))
-}
 
 /**
  * Alias for [inhabit]. Selects patterns from a list by index and squeezes into event duration.
@@ -1147,18 +1154,17 @@ internal val PatternMapperFn._pickSqueeze by dslPatternMapperExtension { m, args
  * @tags pickSqueeze, inhabit, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun SprudelPattern.pickSqueeze(vararg args: PatternLike): SprudelPattern =
-    this._pickSqueeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickSqueeze(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.inhabit(*args, callInfo = callInfo)
 
 /** Alias for [inhabit] — [List] lookup, clamped index, squeeze semantics. */
 @SprudelDsl
-fun SprudelPattern.pickSqueeze(lookup: List<Any>): SprudelPattern =
-    this._pickSqueeze(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pickSqueeze(lookup: List<Any>): SprudelPattern = this.inhabit(lookup)
 
 /** Alias for [inhabit] — [Map] lookup, string key, squeeze semantics. */
 @SprudelDsl
-fun SprudelPattern.pickSqueeze(lookup: Map<String, Any>): SprudelPattern =
-    this._pickSqueeze(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pickSqueeze(lookup: Map<String, Any>): SprudelPattern = this.inhabit(lookup)
 
 /**
  * Alias for [inhabit] on a string pattern. Selects patterns from a lookup by index and squeezes into event duration.
@@ -1168,18 +1174,17 @@ fun SprudelPattern.pickSqueeze(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickSqueeze, inhabit, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun String.pickSqueeze(vararg args: PatternLike): SprudelPattern =
-    this._pickSqueeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickSqueeze(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickSqueeze(*args, callInfo = callInfo)
 
 /** Alias for [inhabit] — [List] lookup on a string pattern; clamped index, squeeze semantics. */
 @SprudelDsl
-fun String.pickSqueeze(lookup: List<Any>): SprudelPattern =
-    this._pickSqueeze(listOf(lookup).asSprudelDslArgs())
+fun String.pickSqueeze(lookup: List<Any>): SprudelPattern = this.toVoiceValuePattern().pickSqueeze(lookup)
 
 /** Alias for [inhabit] — [Map] lookup on a string pattern; string key, squeeze semantics. */
 @SprudelDsl
-fun String.pickSqueeze(lookup: Map<String, Any>): SprudelPattern =
-    this._pickSqueeze(listOf(lookup).asSprudelDslArgs())
+fun String.pickSqueeze(lookup: Map<String, Any>): SprudelPattern = this.toVoiceValuePattern().pickSqueeze(lookup)
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [inhabit]; selects by clamped index and squeezes into event duration.
@@ -1189,72 +1194,43 @@ fun String.pickSqueeze(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickSqueeze, inhabit, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun pickSqueeze(vararg args: PatternLike): PatternMapperFn = _pickSqueeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickSqueeze(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    inhabit(*args, callInfo = callInfo)
 
 /** Returns a [PatternMapperFn] — alias for [inhabit] — [List] lookup, clamped index, squeeze semantics. */
 @SprudelDsl
-fun pickSqueeze(lookup: List<Any>): PatternMapperFn = _pickSqueeze(listOf(lookup).asSprudelDslArgs())
+fun pickSqueeze(lookup: List<Any>): PatternMapperFn = inhabit(lookup)
 
 /** Returns a [PatternMapperFn] — alias for [inhabit] — [Map] lookup, string key, squeeze semantics. */
 @SprudelDsl
-fun pickSqueeze(lookup: Map<String, Any>): PatternMapperFn = _pickSqueeze(listOf(lookup).asSprudelDslArgs())
+fun pickSqueeze(lookup: Map<String, Any>): PatternMapperFn = inhabit(lookup)
 
 /** Chains a pickSqueeze (alias for [inhabit]) onto this [PatternMapperFn]; clamped index, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.pickSqueeze(vararg args: PatternLike): PatternMapperFn =
-    this._pickSqueeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickSqueeze(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.inhabit(*args, callInfo = callInfo)
 
 /** Chains a pickSqueeze from a [List] lookup onto this [PatternMapperFn]; clamped index, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.pickSqueeze(lookup: List<Any>): PatternMapperFn =
-    this._pickSqueeze(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickSqueeze(lookup: List<Any>): PatternMapperFn = this.inhabit(lookup)
 
 /** Chains a pickSqueeze from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.pickSqueeze(lookup: Map<String, Any>): PatternMapperFn =
-    this._pickSqueeze(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickSqueeze(lookup: Map<String, Any>): PatternMapperFn = this.inhabit(lookup)
 
 // -- inhabitmod() -----------------------------------------------------------------------------------------------------
 
-internal val _inhabitmod by dslPatternMapper { args, /* callInfo */ _ ->
-    if (args.size < 2) {
-        val fn: PatternMapperFn = { silence }
-        return@dslPatternMapper fn
-    }
-
-    val first = args[0].value
-    val lookup: Any
-    val patArg: SprudelDslArg<Any?>
-    val lookupLocation: SourceLocation?
-
-    if (first is List<*> || first is Map<*, *>) {
-        lookup = first
-        lookupLocation = args[0].location
-        patArg = args[1]
-    } else {
-        lookup = args.dropLast(1).map { it.value }
-        lookupLocation = args.firstOrNull()?.location
-        patArg = args.last()
-    }
-
-    val pat = listOf(patArg).toPattern(voiceValueModifier)
-    val fn: PatternMapperFn = { dispatchInhabit(lookup, pat, modulo = true, lookupLocation) }
-    fn
-}
-
-internal val SprudelPattern._inhabitmod by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
-
+private fun applyInhabitmodExtension(
+    pattern: SprudelPattern,
+    args: List<SprudelDslArg<Any?>>,
+    baseLocation: SourceLocation?
+): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-
-    dispatchInhabit(lookup, p, modulo = true, callInfo?.receiverLocation)
-}
-
-internal val String._inhabitmod by dslStringExtension { p, args, callInfo -> p._inhabitmod(args, callInfo) }
-
-internal val PatternMapperFn._inhabitmod by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_inhabitmod(args, callInfo))
+    return dispatchInhabit(lookup, pattern, modulo = true, baseLocation)
 }
 
 /**
@@ -1276,18 +1252,19 @@ internal val PatternMapperFn._inhabitmod by dslPatternMapperExtension { m, args,
  * @tags inhabitmod, pickmodSqueeze, modulo, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun SprudelPattern.inhabitmod(vararg args: PatternLike): SprudelPattern =
-    this._inhabitmod(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.inhabitmod(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyInhabitmodExtension(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /** Like [inhabit] with modulo — [List] lookup, modulo-wrapped index, squeezing into this pattern's event timespans. */
 @SprudelDsl
 fun SprudelPattern.inhabitmod(lookup: List<Any>): SprudelPattern =
-    this._inhabitmod(listOf(lookup).asSprudelDslArgs())
+    applyInhabitmodExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /** Like [inhabit] with modulo — [Map] lookup, string key, squeezing into this pattern's event timespans. */
 @SprudelDsl
 fun SprudelPattern.inhabitmod(lookup: Map<String, Any>): SprudelPattern =
-    this._inhabitmod(listOf(lookup).asSprudelDslArgs())
+    applyInhabitmodExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [inhabit] but wraps out-of-bounds indices with modulo arithmetic — string receiver.
@@ -1308,18 +1285,19 @@ fun SprudelPattern.inhabitmod(lookup: Map<String, Any>): SprudelPattern =
  * @tags inhabitmod, pickmodSqueeze, modulo, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun String.inhabitmod(vararg args: PatternLike): SprudelPattern =
-    this._inhabitmod(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.inhabitmod(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).inhabitmod(*args, callInfo = callInfo)
 
 /** Like [inhabit] with modulo — [List] lookup on a string pattern; modulo-wrapped index, squeeze semantics. */
 @SprudelDsl
 fun String.inhabitmod(lookup: List<Any>): SprudelPattern =
-    this._inhabitmod(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().inhabitmod(lookup)
 
 /** Like [inhabit] with modulo — [Map] lookup on a string pattern; string key, squeeze semantics. */
 @SprudelDsl
 fun String.inhabitmod(lookup: Map<String, Any>): SprudelPattern =
-    this._inhabitmod(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().inhabitmod(lookup)
 
 /**
  * Returns a [PatternMapperFn] that is like [inhabit] but wraps indices with modulo.
@@ -1336,39 +1314,37 @@ fun String.inhabitmod(lookup: Map<String, Any>): SprudelPattern =
  * @tags inhabitmod, pickmodSqueeze, modulo, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun inhabitmod(vararg args: PatternLike): PatternMapperFn = _inhabitmod(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun inhabitmod(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    applyInhabitTopLevel(args.toList().asSprudelDslArgs(callInfo), modulo = true)
 
 /** Returns a [PatternMapperFn] like [inhabit] with modulo — [List] lookup, modulo-wrapped index, squeeze semantics. */
 @SprudelDsl
-fun inhabitmod(lookup: List<Any>): PatternMapperFn = _inhabitmod(listOf(lookup).asSprudelDslArgs())
+fun inhabitmod(lookup: List<Any>): PatternMapperFn =
+    applyInhabitTopLevel(listOf(lookup).asSprudelDslArgs(), modulo = true)
 
 /** Returns a [PatternMapperFn] like [inhabit] with modulo — [Map] lookup, string key, squeeze semantics. */
 @SprudelDsl
-fun inhabitmod(lookup: Map<String, Any>): PatternMapperFn = _inhabitmod(listOf(lookup).asSprudelDslArgs())
+fun inhabitmod(lookup: Map<String, Any>): PatternMapperFn =
+    applyInhabitTopLevel(listOf(lookup).asSprudelDslArgs(), modulo = true)
 
 /** Chains an inhabitmod onto this [PatternMapperFn]; modulo-wrapped index, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.inhabitmod(vararg args: PatternLike): PatternMapperFn =
-    this._inhabitmod(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.inhabitmod(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain(applyInhabitTopLevel(args.toList().asSprudelDslArgs(callInfo), modulo = true))
 
 /** Chains an inhabitmod from a [List] lookup onto this [PatternMapperFn]; modulo-wrapped index, squeeze semantics. */
 @SprudelDsl
 fun PatternMapperFn.inhabitmod(lookup: List<Any>): PatternMapperFn =
-    this._inhabitmod(listOf(lookup).asSprudelDslArgs())
+    this.chain(applyInhabitTopLevel(listOf(lookup).asSprudelDslArgs(), modulo = true))
 
 /** Chains an inhabitmod from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
 @SprudelDsl
 fun PatternMapperFn.inhabitmod(lookup: Map<String, Any>): PatternMapperFn =
-    this._inhabitmod(listOf(lookup).asSprudelDslArgs())
+    this.chain(applyInhabitTopLevel(listOf(lookup).asSprudelDslArgs(), modulo = true))
 
 // -- pickmodSqueeze() -------------------------------------------------------------------------------------------------
-
-internal val _pickmodSqueeze by dslPatternMapper { args, callInfo -> _inhabitmod(args, callInfo) }
-internal val SprudelPattern._pickmodSqueeze by dslPatternExtension { p, args, callInfo -> p._inhabitmod(args, callInfo) }
-internal val String._pickmodSqueeze by dslStringExtension { p, args, callInfo -> p._pickmodSqueeze(args, callInfo) }
-internal val PatternMapperFn._pickmodSqueeze by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_inhabitmod(args, callInfo))
-}
 
 /**
  * Alias for [inhabitmod]. Selects patterns by modulo-wrapped index and squeezes into events.
@@ -1378,18 +1354,17 @@ internal val PatternMapperFn._pickmodSqueeze by dslPatternMapperExtension { m, a
  * @tags pickmodSqueeze, inhabitmod, modulo, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun SprudelPattern.pickmodSqueeze(vararg args: PatternLike): SprudelPattern =
-    this._pickmodSqueeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickmodSqueeze(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.inhabitmod(*args, callInfo = callInfo)
 
 /** Alias for [inhabitmod] — [List] lookup, modulo-wrapped index, squeeze semantics. */
 @SprudelDsl
-fun SprudelPattern.pickmodSqueeze(lookup: List<Any>): SprudelPattern =
-    this._pickmodSqueeze(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pickmodSqueeze(lookup: List<Any>): SprudelPattern = this.inhabitmod(lookup)
 
 /** Alias for [inhabitmod] — [Map] lookup, string key, squeeze semantics. */
 @SprudelDsl
-fun SprudelPattern.pickmodSqueeze(lookup: Map<String, Any>): SprudelPattern =
-    this._pickmodSqueeze(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.pickmodSqueeze(lookup: Map<String, Any>): SprudelPattern = this.inhabitmod(lookup)
 
 /**
  * Alias for [inhabitmod] on a string pattern. Selects patterns by modulo-wrapped index and squeezes into events.
@@ -1399,18 +1374,17 @@ fun SprudelPattern.pickmodSqueeze(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickmodSqueeze, inhabitmod, modulo, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun String.pickmodSqueeze(vararg args: PatternLike): SprudelPattern =
-    this._pickmodSqueeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickmodSqueeze(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickmodSqueeze(*args, callInfo = callInfo)
 
 /** Alias for [inhabitmod] — [List] lookup on a string pattern; modulo-wrapped index, squeeze semantics. */
 @SprudelDsl
-fun String.pickmodSqueeze(lookup: List<Any>): SprudelPattern =
-    this._pickmodSqueeze(listOf(lookup).asSprudelDslArgs())
+fun String.pickmodSqueeze(lookup: List<Any>): SprudelPattern = this.toVoiceValuePattern().pickmodSqueeze(lookup)
 
 /** Alias for [inhabitmod] — [Map] lookup on a string pattern; string key, squeeze semantics. */
 @SprudelDsl
-fun String.pickmodSqueeze(lookup: Map<String, Any>): SprudelPattern =
-    this._pickmodSqueeze(listOf(lookup).asSprudelDslArgs())
+fun String.pickmodSqueeze(lookup: Map<String, Any>): SprudelPattern = this.toVoiceValuePattern().pickmodSqueeze(lookup)
 
 /**
  * Returns a [PatternMapperFn] that is an alias for [inhabitmod]; selects by modulo-wrapped index and squeezes.
@@ -1420,54 +1394,39 @@ fun String.pickmodSqueeze(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickmodSqueeze, inhabitmod, modulo, squeeze, select, index, lookup
  */
 @SprudelDsl
-fun pickmodSqueeze(vararg args: PatternLike): PatternMapperFn = _pickmodSqueeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickmodSqueeze(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    inhabitmod(*args, callInfo = callInfo)
 
 /** Returns a [PatternMapperFn] — alias for [inhabitmod] — [List] lookup, modulo-wrapped index, squeeze semantics. */
 @SprudelDsl
-fun pickmodSqueeze(lookup: List<Any>): PatternMapperFn = _pickmodSqueeze(listOf(lookup).asSprudelDslArgs())
+fun pickmodSqueeze(lookup: List<Any>): PatternMapperFn = inhabitmod(lookup)
 
 /** Returns a [PatternMapperFn] — alias for [inhabitmod] — [Map] lookup, string key, squeeze semantics. */
 @SprudelDsl
-fun pickmodSqueeze(lookup: Map<String, Any>): PatternMapperFn = _pickmodSqueeze(listOf(lookup).asSprudelDslArgs())
+fun pickmodSqueeze(lookup: Map<String, Any>): PatternMapperFn = inhabitmod(lookup)
 
 /** Chains a pickmodSqueeze (alias for [inhabitmod]) onto this [PatternMapperFn]; modulo-wrapped index, squeeze. */
 @SprudelDsl
-fun PatternMapperFn.pickmodSqueeze(vararg args: PatternLike): PatternMapperFn =
-    this._pickmodSqueeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickmodSqueeze(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.inhabitmod(*args, callInfo = callInfo)
 
 /** Chains a pickmodSqueeze from a [List] lookup onto this [PatternMapperFn]; modulo-wrapped index, squeeze. */
 @SprudelDsl
-fun PatternMapperFn.pickmodSqueeze(lookup: List<Any>): PatternMapperFn =
-    this._pickmodSqueeze(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickmodSqueeze(lookup: List<Any>): PatternMapperFn = this.inhabitmod(lookup)
 
 /** Chains a pickmodSqueeze from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.pickmodSqueeze(lookup: Map<String, Any>): PatternMapperFn =
-    this._pickmodSqueeze(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.pickmodSqueeze(lookup: Map<String, Any>): PatternMapperFn = this.inhabitmod(lookup)
 
 // -- squeeze() --------------------------------------------------------------------------------------------------------
 
-internal val _squeeze by dslPatternMapper { args, callInfo -> { p -> p._squeeze(args, callInfo) } }
-
-internal val SprudelPattern._squeeze by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
-
+private fun applySqueeze(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>, baseLocation: SourceLocation?): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
-    val lookup: Any
-
-    if (first is List<*> || first is Map<*, *>) {
-        lookup = first
-    } else {
-        lookup = args.map { it.value }
-    }
-
-    dispatchInhabit(lookup, p, modulo = false, callInfo?.receiverLocation)
-}
-
-internal val String._squeeze by dslStringExtension { p, args, callInfo -> p._squeeze(args, callInfo) }
-
-internal val PatternMapperFn._squeeze by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_squeeze(args, callInfo))
+    val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
+    return dispatchInhabit(lookup, pattern, modulo = false, baseLocation)
 }
 
 /**
@@ -1488,16 +1447,19 @@ internal val PatternMapperFn._squeeze by dslPatternMapperExtension { m, args, ca
  * @tags squeeze, inhabit, select, index, lookup
  */
 @SprudelDsl
-fun SprudelPattern.squeeze(vararg args: PatternLike): SprudelPattern = this._squeeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.squeeze(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applySqueeze(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /** Squeezes patterns from a [List] lookup into the timespans of events in this pattern (clamped index). */
 @SprudelDsl
-fun SprudelPattern.squeeze(lookup: List<Any>): SprudelPattern = this._squeeze(listOf(lookup).asSprudelDslArgs())
+fun SprudelPattern.squeeze(lookup: List<Any>): SprudelPattern =
+    applySqueeze(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /** Squeezes patterns from a [Map] lookup into the timespans of events in this pattern (string key). */
 @SprudelDsl
 fun SprudelPattern.squeeze(lookup: Map<String, Any>): SprudelPattern =
-    this._squeeze(listOf(lookup).asSprudelDslArgs())
+    applySqueeze(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Squeezes patterns from a list into the timespans of events in this string pattern (clamped).
@@ -1513,18 +1475,19 @@ fun SprudelPattern.squeeze(lookup: Map<String, Any>): SprudelPattern =
  * @tags squeeze, inhabit, select, index, lookup
  */
 @SprudelDsl
-fun String.squeeze(vararg args: PatternLike): SprudelPattern =
-    this._squeeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.squeeze(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).squeeze(*args, callInfo = callInfo)
 
 /** Squeezes patterns from a [List] lookup into the timespans of events in this string pattern (clamped). */
 @SprudelDsl
 fun String.squeeze(lookup: List<Any>): SprudelPattern =
-    this._squeeze(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().squeeze(lookup)
 
 /** Squeezes patterns from a [Map] lookup into the timespans of events in this string pattern (string key). */
 @SprudelDsl
 fun String.squeeze(lookup: Map<String, Any>): SprudelPattern =
-    this._squeeze(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().squeeze(lookup)
 
 /**
  * Selects patterns from a list by index and squeezes them into the triggering event's timespan.
@@ -1544,32 +1507,33 @@ fun String.squeeze(lookup: Map<String, Any>): SprudelPattern =
  * @tags squeeze, inhabit, pickSqueeze, select, index, lookup
  */
 @SprudelDsl
-fun squeeze(vararg args: PatternLike): PatternMapperFn =
-    _squeeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun squeeze(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.squeeze(*args, callInfo = callInfo) }
 
 /** Returns a [PatternMapperFn] that selects from a [List] lookup by index and squeezes; clamped. */
 @SprudelDsl
-fun squeeze(lookup: List<Any>): PatternMapperFn =
-    _squeeze(listOf(lookup).asSprudelDslArgs())
+fun squeeze(lookup: List<Any>): PatternMapperFn = { p -> p.squeeze(lookup) }
 
 /** Returns a [PatternMapperFn] that selects from a [Map] lookup by string key and squeezes. */
 @SprudelDsl
-fun squeeze(lookup: Map<String, Any>): PatternMapperFn =
-    _squeeze(listOf(lookup).asSprudelDslArgs())
+fun squeeze(lookup: Map<String, Any>): PatternMapperFn = { p -> p.squeeze(lookup) }
 
 /** Chains a squeeze onto this [PatternMapperFn]; clamped index, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.squeeze(vararg args: PatternLike): PatternMapperFn =
-    this._squeeze(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.squeeze(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.squeeze(*args, callInfo = callInfo) }
 
 /** Chains a squeeze from a [List] lookup onto this [PatternMapperFn]; clamped index, squeeze semantics. */
 @SprudelDsl
-fun PatternMapperFn.squeeze(lookup: List<Any>): PatternMapperFn = this._squeeze(listOf(lookup).asSprudelDslArgs())
+fun PatternMapperFn.squeeze(lookup: List<Any>): PatternMapperFn =
+    this.chain { p -> p.squeeze(lookup) }
 
 /** Chains a squeeze from a [Map] lookup onto this [PatternMapperFn]; string keys, squeeze semantics. */
 @SprudelDsl
 fun PatternMapperFn.squeeze(lookup: Map<String, Any>): PatternMapperFn =
-    this._squeeze(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.squeeze(lookup) }
 
 // -- pickRestart() ----------------------------------------------------------------------------------------------------
 
@@ -1619,19 +1583,15 @@ private fun dispatchPickRestart(
     }
 }
 
-internal val _pickRestart by dslPatternMapper { args, callInfo -> { p -> p._pickRestart(args, callInfo) } }
-
-internal val SprudelPattern._pickRestart by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
+private fun applyPickRestartExtension(
+    pattern: SprudelPattern,
+    args: List<SprudelDslArg<Any?>>,
+    baseLocation: SourceLocation?
+): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-    dispatchPickRestart(lookup, p, modulo = false, callInfo?.receiverLocation)
-}
-
-internal val String._pickRestart by dslStringExtension { p, args, callInfo -> p._pickRestart(args, callInfo) }
-
-internal val PatternMapperFn._pickRestart by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickRestart(args, callInfo))
+    return dispatchPickRestart(lookup, pattern, modulo = false, baseLocation)
 }
 
 /**
@@ -1656,8 +1616,9 @@ internal val PatternMapperFn._pickRestart by dslPatternMapperExtension { m, args
  * @tags pickRestart, pick, restart, trigger, select, index
  */
 @SprudelDsl
-fun SprudelPattern.pickRestart(vararg args: PatternLike): SprudelPattern =
-    this._pickRestart(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickRestart(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickRestartExtension(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /**
  * Like [pick] but restarts the chosen pattern — [List] lookup using this pattern's event values.
@@ -1671,7 +1632,7 @@ fun SprudelPattern.pickRestart(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickRestart(lookup: List<PatternLike>): SprudelPattern =
-    this._pickRestart(listOf(lookup).asSprudelDslArgs())
+    applyPickRestartExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pick] but restarts the chosen pattern — [Map] lookup using this pattern's event values as keys.
@@ -1685,7 +1646,7 @@ fun SprudelPattern.pickRestart(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickRestart(lookup: Map<String, Any>): SprudelPattern =
-    this._pickRestart(listOf(lookup).asSprudelDslArgs())
+    applyPickRestartExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pick] but restarts the chosen pattern — this string parsed as a mini-notation index pattern.
@@ -1701,8 +1662,9 @@ fun SprudelPattern.pickRestart(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickRestart, pick, restart, trigger, select, index
  */
 @SprudelDsl
-fun String.pickRestart(vararg args: PatternLike): SprudelPattern =
-    this._pickRestart(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickRestart(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickRestart(*args, callInfo = callInfo)
 
 /**
  * Like [pick] but restarts the chosen pattern — [List] lookup, this string as index pattern.
@@ -1716,7 +1678,7 @@ fun String.pickRestart(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun String.pickRestart(lookup: List<PatternLike>): SprudelPattern =
-    this._pickRestart(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().pickRestart(lookup)
 
 /**
  * Like [pick] but restarts the chosen pattern — [Map] lookup, this string as key pattern.
@@ -1730,7 +1692,7 @@ fun String.pickRestart(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun String.pickRestart(lookup: Map<String, Any>): SprudelPattern =
-    this._pickRestart(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().pickRestart(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects from a lookup and restarts the chosen pattern on each trigger.
@@ -1748,7 +1710,9 @@ fun String.pickRestart(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickRestart, pick, restart, trigger, select, index
  */
 @SprudelDsl
-fun pickRestart(vararg args: PatternLike): PatternMapperFn = _pickRestart(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickRestart(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickRestart(*args, callInfo = callInfo) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [List] lookup and restarts the chosen pattern.
@@ -1761,7 +1725,7 @@ fun pickRestart(vararg args: PatternLike): PatternMapperFn = _pickRestart(args.t
  * ```
  */
 @SprudelDsl
-fun pickRestart(lookup: List<PatternLike>): PatternMapperFn = _pickRestart(listOf(lookup).asSprudelDslArgs())
+fun pickRestart(lookup: List<PatternLike>): PatternMapperFn = { p -> p.pickRestart(lookup) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [Map] lookup and restarts the chosen pattern.
@@ -1774,44 +1738,41 @@ fun pickRestart(lookup: List<PatternLike>): PatternMapperFn = _pickRestart(listO
  * ```
  */
 @SprudelDsl
-fun pickRestart(lookup: Map<String, Any>): PatternMapperFn = _pickRestart(listOf(lookup).asSprudelDslArgs())
+fun pickRestart(lookup: Map<String, Any>): PatternMapperFn = { p -> p.pickRestart(lookup) }
 
 /**
  * Chains a pickRestart onto this [PatternMapperFn]; clamped indices, restarts on trigger.
  */
 @SprudelDsl
-fun PatternMapperFn.pickRestart(vararg args: PatternLike): PatternMapperFn =
-    this._pickRestart(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickRestart(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickRestart(*args, callInfo = callInfo) }
 
 /**
  * Chains a pickRestart from a [List] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
 fun PatternMapperFn.pickRestart(lookup: List<PatternLike>): PatternMapperFn =
-    this._pickRestart(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.pickRestart(lookup) }
 
 /**
  * Chains a pickRestart from a [Map] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
 fun PatternMapperFn.pickRestart(lookup: Map<String, Any>): PatternMapperFn =
-    this._pickRestart(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.pickRestart(lookup) }
 
 // -- pickmodRestart() -------------------------------------------------------------------------------------------------
 
-internal val _pickmodRestart by dslPatternMapper { args, callInfo -> { p -> p._pickmodRestart(args, callInfo) } }
-
-internal val SprudelPattern._pickmodRestart by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
+private fun applyPickmodRestartExtension(
+    pattern: SprudelPattern,
+    args: List<SprudelDslArg<Any?>>,
+    baseLocation: SourceLocation?
+): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-    dispatchPickRestart(lookup, p, modulo = true, callInfo?.receiverLocation)
-}
-
-internal val String._pickmodRestart by dslStringExtension { p, args, callInfo -> p._pickmodRestart(args, callInfo) }
-
-internal val PatternMapperFn._pickmodRestart by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickmodRestart(args, callInfo))
+    return dispatchPickRestart(lookup, pattern, modulo = true, baseLocation)
 }
 
 /**
@@ -1835,8 +1796,9 @@ internal val PatternMapperFn._pickmodRestart by dslPatternMapperExtension { m, a
  * @tags pickmodRestart, pickRestart, modulo, restart, trigger, index
  */
 @SprudelDsl
-fun SprudelPattern.pickmodRestart(vararg args: PatternLike): SprudelPattern =
-    this._pickmodRestart(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickmodRestart(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickmodRestartExtension(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /**
  * Like [pickRestart] but wraps indices with modulo — [List] lookup using this pattern's event values.
@@ -1850,7 +1812,7 @@ fun SprudelPattern.pickmodRestart(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickmodRestart(lookup: List<PatternLike>): SprudelPattern =
-    this._pickmodRestart(listOf(lookup).asSprudelDslArgs())
+    applyPickmodRestartExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pickRestart] but wraps indices with modulo — [Map] lookup using this pattern's event values as keys.
@@ -1864,7 +1826,7 @@ fun SprudelPattern.pickmodRestart(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickmodRestart(lookup: Map<String, Any>): SprudelPattern =
-    this._pickmodRestart(listOf(lookup).asSprudelDslArgs())
+    applyPickmodRestartExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pickRestart] but wraps indices with modulo — this string parsed as a mini-notation index pattern.
@@ -1880,8 +1842,9 @@ fun SprudelPattern.pickmodRestart(lookup: Map<String, Any>): SprudelPattern =
  * @tags pickmodRestart, pickRestart, modulo, restart, trigger, index
  */
 @SprudelDsl
-fun String.pickmodRestart(vararg args: PatternLike): SprudelPattern =
-    this._pickmodRestart(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickmodRestart(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickmodRestart(*args, callInfo = callInfo)
 
 /**
  * Like [pickRestart] but wraps indices with modulo — [List] lookup, this string as index pattern.
@@ -1895,7 +1858,7 @@ fun String.pickmodRestart(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun String.pickmodRestart(lookup: List<PatternLike>): SprudelPattern =
-    this._pickmodRestart(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().pickmodRestart(lookup)
 
 /**
  * Like [pickRestart] but wraps indices with modulo — [Map] lookup, this string as key pattern.
@@ -1909,7 +1872,7 @@ fun String.pickmodRestart(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun String.pickmodRestart(lookup: Map<String, PatternLike>): SprudelPattern =
-    this._pickmodRestart(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().pickmodRestart(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects from a lookup with modulo indices and restarts the chosen pattern.
@@ -1927,8 +1890,9 @@ fun String.pickmodRestart(lookup: Map<String, PatternLike>): SprudelPattern =
  * @tags pickmodRestart, pickRestart, modulo, restart, trigger, index
  */
 @SprudelDsl
-fun pickmodRestart(vararg args: PatternLike): PatternMapperFn =
-    _pickmodRestart(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickmodRestart(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickmodRestart(*args, callInfo = callInfo) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [List] with modulo indices and restarts.
@@ -1941,8 +1905,7 @@ fun pickmodRestart(vararg args: PatternLike): PatternMapperFn =
  * ```
  */
 @SprudelDsl
-fun pickmodRestart(lookup: List<PatternLike>): PatternMapperFn =
-    _pickmodRestart(listOf(lookup).asSprudelDslArgs())
+fun pickmodRestart(lookup: List<PatternLike>): PatternMapperFn = { p -> p.pickmodRestart(lookup) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [Map] lookup and restarts the chosen pattern.
@@ -1955,29 +1918,29 @@ fun pickmodRestart(lookup: List<PatternLike>): PatternMapperFn =
  * ```
  */
 @SprudelDsl
-fun pickmodRestart(lookup: Map<String, PatternLike>): PatternMapperFn =
-    _pickmodRestart(listOf(lookup).asSprudelDslArgs())
+fun pickmodRestart(lookup: Map<String, PatternLike>): PatternMapperFn = { p -> p.pickmodRestart(lookup) }
 
 /**
  * Chains a pickmodRestart onto this [PatternMapperFn]; modulo indices, restarts on trigger.
  */
 @SprudelDsl
-fun PatternMapperFn.pickmodRestart(vararg args: PatternLike): PatternMapperFn =
-    this._pickmodRestart(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickmodRestart(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickmodRestart(*args, callInfo = callInfo) }
 
 /**
  * Chains a pickmodRestart from a [List] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
 fun PatternMapperFn.pickmodRestart(lookup: List<PatternLike>): PatternMapperFn =
-    this._pickmodRestart(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.pickmodRestart(lookup) }
 
 /**
  * Chains a pickmodRestart from a [Map] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
 fun PatternMapperFn.pickmodRestart(lookup: Map<String, PatternLike>): PatternMapperFn =
-    this._pickmodRestart(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.pickmodRestart(lookup) }
 
 // -- pickReset() ------------------------------------------------------------------------------------------------------
 
@@ -2027,19 +1990,15 @@ private fun dispatchPickReset(
     }
 }
 
-internal val _pickReset by dslPatternMapper { args, callInfo -> { p -> p._pickReset(args, callInfo) } }
-
-internal val SprudelPattern._pickReset by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
+private fun applyPickResetExtension(
+    pattern: SprudelPattern,
+    args: List<SprudelDslArg<Any?>>,
+    baseLocation: SourceLocation?
+): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-    dispatchPickReset(lookup, p, modulo = false, callInfo?.receiverLocation)
-}
-
-internal val String._pickReset by dslStringExtension { p, args, callInfo -> p._pickReset(args, callInfo) }
-
-internal val PatternMapperFn._pickReset by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickReset(args, callInfo))
+    return dispatchPickReset(lookup, pattern, modulo = false, baseLocation)
 }
 
 /**
@@ -2063,8 +2022,9 @@ internal val PatternMapperFn._pickReset by dslPatternMapperExtension { m, args, 
  * @tags pickReset, pick, reset, trigger, select, index
  */
 @SprudelDsl
-fun SprudelPattern.pickReset(vararg args: PatternLike): SprudelPattern =
-    this._pickReset(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickReset(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickResetExtension(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /**
  * Like [pick] but resets the chosen pattern — [List] lookup using this pattern's event values.
@@ -2078,7 +2038,7 @@ fun SprudelPattern.pickReset(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickReset(lookup: List<PatternLike>): SprudelPattern =
-    this._pickReset(listOf(lookup).asSprudelDslArgs())
+    applyPickResetExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pick] but resets the chosen pattern — [Map] lookup using this pattern's event values as keys.
@@ -2092,7 +2052,7 @@ fun SprudelPattern.pickReset(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickReset(lookup: Map<String, PatternLike>): SprudelPattern =
-    this._pickReset(listOf(lookup).asSprudelDslArgs())
+    applyPickResetExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pick] but resets the chosen pattern — this string parsed as a mini-notation index pattern.
@@ -2108,8 +2068,9 @@ fun SprudelPattern.pickReset(lookup: Map<String, PatternLike>): SprudelPattern =
  * @tags pickReset, pick, reset, trigger, select, index
  */
 @SprudelDsl
-fun String.pickReset(vararg args: PatternLike): SprudelPattern =
-    this._pickReset(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickReset(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickReset(*args, callInfo = callInfo)
 
 /**
  * Like [pick] but resets the chosen pattern — [List] lookup, this string as index pattern.
@@ -2123,7 +2084,7 @@ fun String.pickReset(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun String.pickReset(lookup: List<PatternLike>): SprudelPattern =
-    this._pickReset(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().pickReset(lookup)
 
 /**
  * Like [pick] but resets the chosen pattern — [Map] lookup, this string as key pattern.
@@ -2137,7 +2098,7 @@ fun String.pickReset(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun String.pickReset(lookup: Map<String, PatternLike>): SprudelPattern =
-    this._pickReset(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().pickReset(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects from a lookup and resets the chosen pattern's phase on trigger.
@@ -2155,8 +2116,9 @@ fun String.pickReset(lookup: Map<String, PatternLike>): SprudelPattern =
  * @tags pickReset, pick, reset, trigger, select, index
  */
 @SprudelDsl
-fun pickReset(vararg args: PatternLike): PatternMapperFn =
-    _pickReset(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickReset(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickReset(*args, callInfo = callInfo) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [List] lookup and resets the chosen pattern.
@@ -2169,8 +2131,7 @@ fun pickReset(vararg args: PatternLike): PatternMapperFn =
  * ```
  */
 @SprudelDsl
-fun pickReset(lookup: List<PatternLike>): PatternMapperFn =
-    _pickReset(listOf(lookup).asSprudelDslArgs())
+fun pickReset(lookup: List<PatternLike>): PatternMapperFn = { p -> p.pickReset(lookup) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [Map] lookup and resets the chosen pattern.
@@ -2183,45 +2144,41 @@ fun pickReset(lookup: List<PatternLike>): PatternMapperFn =
  * ```
  */
 @SprudelDsl
-fun pickReset(lookup: Map<String, PatternLike>): PatternMapperFn =
-    _pickReset(listOf(lookup).asSprudelDslArgs())
+fun pickReset(lookup: Map<String, PatternLike>): PatternMapperFn = { p -> p.pickReset(lookup) }
 
 /**
  * Chains a pickReset onto this [PatternMapperFn]; clamped indices, resets phase on trigger.
  */
 @SprudelDsl
-fun PatternMapperFn.pickReset(vararg args: PatternLike): PatternMapperFn =
-    this._pickReset(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickReset(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickReset(*args, callInfo = callInfo) }
 
 /**
  * Chains a pickReset from a [List] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
 fun PatternMapperFn.pickReset(lookup: List<PatternLike>): PatternMapperFn =
-    this._pickReset(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.pickReset(lookup) }
 
 /**
  * Chains a pickReset from a [Map] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
 fun PatternMapperFn.pickReset(lookup: Map<String, PatternLike>): PatternMapperFn =
-    this._pickReset(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.pickReset(lookup) }
 
 // -- pickmodReset() ---------------------------------------------------------------------------------------------------
 
-internal val _pickmodReset by dslPatternMapper { args, callInfo -> { p -> p._pickmodReset(args, callInfo) } }
-
-internal val SprudelPattern._pickmodReset by dslPatternExtension { p, args, callInfo ->
-    if (args.isEmpty()) return@dslPatternExtension p
+private fun applyPickmodResetExtension(
+    pattern: SprudelPattern,
+    args: List<SprudelDslArg<Any?>>,
+    baseLocation: SourceLocation?
+): SprudelPattern {
+    if (args.isEmpty()) return pattern
     val first = args[0].value
     val lookup = if (first is List<*> || first is Map<*, *>) first else args.map { it.value }
-    dispatchPickReset(lookup, p, modulo = true, callInfo?.receiverLocation)
-}
-
-internal val String._pickmodReset by dslStringExtension { p, args, callInfo -> p._pickmodReset(args, callInfo) }
-
-internal val PatternMapperFn._pickmodReset by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickmodReset(args, callInfo))
+    return dispatchPickReset(lookup, pattern, modulo = true, baseLocation)
 }
 
 /**
@@ -2245,8 +2202,9 @@ internal val PatternMapperFn._pickmodReset by dslPatternMapperExtension { m, arg
  * @tags pickmodReset, pickReset, modulo, reset, trigger, index
  */
 @SprudelDsl
-fun SprudelPattern.pickmodReset(vararg args: PatternLike): SprudelPattern =
-    this._pickmodReset(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickmodReset(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickmodResetExtension(this, args.toList().asSprudelDslArgs(callInfo), callInfo?.receiverLocation)
 
 /**
  * Like [pickReset] but wraps indices with modulo — [List] lookup using this pattern's event values.
@@ -2260,7 +2218,7 @@ fun SprudelPattern.pickmodReset(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickmodReset(lookup: List<PatternLike>): SprudelPattern =
-    this._pickmodReset(listOf(lookup).asSprudelDslArgs())
+    applyPickmodResetExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pickReset] but wraps indices with modulo — [Map] lookup using this pattern's event values as keys.
@@ -2274,7 +2232,7 @@ fun SprudelPattern.pickmodReset(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun SprudelPattern.pickmodReset(lookup: Map<String, PatternLike>): SprudelPattern =
-    this._pickmodReset(listOf(lookup).asSprudelDslArgs())
+    applyPickmodResetExtension(this, listOf(lookup).asSprudelDslArgs(), null)
 
 /**
  * Like [pickReset] but wraps indices with modulo — this string parsed as a mini-notation index pattern.
@@ -2290,8 +2248,9 @@ fun SprudelPattern.pickmodReset(lookup: Map<String, PatternLike>): SprudelPatter
  * @tags pickmodReset, pickReset, modulo, reset, trigger, index
  */
 @SprudelDsl
-fun String.pickmodReset(vararg args: PatternLike): SprudelPattern =
-    this._pickmodReset(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickmodReset(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickmodReset(*args, callInfo = callInfo)
 
 /**
  * Like [pickReset] but wraps indices with modulo — [List] lookup, this string as index pattern.
@@ -2305,7 +2264,7 @@ fun String.pickmodReset(vararg args: PatternLike): SprudelPattern =
  */
 @SprudelDsl
 fun String.pickmodReset(lookup: List<PatternLike>): SprudelPattern =
-    this._pickmodReset(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().pickmodReset(lookup)
 
 /**
  * Like [pickReset] but wraps indices with modulo — [Map] lookup, this string as key pattern.
@@ -2319,7 +2278,7 @@ fun String.pickmodReset(lookup: List<PatternLike>): SprudelPattern =
  */
 @SprudelDsl
 fun String.pickmodReset(lookup: Map<String, PatternLike>): SprudelPattern =
-    this._pickmodReset(listOf(lookup).asSprudelDslArgs())
+    this.toVoiceValuePattern().pickmodReset(lookup)
 
 /**
  * Returns a [PatternMapperFn] that selects from a lookup with modulo indices and resets the chosen pattern.
@@ -2337,8 +2296,9 @@ fun String.pickmodReset(lookup: Map<String, PatternLike>): SprudelPattern =
  * @tags pickmodReset, pickReset, modulo, reset, trigger, index
  */
 @SprudelDsl
-fun pickmodReset(vararg args: PatternLike): PatternMapperFn =
-    _pickmodReset(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickmodReset(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickmodReset(*args, callInfo = callInfo) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [List] with modulo indices and resets phase.
@@ -2351,8 +2311,7 @@ fun pickmodReset(vararg args: PatternLike): PatternMapperFn =
  * ```
  */
 @SprudelDsl
-fun pickmodReset(lookup: List<PatternLike>): PatternMapperFn =
-    _pickmodReset(listOf(lookup).asSprudelDslArgs())
+fun pickmodReset(lookup: List<PatternLike>): PatternMapperFn = { p -> p.pickmodReset(lookup) }
 
 /**
  * Returns a [PatternMapperFn] that selects from a [Map] lookup and resets the chosen pattern.
@@ -2365,29 +2324,29 @@ fun pickmodReset(lookup: List<PatternLike>): PatternMapperFn =
  * ```
  */
 @SprudelDsl
-fun pickmodReset(lookup: Map<String, PatternLike>): PatternMapperFn =
-    _pickmodReset(listOf(lookup).asSprudelDslArgs())
+fun pickmodReset(lookup: Map<String, PatternLike>): PatternMapperFn = { p -> p.pickmodReset(lookup) }
 
 /**
  * Chains a pickmodReset onto this [PatternMapperFn]; modulo indices, resets phase on trigger.
  */
 @SprudelDsl
-fun PatternMapperFn.pickmodReset(vararg args: PatternLike): PatternMapperFn =
-    this._pickmodReset(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickmodReset(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickmodReset(*args, callInfo = callInfo) }
 
 /**
  * Chains a pickmodReset from a [List] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
 fun PatternMapperFn.pickmodReset(lookup: List<PatternLike>): PatternMapperFn =
-    this._pickmodReset(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.pickmodReset(lookup) }
 
 /**
  * Chains a pickmodReset from a [Map] lookup onto this [PatternMapperFn].
  */
 @SprudelDsl
 fun PatternMapperFn.pickmodReset(lookup: Map<String, PatternLike>): PatternMapperFn =
-    this._pickmodReset(listOf(lookup).asSprudelDslArgs())
+    this.chain { p -> p.pickmodReset(lookup) }
 
 // -- pickF() ----------------------------------------------------------------------------------------------------------
 
@@ -2399,7 +2358,7 @@ fun PatternMapperFn.pickmodReset(lookup: Map<String, PatternLike>): PatternMappe
  *
  * Example: `s("bd [rim hh]").pickF("<0 1 2>", [rev, jux(rev), fast(2)])`
  */
-fun applyPickF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPickF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val lookupArg = args.getOrNull(0) ?: return pattern
     val funcsArg = args.getOrNull(1) ?: return pattern
 
@@ -2413,16 +2372,6 @@ fun applyPickF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprude
         val selectedFunction = mappers.getOrNull(index) ?: { it }
         selectedFunction(pattern)
     }
-}
-
-internal val _pickF by dslPatternMapper { args, callInfo -> { p -> p._pickF(args, callInfo) } }
-
-internal val SprudelPattern._pickF by dslPatternExtension { p, args, _ -> applyPickF(p, args) }
-
-internal val String._pickF by dslStringExtension { p, args, callInfo -> p._pickF(args, callInfo) }
-
-internal val PatternMapperFn._pickF by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickF(args, callInfo))
 }
 
 /**
@@ -2446,7 +2395,9 @@ internal val PatternMapperFn._pickF by dslPatternMapperExtension { m, args, call
  * @tags pickF, pick, apply, transform, function, index
  */
 @SprudelDsl
-fun SprudelPattern.pickF(vararg args: PatternLike): SprudelPattern = this._pickF(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickF(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickF(this, args.toList().asSprudelDslArgs(callInfo))
 
 /**
  * Applies a function from a list to this string pattern, selected by an index pattern (clamped).
@@ -2462,7 +2413,9 @@ fun SprudelPattern.pickF(vararg args: PatternLike): SprudelPattern = this._pickF
  * @tags pickF, pick, apply, transform, function, index
  */
 @SprudelDsl
-fun String.pickF(vararg args: PatternLike): SprudelPattern = this._pickF(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickF(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickF(*args, callInfo = callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a function from a list to the source, selected by index (clamped).
@@ -2480,7 +2433,9 @@ fun String.pickF(vararg args: PatternLike): SprudelPattern = this._pickF(args.to
  * @tags pickF, pick, apply, transform, function, index
  */
 @SprudelDsl
-fun pickF(vararg args: PatternLike): PatternMapperFn = _pickF(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickF(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickF(*args, callInfo = callInfo) }
 
 /**
  * Chains a pickF onto this [PatternMapperFn]; applies a function selected by clamped index.
@@ -2489,7 +2444,9 @@ fun pickF(vararg args: PatternLike): PatternMapperFn = _pickF(args.toList().asSp
  * @return A new [PatternMapperFn] composing this mapper with the function-select operation.
  */
 @SprudelDsl
-fun PatternMapperFn.pickF(vararg args: PatternLike): PatternMapperFn = this._pickF(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickF(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickF(*args, callInfo = callInfo) }
 
 // -- pickmodF() -------------------------------------------------------------------------------------------------------
 
@@ -2499,7 +2456,7 @@ fun PatternMapperFn.pickF(vararg args: PatternLike): PatternMapperFn = this._pic
  *
  * JavaScript: `pat.apply(pickmod(lookup, funcs))`
  */
-fun applyPickmodF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyPickmodF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val lookupArg = args.getOrNull(0) ?: return pattern
     val funcsArg = args.getOrNull(1) ?: return pattern
 
@@ -2516,16 +2473,6 @@ fun applyPickmodF(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): Spr
         val selectedFunction = mappers.getOrNull(index) ?: { it }
         selectedFunction(pattern)
     }
-}
-
-internal val _pickmodF by dslPatternMapper { args, callInfo -> { p -> p._pickmodF(args, callInfo) } }
-
-internal val SprudelPattern._pickmodF by dslPatternExtension { p, args, _ -> applyPickmodF(p, args) }
-
-internal val String._pickmodF by dslStringExtension { p, args, callInfo -> p._pickmodF(args, callInfo) }
-
-internal val PatternMapperFn._pickmodF by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_pickmodF(args, callInfo))
 }
 
 /**
@@ -2548,7 +2495,9 @@ internal val PatternMapperFn._pickmodF by dslPatternMapperExtension { m, args, c
  * @tags pickmodF, pickF, modulo, apply, transform, function, index
  */
 @SprudelDsl
-fun SprudelPattern.pickmodF(vararg args: PatternLike): SprudelPattern = this._pickmodF(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.pickmodF(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyPickmodF(this, args.toList().asSprudelDslArgs(callInfo))
 
 /**
  * Like [pickF] but wraps indices with modulo — this string pattern is the source.
@@ -2564,7 +2513,9 @@ fun SprudelPattern.pickmodF(vararg args: PatternLike): SprudelPattern = this._pi
  * @tags pickmodF, pickF, modulo, apply, transform, function, index
  */
 @SprudelDsl
-fun String.pickmodF(vararg args: PatternLike): SprudelPattern = this._pickmodF(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun String.pickmodF(vararg args: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).pickmodF(*args, callInfo = callInfo)
 
 /**
  * Returns a [PatternMapperFn] that applies a function from a list with modulo-wrapped index.
@@ -2582,7 +2533,9 @@ fun String.pickmodF(vararg args: PatternLike): SprudelPattern = this._pickmodF(a
  * @tags pickmodF, pickF, modulo, apply, transform, function, index
  */
 @SprudelDsl
-fun pickmodF(vararg args: PatternLike): PatternMapperFn = _pickmodF(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun pickmodF(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.pickmodF(*args, callInfo = callInfo) }
 
 /**
  * Chains a pickmodF onto this [PatternMapperFn]; applies a function selected by modulo-wrapped index.
@@ -2591,4 +2544,6 @@ fun pickmodF(vararg args: PatternLike): PatternMapperFn = _pickmodF(args.toList(
  * @return A new [PatternMapperFn] composing this mapper with the modulo function-select operation.
  */
 @SprudelDsl
-fun PatternMapperFn.pickmodF(vararg args: PatternLike): PatternMapperFn = this._pickmodF(args.toList().asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.pickmodF(vararg args: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.pickmodF(*args, callInfo = callInfo) }

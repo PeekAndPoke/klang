@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.voices.strip.filter.DistortionRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.filter.renderInPlace
@@ -55,7 +56,7 @@ class DistortionSpec : StringSpec({
 
     "DistortionRenderer with amount=0 passes signal through unchanged" {
         val renderer = DistortionRenderer(amount = 0.0)
-        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f)
+        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9)
         val original = buffer.copyOf()
         renderer.renderInPlace(buffer)
         for (i in buffer.indices) {
@@ -65,7 +66,7 @@ class DistortionSpec : StringSpec({
 
     "DistortionRenderer soft shape produces bounded output" {
         val renderer = DistortionRenderer(amount = 1.0, shape = "soft")
-        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f)
+        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0)
         renderer.renderInPlace(buffer)
         for (sample in buffer) {
             abs(sample.toDouble()) shouldBeLessThan 1.01
@@ -74,7 +75,7 @@ class DistortionSpec : StringSpec({
 
     "DistortionRenderer hard shape clips to [-1, 1]" {
         val renderer = DistortionRenderer(amount = 1.0, shape = "hard")
-        val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f)
+        val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0)
         renderer.renderInPlace(buffer)
         for (sample in buffer) {
             abs(sample.toDouble()) shouldBeLessThan 1.01
@@ -85,7 +86,7 @@ class DistortionSpec : StringSpec({
         val shapes = listOf("soft", "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp")
         for (shape in shapes) {
             val renderer = DistortionRenderer(amount = 0.8, shape = shape)
-            val buffer = floatArrayOf(0.5f, -0.3f, 0.8f, -0.9f, 1.0f, -1.0f, 0.0f, 0.1f)
+            val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0, 0.0, 0.1)
             renderer.renderInPlace(buffer)
             for (sample in buffer) {
                 abs(sample.toDouble()) shouldBeLessThan 3.0
@@ -96,8 +97,8 @@ class DistortionSpec : StringSpec({
     "DistortionRenderer unknown shape falls back to soft" {
         val rendererUnknown = DistortionRenderer(amount = 0.5, shape = "nonexistent")
         val rendererSoft = DistortionRenderer(amount = 0.5, shape = "soft")
-        val buf1 = floatArrayOf(0.5f, -0.3f, 0.8f)
-        val buf2 = floatArrayOf(0.5f, -0.3f, 0.8f)
+        val buf1 = doubleArrayOf(0.5, -0.3, 0.8)
+        val buf2 = doubleArrayOf(0.5, -0.3, 0.8)
         rendererUnknown.renderInPlace(buf1)
         rendererSoft.renderInPlace(buf2)
         for (i in buf1.indices) {
@@ -107,7 +108,7 @@ class DistortionSpec : StringSpec({
 
     "DistortionRenderer diode shape DC blocker removes offset over time" {
         val renderer = DistortionRenderer(amount = 0.8, shape = "diode")
-        val buffer = FloatArray(4096) { 0.5f }
+        val buffer = AudioBuffer(4096) { 0.5 }
         renderer.renderInPlace(buffer)
         val lastSample = buffer[buffer.size - 1]
         abs(lastSample.toDouble()) shouldBeLessThan 0.1
@@ -115,7 +116,7 @@ class DistortionSpec : StringSpec({
 
     "DistortionRenderer rectify shape DC blocker removes offset over time" {
         val renderer = DistortionRenderer(amount = 0.5, shape = "rectify")
-        val buffer = FloatArray(4096) { i -> if (i % 2 == 0) 0.3f else -0.3f }
+        val buffer = AudioBuffer(4096) { i -> if (i % 2 == 0) 0.3 else -0.3 }
         renderer.renderInPlace(buffer)
         val avg = buffer.takeLast(100).map { it.toDouble() }.average()
         abs(avg) shouldBeLessThan 0.15

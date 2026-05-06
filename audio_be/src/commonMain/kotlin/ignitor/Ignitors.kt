@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
@@ -25,11 +26,16 @@ object Ignitors {
     fun sine(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        var phase = 0.0
-        var drift: AnalogDrift? = null
+    ): Ignitor = SineIgnitor(freq, analog)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class SineIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -38,31 +44,29 @@ object Ignitors {
             val end = ctx.offset + ctx.length
 
             if (d.active) {
-                // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase).toFloat()
+                        buffer[i] = sin(phase)
                         phase += phaseInc * d.nextMultiplier()
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase).toFloat()
+                        buffer[i] = sin(phase)
                         phase += phaseInc * phaseMod[i] * d.nextMultiplier()
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 }
             } else {
-                // Clean digital path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase).toFloat()
+                        buffer[i] = sin(phase)
                         phase += phaseInc
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = sin(phase).toFloat()
+                        buffer[i] = sin(phase)
                         phase += phaseInc * phaseMod[i]
                         phase = wrapPhase(phase, TWO_PI)
                     }
@@ -75,11 +79,16 @@ object Ignitors {
     fun sawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        var phase = 0.0 // Normalized 0..1
-        var drift: AnalogDrift? = null
+    ): Ignitor = SawtoothIgnitor(freq, analog)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class SawtoothIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -88,13 +97,12 @@ object Ignitors {
             val end = ctx.offset + ctx.length
 
             if (d.active) {
-                // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
                         val dt = inc * d.nextMultiplier()
                         var out = 2.0 * phase - 1.0
                         out -= polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -103,18 +111,17 @@ object Ignitors {
                         val dt = inc * phaseMod[i] * d.nextMultiplier()
                         var out = 2.0 * phase - 1.0
                         if (dt > BLEP_MIN_DT) out -= polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
                 }
             } else {
-                // Clean digital path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
                         var out = 2.0 * phase - 1.0
                         out -= polyBlep(phase, inc)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -123,7 +130,7 @@ object Ignitors {
                         val dt = inc * phaseMod[i]
                         var out = 2.0 * phase - 1.0
                         if (dt > BLEP_MIN_DT) out -= polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -136,11 +143,16 @@ object Ignitors {
     fun ramp(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        var phase = 0.0 // Normalized 0..1
-        var drift: AnalogDrift? = null
+    ): Ignitor = RampIgnitor(freq, analog)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class RampIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -149,13 +161,12 @@ object Ignitors {
             val end = ctx.offset + ctx.length
 
             if (d.active) {
-                // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
                         val dt = inc * d.nextMultiplier()
                         var out = 1.0 - 2.0 * phase
                         out += polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -164,18 +175,17 @@ object Ignitors {
                         val dt = inc * phaseMod[i] * d.nextMultiplier()
                         var out = 1.0 - 2.0 * phase
                         if (dt > BLEP_MIN_DT) out += polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
                 }
             } else {
-                // Clean digital path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
                         var out = 1.0 - 2.0 * phase
                         out += polyBlep(phase, inc)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -184,7 +194,7 @@ object Ignitors {
                         val dt = inc * phaseMod[i]
                         var out = 1.0 - 2.0 * phase
                         if (dt > BLEP_MIN_DT) out += polyBlep(phase, dt)
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -197,11 +207,16 @@ object Ignitors {
     fun square(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        var phase = 0.0 // Normalized 0..1
-        var drift: AnalogDrift? = null
+    ): Ignitor = SquareIgnitor(freq, analog)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class SquareIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -210,7 +225,6 @@ object Ignitors {
             val end = ctx.offset + ctx.length
 
             if (d.active) {
-                // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
                         val dt = inc * d.nextMultiplier()
@@ -218,7 +232,7 @@ object Ignitors {
                         var out = if (phase < 0.5) 1.0 else -1.0
                         out += polyBlep(phase, dt)                  // transition at 0
                         out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)   // transition at 0.5
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -230,20 +244,18 @@ object Ignitors {
                             out += polyBlep(phase, dt)
                             out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)
                         }
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
                 }
             } else {
-                // Clean digital path (unchanged)
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        // PolyBLEP square: two sawtooths subtracted, shifted by half period
                         var out = if (phase < 0.5) 1.0 else -1.0
-                        out += polyBlep(phase, inc)                  // transition at 0
-                        out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), inc)   // transition at 0.5
-                        buffer[i] = out.toFloat()
+                        out += polyBlep(phase, inc)
+                        out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), inc)
+                        buffer[i] = out
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -255,7 +267,7 @@ object Ignitors {
                             out += polyBlep(phase, dt)
                             out -= polyBlep(smallNumFastMod(phase + 0.5, 1.0), dt)
                         }
-                        buffer[i] = out.toFloat()
+                        buffer[i] = out
                         phase += dt
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -268,11 +280,16 @@ object Ignitors {
     fun triangle(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        var phase = 0.0 // Normalized 0..1
-        var drift: AnalogDrift? = null
+    ): Ignitor = TriangleIgnitor(freq, analog)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class TriangleIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -281,37 +298,30 @@ object Ignitors {
             val end = ctx.offset + ctx.length
 
             if (d.active) {
-                // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
                         // Piecewise linear: rising from -1 to +1 in first half, falling in second half
-                        val out = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        buffer[i] = out.toFloat()
+                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
                         phase += inc * d.nextMultiplier()
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        val out = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        buffer[i] = out.toFloat()
+                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
                         phase += inc * phaseMod[i] * d.nextMultiplier()
                         phase = wrapPhase(phase, 1.0)
                     }
                 }
             } else {
-                // Clean digital path (unchanged)
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        // Piecewise linear: rising from -1 to +1 in first half, falling in second half
-                        val out = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        buffer[i] = out.toFloat()
+                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        val out = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        buffer[i] = out.toFloat()
+                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
                         phase += inc * phaseMod[i]
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -321,11 +331,13 @@ object Ignitors {
     }
 
     /** White noise generator. Flat spectrum with equal energy at all frequencies. */
-    fun whiteNoise(rng: Random): Ignitor {
-        return Ignitor { buffer, _, ctx ->
+    fun whiteNoise(rng: Random): Ignitor = WhiteNoiseIgnitor(rng)
+
+    private class WhiteNoiseIgnitor(private val rng: Random) : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
-                buffer[i] = (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                buffer[i] = (rng.nextDouble() * 2.0 - 1.0)
             }
         }
     }
@@ -334,11 +346,16 @@ object Ignitors {
     fun zawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        var phase = 0.0 // Normalized 0..1
-        var drift: AnalogDrift? = null
+    ): Ignitor = ZawtoothIgnitor(freq, analog)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class ZawtoothIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -347,31 +364,29 @@ object Ignitors {
             val end = ctx.offset + ctx.length
 
             if (d.active) {
-                // Analog drift path
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0).toFloat()
+                        buffer[i] = (2.0 * phase - 1.0)
                         phase += inc * d.nextMultiplier()
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0).toFloat()
+                        buffer[i] = (2.0 * phase - 1.0)
                         phase += inc * phaseMod[i] * d.nextMultiplier()
                         phase = wrapPhase(phase, 1.0)
                     }
                 }
             } else {
-                // Clean digital path (unchanged)
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0).toFloat()
+                        buffer[i] = (2.0 * phase - 1.0)
                         phase += inc
                         phase = wrapPhase(phase, 1.0)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = (2.0 * phase - 1.0).toFloat()
+                        buffer[i] = (2.0 * phase - 1.0)
                         phase += inc * phaseMod[i]
                         phase = wrapPhase(phase, 1.0)
                     }
@@ -384,12 +399,17 @@ object Ignitors {
     fun impulse(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        var phase = 0.0
-        var lastPhase = Double.POSITIVE_INFINITY
-        var drift: AnalogDrift? = null
+    ): Ignitor = ImpulseIgnitor(freq, analog)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class ImpulseIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var lastPhase: Double = Double.POSITIVE_INFINITY
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -398,34 +418,32 @@ object Ignitors {
             val end = ctx.offset + ctx.length
 
             if (d.active) {
-                // Analog drift path: humanized timing irregularity
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0f else 0.0f
+                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * d.nextMultiplier()
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0f else 0.0f
+                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * phaseMod[i] * d.nextMultiplier()
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 }
             } else {
-                // Clean digital path (unchanged)
                 if (phaseMod == null) {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0f else 0.0f
+                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc
                         phase = wrapPhase(phase, TWO_PI)
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < lastPhase) 1.0f else 0.0f
+                        buffer[i] = if (phase < lastPhase) 1.0 else 0.0
                         lastPhase = phase
                         phase += phaseInc * phaseMod[i]
                         phase = wrapPhase(phase, TWO_PI)
@@ -440,11 +458,17 @@ object Ignitors {
         freq: Ignitor = FreqIgnitor,
         duty: Ignitor = ParamIgnitor("duty", 0.5),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        var phase = 0.0 // Normalized 0..1
-        var drift: AnalogDrift? = null
+    ): Ignitor = PulzeIgnitor(freq, duty, analog)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class PulzeIgnitor(
+        private val freq: Ignitor,
+        private val duty: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val dr = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -458,25 +482,25 @@ object Ignitors {
                 if (dr.active) {
                     if (phaseMod == null) {
                         for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
+                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
                             val dt = inc * dr.nextMultiplier()
                             var out = if (phase < d) 1.0 else -1.0
                             out += polyBlep(phase, dt)
                             out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
-                            buffer[i] = out.toFloat()
+                            buffer[i] = out
                             phase += dt
                             phase = wrapPhase(phase, 1.0)
                         }
                     } else {
                         for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
+                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
                             val dt = inc * phaseMod[i] * dr.nextMultiplier()
                             var out = if (phase < d) 1.0 else -1.0
                             if (dt > BLEP_MIN_DT) {
                                 out += polyBlep(phase, dt)
                                 out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
                             }
-                            buffer[i] = out.toFloat()
+                            buffer[i] = out
                             phase += dt
                             phase = wrapPhase(phase, 1.0)
                         }
@@ -484,24 +508,24 @@ object Ignitors {
                 } else {
                     if (phaseMod == null) {
                         for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
+                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
                             var out = if (phase < d) 1.0 else -1.0
                             out += polyBlep(phase, inc)
                             out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), inc)
-                            buffer[i] = out.toFloat()
+                            buffer[i] = out
                             phase += inc
                             phase = wrapPhase(phase, 1.0)
                         }
                     } else {
                         for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].toDouble().coerceIn(0.01, 0.99)
+                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
                             val dt = inc * phaseMod[i]
                             var out = if (phase < d) 1.0 else -1.0
                             if (dt > BLEP_MIN_DT) {
                                 out += polyBlep(phase, dt)
                                 out -= polyBlep(smallNumFastMod(phase + (1.0 - d), 1.0), dt)
                             }
-                            buffer[i] = out.toFloat()
+                            buffer[i] = out
                             phase += dt
                             phase = wrapPhase(phase, 1.0)
                         }
@@ -512,30 +536,34 @@ object Ignitors {
     }
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
-    fun brownNoise(rng: Random): Ignitor {
-        var out = 0.0
+    fun brownNoise(rng: Random): Ignitor = BrownNoiseIgnitor(rng)
 
-        return Ignitor { buffer, _, ctx ->
+    private class BrownNoiseIgnitor(private val rng: Random) : Ignitor {
+        private var out: Double = 0.0
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 val white = rng.nextDouble() * 2.0 - 1.0
                 out = (out + 0.02 * white) / 1.02
-                buffer[i] = out.toFloat()
+                buffer[i] = out
             }
         }
     }
 
     /** Pink noise (1/f spectrum via Paul Kellet's IIR cascades). */
-    fun pinkNoise(rng: Random): Ignitor {
-        var b0 = 0.0
-        var b1 = 0.0
-        var b2 = 0.0
-        var b3 = 0.0
-        var b4 = 0.0
-        var b5 = 0.0
-        var b6 = 0.0
+    fun pinkNoise(rng: Random): Ignitor = PinkNoiseIgnitor(rng)
 
-        return Ignitor { buffer, _, ctx ->
+    private class PinkNoiseIgnitor(private val rng: Random) : Ignitor {
+        private var b0: Double = 0.0
+        private var b1: Double = 0.0
+        private var b2: Double = 0.0
+        private var b3: Double = 0.0
+        private var b4: Double = 0.0
+        private var b5: Double = 0.0
+        private var b6: Double = 0.0
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 val white = rng.nextDouble() * 2.0 - 1.0
@@ -547,23 +575,26 @@ object Ignitors {
                 b5 = -0.7616 * b5 - white * 0.0168980
                 val pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362
                 b6 = white * 0.115926
-                buffer[i] = (pink * 0.11).toFloat()
+                buffer[i] = (pink * 0.11)
             }
         }
     }
 
     /** Perlin noise: smooth organic noise using 1D Perlin noise. Output range -1..1. */
-    fun perlinNoise(rng: Random, rate: Ignitor = ParamIgnitor("rate", 1.0)): Ignitor {
-        val noise = PerlinNoise(rng)
-        var pos = rng.nextDouble() * 256.0
+    fun perlinNoise(rng: Random, rate: Ignitor = ParamIgnitor("rate", 1.0)): Ignitor =
+        PerlinNoiseIgnitor(rng, rate)
 
-        return Ignitor { buffer, _, ctx ->
+    private class PerlinNoiseIgnitor(rng: Random, private val rate: Ignitor) : Ignitor {
+        private val noise = PerlinNoise(rng)
+        private var pos: Double = rng.nextDouble() * 256.0
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             ctx.scratchBuffers.use { rateBuf ->
                 rate.generate(rateBuf, 0.0, ctx)
-                val step = rateBuf[ctx.offset].toDouble() * PERLIN_STEP
+                val step = rateBuf[ctx.offset] * PERLIN_STEP
                 val end = ctx.offset + ctx.length
                 for (i in ctx.offset until end) {
-                    buffer[i] = noise.noise(pos).toFloat()
+                    buffer[i] = noise.noise(pos)
                     pos += step
                 }
             }
@@ -571,18 +602,21 @@ object Ignitors {
     }
 
     /** Berlin noise: piecewise-linear interpolated random noise, scaled to -1..1. */
-    fun berlinNoise(rng: Random, rate: Ignitor = ParamIgnitor("rate", 1.0)): Ignitor {
-        val noise = BerlinNoise(rng)
-        var pos = rng.nextDouble() * 256.0
+    fun berlinNoise(rng: Random, rate: Ignitor = ParamIgnitor("rate", 1.0)): Ignitor =
+        BerlinNoiseIgnitor(rng, rate)
 
-        return Ignitor { buffer, _, ctx ->
+    private class BerlinNoiseIgnitor(rng: Random, private val rate: Ignitor) : Ignitor {
+        private val noise = BerlinNoise(rng)
+        private var pos: Double = rng.nextDouble() * 256.0
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             ctx.scratchBuffers.use { rateBuf ->
                 rate.generate(rateBuf, 0.0, ctx)
-                val step = rateBuf[ctx.offset].toDouble() * PERLIN_STEP
+                val step = rateBuf[ctx.offset] * PERLIN_STEP
                 val end = ctx.offset + ctx.length
                 for (i in ctx.offset until end) {
                     // BerlinNoise outputs 0..1, scale to -1..1
-                    buffer[i] = (noise.noise(pos) * 2.0 - 1.0).toFloat()
+                    buffer[i] = (noise.noise(pos) * 2.0 - 1.0)
                     pos += step
                 }
             }
@@ -590,16 +624,23 @@ object Ignitors {
     }
 
     /** Dust: sparse random impulses. [density] 0.0..1.0 controls impulse rate. [maxRateHz] caps the rate. */
-    fun dust(rng: Random, density: Ignitor = ParamIgnitor("density", 0.2), maxRateHz: Double = 200.0): Ignitor {
-        return Ignitor { buffer, _, ctx ->
+    fun dust(rng: Random, density: Ignitor = ParamIgnitor("density", 0.2), maxRateHz: Double = 200.0): Ignitor =
+        DustIgnitor(rng, density, maxRateHz)
+
+    private class DustIgnitor(
+        private val rng: Random,
+        private val density: Ignitor,
+        private val maxRateHz: Double,
+    ) : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             ctx.scratchBuffers.use { densityBuf ->
                 density.generate(densityBuf, 0.0, ctx)
-                val d = densityBuf[ctx.offset].toDouble().coerceIn(0.0, 1.0)
+                val d = densityBuf[ctx.offset].coerceIn(0.0, 1.0)
                 val rateHz = d * maxRateHz
                 val p = (rateHz / ctx.sampleRateD).coerceIn(0.0, 1.0)
                 val end = ctx.offset + ctx.length
                 for (i in ctx.offset until end) {
-                    buffer[i] = if (rng.nextDouble() < p) rng.nextDouble().toFloat() else 0.0f
+                    buffer[i] = if (rng.nextDouble() < p) rng.nextDouble() else 0.0
                 }
             }
         }
@@ -620,13 +661,24 @@ object Ignitors {
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
         rng: Random = Random
-    ): Ignitor {
-        var v = 0
-        var phases = DoubleArray(0)
-        var voiceGain = 0.0
-        var drift: AnalogDrift? = null
+    ): Ignitor = SuperSawIgnitor(freq, voices, freqSpread, analog, rng)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class SuperSawIgnitor(
+        private val freq: Ignitor,
+        private val voices: Ignitor,
+        private val freqSpread: Ignitor,
+        private val analog: Ignitor,
+        private val rng: Random,
+    ) : Ignitor {
+        private var v: Int = 0
+        private var phases: DoubleArray = DoubleArray(0)
+
+        // Hoisted out of the per-block loop — reused across blocks, resized only when v changes.
+        private var detunes: DoubleArray = DoubleArray(0)
+        private var voiceGain: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -638,24 +690,25 @@ object Ignitors {
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
                     val old = phases
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                    detunes = DoubleArray(v)
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
                     val end = ctx.offset + ctx.length
 
                     if (phaseMod == null) {
-                        // Non-modulated: compute detune increments once per block
-                        val detunes = DoubleArray(v) { n ->
+                        // Recompute the detune increments into the persistent buffer.
+                        for (n in 0 until v) {
                             val det = getUnisonDetune(v, spread, n)
-                            applySemitoneDetuneToFrequency(actualFreq, det) / sr
+                            detunes[n] = applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
 
                         if (d.active) {
@@ -666,7 +719,7 @@ object Ignitors {
                                 val baseDt = detunes[0]
                                 for (i in ctx.offset until end) {
                                     val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] = ((2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                    buffer[i] = ((2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[0] = p
@@ -678,7 +731,7 @@ object Ignitors {
                                 for (i in ctx.offset until end) {
                                     val dt = baseDt * d.nextMultiplier()
                                     buffer[i] =
-                                        (buffer[i] + (2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                        (buffer[i] + (2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[n] = p
@@ -691,12 +744,12 @@ object Ignitors {
                                 val dt = detunes[0]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((2.0 * p - 1.0) * voiceGain).toFloat()
+                                        buffer[i] = ((2.0 * p - 1.0) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
+                                        buffer[i] = ((2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -709,12 +762,12 @@ object Ignitors {
                                 val dt = detunes[n]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0 - polyBlep(p, dt)) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -739,7 +792,7 @@ object Ignitors {
                                 p += dt; p = wrapPhase(p, 1.0)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -757,13 +810,22 @@ object Ignitors {
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
         rng: Random = Random
-    ): Ignitor {
-        var v = 0
-        var phases = DoubleArray(0)
-        var voiceGain = 0.0
-        var drift: AnalogDrift? = null
+    ): Ignitor = SuperSineIgnitor(freq, voices, freqSpread, analog, rng)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class SuperSineIgnitor(
+        private val freq: Ignitor,
+        private val voices: Ignitor,
+        private val freqSpread: Ignitor,
+        private val analog: Ignitor,
+        private val rng: Random,
+    ) : Ignitor {
+        private var v: Int = 0
+        private var phases: DoubleArray = DoubleArray(0)
+        private var detunes: DoubleArray = DoubleArray(0)
+        private var voiceGain: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -775,23 +837,24 @@ object Ignitors {
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
                     val old = phases
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() * TWO_PI }
+                    detunes = DoubleArray(v)
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
                     val end = ctx.offset + ctx.length
 
                     if (phaseMod == null) {
-                        val detunes = DoubleArray(v) { n ->
+                        for (n in 0 until v) {
                             val det = getUnisonDetune(v, spread, n)
-                            TWO_PI * applySemitoneDetuneToFrequency(actualFreq, det) / sr
+                            detunes[n] = TWO_PI * applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
 
                         if (d.active) {
@@ -801,7 +864,7 @@ object Ignitors {
                                 var p = phases[0]
                                 val baseInc = detunes[0]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (sin(p) * voiceGain).toFloat()
+                                    buffer[i] = (sin(p) * voiceGain)
                                     p += baseInc * d.nextMultiplier()
                                     p = wrapPhase(p, TWO_PI)
                                 }
@@ -812,7 +875,7 @@ object Ignitors {
                                 var p = phases[n]
                                 val baseInc = detunes[n]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + sin(p) * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + sin(p) * voiceGain)
                                     p += baseInc * d.nextMultiplier()
                                     p = wrapPhase(p, TWO_PI)
                                 }
@@ -825,7 +888,7 @@ object Ignitors {
                                 var p = phases[0]
                                 val inc = detunes[0]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (sin(p) * voiceGain).toFloat()
+                                    buffer[i] = (sin(p) * voiceGain)
                                     p += inc; p = wrapPhase(p, TWO_PI)
                                 }
                                 phases[0] = p
@@ -836,7 +899,7 @@ object Ignitors {
                                 var p = phases[n]
                                 val inc = detunes[n]
                                 for (i in ctx.offset until end) {
-                                    buffer[i] = (buffer[i] + sin(p) * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + sin(p) * voiceGain)
                                     p += inc; p = wrapPhase(p, TWO_PI)
                                 }
                                 phases[n] = p
@@ -856,7 +919,7 @@ object Ignitors {
                                 p += inc; p = wrapPhase(p, TWO_PI)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -874,13 +937,22 @@ object Ignitors {
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
         rng: Random = Random
-    ): Ignitor {
-        var v = 0
-        var phases = DoubleArray(0)
-        var voiceGain = 0.0
-        var drift: AnalogDrift? = null
+    ): Ignitor = SuperSquareIgnitor(freq, voices, freqSpread, analog, rng)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class SuperSquareIgnitor(
+        private val freq: Ignitor,
+        private val voices: Ignitor,
+        private val freqSpread: Ignitor,
+        private val analog: Ignitor,
+        private val rng: Random,
+    ) : Ignitor {
+        private var v: Int = 0
+        private var phases: DoubleArray = DoubleArray(0)
+        private var detunes: DoubleArray = DoubleArray(0)
+        private var voiceGain: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -892,23 +964,24 @@ object Ignitors {
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
                     val old = phases
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                    detunes = DoubleArray(v)
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
                     val end = ctx.offset + ctx.length
 
                     if (phaseMod == null) {
-                        val detunes = DoubleArray(v) { n ->
+                        for (n in 0 until v) {
                             val det = getUnisonDetune(v, spread, n)
-                            applySemitoneDetuneToFrequency(actualFreq, det) / sr
+                            detunes[n] = applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
 
                         if (d.active) {
@@ -924,7 +997,7 @@ object Ignitors {
                                         out += polyBlep(p, dt)
                                         out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                     }
-                                    buffer[i] = (out * voiceGain).toFloat()
+                                    buffer[i] = (out * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[0] = p
@@ -940,7 +1013,7 @@ object Ignitors {
                                         out += polyBlep(p, dt)
                                         out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
                                     }
-                                    buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + out * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[n] = p
@@ -953,7 +1026,7 @@ object Ignitors {
                                 val dt = detunes[0]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((if (p < 0.5) 1.0 else -1.0) * voiceGain).toFloat()
+                                        buffer[i] = ((if (p < 0.5) 1.0 else -1.0) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
@@ -961,7 +1034,7 @@ object Ignitors {
                                         var out = if (p < 0.5) 1.0 else -1.0
                                         out += polyBlep(p, dt)
                                         out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
-                                        buffer[i] = (out * voiceGain).toFloat()
+                                        buffer[i] = (out * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -974,7 +1047,7 @@ object Ignitors {
                                 val dt = detunes[n]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (if (p < 0.5) 1.0 else -1.0) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (if (p < 0.5) 1.0 else -1.0) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
@@ -982,7 +1055,7 @@ object Ignitors {
                                         var out = if (p < 0.5) 1.0 else -1.0
                                         out += polyBlep(p, dt)
                                         out -= polyBlep(smallNumFastMod(p + 0.5, 1.0), dt)
-                                        buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + out * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -1010,7 +1083,7 @@ object Ignitors {
                                 p += dt; p = wrapPhase(p, 1.0)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -1028,13 +1101,22 @@ object Ignitors {
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
         rng: Random = Random
-    ): Ignitor {
-        var v = 0
-        var phases = DoubleArray(0)
-        var voiceGain = 0.0
-        var drift: AnalogDrift? = null
+    ): Ignitor = SuperTriIgnitor(freq, voices, freqSpread, analog, rng)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class SuperTriIgnitor(
+        private val freq: Ignitor,
+        private val voices: Ignitor,
+        private val freqSpread: Ignitor,
+        private val analog: Ignitor,
+        private val rng: Random,
+    ) : Ignitor {
+        private var v: Int = 0
+        private var phases: DoubleArray = DoubleArray(0)
+        private var detunes: DoubleArray = DoubleArray(0)
+        private var voiceGain: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -1046,23 +1128,24 @@ object Ignitors {
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
                     val old = phases
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                    detunes = DoubleArray(v)
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
                     val end = ctx.offset + ctx.length
 
                     if (phaseMod == null) {
-                        val detunes = DoubleArray(v) { n ->
+                        for (n in 0 until v) {
                             val det = getUnisonDetune(v, spread, n)
-                            applySemitoneDetuneToFrequency(actualFreq, det) / sr
+                            detunes[n] = applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
 
                         if (d.active) {
@@ -1073,7 +1156,7 @@ object Ignitors {
                                 val baseDt = detunes[0]
                                 for (i in ctx.offset until end) {
                                     val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (out * voiceGain).toFloat()
+                                    buffer[i] = (out * voiceGain)
                                     p += baseDt * d.nextMultiplier()
                                     p = wrapPhase(p, 1.0)
                                 }
@@ -1085,7 +1168,7 @@ object Ignitors {
                                 val baseDt = detunes[n]
                                 for (i in ctx.offset until end) {
                                     val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + out * voiceGain)
                                     p += baseDt * d.nextMultiplier()
                                     p = wrapPhase(p, 1.0)
                                 }
@@ -1099,7 +1182,7 @@ object Ignitors {
                                 val dt = detunes[0]
                                 for (i in ctx.offset until end) {
                                     val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (out * voiceGain).toFloat()
+                                    buffer[i] = (out * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[0] = p
@@ -1111,7 +1194,7 @@ object Ignitors {
                                 val dt = detunes[n]
                                 for (i in ctx.offset until end) {
                                     val out = if (p < 0.5) 4.0 * p - 1.0 else 3.0 - 4.0 * p
-                                    buffer[i] = (buffer[i] + out * voiceGain).toFloat()
+                                    buffer[i] = (buffer[i] + out * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[n] = p
@@ -1131,7 +1214,7 @@ object Ignitors {
                                 p += dt; p = wrapPhase(p, 1.0)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -1149,13 +1232,22 @@ object Ignitors {
         freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
         rng: Random = Random
-    ): Ignitor {
-        var v = 0
-        var phases = DoubleArray(0)
-        var voiceGain = 0.0
-        var drift: AnalogDrift? = null
+    ): Ignitor = SuperRampIgnitor(freq, voices, freqSpread, analog, rng)
 
-        return Ignitor { buffer, freqHz, ctx ->
+    private class SuperRampIgnitor(
+        private val freq: Ignitor,
+        private val voices: Ignitor,
+        private val freqSpread: Ignitor,
+        private val analog: Ignitor,
+        private val rng: Random,
+    ) : Ignitor {
+        private var v: Int = 0
+        private var phases: DoubleArray = DoubleArray(0)
+        private var detunes: DoubleArray = DoubleArray(0)
+        private var voiceGain: Double = 0.0
+        private var drift: AnalogDrift? = null
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
@@ -1167,23 +1259,24 @@ object Ignitors {
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
                     val old = phases
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
+                    detunes = DoubleArray(v)
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset].toDouble()
+                    val spread = spreadBuf[ctx.offset]
 
                     val sr = ctx.sampleRateD
                     val phaseMod = ctx.phaseMod
                     val end = ctx.offset + ctx.length
 
                     if (phaseMod == null) {
-                        val detunes = DoubleArray(v) { n ->
+                        for (n in 0 until v) {
                             val det = getUnisonDetune(v, spread, n)
-                            applySemitoneDetuneToFrequency(actualFreq, det) / sr
+                            detunes[n] = applySemitoneDetuneToFrequency(actualFreq, det) / sr
                         }
 
                         if (d.active) {
@@ -1194,7 +1287,7 @@ object Ignitors {
                                 val baseDt = detunes[0]
                                 for (i in ctx.offset until end) {
                                     val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] = ((1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                    buffer[i] = ((1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[0] = p
@@ -1206,7 +1299,7 @@ object Ignitors {
                                 for (i in ctx.offset until end) {
                                     val dt = baseDt * d.nextMultiplier()
                                     buffer[i] =
-                                        (buffer[i] + (1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain).toFloat()
+                                        (buffer[i] + (1.0 - 2.0 * p + if (dt > BLEP_MIN_DT) polyBlep(p, dt) else 0.0) * voiceGain)
                                     p += dt; p = wrapPhase(p, 1.0)
                                 }
                                 phases[n] = p
@@ -1219,12 +1312,12 @@ object Ignitors {
                                 val dt = detunes[0]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((1.0 - 2.0 * p) * voiceGain).toFloat()
+                                        buffer[i] = ((1.0 - 2.0 * p) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = ((1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain).toFloat()
+                                        buffer[i] = ((1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -1237,12 +1330,12 @@ object Ignitors {
                                 val dt = detunes[n]
                                 if (dt <= BLEP_MIN_DT) {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 } else {
                                     for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain).toFloat()
+                                        buffer[i] = (buffer[i] + (1.0 - 2.0 * p + polyBlep(p, dt)) * voiceGain)
                                         p += dt; p = wrapPhase(p, 1.0)
                                     }
                                 }
@@ -1267,7 +1360,7 @@ object Ignitors {
                                 p += dt; p = wrapPhase(p, 1.0)
                                 phases[n] = p
                             }
-                            buffer[i] = (sum * voiceGain).toFloat()
+                            buffer[i] = (sum * voiceGain)
                         }
                     }
                 }
@@ -1287,28 +1380,36 @@ object Ignitors {
         pickPosition: Ignitor = ParamIgnitor("pickPosition", 0.5),
         stiffness: Ignitor = ParamIgnitor("stiffness", 0.0),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
+    ): Ignitor = KarplusStrongIgnitor(freq, decay, brightness, pickPosition, stiffness, analog)
+
+    private class KarplusStrongIgnitor(
+        private val freq: Ignitor,
+        private val decay: Ignitor,
+        private val brightness: Ignitor,
+        private val pickPosition: Ignitor,
+        private val stiffness: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
         // Max delay line: supports down to ~20 Hz at 48kHz (2400 samples)
-        val maxDelay = 2500
-        val delayLine = FloatArray(maxDelay)
-        var writePos = 0
-        var excited = false
-        var drift: AnalogDrift? = null
+        private val maxDelay = 2500
+        private val delayLine = AudioBuffer(maxDelay)
+        private var writePos: Int = 0
+        private var excited: Boolean = false
+        private var drift: AnalogDrift? = null
 
         // One-pole lowpass state for brightness filtering
-        var lpState = 0.0
+        private var lpState: Double = 0.0
 
         // Allpass state for stiffness
-        var apPrevIn = 0.0
-        var apPrevOut = 0.0
+        private var apPrevIn: Double = 0.0
+        private var apPrevOut: Double = 0.0
 
-        val rng = Random
+        private val rng: Random = Random
 
-        return Ignitor { buffer, freqHz, ctx ->
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
             val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
-            // Read control-rate params once per block
             val decayVal = readParam(decay, actualFreq, ctx)
             val brightnessVal = readParam(brightness, actualFreq, ctx)
             val stiffnessVal = readParam(stiffness, actualFreq, ctx)
@@ -1321,54 +1422,42 @@ object Ignitors {
             val phaseMod = ctx.phaseMod
             val end = ctx.offset + ctx.length
 
-            // Delay length in fractional samples (determines pitch)
-            val baseDelay = (sr / actualFreq).coerceIn(2.0, (maxDelay - 1).toDouble())
+            val baseDelay = (sr / actualFreq).coerceIn(2.0, (maxDelay - 1.0))
 
-            // Excite on first call: fill delay line with noise
             if (!excited) {
                 excited = true
                 val pickPosVal = readParam(pickPosition, actualFreq, ctx)
                 val delayLen = baseDelay.toInt()
-
-                // Pick position affects which part of the buffer gets excited
-                // pickPosition 0.0 = narrow burst at start (bridge-like, thin)
-                // pickPosition 0.5 = full buffer (middle, rich harmonics)
-                // pickPosition 1.0 = narrow burst at end (neck-like, warm)
                 val pp = pickPosVal.coerceIn(0.0, 1.0)
                 val burstLen = maxOf(1, (delayLen * (0.1 + 0.9 * pp)).toInt())
                 val burstStart = ((delayLen - burstLen) * pp).toInt()
 
                 for (j in 0 until delayLen) {
                     delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                        (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                        (rng.nextDouble() * 2.0 - 1.0)
                     } else {
-                        0.0f
+                        0.0
                     }
                 }
                 writePos = delayLen % maxDelay
             }
 
             for (i in ctx.offset until end) {
-                // Calculate effective delay (with pitch modulation and analog drift)
                 var dl = baseDelay
                 if (phaseMod != null) dl /= phaseMod[i]
                 if (d.active) dl /= d.nextMultiplier()
-                dl = dl.coerceIn(2.0, (maxDelay - 1).toDouble())
+                dl = dl.coerceIn(2.0, (maxDelay - 1.0))
 
-                // Read with linear interpolation
                 val readPosF = writePos - dl
                 val readPosWrapped = if (readPosF < 0) readPosF + maxDelay else readPosF
                 val readIdx = readPosWrapped.toInt() % maxDelay
                 val frac = readPosWrapped - readPosWrapped.toInt()
                 val nextIdx = (readIdx + 1) % maxDelay
-                val sample = delayLine[readIdx] + (delayLine[nextIdx] - delayLine[readIdx]) * frac.toFloat()
+                val sample = delayLine[readIdx] + (delayLine[nextIdx] - delayLine[readIdx]) * frac
 
-                // One-pole lowpass (brightness)
-                lpState = lpState + lpAlpha * (sample.toDouble() - lpState)
-                lpState = flushDenormal(lpState)
+                lpState = flushDenormal(lpState + lpAlpha * (sample - lpState))
                 var filtered = lpState
 
-                // Allpass stiffness filter (bypassed when stiffness = 0)
                 if (hasStiffness) {
                     val apOut = apCoeff * (filtered - apPrevOut) + apPrevIn
                     apPrevIn = flushDenormal(filtered)
@@ -1376,13 +1465,8 @@ object Ignitors {
                     filtered = apOut
                 }
 
-                // Write back with decay
-                delayLine[writePos] = (filtered * decayVal).toFloat()
-
-                // Output
+                delayLine[writePos] = (filtered * decayVal)
                 buffer[i] = sample
-
-                // Advance write position
                 writePos = (writePos + 1) % maxDelay
             }
         }
@@ -1403,12 +1487,22 @@ object Ignitors {
         pickPosition: Ignitor = ParamIgnitor("pickPosition", 0.5),
         stiffness: Ignitor = ParamIgnitor("stiffness", 0.0),
         analog: Ignitor = ParamIgnitor("analog", 0.0),
-    ): Ignitor {
-        val maxDelay = 2500
+    ): Ignitor = SuperKarplusStrongIgnitor(freq, voices, freqSpread, decay, brightness, pickPosition, stiffness, analog)
 
-        // Per-voice state
-        class StringState(
-            val delayLine: FloatArray = FloatArray(maxDelay),
+    private class SuperKarplusStrongIgnitor(
+        private val freq: Ignitor,
+        private val voices: Ignitor,
+        private val freqSpread: Ignitor,
+        private val decay: Ignitor,
+        private val brightness: Ignitor,
+        private val pickPosition: Ignitor,
+        private val stiffness: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private val maxDelay = 2500
+
+        private class StringState(
+            val delayLine: AudioBuffer,
             var writePos: Int = 0,
             var excited: Boolean = false,
             var lpState: Double = 0.0,
@@ -1417,12 +1511,12 @@ object Ignitors {
             var drift: AnalogDrift? = null,
         )
 
-        var v = 0
-        var voiceGain = 0.0
-        var strings = Array(0) { StringState() }
-        val rng = Random
+        private var v: Int = 0
+        private var voiceGain: Double = 0.0
+        private var strings: Array<StringState> = emptyArray()
+        private val rng: Random = Random
 
-        return Ignitor { buffer, freqHz, ctx ->
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
             ctx.scratchBuffers.use { voicesBuf ->
@@ -1432,10 +1526,10 @@ object Ignitors {
                     v = newV
                     voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
                     val old = strings
-                    strings = Array(v) { i -> if (i < old.size) old[i] else StringState() }
+                    strings = Array(v) { i -> if (i < old.size) old[i] else StringState(AudioBuffer(maxDelay)) }
                 }
                 if (v <= 0) {
-                    buffer.fill(0f, ctx.offset, ctx.offset + ctx.length); return@use
+                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
 
                 // Read control-rate params once per block
@@ -1457,7 +1551,7 @@ object Ignitors {
                     val sd = s.drift ?: initAnalogDrift(analog, actualFreq, ctx).also { s.drift = it }
                     val detuneSemitones = getUnisonDetune(v, spread, n)
                     val detunedFreq = applySemitoneDetuneToFrequency(actualFreq, detuneSemitones)
-                    val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1).toDouble())
+                    val baseDelay = (sr / detunedFreq).coerceIn(2.0, (maxDelay - 1.0))
 
                     // Excite each string independently
                     if (!s.excited) {
@@ -1470,9 +1564,9 @@ object Ignitors {
 
                         for (j in 0 until delayLen) {
                             s.delayLine[j] = if (j >= burstStart && j < burstStart + burstLen) {
-                                (rng.nextDouble() * 2.0 - 1.0).toFloat()
+                                (rng.nextDouble() * 2.0 - 1.0)
                             } else {
-                                0.0f
+                                0.0
                             }
                         }
                         s.writePos = delayLen % maxDelay
@@ -1485,7 +1579,7 @@ object Ignitors {
                         var dl = baseDelay
                         if (phaseMod != null) dl /= phaseMod[i]
                         if (sd.active) dl /= sd.nextMultiplier()
-                        dl = dl.coerceIn(2.0, (maxDelay - 1).toDouble())
+                        dl = dl.coerceIn(2.0, (maxDelay - 1.0))
 
                         // Read with linear interpolation
                         val readPosF = s.writePos - dl
@@ -1493,10 +1587,10 @@ object Ignitors {
                         val readIdx = readPosWrapped.toInt() % maxDelay
                         val frac = readPosWrapped - readPosWrapped.toInt()
                         val nextIdx = (readIdx + 1) % maxDelay
-                        val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac.toFloat()
+                        val sample = s.delayLine[readIdx] + (s.delayLine[nextIdx] - s.delayLine[readIdx]) * frac
 
                         // One-pole lowpass (brightness)
-                        s.lpState = s.lpState + lpAlpha * (sample.toDouble() - s.lpState)
+                        s.lpState = s.lpState + lpAlpha * (sample - s.lpState)
                         s.lpState = flushDenormal(s.lpState)
                         var filtered = s.lpState
 
@@ -1509,10 +1603,10 @@ object Ignitors {
                         }
 
                         // Write back with decay
-                        s.delayLine[s.writePos] = (filtered * decayVal).toFloat()
+                        s.delayLine[s.writePos] = (filtered * decayVal)
 
                         // Sum to output
-                        val out = (sample * voiceGain).toFloat()
+                        val out = (sample * voiceGain)
                         if (isFirst) {
                             buffer[i] = out
                         } else {
@@ -1527,8 +1621,12 @@ object Ignitors {
     }
 
     /** Silence: fills buffer with zeros. */
-    fun silence(): Ignitor = Ignitor { buffer, _, ctx ->
-        buffer.fill(0.0f, ctx.offset, ctx.offset + ctx.length)
+    fun silence(): Ignitor = SilenceIgnitor
+
+    private object SilenceIgnitor : Ignitor {
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length)
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
@@ -1545,7 +1643,7 @@ object Ignitors {
         if (freq is ParamIgnitor) return freq.default
         return ctx.scratchBuffers.use { buf ->
             freq.generate(buf, voiceFreqHz, ctx)
-            buf[ctx.offset].toDouble()
+            buf[ctx.offset]
         }
     }
 
@@ -1557,7 +1655,7 @@ object Ignitors {
         if (analog is ParamIgnitor) return AnalogDrift(analog.default)
         return ctx.scratchBuffers.use { tmp ->
             analog.generate(tmp, freqHz, ctx)
-            AnalogDrift(tmp[ctx.offset].toDouble())
+            AnalogDrift(tmp[ctx.offset])
         }
     }
 
@@ -1565,7 +1663,7 @@ object Ignitors {
     internal fun readParam(param: Ignitor, freqHz: Double, ctx: IgniteContext): Double {
         if (param is FreqIgnitor) return freqHz
         if (param is ParamIgnitor) return param.default
-        return ctx.scratchBuffers.use { tmp -> param.generate(tmp, freqHz, ctx); tmp[ctx.offset].toDouble() }
+        return ctx.scratchBuffers.use { tmp -> param.generate(tmp, freqHz, ctx); tmp[ctx.offset] }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

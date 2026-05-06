@@ -107,8 +107,8 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
         // Phaser — always update parameters (not just when depth > 0) to avoid stale state
         phaser.phaser.rate = voice.phaser.rate
         phaser.phaser.depth = voice.phaser.depth
-        phaser.phaser.centerFreq = if (voice.phaser.center > 0) voice.phaser.center else 1000.0
-        phaser.phaser.sweepRange = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
+        phaser.phaser.center = if (voice.phaser.center > 0) voice.phaser.center else 1000.0
+        phaser.phaser.sweep = if (voice.phaser.sweep > 0) voice.phaser.sweep else 1000.0
         phaser.phaser.feedback = 0.5
 
         // Ducking / Sidechain — reuse instance to preserve envelope state (like compressor)
@@ -223,7 +223,7 @@ class Cylinder(val id: Int, val blockFrames: Int, sampleRate: Int, private val s
     }
 
     private fun isMixBufferSilent(): Boolean {
-        val threshold = 0.00001f
+        val threshold = 0.00001
         for (sample in mixBuffer.left) {
             if (sample > threshold || sample < -threshold) return false
         }

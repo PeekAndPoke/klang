@@ -1,34 +1,23 @@
 @file:Suppress("DuplicatedCode", "ObjectPropertyName", "Detekt:TooManyFunctions")
+@file:KlangScript.Library("sprudel")
 
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.script.annotations.KlangScript
+import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
 import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel._liftData
 import io.peekandpoke.klang.sprudel._liftOrReinterpretNumericalField
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
-
-/**
- * Accessing this property forces the initialization of this file's class,
- * ensuring all 'by dsl...' delegates are registered in SprudelRegistry.
- */
-var sprudelLangSampleInit = false
-
 // -- begin() ----------------------------------------------------------------------------------------------------------
 
 private val beginMutation = voiceModifier { copy(begin = it?.asDoubleOrNull()) }
 
-fun applyBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+private fun applyBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, beginMutation)
-
-internal val _begin by dslPatternMapper { args, callInfo -> { p -> p._begin(args, callInfo) } }
-internal val SprudelPattern._begin by dslPatternExtension { p, args, /* callInfo */ _ -> applyBegin(p, args) }
-internal val String._begin by dslStringExtension { p, args, callInfo -> p._begin(args, callInfo) }
-internal val PatternMapperFn._begin by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_begin(args, callInfo))
-}
 
 /**
  * Sets the sample start position as a fraction of the total sample length (0–1).
@@ -52,19 +41,15 @@ internal val PatternMapperFn._begin by dslPatternMapperExtension { m, args, call
  * @tags begin, start, sample, position, offset
  */
 @SprudelDsl
-fun SprudelPattern.begin(pos: PatternLike): SprudelPattern = this._begin(listOf(pos).asSprudelDslArgs())
-
-/** Reinterprets this pattern's values as sample start positions (0–1). */
-@SprudelDsl
-fun SprudelPattern.begin(): SprudelPattern = this._begin(emptyList())
+@KlangScript.Function
+fun SprudelPattern.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyBegin(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
 
 /** Sets the sample start position (0–1) on a string pattern. */
 @SprudelDsl
-fun String.begin(pos: PatternLike): SprudelPattern = this._begin(listOf(pos).asSprudelDslArgs())
-
-/** Reinterprets this string pattern's values as sample start positions (0–1). */
-@SprudelDsl
-fun String.begin(): SprudelPattern = this._begin(emptyList())
+@KlangScript.Function
+fun String.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).begin(pos, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sample start position (0–1).
@@ -80,29 +65,22 @@ fun String.begin(): SprudelPattern = this._begin(emptyList())
  * @tags begin, start, sample, position, offset
  */
 @SprudelDsl
-fun begin(pos: PatternLike): PatternMapperFn = _begin(listOf(pos).asSprudelDslArgs())
-
-/** Returns a [PatternMapperFn] that reinterprets the source pattern's values as sample start positions. */
-@SprudelDsl
-fun begin(): PatternMapperFn = _begin(emptyList())
+@KlangScript.Function
+fun begin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.begin(pos, callInfo) }
 
 /** Chains a begin onto this [PatternMapperFn]; sets the sample start position (0–1). */
 @SprudelDsl
-fun PatternMapperFn.begin(pos: PatternLike): PatternMapperFn = this._begin(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.begin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.begin(pos, callInfo) }
 
 // -- end() ------------------------------------------------------------------------------------------------------------
 
 private val endMutation = voiceModifier { copy(end = it?.asDoubleOrNull()) }
 
-fun applyEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+private fun applyEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, endMutation)
-
-internal val _end by dslPatternMapper { args, callInfo -> { p -> p._end(args, callInfo) } }
-internal val SprudelPattern._end by dslPatternExtension { p, args, /* callInfo */ _ -> applyEnd(p, args) }
-internal val String._end by dslStringExtension { p, args, callInfo -> p._end(args, callInfo) }
-internal val PatternMapperFn._end by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_end(args, callInfo))
-}
 
 /**
  * Sets the sample end position as a fraction of the total sample length (0–1).
@@ -125,19 +103,15 @@ internal val PatternMapperFn._end by dslPatternMapperExtension { m, args, callIn
  * @tags end, stop, sample, position, offset
  */
 @SprudelDsl
-fun SprudelPattern.end(pos: PatternLike): SprudelPattern = this._end(listOf(pos).asSprudelDslArgs())
-
-/** Reinterprets this pattern's values as sample end positions (0–1). */
-@SprudelDsl
-fun SprudelPattern.end(): SprudelPattern = this._end(emptyList())
+@KlangScript.Function
+fun SprudelPattern.end(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyEnd(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
 
 /** Sets the sample end position (0–1) on a string pattern. */
 @SprudelDsl
-fun String.end(pos: PatternLike): SprudelPattern = this._end(listOf(pos).asSprudelDslArgs())
-
-/** Reinterprets this string pattern's values as sample end positions (0–1). */
-@SprudelDsl
-fun String.end(): SprudelPattern = this._end(emptyList())
+@KlangScript.Function
+fun String.end(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).end(pos, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sample end position (0–1).
@@ -153,29 +127,22 @@ fun String.end(): SprudelPattern = this._end(emptyList())
  * @tags end, stop, sample, position, offset
  */
 @SprudelDsl
-fun end(pos: PatternLike): PatternMapperFn = _end(listOf(pos).asSprudelDslArgs())
-
-/** Returns a [PatternMapperFn] that reinterprets the source pattern's values as sample end positions. */
-@SprudelDsl
-fun end(): PatternMapperFn = _end(emptyList())
+@KlangScript.Function
+fun end(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.end(pos, callInfo) }
 
 /** Chains an end onto this [PatternMapperFn]; sets the sample end position (0–1). */
 @SprudelDsl
-fun PatternMapperFn.end(pos: PatternLike): PatternMapperFn = this._end(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.end(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.end(pos, callInfo) }
 
 // -- speed() ----------------------------------------------------------------------------------------------------------
 
 private val speedMutation = voiceModifier { copy(speed = it?.asDoubleOrNull()) }
 
-fun applySpeed(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+private fun applySpeed(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, speedMutation)
-
-internal val _speed by dslPatternMapper { args, callInfo -> { p -> p._speed(args, callInfo) } }
-internal val SprudelPattern._speed by dslPatternExtension { p, args, /* callInfo */ _ -> applySpeed(p, args) }
-internal val String._speed by dslStringExtension { p, args, callInfo -> p._speed(args, callInfo) }
-internal val PatternMapperFn._speed by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_speed(args, callInfo))
-}
 
 /**
  * Sets the sample playback speed as a multiplier.
@@ -198,19 +165,15 @@ internal val PatternMapperFn._speed by dslPatternMapperExtension { m, args, call
  * @tags speed, playback, pitch, rate, reverse
  */
 @SprudelDsl
-fun SprudelPattern.speed(rate: PatternLike): SprudelPattern = this._speed(listOf(rate).asSprudelDslArgs())
-
-/** Reinterprets this pattern's values as playback speed multipliers. */
-@SprudelDsl
-fun SprudelPattern.speed(): SprudelPattern = this._speed(emptyList())
+@KlangScript.Function
+fun SprudelPattern.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applySpeed(this, listOfNotNull(rate).asSprudelDslArgs(callInfo))
 
 /** Sets the sample playback speed on a string pattern. */
 @SprudelDsl
-fun String.speed(rate: PatternLike): SprudelPattern = this._speed(listOf(rate).asSprudelDslArgs())
-
-/** Reinterprets this string pattern's values as playback speed multipliers. */
-@SprudelDsl
-fun String.speed(): SprudelPattern = this._speed(emptyList())
+@KlangScript.Function
+fun String.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).speed(rate, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the sample playback speed.
@@ -226,31 +189,24 @@ fun String.speed(): SprudelPattern = this._speed(emptyList())
  * @tags speed, playback, pitch, rate, reverse
  */
 @SprudelDsl
-fun speed(rate: PatternLike): PatternMapperFn = _speed(listOf(rate).asSprudelDslArgs())
-
-/** Returns a [PatternMapperFn] that reinterprets the source pattern's values as playback speed multipliers. */
-@SprudelDsl
-fun speed(): PatternMapperFn = _speed(emptyList())
+@KlangScript.Function
+fun speed(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.speed(rate, callInfo) }
 
 /** Chains a speed onto this [PatternMapperFn]; sets the sample playback speed. */
 @SprudelDsl
-fun PatternMapperFn.speed(rate: PatternLike): PatternMapperFn = this._speed(listOf(rate).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.speed(rate: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.speed(rate, callInfo) }
 
 // -- unit() -----------------------------------------------------------------------------------------------------------
 
 private val unitMutation = voiceModifier { copy(unit = it?.asVoiceValue()?.asString) }
 
-fun applyUnit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyUnit(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.isEmpty()) return source
     val control = args.toPattern(unitMutation)
     return source._liftData(control)
-}
-
-internal val _unit by dslPatternMapper { args, callInfo -> { p -> p._unit(args, callInfo) } }
-internal val SprudelPattern._unit by dslPatternExtension { p, args, /* callInfo */ _ -> applyUnit(p, args) }
-internal val String._unit by dslStringExtension { p, args, callInfo -> p._unit(args, callInfo) }
-internal val PatternMapperFn._unit by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_unit(args, callInfo))
 }
 
 /**
@@ -275,11 +231,15 @@ internal val PatternMapperFn._unit by dslPatternMapperExtension { m, args, callI
  * @tags unit, time unit, cycles, sample, timing
  */
 @SprudelDsl
-fun SprudelPattern.unit(value: PatternLike): SprudelPattern = this._unit(listOf(value).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.unit(value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyUnit(this, listOf(value).asSprudelDslArgs(callInfo))
 
 /** Sets the time unit for sample playback on a string pattern. */
 @SprudelDsl
-fun String.unit(value: PatternLike): SprudelPattern = this._unit(listOf(value).asSprudelDslArgs())
+@KlangScript.Function
+fun String.unit(value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).unit(value, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the time unit for sample playback.
@@ -295,27 +255,24 @@ fun String.unit(value: PatternLike): SprudelPattern = this._unit(listOf(value).a
  * @tags unit, time unit, cycles, sample, timing
  */
 @SprudelDsl
-fun unit(value: PatternLike): PatternMapperFn = _unit(listOf(value).asSprudelDslArgs())
+@KlangScript.Function
+fun unit(value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.unit(value, callInfo) }
 
 /** Chains a unit onto this [PatternMapperFn]; sets the time unit for sample playback. */
 @SprudelDsl
-fun PatternMapperFn.unit(value: PatternLike): PatternMapperFn = this._unit(listOf(value).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.unit(value: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.unit(value, callInfo) }
 
 // -- loop() -----------------------------------------------------------------------------------------------------------
 
 private val loopMutation = voiceModifier { copy(loop = it?.asVoiceValue()?.asBoolean) }
 
-fun applyLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val effectiveArgs = args.ifEmpty { listOf(SprudelDslArg.of(1.0)) }
     val control = effectiveArgs.toPattern(loopMutation)
     return source._liftData(control)
-}
-
-internal val _loop by dslPatternMapper { args, callInfo -> { p -> p._loop(args, callInfo) } }
-internal val SprudelPattern._loop by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoop(p, args) }
-internal val String._loop by dslStringExtension { p, args, callInfo -> p._loop(args, callInfo) }
-internal val PatternMapperFn._loop by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_loop(args, callInfo))
 }
 
 /**
@@ -339,11 +296,15 @@ internal val PatternMapperFn._loop by dslPatternMapperExtension { m, args, callI
  * @tags loop, looping, repeat, sample
  */
 @SprudelDsl
-fun SprudelPattern.loop(flag: PatternLike = true): SprudelPattern = this._loop(listOf(flag).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.loop(flag: PatternLike = true, callInfo: CallInfo? = null): SprudelPattern =
+    applyLoop(this, listOf(flag).asSprudelDslArgs(callInfo))
 
 /** Enables sample looping on a string pattern. */
 @SprudelDsl
-fun String.loop(flag: PatternLike = true): SprudelPattern = this._loop(listOf(flag).asSprudelDslArgs())
+@KlangScript.Function
+fun String.loop(flag: PatternLike = true, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).loop(flag, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that enables sample looping.
@@ -359,32 +320,22 @@ fun String.loop(flag: PatternLike = true): SprudelPattern = this._loop(listOf(fl
  * @tags loop, looping, repeat, sample
  */
 @SprudelDsl
-fun loop(flag: PatternLike = true): PatternMapperFn = _loop(listOf(flag).asSprudelDslArgs())
+@KlangScript.Function
+fun loop(flag: PatternLike = true, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.loop(flag, callInfo) }
 
 /** Chains a loop onto this [PatternMapperFn]; enables sample looping. */
 @SprudelDsl
-fun PatternMapperFn.loop(flag: PatternLike = true): PatternMapperFn = this._loop(listOf(flag).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.loop(flag: PatternLike = true, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.loop(flag, callInfo) }
 
 // -- loopBegin() / loopb() --------------------------------------------------------------------------------------------
 
 private val loopBeginMutation = voiceModifier { copy(loopBegin = it?.asDoubleOrNull()) }
 
-fun applyLoopBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+private fun applyLoopBegin(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, loopBeginMutation)
-
-internal val _loopBegin by dslPatternMapper { args, callInfo -> { p -> p._loopBegin(args, callInfo) } }
-internal val SprudelPattern._loopBegin by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopBegin(p, args) }
-internal val String._loopBegin by dslStringExtension { p, args, callInfo -> p._loopBegin(args, callInfo) }
-internal val PatternMapperFn._loopBegin by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_loopBegin(args, callInfo))
-}
-
-internal val _loopb by dslPatternMapper { args, callInfo -> _loopBegin(args, callInfo) }
-internal val SprudelPattern._loopb by dslPatternExtension { p, args, callInfo -> p._loopBegin(args, callInfo) }
-internal val String._loopb by dslStringExtension { p, args, callInfo -> p._loopb(args, callInfo) }
-internal val PatternMapperFn._loopb by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_loopBegin(args, callInfo))
-}
 
 /**
  * Sets the loop start position as a fraction of the total sample length (0–1).
@@ -408,19 +359,15 @@ internal val PatternMapperFn._loopb by dslPatternMapperExtension { m, args, call
  * @tags loopBegin, loopb, loop, start, sample, position
  */
 @SprudelDsl
-fun SprudelPattern.loopBegin(pos: PatternLike): SprudelPattern = this._loopBegin(listOf(pos).asSprudelDslArgs())
-
-/** Reinterprets this pattern's values as loop start positions (0–1). */
-@SprudelDsl
-fun SprudelPattern.loopBegin(): SprudelPattern = this._loopBegin(emptyList())
+@KlangScript.Function
+fun SprudelPattern.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyLoopBegin(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
 
 /** Sets the loop start position (0–1) on a string pattern. */
 @SprudelDsl
-fun String.loopBegin(pos: PatternLike): SprudelPattern = this._loopBegin(listOf(pos).asSprudelDslArgs())
-
-/** Reinterprets this string pattern's values as loop start positions (0–1). */
-@SprudelDsl
-fun String.loopBegin(): SprudelPattern = this._loopBegin(emptyList())
+@KlangScript.Function
+fun String.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).loopBegin(pos, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the loop start position (0–1).
@@ -437,15 +384,15 @@ fun String.loopBegin(): SprudelPattern = this._loopBegin(emptyList())
  * @tags loopBegin, loopb, loop, start, sample, position
  */
 @SprudelDsl
-fun loopBegin(pos: PatternLike): PatternMapperFn = _loopBegin(listOf(pos).asSprudelDslArgs())
-
-/** Returns a [PatternMapperFn] that reinterprets source values as loop start positions. */
-@SprudelDsl
-fun loopBegin(): PatternMapperFn = _loopBegin(emptyList())
+@KlangScript.Function
+fun loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.loopBegin(pos, callInfo) }
 
 /** Chains a loopBegin onto this [PatternMapperFn]; sets the loop start position. */
 @SprudelDsl
-fun PatternMapperFn.loopBegin(pos: PatternLike): PatternMapperFn = this._loopBegin(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.loopBegin(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.loopBegin(pos, callInfo) }
 
 /**
  * Alias for [loopBegin]. Sets the loop start position.
@@ -456,40 +403,34 @@ fun PatternMapperFn.loopBegin(pos: PatternLike): PatternMapperFn = this._loopBeg
  * @tags loopb, loopBegin, loop, start, sample, position
  */
 @SprudelDsl
-fun SprudelPattern.loopb(pos: PatternLike): SprudelPattern = this._loopb(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.loopBegin(pos, callInfo)
 
 /** Alias for [loopBegin] on a string pattern. */
 @SprudelDsl
-fun String.loopb(pos: PatternLike): SprudelPattern = this._loopb(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun String.loopb(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).loopb(pos, callInfo)
 
 /** Alias for [loopBegin] — returns a [PatternMapperFn]. */
 @SprudelDsl
-fun loopb(pos: PatternLike): PatternMapperFn = _loopb(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun loopb(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    loopBegin(pos, callInfo)
 
 /** Chains a loopb (alias for [loopBegin]) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.loopb(pos: PatternLike): PatternMapperFn = this._loopb(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.loopb(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.loopBegin(pos, callInfo)
 
 // -- loopEnd() / loope() ----------------------------------------------------------------------------------------------
 
 private val loopEndMutation = voiceModifier { copy(loopEnd = it?.asDoubleOrNull()) }
 
-fun applyLoopEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+private fun applyLoopEnd(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, loopEndMutation)
-
-internal val _loopEnd by dslPatternMapper { args, callInfo -> { p -> p._loopEnd(args, callInfo) } }
-internal val SprudelPattern._loopEnd by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopEnd(p, args) }
-internal val String._loopEnd by dslStringExtension { p, args, callInfo -> p._loopEnd(args, callInfo) }
-internal val PatternMapperFn._loopEnd by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_loopEnd(args, callInfo))
-}
-
-internal val _loope by dslPatternMapper { args, callInfo -> _loopEnd(args, callInfo) }
-internal val SprudelPattern._loope by dslPatternExtension { p, args, callInfo -> p._loopEnd(args, callInfo) }
-internal val String._loope by dslStringExtension { p, args, callInfo -> p._loope(args, callInfo) }
-internal val PatternMapperFn._loope by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_loopEnd(args, callInfo))
-}
 
 /**
  * Sets the loop end position as a fraction of the total sample length (0–1).
@@ -513,19 +454,15 @@ internal val PatternMapperFn._loope by dslPatternMapperExtension { m, args, call
  * @tags loopEnd, loope, loop, end, sample, position
  */
 @SprudelDsl
-fun SprudelPattern.loopEnd(pos: PatternLike): SprudelPattern = this._loopEnd(listOf(pos).asSprudelDslArgs())
-
-/** Reinterprets this pattern's values as loop end positions (0–1). */
-@SprudelDsl
-fun SprudelPattern.loopEnd(): SprudelPattern = this._loopEnd(emptyList())
+@KlangScript.Function
+fun SprudelPattern.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyLoopEnd(this, listOfNotNull(pos).asSprudelDslArgs(callInfo))
 
 /** Sets the loop end position (0–1) on a string pattern. */
 @SprudelDsl
-fun String.loopEnd(pos: PatternLike): SprudelPattern = this._loopEnd(listOf(pos).asSprudelDslArgs())
-
-/** Reinterprets this string pattern's values as loop end positions (0–1). */
-@SprudelDsl
-fun String.loopEnd(): SprudelPattern = this._loopEnd(emptyList())
+@KlangScript.Function
+fun String.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).loopEnd(pos, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that sets the loop end position (0–1).
@@ -542,15 +479,15 @@ fun String.loopEnd(): SprudelPattern = this._loopEnd(emptyList())
  * @tags loopEnd, loope, loop, end, sample, position
  */
 @SprudelDsl
-fun loopEnd(pos: PatternLike): PatternMapperFn = _loopEnd(listOf(pos).asSprudelDslArgs())
-
-/** Returns a [PatternMapperFn] that reinterprets source values as loop end positions. */
-@SprudelDsl
-fun loopEnd(): PatternMapperFn = _loopEnd(emptyList())
+@KlangScript.Function
+fun loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.loopEnd(pos, callInfo) }
 
 /** Chains a loopEnd onto this [PatternMapperFn]; sets the loop end position. */
 @SprudelDsl
-fun PatternMapperFn.loopEnd(pos: PatternLike): PatternMapperFn = this._loopEnd(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.loopEnd(pos: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.loopEnd(pos, callInfo) }
 
 /**
  * Alias for [loopEnd]. Sets the loop end position.
@@ -561,19 +498,27 @@ fun PatternMapperFn.loopEnd(pos: PatternLike): PatternMapperFn = this._loopEnd(l
  * @tags loope, loopEnd, loop, end, sample, position
  */
 @SprudelDsl
-fun SprudelPattern.loope(pos: PatternLike): SprudelPattern = this._loope(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.loopEnd(pos, callInfo)
 
 /** Alias for [loopEnd] on a string pattern. */
 @SprudelDsl
-fun String.loope(pos: PatternLike): SprudelPattern = this._loope(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun String.loope(pos: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).loope(pos, callInfo)
 
 /** Alias for [loopEnd] — returns a [PatternMapperFn]. */
 @SprudelDsl
-fun loope(pos: PatternLike): PatternMapperFn = _loope(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun loope(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    loopEnd(pos, callInfo)
 
 /** Chains a loope (alias for [loopEnd]) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.loope(pos: PatternLike): PatternMapperFn = this._loope(listOf(pos).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.loope(pos: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.loopEnd(pos, callInfo)
 
 // -- loopAt() ---------------------------------------------------------------------------------------------------------
 
@@ -582,7 +527,7 @@ private val loopAtSpeedMutation = voiceModifier {
     if (value == null) copy(speed = null) else copy(speed = 1.0 / (2.0 * value))
 }
 
-fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (args.isEmpty()) return source
 
     // Get the loopAt factor
@@ -598,13 +543,6 @@ fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprude
     val speedControl = args.toPattern(loopAtSpeedMutation)
 
     return slowed._liftData(speedControl)
-}
-
-internal val _loopAt by dslPatternMapper { args, callInfo -> { p -> p._loopAt(args, callInfo) } }
-internal val SprudelPattern._loopAt by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAt(p, args) }
-internal val String._loopAt by dslStringExtension { p, args, callInfo -> p._loopAt(args, callInfo) }
-internal val PatternMapperFn._loopAt by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_loopAt(args, callInfo))
 }
 
 /**
@@ -629,11 +567,15 @@ internal val PatternMapperFn._loopAt by dslPatternMapperExtension { m, args, cal
  * @tags loopAt, loop, fit, cycles, tempo, stretch
  */
 @SprudelDsl
-fun SprudelPattern.loopAt(cycles: PatternLike): SprudelPattern = this._loopAt(listOf(cycles).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyLoopAt(this, listOf(cycles).asSprudelDslArgs(callInfo))
 
 /** Fits the sample to the specified number of cycles on a string pattern. */
 @SprudelDsl
-fun String.loopAt(cycles: PatternLike): SprudelPattern = this._loopAt(listOf(cycles).asSprudelDslArgs())
+@KlangScript.Function
+fun String.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).loopAt(cycles, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that fits the sample to the given number of cycles.
@@ -649,15 +591,19 @@ fun String.loopAt(cycles: PatternLike): SprudelPattern = this._loopAt(listOf(cyc
  * @tags loopAt, loop, fit, cycles, tempo, stretch
  */
 @SprudelDsl
-fun loopAt(cycles: PatternLike): PatternMapperFn = _loopAt(listOf(cycles).asSprudelDslArgs())
+@KlangScript.Function
+fun loopAt(cycles: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.loopAt(cycles, callInfo) }
 
 /** Chains a loopAt onto this [PatternMapperFn]; fits the sample to the given number of cycles. */
 @SprudelDsl
-fun PatternMapperFn.loopAt(cycles: PatternLike): PatternMapperFn = this._loopAt(listOf(cycles).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.loopAt(cycles, callInfo) }
 
 // -- loopAtCps() ------------------------------------------------------------------------------------------------------
 
-fun applyLoopAtCps(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applyLoopAtCps(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._innerJoin(args) { pat, factorValue, cpsValue ->
         val factor = factorValue?.asRational ?: return@_innerJoin silence
         val cps = cpsValue?.asRational ?: Rational.HALF
@@ -668,20 +614,6 @@ fun applyLoopAtCps(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Spr
         // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
         pat.speed(speed).unit("c").slow(factor)
     }
-}
-
-internal val _loopAtCps by dslPatternMapper { args, callInfo -> { p -> p._loopAtCps(args, callInfo) } }
-internal val SprudelPattern._loopAtCps by dslPatternExtension { p, args, /* callInfo */ _ -> applyLoopAtCps(p, args) }
-internal val String._loopAtCps by dslStringExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
-internal val PatternMapperFn._loopAtCps by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_loopAtCps(args, callInfo))
-}
-
-internal val _loopatcps by dslPatternMapper { args, callInfo -> _loopAtCps(args, callInfo) }
-internal val SprudelPattern._loopatcps by dslPatternExtension { p, args, callInfo -> p._loopAtCps(args, callInfo) }
-internal val String._loopatcps by dslStringExtension { p, args, callInfo -> p._loopatcps(args, callInfo) }
-internal val PatternMapperFn._loopatcps by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_loopAtCps(args, callInfo))
 }
 
 /**
@@ -706,23 +638,25 @@ internal val PatternMapperFn._loopatcps by dslPatternMapperExtension { m, args, 
  * @tags loopAtCps, loopatcps, loop, fit, cycles, cps, tempo, stretch
  */
 @SprudelDsl
-fun SprudelPattern.loopAtCps(factor: PatternLike, cps: PatternLike): SprudelPattern =
-    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applyLoopAtCps(this, listOf(factor, cps).asSprudelDslArgs(callInfo))
 
 /** Fits the sample to the given number of cycles and cps value on this pattern (numeric overload). */
 @SprudelDsl
 fun SprudelPattern.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
-    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
+    this.loopAtCps(factor as PatternLike, cps as PatternLike)
 
 /** Fits the sample to the given number of cycles and cps value on a string pattern. */
 @SprudelDsl
-fun String.loopAtCps(factor: PatternLike, cps: PatternLike): SprudelPattern =
-    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
+@KlangScript.Function
+fun String.loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).loopAtCps(factor, cps, callInfo)
 
 /** Fits the sample to the given number of cycles and cps value on a string pattern (numeric overload). */
 @SprudelDsl
 fun String.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
-    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
+    this.loopAtCps(factor as PatternLike, cps as PatternLike)
 
 /**
  * Returns a [PatternMapperFn] that fits the sample to the given number of cycles and cps.
@@ -740,13 +674,15 @@ fun String.loopAtCps(factor: Number, cps: Number = 0.5): SprudelPattern =
  * @tags loopAtCps, loopatcps, loop, fit, cycles, cps, tempo, stretch
  */
 @SprudelDsl
-fun loopAtCps(factor: PatternLike, cps: PatternLike): PatternMapperFn =
-    _loopAtCps(listOf(factor, cps).asSprudelDslArgs())
+@KlangScript.Function
+fun loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.loopAtCps(factor, cps, callInfo) }
 
 /** Chains a loopAtCps onto this [PatternMapperFn]; fits the sample to the given cycles and cps. */
 @SprudelDsl
-fun PatternMapperFn.loopAtCps(factor: PatternLike, cps: PatternLike): PatternMapperFn =
-    this._loopAtCps(listOf(factor, cps).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.loopAtCps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.loopAtCps(factor, cps, callInfo) }
 
 /**
  * Alias for [loopAtCps]. Fits the sample to the given number of cycles and cps.
@@ -758,8 +694,9 @@ fun PatternMapperFn.loopAtCps(factor: PatternLike, cps: PatternLike): PatternMap
  * @tags loopatcps, loopAtCps, loop, fit, cycles, cps, tempo, stretch
  */
 @SprudelDsl
-fun SprudelPattern.loopatcps(factor: PatternLike, cps: PatternLike): SprudelPattern =
-    this._loopatcps(listOf(factor, cps).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.loopatcps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.loopAtCps(factor, cps, callInfo)
 
 /** Alias for [loopAtCps] on this pattern (numeric overload). */
 @SprudelDsl
@@ -767,8 +704,9 @@ fun SprudelPattern.loopatcps(factor: Number, cps: Number = 0.5): SprudelPattern 
 
 /** Alias for [loopAtCps] on a string pattern. */
 @SprudelDsl
-fun String.loopatcps(factor: PatternLike, cps: PatternLike): SprudelPattern =
-    this._loopatcps(listOf(factor, cps).asSprudelDslArgs())
+@KlangScript.Function
+fun String.loopatcps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).loopatcps(factor, cps, callInfo)
 
 /** Alias for [loopAtCps] on a string pattern (numeric overload). */
 @SprudelDsl
@@ -776,27 +714,22 @@ fun String.loopatcps(factor: Number, cps: Number = 0.5): SprudelPattern = this.l
 
 /** Alias for [loopAtCps] — returns a [PatternMapperFn]. */
 @SprudelDsl
-fun loopatcps(factor: PatternLike, cps: PatternLike): PatternMapperFn =
-    _loopatcps(listOf(factor, cps).asSprudelDslArgs())
+@KlangScript.Function
+fun loopatcps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    loopAtCps(factor, cps, callInfo)
 
 /** Chains a loopatcps (alias for [loopAtCps]) onto this [PatternMapperFn]. */
 @SprudelDsl
-fun PatternMapperFn.loopatcps(factor: PatternLike, cps: PatternLike): PatternMapperFn =
-    this._loopatcps(listOf(factor, cps).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.loopatcps(factor: PatternLike, cps: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.loopAtCps(factor, cps, callInfo)
 
 // -- cut() ------------------------------------------------------------------------------------------------------------
 
 private val cutMutation = voiceModifier { copy(cut = it?.asIntOrNull()) }
 
-fun applyCut(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
+private fun applyCut(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     source._liftOrReinterpretNumericalField(args, cutMutation)
-
-internal val _cut by dslPatternMapper { args, callInfo -> { p -> p._cut(args, callInfo) } }
-internal val SprudelPattern._cut by dslPatternExtension { p, args, /* callInfo */ _ -> applyCut(p, args) }
-internal val String._cut by dslStringExtension { p, args, callInfo -> p._cut(args, callInfo) }
-internal val PatternMapperFn._cut by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_cut(args, callInfo))
-}
 
 /**
  * Assigns the sample to a cut group (choke group) by number.
@@ -820,19 +753,15 @@ internal val PatternMapperFn._cut by dslPatternMapperExtension { m, args, callIn
  * @tags cut, choke, group, hi-hat, sample
  */
 @SprudelDsl
-fun SprudelPattern.cut(group: PatternLike): SprudelPattern = this._cut(listOf(group).asSprudelDslArgs())
-
-/** Reinterprets this pattern's values as cut group numbers. */
-@SprudelDsl
-fun SprudelPattern.cut(): SprudelPattern = this._cut(emptyList())
+@KlangScript.Function
+fun SprudelPattern.cut(group: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyCut(this, listOfNotNull(group).asSprudelDslArgs(callInfo))
 
 /** Assigns the sample to a cut group (choke group) on a string pattern. */
 @SprudelDsl
-fun String.cut(group: PatternLike): SprudelPattern = this._cut(listOf(group).asSprudelDslArgs())
-
-/** Reinterprets this string pattern's values as cut group numbers. */
-@SprudelDsl
-fun String.cut(): SprudelPattern = this._cut(emptyList())
+@KlangScript.Function
+fun String.cut(group: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).cut(group, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that assigns the sample to a cut group.
@@ -848,19 +777,19 @@ fun String.cut(): SprudelPattern = this._cut(emptyList())
  * @tags cut, choke, group, hi-hat, sample
  */
 @SprudelDsl
-fun cut(group: PatternLike): PatternMapperFn = _cut(listOf(group).asSprudelDslArgs())
-
-/** Returns a [PatternMapperFn] that reinterprets the source pattern's values as cut group numbers. */
-@SprudelDsl
-fun cut(): PatternMapperFn = _cut(emptyList())
+@KlangScript.Function
+fun cut(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.cut(group, callInfo) }
 
 /** Chains a cut onto this [PatternMapperFn]; assigns the sample to the given cut group. */
 @SprudelDsl
-fun PatternMapperFn.cut(group: PatternLike): PatternMapperFn = this._cut(listOf(group).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.cut(group: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.cut(group, callInfo) }
 
 // -- slice() ----------------------------------------------------------------------------------------------------------
 
-fun applySlice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applySlice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nArg = args.getOrNull(0)
     val nVal = maxOf(1, nArg?.value?.asIntOrNull() ?: 1)
 
@@ -873,13 +802,6 @@ fun applySlice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprudel
     val end = (indexVal + 1.0) / nVal
 
     return source.begin(start).end(end)
-}
-
-internal val _slice by dslPatternMapper { args, callInfo -> { p -> p._slice(args, callInfo) } }
-internal val SprudelPattern._slice by dslPatternExtension { p, args, /* callInfo */ _ -> applySlice(p, args) }
-internal val String._slice by dslStringExtension { p, args, callInfo -> p._slice(args, callInfo) }
-internal val PatternMapperFn._slice by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_slice(args, callInfo))
 }
 
 /**
@@ -903,16 +825,18 @@ internal val PatternMapperFn._slice by dslPatternMapperExtension { m, args, call
  * @tags slice, segment, chop, sample, begin, end
  */
 @SprudelDsl
-fun SprudelPattern.slice(n: PatternLike, index: PatternLike): SprudelPattern =
-    this._slice(listOf(n, index).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applySlice(this, listOf(n, index).asSprudelDslArgs(callInfo))
 
 /**
  * Plays a specific slice of the sample on a string pattern.
  * See [SprudelPattern.slice] for full documentation.
  */
 @SprudelDsl
-fun String.slice(n: PatternLike, index: PatternLike): SprudelPattern =
-    this._slice(listOf(n, index).asSprudelDslArgs())
+@KlangScript.Function
+fun String.slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).slice(n, index, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that plays a specific slice of the sample.
@@ -929,29 +853,25 @@ fun String.slice(n: PatternLike, index: PatternLike): SprudelPattern =
  * @tags slice, segment, chop, sample, begin, end
  */
 @SprudelDsl
-fun slice(n: PatternLike, index: PatternLike): PatternMapperFn = _slice(listOf(n, index).asSprudelDslArgs())
+@KlangScript.Function
+fun slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.slice(n, index, callInfo) }
 
 /** Chains a slice onto this [PatternMapperFn]; plays the given slice of the sample. */
 @SprudelDsl
-fun PatternMapperFn.slice(n: PatternLike, index: PatternLike): PatternMapperFn =
-    this._slice(listOf(n, index).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.slice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.slice(n, index, callInfo) }
 
 // -- splice() ---------------------------------------------------------------------------------------------------------
 
-fun applySplice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+private fun applySplice(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // Get number of slices (also used as speed multiplier)
     val nArg = args.getOrNull(0)
     val nVal = maxOf(1, nArg?.value?.asIntOrNull() ?: 1)
 
     // Apply slice, then multiply speed by n to maintain timing
     return applySlice(source, args).speed(nVal.toDouble())
-}
-
-internal val _splice by dslPatternMapper { args, callInfo -> { p -> p._splice(args, callInfo) } }
-internal val SprudelPattern._splice by dslPatternExtension { p, args, /* callInfo */ _ -> applySplice(p, args) }
-internal val String._splice by dslStringExtension { p, args, callInfo -> p._splice(args, callInfo) }
-internal val PatternMapperFn._splice by dslPatternMapperExtension { m, args, callInfo ->
-    m.chain(_splice(args, callInfo))
 }
 
 /**
@@ -975,16 +895,18 @@ internal val PatternMapperFn._splice by dslPatternMapperExtension { m, args, cal
  * @tags splice, slice, chop, sample, speed, tempo
  */
 @SprudelDsl
-fun SprudelPattern.splice(n: PatternLike, index: PatternLike): SprudelPattern =
-    this._splice(listOf(n, index).asSprudelDslArgs())
+@KlangScript.Function
+fun SprudelPattern.splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    applySplice(this, listOf(n, index).asSprudelDslArgs(callInfo))
 
 /**
  * Plays a specific slice of the sample at the original tempo on a string pattern.
  * See [SprudelPattern.splice] for full documentation.
  */
 @SprudelDsl
-fun String.splice(n: PatternLike, index: PatternLike): SprudelPattern =
-    this._splice(listOf(n, index).asSprudelDslArgs())
+@KlangScript.Function
+fun String.splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).splice(n, index, callInfo)
 
 /**
  * Returns a [PatternMapperFn] that plays a specific slice at the original sample tempo.
@@ -1001,9 +923,12 @@ fun String.splice(n: PatternLike, index: PatternLike): SprudelPattern =
  * @tags splice, slice, chop, sample, speed, tempo
  */
 @SprudelDsl
-fun splice(n: PatternLike, index: PatternLike): PatternMapperFn = _splice(listOf(n, index).asSprudelDslArgs())
+@KlangScript.Function
+fun splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.splice(n, index, callInfo) }
 
 /** Chains a splice onto this [PatternMapperFn]; plays the given slice at original sample tempo. */
 @SprudelDsl
-fun PatternMapperFn.splice(n: PatternLike, index: PatternLike): PatternMapperFn =
-    this._splice(listOf(n, index).asSprudelDslArgs())
+@KlangScript.Function
+fun PatternMapperFn.splice(n: PatternLike, index: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.splice(n, index, callInfo) }

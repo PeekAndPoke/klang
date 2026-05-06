@@ -5,6 +5,11 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.accelerate
+import io.peekandpoke.klang.audio_bridge.fm
+import io.peekandpoke.klang.audio_bridge.vibrato
 import kotlin.math.abs
 import kotlin.math.sqrt
 import io.kotest.matchers.ints.shouldBeGreaterThan as intShouldBeGreaterThan
@@ -41,25 +46,25 @@ class ExciterCombinatorsSpec : StringSpec({
         freqHz: Double = 440.0,
         blockFrames: Int = defaultBlockFrames,
         ctx: IgniteContext? = null,
-    ): FloatArray {
+    ): AudioBuffer {
         val c = ctx ?: createCtx(blockFrames)
-        val buffer = FloatArray(blockFrames)
+        val buffer = AudioBuffer(blockFrames)
         sig.generate(buffer, freqHz, c)
         return buffer
     }
 
-    fun FloatArray.rms(): Double {
+    fun AudioBuffer.rms(): Double {
         var sum = 0.0
         for (sample in this) sum += sample.toDouble() * sample.toDouble()
         return sqrt(sum / size)
     }
 
-    fun FloatArray.peakAmplitude(): Double =
-        maxOf((maxOrNull() ?: 0.0f).toDouble(), -(minOrNull() ?: 0.0f).toDouble())
+    fun AudioBuffer.peakAmplitude(): Double =
+        maxOf((maxOrNull() ?: 0.0).toDouble(), -(minOrNull() ?: 0.0).toDouble())
 
-    fun FloatArray.dcOffset(): Double = map { it.toDouble() }.average()
+    fun AudioBuffer.dcOffset(): Double = map { it.toDouble() }.average()
 
-    fun FloatArray.uniqueValues(): Int = toSet().size
+    fun AudioBuffer.uniqueValues(): Int = toSet().size
 
     // ═════════════════════════════════════════════════════════════════════════════
     // Effects: distort
@@ -126,9 +131,9 @@ class ExciterCombinatorsSpec : StringSpec({
     // Effects: phaser
     // ═════════════════════════════════════════════════════════════════════════════
 
-    "phaser(rate, depth) - output differs from dry signal" {
+    "phaser(rate, blend) - output differs from dry signal" {
         val dry = generate(Ignitors.sine())
-        val wet = generate(Ignitors.sine().phaser(rate = 2.0, depth = 0.5))
+        val wet = generate(Ignitors.sine().phaser(rate = 2.0, blend = 0.5))
 
         // Phaser should modify the signal
         var differs = false
@@ -175,11 +180,13 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "dcBlock() - removes DC offset from signal" {
         // Create a sine with DC offset by using a custom exciter
-        val dcOffsetExciter = Ignitor { buffer, freqHz, ctx ->
-            Ignitors.sine().generate(buffer, freqHz, ctx)
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                buffer[i] = buffer[i] + 0.5f // Add DC offset
+        val dcOffsetExciter: Ignitor = object : Ignitor {
+            override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+                Ignitors.sine().generate(buffer, freqHz, ctx)
+                val end = ctx.offset + ctx.length
+                for (i in ctx.offset until end) {
+                    buffer[i] = buffer[i] + 0.5 // Add DC offset
+                }
             }
         }
 
@@ -281,15 +288,15 @@ class ExciterCombinatorsSpec : StringSpec({
         val buf = generate(sig, blockFrames = blockFrames, ctx = ctx)
 
         // Start should be near zero (attack beginning)
-        val startRms = FloatArray(441) { buf[it] }.rms()  // first 10ms
+        val startRms = AudioBuffer(441) { buf[it] }.rms()  // first 10ms
         startRms shouldBeLessThan 0.2
 
         // Middle of attack (~50ms) should be building up
-        val midAttackRms = FloatArray(441) { buf[2205 + it] }.rms()  // 50ms in
+        val midAttackRms = AudioBuffer(441) { buf[2205 + it] }.rms()  // 50ms in
         midAttackRms shouldBeGreaterThan startRms
 
         // After attack+decay (>200ms), should be at sustain level
-        val sustainRms = FloatArray(441) { buf[22050 + it] }.rms()  // 500ms in
+        val sustainRms = AudioBuffer(441) { buf[22050 + it] }.rms()  // 500ms in
         // Sustain level is 0.5, sine RMS is ~0.707 * amplitude, so ~0.354
         sustainRms shouldBe (0.354 plusOrMinus 0.05)
     }
@@ -306,7 +313,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
         // With zero attack, output should be at full level from the start
         // Check RMS of first 10ms
-        val startRms = FloatArray(441) { buf[it] }.rms()
+        val startRms = AudioBuffer(441) { buf[it] }.rms()
         // Sine at gain 1.0 has RMS ~0.707
         startRms shouldBeGreaterThan 0.5
     }
@@ -316,8 +323,8 @@ class ExciterCombinatorsSpec : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "vibrato(rate, depth) - output differs from plain sine (frequency modulation)" {
-        val dry = generate(Ignitors.sine())
-        val wet = generate(Ignitors.sine().vibrato(rate = 5.0, depth = 0.05))
+        val dry = generate(IgnitorDsl.Sine().toExciter())
+        val wet = generate(IgnitorDsl.Sine().vibrato(5.0, 0.05).toExciter())
 
         var differs = false
         for (i in dry.indices) {
@@ -338,10 +345,10 @@ class ExciterCombinatorsSpec : StringSpec({
 
     "accelerate(amount) - pitch changes over time" {
         val blockFrames = 44100 // 1 second
-        val wet = generate(Ignitors.sine().accelerate(2.0), freqHz = 440.0, blockFrames = blockFrames)
+        val wet = generate(IgnitorDsl.Sine().accelerate(2.0).toExciter(), freqHz = 440.0, blockFrames = blockFrames)
 
         // Count zero crossings in first half vs second half
-        fun zeroCrossingsInRange(buf: FloatArray, start: Int, end: Int): Int {
+        fun zeroCrossingsInRange(buf: AudioBuffer, start: Int, end: Int): Int {
             var count = 0
             for (i in (start + 1) until end) {
                 if ((buf[i - 1] >= 0.0 && buf[i] < 0.0) || (buf[i - 1] < 0.0 && buf[i] >= 0.0)) {
@@ -364,8 +371,8 @@ class ExciterCombinatorsSpec : StringSpec({
     // ═════════════════════════════════════════════════════════════════════════════
 
     "fm(modulator, ratio, depth) - output has more harmonic content than carrier alone" {
-        val dry = generate(Ignitors.sine())
-        val wet = generate(Ignitors.sine().fm(modulator = Ignitors.sine(), ratio = 2.0, depth = 200.0))
+        val dry = generate(IgnitorDsl.Sine().toExciter())
+        val wet = generate(IgnitorDsl.Sine().fm(IgnitorDsl.Sine(), ratio = 2.0, depth = 200.0).toExciter())
 
         // FM synthesis creates sidebands — the waveform should differ substantially from a pure sine.
         // Compute mean absolute difference between dry and wet signals.

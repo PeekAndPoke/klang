@@ -108,6 +108,19 @@ data class KBConstStmt(
 ) : KBStmt()
 
 /**
+ * An `export` declaration, e.g. `export bass = note("c3 e3 g3")`.
+ *
+ * Combined immutable binding + export marker. Always has an initialiser value;
+ * intended for top-level use in a library/module file. Mirrors [KBConstStmt]
+ * structurally — emits `export <name> = <value>` instead of `const <name> = <value>`.
+ */
+data class KBExportStmt(
+    override val id: String,
+    val name: String,
+    val value: KBArgValue,
+) : KBStmt()
+
+/**
  * A method-call chain statement — the most common statement type.
  *
  * Represents a chain of function calls joined by `.`, e.g.

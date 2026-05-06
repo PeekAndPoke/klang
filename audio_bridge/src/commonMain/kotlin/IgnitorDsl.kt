@@ -4,6 +4,22 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
+ * Process-local counter used to stamp each noise-source DSL instance with a unique
+ * [IgnitorDsl.WhiteNoise.uid] / [IgnitorDsl.BrownNoise.uid] / [IgnitorDsl.PinkNoise.uid].
+ *
+ * Two calls to `Osc.whitenoise()` produce two different DSL objects with different uids —
+ * and therefore two independent Ignitors under the identity-caching `toExciter`. Binding to
+ * a variable and re-using it keeps a single instance, so `let s = Osc.whitenoise(); s + s`
+ * still collapses to one shared stream summed with itself.
+ *
+ * DSL construction is single-threaded in practice (the audio bridge is built from the UI
+ * thread before being serialised to the worklet), so a plain counter is sufficient.
+ */
+private var noiseUidCounter: Int = 0
+
+internal fun nextNoiseUid(): Int = noiseUidCounter++
+
+/**
  * Serializable sealed DSL for describing exciter signal graphs.
  *
  * Each subtype represents a primitive oscillator, noise source, effect, filter, envelope,
@@ -121,10 +137,18 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** White noise generator. Produces uniformly distributed random samples. */
+    /**
+     * White noise generator. Produces uniformly distributed random samples.
+     *
+     * [uid] is an instance-discriminator used by the runtime identity cache: each call to
+     * `Osc.whitenoise()` creates a fresh [WhiteNoise] with a unique uid, so two such calls
+     * yield two independent noise streams when composed (`a + b`). Binding to a variable and
+     * re-using it (`let s = Osc.whitenoise(); s + s`) keeps a single instance and sums the
+     * same stream twice.
+     */
     @Serializable
     @SerialName("white-noise")
-    data object WhiteNoise : IgnitorDsl {
+    data class WhiteNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
@@ -165,17 +189,23 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope. */
+    /**
+     * Brown (Brownian/red) noise generator. Random-walk filtered noise with -6 dB/oct slope.
+     * See [WhiteNoise] for the [uid] instance-discriminator story.
+     */
     @Serializable
     @SerialName("brown-noise")
-    data object BrownNoise : IgnitorDsl {
+    data class BrownNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
-    /** Pink noise generator. Equal energy per octave with -3 dB/oct slope. */
+    /**
+     * Pink noise generator. Equal energy per octave with -3 dB/oct slope.
+     * See [WhiteNoise] for the [uid] instance-discriminator story.
+     */
     @Serializable
     @SerialName("pink-noise")
-    data object PinkNoise : IgnitorDsl {
+    data class PinkNoise(val uid: Int = nextNoiseUid()) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
@@ -376,18 +406,6 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Scales the left signal by the right signal (per-sample multiplication). */
-    @Serializable
-    @SerialName("mul")
-    data class Mul(
-        val left: IgnitorDsl,
-        val right: IgnitorDsl = Constant(1.0),
-    ) : IgnitorDsl {
-        override fun collectParams(out: MutableList<Param>) {
-            left.collectParams(out); right.collectParams(out)
-        }
-    }
-
     /** Divides the left signal by the right signal (per-sample division). */
     @Serializable
     @SerialName("div")
@@ -397,6 +415,276 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /** Subtractive combinator. Subtracts the right signal from the left sample-by-sample. */
+    @Serializable
+    @SerialName("minus")
+    data class Minus(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /** Negates the inner signal (flips polarity). */
+    @Serializable
+    @SerialName("neg")
+    data class Neg(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Absolute value of the inner signal (full-wave rectification). */
+    @Serializable
+    @SerialName("abs")
+    data class Abs(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Raises [base] to the power of [exp] sample-by-sample.
+     *
+     * Uses signed-magnitude semantics: for negative [base], computes
+     * `-(|base|^exp)`. Preserves sign and avoids `NaN` for any real
+     * exponent — keeps the engine numerically stable at audio rate.
+     */
+    @Serializable
+    @SerialName("pow")
+    data class Pow(val base: IgnitorDsl, val exp: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            base.collectParams(out); exp.collectParams(out)
+        }
+    }
+
+    /** Per-sample minimum of two signals. */
+    @Serializable
+    @SerialName("min")
+    data class Min(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /** Per-sample maximum of two signals. */
+    @Serializable
+    @SerialName("max")
+    data class Max(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /** Bounds the inner signal to `[lo, hi]` per sample. */
+    @Serializable
+    @SerialName("clamp")
+    data class Clamp(
+        val inner: IgnitorDsl,
+        val lo: IgnitorDsl = Constant(-1.0),
+        val hi: IgnitorDsl = Constant(1.0),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); lo.collectParams(out); hi.collectParams(out)
+        }
+    }
+
+    /** `e^x` per sample. */
+    @Serializable
+    @SerialName("exp")
+    data class Exp(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Natural logarithm per sample.
+     *
+     * Signed-magnitude: for negative inputs computes `-ln(|x|)`.
+     * `log(0)` is treated as `0` to avoid `-Inf` poisoning the audio path.
+     */
+    @Serializable
+    @SerialName("log")
+    data class Log(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Square root per sample.
+     *
+     * Signed-magnitude: for negative inputs computes `-√|x|` to keep the engine `NaN`-free.
+     */
+    @Serializable
+    @SerialName("sqrt")
+    data class Sqrt(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Sign of the inner signal (`-1`, `0`, or `+1`). */
+    @Serializable
+    @SerialName("sign")
+    data class Sign(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Hyperbolic tangent per sample (smooth saturation curve). */
+    @Serializable
+    @SerialName("tanh")
+    data class Tanh(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Linear interpolation per sample: `left·(1−t) + right·t`.
+     *
+     * Crossfades between [left] and [right] under per-sample weight [t] (typically `[0, 1]`).
+     */
+    @Serializable
+    @SerialName("lerp")
+    data class Lerp(
+        val left: IgnitorDsl,
+        val right: IgnitorDsl,
+        val t: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out); t.collectParams(out)
+        }
+    }
+
+    /**
+     * Maps the inner signal from `[-1, 1]` to `[lo, hi]` per sample.
+     *
+     * Standard LFO scaler. Output = `lo + (inner + 1)·0.5·(hi − lo)`.
+     */
+    @Serializable
+    @SerialName("range")
+    data class Range(
+        val inner: IgnitorDsl,
+        val lo: IgnitorDsl,
+        val hi: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); lo.collectParams(out); hi.collectParams(out)
+        }
+    }
+
+    /** Maps the inner signal from `[0, 1]` to `[-1, 1]` per sample. */
+    @Serializable
+    @SerialName("bipolar")
+    data class Bipolar(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Maps the inner signal from `[-1, 1]` to `[0, 1]` per sample. */
+    @Serializable
+    @SerialName("unipolar")
+    data class Unipolar(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample floor: largest integer `≤ x`. */
+    @Serializable
+    @SerialName("floor")
+    data class Floor(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample ceiling: smallest integer `≥ x`. */
+    @Serializable
+    @SerialName("ceil")
+    data class Ceil(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample round to nearest integer (banker's rounding ties to even). */
+    @Serializable
+    @SerialName("round")
+    data class Round(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample fractional part: `x − floor(x)`. */
+    @Serializable
+    @SerialName("frac")
+    data class Frac(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Per-sample modulo: `left mod right`.
+     *
+     * Zero divisors are substituted with a tiny epsilon (1e-30) so the engine
+     * never produces `NaN`. The master limiter handles the resulting spike.
+     */
+    @Serializable
+    @SerialName("mod")
+    data class Mod(val left: IgnitorDsl, val right: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            left.collectParams(out); right.collectParams(out)
+        }
+    }
+
+    /**
+     * Per-sample reciprocal: `1 / x`.
+     *
+     * Zero inputs are substituted with a tiny epsilon (1e-30) so the engine
+     * never produces `NaN`. The master limiter handles the resulting spike.
+     */
+    @Serializable
+    @SerialName("recip")
+    data class Recip(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /** Per-sample square: `x · x`. */
+    @Serializable
+    @SerialName("sq")
+    data class Sq(val inner: IgnitorDsl) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out)
+        }
+    }
+
+    /**
+     * Per-sample conditional: returns [whenTrue] when [cond] `> 0`, else [whenFalse].
+     *
+     * Both branches are evaluated at audio rate (no short-circuit), so the gate is
+     * deterministic and stateful sources advance regardless of which branch is selected.
+     */
+    @Serializable
+    @SerialName("select")
+    data class Select(
+        val cond: IgnitorDsl,
+        val whenTrue: IgnitorDsl,
+        val whenFalse: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            cond.collectParams(out); whenTrue.collectParams(out); whenFalse.collectParams(out)
         }
     }
 
@@ -611,18 +899,23 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Phaser effect. Sweeps a series of allpass filters to create notch comb filtering. */
+    /**
+     * Phaser effect. Sweeps a series of allpass filters to create notch comb filtering.
+     *
+     * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
+     *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
+     */
     @Serializable
     @SerialName("phaser")
     data class Phaser(
         val inner: IgnitorDsl,
         val rate: IgnitorDsl = Constant(0.5),
-        val depth: IgnitorDsl = Constant(0.5),
+        val blend: IgnitorDsl = Constant(0.5),
         val center: IgnitorDsl = Constant(1000.0),
         val sweep: IgnitorDsl = Constant(1000.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
+            inner.collectParams(out); rate.collectParams(out); blend.collectParams(out)
             center.collectParams(out); sweep.collectParams(out)
         }
     }
@@ -637,6 +930,36 @@ sealed interface IgnitorDsl {
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); rate.collectParams(out); depth.collectParams(out)
+        }
+    }
+
+    /**
+     * Shimmer effect. Granular pitch-shift cloud with feedback — Aetherizer-style.
+     *
+     * Chops the input into short overlapping grains, replays them at the pitch intervals
+     * specified by [pitches] (in semitones), and feeds the wet output back into the grain buffer
+     * through a one-pole lowpass at [tone] Hz.
+     *
+     * @param blend Crossfade between dry and wet. 0.0 = 100% dry (bypass), 1.0 = 100% wet (effect only).
+     *   Formula: `out = dry · (1 − blend) + wet · blend`. Default: 0.5 (equal mix).
+     * @param feedback Wet → grain-buffer feedback. 0.0 = no cascade, 0.9 = long tails.
+     *   Hard-clamped to 0.95 internally for stability.
+     * @param pitches Semitone transpositions for grains. Default: `[0, 7, 12]` (root + fifth + octave).
+     *   Example: `[0, 4, 7, 11]` for a major 7th chord shimmer.
+     * @param tone One-pole lowpass cutoff in Hz applied in the feedback path.
+     *   Lower = darker, more ghostly tails. Typical: 2000–6000. Default: 4000.
+     */
+    @Serializable
+    @SerialName("shimmer")
+    data class Shimmer(
+        val inner: IgnitorDsl,
+        val blend: IgnitorDsl = Constant(0.5),
+        val feedback: IgnitorDsl = Constant(0.5),
+        val pitches: List<Double> = listOf(0.0, 7.0, 12.0),
+        val tone: IgnitorDsl = Constant(4000.0),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); blend.collectParams(out); feedback.collectParams(out); tone.collectParams(out)
         }
     }
 
@@ -695,6 +1018,26 @@ sealed interface IgnitorDsl {
             decaySec.collectParams(out); releaseSec.collectParams(out); curve.collectParams(out); anchor.collectParams(out)
         }
     }
+
+    /**
+     * General-purpose pitch modulation. The [mod] Ignitor produces per-sample phase-deviation
+     * values (0.0 = no change, positive = higher pitch, negative = lower). At runtime, the
+     * build-time walker converts to ratio space (`value + 1.0`) and bubbles the mod to the
+     * source oscillator.
+     *
+     * This is the general primitive underlying `.vibrato()`, `.accelerate()`, `.fm()`, and
+     * `.pitchEnvelope()`. Use it for custom pitch modulation from any Ignitor source.
+     */
+    @Serializable
+    @SerialName("pitch-mod")
+    data class PitchMod(
+        val inner: IgnitorDsl,
+        val mod: IgnitorDsl,
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            inner.collectParams(out); mod.collectParams(out)
+        }
+    }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════════
@@ -709,11 +1052,84 @@ operator fun IgnitorDsl.plus(other: IgnitorDsl) = IgnitorDsl.Plus(left = this, r
 /** Multiplies two ignitor signals together (ring modulation). */
 operator fun IgnitorDsl.times(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
 
-/** Scales this signal by a modulatable [other] factor. */
-fun IgnitorDsl.mul(other: IgnitorDsl) = IgnitorDsl.Mul(left = this, right = other)
+/** Scales this signal by a modulatable [other] factor. Alias for [times]. */
+fun IgnitorDsl.mul(other: IgnitorDsl) = IgnitorDsl.Times(left = this, right = other)
 
 /** Divides this signal by a modulatable [other] divisor. */
 fun IgnitorDsl.div(other: IgnitorDsl) = IgnitorDsl.Div(left = this, right = other)
+
+/** Subtracts [other] from this signal sample-by-sample. */
+fun IgnitorDsl.minus(other: IgnitorDsl) = IgnitorDsl.Minus(left = this, right = other)
+
+/** Negates this signal (flips polarity). */
+fun IgnitorDsl.neg() = IgnitorDsl.Neg(inner = this)
+
+/** Absolute value of this signal (full-wave rectification). */
+fun IgnitorDsl.abs() = IgnitorDsl.Abs(inner = this)
+
+/** Raises this signal to the power of [exp]. Signed-magnitude (no NaN for negative bases). */
+fun IgnitorDsl.pow(exp: IgnitorDsl) = IgnitorDsl.Pow(base = this, exp = exp)
+
+/** Per-sample minimum of this signal and [other]. */
+fun IgnitorDsl.min(other: IgnitorDsl) = IgnitorDsl.Min(left = this, right = other)
+
+/** Per-sample maximum of this signal and [other]. */
+fun IgnitorDsl.max(other: IgnitorDsl) = IgnitorDsl.Max(left = this, right = other)
+
+/** Bounds this signal to the range `[lo, hi]` per sample. */
+fun IgnitorDsl.clamp(lo: IgnitorDsl, hi: IgnitorDsl) = IgnitorDsl.Clamp(inner = this, lo = lo, hi = hi)
+
+/** `e^x` per sample. */
+fun IgnitorDsl.exp() = IgnitorDsl.Exp(inner = this)
+
+/** Natural logarithm per sample. Signed-magnitude; `log(0) = 0` (no `-Inf`). */
+fun IgnitorDsl.log() = IgnitorDsl.Log(inner = this)
+
+/** Square root per sample. Signed-magnitude (no `NaN` for negatives). */
+fun IgnitorDsl.sqrt() = IgnitorDsl.Sqrt(inner = this)
+
+/** Sign of this signal: `-1`, `0`, or `+1`. */
+fun IgnitorDsl.sign() = IgnitorDsl.Sign(inner = this)
+
+/** `tanh(x)` per sample (smooth saturation curve). */
+fun IgnitorDsl.tanh() = IgnitorDsl.Tanh(inner = this)
+
+/** Linear interpolation: `this·(1−t) + other·t`. */
+fun IgnitorDsl.lerp(other: IgnitorDsl, t: IgnitorDsl) = IgnitorDsl.Lerp(left = this, right = other, t = t)
+
+/** Maps this signal from `[-1, 1]` to `[lo, hi]` per sample. */
+fun IgnitorDsl.range(lo: IgnitorDsl, hi: IgnitorDsl) = IgnitorDsl.Range(inner = this, lo = lo, hi = hi)
+
+/** Maps this signal from `[0, 1]` to `[-1, 1]` per sample. */
+fun IgnitorDsl.bipolar() = IgnitorDsl.Bipolar(inner = this)
+
+/** Maps this signal from `[-1, 1]` to `[0, 1]` per sample. */
+fun IgnitorDsl.unipolar() = IgnitorDsl.Unipolar(inner = this)
+
+/** Per-sample floor. */
+fun IgnitorDsl.floor() = IgnitorDsl.Floor(inner = this)
+
+/** Per-sample ceiling. */
+fun IgnitorDsl.ceil() = IgnitorDsl.Ceil(inner = this)
+
+/** Per-sample round to nearest integer. */
+fun IgnitorDsl.round() = IgnitorDsl.Round(inner = this)
+
+/** Per-sample fractional part: `x − floor(x)`. */
+fun IgnitorDsl.frac() = IgnitorDsl.Frac(inner = this)
+
+/** Per-sample modulo. Zero divisors substituted with `1e-30` to avoid `NaN`. */
+fun IgnitorDsl.mod(other: IgnitorDsl) = IgnitorDsl.Mod(left = this, right = other)
+
+/** Per-sample reciprocal: `1 / x`. Zero inputs substituted with `1e-30` to avoid `NaN`. */
+fun IgnitorDsl.recip() = IgnitorDsl.Recip(inner = this)
+
+/** Per-sample square: `x · x`. */
+fun IgnitorDsl.sq() = IgnitorDsl.Sq(inner = this)
+
+/** Per-sample conditional: when this signal `> 0` use [whenTrue], else [whenFalse]. */
+fun IgnitorDsl.select(whenTrue: IgnitorDsl, whenFalse: IgnitorDsl) =
+    IgnitorDsl.Select(cond = this, whenTrue = whenTrue, whenFalse = whenFalse)
 
 // Frequency
 
@@ -809,11 +1225,11 @@ fun IgnitorDsl.coarse(amount: Double) = IgnitorDsl.Coarse(
     amount = IgnitorDsl.Constant(amount),
 )
 
-/** Applies a phaser effect with the given LFO [rate], [depth], [center] frequency, and [sweep] range. */
-fun IgnitorDsl.phaser(rate: Double, depth: Double, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
+/** Applies a phaser effect. [blend]: 0.0 = dry only, 1.0 = wet only (crossfade). */
+fun IgnitorDsl.phaser(rate: Double, blend: Double = 0.5, center: Double = 1000.0, sweep: Double = 1000.0) = IgnitorDsl.Phaser(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
-    depth = IgnitorDsl.Constant(depth),
+    blend = IgnitorDsl.Constant(blend),
     center = IgnitorDsl.Constant(center),
     sweep = IgnitorDsl.Constant(sweep),
 )
@@ -823,6 +1239,24 @@ fun IgnitorDsl.tremolo(rate: Double, depth: Double) = IgnitorDsl.Tremolo(
     inner = this,
     rate = IgnitorDsl.Constant(rate),
     depth = IgnitorDsl.Constant(depth),
+)
+
+/**
+ * Applies a granular shimmer (pitch-shift cloud with feedback).
+ * [blend]: 0.0 = dry only, 1.0 = wet only (crossfade). [pitches]: semitone transpositions.
+ * [tone]: feedback-path LPF cutoff in Hz.
+ */
+fun IgnitorDsl.shimmer(
+    blend: Double = 0.5,
+    feedback: Double = 0.5,
+    pitches: List<Double> = listOf(0.0, 7.0, 12.0),
+    tone: Double = 4000.0,
+) = IgnitorDsl.Shimmer(
+    inner = this,
+    blend = IgnitorDsl.Constant(blend),
+    feedback = IgnitorDsl.Constant(feedback),
+    pitches = pitches,
+    tone = IgnitorDsl.Constant(tone),
 )
 
 // Pitch modulation
@@ -839,6 +1273,14 @@ fun IgnitorDsl.accelerate(amount: Double) = IgnitorDsl.Accelerate(
     inner = this,
     amount = IgnitorDsl.Constant(amount),
 )
+
+/**
+ * Applies a custom pitch modulation from any Ignitor signal.
+ *
+ * The [mod] signal uses deviation space: 0.0 = no change, positive = higher, negative = lower.
+ * At build time, the runtime converts to ratio space and bubbles the mod to the source oscillator.
+ */
+fun IgnitorDsl.pitchMod(mod: IgnitorDsl) = IgnitorDsl.PitchMod(inner = this, mod = mod)
 
 // ═════════════════════════════════════════════════════════════════════════════════
 // Discovery
@@ -882,6 +1324,8 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     is IgnitorDsl.Coarse -> inner.maxReleaseSec()
     is IgnitorDsl.Phaser -> inner.maxReleaseSec()
     is IgnitorDsl.Tremolo -> inner.maxReleaseSec()
+    is IgnitorDsl.Shimmer -> inner.maxReleaseSec()
+    is IgnitorDsl.PitchMod -> inner.maxReleaseSec()
     is IgnitorDsl.Vibrato -> inner.maxReleaseSec()
     is IgnitorDsl.Accelerate -> inner.maxReleaseSec()
     is IgnitorDsl.PitchEnvelope -> inner.maxReleaseSec()
@@ -889,8 +1333,31 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     // Binary nodes
     is IgnitorDsl.Plus -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
     is IgnitorDsl.Times -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
-    is IgnitorDsl.Mul -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
     is IgnitorDsl.Div -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Minus -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Pow -> maxOf(base.maxReleaseSec(), exp.maxReleaseSec())
+    is IgnitorDsl.Min -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Max -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Neg -> inner.maxReleaseSec()
+    is IgnitorDsl.Abs -> inner.maxReleaseSec()
+    is IgnitorDsl.Clamp -> maxOf(inner.maxReleaseSec(), lo.maxReleaseSec(), hi.maxReleaseSec())
+    is IgnitorDsl.Exp -> inner.maxReleaseSec()
+    is IgnitorDsl.Log -> inner.maxReleaseSec()
+    is IgnitorDsl.Sqrt -> inner.maxReleaseSec()
+    is IgnitorDsl.Sign -> inner.maxReleaseSec()
+    is IgnitorDsl.Tanh -> inner.maxReleaseSec()
+    is IgnitorDsl.Lerp -> maxOf(left.maxReleaseSec(), right.maxReleaseSec(), t.maxReleaseSec())
+    is IgnitorDsl.Range -> maxOf(inner.maxReleaseSec(), lo.maxReleaseSec(), hi.maxReleaseSec())
+    is IgnitorDsl.Bipolar -> inner.maxReleaseSec()
+    is IgnitorDsl.Unipolar -> inner.maxReleaseSec()
+    is IgnitorDsl.Floor -> inner.maxReleaseSec()
+    is IgnitorDsl.Ceil -> inner.maxReleaseSec()
+    is IgnitorDsl.Round -> inner.maxReleaseSec()
+    is IgnitorDsl.Frac -> inner.maxReleaseSec()
+    is IgnitorDsl.Mod -> maxOf(left.maxReleaseSec(), right.maxReleaseSec())
+    is IgnitorDsl.Recip -> inner.maxReleaseSec()
+    is IgnitorDsl.Sq -> inner.maxReleaseSec()
+    is IgnitorDsl.Select -> maxOf(cond.maxReleaseSec(), whenTrue.maxReleaseSec(), whenFalse.maxReleaseSec())
     is IgnitorDsl.Fm -> maxOf(carrier.maxReleaseSec(), modulator.maxReleaseSec())
     // Leaf nodes — no release info
     is IgnitorDsl.Freq -> 0.0

@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 /**
  * ADSR amplitude envelope combinator.
  *
@@ -19,59 +21,67 @@ fun Ignitor.adsr(
     decaySec: Ignitor,
     sustainLevel: Ignitor,
     releaseSec: Ignitor,
-): Ignitor {
-    var currentLevel = 0.0
-    var releaseStartLevel = 0.0
-    var releaseStarted = false
+): Ignitor = AdsrIgnitor(this, attackSec, decaySec, sustainLevel, releaseSec)
 
-    return Ignitor { buffer, freqHz, ctx ->
-        this.generate(buffer, freqHz, ctx)
+private class AdsrIgnitor(
+    private val upstream: Ignitor,
+    private val attackSec: Ignitor,
+    private val decaySec: Ignitor,
+    private val sustainLevel: Ignitor,
+    private val releaseSec: Ignitor,
+) : Ignitor {
+    private var currentLevel: Double = 0.0
+    private var releaseStartLevel: Double = 0.0
+    private var releaseStarted: Boolean = false
 
-        val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx).coerceAtLeast(0.0)
-        val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx).coerceAtLeast(0.0)
-        val sustainLevelVal = Ignitors.readParam(sustainLevel, freqHz, ctx).coerceIn(0.0, 1.0)
-        val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx).coerceAtLeast(0.0)
+    override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+        ctx.scratchBuffers.use { input ->
+            upstream.generate(input, freqHz, ctx)
 
-        val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
-        val decayFrames = (decaySecVal * ctx.sampleRate).toInt()
-        val gateEndPos = ctx.gateEndFrame
+            val attackSecVal = Ignitors.readParam(attackSec, freqHz, ctx).coerceAtLeast(0.0)
+            val decaySecVal = Ignitors.readParam(decaySec, freqHz, ctx).coerceAtLeast(0.0)
+            val sustainLevelVal = Ignitors.readParam(sustainLevel, freqHz, ctx).coerceIn(0.0, 1.0)
+            val releaseSecVal = Ignitors.readParam(releaseSec, freqHz, ctx).coerceAtLeast(0.0)
 
-        val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-        val decRate = if (decayFrames > 0) (1.0 - sustainLevelVal) / decayFrames else 0.0
-        val releaseFrames = (releaseSecVal * ctx.sampleRate).toInt()
-        val relDenom = if (releaseFrames > 0) releaseFrames.toDouble() else 1.0
+            val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
+            val decayFrames = (decaySecVal * ctx.sampleRate).toInt()
+            val gateEndPos = ctx.gateEndFrame
 
-        var absPos = ctx.voiceElapsedFrames
+            val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
+            val decRate = if (decayFrames > 0) (1.0 - sustainLevelVal) / decayFrames else 0.0
+            val releaseFrames = (releaseSecVal * ctx.sampleRate).toInt()
+            val relDenom = if (releaseFrames > 0) releaseFrames.toDouble() else 1.0
 
-        val end = ctx.offset + ctx.length
-        for (i in ctx.offset until end) {
-            if (absPos >= gateEndPos) {
-                // Release phase
-                if (!releaseStarted) {
-                    releaseStartLevel = currentLevel
-                    releaseStarted = true
-                }
-                val relPos = absPos - gateEndPos
-                val relRate = releaseStartLevel / relDenom
-                currentLevel = releaseStartLevel - (relPos * relRate)
-            } else {
-                // Attack / Decay / Sustain
-                releaseStarted = false
-                currentLevel = when {
-                    absPos < attackFrames -> absPos * attRate
-                    absPos < attackFrames + decayFrames -> {
-                        val decPos = absPos - attackFrames
-                        1.0 - (decPos * decRate)
+            var absPos = ctx.voiceElapsedFrames
+
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                if (absPos >= gateEndPos) {
+                    if (!releaseStarted) {
+                        releaseStartLevel = currentLevel
+                        releaseStarted = true
                     }
+                    val relPos = absPos - gateEndPos
+                    val relRate = releaseStartLevel / relDenom
+                    currentLevel = releaseStartLevel - (relPos * relRate)
+                } else {
+                    releaseStarted = false
+                    currentLevel = when {
+                        absPos < attackFrames -> absPos * attRate
+                        absPos < attackFrames + decayFrames -> {
+                            val decPos = absPos - attackFrames
+                            1.0 - (decPos * decRate)
+                        }
 
-                    else -> sustainLevelVal
+                        else -> sustainLevelVal
+                    }
                 }
+
+                if (currentLevel < 0.0) currentLevel = 0.0
+
+                buffer[i] = (input[i] * currentLevel)
+                absPos++
             }
-
-            if (currentLevel < 0.0) currentLevel = 0.0
-
-            buffer[i] = (buffer[i] * currentLevel).toFloat()
-            absPos++
         }
     }
 }

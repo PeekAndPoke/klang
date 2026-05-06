@@ -10,8 +10,8 @@ import io.peekandpoke.klang.sprudel.EPSILON
 
 class LangChunkBackSpec : StringSpec({
 
-    "seq(\"0 1 2 3\").chunkBack(4) { it.add(7) } cycles backward through chunks" {
-        val subject = seq("0 1 2 3").chunkBack(4) { it.add(7) }
+    "seq(\"0 1 2 3\").chunkBack(4, transform = { it.add(7) }) cycles backward through chunks" {
+        val subject = seq("0 1 2 3").chunkBack(4, transform = { it.add(7) })
 
         assertSoftly {
             repeat(12) { cycle ->
@@ -85,8 +85,8 @@ class LangChunkBackSpec : StringSpec({
         }
     }
 
-    "s(\"bd sd ht lt\").chunkBack(4) { it.gain(0.8) } works with sound patterns" {
-        val subject = s("bd sd ht lt").chunkBack(4) { it.gain(0.8) }
+    "s(\"bd sd ht lt\").chunkBack(4, transform = { it.gain(0.8) }) works with sound patterns" {
+        val subject = s("bd sd ht lt").chunkBack(4, transform = { it.gain(0.8) })
 
         assertSoftly {
             repeat(12) { cycle ->
@@ -143,8 +143,8 @@ class LangChunkBackSpec : StringSpec({
         }
     }
 
-    "note(\"c d e f\").chunkback(4) { it.transpose(12) } lowercase alias works" {
-        val subject = note("c4 d4 e4 f4").chunkback(4) { it.transpose(12) }
+    "note(\"c d e f\").chunkback(4, transform = { it.transpose(12) }) lowercase alias works" {
+        val subject = note("c4 d4 e4 f4").chunkback(4, transform = { it.transpose(12) })
 
         assertSoftly {
             repeat(12) { cycle ->
@@ -170,8 +170,8 @@ class LangChunkBackSpec : StringSpec({
         }
     }
 
-    "seq(\"0 1\").chunkBack(2) { it.add(10) } works with smaller chunk count" {
-        val subject = seq("0 1").chunkBack(2) { it.add(10) }
+    "seq(\"0 1\").chunkBack(2, transform = { it.add(10) }) works with smaller chunk count" {
+        val subject = seq("0 1").chunkBack(2, transform = { it.add(10) })
 
         assertSoftly {
             repeat(12) { cycle ->

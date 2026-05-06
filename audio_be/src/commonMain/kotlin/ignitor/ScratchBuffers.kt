@@ -1,21 +1,23 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
+
 /**
- * Stack-based pool of reusable FloatArray buffers for binary composition operators.
+ * Stack-based pool of reusable AudioBuffer buffers for binary composition operators.
  *
  * All external access goes through [use], which guarantees the buffer is returned even on exceptions.
  * Max simultaneous buffers = composition tree depth. E.g. `(a + b).mul(0.5) + c` needs 2.
  */
 class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
 
-    private val pool = ArrayList<FloatArray>(initialCapacity).apply {
-        repeat(initialCapacity) { add(FloatArray(blockFrames)) }
+    private val pool = ArrayList<AudioBuffer>(initialCapacity).apply {
+        repeat(initialCapacity) { add(AudioBuffer(blockFrames)) }
     }
     private var nextFree = 0
 
     @PublishedApi
-    internal fun acquire(): FloatArray {
-        if (nextFree >= pool.size) pool.add(FloatArray(blockFrames))
+    internal fun acquire(): AudioBuffer {
+        if (nextFree >= pool.size) pool.add(AudioBuffer(blockFrames))
         return pool[nextFree++]
     }
 
@@ -25,7 +27,7 @@ class ScratchBuffers(private val blockFrames: Int, initialCapacity: Int = 4) {
     }
 
     /** Scoped access — guarantees release even on exceptions. Never leak a buffer. */
-    inline fun <R> use(block: (FloatArray) -> R): R {
+    inline fun <R> use(block: (AudioBuffer) -> R): R {
         val buf = acquire()
         try {
             return block(buf)

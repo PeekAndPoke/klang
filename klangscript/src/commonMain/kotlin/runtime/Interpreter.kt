@@ -2,7 +2,44 @@ package io.peekandpoke.klang.script.runtime
 
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.script.KlangScriptEngine
-import io.peekandpoke.klang.script.ast.*
+import io.peekandpoke.klang.script.ast.Argument
+import io.peekandpoke.klang.script.ast.ArrayLiteral
+import io.peekandpoke.klang.script.ast.ArrowFunction
+import io.peekandpoke.klang.script.ast.ArrowFunctionBody
+import io.peekandpoke.klang.script.ast.AssignmentExpression
+import io.peekandpoke.klang.script.ast.BinaryOperation
+import io.peekandpoke.klang.script.ast.BinaryOperator
+import io.peekandpoke.klang.script.ast.BooleanLiteral
+import io.peekandpoke.klang.script.ast.BreakStatement
+import io.peekandpoke.klang.script.ast.CallExpression
+import io.peekandpoke.klang.script.ast.ConstDeclaration
+import io.peekandpoke.klang.script.ast.ContinueStatement
+import io.peekandpoke.klang.script.ast.DoWhileStatement
+import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportDeclaration
+import io.peekandpoke.klang.script.ast.ExportStatement
+import io.peekandpoke.klang.script.ast.Expression
+import io.peekandpoke.klang.script.ast.ExpressionStatement
+import io.peekandpoke.klang.script.ast.ForStatement
+import io.peekandpoke.klang.script.ast.Identifier
+import io.peekandpoke.klang.script.ast.IfExpression
+import io.peekandpoke.klang.script.ast.ImportStatement
+import io.peekandpoke.klang.script.ast.IndexAccess
+import io.peekandpoke.klang.script.ast.LetDeclaration
+import io.peekandpoke.klang.script.ast.MemberAccess
+import io.peekandpoke.klang.script.ast.NullLiteral
+import io.peekandpoke.klang.script.ast.NumberLiteral
+import io.peekandpoke.klang.script.ast.ObjectLiteral
+import io.peekandpoke.klang.script.ast.Program
+import io.peekandpoke.klang.script.ast.ReturnStatement
+import io.peekandpoke.klang.script.ast.Statement
+import io.peekandpoke.klang.script.ast.StringLiteral
+import io.peekandpoke.klang.script.ast.TemplateLiteral
+import io.peekandpoke.klang.script.ast.TemplatePart
+import io.peekandpoke.klang.script.ast.TernaryExpression
+import io.peekandpoke.klang.script.ast.UnaryOperation
+import io.peekandpoke.klang.script.ast.UnaryOperator
+import io.peekandpoke.klang.script.ast.WhileStatement
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import kotlin.math.pow
 
@@ -173,6 +210,17 @@ class Interpreter(
             // Export statement: mark symbols for export
             is ExportStatement -> executeExport(statement)
 
+            // Export declaration: const-like binding + auto-export under same name.
+            // Evaluates to the bound value (unlike let/const which return null) so that
+            // `export song = stack(...)` as the last statement of a library file makes
+            // the script return the song without needing a trailing `song` reference.
+            is ExportDeclaration -> {
+                val value = evaluate(statement.initializer)
+                env.define(statement.name, value, mutable = false)
+                env.markExports(listOf(statement.name to statement.name))
+                value
+            }
+
             // Return statement: throw ReturnException to exit function
             is ReturnStatement -> {
                 val returnValue = if (statement.value != null) {
@@ -258,8 +306,10 @@ class Interpreter(
             )
         }
 
-        // Parse library source code
-        val libraryProgram = KlangScriptParser.parse(librarySource)
+        // Parse library source code — pass the library name as the source so all
+        // SourceLocations produced from imported code carry it. The editor uses
+        // this to filter highlight events to the file currently displayed.
+        val libraryProgram = KlangScriptParser.parse(librarySource, importStmt.libraryName)
 
         // Create an isolated environment / scope for library evaluation,
         // starting with the native environment of the engine.
@@ -508,23 +558,35 @@ class Interpreter(
             throw e
         }
 
-        // Evaluate all arguments left-to-right
-        val args = call.arguments.map { evaluate(it) }
+        val calleeName = resolveCalleeName(callee, call.callee)
 
-        // Handle different function types
+        // Evaluate every argument left-to-right, preserving Positional vs Named distinction.
+        val evaluated: List<EvaluatedArgument> = call.arguments.map { arg ->
+            when (arg) {
+                is Argument.Positional -> EvaluatedArgument.Positional(evaluate(arg.value), arg.location)
+                is Argument.Named -> EvaluatedArgument.Named(arg.name, evaluate(arg.value), arg.nameLocation)
+            }
+        }
+
+        // Classify: all-positional, all-named, or Empty.
+        // Throws KlangScriptArgumentError if mixed or if a name is duplicated.
+        val callArgs = CallArgs.resolve(
+            functionName = calleeName,
+            evaluated = evaluated,
+            callLocation = call.location,
+            callStackTrace = getStackTrace(),
+        )
+
         return when (callee) {
             is NativeFunctionValue -> {
-                // Push native function onto call stack
                 callStack.push("<native>", call.location)
-
-                // Update execution context with current call location
                 val previousLocation = executionContext.currentLocation
                 executionContext.currentLocation = call.location
 
                 try {
-                    // Call native Kotlin function with location, guarded
-                    guardNativeCall(callee.name, args, call.location) {
-                        callee.function(args, call.location)
+                    val positional = positionalArgsForNative(callee.name, callee.paramSpecs, callArgs, call)
+                    guardNativeCall(callee.name, positional, call.location) {
+                        callee.function(positional, call.location)
                     }
                 } finally {
                     executionContext.currentLocation = previousLocation
@@ -533,50 +595,27 @@ class Interpreter(
             }
 
             is FunctionValue -> {
-                // Verify argument count matches parameter count
-                if (args.size != callee.parameters.size) {
-                    throw KlangScriptArgumentError(
-                        functionName = "<anonymous function>",
-                        message = "Function expects ${callee.parameters.size} arguments, got ${args.size}",
-                        expected = callee.parameters.size,
-                        actual = args.size,
-                        location = call.location,
-                        astNode = call,
-                        callStackTrace = getStackTrace()
-                    )
-                }
+                val boundArgs = bindScriptFunctionArgs(callee, callArgs, call)
 
-                // Push function onto call stack
                 callStack.push("<anonymous>", call.location)
                 try {
-                    // Create new environment extending the function's closure
                     val funcEnv = Environment(callee.closureEnv)
-
-                    // Bind parameters to arguments
-                    callee.parameters.zip(args).forEach { (param, arg) ->
+                    callee.parameters.zip(boundArgs).forEach { (param, arg) ->
                         funcEnv.define(param, arg)
                     }
 
-                    // Create temporary interpreter with function environment, shared call stack, and execution context
                     val funcInterpreter = Interpreter(funcEnv, engine, callStack, executionContext)
 
-                    // Evaluate function body based on type
                     when (val body = callee.body) {
-                        is ArrowFunctionBody.ExpressionBody -> {
-                            // Expression body: implicitly return the expression value
-                            funcInterpreter.evaluate(body.expression)
-                        }
+                        is ArrowFunctionBody.ExpressionBody -> funcInterpreter.evaluate(body.expression)
 
                         is ArrowFunctionBody.BlockBody -> {
-                            // Block body: execute statements, catch return exception
                             try {
                                 for (stmt in body.statements) {
                                     funcInterpreter.executeStatement(stmt)
                                 }
-                                // If no return statement was encountered, return NullValue
                                 NullValue
                             } catch (e: ReturnException) {
-                                // Return statement was encountered, return its value
                                 e.value
                             }
                         }
@@ -587,17 +626,16 @@ class Interpreter(
             }
 
             is BoundNativeMethod -> {
-                // Call the bound native method
                 val fnName = "${callee.receiver.qualifiedName}.${callee.methodName}"
                 callStack.push(fnName, call.location)
 
-                // Update execution context with current call location
                 val previousLocation = executionContext.currentLocation
                 executionContext.currentLocation = call.location
 
                 try {
-                    guardNativeCall(fnName, args, call.location) {
-                        callee.invoker(args, call.location)
+                    val positional = positionalArgsForNative(fnName, callee.paramSpecs, callArgs, call)
+                    guardNativeCall(fnName, positional, call.location) {
+                        callee.invoker(positional, call.location)
                     }
                 } finally {
                     executionContext.currentLocation = previousLocation
@@ -613,6 +651,215 @@ class Interpreter(
                     astNode = call,
                     callStackTrace = getStackTrace()
                 )
+            }
+        }
+    }
+
+    /** User-visible name for a callee — used in argument error messages. */
+    private fun resolveCalleeName(callee: RuntimeValue, calleeExpr: Expression): String = when (callee) {
+        is NativeFunctionValue -> callee.name
+        is BoundNativeMethod -> "${callee.receiver.qualifiedName}.${callee.methodName}"
+        is FunctionValue -> when (calleeExpr) {
+            is Identifier -> calleeExpr.name
+            is MemberAccess -> calleeExpr.property
+            else -> "<anonymous function>"
+        }
+
+        else -> when (calleeExpr) {
+            is Identifier -> calleeExpr.name
+            is MemberAccess -> calleeExpr.property
+            else -> "<anonymous>"
+        }
+    }
+
+    /**
+     * Convert [CallArgs] into the positional `List<RuntimeValue>` that the
+     * legacy native-function signature expects.
+     *
+     * Routing rules:
+     *  - **Positional call** → pass through unchanged. Legacy bridges that use
+     *    arity dispatch on `args.size` keep working; their Kotlin defaults
+     *    fill the missing tail.
+     *  - **Named call** → requires [paramSpecs] *and* every optional spec must
+     *    carry a default thunk. When met, [resolveByParamSpec] produces a
+     *    fully-populated positional list (defaults invoked for omitted slots).
+     *    When not met, throw a transitional error.
+     *  - **Empty call** → empty list, regardless of specs.
+     *
+     * The "every optional has a thunk" check is what separates new-builder
+     * registrations (always thunked) and KSP-generated bridges with safe
+     * literal defaults (also thunked) from legacy KSP bridges with complex
+     * Kotlin defaults (no thunks; named calls error until migrated).
+     */
+    private fun positionalArgsForNative(
+        functionName: String,
+        paramSpecs: List<ParamSpec>?,
+        args: CallArgs,
+        call: CallExpression,
+    ): List<RuntimeValue> {
+        // An empty specs list means "no metadata" — same as null for resolution.
+        val specs: List<ParamSpec>? = paramSpecs?.takeIf { it.isNotEmpty() }
+
+        // Strict spec-aware: every optional has a thunk (or it's a vararg). We
+        // can fully resolve any call style and produce a list aligned with the
+        // spec list. Used by the Phase 4 builder and by KSP bridges where every
+        // default extracted to a safe literal.
+        val canResolveAll = specs != null && specs.all { !it.isOptional || it.default != null }
+
+        if (canResolveAll) {
+            val resolved = resolveByParamSpec(
+                functionName = functionName,
+                specs = specs,
+                args = args,
+                callLocation = call.location,
+                callStackTrace = getStackTrace(),
+            )
+            return resolved.mapIndexed { i, v ->
+                v ?: if (specs[i].isVararg) ArrayValue(mutableListOf()) else specs[i].default!!.invoke()
+            }
+        }
+
+        // Legacy / partially-thunked path. Positional bypasses spec resolution
+        // so the bridge body's arity dispatch on `args.size` keeps working and
+        // Kotlin's own defaults fill the tail.
+        return when (args) {
+            CallArgs.Empty -> emptyList()
+
+            is CallArgs.Positional -> args.values
+
+            is CallArgs.Named -> {
+                if (specs == null) {
+                    throw KlangScriptArgumentError(
+                        functionName = functionName,
+                        message = "Native function '$functionName' does not yet support named arguments. " +
+                                "Pass them positionally for now (named-arg support lands with the builder rewrite).",
+                        location = call.location,
+                        astNode = call,
+                        callStackTrace = getStackTrace(),
+                    )
+                }
+
+                // Has specs but at least one optional lacks a thunk. Resolve as
+                // far as we can and let the bridge body's arity dispatch fill
+                // any trailing unfillable optionals via Kotlin's own defaults.
+                val resolved = resolveByParamSpec(
+                    functionName = functionName,
+                    specs = specs,
+                    args = args,
+                    callLocation = call.location,
+                    callStackTrace = getStackTrace(),
+                )
+
+                var lastSuppliedIdx = -1
+                resolved.forEachIndexed { i, v -> if (v != null) lastSuppliedIdx = i }
+
+                val out = mutableListOf<RuntimeValue>()
+                for (i in resolved.indices) {
+                    val v = resolved[i]
+                    val spec = specs[i]
+                    val thunk = spec.default
+                    when {
+                        v != null -> out += v
+                        spec.isVararg -> out += ArrayValue(mutableListOf())
+                        thunk != null -> out += thunk()
+                        spec.isOptional && i > lastSuppliedIdx -> break  // trailing — let Kotlin default
+                        spec.isOptional -> throw KlangScriptArgumentError(
+                            functionName = functionName,
+                            message = "parameter '${spec.name}' has a complex Kotlin default and was omitted " +
+                                    "in the middle of the call. Either supply it explicitly or call positionally.",
+                            location = call.location,
+                            astNode = call,
+                            callStackTrace = getStackTrace(),
+                        )
+
+                        else -> throw KlangScriptArgumentError(
+                            functionName = functionName,
+                            message = "missing required parameter '${spec.name}'",
+                            location = call.location,
+                            astNode = call,
+                            callStackTrace = getStackTrace(),
+                        )
+                    }
+                }
+                out
+            }
+        }
+    }
+
+    /**
+     * Bind a [CallArgs] against the parameter list of a script arrow function,
+     * producing a positionally-ordered list aligned with [FunctionValue.parameters].
+     *
+     * Script params are all required in Phase 3 — script-side defaults are
+     * deferred to a later phase.
+     */
+    private fun bindScriptFunctionArgs(
+        fn: FunctionValue,
+        args: CallArgs,
+        call: CallExpression,
+    ): List<RuntimeValue> {
+        val paramNames = fn.parameters
+        val fnDisplay = "<anonymous function>"
+
+        return when (args) {
+            CallArgs.Empty -> {
+                if (paramNames.isNotEmpty()) {
+                    throw KlangScriptArgumentError(
+                        functionName = fnDisplay,
+                        message = "Function expects ${paramNames.size} arguments, got 0",
+                        expected = paramNames.size,
+                        actual = 0,
+                        location = call.location,
+                        astNode = call,
+                        callStackTrace = getStackTrace(),
+                    )
+                }
+                emptyList()
+            }
+
+            is CallArgs.Positional -> {
+                if (args.values.size != paramNames.size) {
+                    throw KlangScriptArgumentError(
+                        functionName = fnDisplay,
+                        message = "Function expects ${paramNames.size} arguments, got ${args.values.size}",
+                        expected = paramNames.size,
+                        actual = args.values.size,
+                        location = call.location,
+                        astNode = call,
+                        callStackTrace = getStackTrace(),
+                    )
+                }
+                args.values
+            }
+
+            is CallArgs.Named -> {
+                val result = arrayOfNulls<RuntimeValue>(paramNames.size)
+                for ((name, v) in args.values) {
+                    val idx = paramNames.indexOf(name)
+                    if (idx == -1) {
+                        throw KlangScriptArgumentError(
+                            functionName = fnDisplay,
+                            message = "unknown parameter '$name' (expected: ${paramNames.joinToString(", ")})",
+                            location = call.location,
+                            astNode = call,
+                            callStackTrace = getStackTrace(),
+                        )
+                    }
+                    result[idx] = v
+                }
+                paramNames.forEachIndexed { i, name ->
+                    if (result[i] == null) {
+                        throw KlangScriptArgumentError(
+                            functionName = fnDisplay,
+                            message = "missing required parameter '$name'",
+                            location = call.location,
+                            astNode = call,
+                            callStackTrace = getStackTrace(),
+                        )
+                    }
+                }
+                @Suppress("UNCHECKED_CAST")
+                result.toList() as List<RuntimeValue>
             }
         }
     }
@@ -1139,7 +1386,8 @@ class Interpreter(
                 return BoundNativeMethod(
                     methodName = memberAccess.property,
                     receiver = objValue,
-                    invoker = { args, location -> extensionMethod.invoker(objValue.value, args, location, engine) }
+                    invoker = { args, location -> extensionMethod.invoker(objValue.value, args, location, engine) },
+                    paramSpecs = extensionMethod.paramSpecs,
                 )
             }
 
@@ -1167,7 +1415,8 @@ class Interpreter(
                 return BoundNativeMethod(
                     methodName = memberAccess.property,
                     receiver = NativeObjectValue.fromValue(objValue),
-                    invoker = { args, location -> extensionMethod.invoker(objValue, args, location, engine) }
+                    invoker = { args, location -> extensionMethod.invoker(objValue, args, location, engine) },
+                    paramSpecs = extensionMethod.paramSpecs,
                 )
             }
 

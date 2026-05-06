@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.effects
 
+import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
 
 /**
@@ -47,19 +48,19 @@ class Reverb(
     private val numAllPass = allPassTuning.size
 
     // Left Channel State
-    private val combBufsL = Array(numCombs) { FloatArray(combTuning[it]) }
+    private val combBufsL = Array(numCombs) { AudioBuffer(combTuning[it]) }
     private val combPosL = IntArray(numCombs)
     private val combStoreL = DoubleArray(numCombs) // Low-pass filter history (precision)
 
-    private val apBufsL = Array(numAllPass) { FloatArray(allPassTuning[it]) }
+    private val apBufsL = Array(numAllPass) { AudioBuffer(allPassTuning[it]) }
     private val apPosL = IntArray(numAllPass)
 
     // Right Channel State (Decorrelated)
-    private val combBufsR = Array(numCombs) { FloatArray(combTuning[it] + stereoSpread) }
+    private val combBufsR = Array(numCombs) { AudioBuffer(combTuning[it] + stereoSpread) }
     private val combPosR = IntArray(numCombs)
     private val combStoreR = DoubleArray(numCombs)
 
-    private val apBufsR = Array(numAllPass) { FloatArray(allPassTuning[it] + stereoSpread) }
+    private val apBufsR = Array(numAllPass) { AudioBuffer(allPassTuning[it] + stereoSpread) }
     private val apPosR = IntArray(numAllPass)
 
     // --- Parameters ---
@@ -88,7 +89,7 @@ class Reverb(
      * Checks comb filter buffers (which hold the bulk of the reverb tail).
      */
     fun hasTail(threshold: Double = 0.00001): Boolean {
-        val thresholdF = threshold.toFloat()
+        val thresholdF = threshold
         for (c in 0 until numCombs) {
             for (sample in combBufsL[c]) {
                 if (sample > thresholdF || sample < -thresholdF) return true
@@ -130,8 +131,8 @@ class Reverb(
         // --- 2. Audio Rate Processing ---
 
         for (i in 0 until length) {
-            val inpL = inL[i].toDouble()
-            val inpR = inR[i].toDouble()
+            val inpL = inL[i]
+            val inpR = inR[i]
 
             var sumL = 0.0
             var sumR = 0.0
@@ -144,9 +145,9 @@ class Reverb(
                 val sizeL = bufL.size
                 var posL = combPosL[c]
 
-                val outSampleL = bufL[posL].toDouble()
+                val outSampleL = bufL[posL]
                 combStoreL[c] = (outSampleL * invDamping) + (combStoreL[c] * damping) + antiDenormal
-                bufL[posL] = (inpL + (combStoreL[c] * feedback)).toFloat()
+                bufL[posL] = (inpL + (combStoreL[c] * feedback))
 
                 sumL += outSampleL
 
@@ -158,9 +159,9 @@ class Reverb(
                 val sizeR = bufR.size
                 var posR = combPosR[c]
 
-                val outSampleR = bufR[posR].toDouble()
+                val outSampleR = bufR[posR]
                 combStoreR[c] = (outSampleR * invDamping) + (combStoreR[c] * damping) + antiDenormal
-                bufR[posR] = (inpR + (combStoreR[c] * feedback)).toFloat()
+                bufR[posR] = (inpR + (combStoreR[c] * feedback))
 
                 sumR += outSampleR
 
@@ -176,9 +177,9 @@ class Reverb(
                 val sizeL = bufL.size
                 var posL = apPosL[a]
 
-                val bufOutL = bufL[posL].toDouble()
+                val bufOutL = bufL[posL]
                 val newOutL = -sumL + bufOutL
-                bufL[posL] = (sumL + (bufOutL * allPassFeedback)).toFloat()
+                bufL[posL] = (sumL + (bufOutL * allPassFeedback))
                 sumL = newOutL
 
                 if (++posL >= sizeL) posL = 0
@@ -189,9 +190,9 @@ class Reverb(
                 val sizeR = bufR.size
                 var posR = apPosR[a]
 
-                val bufOutR = bufR[posR].toDouble()
+                val bufOutR = bufR[posR]
                 val newOutR = -sumR + bufOutR
-                bufR[posR] = (sumR + (bufOutR * allPassFeedback)).toFloat()
+                bufR[posR] = (sumR + (bufOutR * allPassFeedback))
                 sumR = newOutR
 
                 if (++posR >= sizeR) posR = 0
@@ -199,8 +200,8 @@ class Reverb(
             }
 
             // --- Mix to Output ---
-            outL[i] = (outL[i] + sumL * outputGain).toFloat()
-            outR[i] = (outR[i] + sumR * outputGain).toFloat()
+            outL[i] = (outL[i] + sumL * outputGain)
+            outR[i] = (outR[i] + sumR * outputGain)
         }
     }
 }

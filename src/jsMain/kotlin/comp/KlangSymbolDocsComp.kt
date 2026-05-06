@@ -54,6 +54,7 @@ import kotlinx.html.Tag
 import kotlinx.html.b
 import kotlinx.html.div
 import kotlinx.html.pre
+import kotlinx.html.span
 import kotlinx.html.tbody
 import kotlinx.html.td
 import kotlinx.html.tr
@@ -179,10 +180,22 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
                                             td {
                                                 css { fontFamily = "monospace" }
                                                 b { +param.name }
+                                                if (param.isOptional && !param.isVararg) {
+                                                    span {
+                                                        css { color = Color(laf.textTertiary) }
+                                                        +"?"
+                                                    }
+                                                }
                                             }
                                             td {
                                                 css { fontFamily = "monospace" }
                                                 +"${param.type}"
+                                                if (param.defaultDoc != null && !param.isVararg) {
+                                                    span {
+                                                        css { color = Color(laf.textTertiary) }
+                                                        +" = ${param.defaultDoc}"
+                                                    }
+                                                }
                                             }
                                             td {
                                                 +param.description

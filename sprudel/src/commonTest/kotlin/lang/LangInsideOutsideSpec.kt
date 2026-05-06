@@ -16,11 +16,11 @@ class LangInsideOutsideSpec : StringSpec({
         val factor = 2
 
         dslInterfaceTests(
-            "pattern.outside(factor)" to s(pat).outside(factor) { it },
+            "pattern.outside(factor)" to s(pat).outside(factor, { it }),
             "script pattern.outside(factor)" to SprudelPattern.compile("""s("$pat").outside($factor, p => p)"""),
-            "string.outside(factor)" to pat.outside(factor) { it },
+            "string.outside(factor)" to pat.outside(factor, { it }),
             "script string.outside(factor)" to SprudelPattern.compile(""""$pat".outside($factor, p => p)"""),
-            "outside(factor)" to s(pat).apply(outside(factor) { it }),
+            "outside(factor)" to s(pat).apply(outside(factor, { it })),
             "script outside(factor)" to SprudelPattern.compile("""s("$pat").apply(outside($factor, p => p))"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
@@ -31,7 +31,7 @@ class LangInsideOutsideSpec : StringSpec({
     "inside() is equivalent to slow().transform().fast()" {
         val original = note("c d e f")
 
-        val withInside = original.inside(2) { it.rev() }
+        val withInside = original.inside(2, { it.rev() })
         val manually = original.slow(2).rev().fast(2)
 
         val insideEvents = withInside.queryArc(0.0, 1.0)
@@ -46,7 +46,7 @@ class LangInsideOutsideSpec : StringSpec({
     }
 
     "inside() with fast transformation" {
-        val p = note("c d").inside(2) { it.fast(2) }
+        val p = note("c d").inside(2, { it.fast(2) })
         val events = p.queryArc(0.0, 1.0)
 
         // Pattern is slowed by 2, sped up by 2, then sped back up by 2
@@ -61,7 +61,7 @@ class LangInsideOutsideSpec : StringSpec({
     "outside() is equivalent to fast().transform().slow()" {
         val original = note("c d e f")
 
-        val withOutside = original.outside(2) { it.rev() }
+        val withOutside = original.outside(2, { it.rev() })
         val manually = original.fast(2).rev().slow(2)
 
         val outsideEvents = withOutside.queryArc(0.0, 1.0)
@@ -76,7 +76,7 @@ class LangInsideOutsideSpec : StringSpec({
     }
 
     "inside() with identity function does nothing" {
-        val p = note("c d e f").inside(2) { it }
+        val p = note("c d e f").inside(2, { it })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4
@@ -87,7 +87,7 @@ class LangInsideOutsideSpec : StringSpec({
     }
 
     "outside() with identity function does nothing" {
-        val p = note("c d e f").outside(2) { it }
+        val p = note("c d e f").outside(2, { it })
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 4

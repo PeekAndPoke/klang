@@ -5,7 +5,7 @@ import io.peekandpoke.klang.ui.KlangUiToolRegistry
 /**
  * Registers all Sprudel UI tools with the given [registry].
  *
- * Call this once at application startup, after [io.peekandpoke.klang.sprudel.lang.initSprudelDsl].
+ * Call this once at application startup.
  */
 fun registerSprudelUiTools(registry: KlangUiToolRegistry = KlangUiToolRegistry) {
     registry.register("SprudelAdsrEditor", SprudelAdsrEditorTool)

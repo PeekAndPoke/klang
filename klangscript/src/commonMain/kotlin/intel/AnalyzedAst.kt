@@ -13,6 +13,7 @@ import io.peekandpoke.klang.script.ast.ConstDeclaration
 import io.peekandpoke.klang.script.ast.ContinueStatement
 import io.peekandpoke.klang.script.ast.DoWhileStatement
 import io.peekandpoke.klang.script.ast.ElseBranch
+import io.peekandpoke.klang.script.ast.ExportDeclaration
 import io.peekandpoke.klang.script.ast.ExportStatement
 import io.peekandpoke.klang.script.ast.Expression
 import io.peekandpoke.klang.script.ast.ExpressionStatement
@@ -149,25 +150,42 @@ class AnalyzedAst(
         /**
          * Parse source code and build an [AnalyzedAst].
          */
-        fun build(source: String, registry: KlangDocsRegistry): AnalyzedAst {
+        fun build(
+            source: String,
+            registry: KlangDocsRegistry,
+            computeDiagnostics: Boolean = true,
+        ): AnalyzedAst {
             val program = KlangScriptParser.parse(source)
-            return build(program, source, registry)
+            return build(program, source, registry, computeDiagnostics)
         }
 
         /**
          * Build an [AnalyzedAst] from an already-parsed program.
+         *
+         * @param computeDiagnostics Set to false when diagnostics aren't needed
+         *   (e.g. engine runtime, batch tools) to skip the analyzer walk.
          */
-        fun build(program: Program, source: String, registry: KlangDocsRegistry): AnalyzedAst {
+        fun build(
+            program: Program,
+            source: String,
+            registry: KlangDocsRegistry,
+            computeDiagnostics: Boolean = true,
+        ): AnalyzedAst {
             val astIndex = AstIndex.build(program, source)
             val inferrer = ExpressionTypeInferrer(registry)
             val typeMap = buildTypeMap(program, inferrer)
+            val diagnostics = if (computeDiagnostics) {
+                NamedArgumentChecker(registry, typeMap).check(program)
+            } else {
+                emptyList()
+            }
             return AnalyzedAst(
                 ast = program,
                 source = source,
                 astIndex = astIndex,
                 registry = registry,
                 typeMap = typeMap,
-                diagnostics = emptyList(),
+                diagnostics = diagnostics,
             )
         }
     }
@@ -184,7 +202,7 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
         when (expr) {
             is CallExpression -> {
                 visitExpr(expr.callee)
-                expr.arguments.forEach { visitExpr(it) }
+                expr.arguments.forEach { visitExpr(it.value) }
             }
 
             is BinaryOperation -> {
@@ -256,6 +274,7 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
             is ExpressionStatement -> visitExpr(stmt.expression)
             is LetDeclaration -> stmt.initializer?.let { visitExpr(it) }
             is ConstDeclaration -> visitExpr(stmt.initializer)
+            is ExportDeclaration -> visitExpr(stmt.initializer)
             is ReturnStatement -> stmt.value?.let { visitExpr(it) }
             is WhileStatement -> {
                 visitExpr(stmt.condition)
