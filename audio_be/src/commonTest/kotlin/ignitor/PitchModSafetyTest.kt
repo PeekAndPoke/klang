@@ -173,4 +173,3 @@ class PitchModSafetyTest : StringSpec({
         out.any { it != 0.0 } shouldBe true
     }
 })
-

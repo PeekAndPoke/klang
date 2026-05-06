@@ -587,14 +587,14 @@ internal fun Ignitor.distortVariant(
     var py1 = 0.0
 
     // Biquad HPF state (used by BIQUAD_HPF). Coeffs computed lazily for sample rate.
-    var b0 = 0.0;
-    var b1 = 0.0;
+    var b0 = 0.0
+    var b1 = 0.0
     var b2 = 0.0
-    var ar1 = 0.0;
+    var ar1 = 0.0
     var ar2 = 0.0
-    var bx1 = 0.0;
-    var bx2 = 0.0;
-    var by1 = 0.0;
+    var bx1 = 0.0
+    var bx2 = 0.0
+    var by1 = 0.0
     var by2 = 0.0
     var biquadInit = false
 

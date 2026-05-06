@@ -100,6 +100,6 @@ class RenderWavCommand(
         val sizeStr = "%.1f".format(fileSize / 1024.0)
         val speedStr = "%.1f".format(result.durationSec / (result.elapsedMs / 1000.0))
 
-        echo("Done! ${durationStr}s of audio, ${sizeStr} KB, rendered in ${"%.0f".format(result.elapsedMs)}ms (${speedStr}x real-time)")
+        echo("Done! ${durationStr}s of audio, $sizeStr KB, rendered in ${"%.0f".format(result.elapsedMs)}ms (${speedStr}x real-time)")
     }
 }

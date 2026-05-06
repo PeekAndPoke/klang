@@ -44,10 +44,10 @@ class MemoizingIgnitor(val inner: Ignitor) : Ignitor {
             return
         }
 
-        val miss = ctx.voiceElapsedFrames != cachedVoiceElapsedFrames
-                || ctx.offset != cachedOffset
-                || ctx.length != cachedLength
-                || freqHz != cachedFreqHz
+        val miss = ctx.voiceElapsedFrames != cachedVoiceElapsedFrames ||
+                ctx.offset != cachedOffset ||
+                ctx.length != cachedLength ||
+                freqHz != cachedFreqHz
 
         if (miss) {
             if (cache.size < buffer.size) {

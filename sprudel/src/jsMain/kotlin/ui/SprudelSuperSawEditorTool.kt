@@ -98,7 +98,7 @@ private class SprudelSuperSawEditorComp(ctx: Ctx<Props>) : Component<SprudelSupe
         toFixed(3).trimEnd('0').trimEnd('.')
 
     private fun buildValue(): String =
-        "\"${voices}:${freqSpread.fmt()}\""
+        "\"$voices:${freqSpread.fmt()}\""
 
     private val isInitialModified get() = initialValue != buildValue()
     private val isCurrentModified get() = currentValue != buildValue()

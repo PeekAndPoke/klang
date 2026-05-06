@@ -179,7 +179,9 @@ class LexikonPage(ctx: NoProps) : PureComponent(ctx) {
                         onClick {
                             selectedDomain = if (isSelected) null else domain
                             // Clear category selection when domain changes
-                            selectedCategories = if (isSelected) emptySet() else {
+                            selectedCategories = if (isSelected) {
+                                emptySet()
+                            } else {
                                 selectedCategories.filter { it.domain == domain }.toSet()
                             }
                         }

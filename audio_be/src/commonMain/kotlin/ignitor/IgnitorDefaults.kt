@@ -185,7 +185,6 @@ fun IgnitorRegistry.registerDefaults() {
         name = "sgbuzz",
         dsl = IgnitorDsl.Square().lowpass(cutoffHz = 2000.0),
     )
-
 }
 
 // ═════════════════════════════════════════════════════════════════════════════════

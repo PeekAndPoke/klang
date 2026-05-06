@@ -10,7 +10,6 @@ import kotlin.math.PI
 import kotlin.math.pow
 import kotlin.math.tan
 
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // SVF Mode enum — determines which output tap is used
 // ═══════════════════════════════════════════════════════════════════════════════

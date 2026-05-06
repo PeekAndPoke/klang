@@ -37,8 +37,11 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
      * 4 original-rate samples (= every `4 * factor` oversampled samples).
      */
     private val increment: Double =
-        if (oversampler != null) 1.0 / (amount * oversampler.factor)
-        else 1.0 / amount
+        if (oversampler != null) {
+            1.0 / (amount * oversampler.factor)
+        } else {
+            1.0 / amount
+        }
 
     override fun render(ctx: BlockContext) {
         if (amount <= 1.0) return

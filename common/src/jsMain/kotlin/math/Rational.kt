@@ -291,10 +291,12 @@ actual class Rational private constructor(
     actual fun toDouble(): Double {
         if (isNaN) return Double.NaN
 
-        if (isInfinite) return if (bigIntGt(n, BI_ZERO)) {
+        if (isInfinite) {
+            return if (bigIntGt(n, BI_ZERO)) {
             Double.POSITIVE_INFINITY
         } else {
             Double.NEGATIVE_INFINITY
+        }
         }
 
         return bigIntToDouble(n) / bigIntToDouble(d)
