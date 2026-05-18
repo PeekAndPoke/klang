@@ -31,7 +31,7 @@ class OversamplerSpec : StringSpec({
 
         // DC signal — no phase issues, pure gain test
         val buffer = AudioBuffer(blockFrames) { 0.75 }
-        os.process(buffer, 0, blockFrames, scratch) { it }
+        os.process(buffer, 0, blockFrames, scratch) { _, _ -> /* identity */ }
 
         // After filter warmup, DC should pass through at unity
         for (i in 16 until blockFrames) {
@@ -51,7 +51,7 @@ class OversamplerSpec : StringSpec({
             sin(2.0 * PI * freq * i / sampleRate)
         }
 
-        os.process(buffer, 0, blockFrames, scratch) { it }
+        os.process(buffer, 0, blockFrames, scratch) { _, _ -> /* identity */ }
 
         // Find peak amplitude in the stable region (after warmup)
         var maxAmp = 0.0
@@ -87,7 +87,9 @@ class OversamplerSpec : StringSpec({
 
         // Hard clip with 2x oversampling
         val os = Oversampler(stages = 1)
-        os.process(inputOs, 0, blockFrames, scratch) { it.coerceIn(-0.5, 0.5) }
+        os.process(inputOs, 0, blockFrames, scratch) { work, count ->
+            for (i in 0 until count) work[i] = work[i].coerceIn(-0.5, 0.5)
+        }
 
         // The oversampled version should have less high-frequency energy (less aliasing).
         // Measure by summing absolute differences between adjacent samples (rough HF proxy).
@@ -116,8 +118,12 @@ class OversamplerSpec : StringSpec({
             sin(2.0 * PI * freq * (i + blockFrames) / sampleRate)
         }
 
-        os.process(block1, 0, blockFrames, scratch) { it * 0.5 }
-        os.process(block2, 0, blockFrames, scratch) { it * 0.5 }
+        os.process(block1, 0, blockFrames, scratch) { work, count ->
+            for (i in 0 until count) work[i] = work[i] * 0.5
+        }
+        os.process(block2, 0, blockFrames, scratch) { work, count ->
+            for (i in 0 until count) work[i] = work[i] * 0.5
+        }
 
         // Check continuity at the boundary: last sample of block1 should be close to first of block2
         val diff = abs(block2[0] - block1[blockFrames - 1])
@@ -132,7 +138,9 @@ class OversamplerSpec : StringSpec({
         os.factor shouldBe 4
 
         val buffer = AudioBuffer(blockFrames) { 0.7 }
-        os.process(buffer, 0, blockFrames, scratch) { it * 0.5 }
+        os.process(buffer, 0, blockFrames, scratch) { work, count ->
+            for (i in 0 until count) work[i] = work[i] * 0.5
+        }
 
         // DC signal * 0.5 should come through as ~0.35
         for (i in HALF_LEN_WARMUP until blockFrames) {
@@ -151,7 +159,9 @@ class OversamplerSpec : StringSpec({
         // Fill region with 1.0
         for (i in offset until offset + length) buffer[i] = 1.0
 
-        os.process(buffer, offset, length, scratch) { it * 0.5 }
+        os.process(buffer, offset, length, scratch) { work, count ->
+            for (i in 0 until count) work[i] = work[i] * 0.5
+        }
 
         // Before offset should be untouched
         for (i in 0 until offset) {

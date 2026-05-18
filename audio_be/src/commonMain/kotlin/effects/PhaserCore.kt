@@ -72,7 +72,7 @@ internal class PhaserCore(
         val safeX = if (x.isFinite()) x else 0.0
 
         // 1. LFO advance — `wrapPhase` handles extreme rates safely (can't skip-wrap).
-        lfoPhase = wrapPhase(lfoPhase + rate * TWO_PI * inverseSampleRate, TWO_PI)
+        lfoPhase = (lfoPhase + rate * TWO_PI * inverseSampleRate).wrapPhase(TWO_PI)
         val lfoValue = (sin(lfoPhase) + 1.0) * 0.5
 
         // 2. Modulated breakpoint frequency, clamped to safe range.
@@ -91,10 +91,10 @@ internal class PhaserCore(
         var signal = safeX + lastOutput * feedback
         for (s in 0 until stages) {
             val y = alpha * signal + z1[s]
-            z1[s] = flushDenormal(signal - alpha * y)
+            z1[s] = (signal - alpha * y).flushDenormal()
             signal = y
         }
-        lastOutput = flushDenormal(signal)
+        lastOutput = signal.flushDenormal()
         return signal
     }
 

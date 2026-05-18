@@ -34,7 +34,7 @@ internal val soundOfTheSeaSong = Song(
        .gain(water).hpf(120).lpf(4000).bandf(300).bandq(1.0).early(2)
 
         , // Waves ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        note("c c c c").legato(4).degrade(95/100).sound("pink").adsr("1.0:5.0:0.6:20.0").warmth(0.1) // . solo()
+        note("c c c c").legato(4).degrade(95/100).sound("pink").adsr("1.0:5.0:0.6:20.0").warmth(0.3) // . solo()
         .gain(waves).hpf(120).lpf(5000).lpadsr("1.0:3.0:0.4:15.0").lpenv(10)
         .bandf(perlin.range(120, 500).slow(22)).bandq(rand.range(0.5, 1.5))
          .pan(sine.range(0.1, 0.4).slow(4)).superimpose(x => x.pan(sine.range(0.9, 0.6).slow(5)))
@@ -42,7 +42,7 @@ internal val soundOfTheSeaSong = Song(
 
              , // Windspiel ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                n(randrun(16)).fast(4).sound("glockenspiel").scale("f2:pentatonic").pan(0.3)
-                 .gain(0.25).distort(0.05).postgain(windSpiel).adsr("0.05:0.3:0.5:5.0").hpf(400).degradeBy(0.995)
+                 .gain(0.25).distort(0.05).postgain(windSpiel).adsr("0.05:0.2:0.5:5.0").hpf(400).lpf("3000:1:1.5").degradeBy(0.995)
                      .orbit(1).delay(0.25).delaytime(pure(1/4).div(cps)).delayfeedback(0.75) // . solo()
                            ).room(0.25).rsize(10.0).seed(sinOfDay.add(1).mul(24 * 60 * 60 * 100))
 

@@ -1,32 +1,50 @@
 package io.peekandpoke.klang.audio_be
 
 /**
- * Resolved distortion shape: clipping function + optional output gain.
- * Shared between the ignitor-based and block-renderer-based distortion implementations.
+ * Distortion waveshaper shapes. Internal-only enum — the DSL surface stays
+ * string-based (sprudel / klangscript) and is mapped via [parseDistortionShape].
  *
- * The DC blocker is now applied unconditionally by the runtime distortion path
- * (was previously gated by a per-shape flag). Asymmetric shapes (`diode`,
- * `rectify`) require DC blocking for correctness; symmetric shapes (`soft`,
- * `hard`, etc.) need it as a defensive measure against rail-lock at extreme
- * drive — see `audio/ref/numerical-safety.md`.
+ * Dispatch at the audio-rate per-sample loop uses [applyDistortionShape], which
+ * is `inline` so each `when` case expands to a literal `ClippingFuncs.foo(x)`
+ * call — letting the inline shape functions in `ClippingFunctions.kt` actually
+ * inline. Storing a `(Double) -> Double` function reference would defeat that.
  */
-internal data class ResolvedShape(
-    val fn: (Double) -> Double,
-    val outputGain: Double = 1.0,
-)
+internal enum class DistortionShape { SOFT, HARD, GENTLE, CUBIC, DIODE, FOLD, CHEBYSHEV, RECTIFY, EXP }
 
 /**
- * Maps a shape name (from the DSL) to the corresponding clipping function and settings.
- * "soft" is the default / fallback.
+ * Maps a DSL shape name to the enum. Unknown / null → [DistortionShape.SOFT]
+ * (the `tanh` fallback). Case-insensitive.
  */
-internal fun resolveDistortionShape(shape: String): ResolvedShape = when (shape.lowercase()) {
-    "hard" -> ResolvedShape(fn = ClippingFuncs::hardClip)
-    "gentle" -> ResolvedShape(fn = ClippingFuncs::softClip, outputGain = 2.0)
-    "cubic" -> ResolvedShape(fn = ClippingFuncs::cubicClip)
-    "diode" -> ResolvedShape(fn = ClippingFuncs::diodeClip)
-    "fold" -> ResolvedShape(fn = ClippingFuncs::sineFold)
-    "chebyshev" -> ResolvedShape(fn = ClippingFuncs::chebyshevT3)
-    "rectify" -> ResolvedShape(fn = ClippingFuncs::rectify)
-    "exp" -> ResolvedShape(fn = ClippingFuncs::expClip)
-    else -> ResolvedShape(fn = ClippingFuncs::fastTanh) // "soft" & fallback
+internal fun parseDistortionShape(shape: String): DistortionShape = when (shape.lowercase()) {
+    "hard" -> DistortionShape.HARD
+    "gentle" -> DistortionShape.GENTLE
+    "cubic" -> DistortionShape.CUBIC
+    "diode" -> DistortionShape.DIODE
+    "fold" -> DistortionShape.FOLD
+    "chebyshev" -> DistortionShape.CHEBYSHEV
+    "rectify" -> DistortionShape.RECTIFY
+    "exp" -> DistortionShape.EXP
+    else -> DistortionShape.SOFT // "soft" + fallback
+}
+
+/**
+ * Applies the shape to a single sample. `inline` is load-bearing: it expands
+ * the `when` at the call site and inlines each `ClippingFuncs.foo(x)`. Holding
+ * a `(Double) -> Double` function reference instead would force a virtual
+ * Function1 dispatch + Double boxing per sample on Kotlin/JS.
+ *
+ * The legacy `outputGain` (2.0 for `gentle`, 1.0 for everything else) is baked
+ * into the gentle case — no separate field to track.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun applyDistortionShape(shape: DistortionShape, x: Double): Double = when (shape) {
+    DistortionShape.SOFT -> ClippingFuncs.fastTanh(x)
+    DistortionShape.HARD -> ClippingFuncs.hardClip(x)
+    DistortionShape.GENTLE -> ClippingFuncs.softClip(x) * 2.0
+    DistortionShape.CUBIC -> ClippingFuncs.cubicClip(x)
+    DistortionShape.DIODE -> ClippingFuncs.diodeClip(x)
+    DistortionShape.FOLD -> ClippingFuncs.sineFold(x)
+    DistortionShape.CHEBYSHEV -> ClippingFuncs.chebyshevT3(x)
+    DistortionShape.RECTIFY -> ClippingFuncs.rectify(x)
+    DistortionShape.EXP -> ClippingFuncs.expClip(x)
 }

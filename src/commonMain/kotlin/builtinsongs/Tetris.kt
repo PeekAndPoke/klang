@@ -10,7 +10,7 @@ internal val tetrisSong = Song(
     title = "Stein um Stein",
     rpm = 39.5,
     icon = "gamepad",
-    code = """
+    code = """  
 import * from "stdlib"
 import * from "sprudel"
 
@@ -29,12 +29,12 @@ export subPattern = `<[[e2 b1]!2 [a1 c2]!2] [[g#1 b1] [e1 b1] [a1 e1] [a1 g#1 b1
 
 // Drum machine programming.
 export drumsPattern = `<
-    [[bd:2,cr,cr] hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd:2,cr]    hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
     [[bd,hh]      hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [mt mt,sd]    [ht ht,oh]]
     [[bd:2,cr]    hh sd      hh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
     [[bd,hh]      hh [sd,hh] oh     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [sd sd]       [sd sd]   ]
 
-    [[bd:2,cr,cr] hh sd      sd     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
+    [[bd:2,cr]    hh sd      sd     ]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      sd            hh        ]
     [[bd,hh]      hh sd      [hh sd]]  [bd      hh sd      oh]  [bd      hh sd hh]       [bd hh      [lt lt,sd sd] ~         ]
     [[bd:2,cr]    hh sd      [sd,hh]]  [bd      hh sd:8    oh]  [bd      hh sd hh]       [bd hh      sd            [bd,oh]   ]
     [[bd,cr]      hh [sd,hh] cr     ]  [[bd,cr] hh [bd,cr] hh]  [[sd,oh] bd sd [bd,hh]]  [sd [bd,hh] [bd bd]       [bd bd,hh]]
@@ -57,14 +57,14 @@ export leadShape = (p) => p
 // Bass voice: supersaw, slow detune-LFO, stereo phaser, transposed superimpose.
 export bassShape = (p) => p
     .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.1)
-    .orbit(1).gain(0.65).adsr("0.005:0.2:0.7:0.15").pan(0.3)
-    .superimpose(transpose("<0 12 0 -12>/8").pan(0.7)).phaser(1/13).phaserdepth(0.25).phasercenter(3500).phasersweep(1000)
-    .detune(sine.range(0.05, 0.45).early(1.5).slow(24)).hpf(120).lpf(4200)
+    .orbit(1).gain(0.65).adsr("0.005:0.2:0.8:0.15").pan(0.3)
+    .superimpose(transpose("<0 12 0 -12>/8").pan(0.7)).phaser(1/13).phaserdepth(0.15).phasercenter(2500).phasersweep(1000)
+    .detune(sine.range(0.05, 0.45).early(1.5).slow(24)).hpf(200).lpf(4200)
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.
 export subShape = (p) => p
     .slow(2).orbit(2).clip(0.5).sound("tri").gain(0.8).warmth(0.5).distort("0.3:soft:2").postgain(0.4)
-    .adsr("0.005:0.2:0.3:0.075").tremolo("0.1:8::0:0").hpf(60).lpf(3000).engine("pedal")
+    .adsr("0.005:0.2:0.3:0.075").tremolo("0.1:8::0:0").hpf(70).lpf(2000).engine("pedal")
 
 // Drums: tight, panned right, fast.
 export drumsShape = (p) => p
@@ -94,5 +94,8 @@ export song = stack(
     sub.filterWhen(x => x > 31.4 && x % 128 > 15.4),
     drums,
 ).room(0.1).rsize(5.0).compressor("-10:2:10:0.02:0.25").analog(0.5)
-            """,
+
+
+
+    """.trimIndent(),
 )

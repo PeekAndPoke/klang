@@ -2,6 +2,7 @@ package io.peekandpoke.klang.audio_be.voices.strip.filter
 
 import io.peekandpoke.klang.audio_be.AudioSample
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 
@@ -48,8 +49,10 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
 
         val os = oversampler
         if (os != null) {
-            os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                holdStep(sample)
+            os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { work, count ->
+                for (i in 0 until count) {
+                    work[i] = holdStep(work[i])
+                }
             }
         } else {
             renderDirect(ctx)
@@ -62,7 +65,7 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
             val idx = ctx.offset + i
 
             if (counter >= 1.0 || (i == 0 && counter == 0.0)) {
-                lastValue = buf[idx]
+                lastValue = buf[idx].nanGuard()
                 counter -= 1.0
             }
 
@@ -74,8 +77,14 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
     /**
      * Per-sample hold transform used in the oversampled path. State (`lastValue`,
      * `counter`) persists across samples and blocks, matching [renderDirect].
+     *
+     * `inline` is load-bearing: the per-sample call is invoked from inside the
+     * block lambda passed to [Oversampler.process], and inlining eliminates the
+     * function-call overhead on Kotlin/JS. JVM JIT inlines this anyway, but
+     * marking `inline` makes the win cross-platform.
      */
-    private fun holdStep(sample: AudioSample): AudioSample {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun holdStep(sample: AudioSample): AudioSample {
         if (counter >= 1.0) {
             lastValue = sample
             counter -= 1.0

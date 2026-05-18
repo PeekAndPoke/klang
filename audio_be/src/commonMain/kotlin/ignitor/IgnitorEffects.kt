@@ -2,13 +2,16 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.ClippingFuncs
+import io.peekandpoke.klang.audio_be.DistortionShape
 import io.peekandpoke.klang.audio_be.Oversampler
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.effects.PhaserCore
 import io.peekandpoke.klang.audio_be.filters.DEFAULT_DC_BLOCK_COEFF
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.flushDenormal
-import io.peekandpoke.klang.audio_be.resolveDistortionShape
+import io.peekandpoke.klang.audio_be.nanGuard
+import io.peekandpoke.klang.audio_be.parseDistortionShape
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.pow
@@ -53,22 +56,15 @@ private class DistortIgnitor(
     shape: String,
     oversampleStages: Int,
 ) : Ignitor {
-    private val waveshaper: (Double) -> Double
-    private val outputGain: Double
-    private val oversampler: Oversampler?
+    private val shape: DistortionShape = parseDistortionShape(shape)
+    private val oversampler: Oversampler? =
+        if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     // DC blocker — always applied to guard against rail-lock at extreme drive.
     // Runs at base rate after oversampler decimation (or directly when no oversampler).
     // The block-based class keeps state in registers across the inner loop.
     // The downstream `softCap` bounds the raw-pole 2× edge transient to ±1.
     private val dcBlocker = LowPassHighPassFilters.DcBlocker()
-
-    init {
-        val resolved = resolveDistortionShape(shape)
-        waveshaper = resolved.fn
-        outputGain = resolved.outputGain
-        oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
-    }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
@@ -84,16 +80,19 @@ private class DistortIgnitor(
                 return@use
             }
 
+            val s = shape
             val drive = 10.0.pow(amt * 1.2)
             val os = oversampler
 
             if (os != null) {
-                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                    (waveshaper(sample * drive) * outputGain)
+                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
+                    for (i in 0 until count) {
+                        w[i] = applyDistortionShape(s, w[i] * drive)
+                    }
                 }
             } else {
                 for (i in ctx.offset until end) {
-                    work[i] = waveshaper(work[i] * drive) * outputGain
+                    work[i] = applyDistortionShape(s, work[i] * drive).nanGuard()
                 }
             }
 
@@ -196,34 +195,30 @@ private class ClipIgnitor(
     shape: String,
     oversampleStages: Int,
 ) : Ignitor {
-    private val clipFn: (Double) -> Double
-    private val outputGain: Double
-    private val oversampler: Oversampler?
+    private val shape: DistortionShape = parseDistortionShape(shape)
+    private val oversampler: Oversampler? =
+        if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     // DC blocker pre-softCap. See `Ignitor.distort` for the rationale.
     private val dcBlocker = LowPassHighPassFilters.DcBlocker()
-
-    init {
-        val resolved = resolveDistortionShape(shape)
-        clipFn = resolved.fn
-        outputGain = resolved.outputGain
-        oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
-    }
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         ctx.scratchBuffers.use { work ->
             upstream.generate(work, freqHz, ctx)
 
             val end = ctx.offset + ctx.length
+            val s = shape
             val os = oversampler
 
             if (os != null) {
-                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                    (clipFn(sample) * outputGain)
+                os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
+                    for (i in 0 until count) {
+                        w[i] = applyDistortionShape(s, w[i])
+                    }
                 }
             } else {
                 for (i in ctx.offset until end) {
-                    work[i] = clipFn(work[i]) * outputGain
+                    work[i] = applyDistortionShape(s, work[i]).nanGuard()
                 }
             }
 
@@ -375,7 +370,7 @@ fun Ignitor.coarse(amount: Double): Ignitor {
  *
  * @param rate LFO speed in Hz. 0.0 = static, 0.5 = slow sweep, 2.0 = moderate,
  *   5.0+ = fast. Typical range: 0.1–5.0. Default: no default (required).
- * @param depth Wet/dry mix amount. 0.0 = bypass, 0.5 = subtle, 1.0 = full effect.
+ * @param blend Wet/dry mix amount. 0.0 = bypass, 0.5 = subtle, 1.0 = full effect.
  *   Typical range: 0.3–1.0. Default: no default (required).
  * @param center Center frequency of the notch sweep in Hz. Default: 1000.0.
  *   Clamped to [100, 18000]. Typical range: 500–4000.
@@ -658,7 +653,7 @@ private class ShimmerIgnitor(
                     if (grainElapsed[g] >= grainTotal[g]) grainActive[g] = false
                 }
 
-                lpfState = flushDenormal(lpfOneMinusA * wet + lpfA * lpfState)
+                lpfState = (lpfOneMinusA * wet + lpfA * lpfState).flushDenormal()
                 feedbackTap = lpfState
 
                 buffer[i] = (dry * (1.0 - blendVal) + wet * blendVal)

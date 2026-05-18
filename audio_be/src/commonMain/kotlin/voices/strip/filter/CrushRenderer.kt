@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_be.nanGuard
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import kotlin.math.floor
@@ -61,15 +62,18 @@ class CrushRenderer(amount: Double, oversampleStages: Int = 0) : BlockRenderer {
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
             val q = floor(buf[idx] * hl) / hl
-            buf[idx] = q.coerceIn(-1.0, 1.0)
+            buf[idx] = q.coerceIn(-1.0, 1.0).nanGuard()
         }
     }
 
     private fun renderOversampled(ctx: BlockContext, os: Oversampler) {
         val hl = halfLevels
-        os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-            val q = floor(sample * hl) / hl
-            q.coerceIn(-1.0, 1.0)
+        os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { work, count ->
+            for (i in 0 until count) {
+                val q = floor(work[i] * hl) / hl
+                work[i] = q.coerceIn(-1.0, 1.0)
+            }
+            // NaN sterilisation owned by Oversampler.
         }
     }
 }

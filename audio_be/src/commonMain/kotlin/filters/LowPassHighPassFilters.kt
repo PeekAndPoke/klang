@@ -202,7 +202,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 val x = buffer[i]
                 y += a * (x - y)
-                y = flushDenormal(y)
+                y = y.flushDenormal()
                 buffer[i] = y
             }
         }
@@ -237,7 +237,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 val x = buffer[i]
                 y = b0 * (x - xPrev) + a1 * y
-                y = flushDenormal(y)
+                y = y.flushDenormal()
                 xPrev = x
                 buffer[i] = y
             }
@@ -276,7 +276,7 @@ object LowPassHighPassFilters {
                 val x = buffer[i]
                 val out = x - xp + a * yc
                 xp = x
-                yc = flushDenormal(out)
+                yc = out.flushDenormal()
                 buffer[i] = out
             }
             xPrev = xp
@@ -293,7 +293,7 @@ object LowPassHighPassFilters {
                 val x = input[i]
                 val out = x - xp + a * yc
                 xp = x
-                yc = flushDenormal(out)
+                yc = out.flushDenormal()
                 output[i] = out
             }
             xPrev = xp
@@ -350,8 +350,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                 buffer[i] = v2
             }
         }
@@ -365,8 +365,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                 buffer[i] = (v0 - k * v1 - v2)
             }
         }
@@ -380,8 +380,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                 buffer[i] = v1
             }
         }
@@ -395,8 +395,8 @@ object LowPassHighPassFilters {
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
                 val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-                ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                 buffer[i] = (v0 - k * v1)
             }
         }

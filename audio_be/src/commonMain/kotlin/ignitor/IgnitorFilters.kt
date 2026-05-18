@@ -161,8 +161,8 @@ private class SvfIgnitor(
                         val v3 = v0 - ic2eq
                         val v1 = a1 * ic1eq + a2 * v3
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-                        ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                         buffer[i] = v2
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep
                     }
@@ -174,8 +174,8 @@ private class SvfIgnitor(
                         val v3 = v0 - ic2eq
                         val v1 = a1 * ic1eq + a2 * v3
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-                        ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                         buffer[i] = v0 - k * v1 - v2
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep
                     }
@@ -187,8 +187,8 @@ private class SvfIgnitor(
                         val v3 = v0 - ic2eq
                         val v1 = a1 * ic1eq + a2 * v3
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-                        ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                         buffer[i] = v1
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep
                     }
@@ -200,8 +200,8 @@ private class SvfIgnitor(
                         val v3 = v0 - ic2eq
                         val v1 = a1 * ic1eq + a2 * v3
                         val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = flushDenormal(2.0 * v1 - ic1eq)
-                        ic2eq = flushDenormal(2.0 * v2 - ic2eq)
+                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                         buffer[i] = v0 - k * v1
                         a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep
                     }
@@ -346,7 +346,7 @@ private class OnePoleLowpassIgnitor(
             val end = ctx.offset + ctx.length
             for (i in ctx.offset until end) {
                 y += a * (input[i] - y)
-                y = flushDenormal(y)
+                y = y.flushDenormal()
                 buffer[i] = y
             }
         }
@@ -400,7 +400,7 @@ private class OnePoleHighpassIgnitor(
             for (i in ctx.offset until end) {
                 val x = input[i]
                 y = b0 * (x - xPrev) + a1 * y
-                y = flushDenormal(y)
+                y = y.flushDenormal()
                 xPrev = x
                 buffer[i] = y
             }
@@ -475,8 +475,8 @@ private class FormantIgnitor(
                     val v3 = v0 - band.ic2eq
                     val v1 = band.a1 * band.ic1eq + band.a2 * v3
                     val v2 = band.ic2eq + band.a2 * band.ic1eq + band.a3 * v3
-                    band.ic1eq = flushDenormal(2.0 * v1 - band.ic1eq)
-                    band.ic2eq = flushDenormal(2.0 * v2 - band.ic2eq)
+                    band.ic1eq = (2.0 * v1 - band.ic1eq).flushDenormal()
+                    band.ic2eq = (2.0 * v2 - band.ic2eq).flushDenormal()
                     buffer[i] = (buffer[i] + v1 * band.linearGain)
                 }
             }
@@ -523,7 +523,7 @@ private class WithWarmthIgnitor(
                 val raw = input[i]
                 val smoothed = raw + a * (lastSample - raw)
                 buffer[i] = smoothed
-                lastSample = flushDenormal(smoothed)
+                lastSample = smoothed.flushDenormal()
             }
         }
     }

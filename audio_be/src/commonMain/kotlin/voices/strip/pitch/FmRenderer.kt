@@ -44,6 +44,6 @@ class FmRenderer(
             buf[ctx.offset + i] *= fmMult
         }
 
-        fm.modPhase = wrapPhase(modPhase, TWO_PI)
+        fm.modPhase = modPhase.wrapPhase(TWO_PI)
     }
 }

@@ -3,8 +3,9 @@ package io.peekandpoke.klang.audio_be.ignitor
 import io.kotest.core.spec.style.StringSpec
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_be.applyDistortionShape
 import io.peekandpoke.klang.audio_be.flushDenormal
-import io.peekandpoke.klang.audio_be.resolveDistortionShape
+import io.peekandpoke.klang.audio_be.parseDistortionShape
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.adsr
 import io.peekandpoke.klang.audio_bridge.bandpass
@@ -27,7 +28,7 @@ import kotlin.math.tanh
  * - attackPeak    — max |x| in first 1ms (voice-start transient — should be small)
  * - gateEndDelta  — max sample-to-sample |delta| within ±2ms of gate-end (release-edge click)
  * - tail          — max |x| in last 0.5ms of voice (residual after release — should be ~0)
- * - peakDelta     — max |x[n]-x[n-1]| over the whole render
+ * - peakDelta     — max |x[ n ]-x[n-1]| over the whole render
  * - p99Delta      — 99th percentile |delta| (excludes the periodic-saw-edge baseline)
  * - ratio         — peakDelta / p99Delta. Periodic harshness ≈ 1; real click >> 1.
  */
@@ -489,7 +490,7 @@ class GuitarClickHuntTest : StringSpec({
             val oversample = if (shape == "soft") 4 else 8
             println()
             println("=== shape=$shape, oversample=$oversample ===")
-            for (variant in DistortVariant.values()) {
+            for (variant in DistortVariant.entries) {
                 val perNote = mutableListOf<Pair<Int, Metrics>>()
                 for (m in rhythmMidis) {
                     // IMPORTANT: build a fresh chain per note — each Ignitor has internal state.
@@ -573,9 +574,7 @@ internal fun Ignitor.distortVariant(
     oversampleStages: Int,
     variant: DistortVariant,
 ): Ignitor {
-    val resolved = resolveDistortionShape(shape)
-    val waveshaper = resolved.fn
-    val outputGain = resolved.outputGain
+    val s = parseDistortionShape(shape)
     val oversampler = if (oversampleStages > 0) Oversampler(oversampleStages) else null
 
     // One-pole state (used by STOCK + PRE_BLOCK + POST_TANH for the post path).
@@ -616,40 +615,42 @@ internal fun Ignitor.distortVariant(
                 // Pre-shape DC block (PRE_BLOCK only).
                 if (variant == DistortVariant.PRE_BLOCK) {
                     for (i in ctx.offset until end) {
-                        val xi = work[i].toDouble()
+                        val xi = work[i]
                         val po = xi - px1 + a * py1
                         px1 = xi
-                        py1 = flushDenormal(po)
+                        py1 = po.flushDenormal()
                         work[i] = po
                     }
                 }
 
                 val os = oversampler
                 if (os != null) {
-                    os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { sample ->
-                        (waveshaper(sample.toDouble() * driveGain) * outputGain)
+                    os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
+                        for (i in 0 until count) {
+                            w[i] = applyDistortionShape(s, w[i] * driveGain)
+                        }
                     }
                 } else {
                     for (i in ctx.offset until end) {
-                        work[i] = (waveshaper(work[i].toDouble() * driveGain) * outputGain)
+                        work[i] = applyDistortionShape(s, work[i] * driveGain)
                     }
                 }
 
                 when (variant) {
                     DistortVariant.STOCK -> {
                         for (i in ctx.offset until end) {
-                            val y = work[i].toDouble()
+                            val y = work[i]
                             val out = y - x1 + a * y1
-                            x1 = y; y1 = flushDenormal(out)
+                            x1 = y; y1 = out.flushDenormal()
                             buffer[i] = out
                         }
                     }
 
                     DistortVariant.POST_TANH -> {
                         for (i in ctx.offset until end) {
-                            val y = work[i].toDouble()
+                            val y = work[i]
                             val out = y - x1 + a * y1
-                            x1 = y; y1 = flushDenormal(out)
+                            x1 = y; y1 = out.flushDenormal()
                             // Soft-cap at ±1: tanh of the DC-blocked signal. Bounds the
                             // 2× overshoot back to ~1, smooth knee → no aliasing introduced.
                             buffer[i] = tanh(out)
@@ -674,10 +675,10 @@ internal fun Ignitor.distortVariant(
                             biquadInit = true
                         }
                         for (i in ctx.offset until end) {
-                            val xi = work[i].toDouble()
+                            val xi = work[i]
                             val out = b0 * xi + b1 * bx1 + b2 * bx2 - ar1 * by1 - ar2 * by2
                             bx2 = bx1; bx1 = xi
-                            by2 = by1; by1 = flushDenormal(out)
+                            by2 = by1; by1 = out.flushDenormal()
                             buffer[i] = out
                         }
                     }

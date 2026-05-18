@@ -210,7 +210,7 @@ class Reverb(
                 var posL = combPosL[c]
 
                 val outSampleL = bufL[posL]
-                combStoreL[c] = flushDenormal((outSampleL * invDamping) + (combStoreL[c] * damping))
+                combStoreL[c] = ((outSampleL * invDamping) + (combStoreL[c] * damping)).flushDenormal()
                 bufL[posL] = inpL + (combStoreL[c] * feedback)
 
                 sumL += outSampleL
@@ -226,7 +226,7 @@ class Reverb(
                 var posR = combPosR[c]
 
                 val outSampleR = bufR[posR]
-                combStoreR[c] = flushDenormal((outSampleR * invDamping) + (combStoreR[c] * damping))
+                combStoreR[c] = ((outSampleR * invDamping) + (combStoreR[c] * damping)).flushDenormal()
                 bufR[posR] = inpR + (combStoreR[c] * feedback)
 
                 sumR += outSampleR
@@ -246,7 +246,7 @@ class Reverb(
 
                 val bufOutL = bufL[posL]
                 val newOutL = -sumL + bufOutL
-                bufL[posL] = flushDenormal(sumL + (bufOutL * ALL_PASS_FEEDBACK))
+                bufL[posL] = (sumL + (bufOutL * ALL_PASS_FEEDBACK)).flushDenormal()
                 sumL = newOutL
 
                 if (++posL >= sizeL) {
@@ -261,7 +261,7 @@ class Reverb(
 
                 val bufOutR = bufR[posR]
                 val newOutR = -sumR + bufOutR
-                bufR[posR] = flushDenormal(sumR + (bufOutR * ALL_PASS_FEEDBACK))
+                bufR[posR] = (sumR + (bufOutR * ALL_PASS_FEEDBACK)).flushDenormal()
                 sumR = newOutR
 
                 if (++posR >= sizeR) {

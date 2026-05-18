@@ -4,21 +4,34 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * Collection of optimized shaping functions for distortion and saturation.
+ * Collection of optimised shaping functions for distortion and saturation.
  *
- * Each function applies a different transfer curve (waveshaper) to an input sample 'x'.
- * These are used to create various "colors" of distortion, from warm saturation to harsh digital clipping.
+ * Each function applies a different transfer curve (waveshaper) to an input sample `x`.
+ * These are used to create various "colors" of distortion, from warm saturation to
+ * harsh digital clipping.
+ *
+ * **NaN / Inf policy:** these are raw math primitives. NaN/Inf input is **not**
+ * sterilised here — callers in IIR contexts (e.g. anything feeding a DcBlocker or
+ * the Oversampler FIR delay line) must guard before invocation. See the `// NaN-guard`
+ * idiom used by [Oversampler.process] and the strip-filter direct paths. This
+ * convention matches the engine's "raw Motör" philosophy: don't pay the cost of
+ * defensive checks in the inner math; defend at the integration points.
  */
 @Suppress("NOTHING_TO_INLINE", "unused")
 object ClippingFuncs {
 
     /**
-     * Fast approximation of tanh using a Padé approximant.
+     * Fast approximation of `tanh` using a Padé approximant.
      *
      * **Sonic Character:** Warm, analog-style saturation. Smoothly rounds off peaks.
      * **Use Case:** General purpose overdrive, guitar-pedal style distortion.
-     * **Performance:** Significantly faster than kotlin.math.tanh (~5x) with negligible error for audio.
-     * **Range:** Accurate within [-3, 3], clamped outside that range.
+     * **Performance:** Significantly faster than `kotlin.math.tanh` (~5x) with negligible error for audio.
+     * **Range:** Accurate within `[-3, 3]`, clamped outside.
+     *
+     * **C¹ at the ±3 boundary:** the Padé form `x(27+x²) / (27+9x²)` evaluates to
+     * exactly `1.0` at `x = 3` AND its derivative is `0` at `x = 3` — so the
+     * constant clamp `return 1.0` is both value- AND slope-continuous with the
+     * curve. No cliff at the clamp.
      */
     inline fun fastTanh(x: Double): Double {
         if (x < -3.0) return -1.0
@@ -41,9 +54,14 @@ object ClippingFuncs {
     /**
      * Rational Soft Clipper (Algebraic Sigmoid).
      *
-     * **Sonic Character:** Very similar to tanh but slightly "softer" knee.
-     * **Use Case:** A cheaper alternative to fastTanh if CPU is extremely tight, though the difference is minimal on modern CPUs.
-     * **Math:** x / (1 + |x|)
+     * **Sonic Character:** Very similar to `tanh` but slightly "softer" knee.
+     * **Use Case:** A cheaper alternative to `fastTanh` if CPU is extremely tight,
+     * though the difference is minimal on modern CPUs.
+     * **Math:** `x / (1 + |x|)`
+     *
+     * **Inf input → NaN.** `±Inf / (1 + Inf) = NaN`. Per the engine convention
+     * (see file-level KDoc), this function does not sterilise; callers in IIR
+     * contexts must guard. Finite input is always well-behaved.
      */
     inline fun softClip(x: Double): Double {
         return x / (1.0 + abs(x))
@@ -53,18 +71,13 @@ object ClippingFuncs {
      * Cubic Soft Clipper (Tube Simulation).
      *
      * **Sonic Character:** Emulates the saturation of a vacuum tube amplifier.
-     * Compresses dynamic range gently before clipping. Emphasizes the 3rd harmonic.
+     * Compresses dynamic range gently before clipping. Emphasises the 3rd harmonic.
      * **Use Case:** Warmth, boosting perceived loudness without obvious distortion.
-     * **Math:** f(x) = x - x^3/3 (clamped at x=1.5 to prevent foldover)
+     * **Math:** `1.5·x − 0.5·x³` clamped to `[-1, 1]`. At `x = ±1` the curve hits
+     * `±1` with zero derivative, so the clamp is value- AND slope-continuous.
      */
     inline fun cubicClip(x: Double): Double {
-        if (x < -1.5) return -1.0
-        if (x > 1.5) return 1.0
-        // standard cubic soft clip is often defined up to 1.0, but extending it to 1.5 gives a bit more headroom
-        // normalizing factor 1.5 - 1.5^3/3 = 1.5 - 3.375/3 = 1.5 - 1.125 = 0.375 ??
-        // Let's stick to the standard range [-1, 1] where derivative becomes 0
         val xc = x.coerceIn(-1.0, 1.0)
-        // 1.5x - 0.5x^3 allows it to reach 1.0 at input 1.0
         return 1.5 * xc - 0.5 * xc * xc * xc
     }
 
@@ -124,7 +137,9 @@ object ClippingFuncs {
      *
      * **Sonic Character:** Octave-up effect, buzzy, gnarly.
      * **Use Case:** Octave effects, aggressive bass sounds.
-     * **Math:** |x|, then soft-clipped to prevent aliasing.
+     * **Math:** `|x|`, then **hard-clipped** at `1.0`. The hard clip is intentional —
+     * it's the aliased flat-top above unity that gives this shape its harsh,
+     * buzzy character. Pre-amplified input (via `drive`) is expected.
      * **Note:** Generates DC offset — always use with a DC blocking filter.
      */
     inline fun rectify(x: Double): Double {
