@@ -58,12 +58,16 @@ class Oversampler(stages: Int) {
      *    operates on `work[0 until count]` in place. This block-level
      *    callback avoids the per-sample `Function1.invoke` dispatch + Double
      *    boxing that a `(Double) -> Double` callback would force on JS.
-     * 3. Sterilises any NaN samples in the work buffer to 0.0 — a single in-
-     *    place sweep. Without this, a NaN from the transform would land in
-     *    the decimator FIR delay line and poison every subsequent output
-     *    until the NaN scrolls out (15+ samples per stage).
-     * 4. Decimates back to original rate via cascaded half-band filters.
-     * 5. Writes results back into `buffer[offset..offset+length)`.
+     * 3. Decimates back to original rate via cascaded half-band filters.
+     * 4. Writes results back into `buffer[offset..offset+length)`.
+     *
+     * **Caller contract — NaN-guard responsibility**: [transformBlock] MUST
+     * sterilise NaN samples (e.g. with `.nanGuard()`) before they reach the
+     * decimator FIR. A single NaN entering the FIR delay line poisons every
+     * subsequent output until the NaN scrolls out (15+ samples per stage).
+     * Fusing the guard into the caller's per-sample expression gives a single
+     * pass over the work buffer; a defensive second sweep here would force a
+     * two-pass loop and measurably slow the path on V8.
      *
      * When [stages] is 0 this method is a no-op.
      */
@@ -83,21 +87,16 @@ class Oversampler(stages: Int) {
             upsample(buffer, offset, length, work)
 
             // Step 2: Apply caller's transform to the entire oversampled block in one call.
+            // Caller is responsible for NaN-sterilising via .nanGuard() — see KDoc.
             transformBlock(work, oversampledLen)
 
-            // Step 3: NaN sterilisation — protects the decimator FIR delay lines.
-            // Single sweep over the work buffer; still hot in L1 from step 2.
-            for (i in 0 until oversampledLen) {
-                work[i] = work[i].nanGuard()
-            }
-
-            // Step 4: Cascaded 2x decimation (in-place in work buffer)
+            // Step 3: Cascaded 2x decimation (in-place in work buffer)
             var currentLen = oversampledLen
             for (stage in 0 until stages) {
                 currentLen = decimate2x(decimators[stage], work, currentLen)
             }
 
-            // Step 5: Copy back to original buffer
+            // Step 4: Copy back to original buffer
             work.copyInto(buffer, offset, 0, length)
         }
     }

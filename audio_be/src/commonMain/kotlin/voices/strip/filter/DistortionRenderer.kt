@@ -53,10 +53,11 @@ class DistortionRenderer(
         val os = oversampler
 
         if (os != null) {
-            // Oversampled path: NaN sterilisation owned by Oversampler.
+            // Oversampled path: NaN-guard fused into the per-sample loop so we
+            // avoid a second sweep — see Oversampler.process KDoc.
             os.process(buf, ctx.offset, ctx.length, ctx.scratchBuffers) { work, count ->
                 for (i in 0 until count) {
-                    work[i] = applyDistortionShape(s, work[i] * d)
+                    work[i] = applyDistortionShape(s, work[i] * d).nanGuard()
                 }
             }
         } else {

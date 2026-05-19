@@ -85,9 +85,10 @@ private class DistortIgnitor(
             val os = oversampler
 
             if (os != null) {
+                // NaN-guard fused into the per-sample loop — see Oversampler.process KDoc.
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
                     for (i in 0 until count) {
-                        w[i] = applyDistortionShape(s, w[i] * drive)
+                        w[i] = applyDistortionShape(s, w[i] * drive).nanGuard()
                     }
                 }
             } else {
@@ -211,9 +212,10 @@ private class ClipIgnitor(
             val os = oversampler
 
             if (os != null) {
+                // NaN-guard fused into the per-sample loop — see Oversampler.process KDoc.
                 os.process(work, ctx.offset, ctx.length, ctx.scratchBuffers) { w, count ->
                     for (i in 0 until count) {
-                        w[i] = applyDistortionShape(s, w[i])
+                        w[i] = applyDistortionShape(s, w[i]).nanGuard()
                     }
                 }
             } else {

@@ -69,11 +69,11 @@ class CrushRenderer(amount: Double, oversampleStages: Int = 0) : BlockRenderer {
     private fun renderOversampled(ctx: BlockContext, os: Oversampler) {
         val hl = halfLevels
         os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { work, count ->
+            // NaN-guard fused into the per-sample loop — see Oversampler.process KDoc.
             for (i in 0 until count) {
                 val q = floor(work[i] * hl) / hl
-                work[i] = q.coerceIn(-1.0, 1.0)
+                work[i] = q.coerceIn(-1.0, 1.0).nanGuard()
             }
-            // NaN sterilisation owned by Oversampler.
         }
     }
 }

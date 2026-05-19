@@ -264,8 +264,8 @@ class EffectBenchmark(
                 val p = Phaser(sr).apply {
                     rate = 0.5
                     depth = 0.5
-                    centerFreq = 1000.0
-                    sweepRange = 1000.0
+                    center = 1000.0
+                    sweep = 1000.0
                     feedback = 0.3
                 }
                 StereoInPlaceEffect { buf, length -> p.process(buf, length) }

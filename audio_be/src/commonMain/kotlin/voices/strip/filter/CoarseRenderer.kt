@@ -50,8 +50,9 @@ class CoarseRenderer(private val amount: Double, oversampleStages: Int = 0) : Bl
         val os = oversampler
         if (os != null) {
             os.process(ctx.audioBuffer, ctx.offset, ctx.length, ctx.scratchBuffers) { work, count ->
+                // NaN-guard fused into the per-sample loop — see Oversampler.process KDoc.
                 for (i in 0 until count) {
-                    work[i] = holdStep(work[i])
+                    work[i] = holdStep(work[i]).nanGuard()
                 }
             }
         } else {
