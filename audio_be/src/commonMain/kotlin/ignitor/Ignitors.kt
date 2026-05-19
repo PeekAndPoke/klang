@@ -22,10 +22,26 @@ import kotlin.random.Random
 @Suppress(/* False positives */ "EmptyRange")
 object Ignitors {
 
+    // Shared ParamIgnitor singletons — mirror IgnitorDsl.Slots names + defaults.
+    // ParamIgnitor is stateless (just fills a buffer with `default`), so a single
+    // instance can be reused across every factory default. The `name` is only a
+    // debug label at this layer; sprudel's oscParam lookup runs earlier, in
+    // IgnitorDslRuntime.buildIgnitor, before these factories are called.
+    private val analogDefault = ParamIgnitor("analog", 0.0)
+    private val voicesDefault = ParamIgnitor("voices", 8.0)
+    private val freqSpreadDefault = ParamIgnitor("freqSpread", 0.2)
+    private val dutyDefault = ParamIgnitor("duty", 0.5)
+    private val densityDefault = ParamIgnitor("density", 0.2)
+    private val rateDefault = ParamIgnitor("rate", 1.0)
+    private val decayDefault = ParamIgnitor("decay", 0.996)
+    private val brightnessDefault = ParamIgnitor("brightness", 0.5)
+    private val pickPositionDefault = ParamIgnitor("pickPosition", 0.5)
+    private val stiffnessDefault = ParamIgnitor("stiffness", 0.0)
+
     /** Sine wave oscillator. Inherently band-limited, no anti-aliasing needed. */
     fun sine(
         freq: Ignitor = FreqIgnitor,
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        analog: Ignitor = analogDefault,
     ): Ignitor = SineIgnitor(freq, analog)
 
     private class SineIgnitor(
@@ -78,7 +94,7 @@ object Ignitors {
     /** Sawtooth wave oscillator with PolyBLEP anti-aliasing. Rich in harmonics, classic subtractive synth tone. */
     fun sawtooth(
         freq: Ignitor = FreqIgnitor,
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        analog: Ignitor = analogDefault,
     ): Ignitor = SawtoothIgnitor(freq, analog)
 
     private class SawtoothIgnitor(
@@ -142,7 +158,7 @@ object Ignitors {
     /** Reverse sawtooth (ramp up) with PolyBLEP anti-aliasing. Inverted [sawtooth] waveform. */
     fun ramp(
         freq: Ignitor = FreqIgnitor,
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        analog: Ignitor = analogDefault,
     ): Ignitor = RampIgnitor(freq, analog)
 
     private class RampIgnitor(
@@ -206,7 +222,7 @@ object Ignitors {
     /** Square wave oscillator with dual PolyBLEP anti-aliasing at both transitions. */
     fun square(
         freq: Ignitor = FreqIgnitor,
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        analog: Ignitor = analogDefault,
     ): Ignitor = SquareIgnitor(freq, analog)
 
     private class SquareIgnitor(
@@ -279,7 +295,7 @@ object Ignitors {
     /** Triangle wave oscillator. Piecewise linear, inherently band-limited. Softer tone than square or saw. */
     fun triangle(
         freq: Ignitor = FreqIgnitor,
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        analog: Ignitor = analogDefault,
     ): Ignitor = TriangleIgnitor(freq, analog)
 
     private class TriangleIgnitor(
@@ -345,7 +361,7 @@ object Ignitors {
     /** Naive sawtooth without anti-aliasing. Brighter/harsher than [sawtooth] (PolyBLEP). */
     fun zawtooth(
         freq: Ignitor = FreqIgnitor,
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        analog: Ignitor = analogDefault,
     ): Ignitor = ZawtoothIgnitor(freq, analog)
 
     private class ZawtoothIgnitor(
@@ -398,7 +414,7 @@ object Ignitors {
     /** Impulse: outputs 1.0 once per cycle (at phase wrap), 0.0 otherwise. */
     fun impulse(
         freq: Ignitor = FreqIgnitor,
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        analog: Ignitor = analogDefault,
     ): Ignitor = ImpulseIgnitor(freq, analog)
 
     private class ImpulseIgnitor(
@@ -456,8 +472,8 @@ object Ignitors {
     /** Pulse wave with variable [duty] cycle (0.0..1.0) and dual PolyBLEP anti-aliasing at both transitions. */
     fun pulze(
         freq: Ignitor = FreqIgnitor,
-        duty: Ignitor = ParamIgnitor("duty", 0.5),
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        duty: Ignitor = dutyDefault,
+        analog: Ignitor = analogDefault,
     ): Ignitor = PulzeIgnitor(freq, duty, analog)
 
     private class PulzeIgnitor(
@@ -581,7 +597,7 @@ object Ignitors {
     }
 
     /** Perlin noise: smooth organic noise using 1D Perlin noise. Output range -1..1. */
-    fun perlinNoise(rng: Random, rate: Ignitor = ParamIgnitor("rate", 1.0)): Ignitor =
+    fun perlinNoise(rng: Random, rate: Ignitor = rateDefault): Ignitor =
         PerlinNoiseIgnitor(rng, rate)
 
     private class PerlinNoiseIgnitor(rng: Random, private val rate: Ignitor) : Ignitor {
@@ -602,7 +618,7 @@ object Ignitors {
     }
 
     /** Berlin noise: piecewise-linear interpolated random noise, scaled to -1..1. */
-    fun berlinNoise(rng: Random, rate: Ignitor = ParamIgnitor("rate", 1.0)): Ignitor =
+    fun berlinNoise(rng: Random, rate: Ignitor = rateDefault): Ignitor =
         BerlinNoiseIgnitor(rng, rate)
 
     private class BerlinNoiseIgnitor(rng: Random, private val rate: Ignitor) : Ignitor {
@@ -624,7 +640,7 @@ object Ignitors {
     }
 
     /** Dust: sparse random impulses. [density] 0.0..1.0 controls impulse rate. [maxRateHz] caps the rate. */
-    fun dust(rng: Random, density: Ignitor = ParamIgnitor("density", 0.2), maxRateHz: Double = 200.0): Ignitor =
+    fun dust(rng: Random, density: Ignitor = densityDefault, maxRateHz: Double = 200.0): Ignitor =
         DustIgnitor(rng, density, maxRateHz)
 
     private class DustIgnitor(
@@ -647,7 +663,7 @@ object Ignitors {
     }
 
     /** Crackle: sparse random impulses with higher max rate than [dust]. */
-    fun crackle(rng: Random, density: Ignitor = ParamIgnitor("density", 0.2), maxRateHz: Double = 800.0): Ignitor {
+    fun crackle(rng: Random, density: Ignitor = densityDefault, maxRateHz: Double = 800.0): Ignitor {
         return dust(rng, density, maxRateHz)
     }
 
@@ -657,9 +673,9 @@ object Ignitors {
      */
     fun superSaw(
         freq: Ignitor = FreqIgnitor,
-        voices: Ignitor = ParamIgnitor("voices", 8.0),
-        freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        voices: Ignitor = voicesDefault,
+        freqSpread: Ignitor = freqSpreadDefault,
+        analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = SuperSawIgnitor(freq, voices, freqSpread, analog, rng)
 
@@ -806,9 +822,9 @@ object Ignitors {
      */
     fun superSine(
         freq: Ignitor = FreqIgnitor,
-        voices: Ignitor = ParamIgnitor("voices", 8.0),
-        freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        voices: Ignitor = voicesDefault,
+        freqSpread: Ignitor = freqSpreadDefault,
+        analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = SuperSineIgnitor(freq, voices, freqSpread, analog, rng)
 
@@ -933,9 +949,9 @@ object Ignitors {
      */
     fun superSquare(
         freq: Ignitor = FreqIgnitor,
-        voices: Ignitor = ParamIgnitor("voices", 8.0),
-        freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        voices: Ignitor = voicesDefault,
+        freqSpread: Ignitor = freqSpreadDefault,
+        analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = SuperSquareIgnitor(freq, voices, freqSpread, analog, rng)
 
@@ -1097,9 +1113,9 @@ object Ignitors {
      */
     fun superTri(
         freq: Ignitor = FreqIgnitor,
-        voices: Ignitor = ParamIgnitor("voices", 8.0),
-        freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        voices: Ignitor = voicesDefault,
+        freqSpread: Ignitor = freqSpreadDefault,
+        analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = SuperTriIgnitor(freq, voices, freqSpread, analog, rng)
 
@@ -1228,9 +1244,9 @@ object Ignitors {
      */
     fun superRamp(
         freq: Ignitor = FreqIgnitor,
-        voices: Ignitor = ParamIgnitor("voices", 8.0),
-        freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        voices: Ignitor = voicesDefault,
+        freqSpread: Ignitor = freqSpreadDefault,
+        analog: Ignitor = analogDefault,
         rng: Random = Random
     ): Ignitor = SuperRampIgnitor(freq, voices, freqSpread, analog, rng)
 
@@ -1375,11 +1391,11 @@ object Ignitors {
     @Suppress("DuplicatedCode")
     fun karplusStrong(
         freq: Ignitor = FreqIgnitor,
-        decay: Ignitor = ParamIgnitor("decay", 0.996),
-        brightness: Ignitor = ParamIgnitor("brightness", 0.5),
-        pickPosition: Ignitor = ParamIgnitor("pickPosition", 0.5),
-        stiffness: Ignitor = ParamIgnitor("stiffness", 0.0),
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        decay: Ignitor = decayDefault,
+        brightness: Ignitor = brightnessDefault,
+        pickPosition: Ignitor = pickPositionDefault,
+        stiffness: Ignitor = stiffnessDefault,
+        analog: Ignitor = analogDefault,
     ): Ignitor = KarplusStrongIgnitor(freq, decay, brightness, pickPosition, stiffness, analog)
 
     private class KarplusStrongIgnitor(
@@ -1480,13 +1496,13 @@ object Ignitors {
     @Suppress("DuplicatedCode")
     fun superKarplusStrong(
         freq: Ignitor = FreqIgnitor,
-        voices: Ignitor = ParamIgnitor("voices", 8.0),
-        freqSpread: Ignitor = ParamIgnitor("freqSpread", 0.2),
-        decay: Ignitor = ParamIgnitor("decay", 0.996),
-        brightness: Ignitor = ParamIgnitor("brightness", 0.5),
-        pickPosition: Ignitor = ParamIgnitor("pickPosition", 0.5),
-        stiffness: Ignitor = ParamIgnitor("stiffness", 0.0),
-        analog: Ignitor = ParamIgnitor("analog", 0.0),
+        voices: Ignitor = voicesDefault,
+        freqSpread: Ignitor = freqSpreadDefault,
+        decay: Ignitor = decayDefault,
+        brightness: Ignitor = brightnessDefault,
+        pickPosition: Ignitor = pickPositionDefault,
+        stiffness: Ignitor = stiffnessDefault,
+        analog: Ignitor = analogDefault,
     ): Ignitor = SuperKarplusStrongIgnitor(freq, voices, freqSpread, decay, brightness, pickPosition, stiffness, analog)
 
     private class SuperKarplusStrongIgnitor(

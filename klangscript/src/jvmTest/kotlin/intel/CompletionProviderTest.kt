@@ -115,13 +115,13 @@ class CompletionProviderTest : StringSpec({
     "top-level: empty prefix returns all top-level symbols" {
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.topLevelCompletions("").map { it.name }
-        names shouldContainExactlyInAnyOrder listOf("Osc", "Math", "Object", "PI", "E")
+        names shouldContainExactlyInAnyOrder listOf("Osc", "OscSlot", "Math", "Object", "PI", "E")
     }
 
     "top-level: filtered prefix" {
         val provider = CompletionProvider(stdlibRegistry())
         val names = provider.topLevelCompletions("O").map { it.name }
-        names shouldContainExactlyInAnyOrder listOf("Osc", "Object")
+        names shouldContainExactlyInAnyOrder listOf("Osc", "OscSlot", "Object")
     }
 
     "top-level: case-insensitive prefix" {

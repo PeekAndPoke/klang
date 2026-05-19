@@ -109,9 +109,9 @@ class StdLibOscTest : StringSpec({
         dsl.voices shouldBe IgnitorDsl.Constant(1.0)
     }
 
-    // Positional args: supersaw(freq, voices, freqSpread, analog)
+    // Positional args: supersaw(freq, voices, freqSpread). Use .analog() to opt in.
     "Osc.supersaw with all params" {
-        val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), 4, 0.1, 0.3)")
+        val dsl = evalIgnitorDsl("Osc.supersaw(Osc.freq(), 4, 0.1).analog(0.3)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSaw>()
         dsl.voices shouldBe IgnitorDsl.Constant(4.0)
         dsl.freqSpread shouldBe IgnitorDsl.Constant(0.1)
@@ -124,7 +124,7 @@ class StdLibOscTest : StringSpec({
         dsl.voices.shouldBeInstanceOf<IgnitorDsl.Sine>()
     }
 
-    // Positional args: supersine(freq, voices, freqSpread, analog)
+    // Positional args: supersine(freq, voices, freqSpread). Use .analog() to opt in.
     "Osc.supersine with voices and freqSpread" {
         val dsl = evalIgnitorDsl("Osc.supersine(Osc.freq(), 6, 0.15)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSine>()
@@ -132,31 +132,31 @@ class StdLibOscTest : StringSpec({
         dsl.freqSpread shouldBe IgnitorDsl.Constant(0.15)
     }
 
-    // Positional args: supersquare(freq, voices, freqSpread, analog)
+    // Positional args: supersquare(freq, voices, freqSpread). Use .analog() to opt in.
     "Osc.supersquare with voices and analog" {
-        val dsl = evalIgnitorDsl("Osc.supersquare(Osc.freq(), 3, 0.2, 0.2)")
+        val dsl = evalIgnitorDsl("Osc.supersquare(Osc.freq(), 3, 0.2).analog(0.2)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperSquare>()
         dsl.voices shouldBe IgnitorDsl.Constant(3.0)
         dsl.analog shouldBe IgnitorDsl.Constant(0.2)
     }
 
-    // Positional args: supertri(freq, voices, freqSpread, analog)
+    // Positional args: supertri(freq, voices, freqSpread). Use .analog() to opt in.
     "Osc.supertri with voices" {
         val dsl = evalIgnitorDsl("Osc.supertri(Osc.freq(), 12)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperTri>()
         dsl.voices shouldBe IgnitorDsl.Constant(12.0)
     }
 
-    // Positional args: superramp(freq, voices, freqSpread, analog)
+    // Positional args: superramp(freq, voices, freqSpread). Use .analog() to opt in.
     "Osc.superramp with all params" {
-        val dsl = evalIgnitorDsl("Osc.superramp(Osc.freq(), 5, 0.4, 0.1)")
+        val dsl = evalIgnitorDsl("Osc.superramp(Osc.freq(), 5, 0.4).analog(0.1)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperRamp>()
         dsl.voices shouldBe IgnitorDsl.Constant(5.0)
         dsl.freqSpread shouldBe IgnitorDsl.Constant(0.4)
         dsl.analog shouldBe IgnitorDsl.Constant(0.1)
     }
 
-    // Positional args: superpluck(freq, voices, freqSpread, analog)
+    // Positional args: superpluck(freq, voices, freqSpread). Use .analog() to opt in.
     "Osc.superpluck with voices and freqSpread" {
         val dsl = evalIgnitorDsl("Osc.superpluck(Osc.freq(), 4, 0.05)")
         dsl.shouldBeInstanceOf<IgnitorDsl.SuperPluck>()

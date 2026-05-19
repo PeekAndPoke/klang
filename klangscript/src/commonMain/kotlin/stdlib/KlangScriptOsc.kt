@@ -146,20 +146,17 @@ object KlangScriptOsc {
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      * @param voices number of detuned voices (default 8).
      * @param freqSpread frequency spread between voices (default 0.2).
-     * @param analog random per-voice pitch drift amount (default 0.0).
      */
     @KlangScript.Method
     fun supersaw(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
         voices: IgnitorDslLike = 8.0,
         freqSpread: IgnitorDslLike = 0.2,
-        analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl =
         IgnitorDsl.SuperSaw(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
             freqSpread = freqSpread.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(),
         )
 
     /**
@@ -167,20 +164,17 @@ object KlangScriptOsc {
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      * @param voices number of detuned voices (default 8).
      * @param freqSpread frequency spread between voices (default 0.2).
-     * @param analog random per-voice pitch drift amount (default 0.0).
      */
     @KlangScript.Method
     fun supersine(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
         voices: IgnitorDslLike = 8.0,
         freqSpread: IgnitorDslLike = 0.2,
-        analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl =
         IgnitorDsl.SuperSine(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
             freqSpread = freqSpread.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(),
         )
 
     /**
@@ -188,20 +182,17 @@ object KlangScriptOsc {
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      * @param voices number of detuned voices (default 8).
      * @param freqSpread frequency spread between voices (default 0.2).
-     * @param analog random per-voice pitch drift amount (default 0.0).
      */
     @KlangScript.Method
     fun supersquare(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
         voices: IgnitorDslLike = 8.0,
         freqSpread: IgnitorDslLike = 0.2,
-        analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl =
         IgnitorDsl.SuperSquare(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
             freqSpread = freqSpread.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(),
         )
 
     /**
@@ -209,20 +200,17 @@ object KlangScriptOsc {
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      * @param voices number of detuned voices (default 8).
      * @param freqSpread frequency spread between voices (default 0.2).
-     * @param analog random per-voice pitch drift amount (default 0.0).
      */
     @KlangScript.Method
     fun supertri(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
         voices: IgnitorDslLike = 8.0,
         freqSpread: IgnitorDslLike = 0.2,
-        analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl =
         IgnitorDsl.SuperTri(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
             freqSpread = freqSpread.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(),
         )
 
     /**
@@ -230,20 +218,17 @@ object KlangScriptOsc {
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      * @param voices number of detuned voices (default 8).
      * @param freqSpread frequency spread between voices (default 0.2).
-     * @param analog random per-voice pitch drift amount (default 0.0).
      */
     @KlangScript.Method
     fun superramp(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
         voices: IgnitorDslLike = 8.0,
         freqSpread: IgnitorDslLike = 0.2,
-        analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl =
         IgnitorDsl.SuperRamp(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
             freqSpread = freqSpread.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(),
         )
 
     // ── Physical Models ──────────────────────────────────────────────────────
@@ -261,20 +246,17 @@ object KlangScriptOsc {
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      * @param voices number of detuned voices (default 8).
      * @param freqSpread frequency spread between voices (default 0.2).
-     * @param analog random per-voice pitch drift amount (default 0.0).
      */
     @KlangScript.Method
     fun superpluck(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
         voices: IgnitorDslLike = 8.0,
         freqSpread: IgnitorDslLike = 0.2,
-        analog: IgnitorDslLike = 0.0,
     ): IgnitorDsl =
         IgnitorDsl.SuperPluck(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
             freqSpread = freqSpread.toIgnitorDsl(),
-            analog = analog.toIgnitorDsl(),
         )
 
     // ── Parameter Slot ───────────────────────────────────────────────────────

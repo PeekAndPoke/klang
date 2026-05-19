@@ -82,6 +82,32 @@ sealed interface IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {}
     }
 
+    /**
+     * Canonical open parameter slots that mirror sprudel's `withOscParam(name)` calls.
+     *
+     * Use these when registering a custom sound that should respond to sprudel modulation
+     * (e.g. `note("c").analog(0.3)`). Each slot is a `Param(name, default)` singleton with
+     * the same name + default value that sprudel addons expect.
+     *
+     * Builtin sounds (`IgnitorDefaults.kt`) wire these in automatically; user-registered
+     * sounds opt in explicitly:
+     * ```
+     * Osc.register("mypad", Osc.sine().analog(OscSlot.analog()))
+     * ```
+     */
+    object Slots {
+        val analog: IgnitorDsl = Param("analog", 0.0)
+        val voices: IgnitorDsl = Param("voices", 8.0)
+        val freqSpread: IgnitorDsl = Param("freqSpread", 0.2)
+        val duty: IgnitorDsl = Param("duty", 0.5)
+        val density: IgnitorDsl = Param("density", 0.2)
+        val decay: IgnitorDsl = Param("decay", 0.996)
+        val brightness: IgnitorDsl = Param("brightness", 0.5)
+        val pickPosition: IgnitorDsl = Param("pickPosition", 0.5)
+        val stiffness: IgnitorDsl = Param("stiffness", 0.0)
+        val rate: IgnitorDsl = Param("rate", 1.0)
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Oscillator Primitives
     //

@@ -22,14 +22,14 @@ let tp = "[0 1 2 3 -2 -4 -3 -1]/8".slow(stay) // <---- transposition ... wait fo
 let guitar = Osc.register("guitar", (() => {
 
   let pSpread     = Osc.param("spread", 0.05, "Supersaw voice detuning")
-  let pAnalog     = Osc.param("analog", 3.00, "Analog pitch drift")
+  let pAnalog     = Osc.param("analog", 2.00, "Analog pitch drift")
 
   let pDrive      = Osc.param("drive",         1.0,    "Primary distortion drive level")
   let pBrightness = Osc.param("brightness", 5000.0,    "Post-distortion lowpass cutoff in Hz")
   let pAttack     = Osc.param("attack",         0.004, "Attack time in seconds")
   let pSustain    = Osc.param("sustain",        0.75,  "Sustain level")
 
-  let signal = Osc.supersaw(freq = Osc.freq(), voices = 3, freqSpread = pSpread, analog = pAnalog).mul(0.3)
+  let signal = Osc.supersaw(freq = Osc.freq(), voices = 3, freqSpread = pSpread).analog(pAnalog).mul(0.3)
     .plus(Osc.zawtooth(Osc.freq().mul(1.000)).analog(pAnalog).mul(0.15))  // Zawtooth for raw grit
     .plus(Osc.zawtooth(Osc.freq().mul(2.000)).analog(pAnalog).mul(0.07))  // Zawtooth overtones for more grit
     .plus(Osc.zawtooth(Osc.freq().mul(4.000)).analog(pAnalog).mul(0.02))  // Zawtooth overtones for more grit
@@ -39,7 +39,7 @@ let guitar = Osc.register("guitar", (() => {
     .lowpass(Osc.sine(0.25).plus(1).times(1000).plus(pBrightness.div(2)), 1.25)     // Pre-distortion: sweeping lowpass adds dynamic character
     .plus(signal.mul(0.10).highpass(110).lowpass(300))                              // Re-add low end after bandpass
     .plus(Osc.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(1.0))  // Noise burst
-    .bandpass(1000, 0.15)                                                           // Gentle mid-focus before distortion
+    .bandpass(1000, 0.10)                                                           // Gentle mid-focus before distortion
     .distort(pDrive, "soft", 2)                                                     // Overdrive + Oversample
     .lowpass(pBrightness, 1.0)                                                      // Post-distortion: control fizz + warmth roll-off
     .adsr(pAttack, 0.15, pSustain, 0.05)                                            // Tight rhythm envelope
@@ -52,13 +52,13 @@ stack( // Gitarre! -------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(1).fast(4).scale("C3:chromatic").notchf("1200").lpf("4250").clip(0.975).velocity("<[1.0 0.95 0.975 0.95]>")  // .solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightnes", 5000).oscp("spread", 0.04).hpf(350).postgain(0.21)
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightnes", 5000).oscp("spread", 0.04).hpf(350).postgain(0.20)
     .transpose(tp).pan(0.45).superimpose(pan(0.55)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 16)
   , // Melody 2 --------------------------------------------------------------------------------------------------
   n(`<   [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [ 0 0 0 7] [0  5 0 8] [0 7 0 5] [ 0 7 0 0]
          [0 0 0 7] [0 5 0 2] [0 3 0 5] [0 3 0 0]  [12 0 0 0] [0 10 0 7] [0 8 7 8] [10 8 7@2]>`)
     .orbit(2).fast(4).scale("C4:chromatic").notchf("1300").lpf("4750").clip(0.975)  // . solo()
-    .s(guitar).oscp("drive", drive * 0.9).oscp("brightnes", 5000).oscp("spread", 0.04).hpf(700).postgain(0.14)
+    .s(guitar).oscp("drive", drive * 0.9).oscp("brightnes", 5000).oscp("spread", 0.04).hpf(700).postgain(0.12)
     .transpose(tp).pan(0.08).superimpose(pan(0.92)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay > 32)
   , // Rhythm -----------------------------------------------------------------------------------------------------------------
   cat(n(`<[0,7,12]                                [[0,7,12]!3 ~                ~!12]
