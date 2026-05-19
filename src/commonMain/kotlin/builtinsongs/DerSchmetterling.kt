@@ -36,7 +36,7 @@ stack(                                                                          
     .scale("<e2:minor!48 e3:minor!16>").sound("supersaw").unison(2).detune(0.05).distort("0.1:soft:2")
     .lpf("<1350!48 2200!16>").hpf("<180!48 320!16>").warmth(saw.range(0.3, 0.1).slow(5*32))
     .distort("0.3:gentle:2").distort(sine.range(0.15, 0.3).slow(10*32))
-    .adsr("0.0175:0.15:0.3:0.12").clip("<0.55!48 0.6!16>").crush(saw.range(8, 4).slow(32))  // . solo()
+    .adsr("0.0175:0.15:0.45:0.12").clip("<0.55!48 0.6!16>").crush(saw.range(8, 4).slow(32))  // . solo()
     .gain(0.38).orbit(1).pan(0.4).lpe(0.5)
     .superimpose(scaleTranspose(7).gain(0.1).pan(0.2).hpf(400).lpe("1.8"), scaleTranspose(7).gain(0.1).pan(0.8).hpf(400).lpe("1.8"))
   ,
