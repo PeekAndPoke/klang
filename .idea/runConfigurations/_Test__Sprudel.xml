@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="[Test] Strudel JVM Single" type="GradleRunConfiguration" factoryName="Gradle">
+  <configuration default="false" name="[Test] Sprudel" type="GradleRunConfiguration" factoryName="Gradle">
     <ExternalSystemSettings>
       <option name="executionName" />
       <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -10,10 +10,8 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value=":strudel:cleanAllTests" />
-          <option value=":strudel:jvmTest" />
-          <option value="--tests" />
-          <option value="RationalSpec" />
+          <option value=":sprudel:cleanAllTests" />
+          <option value=":sprudel:check" />
         </list>
       </option>
       <option name="vmOptions" />

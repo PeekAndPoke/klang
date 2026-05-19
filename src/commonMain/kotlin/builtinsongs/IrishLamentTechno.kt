@@ -38,25 +38,25 @@ import * from "sprudel"
 //   = 212 cycles total, then arrange loops back to warm
 
 // ── Continuous core: kick + hat + bass ──────────────────────────────
-let kick = s("bd!4").gain(1.0).hpf(40).adsr("0.06:0.18:0.0:0.02").orbit(1)
+let kick = s("bd!4").gain(1.0).hpf(40).adsr("0.06:0.20:0.2:0.02").orbit(1)
 let hat  = s("hh!8").gain(0.27).hpf(7000).adsr("0.001:0.04:0.0:0.04").orbit(2)
 let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
-    .sound("saw").legato(0.7).hpf(100).lpf(sine.range(380, 600).slow(48)).resonance(4).lpenv(1.75).lpadsr("0.005:0.08:0.1:0.05")
-    .adsr("0.002:0.08:0.5:0.05").distort("0.9:soft:4").postgain(0.22).warmth(0.25)
-    .gain(0.5).orbit(0)
+    .sound("saw").legato(0.7).hpf(160).lpf(sine.range(450, 700).slow(48)).resonance(1.2).lpenv(1.2).lpadsr("0.005:0.15:0.3:0.05")
+    .adsr("0.002:0.08:0.5:0.05").distort("0.5:hard:2").postgain(0.22).warmth(0.25)
+    .gain(1.0).orbit(0) // . solo()
 let core = stack(kick, hat, bass)
 
 // ── Build layers ────────────────────────────────────────────────────
-let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.05").lpf(180).gain(0.35).orbit(6)
+let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02").hpf(60).lpf(180).gain(0.28).orbit(6)
 let clap = s("~ cp ~ cp").gain(0.21).hpf(300).orbit(4).room(0.2).rsize(3)
 let oh   = s("[~ ~ ~ oh]!4").gain(0.19).hpf(5000).orbit(2)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.3).hpf(800).orbit(2)
 
 // ── Lead phrases (5 shapes of the recorder melody) ──────────────────
-let leadStyle = mel =>mel.sound("supertri").unison(3).detune(0.07).euclid(3, 8)
-       .hpf(300).lpf(sine.range(2200, 4000).slow(24)).resonance(2).adsr("0.005:0.12:0.5:0.08").clip(0.7).distort(0.4).postgain(0.25)
+let leadStyle = mel =>mel.sound("supertri").unison(3).detune(0.07).euclid(3, 8).warmth(0.2)
+       .hpf(600).lpf(sine.range(1500, 2250).slow(24)).lpenv(1.5).resonance(2).adsr("0.03:0.3:0.5:0.08").clip(0.7).distort("0.1:gentle:2").postgain(0.3)
        .delay(0.18).delaytime(pure(3/16).div(cps)).delayfeedback(0.32)
-       .gain(0.7).orbit(3).room(0.2).rsize(3)
+       .gain(0.75).orbit(3).room(0.2).rsize(3)
 let leadA = leadStyle(note(`<[a4 c5 b4 a4] [d5 c5 a4 g4] [bb4 a4 g4  f4]  [g4 e4 c4 a4] [g4 bb4 d5 bb4] [f4 a4 c5 a4] [a4 c5 e5 c5] [d4 f4 a4 d5]>`))
 let leadB = leadStyle(note(`<[a5 e5 a5 c5] [d5 a5 d5 f5] [bb4 d5 bb5 d5]  [c5 g5 c5 e5] [g4 d5  g5 d5]  [c5 a4 f5 a4] [a4 c5 a5 e5] [d5 f5 a5 d5]>`))
 let leadC = leadStyle(note(`<[a5 c6 b5 a5] [d6 c6 a5 g5] [bb5 a5 g5  f5]  [g5 e5 c5 a5] [g5 bb5 d6 g5]  [a5 c6 f5 a5] [a5 e6 c6 a5] [d5 f5 a5 d6]>`))
@@ -64,11 +64,11 @@ let leadD = leadStyle(note(`<[a5 e5 a5 c5] [d5 a5 d5 f5] [bb4 d5 bb5 d5]  [c5 g5
 let leadE = leadStyle(note(`<[a5 e5 d6 c6] [a5 f5 d5 c5] [f5  d5 g5  bb4] [e5 g5 d5 c5] [d5@2   a4@2]   [c5@2  g4@2]  [a4@2  e4@2]  [d4@4]>`))
 
 // ── Pad ─────────────────────────────────────────────────────────────
-let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing()
-    .sound("superpulse").unison(4).detune(0.15).lpf(2000).adsr("0.2:0.2:0.5:0.1").legato(1.0)
-    .pan(0.3).superimpose(pan(0.7).transpose(12))
-    .phaser(0.4).phaserdepth(saw.range(0.0, 0.6).slow(16)).phasersweep(900).phasercenter(1400)
-    .gain(0.07).orbit(5).room(0.4).rsize(6) //  .solo()
+let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing(rank = sine.range(0, 1.9).fast(7).add(perlin.range(0, 0.2)))
+    .sound("superpulse").unison(3).detune(0.20).lpf("1500:1:1.5").adsr("1.5:0.5:0.2:0.2").legato(1.0)
+    .pan(0.3).superimpose(pan(0.5).transpose(-12), pan(0.5).transpose(12))
+    .phaser(1/6).phaserdepth(saw.range(0.3, 0.6).slow(16)).phasersweep(900).phasercenter(1400)
+    .gain(0.05).orbit(5).room(0.4).rsize(6) //  .solo()
 
 // ── THE WIND (riser used inside a 16-cycle section so saw ramps once)
 let riser = note("c").fast(2).sound("pink").superimpose(x => x.sound("brown"))
@@ -81,7 +81,7 @@ let riser = note("c").fast(2).sound("pink").superimpose(x => x.sound("brown"))
 // The hit segment is 2 cycles, so inner time advances by 2 per arrange loop;
 // plain `t < 1` would only match the very first iteration. `t % 2 < 1`
 // matches the first cycle of every 2-cycle period, so the hit fires every loop.
-let hitKick = s("bd").gain(0.95).hpf(40).adsr("0.001:0.22:0.0:0.05").orbit(1)
+let hitKick = s("bd").gain(0.95).hpf(40).adsr("0.05:0.22:0.5:1.0").orbit(1)
 let hitBass = note("d2").sound("saw").distort("0.8:hard:4")
     .hpf(100).lpf(900).resonance(2.5).adsr("0.02:0.3:0.7:6.0")
     .gain(0.4).postgain(0.22).warmth(0.25)
@@ -93,13 +93,13 @@ let hitCrash = s("cr").gain(0.75).hpf(200).orbit(8).room(0.25).rsize(4).adsr("0.
 let hitStab = chord("Dm").voicing()
     .sound("supersaw").unison(4).detune(0.08).distort(0.2)
     .adsr("0.005:0.3:0.7:6.0")
-    .lpf("120:1:15").lpadsr("2.0:1.5:0.33:6.0")
+    .lpf("80:1:25").lpadsr("2.25:1.0:0.5:30.0")
     .pan(0.2).superimpose(transpose(-12), pan(0.8).transpose(12))
     .gain(0.32).postgain(0.3)
     .orbit(9).room(0.4).rsize(5)
 // Offbeat hi-hat keeps the rhythmic flow alive through the hit + tail.
 // No filterWhen — plays naturally across the full 2-cycle hit segment.
-let hitHat = s("[hh ~]!4").gain(0.25).hpf(7000).adsr("0.001:0.04:0.0:0.04").orbit(2)
+let hitHat = s("[hh ~]!2").gain(0.25).hpf(7000).adsr("0.001:0.04:0.0:0.04").orbit(2)
 let hit = stack(
     hitHat,
     stack(hitKick, hitBass, hitSub, hitCrash, hitStab).filterWhen(t => t % 4 < 1),
@@ -111,15 +111,15 @@ let hit = stack(
 let melody3a = note(`<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5  f5 e5] [d5 a4 d5  f5] [c5 g4 bb4 a4] [d5 c5 a4 g4] [d4@2  d4 ~]>`)
 let melody1  = note(`<[d4 f4 e4 d4] [c4 a4 g4 f4] [d4 g4 f4 e4] [c4 bb4 a4 g4] [d5 c5 bb4 a4] [g4 e4 d4 e4]  [a4 g4 f4 e4] [f4 c4 a4 ~]>`)
 
-let mel3 = melody3a.sound("saw").legato(0.75).hpf(80).lpf(2200).adsr("0.25:0.1:0.6:0.85").gain(0.15).orbit(0).pan(0.4)
-let mel1 = melody1.sound("saw").legato(0.75).hpf(80).lpf(2500).adsr("0.22:0.1:0.6:0.85").gain(0.225).orbit(0).pan(0.6)
+let mel3 = melody3a.sound("saw").legato(0.75).hpf(400).lpf(3200).adsr("0.35:0.1:0.6:0.85").gain(0.15).orbit(0).pan(0.4)
+let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.225).orbit(0).pan(0.6)
 
 // One big 64-cycle section. saw.slow(64) ramps 0 → 1 across it.
 // Rhythm/bass build via clean gain ramps (no degrade — that was unpleasant).
 // Only the two melodies cross-fade via degradeBy.
 let quietBuild = stack(
     // Kick — clean gain ramp from soft to full
-    s("bd!4").gain(saw.range(0.7, 1.1).slow(64)).hpf(40).adsr("0.06:0.18:0.0:0.02").orbit(1),
+    s("bd!4").gain(saw.range(0.7, 1.0).slow(64)).hpf(80).adsr("0.03:0.2:0.2:0.02").orbit(1),
     // Hat — gain grows
     s("hh!8").gain(saw.range(0.15, 0.3).slow(64)).hpf(7000).adsr("0.001:0.04:0.0:0.04").orbit(2),
     // Clap — gain swells in
@@ -128,21 +128,21 @@ let quietBuild = stack(
     s("[~ hh sd oh]!4").gain(saw.range(0.0, 0.22).slow(64)).hpf(5000).orbit(2),
     // Sub bass — always present, gain grows
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x]!32 [x!2]!32>").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.05")
-        .hpf(80).lpf(220).lpenv(4).gain(saw.range(0.3, 0.4).slow(64)).orbit(6),
+        .hpf(60).lpf(220).lpenv(4).gain(saw.range(0.2, 0.3).slow(64)).orbit(6),
     // Saw bass — gain swells from silent to full
-    note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>").sound("saw").legato(0.7).hpf(100).lpf(800)
+    note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>").sound("saw").legato(0.7).hpf(160).lpf(800)
         .adsr("0.002:0.08:0.5:0.05").distort("0.4:soft:2").postgain(0.4)
         .gain(saw.range(0.0, 0.45).slow(64)).orbit(0),
     // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.4, 0.8).min(0).max(1).slow(64)).euclidrot(3, 8, 1),
+    mel3.velocity(saw.range(0.2, 0.9).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.05),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(-0.25, 0.8).min(0).max(1.5).slow(64)).struct("[4!1]!4").euclidrot(3, 8, 1).vib(4).vibmod(0.10),
+    mel1.velocity(saw.range(-0.35, 0.95).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.10),
     // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
     // enter at section-local cycle 32 (= second half of the build)
     chord("<Am Dm Bb C Gm F Am Dm>").voicing().struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
         .sound("superpulse").unison(2).detune(0.15).hpf(350).lpf(3000)
         .adsr("0.005:0.08:0.25:0.08").legato(0.7)
-        .gain(0.16).orbit(5).room(0.4).rsize(6)
+        .gain(0.15).orbit(5).room(0.4).rsize(6)
         .filterWhen(t => t % 64 >= 48),
     // Tetris-style techno bassline — driving 8ths with octave jumps,
     // pattern: root - 5 - octave - 5 - 3rd - 5 - root - 5 per chord
@@ -152,7 +152,7 @@ let quietBuild = stack(
           [a1 e2 a2 e2 c2 e2 a1 e2] [d2 a2 d3 a2 f2 a2 d2 a2]>`)
         .sound("supersaw").unison(8).warmth(0.1).gain(0.65).adsr("0.005:0.2:0.7:0.15").pan(0.3)
         .superimpose(transpose("<0 12 24 12>/8").pan(0.7)).phaser(1/13).phaserdepth(0.25).phasercenter(3500).phasersweep(1000)
-        .detune(sine.range(0.05, 0.45).slow(64)).hpf(120).lpf(3200)
+        .detune(sine.range(0.15, 0.45).slow(64)).hpf(200).lpf(3600)
         .velocity(saw.range(-0.5, 1.0).min(0).slow(64))
         .orbit(7),
 )
@@ -179,7 +179,7 @@ let darkBuild = stack(
     // Saw bass — pumping, LPF closes, warmth + distortion grow
     note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>")
         .sound("saw").legato(0.7)
-        .hpf(90).lpf(saw.range(900, 280).slow(64)).adsr("0.002:0.08:0.5:0.05")
+        .hpf(90).lpf(saw.range(280, 900).slow(64)).adsr("0.002:0.08:0.5:0.05")
         .distort("0.7:hard:4").postgain(0.5)
         .warmth(saw.range(0.6, 0.2).slow(64))
         .gain(saw.fast(4).range(0.4, 0.7))
@@ -187,27 +187,33 @@ let darkBuild = stack(
     // Tetris bassline — same pattern, pumps, LPF closes, more grit
     note(`<[a1 e2 a2 e2 c2 e2 a1 e2] [d2 a2 d3 a2 f2 a2 d2 a2] [bb1 f2 bb2 f2 d2 f2 bb1 f2] [c2 g2 c3 g2 e2 g2 c2 g2]
           [g1 d2 g2 d2 bb1 d2 g1 d2] [f1 c2 f2 c2 a1 c2 f1 c2] [a1  e2 a2  e2 c2 e2 a1  e2] [d2 a2 d3 a2 f2 a2 d2 a2]>`)
-        .sound("supersaw").unison(12).warmth(saw.range(0.3, 0.7).slow(64)).gain(0.25).distort(saw.range(0.35, 0.85).slow(64))
-        .pan(0.3).superimpose(pan(0.7)).superimpose(transpose("<0 12 0 -12>/8").gain(0.2))
+        .sound("supersaw").unison(12).detune(sine.range(0.1, 0.25).slow(64))
+        .warmth(saw.range(0.5, 0.2).slow(64)).gain(0.25).distort(saw.range(0.3, 0.5).slow(64))
+        .pan(0.3).superimpose(pan(0.7)).superimpose(transpose("<-12 0 12 0>/8").gain(0.2), transpose("<0 12 24 12>/8").gain(saw.range(0.1, 0.2).slow(64)))
         .phaser(1/11).phaserdepth(0.25).phasercenter(3500).phasersweep(500)
-        .detune(sine.range(0.1, 0.25).slow(64))
-        .hpf(120).lpf(saw.range(2000, 4000).slow(64)).adsr("0.005:0.2:0.5:0.15")
+        .hpf(160).lpf(saw.range(2000, 4000).slow(64)).adsr("0.005:0.2:0.5:0.12")
         .orbit(7),
     // Syncopated pad stabs — keep the 90s rhythm but darken with section
-    chord("<Am [Dm|Dm|D] <Bb!2 [Bb|Bb2]> C Gm [F|F|Dm] Am Dm>").voicing()
+    chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.5).fast(7).add(perlin.range(0, 0.2)))
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
-        .sound("superpulse").unison(2).detune(0.20)
-        .hpf(300).lpf(sine.range(2000, 1200).slow(32))
-        .adsr("0.005:0.08:0.25:0.08").legato(0.7)
-        .gain(0.18).orbit(5).room(0.4).rsize(6),
+        .sound("superpulse").unison(2).detune(0.15)
+        .hpf(400).lpf(sine.range(2000, 3200).slow(32))
+        .adsr("0.01:0.05:0.25:0.2").legato(0.7)
+        .gain(0.23).orbit(5).room(0.4).rsize(6),
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift
     note("<a5 d6 bb5 c6 g5 f5 a5 d6>")
-        .sound("supersine").unison(8).detune(0.07).adsr("0.5:0.5:0.5:0.5")
-        .hpf(1000).lpf(3000).bandf(sine.range(2000, 4000).slow(8)).lpenv(2).vib(pure(1/2).div(cps)).vibmod(0.1)
+        .sound("supersine").unison(8).detune(0.07).adsr("0.5:0.3:0.5:0.5")
+        .hpf(1500).lpf(3000).lpenv(2).bandf(sine.range(2000, 4000).slow(8)).vib(pure(1/2).div(cps)).vibmod(0.1)
         .gain(saw.range(0.0, 0.4).slow(64))
         .pan(sine.range(0.05, 0.95).slow(3))
         .delay(0.4).delaytime(pure(2/8).div(cps)).delayfeedback(0.45)
         .orbit(10).room(0.7).rsize(10),
+
+      // Melody 3 — velocity fades from full to silent
+    mel3.velocity(saw.range(0.1, 1.05).min(0).max(1).slow(64)).euclidrot(7, 8, 2).vib(4).vibmod(0.05),
+    // Melody 1 — velocity fades from silent to full
+    mel1.velocity(saw.range(0.15, 1.15).min(0).max(1).slow(64)).euclidrot(7, 8, 2).vib(4).vibmod(0.10),
+
 )
 
 // ── Sections ────────────────────────────────────────────────────────

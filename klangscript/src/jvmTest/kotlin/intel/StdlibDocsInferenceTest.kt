@@ -10,6 +10,7 @@ import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.generated.generatedStdlibDocs
 import io.peekandpoke.klang.script.parser.KlangScriptParser
 import io.peekandpoke.klang.script.types.KlangCallable
+import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangType
 
 /**
@@ -98,10 +99,16 @@ class StdlibDocsInferenceTest : StringSpec({
 
     "real stdlib: getVariantsForReceiver(Osc) returns Osc methods" {
         val reg = stdlibRegistry()
-        val oscMethods = reg.getVariantsForReceiver(KlangType("Osc"))
-        oscMethods shouldHaveAtLeastSize 5 // sine, saw, square, triangle, etc.
-        oscMethods.all { symbol ->
-            symbol.variants.any { v -> v is KlangCallable && v.receiver?.simpleName == "Osc" }
+        val oscMembers = reg.getVariantsForReceiver(KlangType("Osc"))
+        oscMembers shouldHaveAtLeastSize 5 // sine, saw, square, triangle, slot, etc.
+        // Each returned symbol has at least one variant whose owner/receiver is Osc.
+        oscMembers.all { symbol ->
+            symbol.variants.any { v ->
+                when (v) {
+                    is KlangCallable -> v.receiver?.simpleName == "Osc"
+                    is KlangProperty -> v.owner?.simpleName == "Osc"
+                }
+            }
         } shouldBe true
     }
 

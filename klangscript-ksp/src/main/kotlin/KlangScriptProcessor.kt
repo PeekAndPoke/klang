@@ -1102,7 +1102,11 @@ class KlangScriptProcessor(
             docItems.add(DocItem(fn.name, null, fn.fn))
         }
 
-        if (docItems.isEmpty() && entries.objects.isEmpty() && entries.properties.isEmpty()) return
+        val anyMemberProperties = entries.objects.any { it.memberProperties.isNotEmpty() } ||
+                entries.typeExtensions.any { it.memberProperties.isNotEmpty() }
+        if (docItems.isEmpty() && entries.objects.isEmpty() && entries.properties.isEmpty() &&
+            !anyMemberProperties
+        ) return
 
         // Group by script name (handles overloads)
         val grouped = docItems.groupBy { it.scriptName }
@@ -1200,6 +1204,66 @@ class KlangScriptProcessor(
             appendLine()
         }
 
+        // Generate member-property entries (e.g., "slot" on "Osc", "analog" on "OscSlot")
+        data class MemberPropDoc(val name: String, val ownerName: String, val prop: KSPropertyDeclaration)
+
+        val memberPropDocs = buildList {
+            for (obj in entries.objects) {
+                for (prop in obj.memberProperties) {
+                    add(MemberPropDoc(prop.name, obj.name, prop.prop))
+                }
+            }
+            for (ext in entries.typeExtensions) {
+                val displayName = typeDisplayName(ext.typeDecl.simpleName.asString())
+                for (prop in ext.memberProperties) {
+                    add(MemberPropDoc(prop.name, displayName, prop.prop))
+                }
+            }
+        }
+        val memberPropsGrouped = memberPropDocs.groupBy { it.name }
+        if (memberPropsGrouped.isNotEmpty()) {
+            appendLine("private fun generated${capitalizedName}DocsMemberProperties() = mapOf(")
+            val groupedNames = memberPropsGrouped.keys.sorted()
+            groupedNames.forEachIndexed { groupIdx, propName ->
+                val variants = memberPropsGrouped[propName]!!
+                val first = variants.first().prop
+                val kdoc = KDocParser.parse(first.docString)
+                val description = kdoc.description.escapeForRawString()
+                val category = kdoc.category ?: "uncategorized"
+                val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
+                val aliasesString = kdoc.aliases.joinToString(", ") { "\"$it\"" }
+
+                appendLine()
+                appendLine("    \"$propName\" to KlangSymbol(")
+                appendLine("        name = \"$propName\",")
+                appendLine("        category = \"$category\",")
+                appendLine("        tags = listOf($tagsString),")
+                appendLine("        aliases = listOf($aliasesString),")
+                appendLine("        library = \"$libraryName\",")
+                appendLine("        variants = listOf(")
+                variants.forEachIndexed { vIdx, doc ->
+                    val propType = doc.prop.type.resolve()
+                    val vKdoc = KDocParser.parse(doc.prop.docString)
+                    val vDescription = vKdoc.description.escapeForRawString()
+                    appendLine("            KlangProperty(")
+                    appendLine("                name = \"${doc.name}\",")
+                    appendLine("                owner = KlangType(simpleName = \"${doc.ownerName}\"),")
+                    appendLine("                type = ${generateKlangType(propType)},")
+                    appendLine("                description = \"\"\"$vDescription\"\"\",")
+                    appendLine("                library = \"$libraryName\",")
+                    appendLine("            )${if (vIdx < variants.lastIndex) "," else ""}")
+                }
+                appendLine("        )")
+                if (groupIdx < groupedNames.size - 1) {
+                    appendLine("    ),")
+                } else {
+                    appendLine("    )")
+                }
+            }
+            appendLine(")")
+            appendLine()
+        }
+
         appendLine("/** Generated documentation for the '$libraryName' library. */")
         appendLine("val generated${capitalizedName}Docs: Map<String, KlangSymbol> = buildMap {")
         if (entries.objects.isNotEmpty()) {
@@ -1207,6 +1271,9 @@ class KlangScriptProcessor(
         }
         if (entries.properties.isNotEmpty()) {
             appendLine("    putAll(generated${capitalizedName}DocsProperties())")
+        }
+        if (memberPropsGrouped.isNotEmpty()) {
+            appendLine("    putAll(generated${capitalizedName}DocsMemberProperties())")
         }
         chunks.forEachIndexed { chunkIdx, _ ->
             appendLine("    putAll(generated${capitalizedName}DocsChunk$chunkIdx())")
