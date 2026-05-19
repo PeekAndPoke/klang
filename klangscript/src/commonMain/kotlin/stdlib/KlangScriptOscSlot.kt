@@ -13,9 +13,12 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  *
  * ```KlangScript(Executable)
  * let pad = Osc.register("pad",
- *   Osc.sine().analog(OscSlot.analog()).lowpass(2000)
+ *   Osc.sine().analog(OscSlot.analog).lowpass(2000)
  * )
  * ```
+ *
+ * Also accessible via `Osc.slot.analog` (member-property chain through the Osc
+ * namespace).
  *
  * Without opting in, custom sounds ignore sprudel modulation (the data-class
  * defaults are sealed `Constant(0.0)`). Opting in wires the named slot to
@@ -27,42 +30,42 @@ object KlangScriptOscSlot {
     override fun toString(): String = "[OscSlot object]"
 
     /** Open `analog` slot (default 0.0). Mirrors sprudel `.analog(x)`. */
-    @KlangScript.Method
-    fun analog(): IgnitorDsl = IgnitorDsl.Slots.analog
+    @KlangScript.Property
+    val analog: IgnitorDsl = IgnitorDsl.Slots.analog
 
     /** Open `voices` slot (default 8.0). Used by super-oscillators. */
-    @KlangScript.Method
-    fun voices(): IgnitorDsl = IgnitorDsl.Slots.voices
+    @KlangScript.Property
+    val voices: IgnitorDsl = IgnitorDsl.Slots.voices
 
     /** Open `freqSpread` slot (default 0.2). Used by super-oscillators. */
-    @KlangScript.Method
-    fun freqSpread(): IgnitorDsl = IgnitorDsl.Slots.freqSpread
+    @KlangScript.Property
+    val freqSpread: IgnitorDsl = IgnitorDsl.Slots.freqSpread
 
     /** Open `duty` slot (default 0.5). Used by pulze. */
-    @KlangScript.Method
-    fun duty(): IgnitorDsl = IgnitorDsl.Slots.duty
+    @KlangScript.Property
+    val duty: IgnitorDsl = IgnitorDsl.Slots.duty
 
     /** Open `density` slot (default 0.2). Used by dust / crackle. */
-    @KlangScript.Method
-    fun density(): IgnitorDsl = IgnitorDsl.Slots.density
+    @KlangScript.Property
+    val density: IgnitorDsl = IgnitorDsl.Slots.density
 
     /** Open `decay` slot (default 0.996). Used by pluck. */
-    @KlangScript.Method
-    fun decay(): IgnitorDsl = IgnitorDsl.Slots.decay
+    @KlangScript.Property
+    val decay: IgnitorDsl = IgnitorDsl.Slots.decay
 
     /** Open `brightness` slot (default 0.5). Used by pluck. */
-    @KlangScript.Method
-    fun brightness(): IgnitorDsl = IgnitorDsl.Slots.brightness
+    @KlangScript.Property
+    val brightness: IgnitorDsl = IgnitorDsl.Slots.brightness
 
     /** Open `pickPosition` slot (default 0.5). Used by pluck. */
-    @KlangScript.Method
-    fun pickPosition(): IgnitorDsl = IgnitorDsl.Slots.pickPosition
+    @KlangScript.Property
+    val pickPosition: IgnitorDsl = IgnitorDsl.Slots.pickPosition
 
     /** Open `stiffness` slot (default 0.0). Used by pluck. */
-    @KlangScript.Method
-    fun stiffness(): IgnitorDsl = IgnitorDsl.Slots.stiffness
+    @KlangScript.Property
+    val stiffness: IgnitorDsl = IgnitorDsl.Slots.stiffness
 
     /** Open `rate` slot (default 1.0). Used by perlin / berlin noise. */
-    @KlangScript.Method
-    fun rate(): IgnitorDsl = IgnitorDsl.Slots.rate
+    @KlangScript.Property
+    val rate: IgnitorDsl = IgnitorDsl.Slots.rate
 }

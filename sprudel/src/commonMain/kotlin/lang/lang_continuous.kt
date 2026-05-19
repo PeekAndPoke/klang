@@ -485,7 +485,7 @@ fun PatternMapperFn.range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallI
  * @tags silence, rest, empty, quiet
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val silence: SprudelPattern = EmptyPattern
 
 /**
@@ -504,7 +504,7 @@ val silence: SprudelPattern = EmptyPattern
  * @tags rest, silence, empty, quiet
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val rest: SprudelPattern = EmptyPattern
 
 /**
@@ -523,7 +523,7 @@ val rest: SprudelPattern = EmptyPattern
  * @tags nothing, silence, rest, empty, quiet
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val nothing: SprudelPattern = EmptyPattern
 
 // -- signal -----------------------------------------------------------------------------------------------------------
@@ -607,7 +607,7 @@ private val timeBase: SprudelPattern by lazy { applySignal { t -> t } }
  * @tags time, continuous, linear, ramp
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val time: SprudelPattern = timeBase
 
 // -- sine / sine2 -----------------------------------------------------------------------------------------------------
@@ -634,7 +634,7 @@ private val sine2Base: SprudelPattern by lazy { sineBase.toBipolar() }
  * @tags sine, oscillator, lfo, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val sine: SprudelPattern = sineBase
 
 /**
@@ -654,7 +654,7 @@ val sine: SprudelPattern = sineBase
  * @tags sine2, sine, oscillator, lfo, bipolar, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val sine2: SprudelPattern = sine2Base
 
 // -- cosine / cosine2 -------------------------------------------------------------------------------------------------
@@ -681,7 +681,7 @@ private val cosine2Base: SprudelPattern by lazy { cosineBase.toBipolar() }
  * @tags cosine, oscillator, lfo, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val cosine: SprudelPattern = cosineBase
 
 /**
@@ -701,7 +701,7 @@ val cosine: SprudelPattern = cosineBase
  * @tags cosine2, cosine, oscillator, lfo, bipolar, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val cosine2: SprudelPattern = cosine2Base
 
 // -- saw / saw2 -------------------------------------------------------------------------------------------------------
@@ -727,7 +727,7 @@ private val saw2Base: SprudelPattern by lazy { sawBase.toBipolar() }
  * @tags saw, sawtooth, oscillator, lfo, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val saw: SprudelPattern = sawBase
 
 /**
@@ -747,7 +747,7 @@ val saw: SprudelPattern = sawBase
  * @tags saw2, saw, sawtooth, oscillator, lfo, bipolar, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val saw2: SprudelPattern = saw2Base
 
 // -- isaw / isaw2 -----------------------------------------------------------------------------------------------------
@@ -773,7 +773,7 @@ private val isaw2Base: SprudelPattern by lazy { isawBase.toBipolar() }
  * @tags isaw, sawtooth, oscillator, lfo, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val isaw: SprudelPattern = isawBase
 
 /**
@@ -793,7 +793,7 @@ val isaw: SprudelPattern = isawBase
  * @tags isaw2, isaw, sawtooth, oscillator, lfo, bipolar, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val isaw2: SprudelPattern = isaw2Base
 
 // -- tri / tri2 -------------------------------------------------------------------------------------------------------
@@ -824,7 +824,7 @@ private val tri2Base: SprudelPattern by lazy { triBase.toBipolar() }
  * @tags tri, triangle, oscillator, lfo, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val tri: SprudelPattern = triBase
 
 /**
@@ -844,7 +844,7 @@ val tri: SprudelPattern = triBase
  * @tags tri2, tri, triangle, oscillator, lfo, bipolar, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val tri2: SprudelPattern = tri2Base
 
 // -- itri / itri2 -----------------------------------------------------------------------------------------------------
@@ -875,7 +875,7 @@ private val itri2Base: SprudelPattern by lazy { itriBase.toBipolar() }
  * @tags itri, triangle, oscillator, lfo, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val itri: SprudelPattern = itriBase
 
 /**
@@ -895,7 +895,7 @@ val itri: SprudelPattern = itriBase
  * @tags itri2, itri, triangle, oscillator, lfo, bipolar, continuous, wave
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val itri2: SprudelPattern = itri2Base
 
 // -- square / square2 -------------------------------------------------------------------------------------------------
@@ -921,7 +921,7 @@ private val square2Base: SprudelPattern by lazy { squareBase.toBipolar() }
  * @tags square, oscillator, lfo, continuous, wave, gate
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val square: SprudelPattern = squareBase
 
 /**
@@ -941,7 +941,7 @@ val square: SprudelPattern = squareBase
  * @tags square2, square, oscillator, lfo, bipolar, continuous, wave, gate
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val square2: SprudelPattern = square2Base
 
 // -- perlin / perlin2 -------------------------------------------------------------------------------------------------
@@ -975,7 +975,7 @@ private fun createPerlin(): SprudelPattern {
  * @tags perlin, noise, random, smooth, continuous, lfo
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val perlin: SprudelPattern = createPerlin()
 
 /**
@@ -995,7 +995,7 @@ val perlin: SprudelPattern = createPerlin()
  * @tags perlin2, perlin, noise, random, bipolar, smooth, continuous, lfo
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val perlin2: SprudelPattern = createPerlin().toBipolar()
 
 // -- berlin / berlin2 -------------------------------------------------------------------------------------------------
@@ -1033,7 +1033,7 @@ private fun createBerlin2(): SprudelPattern {
  * @tags berlin, noise, random, sawtooth, continuous, lfo
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val berlin: SprudelPattern = createBerlin()
 
 /**
@@ -1053,5 +1053,5 @@ val berlin: SprudelPattern = createBerlin()
  * @tags berlin2, berlin, noise, random, bipolar, sawtooth, continuous, lfo
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val berlin2: SprudelPattern = createBerlin2()

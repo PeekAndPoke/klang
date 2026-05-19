@@ -29,6 +29,13 @@ object KlangScriptOsc {
 
     override fun toString(): String = "[Osc object]"
 
+    /**
+     * Canonical open parameter slots — `Osc.slot.analog`, `Osc.slot.voices`, etc.
+     * Equivalent to the top-level [KlangScriptOscSlot] object.
+     */
+    @KlangScript.Property
+    val slot: KlangScriptOscSlot = KlangScriptOscSlot
+
     // ── Oscillator Primitives ────────────────────────────────────────────────
     //
     // freq default: Freq (voice note frequency). Pass a value in Hz for a fixed frequency (e.g. Osc.sine(5) = 5 Hz LFO).

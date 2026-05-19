@@ -38,6 +38,23 @@ data class NativeExtensionMethod(
 )
 
 /**
+ * Wrapper for an extension property registered on a native type.
+ *
+ * Property access (`receiver.foo`) is resolved by the interpreter to the
+ * [getter] which returns the current value as a [RuntimeValue]. No call
+ * parentheses are required — the property reads directly.
+ *
+ * @property propertyName The name of the property
+ * @property receiverClass The Kotlin class this property is registered on
+ * @property getter Function that produces the property value from the receiver
+ */
+data class NativeExtensionProperty(
+    val propertyName: String,
+    val receiverClass: KClass<*>,
+    val getter: (receiver: Any) -> RuntimeValue,
+)
+
+/**
  * Check if the number of arguments matches the expected count.
  *
  * @param fn Function name for error reporting

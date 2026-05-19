@@ -107,6 +107,24 @@ object KlangScript {
      *
      * The library is inherited from `@Library` on the enclosing file or class.
      *
+     * **Scope**: must be declared at file top-level. Use [Property] for vals declared
+     * inside an [Object] or [TypeExtensions] class.
+     *
+     * @param name The name visible in KlangScript. Defaults to the Kotlin property name.
+     */
+    @Target(AnnotationTarget.PROPERTY)
+    @Retention(AnnotationRetention.SOURCE)
+    annotation class Constant(val name: String = "")
+
+    /**
+     * Registers a property on an [Object] or [TypeExtensions] class. The annotated
+     * Kotlin `val` becomes accessible in KlangScript as a no-parens member access
+     * — e.g. `Osc.slot.analog` evaluates the val directly rather than producing
+     * a bound method.
+     *
+     * **Scope**: must be declared inside an [Object] or [TypeExtensions] class.
+     * For top-level vals use [Constant].
+     *
      * @param name The name visible in KlangScript. Defaults to the Kotlin property name.
      */
     @Target(AnnotationTarget.PROPERTY)

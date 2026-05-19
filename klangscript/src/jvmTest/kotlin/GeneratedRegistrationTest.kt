@@ -330,7 +330,7 @@ class GeneratedRegistrationTest : StringSpec({
         lib.docs.symbols["sine"] shouldNotBe null
     }
 
-    // ── @KlangScript.Property registration ───────────────────────────────
+    // ── @KlangScript.Constant registration ───────────────────────────────
 
     "PI top-level property resolves to kotlin.math.PI" {
         val result = engine().execute("PI")
@@ -342,12 +342,12 @@ class GeneratedRegistrationTest : StringSpec({
         (result as NumberValue).value shouldBe (kotlin.math.E plusOrMinus 0.0)
     }
 
-    "@KlangScript.Property values are usable in expressions" {
+    "@KlangScript.Constant values are usable in expressions" {
         val result = engine().execute("PI * 2")
         (result as NumberValue).value shouldBe ((kotlin.math.PI * 2) plusOrMinus 0.0)
     }
 
-    "@KlangScript.Property values are passable to functions" {
+    "@KlangScript.Constant values are passable to functions" {
         val result = engine().execute("Math.sin(PI)")
         // sin(π) ≈ 0; allow tiny floating-point error
         (result as NumberValue).value shouldBe (0.0 plusOrMinus 1e-10)

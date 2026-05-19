@@ -36,6 +36,7 @@ class KlangScriptProcessor(
         private const val ANN_FUNCTION = "$ANN_PKG.Function"
         private const val ANN_METHOD = "$ANN_PKG.Method"
         private const val ANN_PROPERTY = "$ANN_PKG.Property"
+        private const val ANN_CONSTANT = "$ANN_PKG.Constant"
 
         /** Maps Kotlin/RuntimeValue types to KlangScript display names. */
         private val TYPE_DISPLAY_NAMES = mapOf(
@@ -88,30 +89,66 @@ class KlangScriptProcessor(
             .filterIsInstance<KSFunctionDeclaration>().toList()
         val topLevelProperties = resolver.getSymbolsWithAnnotation(ANN_PROPERTY)
             .filterIsInstance<KSPropertyDeclaration>().toList()
+        val topLevelConstants = resolver.getSymbolsWithAnnotation(ANN_CONSTANT)
+            .filterIsInstance<KSPropertyDeclaration>().toList()
 
         logger.info(
             "KlangScriptProcessor: Found ${objectClasses.size} @Object, " +
                     "${typeExtClasses.size} @TypeExtensions, " +
                     "${topLevelFunctions.size} @Function, " +
-                    "${topLevelProperties.size} @Property"
+                    "${topLevelProperties.size} @Property, " +
+                    "${topLevelConstants.size} @Constant"
         )
 
-        // Validate orphaned @Method annotations (on classes without @Object or @TypeExtensions)
+        // ── Scope validation ──────────────────────────────────────────────────
+        // Each annotation is required to live in a specific declaration context.
+        // Violations are reported as KSP errors so the build fails with a clear
+        // pointer at the offending declaration.
+
         val validParents = (objectClasses + typeExtClasses).toSet()
+
+        // @Method must live inside an @Object or @TypeExtensions class.
         val allMethods = resolver.getSymbolsWithAnnotation(ANN_METHOD)
             .filterIsInstance<KSFunctionDeclaration>().toList()
         for (method in allMethods) {
             val parent = method.parentDeclaration
-            if (parent is KSClassDeclaration && parent !in validParents) {
+            if (parent !is KSClassDeclaration || parent !in validParents) {
                 logger.error(
-                    "@Method '${method.simpleName.asString()}' is inside '${parent.simpleName.asString()}' " +
-                            "which has neither @Object nor @TypeExtensions — it will be ignored",
+                    "@KlangScript.Method '${method.simpleName.asString()}' must be declared inside " +
+                            "an @KlangScript.Object or @KlangScript.TypeExtensions class. For " +
+                            "top-level functions use @KlangScript.Function.",
                     method
                 )
             }
         }
 
-        if (objectClasses.isEmpty() && typeExtClasses.isEmpty() && topLevelFunctions.isEmpty() && topLevelProperties.isEmpty()) {
+        // @Function must be top-level (file-level), not a class member.
+        for (fn in topLevelFunctions) {
+            if (fn.parentDeclaration is KSClassDeclaration) {
+                logger.error(
+                    "@KlangScript.Function '${fn.simpleName.asString()}' must be declared at file " +
+                            "top-level. For methods on an @Object or @TypeExtensions class use " +
+                            "@KlangScript.Method.",
+                    fn
+                )
+            }
+        }
+
+        // @Constant must be top-level.
+        for (prop in topLevelConstants) {
+            if (prop.parentDeclaration is KSClassDeclaration) {
+                logger.error(
+                    "@KlangScript.Constant '${prop.simpleName.asString()}' must be declared at " +
+                            "file top-level. For vals on an @Object or @TypeExtensions class use " +
+                            "@KlangScript.Property.",
+                    prop
+                )
+            }
+        }
+
+        if (objectClasses.isEmpty() && typeExtClasses.isEmpty() && topLevelFunctions.isEmpty() &&
+            topLevelProperties.isEmpty() && topLevelConstants.isEmpty()
+        ) {
             return emptyList()
         }
 
@@ -130,9 +167,10 @@ class KlangScriptProcessor(
             val objectName = getAnnotationStringArg(cls, ANN_OBJECT, "name")
                 .let { if (it.isNullOrEmpty()) cls.simpleName.asString() else it }
             val methods = collectMethods(cls)
+            val memberProperties = collectMemberProperties(cls)
 
             libraryEntries.getOrPut(library) { LibraryEntries() }
-                .objects.add(ObjectEntry(objectName, cls, methods))
+                .objects.add(ObjectEntry(objectName, cls, methods, memberProperties))
         }
 
         for (cls in typeExtClasses) {
@@ -147,9 +185,10 @@ class KlangScriptProcessor(
                 continue
             }
             val methods = collectMethods(cls)
+            val memberProperties = collectMemberProperties(cls)
 
             libraryEntries.getOrPut(library) { LibraryEntries() }
-                .typeExtensions.add(TypeExtEntry(typeArg, cls, methods))
+                .typeExtensions.add(TypeExtEntry(typeArg, cls, methods, memberProperties))
         }
 
         for (fn in topLevelFunctions) {
@@ -196,6 +235,7 @@ class KlangScriptProcessor(
                             cls = fn.parentDeclaration as? KSClassDeclaration
                                 ?: receiverClass,
                             methods = listOf(MethodEntry(functionName, fn)),
+                            memberProperties = emptyList(),
                         )
                     )
             } else {
@@ -204,13 +244,27 @@ class KlangScriptProcessor(
             }
         }
 
+        // Validate that any @Property declarations live inside an @Object or @TypeExtensions class.
+        // (Member-property registration is added below as part of object/type-ext processing.)
         for (prop in topLevelProperties) {
+            val parent = prop.parentDeclaration
+            if (parent !is KSClassDeclaration || parent !in validParents) {
+                logger.error(
+                    "@KlangScript.Property '${prop.simpleName.asString()}' must be declared inside an " +
+                            "@KlangScript.Object or @KlangScript.TypeExtensions class. For top-level " +
+                            "vals use @KlangScript.Constant instead.",
+                    prop
+                )
+            }
+        }
+
+        for (prop in topLevelConstants) {
             val library = getLibraryNameForProperty(prop)
             if (library == null) {
-                logger.error("@Property '${prop.simpleName.asString()}' must have @Library (on file or enclosing class)", prop)
+                logger.error("@Constant '${prop.simpleName.asString()}' must have @Library (on file or enclosing class)", prop)
                 continue
             }
-            val propertyName = getAnnotationStringArg(prop, ANN_PROPERTY, "name")
+            val propertyName = getAnnotationStringArg(prop, ANN_CONSTANT, "name")
                 .let { if (it.isNullOrEmpty()) prop.simpleName.asString() else it }
 
             libraryEntries.getOrPut(library) { LibraryEntries() }
@@ -228,6 +282,7 @@ class KlangScriptProcessor(
         unprocessed.addAll(typeExtClasses.filterNot { it.validate() })
         unprocessed.addAll(topLevelFunctions.filterNot { it.validate() })
         unprocessed.addAll(topLevelProperties.filterNot { it.validate() })
+        unprocessed.addAll(topLevelConstants.filterNot { it.validate() })
         return unprocessed
     }
 
@@ -244,12 +299,14 @@ class KlangScriptProcessor(
         val name: String,
         val cls: KSClassDeclaration,
         val methods: List<MethodEntry>,
+        val memberProperties: List<MemberPropertyEntry>,
     )
 
     private data class TypeExtEntry(
         val typeDecl: KSClassDeclaration,
         val cls: KSClassDeclaration,
         val methods: List<MethodEntry>,
+        val memberProperties: List<MemberPropertyEntry>,
     )
 
     private data class FunctionEntry(
@@ -258,6 +315,11 @@ class KlangScriptProcessor(
     )
 
     private data class PropertyEntry(
+        val name: String,
+        val prop: KSPropertyDeclaration,
+    )
+
+    private data class MemberPropertyEntry(
         val name: String,
         val prop: KSPropertyDeclaration,
     )
@@ -347,6 +409,22 @@ class KlangScriptProcessor(
                 val methodName = getAnnotationStringArg(fn, ANN_METHOD, "name")
                     .let { if (it.isNullOrEmpty()) fn.simpleName.asString() else it }
                 MethodEntry(methodName, fn)
+            }
+            .toList()
+    }
+
+    private fun collectMemberProperties(cls: KSClassDeclaration): List<MemberPropertyEntry> {
+        return cls.declarations
+            .filterIsInstance<KSPropertyDeclaration>()
+            .filter { prop ->
+                prop.annotations.any { ann ->
+                    ann.annotationType.resolve().declaration.qualifiedName?.asString() == ANN_PROPERTY
+                }
+            }
+            .map { prop ->
+                val propertyName = getAnnotationStringArg(prop, ANN_PROPERTY, "name")
+                    .let { if (it.isNullOrEmpty()) prop.simpleName.asString() else it }
+                MemberPropertyEntry(propertyName, prop)
             }
             .toList()
     }
@@ -489,7 +567,7 @@ class KlangScriptProcessor(
                 logger.error(
                     "Duplicate KlangScript registration: '$scriptName' on receiver '${receiver ?: "<top-level>"}' " +
                             "is registered by both [$prior] and [$sourceDesc]. " +
-                            "Only one @KlangScript.Method / @KlangScript.Function / @KlangScript.Property " +
+                            "Only one @KlangScript.Method / @KlangScript.Function / @KlangScript.Property / @KlangScript.Constant " +
                             "per (name, receiver) is allowed."
                 )
             }
@@ -542,6 +620,10 @@ class KlangScriptProcessor(
                     val item = buildMethodItem(method, obj.cls, isTypeExtension = false)
                     appendLine(item.renderRegistration().prependIndent("        "))
                 }
+                for (prop in obj.memberProperties) {
+                    val rendered = renderMemberPropertyRegistration(obj.cls, prop)
+                    appendLine(rendered.prependIndent("        "))
+                }
                 appendLine("    }")
 
                 for (method in rawArgsMethods) {
@@ -561,7 +643,7 @@ class KlangScriptProcessor(
                 appendLine()
                 appendLine("    // @TypeExtensions($typeName::class) on ${ext.cls.simpleName.asString()}")
 
-                if (allFileLevelMethods) {
+                if (allFileLevelMethods && ext.memberProperties.isEmpty()) {
                     for (method in ext.methods) {
                         val item = buildFileLevelExtItem(method, ext.typeDecl)
                         appendLine(item.renderRegistration().prependIndent("    "))
@@ -571,6 +653,10 @@ class KlangScriptProcessor(
                     for (method in ext.methods) {
                         val item = buildMethodItem(method, ext.cls, isTypeExtension = true)
                         appendLine(item.renderRegistration().prependIndent("        "))
+                    }
+                    for (prop in ext.memberProperties) {
+                        val rendered = renderMemberPropertyRegistration(ext.cls, prop)
+                        appendLine(rendered.prependIndent("        "))
                     }
                     appendLine("    }")
                 }
@@ -748,6 +834,23 @@ class KlangScriptProcessor(
             callArgs = fullCallArgs,
             isTopLevel = false,
         )
+    }
+
+    /**
+     * Render a `registerProperty(...)` call for a member-`@Property` declared
+     * inside an `@Object` or `@TypeExtensions` class.
+     *
+     * The Kotlin property is accessed via the owning singleton as
+     * `OwnerObject.propName`. The receiver lambda parameter is ignored — the
+     * value lives on the singleton, not on the runtime instance.
+     */
+    private fun renderMemberPropertyRegistration(
+        ownerCls: KSClassDeclaration,
+        prop: MemberPropertyEntry,
+    ): String {
+        val ownerName = ownerCls.simpleName.asString()
+        val propKotlinName = escapeIdentifier(prop.prop.simpleName.asString())
+        return "registerProperty(\"${prop.name}\") { $ownerName.$propKotlinName }"
     }
 
     private fun buildRawArgsItem(method: MethodEntry, ownerCls: KSClassDeclaration): RawArgsItem {

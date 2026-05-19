@@ -17,7 +17,7 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * @category math
  * @tags constant, math, pi
  */
-@KlangScript.Property
+@KlangScript.Constant
 val PI: Double = kotlin.math.PI
 
 /**
@@ -32,5 +32,5 @@ val PI: Double = kotlin.math.PI
  * @category math
  * @tags constant, math, euler
  */
-@KlangScript.Property
+@KlangScript.Constant
 val E: Double = kotlin.math.E

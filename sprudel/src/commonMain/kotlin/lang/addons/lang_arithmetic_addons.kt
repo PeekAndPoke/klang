@@ -70,7 +70,7 @@ fun String.flipSign(callInfo: CallInfo? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val flipSign: PatternMapperFn = { p -> p.flipSign() }
 
 /**
@@ -125,7 +125,7 @@ fun String.oneMinusValue(callInfo: CallInfo? = null): SprudelPattern =
 
 /** Calculates `1.0 - value` as a [PatternMapperFn]. */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val oneMinusValue: PatternMapperFn = { p -> p.oneMinusValue() }
 
 /**
@@ -188,7 +188,7 @@ fun String.not(callInfo: CallInfo? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val not: PatternMapperFn = { p -> p.not() }
 
 /**
@@ -250,7 +250,7 @@ fun String.abs(callInfo: CallInfo? = null): SprudelPattern =
  * ```
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val abs: PatternMapperFn = { p -> p.abs() }
 
 /**

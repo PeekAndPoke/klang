@@ -1378,8 +1378,13 @@ class Interpreter(
             return NullValue
         }
 
-        // Handle native objects - lookup extension methods
+        // Handle native objects - lookup extension properties first, then methods
         if (objValue is NativeObjectValue<*>) {
+            val extensionProperty = engine.getExtensionProperty(objValue, memberAccess.property)
+            if (extensionProperty != null) {
+                return extensionProperty.getter(objValue.value)
+            }
+
             val extensionMethod = engine.getExtensionMethod(objValue, memberAccess.property)
             if (extensionMethod != null) {
                 // Return bound method
@@ -1409,6 +1414,11 @@ class Interpreter(
         }
         // Handle built-in runtime types (ArrayValue, StringValue, etc.) - lookup extension methods
         else if (objValue is ArrayValue || objValue is StringValue || objValue is NumberValue) {
+            val extensionProperty = engine.getExtensionProperty(objValue, memberAccess.property)
+            if (extensionProperty != null) {
+                return extensionProperty.getter(objValue)
+            }
+
             val extensionMethod = engine.getExtensionMethod(objValue, memberAccess.property)
             if (extensionMethod != null) {
                 // Return bound method

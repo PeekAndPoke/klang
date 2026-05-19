@@ -154,7 +154,7 @@ fun PatternMapperFn.withSeed(n: PatternLike, callInfo: CallInfo? = null): Patter
  * @tags rand, random, continuous, noise
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val rand: SprudelPattern = ContinuousPattern { from, _, ctx ->
     ctx.getSeededRandom(from, "rand").nextDouble()
 }
@@ -177,7 +177,7 @@ val rand: SprudelPattern = ContinuousPattern { from, _, ctx ->
  * @tags rand2, random, bipolar, continuous, noise
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val rand2: SprudelPattern = rand.toBipolar()
 
 /**
@@ -195,7 +195,7 @@ val rand2: SprudelPattern = rand.toBipolar()
  * @tags randCycle, random, cycle, hold, step
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val randCycle: SprudelPattern = ContinuousPattern { fromTime, _, ctx ->
     ctx.getSeededRandom(floor(fromTime), "randCycle").nextDouble()
 }
@@ -272,7 +272,7 @@ fun brandBy(prob: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * @tags brand, brandBy, binary, random, gate
  */
 @SprudelDsl
-@KlangScript.Property
+@KlangScript.Constant
 val brand: SprudelPattern = brandBy(0.5)
 
 // -- irand() ----------------------------------------------------------------------------------------------------------

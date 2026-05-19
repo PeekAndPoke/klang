@@ -46,6 +46,9 @@ class Environment(
     /** Registry with all known native extension methods */
     private val nativeExtensionMethods = mutableMapOf<KClass<*>, MutableMap<String, NativeExtensionMethod>>()
 
+    /** Registry with all known native extension properties */
+    private val nativeExtensionProperties = mutableMapOf<KClass<*>, MutableMap<String, NativeExtensionProperty>>()
+
     /** Map of variable names to their runtime values in this scope */
     private val values = mutableMapOf<String, RuntimeValue>()
 
@@ -58,6 +61,7 @@ class Environment(
     // caches
     private val getExtensionMethodCache = mutableMapOf<Pair<KClass<*>, String>, NativeExtensionMethod?>()
     private val getExtensionMethodNamesCache = mutableMapOf<KClass<*>, Set<String>>()
+    private val getExtensionPropertyCache = mutableMapOf<Pair<KClass<*>, String>, NativeExtensionProperty?>()
     private val getAllRegisteredSupertypes = mutableMapOf<KClass<*>, List<KClass<*>>>()
 
     /**
@@ -71,6 +75,7 @@ class Environment(
         // clear all caches
         getExtensionMethodCache.clear()
         getExtensionMethodNamesCache.clear()
+        getExtensionPropertyCache.clear()
         getAllRegisteredSupertypes.clear()
 
         // Register all libraries
@@ -82,11 +87,14 @@ class Environment(
         // Register all native extension methods
         nativeExtensionMethods.putAll(native.extensionMethods)
 
+        // Register all native extension properties
+        nativeExtensionProperties.putAll(native.extensionProperties)
+
         // Define all native objects as values.
         //
         // Use wrapAsRuntimeValue so primitives (Double / Int / String / Boolean) are
         // exposed as their script-level types (NumberValue / StringValue / BooleanValue),
-        // letting `@KlangScript.Property val PI: Double` participate naturally in arithmetic
+        // letting `@KlangScript.Constant val PI: Double` participate naturally in arithmetic
         // and comparison. Non-primitive values fall through to NativeObjectValue<T>, the
         // existing behavior for objects like SprudelPattern.
         native.objects.forEach { (name, obj) ->
@@ -332,6 +340,25 @@ class Environment(
             val parent = parent?.getExtensionMethodNames(value) ?: emptyList()
 
             local + parent
+        }
+    }
+
+    /**
+     * Get an extension property for a native type.
+     *
+     * Used by the interpreter to resolve no-parens member access (`receiver.foo`)
+     * against registered property accessors. Returns null if no property by
+     * [propertyName] is registered for [value]'s type or its supertypes.
+     */
+    fun getExtensionProperty(value: RuntimeValue, propertyName: String): NativeExtensionProperty? {
+        val obj = value.unpackForSupertypeLookup()
+        val cls = obj::class
+
+        return getExtensionPropertyCache.getOrPut(cls to propertyName) {
+            val allTypes = getAllRegisteredSupertypes(obj)
+
+            allTypes.firstNotNullOfOrNull { nativeExtensionProperties[it]?.get(propertyName) }
+                ?: parent?.getExtensionProperty(value, propertyName)
         }
     }
 

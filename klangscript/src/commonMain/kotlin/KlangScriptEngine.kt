@@ -10,6 +10,7 @@ import io.peekandpoke.klang.script.runtime.Interpreter
 import io.peekandpoke.klang.script.runtime.KlangScriptSyntaxError
 import io.peekandpoke.klang.script.runtime.LibraryLoader
 import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
+import io.peekandpoke.klang.script.runtime.NativeExtensionProperty
 import io.peekandpoke.klang.script.runtime.RuntimeValue
 import io.peekandpoke.ultra.common.MutableTypedAttributes
 
@@ -209,6 +210,18 @@ class KlangScriptEngine private constructor(
      */
     fun getExtensionMethodNames(value: RuntimeValue): Set<String> {
         return environment.getExtensionMethodNames(value)
+    }
+
+    /**
+     * Get an extension property for a native type.
+     *
+     * Used by the interpreter to resolve no-parens member access against
+     * registered property accessors.
+     *
+     * @return The extension property, or null if not found
+     */
+    fun getExtensionProperty(value: RuntimeValue, propertyName: String): NativeExtensionProperty? {
+        return environment.getExtensionProperty(value, propertyName)
     }
 
     /**

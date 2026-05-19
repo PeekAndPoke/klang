@@ -8,6 +8,7 @@ import io.peekandpoke.klang.script.KlangScriptLibrary
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.script.getUniqueClassName
 import io.peekandpoke.klang.script.runtime.NativeExtensionMethod
+import io.peekandpoke.klang.script.runtime.NativeExtensionProperty
 import io.peekandpoke.klang.script.runtime.NativeTypeInfo
 import io.peekandpoke.klang.script.runtime.NumberValue
 import io.peekandpoke.klang.script.runtime.ParamSpec
@@ -48,6 +49,8 @@ class KlangScriptExtension(
     val objects: Map<String, Any>,
     /** Registered native object extension methods */
     val extensionMethods: Map<KClass<*>, MutableMap<String, NativeExtensionMethod>>,
+    /** Registered native object extension properties */
+    val extensionProperties: Map<KClass<*>, MutableMap<String, NativeExtensionProperty>>,
 )
 
 /**
@@ -115,6 +118,19 @@ interface KlangScriptExtensionBuilder {
         paramSpecs: List<ParamSpec>,
         fn: (Any, List<RuntimeValue>, SourceLocation?) -> RuntimeValue,
     )
+
+    /**
+     * Register a native Kotlin extension property.
+     *
+     * Property access (`receiver.name` without parens) on a [NativeObjectValue]
+     * of type [receiver] resolves to the value produced by [getter] (already
+     * wrapped as a [RuntimeValue]).
+     */
+    fun <T : Any> registerExtensionProperty(
+        receiver: KClass<T>,
+        name: String,
+        getter: (T) -> RuntimeValue,
+    )
 }
 
 /**
@@ -136,13 +152,17 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
     /** Registered native object extension methods */
     private val nativeExtensionMethods = mutableMapOf<KClass<*>, MutableMap<String, NativeExtensionMethod>>()
 
+    /** Registered native object extension properties */
+    private val nativeExtensionProperties = mutableMapOf<KClass<*>, MutableMap<String, NativeExtensionProperty>>()
+
     /** Build the extension */
     override fun buildNativeRegistry(): KlangScriptExtension = KlangScriptExtension(
         libraries = libraries,
         types = nativeTypes,
         objects = nativeObjects,
         extensionMethods = nativeExtensionMethods,
-        functions = nativeFunctions
+        extensionProperties = nativeExtensionProperties,
+        functions = nativeFunctions,
     )
 
     /** Register a library with the engine */
@@ -251,6 +271,23 @@ class RegistryBuilderImpl : KlangScriptExtensionBuilder {
         registerType(receiver) {}
         nativeExtensionMethods.getOrPut(receiver) { mutableMapOf() }[name] = extensionMethod
     }
+
+    override fun <T : Any> registerExtensionProperty(
+        receiver: KClass<T>,
+        name: String,
+        getter: (T) -> RuntimeValue,
+    ) {
+        val extensionProperty = NativeExtensionProperty(
+            propertyName = name,
+            receiverClass = receiver,
+            getter = { rcv ->
+                @Suppress("UNCHECKED_CAST")
+                getter(rcv as T)
+            },
+        )
+        registerType(receiver) {}
+        nativeExtensionProperties.getOrPut(receiver) { mutableMapOf() }[name] = extensionProperty
+    }
 }
 
 /**
@@ -260,6 +297,21 @@ class NativeObjectExtensionsBuilder<T : Any>(
     @PublishedApi internal val builder: KlangScriptExtensionBuilder,
     @PublishedApi internal val cls: KClass<T>,
 ) {
+    /**
+     * Register a no-parens property accessor on the receiver type.
+     *
+     * The [getter] receives the receiver instance and returns the property value;
+     * it is wrapped as a [RuntimeValue] via [wrapAsRuntimeValue].
+     */
+    inline fun <reified R : Any?> registerProperty(
+        name: String,
+        noinline getter: T.() -> R,
+    ) {
+        builder.registerExtensionProperty(cls, name) { receiver ->
+            wrapAsRuntimeValue(receiver.getter())
+        }
+    }
+
     /** Register a native extension function with variable number of parameters. Null args are passed through. */
     @Suppress("UNCHECKED_CAST")
     inline fun <reified P : Any, reified R : Any> registerVarargMethod(

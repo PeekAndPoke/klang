@@ -10,8 +10,8 @@ import io.peekandpoke.klang.script.runtime.NativeObjectValue
 /**
  * Integration tests for the OscSlot DSL in KlangScript.
  *
- * Each OscSlot.* method returns the matching canonical [IgnitorDsl.Param] singleton
- * that built-in sounds wire in for sprudel modulation compatibility.
+ * Each OscSlot.* property returns the matching canonical [IgnitorDsl.Param]
+ * singleton that built-in sounds wire in for sprudel modulation compatibility.
  */
 class KlangScriptOscSlotTest : StringSpec({
 
@@ -25,48 +25,52 @@ class KlangScriptOscSlotTest : StringSpec({
         return value
     }
 
-    "OscSlot.analog() returns Param(\"analog\", 0.0)" {
-        evalIgnitorDsl("OscSlot.analog()") shouldBe IgnitorDsl.Param("analog", 0.0)
+    "OscSlot.analog → Param(\"analog\", 0.0)" {
+        evalIgnitorDsl("OscSlot.analog") shouldBe IgnitorDsl.Param("analog", 0.0)
     }
 
-    "OscSlot.voices() returns Param(\"voices\", 8.0)" {
-        evalIgnitorDsl("OscSlot.voices()") shouldBe IgnitorDsl.Param("voices", 8.0)
+    "OscSlot.voices → Param(\"voices\", 8.0)" {
+        evalIgnitorDsl("OscSlot.voices") shouldBe IgnitorDsl.Param("voices", 8.0)
     }
 
-    "OscSlot.freqSpread() returns Param(\"freqSpread\", 0.2)" {
-        evalIgnitorDsl("OscSlot.freqSpread()") shouldBe IgnitorDsl.Param("freqSpread", 0.2)
+    "OscSlot.freqSpread → Param(\"freqSpread\", 0.2)" {
+        evalIgnitorDsl("OscSlot.freqSpread") shouldBe IgnitorDsl.Param("freqSpread", 0.2)
     }
 
-    "OscSlot.duty() returns Param(\"duty\", 0.5)" {
-        evalIgnitorDsl("OscSlot.duty()") shouldBe IgnitorDsl.Param("duty", 0.5)
+    "OscSlot.duty → Param(\"duty\", 0.5)" {
+        evalIgnitorDsl("OscSlot.duty") shouldBe IgnitorDsl.Param("duty", 0.5)
     }
 
-    "OscSlot.density() returns Param(\"density\", 0.2)" {
-        evalIgnitorDsl("OscSlot.density()") shouldBe IgnitorDsl.Param("density", 0.2)
+    "OscSlot.density → Param(\"density\", 0.2)" {
+        evalIgnitorDsl("OscSlot.density") shouldBe IgnitorDsl.Param("density", 0.2)
     }
 
-    "OscSlot.decay() returns Param(\"decay\", 0.996)" {
-        evalIgnitorDsl("OscSlot.decay()") shouldBe IgnitorDsl.Param("decay", 0.996)
+    "OscSlot.decay → Param(\"decay\", 0.996)" {
+        evalIgnitorDsl("OscSlot.decay") shouldBe IgnitorDsl.Param("decay", 0.996)
     }
 
-    "OscSlot.brightness() returns Param(\"brightness\", 0.5)" {
-        evalIgnitorDsl("OscSlot.brightness()") shouldBe IgnitorDsl.Param("brightness", 0.5)
+    "OscSlot.brightness → Param(\"brightness\", 0.5)" {
+        evalIgnitorDsl("OscSlot.brightness") shouldBe IgnitorDsl.Param("brightness", 0.5)
     }
 
-    "OscSlot.pickPosition() returns Param(\"pickPosition\", 0.5)" {
-        evalIgnitorDsl("OscSlot.pickPosition()") shouldBe IgnitorDsl.Param("pickPosition", 0.5)
+    "OscSlot.pickPosition → Param(\"pickPosition\", 0.5)" {
+        evalIgnitorDsl("OscSlot.pickPosition") shouldBe IgnitorDsl.Param("pickPosition", 0.5)
     }
 
-    "OscSlot.stiffness() returns Param(\"stiffness\", 0.0)" {
-        evalIgnitorDsl("OscSlot.stiffness()") shouldBe IgnitorDsl.Param("stiffness", 0.0)
+    "OscSlot.stiffness → Param(\"stiffness\", 0.0)" {
+        evalIgnitorDsl("OscSlot.stiffness") shouldBe IgnitorDsl.Param("stiffness", 0.0)
     }
 
-    "OscSlot.rate() returns Param(\"rate\", 1.0)" {
-        evalIgnitorDsl("OscSlot.rate()") shouldBe IgnitorDsl.Param("rate", 1.0)
+    "OscSlot.rate → Param(\"rate\", 1.0)" {
+        evalIgnitorDsl("OscSlot.rate") shouldBe IgnitorDsl.Param("rate", 1.0)
     }
 
-    "Osc.sine().analog(OscSlot.analog()) opens the analog slot on a custom sound" {
-        val dsl = evalIgnitorDsl("Osc.sine().analog(OscSlot.analog())")
+    "Osc.slot.analog (member-property chain) → Param(\"analog\", 0.0)" {
+        evalIgnitorDsl("Osc.slot.analog") shouldBe IgnitorDsl.Param("analog", 0.0)
+    }
+
+    "Osc.sine().analog(OscSlot.analog) opens the analog slot on a custom sound" {
+        val dsl = evalIgnitorDsl("Osc.sine().analog(OscSlot.analog)")
         dsl.shouldBeInstanceOf<IgnitorDsl.Sine>()
         dsl.analog shouldBe IgnitorDsl.Param("analog", 0.0)
     }
