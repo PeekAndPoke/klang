@@ -19,7 +19,7 @@ class ChoicePatternSpec : StringSpec() {
             // "a|b" picks one per cycle
             val pattern = parse("a|b").seed(1)
 
-            pattern.shouldBeInstanceOf<ContextModifierPattern>()
+            pattern.shouldBeInstanceOf<SeedPattern>()
 
             val choice = pattern.source
             choice.shouldBeInstanceOf<ChoicePattern>()
