@@ -53,7 +53,7 @@ stack(                                                                          
   sound("<[bd!2]!2 [bd!4]!2 [bd!8]!2 [bd!16] [bd!24] [bd sd bd sd]!24 [bd [bd,sd] bd [bd,sd]]!8>").mute("<0!192 1!32>")// . solo()
     .early(0.002).orbit(3).gain(1.0).crush(10).crushos(2).hpf(90).lpf("2300:1:1.5").lpe("<2!128 2.3!128 2.7!128>").adsr("0.005:0.2:0.5:0.1"),
   sound("<[hh hh oh hh]!48 [cr hh cr hh]!16 [0 hh 0 hh]!32>").fast(2).mute("<0!192 1!32>") //. solo()
-    .early(-0.002).orbit(4).gain(0.9).crush(10).crushos(2).hpf(800).lpf("3600:1:1.5").adsr("0.01:0.2:0.5:0.1")
+    .late(0.004).orbit(4).gain(0.9).crush(10).crushos(2).hpf(800).lpf("3500:1:1.5").adsr("0.01:0.2:0.5:0.1")
   // Master
 ).compressor("-6:2:10:0.02:0.25").analog(feel).engine("pedal").room("0.01:5")
 
