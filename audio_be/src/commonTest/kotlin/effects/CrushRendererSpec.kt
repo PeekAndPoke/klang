@@ -47,7 +47,7 @@ class CrushRendererSpec : StringSpec({
                 val buffer = AudioBuffer(inputs.size) { i -> sign * inputs[i] }
                 CrushRenderer(amount = amount).renderInPlace(buffer)
                 for (s in buffer) {
-                    abs(s.toDouble()) shouldBeLessThan 1.0001
+                    abs(s) shouldBeLessThan 1.0001
                 }
             }
         }
@@ -60,7 +60,7 @@ class CrushRendererSpec : StringSpec({
         renderer.renderInPlace(buffer)
         // Every output must be a multiple of 0.5.
         for (s in buffer) {
-            val q = s.toDouble() * 2.0
+            val q = s * 2.0
             abs(q - round(q)) shouldBeLessThan 1e-6
         }
     }
@@ -88,7 +88,7 @@ class CrushRendererSpec : StringSpec({
         val renderer = CrushRenderer(amount = 1.0) // halfLevels = 1, expected bias ≈ −0.5
         renderer.renderInPlace(buffer)
 
-        val mean = buffer.map { it.toDouble() }.average()
+        val mean = buffer.map { it }.average()
         // Must be clearly non-zero — mean ≈ −0.5 with room for envelope/phase variation.
         (abs(mean) > 0.3) shouldBe true
     }
@@ -116,7 +116,7 @@ class CrushRendererSpec : StringSpec({
 
         // Every direct-path sample must land exactly on a grid point (multiple of 0.5).
         for (s in bufDirect) {
-            val q = s.toDouble() * 2.0
+            val q = s * 2.0
             abs(q - round(q)) shouldBeLessThan 1e-6
         }
     }
@@ -136,7 +136,7 @@ class CrushRendererSpec : StringSpec({
         val warmup = 20
         var offGrid = 0
         for (i in warmup until blockFrames) {
-            val q = bufOs[i].toDouble() * 2.0
+            val q = bufOs[i] * 2.0
             if (abs(q - round(q)) > 1e-3) offGrid++
         }
 
@@ -152,7 +152,7 @@ class CrushRendererSpec : StringSpec({
         // amount=4 → levels=16, halfLevels=8, grid step=0.125
         // floor(0.6 * 8)/8 = floor(4.8)/8 = 4/8 = 0.5
         // After filter warmup the steady-state value should be near 0.5.
-        val steady = buffer.takeLast(64).map { it.toDouble() }.average()
+        val steady = buffer.takeLast(64).map { it }.average()
         abs(steady - 0.5) shouldBeLessThan 0.05
     }
 

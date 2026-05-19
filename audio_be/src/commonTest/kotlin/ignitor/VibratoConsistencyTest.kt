@@ -30,7 +30,7 @@ class VibratoConsistencyTest : StringSpec({
     fun diffRms(a: AudioBuffer, b: AudioBuffer): Double {
         var sum = 0.0
         for (i in a.indices) {
-            val d = a[i].toDouble() - b[i].toDouble()
+            val d = a[i] - b[i]
             sum += d * d
         }
         return sqrt(sum / a.size)

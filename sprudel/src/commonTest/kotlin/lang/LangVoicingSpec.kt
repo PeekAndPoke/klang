@@ -234,7 +234,8 @@ class LangVoicingSpec : StringSpec({
 
         val groups = events.groupBy { it.part.begin }
         groups.size shouldBe 2
-        val notesPerEvent = groups.toSortedMap().map { (_, notes) -> notes.map { it.data.note } }
+        val notesPerEvent = groups.entries.sortedBy { it.key }
+            .map { (_, notes) -> notes.map { it.data.note } }
 
         // Event 0 (rank 0) and event 1 (rank 1) must differ.
         notesPerEvent[1] shouldNotBe notesPerEvent[0]
@@ -256,7 +257,9 @@ class LangVoicingSpec : StringSpec({
 
         events.size shouldBe 16
         val groups = events.groupBy { it.part.begin }
-        val notesPerEvent = groups.toSortedMap().map { (_, notes) -> notes.map { it.data.note }.toSet() }
+        val notesPerEvent = groups.entries.sortedBy { it.key }
+            .map { (_, notes) -> notes.map { it.data.note }.toSet() }
+
         notesPerEvent.toSet().size shouldBeGreaterThanOrEqual 2
     }
 })

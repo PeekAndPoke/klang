@@ -35,7 +35,7 @@ class OversamplerSpec : StringSpec({
 
         // After filter warmup, DC should pass through at unity
         for (i in 16 until blockFrames) {
-            buffer[i].toDouble() shouldBe (0.75 plusOrMinus 0.01)
+            buffer[i] shouldBe (0.75 plusOrMinus 0.01)
         }
     }
 
@@ -56,7 +56,7 @@ class OversamplerSpec : StringSpec({
         // Find peak amplitude in the stable region (after warmup)
         var maxAmp = 0.0
         for (i in 20 until blockFrames) {
-            val a = abs(buffer[i].toDouble())
+            val a = abs(buffer[i])
             if (a > maxAmp) maxAmp = a
         }
 
@@ -144,7 +144,7 @@ class OversamplerSpec : StringSpec({
 
         // DC signal * 0.5 should come through as ~0.35
         for (i in HALF_LEN_WARMUP until blockFrames) {
-            buffer[i].toDouble() shouldBe (0.35 plusOrMinus 0.05)
+            buffer[i] shouldBe (0.35 plusOrMinus 0.05)
         }
     }
 

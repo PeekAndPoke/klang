@@ -56,8 +56,8 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Should cover full sample in 50 frames
-        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[49].toDouble() shouldBe (0.98 plusOrMinus 0.03)
+        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[49] shouldBe (0.98 plusOrMinus 0.03)
     }
 
     "SampleVoice with rate < 1 plays slower" {
@@ -80,8 +80,8 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Should only cover half the sample in 100 frames
-        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[99].toDouble() shouldBe (0.50 plusOrMinus 0.02)
+        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[99] shouldBe (0.50 plusOrMinus 0.02)
     }
 
     "SampleVoice performs linear interpolation" {
@@ -156,12 +156,12 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // First 50 frames should play 0.0 to 0.5
-        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[49].toDouble() shouldBe (0.49 plusOrMinus 0.02)
+        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[49] shouldBe (0.49 plusOrMinus 0.02)
 
         // Next 50 frames should loop back and play 0.0 to 0.5 again
-        ctx.voiceBuffer[50].toDouble() shouldBe (0.0 plusOrMinus 0.02)
-        ctx.voiceBuffer[99].toDouble() shouldBe (0.49 plusOrMinus 0.02)
+        ctx.voiceBuffer[50] shouldBe (0.0 plusOrMinus 0.02)
+        ctx.voiceBuffer[99] shouldBe (0.49 plusOrMinus 0.02)
     }
 
     "SampleVoice with stopFrame ends early" {
@@ -314,9 +314,9 @@ class SampleVoiceSpecificTest : StringSpec({
         voice.render(ctx)
 
         // Envelope should modulate sample amplitude
-        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.02)  // Start of attack
-        ctx.voiceBuffer[50].toDouble() shouldBe (0.5 plusOrMinus 0.03) // Mid-attack
-        ctx.voiceBuffer[99].toDouble() shouldBe (0.99 plusOrMinus 0.03) // End of attack
+        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.02)  // Start of attack
+        ctx.voiceBuffer[50] shouldBe (0.5 plusOrMinus 0.03) // Mid-attack
+        ctx.voiceBuffer[99] shouldBe (0.99 plusOrMinus 0.03) // End of attack
     }
 
     "SampleVoice handles sample end boundary" {

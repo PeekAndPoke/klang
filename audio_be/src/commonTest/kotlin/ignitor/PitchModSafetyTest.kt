@@ -77,7 +77,7 @@ class PitchModSafetyTest : StringSpec({
         val sig = accelerateModIgnitor(amount = 1.0)
         val out = render(sig)
         out.allFinite() shouldBe true
-        out[0].toDouble() shouldBe (1.0 plusOrMinus 0.01)  // start ≈ 1
+        out[0] shouldBe (1.0 plusOrMinus 0.01)  // start ≈ 1
     }
 
     "accelerate with extreme amount stays finite at end of voice" {

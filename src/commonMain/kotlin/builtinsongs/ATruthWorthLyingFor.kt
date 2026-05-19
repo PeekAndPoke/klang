@@ -30,9 +30,9 @@ let guitar = Osc.register("guitar", (() => {
   let pSustain    = Osc.param("sustain",        0.75,  "Sustain level")
 
   let signal = Osc.supersaw(freq = Osc.freq(), voices = 3, freqSpread = pSpread).analog(pAnalog).mul(0.3)
-    .plus(Osc.zawtooth(Osc.freq().mul(1.000)).analog(pAnalog).mul(0.15))  // Zawtooth for raw grit
-    .plus(Osc.zawtooth(Osc.freq().mul(2.000)).analog(pAnalog).mul(0.07))  // Zawtooth overtones for more grit
-    .plus(Osc.zawtooth(Osc.freq().mul(4.000)).analog(pAnalog).mul(0.02))  // Zawtooth overtones for more grit
+    .plus(Osc.zawtooth(Osc.freq().mul(1.001)).analog(pAnalog).mul(0.15))  // Zawtooth for raw grit
+    .plus(Osc.zawtooth(Osc.freq().mul(1.999)).analog(pAnalog).mul(0.07))  // Zawtooth overtones for more grit
+    .plus(Osc.zawtooth(Osc.freq().mul(4.002)).analog(pAnalog).mul(0.02))  // Zawtooth overtones for more grit
     .plus(Osc.square(Osc.freq().mul(2.998)).analog(pAnalog).mul(0.02))    // Square for aggressive mid bite
 
   return signal

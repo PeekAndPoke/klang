@@ -69,7 +69,7 @@ class DistortionSpec : StringSpec({
         val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0)
         renderer.renderInPlace(buffer)
         for (sample in buffer) {
-            abs(sample.toDouble()) shouldBeLessThan 1.01
+            abs(sample) shouldBeLessThan 1.01
         }
     }
 
@@ -78,7 +78,7 @@ class DistortionSpec : StringSpec({
         val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0)
         renderer.renderInPlace(buffer)
         for (sample in buffer) {
-            abs(sample.toDouble()) shouldBeLessThan 1.01
+            abs(sample) shouldBeLessThan 1.01
         }
     }
 
@@ -89,7 +89,7 @@ class DistortionSpec : StringSpec({
             val buffer = doubleArrayOf(0.5, -0.3, 0.8, -0.9, 1.0, -1.0, 0.0, 0.1)
             renderer.renderInPlace(buffer)
             for (sample in buffer) {
-                abs(sample.toDouble()) shouldBeLessThan 3.0
+                abs(sample) shouldBeLessThan 3.0
             }
         }
     }
@@ -102,7 +102,7 @@ class DistortionSpec : StringSpec({
         rendererUnknown.renderInPlace(buf1)
         rendererSoft.renderInPlace(buf2)
         for (i in buf1.indices) {
-            buf1[i].toDouble() shouldBe (buf2[i].toDouble() plusOrMinus 0.0001)
+            buf1[i] shouldBe (buf2[i] plusOrMinus 0.0001)
         }
     }
 
@@ -111,14 +111,14 @@ class DistortionSpec : StringSpec({
         val buffer = AudioBuffer(4096) { 0.5 }
         renderer.renderInPlace(buffer)
         val lastSample = buffer[buffer.size - 1]
-        abs(lastSample.toDouble()) shouldBeLessThan 0.1
+        abs(lastSample) shouldBeLessThan 0.1
     }
 
     "DistortionRenderer rectify shape DC blocker removes offset over time" {
         val renderer = DistortionRenderer(amount = 0.5, shape = "rectify")
         val buffer = AudioBuffer(4096) { i -> if (i % 2 == 0) 0.3 else -0.3 }
         renderer.renderInPlace(buffer)
-        val avg = buffer.takeLast(100).map { it.toDouble() }.average()
+        val avg = buffer.takeLast(100).map { it }.average()
         abs(avg) shouldBeLessThan 0.15
     }
 })

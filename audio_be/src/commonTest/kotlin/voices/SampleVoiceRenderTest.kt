@@ -38,8 +38,8 @@ class SampleVoiceRenderTest : StringSpec({
         // rate 2.0 means we skip every other sample (interpolated)
         // Indices: 0, 2, 4, 6, 8
         for (i in 0 until 5) {
-            val expected = sample.pcm[i * 2].toDouble()
-            ctx.voiceBuffer[i].toDouble() shouldBe (expected plusOrMinus 0.0001)
+            val expected = sample.pcm[i * 2]
+            ctx.voiceBuffer[i] shouldBe (expected plusOrMinus 0.0001)
         }
         ctx.voiceBuffer[5] shouldBe 0.0
     }
@@ -60,8 +60,8 @@ class SampleVoiceRenderTest : StringSpec({
 
         // Should play 0, 1, 2, 3, 4, then wrap to 0, 1, 2, 3, 4...
         // 0.0, 0.11, 0.22, 0.33, 0.44
-        val values = (0 until 10).map { ctx.voiceBuffer[it].toDouble() }
-        val expectedSegment = (0 until 5).map { sample.pcm[it].toDouble() }
+        val values = (0 until 10).map { ctx.voiceBuffer[it] }
+        val expectedSegment = (0 until 5).map { sample.pcm[it] }
 
         values.subList(0, 5) shouldBe expectedSegment // First pass
         values.subList(5, 10) shouldBe expectedSegment // Loop pass

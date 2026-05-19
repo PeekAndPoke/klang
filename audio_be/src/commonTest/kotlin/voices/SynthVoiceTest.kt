@@ -48,8 +48,8 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext(blockFrames = 10)
         voice.render(ctx)
 
-        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[9].toDouble() shouldBe (0.9 plusOrMinus 0.01)
+        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[9] shouldBe (0.9 plusOrMinus 0.01)
     }
 
     "SynthVoice passes pitch modulation to signal" {
@@ -120,9 +120,9 @@ class SynthVoiceTest : StringSpec({
         val ctx = createContext(blockFrames = 100)
         voice.render(ctx)
 
-        ctx.voiceBuffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.01)
-        ctx.voiceBuffer[50].toDouble() shouldBe (0.5 plusOrMinus 0.02)
-        ctx.voiceBuffer[99].toDouble() shouldBe (0.99 plusOrMinus 0.02)
+        ctx.voiceBuffer[0] shouldBe (0.0 plusOrMinus 0.01)
+        ctx.voiceBuffer[50] shouldBe (0.5 plusOrMinus 0.02)
+        ctx.voiceBuffer[99] shouldBe (0.99 plusOrMinus 0.02)
     }
 
     "SynthVoice with filter affects signal output" {

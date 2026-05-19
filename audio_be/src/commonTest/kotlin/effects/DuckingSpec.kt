@@ -26,7 +26,7 @@ class DuckingSpec : StringSpec({
         ducking.process(input, sidechain, 100)
 
         // Input should be reduced significantly
-        val avgLevel = input.map { abs(it.toDouble()) }.average()
+        val avgLevel = input.map { abs(it) }.average()
         avgLevel shouldBeLessThan 0.5
     }
 
@@ -48,7 +48,7 @@ class DuckingSpec : StringSpec({
         ducking.process(input2, sidechain2, 1000)
 
         // Should return close to full volume
-        val endLevel = input2.takeLast(100).map { abs(it.toDouble()) }.average()
+        val endLevel = input2.takeLast(100).map { abs(it) }.average()
         endLevel shouldBe (1.0 plusOrMinus 0.1)
     }
 
@@ -63,8 +63,8 @@ class DuckingSpec : StringSpec({
         duckingLight.process(input1, sidechain, 100)
         duckingHeavy.process(input2, sidechain, 100)
 
-        val avgLight = input1.map { abs(it.toDouble()) }.average()
-        val avgHeavy = input2.map { abs(it.toDouble()) }.average()
+        val avgLight = input1.map { abs(it) }.average()
+        val avgHeavy = input2.map { abs(it) }.average()
 
         // Heavy ducking should reduce more
         avgHeavy shouldBeLessThan avgLight
@@ -86,7 +86,7 @@ class DuckingSpec : StringSpec({
         val sidechain2 = AudioBuffer(10) { 0.0 }
         ducking.process(input2, sidechain2, 10)
 
-        input2[0].toDouble() shouldBe (1.0 plusOrMinus 0.01)
+        input2[0] shouldBe (1.0 plusOrMinus 0.01)
     }
 
     "Ducking with zero depth has no effect" {
@@ -102,7 +102,7 @@ class DuckingSpec : StringSpec({
         ducking.process(input, sidechain, 100)
 
         // Should remain at full volume
-        val avgLevel = input.map { abs(it.toDouble()) }.average()
+        val avgLevel = input.map { abs(it) }.average()
         avgLevel shouldBe (1.0 plusOrMinus 0.01)
     }
 
@@ -116,8 +116,8 @@ class DuckingSpec : StringSpec({
 
         ducking.processStereo(inputLeft, inputRight, sidechainLeft, sidechainRight, 100)
 
-        val avgLeft = inputLeft.map { abs(it.toDouble()) }.average()
-        val avgRight = inputRight.map { abs(it.toDouble()) }.average()
+        val avgLeft = inputLeft.map { abs(it) }.average()
+        val avgRight = inputRight.map { abs(it) }.average()
 
         // Both channels should be ducked
         avgLeft shouldBeLessThan 0.5
@@ -138,8 +138,8 @@ class DuckingSpec : StringSpec({
 
         ducking.processStereo(inputLeft, inputRight, sidechainLeft, sidechainRight, 100)
 
-        val avgLeft = inputLeft.map { abs(it.toDouble()) }.average()
-        val avgRight = inputRight.map { abs(it.toDouble()) }.average()
+        val avgLeft = inputLeft.map { abs(it) }.average()
+        val avgRight = inputRight.map { abs(it) }.average()
 
         // Both channels should have identical gain reduction despite asymmetric sidechain
         avgLeft shouldBe (avgRight plusOrMinus 0.001)
@@ -165,8 +165,8 @@ class DuckingSpec : StringSpec({
         duckingSlow.process(recover2, sidechainSilent, 400)
 
         // Fast should recover more by sample 50-100 of the recovery phase
-        val fastLevel = recover1.sliceArray(50 until 100).map { abs(it.toDouble()) }.average()
-        val slowLevel = recover2.sliceArray(50 until 100).map { abs(it.toDouble()) }.average()
+        val fastLevel = recover1.sliceArray(50 until 100).map { abs(it) }.average()
+        val slowLevel = recover2.sliceArray(50 until 100).map { abs(it) }.average()
 
         // Fast recovery should be closer to 1.0 than slow recovery
         (fastLevel > slowLevel) shouldBe true

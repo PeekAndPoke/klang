@@ -51,7 +51,7 @@ class CompositionPropertiesSpec : StringSpec({
 
     fun AudioBuffer.rms(): Double {
         var s = 0.0
-        for (x in this) s += x.toDouble() * x.toDouble()
+        for (x in this) s += x * x
         return kotlin.math.sqrt(s / size)
     }
 
@@ -72,7 +72,7 @@ class CompositionPropertiesSpec : StringSpec({
 
         for (i in 0 until blockFrames) {
             // Floating-point arithmetic is order-sensitive; one sample's worth of epsilon is fine.
-            plusOut[i].toDouble() shouldBe (mulOut[i].toDouble() plusOrMinus 1e-5)
+            plusOut[i] shouldBe (mulOut[i] plusOrMinus 1e-5)
         }
     }
 
@@ -85,7 +85,7 @@ class CompositionPropertiesSpec : StringSpec({
         val b = render(tripled.toExciter(), 440.0, createCtx())
 
         for (i in 0 until blockFrames) {
-            a[i].toDouble() shouldBe (b[i].toDouble() plusOrMinus 1e-5)
+            a[i] shouldBe (b[i] plusOrMinus 1e-5)
         }
     }
 
@@ -155,7 +155,7 @@ class CompositionPropertiesSpec : StringSpec({
         val sumBuf = render(ig, 440.0, ctx)
 
         for (i in 0 until blockFrames) {
-            sumBuf[i].toDouble() shouldBe ((2.0 * singleBuf[i]) plusOrMinus 1e-4)
+            sumBuf[i] shouldBe ((2.0 * singleBuf[i]) plusOrMinus 1e-4)
         }
     }
 
@@ -268,7 +268,7 @@ class CompositionPropertiesSpec : StringSpec({
         // The summed output should differ from 2×single (because one arm has vibrato).
         var diffs = 0
         for (i in 0 until blockFrames) {
-            if (kotlin.math.abs(plusBuf[i] - 2.0 * singleBuf[i]) > 0.001) diffs++
+            if (abs(plusBuf[i] - 2.0 * singleBuf[i]) > 0.001) diffs++
         }
         (diffs > 0) shouldBe true
     }
@@ -286,7 +286,7 @@ class CompositionPropertiesSpec : StringSpec({
 
         // v + v should equal 2 × v (shared oscillator, memoised).
         for (i in 0 until blockFrames) {
-            sumBuf[i].toDouble() shouldBe ((2.0 * singleBuf[i]) plusOrMinus 1e-4)
+            sumBuf[i] shouldBe ((2.0 * singleBuf[i]) plusOrMinus 1e-4)
         }
     }
 
@@ -302,7 +302,7 @@ class CompositionPropertiesSpec : StringSpec({
         // Output should be non-zero and bounded (combined pitch mod applied).
         buf.rms() shouldBeGreaterThan 0.1
         for (s in buf) {
-            kotlin.math.abs(s.toDouble()) shouldBeLessThan 1.5
+            abs(s) shouldBeLessThan 1.5
         }
     }
 
@@ -319,7 +319,7 @@ class CompositionPropertiesSpec : StringSpec({
 
         // PitchMod with Constant(0) = deviation 0 → ratio 1.0 → no pitch change.
         for (i in 0 until blockFrames) {
-            moddedBuf[i].toDouble() shouldBe (plainBuf[i].toDouble() plusOrMinus 1e-5)
+            moddedBuf[i] shouldBe (plainBuf[i] plusOrMinus 1e-5)
         }
     }
 
@@ -344,7 +344,7 @@ class CompositionPropertiesSpec : StringSpec({
 
         var diffs = 0
         for (i in 0 until blockFrames) {
-            if (kotlin.math.abs(buf[i] - plainBuf[i]) > 0.001) diffs++
+            if (abs(buf[i] - plainBuf[i]) > 0.001) diffs++
         }
         (diffs > 0) shouldBe true
     }

@@ -48,7 +48,7 @@ class CoarseRendererSpec : StringSpec({
         renderer.renderInPlace(buffer)
 
         // DC in → sample-hold → DC at the same level (after filter warmup).
-        val steady = buffer.takeLast(64).map { it.toDouble() }.average()
+        val steady = buffer.takeLast(64).map { it }.average()
         kotlin.math.abs(steady - 0.6) shouldBeLessThan 0.05
     }
 })

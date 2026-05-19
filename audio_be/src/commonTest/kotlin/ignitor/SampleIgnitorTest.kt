@@ -42,10 +42,10 @@ class SampleIgnitorTest : StringSpec({
         gen.generate(buffer, 440.0, ctx)
 
         // At rate=1.0, playhead lands exactly on integer indices
-        buffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.001)
-        buffer[1].toDouble() shouldBe (0.25 plusOrMinus 0.001)
-        buffer[2].toDouble() shouldBe (0.5 plusOrMinus 0.001)
-        buffer[3].toDouble() shouldBe (0.75 plusOrMinus 0.001)
+        buffer[0] shouldBe (0.0 plusOrMinus 0.001)
+        buffer[1] shouldBe (0.25 plusOrMinus 0.001)
+        buffer[2] shouldBe (0.5 plusOrMinus 0.001)
+        buffer[3] shouldBe (0.75 plusOrMinus 0.001)
         // Last sample: base=4 >= pcmMax(4), so output is 0
         buffer[4] shouldBe 0.0
     }
@@ -69,10 +69,10 @@ class SampleIgnitorTest : StringSpec({
         gen.generate(buffer, 440.0, ctx)
 
         // playhead: 0.0, 0.5, 1.0, 1.5
-        buffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.001)   // pcm[0]
-        buffer[1].toDouble() shouldBe (0.5 plusOrMinus 0.001)   // interpolate 0.0 and 1.0
-        buffer[2].toDouble() shouldBe (1.0 plusOrMinus 0.001)   // pcm[1]
-        buffer[3].toDouble() shouldBe (0.5 plusOrMinus 0.001)   // interpolate 1.0 and 0.0
+        buffer[0] shouldBe (0.0 plusOrMinus 0.001)   // pcm[0]
+        buffer[1] shouldBe (0.5 plusOrMinus 0.001)   // interpolate 0.0 and 1.0
+        buffer[2] shouldBe (1.0 plusOrMinus 0.001)   // pcm[1]
+        buffer[3] shouldBe (0.5 plusOrMinus 0.001)   // interpolate 1.0 and 0.0
     }
 
     "looping wraps playhead correctly" {
@@ -95,12 +95,12 @@ class SampleIgnitorTest : StringSpec({
         gen.generate(buffer, 440.0, ctx)
 
         // playhead: 0, 1, 2, 3->wraps to 1, 2, 3->wraps to 1
-        buffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.001)   // pcm[0]
-        buffer[1].toDouble() shouldBe (0.5 plusOrMinus 0.001)   // pcm[1]
-        buffer[2].toDouble() shouldBe (1.0 plusOrMinus 0.001)   // pcm[2]
-        buffer[3].toDouble() shouldBe (0.5 plusOrMinus 0.001)   // wraps to 1 -> pcm[1]
-        buffer[4].toDouble() shouldBe (1.0 plusOrMinus 0.001)   // pcm[2]
-        buffer[5].toDouble() shouldBe (0.5 plusOrMinus 0.001)   // wraps to 1 -> pcm[1]
+        buffer[0] shouldBe (0.0 plusOrMinus 0.001)   // pcm[0]
+        buffer[1] shouldBe (0.5 plusOrMinus 0.001)   // pcm[1]
+        buffer[2] shouldBe (1.0 plusOrMinus 0.001)   // pcm[2]
+        buffer[3] shouldBe (0.5 plusOrMinus 0.001)   // wraps to 1 -> pcm[1]
+        buffer[4] shouldBe (1.0 plusOrMinus 0.001)   // pcm[2]
+        buffer[5] shouldBe (0.5 plusOrMinus 0.001)   // wraps to 1 -> pcm[1]
     }
 
     "stopFrame truncates output to silence" {
@@ -152,8 +152,8 @@ class SampleIgnitorTest : StringSpec({
 
         // playhead advances by rate*phaseMod = 1.0*2.0 = 2.0 per sample
         // playhead: 0.0, 2.0, 4.0(>=pcmMax), ...
-        buffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.001)   // pcm[0]
-        buffer[1].toDouble() shouldBe (1.0 plusOrMinus 0.001)   // pcm[2]
+        buffer[0] shouldBe (0.0 plusOrMinus 0.001)   // pcm[0]
+        buffer[1] shouldBe (1.0 plusOrMinus 0.001)   // pcm[2]
         buffer[2] shouldBe 0.0                                  // past end
         buffer[3] shouldBe 0.0                                  // past end
     }
@@ -199,8 +199,8 @@ class SampleIgnitorTest : StringSpec({
         // playhead: -2.0, -1.0, 0.0, 1.0
         buffer[0] shouldBe 0.0    // negative -> silence
         buffer[1] shouldBe 0.0    // negative -> silence
-        buffer[2].toDouble() shouldBe (0.5 plusOrMinus 0.001)  // pcm[0]
-        buffer[3].toDouble() shouldBe (1.0 plusOrMinus 0.001)  // pcm[1]
+        buffer[2] shouldBe (0.5 plusOrMinus 0.001)  // pcm[0]
+        buffer[3] shouldBe (1.0 plusOrMinus 0.001)  // pcm[1]
     }
 
     "fractional negative playhead outputs silence, not extrapolation" {
@@ -223,8 +223,8 @@ class SampleIgnitorTest : StringSpec({
 
         // playhead: -0.5, 0.0, 0.5
         buffer[0] shouldBe 0.0    // fractional negative -> silence (not extrapolation)
-        buffer[1].toDouble() shouldBe (0.5 plusOrMinus 0.001)   // pcm[0]
-        buffer[2].toDouble() shouldBe (0.75 plusOrMinus 0.001)  // interpolate pcm[0] and pcm[1]
+        buffer[1] shouldBe (0.5 plusOrMinus 0.001)   // pcm[0]
+        buffer[2] shouldBe (0.75 plusOrMinus 0.001)  // interpolate pcm[0] and pcm[1]
     }
 
     "loop wrap handles large rate overshoots" {
@@ -247,9 +247,9 @@ class SampleIgnitorTest : StringSpec({
         gen.generate(buffer, 440.0, ctx)
 
         // playhead: 0.0 -> advance 10 -> 10.0 -> wrap to 10%4=2.0 -> advance 10 -> 12.0 -> wrap to 12%4=0.0
-        buffer[0].toDouble() shouldBe (0.0 plusOrMinus 0.001)   // ph=0 -> pcm[0]
-        buffer[1].toDouble() shouldBe (0.5 plusOrMinus 0.001)   // ph=10 wraps to 2 -> pcm[2]
-        buffer[2].toDouble() shouldBe (0.0 plusOrMinus 0.001)   // ph=12 wraps to 0 -> pcm[0]
+        buffer[0] shouldBe (0.0 plusOrMinus 0.001)   // ph=0 -> pcm[0]
+        buffer[1] shouldBe (0.5 plusOrMinus 0.001)   // ph=10 wraps to 2 -> pcm[2]
+        buffer[2] shouldBe (0.0 plusOrMinus 0.001)   // ph=12 wraps to 0 -> pcm[0]
     }
 
     "freqHz is ignored" {

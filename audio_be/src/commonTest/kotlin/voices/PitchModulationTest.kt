@@ -21,7 +21,7 @@ class PitchModulationTest : StringSpec({
     fun rms(buf: AudioBuffer, from: Int = 0, to: Int = buf.size): Double {
         var sum = 0.0
         for (i in from until to) {
-            sum += buf[i].toDouble() * buf[i].toDouble()
+            sum += buf[i] * buf[i]
         }
         return sqrt(sum / (to - from))
     }
@@ -30,7 +30,7 @@ class PitchModulationTest : StringSpec({
     fun diffRms(a: AudioBuffer, b: AudioBuffer, from: Int = 0, to: Int = a.size): Double {
         var sum = 0.0
         for (i in from until to) {
-            val d = a[i].toDouble() - b[i].toDouble()
+            val d = a[i] - b[i]
             sum += d * d
         }
         return sqrt(sum / (to - from))

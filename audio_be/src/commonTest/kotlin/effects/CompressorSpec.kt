@@ -49,7 +49,7 @@ class CompressorSpec : StringSpec({
 
         // Signal should be mostly unchanged
         for (i in buffer.indices) {
-            buffer[i].toDouble() shouldBe (original[i].toDouble() plusOrMinus 0.01)
+            buffer[i] shouldBe (original[i] plusOrMinus 0.01)
         }
     }
 
@@ -102,7 +102,7 @@ class CompressorSpec : StringSpec({
         compressor.process(quietBuffer, 0, 100)
 
         for (i in quietBuffer.indices) {
-            quietBuffer[i].toDouble() shouldBe (original[i].toDouble() plusOrMinus 0.01)
+            quietBuffer[i] shouldBe (original[i] plusOrMinus 0.01)
         }
     }
 

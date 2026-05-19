@@ -11,15 +11,6 @@ class DelayLineSpec : StringSpec({
     val sampleRate = 44100
     val blockSize = 512
 
-    fun processBlocks(delay: DelayLine, send: StereoBuffer, output: StereoBuffer, blocks: Int) {
-        repeat(blocks) {
-            // Only send the impulse on the first block; clear send for subsequent blocks
-            if (it > 0) send.clear()
-            output.clear()
-            delay.process(send, output, blockSize)
-        }
-    }
-
     "impulse appears in output after correct delay time" {
         val delaySeconds = 0.01 // 10ms
         val delaySamples = (delaySeconds * sampleRate).toInt() // 441 samples
@@ -108,7 +99,7 @@ class DelayLineSpec : StringSpec({
         // We should have at least 2 peaks, and each should be smaller than the previous
         (peaks.size >= 2) shouldBe true
         for (i in 1 until peaks.size) {
-            peaks[i].toDouble() shouldBeLessThan peaks[i - 1].toDouble()
+            peaks[i] shouldBeLessThan peaks[i - 1]
         }
     }
 
@@ -198,9 +189,6 @@ class DelayLineSpec : StringSpec({
         delay.feedback = 0.0
 
         // Never send any signal
-        val send = StereoBuffer(blockSize)
-        val output = StereoBuffer(blockSize)
-
         delay.hasTail() shouldBe false
     }
 
@@ -263,7 +251,7 @@ class DelayLineSpec : StringSpec({
         // Change delay time dramatically
         delay.delayTimeSeconds = 0.5
 
-        repeat(5) { block ->
+        repeat(5) {
             send.clear()
             output.clear()
             delay.process(send, output, blockSize)
@@ -280,7 +268,7 @@ class DelayLineSpec : StringSpec({
         // Change to a very short delay
         delay.delayTimeSeconds = 0.001
 
-        repeat(5) { block ->
+        repeat(5) {
             send.clear()
             output.clear()
             delay.process(send, output, blockSize)

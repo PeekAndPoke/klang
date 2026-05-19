@@ -55,14 +55,14 @@ class ExciterCombinatorsSpec : StringSpec({
 
     fun AudioBuffer.rms(): Double {
         var sum = 0.0
-        for (sample in this) sum += sample.toDouble() * sample.toDouble()
+        for (sample in this) sum += sample * sample
         return sqrt(sum / size)
     }
 
     fun AudioBuffer.peakAmplitude(): Double =
-        maxOf((maxOrNull() ?: 0.0).toDouble(), -(minOrNull() ?: 0.0).toDouble())
+        maxOf((maxOrNull() ?: 0.0), -(minOrNull() ?: 0.0))
 
-    fun AudioBuffer.dcOffset(): Double = map { it.toDouble() }.average()
+    fun AudioBuffer.dcOffset(): Double = map { it }.average()
 
     fun AudioBuffer.uniqueValues(): Int = toSet().size
 
@@ -76,7 +76,7 @@ class ExciterCombinatorsSpec : StringSpec({
 
         // Output should be bounded
         for (sample in wet) {
-            abs(sample.toDouble()) shouldBeLessThan 1.5
+            abs(sample) shouldBeLessThan 1.5
         }
 
         // Distortion compresses dynamic range: RMS should increase relative to peak
@@ -90,7 +90,7 @@ class ExciterCombinatorsSpec : StringSpec({
         val wet = generate(Ignitors.sine().distort(0.0))
 
         for (i in dry.indices) {
-            wet[i].toDouble() shouldBe (dry[i].toDouble() plusOrMinus 0.0001)
+            wet[i] shouldBe (dry[i] plusOrMinus 0.0001)
         }
     }
 
@@ -162,7 +162,7 @@ class ExciterCombinatorsSpec : StringSpec({
             val start = w * windowSize
             var sum = 0.0
             for (i in start until start + windowSize) {
-                sum += wet[i].toDouble() * wet[i].toDouble()
+                sum += wet[i] * wet[i]
             }
             sqrt(sum / windowSize)
         }
@@ -378,7 +378,7 @@ class ExciterCombinatorsSpec : StringSpec({
         // Compute mean absolute difference between dry and wet signals.
         var diffSum = 0.0
         for (i in dry.indices) {
-            diffSum += abs(dry[i] - wet[i]).toDouble()
+            diffSum += abs(dry[i] - wet[i])
         }
         val meanDiff = diffSum / dry.size
 

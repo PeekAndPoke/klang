@@ -33,9 +33,9 @@ class PitchModFactoriesSpec : StringSpec({
         return buf
     }
 
-    fun AudioBuffer.mean(): Double = sumOf { it.toDouble() } / size
+    fun AudioBuffer.mean(): Double = sumOf { it } / size
     fun AudioBuffer.rms(): Double {
-        var s = 0.0; for (x in this) s += x.toDouble() * x.toDouble(); return sqrt(s / size)
+        var s = 0.0; for (x in this) s += x * x; return sqrt(s / size)
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -68,7 +68,7 @@ class PitchModFactoriesSpec : StringSpec({
         val large = vibratoModIgnitor(rate = 5.0, depth = 2.0)
         fun deviationRms(buf: AudioBuffer): Double {
             var s = 0.0; for (x in buf) {
-                val d = x.toDouble() - 1.0; s += d * d
+                val d = x - 1.0; s += d * d
             }; return sqrt(s / buf.size)
         }
         deviationRms(render(large)) shouldBeGreaterThan deviationRms(render(small)) * 2.0
@@ -90,7 +90,7 @@ class PitchModFactoriesSpec : StringSpec({
         ctx.voiceElapsedFrames = 0
         val out = render(mod, ctx = ctx)
         // First sample: 2^(2.0 * 0/44100) ≈ 1.0
-        out[0].toDouble() shouldBe (1.0 plusOrMinus 0.001)
+        out[0] shouldBe (1.0 plusOrMinus 0.001)
     }
 
     "accelerateMod: positive amount produces increasing ratio" {
@@ -99,7 +99,7 @@ class PitchModFactoriesSpec : StringSpec({
         ctx.voiceElapsedFrames = sampleRate / 2 // halfway
         val out = render(mod, ctx = ctx)
         // At progress=0.5: ratio = 2^(2.0 * 0.5) = 2^1 = 2.0
-        out[0].toDouble() shouldBe (2.0 plusOrMinus 0.01)
+        out[0] shouldBe (2.0 plusOrMinus 0.01)
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -165,7 +165,7 @@ class PitchModFactoriesSpec : StringSpec({
 
         fun deviationRms(buf: AudioBuffer): Double {
             var s = 0.0; for (x in buf) {
-                val d = x.toDouble() - 1.0; s += d * d
+                val d = x - 1.0; s += d * d
             }; return sqrt(s / buf.size)
         }
         deviationRms(render(large)) shouldBeGreaterThan deviationRms(render(small)) * 2.0
@@ -183,8 +183,8 @@ class PitchModFactoriesSpec : StringSpec({
         for (mod in mods) {
             val out = render(mod)
             for (s in out) {
-                s.toDouble() shouldBeGreaterThan 0.5
-                s.toDouble() shouldBeLessThan 2.0
+                s shouldBeGreaterThan 0.5
+                s shouldBeLessThan 2.0
             }
         }
     }
