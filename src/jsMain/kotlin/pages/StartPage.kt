@@ -15,8 +15,10 @@ import io.peekandpoke.klang.comp.RoundGauge
 import io.peekandpoke.klang.comp.Spectrumeter
 import io.peekandpoke.klang.comp.motorBackgroundRef
 import io.peekandpoke.klang.sprudel.lang.adsr
+import io.peekandpoke.klang.sprudel.lang.compressor
 import io.peekandpoke.klang.sprudel.lang.delay
 import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.hpf
 import io.peekandpoke.klang.sprudel.lang.lpf
 import io.peekandpoke.klang.sprudel.lang.room
 import io.peekandpoke.klang.sprudel.lang.rsize
@@ -310,8 +312,11 @@ class StartPage(ctx: NoProps) : PureComponent(ctx) {
         override fun getOpacity(): Double = 1.0
 
         override fun gotoNext() {
-            val song = sound("[sd sd sd sd  [bd, cr] ~ ~ ~]").fast(1)
-                .adsr("0.001:1.0:1.0:3.0").room(0.05).rsize(8.0).lpf("4500")
+            val song = sound("<[sd sd sd sd  [bd, cr] ~ ~ ~] ~>").fast(1)
+                .adsr("0.005:0.2:0.3:10.0")
+                .room(0.1).rsize(8.0)
+                .hpf(80).lpf("2300:1:1.5")
+                .compressor("-6:2:10:0.02:0.25")
 
             val playback = Player.get()?.playOnce(song)
 

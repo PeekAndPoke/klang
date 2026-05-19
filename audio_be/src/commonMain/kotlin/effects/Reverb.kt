@@ -2,7 +2,6 @@ package io.peekandpoke.klang.audio_be.effects
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.StereoBuffer
-import io.peekandpoke.klang.audio_be.flushDenormal
 
 /**
  * High-performance stereo reverb based on the Freeverb algorithm
@@ -35,6 +34,14 @@ import io.peekandpoke.klang.audio_be.flushDenormal
  *   even from a mono input.
  * - **Gain staging**: `FIXED_GAIN = 0.015` normalises the sum of 8 resonant
  *   combs to keep internal levels bounded.
+ * - **Denormal protection**: each comb LPF state and allpass buffer write
+ *   adds a tiny `ANTI_DENORMAL = 1e-18` bias, preventing the IIR state from
+ *   decaying into subnormal range during silence (which would cause FPU
+ *   stalls at ~50–100 cycles each). The bias is well below audibility and
+ *   matches the canonical Freeverb approach. With 24 IIR stores per sample,
+ *   the per-sample `+ 1e-18` is dramatically cheaper than `flushDenormal()`
+ *   (24× ABS + compare + branch) — the rest of the engine uses
+ *   `flushDenormal` because those components have only 1–2 IIR stages.
  *
  * **Strudel parameter mapping**:
  * - `room`     → wet/dry send amount (caller-side; not a parameter here).
@@ -203,6 +210,16 @@ class Reverb(
 
             // Parallel comb filters (each with one-pole LPF damping in the
             // feedback path). Inlined to keep state in registers.
+            //
+            // Denormal protection via `+ ANTI_DENORMAL` (1e-18) on every state
+            // store — the canonical Freeverb approach. A previous revision
+            // (2026-05-08, Round 9) replaced this with `flushDenormal()` for
+            // engine-wide consistency, but that cost ~+11% per-sample because
+            // Reverb has 24 IIR stores/sample (8 combs + 4 allpass × 2 ch),
+            // vs 1–2 for other components. The ANTI_DENORMAL bias is well
+            // below audibility (~250 dB below the noise floor); the engine's
+            // `flushDenormal` pattern remains canonical for low-state-count
+            // components. Reverted 2026-05-19.
             for (c in 0 until numCombs) {
                 // Left
                 val bufL = combBufsL[c]
@@ -210,7 +227,7 @@ class Reverb(
                 var posL = combPosL[c]
 
                 val outSampleL = bufL[posL]
-                combStoreL[c] = ((outSampleL * invDamping) + (combStoreL[c] * damping)).flushDenormal()
+                combStoreL[c] = (outSampleL * invDamping) + (combStoreL[c] * damping) + ANTI_DENORMAL
                 bufL[posL] = inpL + (combStoreL[c] * feedback)
 
                 sumL += outSampleL
@@ -226,7 +243,7 @@ class Reverb(
                 var posR = combPosR[c]
 
                 val outSampleR = bufR[posR]
-                combStoreR[c] = ((outSampleR * invDamping) + (combStoreR[c] * damping)).flushDenormal()
+                combStoreR[c] = (outSampleR * invDamping) + (combStoreR[c] * damping) + ANTI_DENORMAL
                 bufR[posR] = inpR + (combStoreR[c] * feedback)
 
                 sumR += outSampleR
@@ -246,7 +263,7 @@ class Reverb(
 
                 val bufOutL = bufL[posL]
                 val newOutL = -sumL + bufOutL
-                bufL[posL] = (sumL + (bufOutL * ALL_PASS_FEEDBACK)).flushDenormal()
+                bufL[posL] = sumL + (bufOutL * ALL_PASS_FEEDBACK) + ANTI_DENORMAL
                 sumL = newOutL
 
                 if (++posL >= sizeL) {
@@ -261,7 +278,7 @@ class Reverb(
 
                 val bufOutR = bufR[posR]
                 val newOutR = -sumR + bufOutR
-                bufR[posR] = (sumR + (bufOutR * ALL_PASS_FEEDBACK)).flushDenormal()
+                bufR[posR] = sumR + (bufOutR * ALL_PASS_FEEDBACK) + ANTI_DENORMAL
                 sumR = newOutR
 
                 if (++posR >= sizeR) {
@@ -301,5 +318,15 @@ class Reverb(
 
         /** Right-channel decorrelation: every delay line is +N samples vs left. Scaled by sample rate. */
         private const val STEREO_SPREAD_44K1: Int = 23
+
+        /**
+         * Anti-denormal injection — a tiny DC bias added to every IIR state update.
+         * Keeps the state magnitude above the FPU subnormal threshold (≈ 2.2e-308)
+         * during silence, preventing ~50–100 cycle stalls on denormal arithmetic.
+         * The resulting steady-state DC bias is `~1.7e-18 / (1 − damping) ≈ 2.8e-18`
+         * for the comb LPF and `~2e-18` for the allpass — both ~250 dB below the
+         * noise floor, inaudible. Canonical Freeverb approach.
+         */
+        private const val ANTI_DENORMAL: Double = 1e-18
     }
 }
