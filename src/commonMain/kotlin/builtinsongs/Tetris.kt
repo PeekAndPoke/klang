@@ -10,8 +10,7 @@ internal val tetrisSong = Song(
     title = "Stein um Stein",
     rpm = 39.5,
     icon = "gamepad",
-    code = """  
-import * from "stdlib"
+    code = """import * from "stdlib"
 import * from "sprudel"
 
 // ── Patterns: the raw musical content ───────────────────────────────────
@@ -58,7 +57,7 @@ export leadShape = (p) => p
 export bassShape = (p) => p
     .sound("supersaw").spread(0.5).unison(sine.range(8, 16).slow(32)).warmth(0.1)
     .orbit(1).gain(0.65).adsr("0.005:0.2:0.8:0.15").pan(0.3)
-    .superimpose(transpose("<0 12 0 -12>/8").pan(0.7)).phaser(1/13).phaserdepth(0.15).phasercenter(2500).phasersweep(1000)
+    .superimpose(transpose("<0 12 0 -12>/8").pan(0.7)).phaser(1/13).phaserdepth(0.20).phasercenter(2500).phasersweep(1000)
     .detune(sine.range(0.05, 0.45).early(1.5).slow(24)).hpf(200).lpf(4200)
 
 // Sub voice: tremoloed triangle, soft distortion, pedal engine.
@@ -68,7 +67,7 @@ export subShape = (p) => p
 
 // Drums: tight, panned right, fast.
 export drumsShape = (p) => p
-    .orbit(3).gain(0.9).pan(0.6).adsr("0.007:0.2:0.5:1.0").hpf(80).lpf("6000")
+    .orbit(3).gain(0.8).pan(0.6).adsr("0.007:0.2:0.5:1.0").hpf(90).lpf("3500:1:1.5")
     .fast(2)
 
 // ── Assembled parts: shape × pattern, fully voiced and arrangement-free ─
