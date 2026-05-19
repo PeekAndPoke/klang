@@ -70,7 +70,7 @@ internal fun IgnitorDsl.buildIgnitor(
     // ── Leaves: direct return, no cache. ──
     when (this) {
         is IgnitorDsl.Param -> return ParamIgnitor(name, oscParams?.get(name) ?: default)
-        is IgnitorDsl.Constant -> return ParamIgnitor("", value)
+        is IgnitorDsl.Constant -> return ConstantIgnitor(value)
         is IgnitorDsl.Freq -> return FreqIgnitor
         else -> { /* fall through */
         }

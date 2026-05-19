@@ -22,21 +22,21 @@ import kotlin.random.Random
 @Suppress(/* False positives */ "EmptyRange")
 object Ignitors {
 
-    // Shared ParamIgnitor singletons — mirror IgnitorDsl.Slots names + defaults.
-    // ParamIgnitor is stateless (just fills a buffer with `default`), so a single
-    // instance can be reused across every factory default. The `name` is only a
-    // debug label at this layer; sprudel's oscParam lookup runs earlier, in
-    // IgnitorDslRuntime.buildIgnitor, before these factories are called.
-    private val analogDefault = ParamIgnitor("analog", 0.0)
-    private val voicesDefault = ParamIgnitor("voices", 8.0)
-    private val freqSpreadDefault = ParamIgnitor("freqSpread", 0.2)
-    private val dutyDefault = ParamIgnitor("duty", 0.5)
-    private val densityDefault = ParamIgnitor("density", 0.2)
-    private val rateDefault = ParamIgnitor("rate", 1.0)
-    private val decayDefault = ParamIgnitor("decay", 0.996)
-    private val brightnessDefault = ParamIgnitor("brightness", 0.5)
-    private val pickPositionDefault = ParamIgnitor("pickPosition", 0.5)
-    private val stiffnessDefault = ParamIgnitor("stiffness", 0.0)
+    // Shared ConstantIgnitor singletons used as factory defaults. The normal DSL
+    // path (IgnitorDslRuntime.toExciter) always supplies an explicit runtime
+    // ignitor, so these defaults only fire when a Kotlin caller invokes a factory
+    // without that argument. Sprudel's oscParam lookup runs at the DSL layer
+    // (IgnitorDslRuntime.buildIgnitor), upstream of these factories.
+    private val analogDefault = ConstantIgnitor(0.0)
+    private val voicesDefault = ConstantIgnitor(8.0)
+    private val freqSpreadDefault = ConstantIgnitor(0.2)
+    private val dutyDefault = ConstantIgnitor(0.5)
+    private val densityDefault = ConstantIgnitor(0.2)
+    private val rateDefault = ConstantIgnitor(1.0)
+    private val decayDefault = ConstantIgnitor(0.996)
+    private val brightnessDefault = ConstantIgnitor(0.5)
+    private val pickPositionDefault = ConstantIgnitor(0.5)
+    private val stiffnessDefault = ConstantIgnitor(0.0)
 
     /** Sine wave oscillator. Inherently band-limited, no anti-aliasing needed. */
     fun sine(

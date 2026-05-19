@@ -652,8 +652,9 @@ private class DetuneConstIgnitor(
 // Gain from Ignitor (param slot)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Apply audio-rate gain from another exciter. Short-circuits when [gain] is a [ParamIgnitor] with default 1.0. */
+/** Apply audio-rate gain from another exciter. Short-circuits when [gain] is a constant 1.0. */
 fun Ignitor.withGain(gain: Ignitor): Ignitor {
+    if (gain is ConstantIgnitor && gain.value == 1.0) return this
     if (gain is ParamIgnitor && gain.default == 1.0) return this
     return this * gain
 }
