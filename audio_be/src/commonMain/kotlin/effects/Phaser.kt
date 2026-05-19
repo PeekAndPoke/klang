@@ -72,6 +72,10 @@ class Phaser(sampleRate: Int) {
         val right = buffer.right
         val d = depth
 
+        // Control-rate: compute α at block boundaries once per channel.
+        coreL.prepareBlock(frames)
+        coreR.prepareBlock(frames)
+
         for (i in 0 until frames) {
             val dryL = left[i]
             val wetL = coreL.step(dryL)

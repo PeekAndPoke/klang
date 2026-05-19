@@ -418,6 +418,9 @@ private class PhaserIgnitor(
             phaser.center = Ignitors.readParam(center, freqHz, ctx)
             phaser.sweep = Ignitors.readParam(sweep, freqHz, ctx)
 
+            // Precompute α at block boundaries — see PhaserCore KDoc.
+            phaser.prepareBlock(ctx.length)
+
             val d = blendVal
             val dInv = 1.0 - d
             for (i in ctx.offset until end) {

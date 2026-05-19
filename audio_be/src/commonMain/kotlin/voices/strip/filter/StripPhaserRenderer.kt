@@ -36,6 +36,9 @@ class StripPhaserRenderer(
         val buf = ctx.audioBuffer
         val d = depth
 
+        // Control-rate: compute α at block boundaries once.
+        core.prepareBlock(ctx.length)
+
         for (i in 0 until ctx.length) {
             val idx = ctx.offset + i
             val dry = buf[idx]
