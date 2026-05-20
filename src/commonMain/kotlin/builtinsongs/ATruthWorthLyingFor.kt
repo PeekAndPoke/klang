@@ -87,7 +87,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [lt,sd]                                 [[[mt,sd]@12 [lt]@4]        [mt,sd]]>`).repeat(2),
       s(`<[bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] [sd bd]
           [bd bd] [sd bd] [~ bd] [sd bd]          [~ bd] [sd bd]              [~ bd] sd>`).fast(8).repeat(4)
-  ).orbit(5).early(0.002).adsr("0.0075:0.3:0.2:1.0 0.01:0.25:0.2:1.0".slow(16)).n(0).gain(0.8).hpf(100).lpf("2200:1:1.8")
+  ).orbit(5).early(0.002).adsr("0.0075:0.3:0.2:0.5 0.0075:0.25:0.2:0.5".slow(16)).n(0).gain(0.8).hpf(100).lpf("2200:1:1.8")
     .superimpose(bandf(200).bandq(1.5).gain(0.2)).filterWhen(t => t % stay >= 3.95)  // .solo()
   , // Drums 1 ------------------------------------------------------------------------------------------------
   s("<[cr hh!7]!7 [cr hh!3 [hh hh] [hh hh] [cr hh] [oh hh]]>")
