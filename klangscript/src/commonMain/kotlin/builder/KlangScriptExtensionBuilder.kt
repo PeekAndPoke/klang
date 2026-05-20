@@ -122,7 +122,7 @@ interface KlangScriptExtensionBuilder {
     /**
      * Register a native Kotlin extension property.
      *
-     * Property access (`receiver.name` without parens) on a [NativeObjectValue]
+     * Property access (`receiver.name` without parens) on a [ NativeObjectValue ]
      * of type [receiver] resolves to the value produced by [getter] (already
      * wrapped as a [RuntimeValue]).
      */
@@ -303,7 +303,7 @@ class NativeObjectExtensionsBuilder<T : Any>(
      * The [getter] receives the receiver instance and returns the property value;
      * it is wrapped as a [RuntimeValue] via [wrapAsRuntimeValue].
      */
-    inline fun <reified R : Any?> registerProperty(
+    inline fun <reified R> registerProperty(
         name: String,
         noinline getter: T.() -> R,
     ) {
@@ -329,7 +329,8 @@ class NativeObjectExtensionsBuilder<T : Any>(
     }
 
     /** Register a native extension method with CallInfo for location tracking. */
-    @Suppress("UNCHECKED_CAST")
+    // Invoked from KSP-generated registration code (klangscript-ksp RegistrationModel).
+    @Suppress("UNCHECKED_CAST", "unused")
     inline fun <reified P : Any, reified R> registerVarargMethodWithCallInfo(
         name: String, noinline fn: T.(List<P>, CallInfo) -> R,
     ) {
@@ -498,7 +499,8 @@ inline fun <reified T : Any> KlangScriptExtensionBuilder.registerType(
 }
 
 /** Registers a native function as a top-level vararg function. Null args are passed through. */
-@Suppress("UNCHECKED_CAST")
+// Also invoked from KSP-generated registration code (klangscript-ksp RegistrationModel).
+@Suppress("UNCHECKED_CAST", "unused")
 inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.registerVarargFunction(
     name: String, noinline fn: (List<P>) -> R,
 ) {
@@ -512,7 +514,8 @@ inline fun <reified P : Any, reified R : Any> KlangScriptExtensionBuilder.regist
 }
 
 /** Registers a native vararg function with inline documentation. */
-@Suppress("UNCHECKED_CAST")
+// Also invoked from KSP-generated registration code (klangscript-ksp RegistrationModel).
+@Suppress("UNCHECKED_CAST", "unused")
 inline fun <reified P : Any, reified R : Any> KlangScriptLibrary.Builder.registerVarargFunction(
     name: String,
     docs: io.peekandpoke.klang.script.types.KlangCallable,
@@ -645,7 +648,8 @@ inline fun <reified P1 : Any, reified P2 : Any, reified P3 : Any, reified P4 : A
  *
  * Extracts source locations from RuntimeValue parameters and provides them via CallInfo.
  */
-@Suppress("UNCHECKED_CAST")
+// Invoked from KSP-generated registration code (klangscript-ksp RegistrationModel).
+@Suppress("UNCHECKED_CAST", "unused")
 inline fun <reified P : Any, reified R> KlangScriptExtensionBuilder.registerVarargFunctionWithCallInfo(
     name: String, noinline fn: (List<P>, CallInfo) -> R,
 ) {

@@ -9,6 +9,7 @@ import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangRibbonSpec : StringSpec({
 
@@ -147,7 +148,7 @@ class LangRibbonSpec : StringSpec({
                     events.size shouldBe 1
 
                     val event = events[0]
-                    event.data.sound shouldBe "ht"
+                    event.data.soundName shouldBe "ht"
                     event.part.begin shouldBe cycle.toRational()
                     event.part.end shouldBe (cycle + 1).toRational()
                     event.whole.begin shouldBe cycle.toRational()

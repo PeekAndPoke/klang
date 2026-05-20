@@ -7,6 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangChunkBackSpec : StringSpec({
 
@@ -108,7 +109,7 @@ class LangChunkBackSpec : StringSpec({
                             events[1].data.gain shouldBe null
                             events[2].data.gain shouldBe null
                             events[3].data.gain shouldBe null
-                            events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                            events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                         }
 
                         1 -> {
@@ -117,7 +118,7 @@ class LangChunkBackSpec : StringSpec({
                             events[1].data.gain shouldBe null
                             events[2].data.gain shouldBe null
                             events[3].data.gain shouldBe 0.8
-                            events[3].data.sound shouldBeEqualIgnoringCase "lt"
+                            events[3].data.soundName shouldBeEqualIgnoringCase "lt"
                         }
 
                         2 -> {
@@ -126,7 +127,7 @@ class LangChunkBackSpec : StringSpec({
                             events[1].data.gain shouldBe null
                             events[2].data.gain shouldBe 0.8
                             events[3].data.gain shouldBe null
-                            events[2].data.sound shouldBeEqualIgnoringCase "ht"
+                            events[2].data.soundName shouldBeEqualIgnoringCase "ht"
                         }
 
                         3 -> {
@@ -135,7 +136,7 @@ class LangChunkBackSpec : StringSpec({
                             events[1].data.gain shouldBe 0.8
                             events[2].data.gain shouldBe null
                             events[3].data.gain shouldBe null
-                            events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                            events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                         }
                     }
                 }

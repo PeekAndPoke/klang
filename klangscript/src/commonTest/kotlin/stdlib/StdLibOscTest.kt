@@ -1,13 +1,11 @@
 package io.peekandpoke.klang.script.stdlib
 
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.NativeObjectValue
-import io.peekandpoke.klang.script.runtime.StringValue
 
 /**
  * Integration tests for the Osc DSL in KlangScript.
@@ -337,41 +335,6 @@ class StdLibOscTest : StringSpec({
         dsl.inner.shouldBeInstanceOf<IgnitorDsl.Sawtooth>()
         // The LFO is a Plus(Times(Plus(Sine, Constant), Constant), Constant)
         dsl.cutoffHz.shouldBeInstanceOf<IgnitorDsl.Plus>()
-    }
-
-    // ═════════════════════════════════════════════════════════════════════════════
-    // Osc.register
-    // ═════════════════════════════════════════════════════════════════════════════
-
-    "Osc.register returns registered name when registrar is set" {
-        val registered = mutableListOf<Pair<String, IgnitorDsl>>()
-
-        val engine = klangScript()
-        engine.execute("""import * from "stdlib"""")
-        engine.attrs[KlangScriptOsc.REGISTRAR_KEY] = { name: String, dsl: IgnitorDsl ->
-            registered.add(name to dsl)
-            name
-        }
-
-        val result = engine.execute("""Osc.register("myPad", Osc.sine().lowpass(1000))""")
-        result.shouldBeInstanceOf<StringValue>()
-        result.value shouldBe "myPad"
-
-        registered.size shouldBe 1
-        registered[0].first shouldBe "myPad"
-        registered[0].second.shouldBeInstanceOf<IgnitorDsl.Lowpass>()
-    }
-
-    "Osc.register throws when no registrar is set" {
-        val engine = klangScript()
-        engine.execute("""import * from "stdlib"""")
-
-        try {
-            engine.execute("""Osc.register("test", Osc.sine())""")
-            error("Should have thrown")
-        } catch (e: Exception) {
-            e.message.shouldNotBeNull()
-        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════════

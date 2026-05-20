@@ -4,7 +4,6 @@ import io.peekandpoke.klang.Player.nowPlaying
 import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
-import io.peekandpoke.klang.audio_engine.setPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
@@ -100,9 +99,11 @@ object Player {
     /**
      * Creates a KlangScriptEngine with sprudel and stdlib registered.
      *
-     * If a [player] is available, `Osc.register()` is wired to send commands to the audio backend.
+     * Inline ignitors are denormalized at the playback boundary by the player's ignitor
+     * registry — no engine-level wiring is required.
      * If [outputHandler] is provided, console/print output goes there (e.g. REPL capture).
      */
+    @Suppress("UNUSED_PARAMETER")
     fun createEngine(
         player: KlangPlayer? = get(),
         outputHandler: ((ConsoleLevel, List<String>) -> Unit)? = null,
@@ -117,7 +118,6 @@ object Player {
         engineBuilder.registerLibrary(stdlib)
         engineBuilder.registerLibrary(sprudelLib)
         engineBuilder.registerBuiltInSongsAsModules()
-        if (player != null) engineBuilder.setPlayer(player)
         return engineBuilder.build()
     }
 

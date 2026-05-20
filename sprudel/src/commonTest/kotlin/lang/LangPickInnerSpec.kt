@@ -8,6 +8,7 @@ import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 /**
  * Tests for pick() and pickmod() with innerJoin behavior.
@@ -197,8 +198,8 @@ class LangPickInnerSpec : StringSpec({
 
         val events = result.queryArc(0.0, 1.0)
         events shouldHaveSize 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "cp"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "cp"
     }
 
     "pick() with list of patterns picks patterns" {
@@ -209,8 +210,8 @@ class LangPickInnerSpec : StringSpec({
         val result = seq("0 1").pick(lookup)
         val events = result.queryArc(0.0, 1.0)
         events shouldHaveSize 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "cp"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "cp"
     }
 
     "pick() with fractional indices floors to integer" {
@@ -235,11 +236,11 @@ class LangPickInnerSpec : StringSpec({
             events shouldHaveSize 2
             events[0].part.begin.toDouble() shouldBeExactly 0.0
             events[0].part.end.toDouble() shouldBeExactly 0.5
-            events[0].data.sound shouldBe "bd"
+            events[0].data.soundName shouldBe "bd"
 
             events[1].part.begin.toDouble() shouldBeExactly 0.5
             events[1].part.end.toDouble() shouldBeExactly 1.0
-            events[1].data.sound shouldBe "sd"
+            events[1].data.soundName shouldBe "sd"
         }
     }
 

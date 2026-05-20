@@ -3,29 +3,25 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
-import io.peekandpoke.ultra.common.TypedKey
-
-/** Callback type for registering an IgnitorDsl with the audio backend. Returns the registered name. */
-typealias IgnitorRegistrar = (name: String, dsl: IgnitorDsl) -> String
 
 /**
  * Osc object for KlangScript — builds IgnitorDsl signal graphs.
  *
  * Provides factory methods for all oscillator primitives, noise sources, and super oscillators.
  * Returns [IgnitorDsl] instances that can be composed via extension methods (lowpass, adsr, mul, etc.)
- * and registered as named sounds via Osc.register.
+ * and passed directly to `.sound()`:
  *
- * Usage in KlangScript:
  * ```
- * let pad = Osc.register("pad", Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5))
+ * let pad = Osc.supersaw().lowpass(2000).adsr(0.01, 0.2, 0.5, 0.5)
  * note("c3 e3 g3").sound(pad)
  * ```
+ *
+ * The playback denormalizes inline ignitor references at the wire boundary via the
+ * player's ignitor registry — no explicit registration step is needed.
  */
 @KlangScript.Library(KlangScriptLibraries.STDLIB)
 @KlangScript.Object("Osc")
 object KlangScriptOsc {
-    /** TypedKey for the ignitor registrar callback. Set on engine.attrs by the app when the player is available. */
-    val REGISTRAR_KEY = TypedKey<IgnitorRegistrar>("IgnitorRegistrar")
 
     override fun toString(): String = "[Osc object]"
 

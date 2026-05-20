@@ -6,6 +6,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangZoomControlPatternSpec : StringSpec({
 
@@ -25,8 +26,8 @@ class LangZoomControlPatternSpec : StringSpec({
 
                     // zoom(0, 0.5) takes first half and stretches to full cycle
                     events.size shouldBe 2
-                    events[0].data.sound shouldBe "bd"
-                    events[1].data.sound shouldBe "sd"
+                    events[0].data.soundName shouldBe "bd"
+                    events[1].data.soundName shouldBe "sd"
 
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
@@ -56,16 +57,16 @@ class LangZoomControlPatternSpec : StringSpec({
                         0 -> {
                             // zoom(0, 0.75) - takes first 75%
                             events.size shouldBe 3
-                            events[0].data.sound shouldBe "bd"
-                            events[1].data.sound shouldBe "sd"
-                            events[2].data.sound shouldBe "ht"
+                            events[0].data.soundName shouldBe "bd"
+                            events[1].data.soundName shouldBe "sd"
+                            events[2].data.soundName shouldBe "ht"
                         }
 
                         1 -> {
                             // zoom(0.25, 0.75) - takes middle 50%
                             events.size shouldBe 2
-                            events[0].data.sound shouldBe "sd"
-                            events[1].data.sound shouldBe "ht"
+                            events[0].data.soundName shouldBe "sd"
+                            events[1].data.soundName shouldBe "ht"
                         }
                     }
                 }
@@ -91,16 +92,16 @@ class LangZoomControlPatternSpec : StringSpec({
                         0 -> {
                             // zoom(0, 0.5) - takes first 50%
                             events.size shouldBe 2
-                            events[0].data.sound shouldBe "bd"
-                            events[1].data.sound shouldBe "sd"
+                            events[0].data.soundName shouldBe "bd"
+                            events[1].data.soundName shouldBe "sd"
                         }
 
                         1 -> {
                             // zoom(0, 0.75) - takes first 75%
                             events.size shouldBe 3
-                            events[0].data.sound shouldBe "bd"
-                            events[1].data.sound shouldBe "sd"
-                            events[2].data.sound shouldBe "ht"
+                            events[0].data.soundName shouldBe "bd"
+                            events[1].data.soundName shouldBe "sd"
+                            events[2].data.soundName shouldBe "ht"
                         }
                     }
                 }
@@ -126,15 +127,15 @@ class LangZoomControlPatternSpec : StringSpec({
                         0 -> {
                             // zoom(0, 0.5) - takes first 50%
                             events.size shouldBe 2
-                            events[0].data.sound shouldBe "bd"
-                            events[1].data.sound shouldBe "sd"
+                            events[0].data.soundName shouldBe "bd"
+                            events[1].data.soundName shouldBe "sd"
                         }
 
                         1 -> {
                             // zoom(0.25, 0.75) - takes middle 50%
                             events.size shouldBe 2
-                            events[0].data.sound shouldBe "sd"
-                            events[1].data.sound shouldBe "ht"
+                            events[0].data.soundName shouldBe "sd"
+                            events[1].data.soundName shouldBe "ht"
                         }
                     }
                 }

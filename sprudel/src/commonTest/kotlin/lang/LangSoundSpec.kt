@@ -3,7 +3,11 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangSoundSpec : StringSpec({
 
@@ -12,8 +16,8 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "sd"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "sd"
     }
 
     "sound() parses sound index from string (e.g. bd:1)" {
@@ -21,9 +25,9 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].data.soundIndex shouldBe 0
-        events[1].data.sound shouldBe "sd"
+        events[1].data.soundName shouldBe "sd"
         events[1].data.soundIndex shouldBe 1
     }
 
@@ -34,7 +38,7 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
         events[0].data.note shouldBeEqualIgnoringCase "c"
-        events[0].data.sound shouldBe "piano"
+        events[0].data.soundName shouldBe "piano"
     }
 
     "sound() merges sound index correctly" {
@@ -43,7 +47,7 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "sd"
+        events[0].data.soundName shouldBe "sd"
         events[0].data.soundIndex shouldBe 1
     }
 
@@ -53,7 +57,7 @@ class LangSoundSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.value?.asString shouldBeEqualIgnoringCase "c"
-        events[0].data.sound shouldBe "piano"
+        events[0].data.soundName shouldBe "piano"
     }
 
     "sound() without args reinterprets value as sound" {
@@ -62,7 +66,7 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].data.soundIndex shouldBe 1
     }
 
@@ -72,7 +76,7 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].data.soundIndex shouldBe 1
     }
 
@@ -81,7 +85,7 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
     }
 
     "s() works as pattern extension" {
@@ -89,7 +93,7 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "piano"
+        events[0].data.soundName shouldBe "piano"
     }
 
     "s() works as string extension" {
@@ -97,7 +101,7 @@ class LangSoundSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "piano"
+        events[0].data.soundName shouldBe "piano"
     }
 
     "sound() works in compiled code" {
@@ -105,8 +109,8 @@ class LangSoundSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "sd"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "sd"
     }
 
     "s() alias works in compiled code" {
@@ -114,7 +118,30 @@ class LangSoundSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].data.soundIndex shouldBe 1
+    }
+
+    // ── Inline IgnitorDsl handoff ────────────────────────────────────
+
+    "sound(IgnitorDsl) stores SoundValue.Osc on the event data" {
+        val osc = IgnitorDsl.Sine()
+        val p = note("c").sound(osc)
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        val sound = events[0].data.sound
+        sound.shouldBeInstanceOf<SoundValue.Osc>()
+        sound.osc shouldBe osc
+        // .soundName extracts only Named entries, so it's null here.
+        events[0].data.soundName shouldBe null
+    }
+
+    "sound(IgnitorDsl) replaces a previous SoundValue.Named on the same chain" {
+        val p = note("c").sound("bd").sound(IgnitorDsl.Sawtooth())
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.sound.shouldBeInstanceOf<SoundValue.Osc>()
     }
 })

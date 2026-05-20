@@ -1,10 +1,12 @@
 package io.peekandpoke.klang.audio_engine
 
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPlaybackSignal
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlaybackController.Companion.MIN_RPM
 import io.peekandpoke.klang.common.infra.KlangAtomicBool
@@ -46,6 +48,7 @@ internal class KlangPlaybackController(
     private val fetcherDispatcher = context.fetcherDispatcher
     private val callbackDispatcher = context.callbackDispatcher
     private val backendReady = context.backendReady
+    private val registerIgnitor: (IgnitorDsl) -> String = context::registerIgnitor
 
     companion object {
         /**
@@ -361,6 +364,15 @@ internal class KlangPlaybackController(
     private fun queryEvents(from: Double, to: Double, sendSignals: Boolean): List<ScheduledVoice> {
         val events = pattern.queryEvents(fromCycles = from, toCycles = to, cps = cyclesPerSecond)
 
+        // Pre-register inline ignitors with the backend so their synthetic names are
+        // known before the voice events referencing them are scheduled. The name itself
+        // comes from IgnitorDsl.uniqueId() (process-wide); registerIgnitor only takes
+        // care of the per-player RegisterIgnitor wire command on first sighting.
+        events.asSequence()
+            .map { it.sound }
+            .filterIsInstance<SoundValue.Osc>()
+            .forEach { registerIgnitor(it.osc) }
+
         // Transform to ScheduledVoice using absolute time from KlangTime epoch
         val secPerCycle = 1.0 / cyclesPerSecond
         val playbackStartTimeSec = startTimeMs / 1000.0
@@ -379,7 +391,8 @@ internal class KlangPlaybackController(
             val absoluteStartTime = playbackStartTimeSec + relativeStartTime
             val absoluteEndTime = absoluteStartTime + duration
 
-            // Convert to VoiceData
+            // Convert to VoiceData. Inline ignitors resolve their synthetic name via
+            // the global IgnitorDsl.uniqueId() map (pre-registered above).
             val voiceData = event.toVoiceData()
 
             // Collect signal event

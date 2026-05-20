@@ -4,7 +4,6 @@ import io.peekandpoke.klang.audio_engine.KlangCyclicPlayback
 import io.peekandpoke.klang.audio_engine.KlangPlayer
 import io.peekandpoke.klang.audio_engine.klangPlayer
 import io.peekandpoke.klang.audio_engine.play
-import io.peekandpoke.klang.audio_engine.setPlayer
 import io.peekandpoke.klang.audio_fe.create
 import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
@@ -31,7 +30,6 @@ suspend fun main() {
     val player = klangPlayer(options = playerOptions)
 
     val scripting = klangScript {
-        setPlayer(player)
         registerLibrary(sprudelLib)
         registerBuiltInSongsAsModules()
     }

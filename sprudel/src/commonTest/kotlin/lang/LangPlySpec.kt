@@ -9,6 +9,7 @@ import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangPlySpec : StringSpec({
 
@@ -149,10 +150,10 @@ class LangPlySpec : StringSpec({
 
         events.size shouldBe 4
 
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "bd"
-        events[2].data.sound shouldBe "hh"
-        events[3].data.sound shouldBe "hh"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "bd"
+        events[2].data.soundName shouldBe "hh"
+        events[3].data.soundName shouldBe "hh"
     }
 
     "ply() works as pattern extension" {

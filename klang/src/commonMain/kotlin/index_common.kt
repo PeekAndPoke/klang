@@ -1,11 +1,7 @@
 package io.peekandpoke.klang.audio_engine
 
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
-import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
 import io.peekandpoke.klang.audio_engine.KlangPlayer.Options
-import io.peekandpoke.klang.script.KlangScriptEngine
-import io.peekandpoke.klang.script.stdlib.KlangScriptOsc
 
 /**
  * Creates a platform-specific KlangPlayer instance and suspends until the audio
@@ -54,28 +50,4 @@ fun KlangPlayer.playOnce(
         onStopped = { unregisterPlayback(playback) },
     )
     return playback
-}
-
-/**
- * Wires [player] into the [KlangScriptEngine.Builder] so a script's
- * `Osc.register("name", dsl)` calls forward custom ignitors to the running backend.
- *
- * ```
- * val engine = klangScript {
- *     setPlayer(player)
- *     registerLibrary(sprudelLib)
- * }
- * ```
- */
-fun KlangScriptEngine.Builder.setPlayer(player: KlangPlayer) {
-    attrs[KlangScriptOsc.REGISTRAR_KEY] = { name: String, dsl: IgnitorDsl ->
-        player.sendControl(
-            KlangCommLink.Cmd.RegisterIgnitor(
-                playbackId = KlangCommLink.SYSTEM_PLAYBACK_ID,
-                name = name,
-                dsl = dsl,
-            )
-        )
-        name
-    }
 }

@@ -76,6 +76,11 @@ class KlangPlayer(
     // Completes once the backend has emitted Feedback.BackendReady (post-warmup).
     val backendReady = CompletableDeferred<Unit>()
 
+    // Per-player ignitor name cache; allocates synthetic names + sends RegisterIgnitor
+    // on first sighting of each unique IgnitorDsl tree. Shared across all playbacks so
+    // concurrent playbacks cannot collide on synthetic names.
+    internal val ignitors = IgnitorRegistry(sendControl = ::sendControl)
+
     // Context bundle for playback implementations (reduces constructor parameter lists)
     val playbackContext = KlangPlaybackContext(
         playerOptions = options,
@@ -85,6 +90,7 @@ class KlangPlayer(
         fetcherDispatcher = fetcherDispatcher,
         callbackDispatcher = callbackDispatcher,
         backendReady = backendReady,
+        ignitors = ignitors,
     )
 
     /**

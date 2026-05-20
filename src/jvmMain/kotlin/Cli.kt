@@ -3,7 +3,6 @@ package io.peekandpoke.klang
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_engine.cli.RenderWavCommand
 import io.peekandpoke.klang.audio_fe.create
@@ -11,7 +10,6 @@ import io.peekandpoke.klang.audio_fe.samples.SampleCatalogue
 import io.peekandpoke.klang.audio_fe.samples.Samples
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
-import io.peekandpoke.klang.script.stdlib.KlangScriptOsc
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 import kotlinx.coroutines.runBlocking
 
@@ -21,16 +19,12 @@ class KlangCli : CliktCommand(name = "klang") {
 
 /**
  * Creates a full KlangScript engine, executes the code, and returns the last expression as a KlangPattern.
- * Captures any Osc.register() calls so custom ignitors can be passed to the offline renderer.
+ *
+ * Inline ignitors (`note("a").sound(Osc.sine()...)`) are denormalized to synthetic names by the
+ * offline renderer's internal ignitor registrar during render — no engine-level capture step.
  */
 private fun compilePattern(code: String): RenderWavCommand.CompileResult? {
-    val customIgnitors = mutableListOf<Pair<String, IgnitorDsl>>()
-
     val engine = klangScript {
-        attrs[KlangScriptOsc.REGISTRAR_KEY] = { name: String, dsl: IgnitorDsl ->
-            customIgnitors.add(name to dsl)
-            name
-        }
         registerLibrary(sprudelLib)
         registerBuiltInSongsAsModules()
     }
@@ -42,10 +36,7 @@ private fun compilePattern(code: String): RenderWavCommand.CompileResult? {
     val result = engine.execute(code + "\n")
     val pattern = result.toObjectOrNull<KlangPattern>() ?: return null
 
-    return RenderWavCommand.CompileResult(
-        pattern = pattern,
-        customIgnitors = customIgnitors,
-    )
+    return RenderWavCommand.CompileResult(pattern = pattern)
 }
 
 fun main(args: Array<String>) {

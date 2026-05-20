@@ -10,6 +10,7 @@ import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangLingerSpec : StringSpec({
 
@@ -51,19 +52,19 @@ class LangLingerSpec : StringSpec({
                     events.size shouldBe 4
 
                     // Each event should be twice as long (slowed by 0.5)
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
 
-                    events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
-                    events[2].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[2].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
 
-                    events[3].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[3].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
@@ -85,19 +86,19 @@ class LangLingerSpec : StringSpec({
                     events.size shouldBe 4
 
                     // Each event should be twice as long (slowed by 0.5)
-                    events[0].data.sound shouldBeEqualIgnoringCase "ht"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "ht"
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].part.end.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
 
-                    events[1].data.sound shouldBeEqualIgnoringCase "lt"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "lt"
                     events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[1].part.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
-                    events[2].data.sound shouldBeEqualIgnoringCase "ht"
+                    events[2].data.soundName shouldBeEqualIgnoringCase "ht"
                     events[2].part.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[2].part.end.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
 
-                    events[3].data.sound shouldBeEqualIgnoringCase "lt"
+                    events[3].data.soundName shouldBeEqualIgnoringCase "lt"
                     events[3].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[3].part.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
@@ -209,28 +210,28 @@ class LangLingerSpec : StringSpec({
                         0 -> {
                             // linger(1): full pattern, no change
                             events.size shouldBe 4
-                            events[0].data.sound shouldBeEqualIgnoringCase "bd"
-                            events[1].data.sound shouldBeEqualIgnoringCase "sd"
-                            events[2].data.sound shouldBeEqualIgnoringCase "ht"
-                            events[3].data.sound shouldBeEqualIgnoringCase "lt"
+                            events[0].data.soundName shouldBeEqualIgnoringCase "bd"
+                            events[1].data.soundName shouldBeEqualIgnoringCase "sd"
+                            events[2].data.soundName shouldBeEqualIgnoringCase "ht"
+                            events[3].data.soundName shouldBeEqualIgnoringCase "lt"
                         }
 
                         1 -> {
                             // linger(0.5): first half repeated
                             events.size shouldBe 4
-                            events[0].data.sound shouldBeEqualIgnoringCase "bd"
-                            events[1].data.sound shouldBeEqualIgnoringCase "sd"
-                            events[2].data.sound shouldBeEqualIgnoringCase "bd"
-                            events[3].data.sound shouldBeEqualIgnoringCase "sd"
+                            events[0].data.soundName shouldBeEqualIgnoringCase "bd"
+                            events[1].data.soundName shouldBeEqualIgnoringCase "sd"
+                            events[2].data.soundName shouldBeEqualIgnoringCase "bd"
+                            events[3].data.soundName shouldBeEqualIgnoringCase "sd"
                         }
 
                         2 -> {
                             // linger(0.25): first quarter repeated
                             events.size shouldBe 4
-                            events[0].data.sound shouldBeEqualIgnoringCase "bd"
-                            events[1].data.sound shouldBeEqualIgnoringCase "bd"
-                            events[2].data.sound shouldBeEqualIgnoringCase "bd"
-                            events[3].data.sound shouldBeEqualIgnoringCase "bd"
+                            events[0].data.soundName shouldBeEqualIgnoringCase "bd"
+                            events[1].data.soundName shouldBeEqualIgnoringCase "bd"
+                            events[2].data.soundName shouldBeEqualIgnoringCase "bd"
+                            events[3].data.soundName shouldBeEqualIgnoringCase "bd"
                         }
                     }
                 }

@@ -35,7 +35,7 @@ object KlangScriptOscSlot {
 
 ```
 // Script:
-let pad = Osc.register("pad", Osc.sine().analog(Osc.slot.analog))
+let pad = Osc.sine().analog(Osc.slot.analog)
 ```
 
 ## Background — what's in place today

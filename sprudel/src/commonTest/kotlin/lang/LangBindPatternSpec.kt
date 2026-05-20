@@ -6,6 +6,7 @@ import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel._bind
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangBindPatternSpec : StringSpec({
 
@@ -45,7 +46,7 @@ class LangBindPatternSpec : StringSpec({
 
         val events = result.queryArc(0.0, 1.0)
         events shouldHaveSize 1
-        events[0].data.sound shouldBe "hh"
+        events[0].data.soundName shouldBe "hh"
     }
 
     "bindPattern() - null produces silence" {

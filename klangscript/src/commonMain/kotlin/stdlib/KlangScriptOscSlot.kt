@@ -8,13 +8,12 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * Canonical open parameter slots for sprudel-compatible custom sounds.
  *
  * Each slot is the same `IgnitorDsl.Param(name, default)` singleton that built-in
- * sounds use, exposed for user-registered sounds that want to opt in to sprudel
+ * sounds use, exposed for custom sounds that want to opt in to sprudel
  * modulation (`.analog()`, `.voices()`, `.freqSpread()`, etc).
  *
  * ```KlangScript(Executable)
- * let pad = Osc.register("pad",
- *   Osc.sine().analog(OscSlot.analog).lowpass(2000)
- * )
+ * let pad = Osc.sine().analog(OscSlot.analog).lowpass(2000)
+ * note("c").sound(pad)
  * ```
  *
  * Also accessible via `Osc.slot.analog` (member-property chain through the Osc

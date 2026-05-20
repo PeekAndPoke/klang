@@ -3,6 +3,7 @@ package io.peekandpoke.klang.sprudel.lang
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangNSpec : StringSpec({
 
@@ -30,9 +31,9 @@ class LangNSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].data.soundIndex shouldBe 0
-        events[1].data.sound shouldBe "sd"
+        events[1].data.soundName shouldBe "sd"
         events[1].data.soundIndex shouldBe 1
     }
 

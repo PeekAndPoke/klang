@@ -7,6 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangHushSpec : StringSpec({
 
@@ -148,8 +149,8 @@ class LangHushSpec : StringSpec({
                         events.size shouldBe 0
                     } else {
                         events.size shouldBe 2
-                        events[0].data.sound shouldBeEqualIgnoringCase "bd"
-                        events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                        events[0].data.soundName shouldBeEqualIgnoringCase "bd"
+                        events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     }
                 }
             }
@@ -223,8 +224,8 @@ class LangHushSpec : StringSpec({
                         events.size shouldBe 0
                     } else {
                         events.size shouldBe 2
-                        events[0].data.sound shouldBeEqualIgnoringCase "bd"
-                        events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                        events[0].data.soundName shouldBeEqualIgnoringCase "bd"
+                        events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     }
                 }
             }

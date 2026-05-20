@@ -8,7 +8,13 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.apply
+import io.peekandpoke.klang.sprudel.lang.mul
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.s
+import io.peekandpoke.klang.sprudel.lang.seq
+import io.peekandpoke.klang.sprudel.lang.sine
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangWarmthSpec : StringSpec({
 
@@ -125,7 +131,7 @@ class LangWarmthSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "supersaw"
+        events[0].data.soundName shouldBe "supersaw"
         events[0].data.oscParams?.get("warmth") shouldBe 0.25
         events[0].data.note shouldBe "c3"
     }
@@ -165,11 +171,11 @@ class LangWarmthSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 3
-        events[0].data.sound shouldBe "sine"
+        events[0].data.soundName shouldBe "sine"
         events[0].data.oscParams?.get("warmth") shouldBe 0.3
-        events[1].data.sound shouldBe "triangle"
+        events[1].data.soundName shouldBe "triangle"
         events[1].data.oscParams?.get("warmth") shouldBe 0.5
-        events[2].data.sound shouldBe "square"
+        events[2].data.soundName shouldBe "square"
         events[2].data.oscParams?.get("warmth") shouldBe 0.7
     }
 })

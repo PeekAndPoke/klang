@@ -9,8 +9,10 @@ import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangTime
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.infra.KlangCommLink
+import io.peekandpoke.klang.audio_bridge.uniqueId
 import io.peekandpoke.klang.audio_fe.samples.Samples
 
 /**
@@ -89,11 +91,25 @@ class KlangOfflineRenderer(
             val voiceData: VoiceData,
         )
 
-        val events = pattern.queryEvents(
+        val rawEvents = pattern.queryEvents(
             fromCycles = 0.0,
             toCycles = cycles.toDouble(),
             cps = cyclesPerSecond,
-        ).map { CachedEvent(it.startCycles, it.durationCycles, it.toVoiceData()) }
+        )
+
+        // Pre-register inline ignitors with the in-process BE so their synthetic names
+        // (from IgnitorDsl.uniqueId()) are recognised at voice scheduling time.
+        rawEvents.asSequence()
+            .map { it.sound }
+            .filterIsInstance<SoundValue.Osc>()
+            .forEach { soundValue ->
+                val name = soundValue.osc.uniqueId()
+                if (!ignitorRegistry.contains(name)) {
+                    ignitorRegistry.register(name, soundValue.osc)
+                }
+            }
+
+        val events = rawEvents.map { CachedEvent(it.startCycles, it.durationCycles, it.toVoiceData()) }
 
         // 3. Preload samples
         if (samples != null) {

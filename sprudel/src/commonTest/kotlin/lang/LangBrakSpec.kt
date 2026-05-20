@@ -7,6 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangBrakSpec : StringSpec({
 
@@ -117,15 +118,15 @@ class LangBrakSpec : StringSpec({
         // Cycle 0: straight beat
         val cycle0 = pattern.queryArc(0.0, 1.0).sortedBy { it.part.begin }
         cycle0.size shouldBe 2
-        cycle0[0].data.sound shouldBe "bd"
-        cycle0[1].data.sound shouldBe "sd"
+        cycle0[0].data.soundName shouldBe "bd"
+        cycle0[1].data.soundName shouldBe "sd"
 
         // Cycle 1: syncopated
         val cycle1 = pattern.queryArc(1.0, 2.0).sortedBy { it.part.begin }
         cycle1.size shouldBe 2
         // Both events shifted by 0.25 cycles
-        cycle1[0].data.sound shouldBe "bd"
-        cycle1[1].data.sound shouldBe "sd"
+        cycle1[0].data.soundName shouldBe "bd"
+        cycle1[1].data.soundName shouldBe "sd"
         cycle1[0].part.begin.toDouble() shouldBe (1.25 plusOrMinus EPSILON)
     }
 

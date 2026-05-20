@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.sprudel.graal
 
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -322,7 +323,7 @@ class GraalSprudelPattern(
                 postGain = postGain,
                 // Sound samples
                 bank = bank,
-                sound = sound,
+                sound = sound?.let(SoundValue::Named),
                 soundIndex = soundIndex,
                 // Oscillator parameters
                 oscParams = oscParams,

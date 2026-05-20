@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangChordSpec : StringSpec({
 
@@ -73,6 +74,6 @@ class LangChordSpec : StringSpec({
 
         events.size shouldBe 1
         events[0].data.chord shouldBe "C"
-        events[0].data.sound shouldBe "piano"
+        events[0].data.soundName shouldBe "piano"
     }
 })

@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.sprudel.soundName
 
 /**
  * Tests for pickOut() and pickmodOut() with outerJoin behavior.
@@ -100,8 +101,8 @@ class LangPickOuterSpec : StringSpec({
         val result = seq("0 1").pickOut(lookup)
         val events = result.queryArc(0.0, 1.0)
         events shouldHaveSize 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "cp"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "cp"
     }
 
     "pickOut() clips events (matching JS behavior)" {
@@ -112,7 +113,7 @@ class LangPickOuterSpec : StringSpec({
             events shouldHaveSize 1
             events[0].part.begin.toDouble() shouldBeExactly 0.0
             events[0].part.end.toDouble() shouldBeExactly 0.5
-            events[0].data.sound shouldBe "bd"
+            events[0].data.soundName shouldBe "bd"
         }
     }
 })

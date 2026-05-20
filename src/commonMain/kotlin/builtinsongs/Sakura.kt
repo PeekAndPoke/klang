@@ -16,13 +16,12 @@ import * from "sprudel"
 
 let wait = 14
 
-let koto = Osc.register("koto", Osc.pluck()
+let koto = Osc.pluck()
       .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
       .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
       .highpass(200)
-)
 
-let shaku = Osc.register("shaku", Osc.sine().mul(0.6)
+let shaku = Osc.sine().mul(0.6)
       .plus(Osc.triangle().mul(0.25))
       .plus(Osc.perlin(13).mul(0.05))
       .plus(Osc.perlin(21).mul(0.10).highpass(2000).adsr(0.02, 0.2, 0.03, 0.02))
@@ -30,33 +29,27 @@ let shaku = Osc.register("shaku", Osc.sine().mul(0.6)
       .analog(0.2).vibrato(2, Osc.perlin(1).mul(0.1).plus(0.15))
       .pitchEnvelope(1, 0.02, 0.1)
       .adsr(0.07, 0.15, 0.8, 0.3)
-)
 
-let kick = Osc.register("kick", Osc.sine()
+let kick = Osc.sine()
       .pitchEnvelope(24, 0.001, 0.04)
       .adsr(0.001, 0.2, 0.0, 0.02)
-)
 
-let rim = Osc.register("rim", Osc.sine(800)
+let rim = Osc.sine(800)
       .plus(Osc.whitenoise().highpass(4000).mul(0.3))
       .lowpass(3000)
       .adsr(0.001, 0.03, 0.0, 0.005)
-)
 
-let brush = Osc.register("brush", Osc.perlin(30).mul(0.5)
+let brush = Osc.perlin(30).mul(0.5)
       .plus(Osc.whitenoise().mul(0.3))
       .highpass(2000).lowpass(8000)
       .adsr(0.01, 0.08, 0.0, 0.02)
-)
 
-let sub = Osc.register("sub", Osc.sine().lowpass(200)
+let sub = Osc.sine().lowpass(200)
       .adsr(0.005, 0.3, 0.0, 0.05)
-)
 
-let pad = Osc.register("pad", Osc.supersine().analog(0.3)
+let pad = Osc.supersine().analog(0.3)
       .lowpass(Osc.sine(0.08).plus(1).times(300).plus(800))
       .adsr(0.8, 0.5, 0.9, 2.0)
-)
 
 
 stack(

@@ -3,6 +3,7 @@
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -24,7 +25,7 @@ private val sndPluckMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "pluck").withOscParams(
+    copy(sound = SoundValue.Named("pluck")).withOscParams(
         "decay" to parts.getOrNull(0),
         "brightness" to parts.getOrNull(1),
         "pickPosition" to parts.getOrNull(2),
@@ -34,7 +35,7 @@ private val sndPluckMutation = voiceModifier {
 
 private fun applySndPluck(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "pluck") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("pluck")) }
     } else {
         source._applyControlFromParams(args, sndPluckMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -120,7 +121,7 @@ private val sndSuperPluckMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "superpluck").withOscParams(
+    copy(sound = SoundValue.Named("superpluck")).withOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
         "decay" to parts.getOrNull(2),
@@ -132,7 +133,7 @@ private val sndSuperPluckMutation = voiceModifier {
 
 private fun applySndSuperPluck(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "superpluck") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("superpluck")) }
     } else {
         source._applyControlFromParams(args, sndSuperPluckMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -209,7 +210,7 @@ fun PatternMapperFn.sndSuperPluck(params: PatternLike? = null, callInfo: CallInf
 // -- sndSine() --------------------------------------------------------------------------------------------------------
 
 private fun applySndSine(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = "sine") }
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("sine")) }
 }
 
 /**
@@ -252,7 +253,7 @@ fun PatternMapperFn.sndSine(params: PatternLike? = null, callInfo: CallInfo? = n
 // -- sndSaw() ---------------------------------------------------------------------------------------------------------
 
 private fun applySndSaw(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = "sawtooth") }
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("sawtooth")) }
 }
 
 /**
@@ -295,7 +296,7 @@ fun PatternMapperFn.sndSaw(params: PatternLike? = null, callInfo: CallInfo? = nu
 // -- sndSquare() ------------------------------------------------------------------------------------------------------
 
 private fun applySndSquare(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = "square") }
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("square")) }
 }
 
 /**
@@ -338,7 +339,7 @@ fun PatternMapperFn.sndSquare(params: PatternLike? = null, callInfo: CallInfo? =
 // -- sndTriangle() ----------------------------------------------------------------------------------------------------
 
 private fun applySndTriangle(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = "triangle") }
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("triangle")) }
 }
 
 /**
@@ -381,7 +382,7 @@ fun PatternMapperFn.sndTriangle(params: PatternLike? = null, callInfo: CallInfo?
 // -- sndRamp() --------------------------------------------------------------------------------------------------------
 
 private fun applySndRamp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = "ramp") }
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("ramp")) }
 }
 
 /**
@@ -424,7 +425,7 @@ fun PatternMapperFn.sndRamp(params: PatternLike? = null, callInfo: CallInfo? = n
 // -- sndNoise() -------------------------------------------------------------------------------------------------------
 
 private fun applySndNoise(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = "whitenoise") }
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("whitenoise")) }
 }
 
 /**
@@ -467,7 +468,7 @@ fun PatternMapperFn.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = 
 // -- sndBrown() -------------------------------------------------------------------------------------------------------
 
 private fun applySndBrown(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = "brownnoise") }
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("brownnoise")) }
 }
 
 /**
@@ -510,7 +511,7 @@ fun PatternMapperFn.sndBrown(params: PatternLike? = null, callInfo: CallInfo? = 
 // -- sndPink() --------------------------------------------------------------------------------------------------------
 
 private fun applySndPink(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    return source._liftOrReinterpretStringField(args) { copy(sound = "pinknoise") }
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("pinknoise")) }
 }
 
 /**
@@ -556,14 +557,14 @@ private val sndPulzeMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "pulze").withOscParams(
+    copy(sound = SoundValue.Named("pulze")).withOscParams(
         "duty" to parts.getOrNull(0),
     )
 }
 
 private fun applySndPulze(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "pulze") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("pulze")) }
     } else {
         source._applyControlFromParams(args, sndPulzeMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -626,14 +627,14 @@ private val sndDustMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "dust").withOscParams(
+    copy(sound = SoundValue.Named("dust")).withOscParams(
         "density" to parts.getOrNull(0),
     )
 }
 
 private fun applySndDust(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "dust") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("dust")) }
     } else {
         source._applyControlFromParams(args, sndDustMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -696,14 +697,14 @@ private val sndCrackleMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "crackle").withOscParams(
+    copy(sound = SoundValue.Named("crackle")).withOscParams(
         "density" to parts.getOrNull(0),
     )
 }
 
 private fun applySndCrackle(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "crackle") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("crackle")) }
     } else {
         source._applyControlFromParams(args, sndCrackleMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -766,7 +767,7 @@ private val sndSuperSawMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "supersaw").withOscParams(
+    copy(sound = SoundValue.Named("supersaw")).withOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -774,7 +775,7 @@ private val sndSuperSawMutation = voiceModifier {
 
 private fun applySndSuperSaw(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "supersaw") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("supersaw")) }
     } else {
         source._applyControlFromParams(args, sndSuperSawMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -839,7 +840,7 @@ private val sndSuperSineMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "supersine").withOscParams(
+    copy(sound = SoundValue.Named("supersine")).withOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -847,7 +848,7 @@ private val sndSuperSineMutation = voiceModifier {
 
 private fun applySndSuperSine(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "supersine") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("supersine")) }
     } else {
         source._applyControlFromParams(args, sndSuperSineMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -912,7 +913,7 @@ private val sndSuperSquareMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "supersquare").withOscParams(
+    copy(sound = SoundValue.Named("supersquare")).withOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -920,7 +921,7 @@ private val sndSuperSquareMutation = voiceModifier {
 
 private fun applySndSuperSquare(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "supersquare") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("supersquare")) }
     } else {
         source._applyControlFromParams(args, sndSuperSquareMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -985,7 +986,7 @@ private val sndSuperTriMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "supertri").withOscParams(
+    copy(sound = SoundValue.Named("supertri")).withOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -993,7 +994,7 @@ private val sndSuperTriMutation = voiceModifier {
 
 private fun applySndSuperTri(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "supertri") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("supertri")) }
     } else {
         source._applyControlFromParams(args, sndSuperTriMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)
@@ -1058,7 +1059,7 @@ private val sndSuperRampMutation = voiceModifier {
     val parts = it?.toString()?.split(":")
         ?.map { d -> d.trim().toDoubleOrNull() } ?: emptyList()
 
-    copy(sound = "superramp").withOscParams(
+    copy(sound = SoundValue.Named("superramp")).withOscParams(
         "voices" to parts.getOrNull(0),
         "freqSpread" to parts.getOrNull(1),
     )
@@ -1066,7 +1067,7 @@ private val sndSuperRampMutation = voiceModifier {
 
 private fun applySndSuperRamp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        source._liftOrReinterpretStringField(args) { copy(sound = "superramp") }
+        source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("superramp")) }
     } else {
         source._applyControlFromParams(args, sndSuperRampMutation) { src, ctrl ->
             src.copy(sound = ctrl.sound ?: src.sound).mergeOscParamsFrom(ctrl)

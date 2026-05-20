@@ -7,6 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangFastSpec : StringSpec({
 
@@ -43,11 +44,11 @@ class LangFastSpec : StringSpec({
 
         // It should contain the full "bd hh" sequence in 0.5 time
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].part.end.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
 
-        events[1].data.sound shouldBe "hh"
+        events[1].data.soundName shouldBe "hh"
         events[1].part.begin.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
         events[1].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
@@ -57,7 +58,7 @@ class LangFastSpec : StringSpec({
         val events = p.queryArc(0.0, 0.5).sortedBy { it.part.begin }
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
@@ -76,7 +77,7 @@ class LangFastSpec : StringSpec({
         val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
@@ -85,7 +86,7 @@ class LangFastSpec : StringSpec({
         val events = p?.queryArc(0.0, 0.5)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 

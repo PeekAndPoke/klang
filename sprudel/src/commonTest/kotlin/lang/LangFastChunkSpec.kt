@@ -7,6 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangFastChunkSpec : StringSpec({
 
@@ -106,16 +107,16 @@ class LangFastChunkSpec : StringSpec({
                             // Chunk 0: first element gets gain
                             events[0].data.gain shouldBe 0.8
                             events[1].data.gain shouldBe null
-                            events[0].data.sound shouldBeEqualIgnoringCase "bd"
-                            events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                            events[0].data.soundName shouldBeEqualIgnoringCase "bd"
+                            events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                         }
 
                         1 -> {
                             // Chunk 1: second element gets gain
                             events[0].data.gain shouldBe null
                             events[1].data.gain shouldBe 0.8
-                            events[0].data.sound shouldBeEqualIgnoringCase "bd"
-                            events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                            events[0].data.soundName shouldBeEqualIgnoringCase "bd"
+                            events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                         }
                     }
                 }

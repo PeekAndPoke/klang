@@ -7,6 +7,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel._lift
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangLiftSpec : StringSpec({
 
@@ -48,7 +49,7 @@ class LangLiftSpec : StringSpec({
 
         val events = result.queryArc(0.0, 0.5)
         events shouldHaveSize 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.duration.toDouble() shouldBe (0.25 plusOrMinus EPSILON)
     }
 
@@ -76,8 +77,8 @@ class LangLiftSpec : StringSpec({
 
         val events = result.queryArc(0.0, 1.0)
         events shouldHaveSize 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "hh"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "hh"
     }
 
     "lift() - produces events with any transformation" {
@@ -90,6 +91,6 @@ class LangLiftSpec : StringSpec({
 
         val events = result.queryArc(0.0, 1.0)
         events.shouldNotBeEmpty()
-        events.all { it.data.sound in listOf("bd", "hh") } shouldBe true
+        events.all { it.data.soundName in listOf("bd", "hh") } shouldBe true
     }
 })

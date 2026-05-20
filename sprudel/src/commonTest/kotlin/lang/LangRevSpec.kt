@@ -7,6 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangRevSpec : StringSpec({
 
@@ -36,11 +37,11 @@ class LangRevSpec : StringSpec({
         // Then "b" should be first and "a" second
         events.size shouldBe 2
 
-        events[0].data.sound shouldBe "b"
+        events[0].data.soundName shouldBe "b"
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-        events[1].data.sound shouldBe "a"
+        events[1].data.soundName shouldBe "a"
         events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
@@ -60,8 +61,8 @@ class LangRevSpec : StringSpec({
         // 1.0-1.5 (a) -> 0.5-1.0
         // 1.5-2.0 (b) -> 0.0-0.5
         events.size shouldBe 2
-        events[0].data.sound shouldBe "b" // From the very end of the 2nd cycle
-        events[1].data.sound shouldBe "a" // From the first half of the 2nd cycle
+        events[0].data.soundName shouldBe "b" // From the very end of the 2nd cycle
+        events[1].data.soundName shouldBe "a" // From the first half of the 2nd cycle
     }
 
     "rev() works as a standalone function" {
@@ -69,7 +70,7 @@ class LangRevSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "hh"
+        events[0].data.soundName shouldBe "hh"
     }
 
     "rev() works as extension on String" {
@@ -85,7 +86,7 @@ class LangRevSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "hh"
+        events[0].data.soundName shouldBe "hh"
     }
 
     "rev(n) works in compiled code" {
@@ -93,7 +94,7 @@ class LangRevSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "b"
+        events[0].data.soundName shouldBe "b"
     }
 
     "rev() with discrete pattern control" {

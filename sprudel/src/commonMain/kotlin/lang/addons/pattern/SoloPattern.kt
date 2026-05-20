@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.sprudel.lang.addons.pattern
 
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -64,7 +65,7 @@ class SoloPattern(
                 data = SprudelVoiceData.empty.copy(
                     note = "a",
                     freqHz = 0.0,
-                    sound = "sine",
+                    sound = SoundValue.Named("sine"),
                     gain = 0.000001,
                     solo = evt?.data?.value?.asDouble?.coerceIn(0.0, 1.0),
                     patternId = patternId,

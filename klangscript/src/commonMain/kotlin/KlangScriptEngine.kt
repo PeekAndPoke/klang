@@ -230,9 +230,9 @@ class KlangScriptEngine private constructor(
      * The builder collects all registrations (libraries, functions, types, methods)
      * and applies them when build() is called, producing an immutable engine.
      *
-     * The [attrs] bag holds engine-level state (e.g. a player registrar callback). Mutate
-     * it directly from extension functions during configuration — it is handed to the
-     * built engine as-is.
+     * The [attrs] bag holds engine-level typed state for cross-cutting configuration
+     * that does not fit into the library/symbol registries. Mutate it directly from
+     * extension functions during configuration — it is handed to the built engine as-is.
      */
     class Builder(
         private val registry: KlangScriptExtensionBuilder = KlangScriptExtensionBuilder(),

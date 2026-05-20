@@ -17,7 +17,7 @@ import * from "sprudel"
 // ── Instruments ─────────────────────────────────────────────────────
 
 // Blockflöte — more breath presence
-let blockfloete = Osc.register("blockfloete",
+let blockfloete =
     Osc.sine().mul(0.55)
         .plus(Osc.triangle().mul(0.22))
         .plus(Osc.saw().mul(0.01).lowpass(2500))
@@ -32,20 +32,18 @@ let blockfloete = Osc.register("blockfloete",
         .analog(0.06)
         .pitchEnvelope(0.5, 0.005, 0.03)
         .adsr(0.015, 0.08, 0.7, 0.08)
-)
 
 // Guitar — more sustain and release
-let fingerpick = Osc.register("fingerpick",
+let fingerpick =
     Osc.pluck(Osc.freq(), 0.99, 0.45, 0.5)
         .plus(Osc.sine().mul(0.12))
         .plus(Osc.sine().detune(-12).mul(0.03))
         .lowpass(2800)
         .highpass(120)
         .adsr(0.003, 0.6, 0.2, 0.4)
-)
 
 // Pizzicato contrabass
-let contrabass = Osc.register("contrabass",
+let contrabass =
   Osc.pluck(Osc.freq(), 0.995, 0.25, 0.55, 0.05)
     .pitchEnvelope(0.5, 0.003, 0.02)
     .plus(Osc.pluck(Osc.freq(), 0.995, 0.25, 0.55, 0.05).detune(0.05).mul(0.15))
@@ -56,7 +54,6 @@ let contrabass = Osc.register("contrabass",
     .lowpass(Osc.constant(300).plus(Osc.constant(1200).adsr(0.005, 0.2, 0.0, 0.05)))
     .highpass(30).warmth(600).analog(0.04)
     .adsr(0.005, 0.5, 0.0, 0.15)
-)
 
 // ── Part 1: Opening lament (Dm - Gm - C - F) ───────────────────────
 let melody1 = note("<[d4 f4 e4 d4] [c4 a4 g4 f4] [d4 g4 f4 e4] [c4 bb4 a4 g4] [d5 c5 bb4 a4] [g4 e4 d4 f4] [a4 g4 f4 e4] [d4 c4 d4 ~]>")

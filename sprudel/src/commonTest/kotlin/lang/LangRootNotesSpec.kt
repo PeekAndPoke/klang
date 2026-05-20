@@ -4,6 +4,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangRootNotesSpec : StringSpec({
 
@@ -61,7 +62,7 @@ class LangRootNotesSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events.all { it.data.sound == "bass" } shouldBe true
+        events.all { it.data.soundName == "bass" } shouldBe true
     }
 
     "rootNotes() timing preservation" {

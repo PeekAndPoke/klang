@@ -8,7 +8,12 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.apply
+import io.peekandpoke.klang.sprudel.lang.mul
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.s
+import io.peekandpoke.klang.sprudel.lang.seq
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangMergeSpec : StringSpec({
 
@@ -30,9 +35,9 @@ class LangMergeSpec : StringSpec({
         ) { _, events ->
             events.shouldHaveSize(2)
             events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)  // source value preserved
-            events[0].data.sound shouldBe "sine"                                // sound from control
+            events[0].data.soundName shouldBe "sine"                                // sound from control
             events[1].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
-            events[1].data.sound shouldBe "supersaw"
+            events[1].data.soundName shouldBe "supersaw"
         }
     }
 
@@ -45,9 +50,9 @@ class LangMergeSpec : StringSpec({
         assertSoftly {
             events.shouldHaveSize(2)
             events[0].data.note shouldBe "c3"
-            events[0].data.sound shouldBe "sine"
+            events[0].data.soundName shouldBe "sine"
             events[1].data.note shouldBe "d3"
-            events[1].data.sound shouldBe "supersaw"
+            events[1].data.soundName shouldBe "supersaw"
         }
     }
 
@@ -59,9 +64,9 @@ class LangMergeSpec : StringSpec({
         assertSoftly {
             events.shouldHaveSize(2)
             events[0].data.oscParams?.get("warmth") shouldBe (0.3 plusOrMinus EPSILON)  // source warmth preserved
-            events[0].data.sound shouldBe "sine"                        // sound from control
+            events[0].data.soundName shouldBe "sine"                        // sound from control
             events[1].data.oscParams?.get("warmth") shouldBe (0.7 plusOrMinus EPSILON)
-            events[1].data.sound shouldBe "supersaw"
+            events[1].data.soundName shouldBe "supersaw"
         }
     }
 
@@ -73,9 +78,9 @@ class LangMergeSpec : StringSpec({
         assertSoftly {
             events.shouldHaveSize(2)
             events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
-            events[0].data.sound shouldBe "sine"
+            events[0].data.soundName shouldBe "sine"
             events[1].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
-            events[1].data.sound shouldBe "supersaw"
+            events[1].data.soundName shouldBe "supersaw"
         }
     }
 
@@ -87,9 +92,9 @@ class LangMergeSpec : StringSpec({
         assertSoftly {
             events.shouldHaveSize(2)
             events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)  // 1.0 * 2 = 2.0
-            events[0].data.sound shouldBe "sine"                                 // sound from control
+            events[0].data.soundName shouldBe "sine"                                 // sound from control
             events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)  // 2.0 * 2 = 4.0
-            events[1].data.sound shouldBe "supersaw"
+            events[1].data.soundName shouldBe "supersaw"
         }
     }
 
@@ -102,9 +107,9 @@ class LangMergeSpec : StringSpec({
         assertSoftly {
             events.shouldHaveSize(2)
             events[0].data.value?.asDouble shouldBe (2.0 plusOrMinus EPSILON)
-            events[0].data.sound shouldBe "sine"
+            events[0].data.soundName shouldBe "sine"
             events[1].data.value?.asDouble shouldBe (4.0 plusOrMinus EPSILON)
-            events[1].data.sound shouldBe "supersaw"
+            events[1].data.soundName shouldBe "supersaw"
         }
     }
 })

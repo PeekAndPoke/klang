@@ -5,6 +5,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.peekandpoke.klang.audio_bridge.FilterDef
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import kotlinx.serialization.json.Json
 
 class SprudelVoiceDataSpec : StringSpec({
@@ -154,7 +155,7 @@ class SprudelVoiceDataSpec : StringSpec({
             gain = 0.8,
             legato = 0.9,
             bank = "MPC60",
-            sound = "bd",
+            sound = SoundValue.Named("bd"),
             soundIndex = 2,
             oscParams = mapOf("density" to 0.5, "panSpread" to 0.3, "freqSpread" to 0.1, "voices" to 3.0),
             accelerate = 0.05,

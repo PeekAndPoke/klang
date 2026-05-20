@@ -19,6 +19,16 @@ interface KlangPatternEvent {
     /** Source locations for code highlighting */
     val sourceLocations: SourceLocationChain?
 
-    /** Convert to engine-level voice data */
+    /**
+     * The sound this event references, if any. Default `null` for pattern types that
+     * don't carry [SoundValue]. Pattern languages that may carry an inline ignitor
+     * (e.g. sprudel) override to expose the event's [SoundValue].
+     *
+     * Used by the playback's wire-emission step to pre-register inline ignitors with
+     * the backend before voice events that reference them are scheduled.
+     */
+    val sound: SoundValue? get() = null
+
+    /** Convert to engine-level voice data. */
     fun toVoiceData(): VoiceData
 }

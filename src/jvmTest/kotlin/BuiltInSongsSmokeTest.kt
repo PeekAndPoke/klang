@@ -2,9 +2,7 @@ package io.peekandpoke.klang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
-import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.klangScript
-import io.peekandpoke.klang.script.stdlib.KlangScriptOsc
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.sprudelLib
 
@@ -18,12 +16,10 @@ import io.peekandpoke.klang.sprudel.lang.sprudelLib
  */
 class BuiltInSongsSmokeTest : StringSpec({
 
-    // Engine matches the Cli's `compilePattern` setup: sprudel registered,
-    // built-in songs registered as modules, and a no-op Osc registrar so
-    // songs that call `Osc.register(...)` (Sakura, Irish Lament, ...) compile
-    // without an attached audio player.
+    // Engine matches the Cli's `compilePattern` setup. Inline ignitors
+    // (`val foo = Osc.sine()...; .sound(foo)`) are values now — no registrar
+    // wiring needed at compile time.
     fun engine() = klangScript {
-        attrs[KlangScriptOsc.REGISTRAR_KEY] = { name: String, _: IgnitorDsl -> name }
         registerLibrary(sprudelLib)
         registerBuiltInSongsAsModules()
     }

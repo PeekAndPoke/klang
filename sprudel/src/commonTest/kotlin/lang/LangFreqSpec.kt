@@ -7,6 +7,7 @@ import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangFreqSpec : StringSpec({
 
@@ -64,7 +65,7 @@ class LangFreqSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events shouldHaveSize 1
-        events[0].data.sound shouldBe "saw"
+        events[0].data.soundName shouldBe "saw"
         events[0].data.freqHz shouldBe 220.0
     }
 

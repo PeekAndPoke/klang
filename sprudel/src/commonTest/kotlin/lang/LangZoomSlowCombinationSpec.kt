@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangZoomSlowCombinationSpec : StringSpec({
 
@@ -21,8 +22,8 @@ class LangZoomSlowCombinationSpec : StringSpec({
         // Should have "bd" and "sd" stretched to fill full cycle
         assertSoftly {
             events.size shouldBe 2
-            events[0].data.sound shouldBe "bd"
-            events[1].data.sound shouldBe "sd"
+            events[0].data.soundName shouldBe "bd"
+            events[1].data.soundName shouldBe "sd"
 
             // Each event should be 0.5 cycles long (stretched from 0.25)
             events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
@@ -46,10 +47,10 @@ class LangZoomSlowCombinationSpec : StringSpec({
         // Should have "bd sd" compressed to 0.5 cycles, repeating twice
         assertSoftly {
             events.size shouldBe 4  // bd, sd, bd, sd
-            events[0].data.sound shouldBe "bd"
-            events[1].data.sound shouldBe "sd"
-            events[2].data.sound shouldBe "bd"
-            events[3].data.sound shouldBe "sd"
+            events[0].data.soundName shouldBe "bd"
+            events[1].data.soundName shouldBe "sd"
+            events[2].data.soundName shouldBe "bd"
+            events[3].data.soundName shouldBe "sd"
 
             // Each event should be 0.25 cycles long
             events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
@@ -82,10 +83,10 @@ class LangZoomSlowCombinationSpec : StringSpec({
         // Result: "bd sd bd sd" each 0.25 cycles long
         assertSoftly {
             events.size shouldBe 4  // bd, sd, bd, sd
-            events[0].data.sound shouldBe "bd"
-            events[1].data.sound shouldBe "sd"
-            events[2].data.sound shouldBe "bd"
-            events[3].data.sound shouldBe "sd"
+            events[0].data.soundName shouldBe "bd"
+            events[1].data.soundName shouldBe "sd"
+            events[2].data.soundName shouldBe "bd"
+            events[3].data.soundName shouldBe "sd"
 
             // Each event should be 0.25 cycles long
             events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)

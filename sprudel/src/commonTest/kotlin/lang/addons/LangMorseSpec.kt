@@ -8,6 +8,7 @@ import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.s
 import io.peekandpoke.klang.sprudel.lang.sound
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangMorseSpec : StringSpec({
 
@@ -111,7 +112,7 @@ class LangMorseSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0)
 
         events.shouldNotBeEmpty()
-        events.all { it.data.sound == "sawtooth" } shouldBe true
+        events.all { it.data.soundName == "sawtooth" } shouldBe true
     }
 
     "morse() works with sound pattern" {
@@ -119,7 +120,7 @@ class LangMorseSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.shouldNotBeEmpty()
-        events.all { it.data.sound == "sine" } shouldBe true
+        events.all { it.data.soundName == "sine" } shouldBe true
     }
 
     "morse() works in compiled code" {

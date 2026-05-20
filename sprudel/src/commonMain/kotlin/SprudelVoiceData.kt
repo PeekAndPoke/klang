@@ -4,7 +4,9 @@ import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.FilterEnvelope
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
+import io.peekandpoke.klang.audio_bridge.uniqueId
 import kotlinx.serialization.Serializable
 
 /**
@@ -36,8 +38,13 @@ data class SprudelVoiceData(
     // Sound, bank, sound index
     /** Sample bank (e.g. "MPC60" or "AkaiMPC60"), optional.*/
     val bank: String?,
-    /** Parsed from osc if it looks like "bd:2". sound="bd", soundIndex=2 */
-    val sound: String?,
+    /**
+     * The sound this voice references. Either a [SoundValue.Named] (sample bank entry,
+     * pre-registered ignitor, etc., possibly with `name:index` form parsed into [soundIndex])
+     * or a [SoundValue.Osc] inlining an [IgnitorDsl] tree — the latter gets denormalized to
+     * a synthetic name at the wire boundary by [toVoiceData].
+     */
+    val sound: SoundValue?,
     /** Sound index */
     val soundIndex: Int?,
 
@@ -474,8 +481,19 @@ data class SprudelVoiceData(
      * Maps flat fields to complex objects:
      * - attack, decay, sustain, release → AdsrEnvelope
      * - cutoff/resonance, hcutoff/hresonance, bandf/bandq, notchf/nresonance → FilterDefs
+     *
+     * For inline ignitors ([SoundValue.Osc]) the wire-level `sound` name is resolved via
+     * the process-wide [uniqueId] map — playbacks are expected to pre-register inline
+     * ignitors with their backend so that name is already known to the runtime by the
+     * time voice events referencing it are scheduled.
      */
     fun toVoiceData(): VoiceData {
+        val soundName: String? = when (val s = sound) {
+            null -> null
+            is SoundValue.Named -> s.name
+            is SoundValue.Osc -> s.osc.uniqueId()
+        }
+
         // Build filter list from flat fields, each with its own resonance
         val filters = buildList {
             cutoff?.let { cutoffValue ->
@@ -590,7 +608,7 @@ data class SprudelVoiceData(
             postGain = postGain,
             legato = legato,
             bank = bank,
-            sound = sound,
+            sound = soundName,
             soundIndex = soundIndex,
             oscParams = oscParams,
             filters = FilterDefs(filters),
@@ -1014,3 +1032,7 @@ fun SprudelVoiceData.mergeOscParamsFrom(other: SprudelVoiceData): SprudelVoiceDa
     if (otherParams.isNullOrEmpty()) return this
     return copy(oscParams = (oscParams.orEmpty()) + otherParams)
 }
+
+/** Convenience accessor that extracts the [SoundValue.Named.name] from [SprudelVoiceData.sound], or null if [sound] is null or a [SoundValue.Osc]. */
+val SprudelVoiceData.soundName: String? get() = (sound as? SoundValue.Named)?.name
+

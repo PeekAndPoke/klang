@@ -14,6 +14,7 @@ import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.gain
 import io.peekandpoke.klang.sprudel.lang.s
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangSoloSpec : StringSpec({
 
@@ -65,7 +66,7 @@ class LangSoloSpec : StringSpec({
                         .filter { it.isOnset }
 
                     events.size shouldBe 1
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].data.solo shouldBe 0.97
                 }
             }
@@ -194,9 +195,9 @@ class LangSoloSpec : StringSpec({
                     events.size shouldBe 2
 
                     val expectedSolo = if ((cycle % 2) == 0) 1.0 else 0.0
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].data.solo shouldBe expectedSolo
-                    events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[1].data.solo shouldBe expectedSolo
                 }
             }
@@ -213,9 +214,9 @@ class LangSoloSpec : StringSpec({
                         .filter { it.isOnset }
 
                     events.size shouldBe 2
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].data.solo shouldBe 1.0
-                    events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[1].data.solo shouldBe 0.0
                 }
             }

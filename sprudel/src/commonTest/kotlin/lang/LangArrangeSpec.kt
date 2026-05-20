@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangArrangeSpec : StringSpec({
 
@@ -17,11 +18,11 @@ class LangArrangeSpec : StringSpec({
 
         // Then each pattern takes 1 cycle
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
-        events[1].data.sound shouldBe "hh"
+        events[1].data.soundName shouldBe "hh"
         events[1].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[1].part.end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
@@ -37,15 +38,15 @@ class LangArrangeSpec : StringSpec({
         events.size shouldBe 3
 
         // First two cycles: bd
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
-        events[1].data.sound shouldBe "bd"
+        events[1].data.soundName shouldBe "bd"
         events[1].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[1].part.end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
 
         // Third cycle: hh
-        events[2].data.sound shouldBe "hh"
+        events[2].data.soundName shouldBe "hh"
         events[2].part.begin.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
         events[2].part.end.toDouble() shouldBe (3.0 plusOrMinus EPSILON)
     }
@@ -57,8 +58,8 @@ class LangArrangeSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "hh"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "hh"
     }
 
     "arrange() works as extension on String" {
@@ -88,8 +89,8 @@ class LangArrangeSpec : StringSpec({
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "hh"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "hh"
     }
 
     "arrange() works as method in compiled code" {
@@ -97,7 +98,7 @@ class LangArrangeSpec : StringSpec({
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
-        events[1].data.sound shouldBe "hh"
+        events[0].data.soundName shouldBe "bd"
+        events[1].data.soundName shouldBe "hh"
     }
 })

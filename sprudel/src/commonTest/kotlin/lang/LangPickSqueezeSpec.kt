@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangPickSqueezeSpec : StringSpec({
 
@@ -45,8 +46,8 @@ class LangPickSqueezeSpec : StringSpec({
         val events = result.queryArc(0.0, 1.0)
         assertSoftly {
             events shouldHaveSize 4
-            events[0].data.sound shouldBe "bd"
-            events[3].data.sound shouldBe "cp"
+            events[0].data.soundName shouldBe "bd"
+            events[3].data.soundName shouldBe "cp"
         }
     }
 
@@ -59,8 +60,8 @@ class LangPickSqueezeSpec : StringSpec({
         val events = result.queryArc(0.0, 1.0)
         assertSoftly {
             events shouldHaveSize 4
-            events[0].data.sound shouldBe "bd"
-            events[2].data.sound shouldBe "sn"
+            events[0].data.soundName shouldBe "bd"
+            events[2].data.soundName shouldBe "sn"
         }
     }
 

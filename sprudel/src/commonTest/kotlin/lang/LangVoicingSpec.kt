@@ -6,6 +6,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.soundName
 import io.peekandpoke.klang.tones.note.Note
 
 class LangVoicingSpec : StringSpec({
@@ -55,7 +56,7 @@ class LangVoicingSpec : StringSpec({
 
         events.size shouldBe 3
         // Other properties like sound should be preserved
-        events.all { it.data.sound == "piano" } shouldBe true
+        events.all { it.data.soundName == "piano" } shouldBe true
         // But chord property is removed
         events.all { it.data.chord == null } shouldBe true
     }

@@ -7,6 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangSlowSpec : StringSpec({
 
@@ -36,11 +37,11 @@ class LangSlowSpec : StringSpec({
 
         // Then the two sounds are stretched across 2 cycles
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
 
-        events[1].data.sound shouldBe "hh"
+        events[1].data.soundName shouldBe "hh"
         events[1].part.begin.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[1].part.end.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
@@ -51,9 +52,9 @@ class LangSlowSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
-        events[1].data.sound shouldBe "hh"
+        events[1].data.soundName shouldBe "hh"
         events[1].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }
 
@@ -78,7 +79,7 @@ class LangSlowSpec : StringSpec({
 
         // Then it plays normally
         events.size shouldBe 2
-        events.map { it.data.sound } shouldBe listOf("bd", "hh")
+        events.map { it.data.soundName } shouldBe listOf("bd", "hh")
         events[0].part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
@@ -92,7 +93,7 @@ class LangSlowSpec : StringSpec({
 
         // Then each sound takes 1 full cycle
         events.size shouldBe 4
-        events.map { it.data.sound } shouldBe listOf("bd", "hh", "sn", "cp")
+        events.map { it.data.soundName } shouldBe listOf("bd", "hh", "sn", "cp")
 
         events.forEach { event ->
             event.part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
@@ -110,9 +111,9 @@ class LangSlowSpec : StringSpec({
 
         // Then the pattern is slowed by 4 total (2 * 2)
         events.size shouldBe 2
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
         events[0].whole.duration.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
-        events[1].data.sound shouldBe "hh"
+        events[1].data.soundName shouldBe "hh"
         events[1].whole.duration.toDouble() shouldBe (2.0 plusOrMinus EPSILON)
     }
 
@@ -125,7 +126,7 @@ class LangSlowSpec : StringSpec({
 
         // Then we get two events (pattern plays twice as fast)
         events.size shouldBe 2
-        events.all { it.data.sound == "bd" } shouldBe true
+        events.all { it.data.soundName == "bd" } shouldBe true
         events[0].part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
     }
@@ -136,7 +137,7 @@ class LangSlowSpec : StringSpec({
         val events = p?.queryArc(0.0, 2.0)?.sortedBy { it.part.begin } ?: emptyList()
 
         events.size shouldBe 2
-        events.map { it.data.sound } shouldBe listOf("bd", "hh")
+        events.map { it.data.soundName } shouldBe listOf("bd", "hh")
         events[0].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
         events[1].part.duration.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }

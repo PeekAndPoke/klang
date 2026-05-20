@@ -52,16 +52,14 @@ stack(
 import * from "stdlib"
 import * from "sprudel"
 
-let koto = Osc.register("koto", Osc.pluck()
+let koto = Osc.pluck()
   .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
   .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
   .highpass(200)
-)
 
-let kick = Osc.register("kick", Osc.sine()
+let kick = Osc.sine()
   .pitchEnvelope(24, 0.001, 0.04)
   .adsr(0.001, 0.2, 0.0, 0.02)
-)
 
 stack(
   note("a4 b4 c5 b4 a4 [b4 a4] f4@2").sound(koto)

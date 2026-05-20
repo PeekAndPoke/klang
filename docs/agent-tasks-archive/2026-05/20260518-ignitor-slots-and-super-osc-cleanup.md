@@ -181,9 +181,8 @@ import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
  * modulation calls like `.analog()`, `.voices()`, `.freqSpread()`, etc.
  *
  * ```KlangScript(Executable)
- * let pad = Osc.register("pad",
- *   Osc.sine().analog(OscSlot.analog()).lowpass(2000)
- * )
+ * let pad = *   Osc.sine().analog(OscSlot.analog()).lowpass(2000)
+ *
  * ```
 
 */

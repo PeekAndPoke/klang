@@ -8,6 +8,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangSndSpec : StringSpec({
 
@@ -23,7 +24,7 @@ class LangSndSpec : StringSpec({
             "script apply(sndSine())" to SprudelPattern.compile("""note("c3").apply(sndSine())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.sound shouldBe "sine"
+            events[0].data.soundName shouldBe "sine"
         }
     }
 
@@ -37,7 +38,7 @@ class LangSndSpec : StringSpec({
             "script apply(sndSaw())" to SprudelPattern.compile("""note("c3").apply(sndSaw())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.sound shouldBe "sawtooth"
+            events[0].data.soundName shouldBe "sawtooth"
         }
     }
 
@@ -51,7 +52,7 @@ class LangSndSpec : StringSpec({
             "script apply(sndSquare())" to SprudelPattern.compile("""note("c3").apply(sndSquare())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.sound shouldBe "square"
+            events[0].data.soundName shouldBe "square"
         }
     }
 
@@ -65,7 +66,7 @@ class LangSndSpec : StringSpec({
             "script apply(sndTriangle())" to SprudelPattern.compile("""note("c3").apply(sndTriangle())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.sound shouldBe "triangle"
+            events[0].data.soundName shouldBe "triangle"
         }
     }
 
@@ -79,7 +80,7 @@ class LangSndSpec : StringSpec({
             "script apply(sndRamp())" to SprudelPattern.compile("""note("c3").apply(sndRamp())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.sound shouldBe "ramp"
+            events[0].data.soundName shouldBe "ramp"
         }
     }
 
@@ -93,7 +94,7 @@ class LangSndSpec : StringSpec({
             "script apply(sndNoise())" to SprudelPattern.compile("""note("c3").apply(sndNoise())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.sound shouldBe "whitenoise"
+            events[0].data.soundName shouldBe "whitenoise"
         }
     }
 
@@ -107,7 +108,7 @@ class LangSndSpec : StringSpec({
             "script apply(sndBrown())" to SprudelPattern.compile("""note("c3").apply(sndBrown())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.sound shouldBe "brownnoise"
+            events[0].data.soundName shouldBe "brownnoise"
         }
     }
 
@@ -121,7 +122,7 @@ class LangSndSpec : StringSpec({
             "script apply(sndPink())" to SprudelPattern.compile("""note("c3").apply(sndPink())"""),
         ) { _, events ->
             events.shouldNotBeEmpty()
-            events[0].data.sound shouldBe "pinknoise"
+            events[0].data.soundName shouldBe "pinknoise"
         }
     }
 
@@ -138,7 +139,7 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "pulze"
+                events[0].data.soundName shouldBe "pulze"
                 events[0].data.oscParams?.get("duty") shouldBe 0.25
             }
         }
@@ -148,7 +149,7 @@ class LangSndSpec : StringSpec({
         val p = note("c3").sndPulze()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.sound shouldBe "pulze"
+        events[0].data.soundName shouldBe "pulze"
     }
 
     "sndDust() dsl interface" {
@@ -162,7 +163,7 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "dust"
+                events[0].data.soundName shouldBe "dust"
                 events[0].data.oscParams?.get("density") shouldBe 0.3
             }
         }
@@ -172,7 +173,7 @@ class LangSndSpec : StringSpec({
         val p = note("c3").sndDust()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.sound shouldBe "dust"
+        events[0].data.soundName shouldBe "dust"
     }
 
     "sndCrackle() dsl interface" {
@@ -186,7 +187,7 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "crackle"
+                events[0].data.soundName shouldBe "crackle"
                 events[0].data.oscParams?.get("density") shouldBe 0.5
             }
         }
@@ -196,7 +197,7 @@ class LangSndSpec : StringSpec({
         val p = note("c3").sndCrackle()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.sound shouldBe "crackle"
+        events[0].data.soundName shouldBe "crackle"
     }
 
     // -- two params (voices:freqSpread) -----------------------------------------------------------------------------------
@@ -212,7 +213,7 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "supersaw"
+                events[0].data.soundName shouldBe "supersaw"
                 events[0].data.oscParams?.get("voices") shouldBe 7.0
                 events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
             }
@@ -223,7 +224,7 @@ class LangSndSpec : StringSpec({
         val p = note("c3").sndSuperSaw()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.sound shouldBe "supersaw"
+        events[0].data.soundName shouldBe "supersaw"
     }
 
     "sndSuperSine() dsl interface" {
@@ -237,7 +238,7 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "supersine"
+                events[0].data.soundName shouldBe "supersine"
                 events[0].data.oscParams?.get("voices") shouldBe 5.0
                 events[0].data.oscParams?.get("freqSpread") shouldBe 0.2
             }
@@ -248,7 +249,7 @@ class LangSndSpec : StringSpec({
         val p = note("c3").sndSuperSine()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.sound shouldBe "supersine"
+        events[0].data.soundName shouldBe "supersine"
     }
 
     "sndSuperSquare() dsl interface" {
@@ -262,7 +263,7 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "supersquare"
+                events[0].data.soundName shouldBe "supersquare"
                 events[0].data.oscParams?.get("voices") shouldBe 7.0
                 events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
             }
@@ -273,7 +274,7 @@ class LangSndSpec : StringSpec({
         val p = note("c3").sndSuperSquare()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.sound shouldBe "supersquare"
+        events[0].data.soundName shouldBe "supersquare"
     }
 
     "sndSuperTri() dsl interface" {
@@ -287,7 +288,7 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "supertri"
+                events[0].data.soundName shouldBe "supertri"
                 events[0].data.oscParams?.get("voices") shouldBe 5.0
                 events[0].data.oscParams?.get("freqSpread") shouldBe 0.2
             }
@@ -298,7 +299,7 @@ class LangSndSpec : StringSpec({
         val p = note("c3").sndSuperTri()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.sound shouldBe "supertri"
+        events[0].data.soundName shouldBe "supertri"
     }
 
     "sndSuperRamp() dsl interface" {
@@ -312,7 +313,7 @@ class LangSndSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "superramp"
+                events[0].data.soundName shouldBe "superramp"
                 events[0].data.oscParams?.get("voices") shouldBe 7.0
                 events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
             }
@@ -323,6 +324,6 @@ class LangSndSpec : StringSpec({
         val p = note("c3").sndSuperRamp()
         val events = p.queryArc(0.0, 1.0)
         events.size shouldBe 1
-        events[0].data.sound shouldBe "superramp"
+        events[0].data.soundName shouldBe "superramp"
     }
 })

@@ -3,6 +3,8 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.IgnitorDsl
+import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
@@ -282,10 +284,15 @@ fun n(index: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
 private val soundMutation = voiceModifier {
     if (it == null) return@voiceModifier this
 
+    // An inline ignitor DSL value bypasses the "name:index" string parse and is stored as-is.
+    if (it is IgnitorDsl) {
+        return@voiceModifier copy(sound = SoundValue.Osc(it), value = null)
+    }
+
     val split = it.toString().split(":")
 
     copy(
-        sound = split.getOrNull(0),
+        sound = split.getOrNull(0)?.let { name -> SoundValue.Named(name) },
         // Preserve existing index if the string doesn't specify one.
         soundIndex = split.getOrNull(1)?.toIntOrNull() ?: soundIndex,
         // Preserve existing gain if the string doesn't specify one.
@@ -296,6 +303,13 @@ private val soundMutation = voiceModifier {
 }
 
 private fun applySound(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    // An inline ignitor DSL bypasses the mini-notation parse: stamp every source
+    // event with SoundValue.Osc(dsl). Replaces any previously-set sound.
+    val singleArg = args.singleOrNull()?.value
+    if (singleArg is IgnitorDsl) {
+        return source.reinterpretVoice { vd -> vd.copy(sound = SoundValue.Osc(singleArg), value = null) }
+    }
+
     return if (args.isEmpty()) {
         // TODO: test this
         source.reinterpretVoice {

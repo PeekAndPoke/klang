@@ -8,8 +8,7 @@ These are starting points — tweak parameters to taste.
 ### Flute
 
 ```javascript
-let flute = Osc.register("flute",
-    Osc.sine()
+let flute = Osc.sine()
         .plus(Osc.triangle().mul(0.3))
         .plus(
             Osc.perlin(12).mul(0.2)
@@ -24,14 +23,12 @@ let flute = Osc.register("flute",
         .vibrato(4.5, 0.012)
         .pitchEnvelope(1.5, 0.01, 0.06)
         .adsr(0.06, 0.15, 0.75, 0.2)
-)
 ```
 
 ### Clarinet
 
 ```javascript
-let clarinet = Osc.register("clarinet",
-    Osc.triangle().mul(0.7)
+let clarinet = Osc.triangle().mul(0.7)
         .plus(Osc.square().mul(0.15))
         .plus(Osc.sine().mul(0.15))
         .plus(Osc.perlin(6).mul(0.02))
@@ -44,14 +41,12 @@ let clarinet = Osc.register("clarinet",
         .vibrato(5, 0.003)
         .pitchEnvelope(0.5, 0.01, 0.06)
         .adsr(0.04, 0.08, 0.9, 0.1)
-)
 ```
 
 ### Jazz Clarinet
 
 ```javascript
-let jazzClar = Osc.register("jazzclar",
-    Osc.triangle().mul(0.6)
+let jazzClar = Osc.triangle().mul(0.6)
         .plus(Osc.square().mul(0.25))
         .plus(Osc.sine().mul(0.15))
         .plus(Osc.perlin(8).mul(0.03))
@@ -63,14 +58,12 @@ let jazzClar = Osc.register("jazzclar",
         .vibrato(4.5, 0.01)
         .pitchEnvelope(-1, 0.01, 0.1)
         .adsr(0.03, 0.1, 0.85, 0.12)
-)
 ```
 
 ### Alto Saxophone
 
 ```javascript
-let alto = Osc.register("alto",
-    Osc.square().mul(0.6)
+let alto = Osc.square().mul(0.6)
         .plus(Osc.saw().mul(0.3))
         .plus(Osc.sine().mul(0.1))
         .plus(Osc.perlin(10).mul(0.04))
@@ -82,14 +75,12 @@ let alto = Osc.register("alto",
         .vibrato(4.5, 0.015)
         .pitchEnvelope(-2, 0.01, 0.12)
         .adsr(0.03, 0.1, 0.85, 0.12)
-)
 ```
 
 ### Tenor Saxophone
 
 ```javascript
-let tenor = Osc.register("tenor",
-    Osc.square().mul(0.5)
+let tenor = Osc.square().mul(0.5)
         .plus(Osc.saw().mul(0.4))
         .plus(Osc.sine().mul(0.1))
         .plus(Osc.perlin(8).mul(0.05))
@@ -101,14 +92,12 @@ let tenor = Osc.register("tenor",
         .vibrato(4, 0.018)
         .pitchEnvelope(-3, 0.01, 0.15)
         .adsr(0.04, 0.12, 0.8, 0.15)
-)
 ```
 
 ### Soprano Saxophone
 
 ```javascript
-let soprano = Osc.register("soprano",
-    Osc.square().mul(0.5)
+let soprano = Osc.square().mul(0.5)
         .plus(Osc.saw().mul(0.35))
         .plus(Osc.sine().mul(0.15))
         .plus(Osc.perlin(12).mul(0.03))
@@ -120,7 +109,6 @@ let soprano = Osc.register("soprano",
         .vibrato(5, 0.012)
         .pitchEnvelope(-1.5, 0.01, 0.08)
         .adsr(0.02, 0.08, 0.85, 0.1)
-)
 ```
 
 ## Guitars
@@ -128,69 +116,57 @@ let soprano = Osc.register("soprano",
 ### Acoustic Guitar
 
 ```javascript
-let acoustic = Osc.register("acoustic",
-    Osc.pluck()
+let acoustic = Osc.pluck()
         .highpass(80)
         .lowpass(4000)
-)
 ```
 
 ### Steel String
 
 ```javascript
-let steel = Osc.register("steel",
-    Osc.pluck()
+let steel = Osc.pluck()
         .lowpass(Osc.constant(5000).plus(
             Osc.constant(3000).adsr(0.001, 0.4, 0.0, 0.1)
         ))
         .highpass(100)
-)
 ```
 
 ### Nylon (Classical)
 
 ```javascript
-let nylon = Osc.register("nylon",
-    Osc.pluck()
+let nylon = Osc.pluck()
         .lowpass(2000)
         .warmth(3000)
         .highpass(80)
-)
 ```
 
 ### 12-String
 
 ```javascript
-let twelve = Osc.register("12string",
-    Osc.superpluck()
+let twelve = Osc.superpluck()
         .lowpass(Osc.constant(4000).plus(
             Osc.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)
         ))
         .highpass(100)
-)
 ```
 
 ### Electric Clean
 
 ```javascript
-let electric = Osc.register("electric",
-    Osc.pluck()
+let electric = Osc.pluck()
         .lowpass(6000)
         .highpass(200)
         .phaser(0.3, 0.3)
-)
 ```
 
 ### Electric Distorted
 
 ```javascript
-let crunch = Osc.register("crunch",
-    Osc.pluck()
+let crunch = Osc.pluck()
         .lowpass(8000)
         .distort(0.6)
         .lowpass(4000)
         .highpass(150)
-)
 ```
 
 ## Synth Pads
@@ -198,12 +174,10 @@ let crunch = Osc.register("crunch",
 ### Fat Analog Pad
 
 ```javascript
-let fatpad = Osc.register("fatpad",
-    Osc.supersaw()
+let fatpad = Osc.supersaw()
         .analog(0.3)
         .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
         .adsr(0.2, 0.5, 0.7, 1.0)
-)
 ```
 
 ## Synth Leads
@@ -211,22 +185,18 @@ let fatpad = Osc.register("fatpad",
 ### Plucky Bass
 
 ```javascript
-let bass = Osc.register("pluckbass",
-    Osc.saw()
+let bass = Osc.saw()
         .lowpass(Osc.param("cutoff", 800, "filter cutoff"))
         .adsr(0.005, 0.2, 0.0, 0.05)
-)
 ```
 
 ### Bitcrushed Lead
 
 ```javascript
-let crunchlead = Osc.register("crunchlead",
-    Osc.square()
+let crunchlead = Osc.square()
         .crush(6)
         .lowpass(3000)
         .adsr(0.01, 0.1, 0.8, 0.3)
-)
 ```
 
 ## Bells & Mallet Percussion
@@ -234,8 +204,7 @@ let crunchlead = Osc.register("crunchlead",
 ### Glockenspiel
 
 ```javascript
-let glock = Osc.register("glock",
-    Osc.sine().mul(0.5)
+let glock = Osc.sine().mul(0.5)
         .plus(Osc.sine().detune(19.02).mul(0.3))
         .plus(Osc.sine().detune(27.86).mul(0.15))
         .plus(Osc.sine().detune(31.02).mul(0.1))
@@ -249,14 +218,12 @@ let glock = Osc.register("glock",
             Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)
         ))
         .adsr(0.001, 1.5, 0.0, 0.3)
-)
 ```
 
 ### Celesta
 
 ```javascript
-let celesta = Osc.register("celesta",
-    Osc.sine().mul(0.6)
+let celesta = Osc.sine().mul(0.6)
         .plus(Osc.sine().detune(19.02).mul(0.2))
         .plus(Osc.sine().detune(27.86).mul(0.08))
         .plus(
@@ -267,14 +234,12 @@ let celesta = Osc.register("celesta",
         ))
         .warmth(6000)
         .adsr(0.005, 1.2, 0.0, 0.4)
-)
 ```
 
 ### Music Box
 
 ```javascript
-let musicbox = Osc.register("musicbox",
-    Osc.sine().mul(0.6)
+let musicbox = Osc.sine().mul(0.6)
         .plus(Osc.sine().detune(12).mul(0.3))
         .plus(Osc.sine().detune(24).mul(0.1))
         .plus(
@@ -285,23 +250,19 @@ let musicbox = Osc.register("musicbox",
         )
         .lowpass(6000)
         .adsr(0.001, 0.6, 0.0, 0.1)
-)
 ```
 
 ### FM Bell
 
 ```javascript
-let bell = Osc.register("fmbell",
-    Osc.sine().fm(Osc.sine(), 2.3, 400)
+let bell = Osc.sine().fm(Osc.sine(), 2.3, 400)
         .adsr(0.001, 1.5, 0.0, 0.5)
-)
 ```
 
 ### Marimba
 
 ```javascript
-let marimba = Osc.register("marimba",
-    Osc.sine().mul(0.7)
+let marimba = Osc.sine().mul(0.7)
         .plus(
             Osc.sine().detune(12).mul(0.15)
                 .adsr(0.001, 0.08, 0.0, 0.02)
@@ -320,14 +281,12 @@ let marimba = Osc.register("marimba",
         .warmth(3000)
         .pitchEnvelope(1, 0.001, 0.04)
         .adsr(0.005, 0.5, 0.0, 0.08)
-)
 ```
 
 ### Low Marimba
 
 ```javascript
-let lowMarimba = Osc.register("lowmarimba",
-    Osc.sine().mul(0.8)
+let lowMarimba = Osc.sine().mul(0.8)
         .plus(
             Osc.sine().detune(12).mul(0.1)
                 .adsr(0.001, 0.1, 0.0, 0.02)
@@ -341,14 +300,12 @@ let lowMarimba = Osc.register("lowmarimba",
         .warmth(2000)
         .pitchEnvelope(0.5, 0.001, 0.05)
         .adsr(0.005, 0.8, 0.0, 0.1)
-)
 ```
 
 ### Vibraphone
 
 ```javascript
-let vibes = Osc.register("vibes",
-    Osc.sine().mul(0.5)
+let vibes = Osc.sine().mul(0.5)
         .plus(Osc.sine().detune(19.02).mul(0.25))
         .plus(Osc.sine().detune(27.86).mul(0.12))
         .plus(
@@ -360,7 +317,6 @@ let vibes = Osc.register("vibes",
         .lowpass(6000)
         .tremolo(5.5, 0.3)
         .adsr(0.003, 2.0, 0.0, 0.5)
-)
 ```
 
 ## Percussion
@@ -368,11 +324,9 @@ let vibes = Osc.register("vibes",
 ### Hi-Hat
 
 ```javascript
-let hat = Osc.register("hat",
-    Osc.whitenoise()
+let hat = Osc.whitenoise()
         .highpass(8000)
         .adsr(0.001, 0.05, 0.0, 0.01)
-)
 ```
 
 ---

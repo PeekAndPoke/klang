@@ -10,6 +10,7 @@ import io.kotest.matchers.string.shouldBeEqualIgnoringCase
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangPressSpec : StringSpec({
 
@@ -67,7 +68,7 @@ class LangPressSpec : StringSpec({
 
                     // First event "bd" originally at [0, 0.5]
                     // After press (pressBy 0.5): starts at 0.25, ends at 0.5
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[0].part.begin.toDouble() shouldBe ((cycleDbl + 0.25) plusOrMinus EPSILON)
@@ -75,7 +76,7 @@ class LangPressSpec : StringSpec({
 
                     // Second event "sd" originally at [0.5, 1.0]
                     // After press: starts at 0.75, ends at 1.0
-                    events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                     events[1].part.begin.toDouble() shouldBe ((cycleDbl + 0.75) plusOrMinus EPSILON)
@@ -106,17 +107,17 @@ class LangPressSpec : StringSpec({
                     events.size shouldBe 3
 
                     // Event "bd" at [0, 1/3] -> [1/6, 1/3]
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 1.0 / 6.0) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 1.0 / 3.0) plusOrMinus EPSILON)
 
                     // Event "sd" at [1/3, 2/3] -> [1/2, 2/3]
-                    events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 2.0 / 3.0) plusOrMinus EPSILON)
 
                     // Event "ht" at [2/3, 1] -> [5/6, 1]
-                    events[2].data.sound shouldBeEqualIgnoringCase "ht"
+                    events[2].data.soundName shouldBeEqualIgnoringCase "ht"
                     events[2].whole.begin.toDouble() shouldBe ((cycleDbl + 5.0 / 6.0) plusOrMinus EPSILON)
                     events[2].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
@@ -146,13 +147,13 @@ class LangPressSpec : StringSpec({
 
                     // Event "bd" originally at [0, 0.5]
                     // pressBy(0.75): starts at 0.375 (0 + 0.75*0.5), ends at 0.5
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.375) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                     // Event "sd" originally at [0.5, 1.0]
                     // pressBy(0.75): starts at 0.875 (0.5 + 0.75*0.5), ends at 1.0
-                    events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.875) plusOrMinus EPSILON)
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
@@ -182,13 +183,13 @@ class LangPressSpec : StringSpec({
 
                     // Event "bd" originally at [0, 0.5]
                     // pressBy(0.25): starts at 0.125 (0 + 0.25*0.5), ends at 0.5
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.125) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                     // Event "sd" originally at [0.5, 1.0]
                     // pressBy(0.25): starts at 0.625 (0.5 + 0.25*0.5), ends at 1.0
-                    events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.625) plusOrMinus EPSILON)
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }
@@ -217,12 +218,12 @@ class LangPressSpec : StringSpec({
                     events.size shouldBe 2
 
                     // Event "bd" at [0, 0.5] - no change with pressBy(0)
-                    events[0].data.sound shouldBeEqualIgnoringCase "bd"
+                    events[0].data.soundName shouldBeEqualIgnoringCase "bd"
                     events[0].whole.begin.toDouble() shouldBe ((cycleDbl + 0.0) plusOrMinus EPSILON)
                     events[0].whole.end.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
 
                     // Event "sd" at [0.5, 1.0] - no change
-                    events[1].data.sound shouldBeEqualIgnoringCase "sd"
+                    events[1].data.soundName shouldBeEqualIgnoringCase "sd"
                     events[1].whole.begin.toDouble() shouldBe ((cycleDbl + 0.5) plusOrMinus EPSILON)
                     events[1].whole.end.toDouble() shouldBe ((cycleDbl + 1.0) plusOrMinus EPSILON)
                 }

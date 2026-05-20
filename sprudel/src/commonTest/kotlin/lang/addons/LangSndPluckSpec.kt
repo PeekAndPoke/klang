@@ -9,6 +9,7 @@ import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.gain
 import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangSndPluckSpec : StringSpec({
 
@@ -25,7 +26,7 @@ class LangSndPluckSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "pluck"
+                events[0].data.soundName shouldBe "pluck"
                 events[0].data.oscParams?.get("decay") shouldBe 0.99
                 events[0].data.oscParams?.get("brightness") shouldBe 0.8
             }
@@ -39,7 +40,7 @@ class LangSndPluckSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "pluck"
+        events[0].data.soundName shouldBe "pluck"
         events[0].data.oscParams?.get("decay") shouldBe null
     }
 
@@ -50,7 +51,7 @@ class LangSndPluckSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "pluck"
+        events[0].data.soundName shouldBe "pluck"
         events[0].data.oscParams?.get("decay") shouldBe 0.99
         events[0].data.oscParams?.get("brightness") shouldBe null
     }
@@ -62,7 +63,7 @@ class LangSndPluckSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "pluck"
+        events[0].data.soundName shouldBe "pluck"
         events[0].data.oscParams?.get("decay") shouldBe 0.99
         events[0].data.oscParams?.get("brightness") shouldBe 0.8
     }
@@ -75,7 +76,7 @@ class LangSndPluckSpec : StringSpec({
 
         events.size shouldBe 1
         with(events[0].data) {
-            sound shouldBe "pluck"
+            soundName shouldBe "pluck"
             oscParams?.get("decay") shouldBe 0.996
             oscParams?.get("brightness") shouldBe 0.5
             oscParams?.get("pickPosition") shouldBe 0.2
@@ -90,7 +91,7 @@ class LangSndPluckSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 2
-        events[0].data.sound shouldBe "pluck"
+        events[0].data.soundName shouldBe "pluck"
         events[0].data.oscParams?.get("decay") shouldBe 0.99
         events[0].data.oscParams?.get("brightness") shouldBe 0.8
         events[1].data.oscParams?.get("decay") shouldBe 0.95
@@ -104,7 +105,7 @@ class LangSndPluckSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "pluck"
+        events[0].data.soundName shouldBe "pluck"
         events[0].data.oscParams?.get("decay") shouldBe 0.99
         events[0].data.oscParams?.get("brightness") shouldBe 0.8
         events[0].data.oscParams?.get("pickPosition") shouldBe 0.2
@@ -117,7 +118,7 @@ class LangSndPluckSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "pluck"
+        events[0].data.soundName shouldBe "pluck"
         events[0].data.oscParams?.get("decay") shouldBe 0.996
     }
 
@@ -128,7 +129,7 @@ class LangSndPluckSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "pluck"
+        events[0].data.soundName shouldBe "pluck"
         events[0].data.oscParams?.get("decay") shouldBe 0.99
         events[0].data.gain shouldBe 0.5
     }

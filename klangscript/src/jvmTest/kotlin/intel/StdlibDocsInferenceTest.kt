@@ -255,19 +255,6 @@ class StdlibDocsInferenceTest : StringSpec({
         topLevelAbs!!.receiver shouldBe null
     }
 
-    // ── Builder docs-aware registration ─────────────────────────────────
-
-    "KlangStdLib.create() includes manually registered Osc.register docs" {
-        val lib = io.peekandpoke.klang.script.stdlib.KlangStdLib.create()
-        val registerSymbol = lib.docs.get("register")
-        registerSymbol shouldNotBe null
-        val callable = registerSymbol!!.variants.filterIsInstance<KlangCallable>().firstOrNull()
-        callable shouldNotBe null
-        callable!!.receiver?.simpleName shouldBe "Osc"
-        callable.returnType?.simpleName shouldBe "String"
-        callable.params.map { it.name } shouldBe listOf("name", "dsl")
-    }
-
     // ── Per-variant library field ───────────────────────────────────────
 
     "real stdlib: generated callables carry library=stdlib" {

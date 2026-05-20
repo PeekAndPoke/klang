@@ -52,9 +52,7 @@ IgnitorDsl.Attribute("cps")       → at render time reads from ctx.attributes["
 ### Usage
 
 ```javascript
-let pad = Osc.register("syncPad",
-    Osc.supersaw().tremolo(Osc.cps(), 0.5).lowpass(2000).adsr(0.01, 0.3, 0.5, 0.5)
-)
+let pad = Osc.supersaw().tremolo(Osc.cps(), 0.5).lowpass(2000).adsr(0.01, 0.3, 0.5, 0.5)
 note("c3 e3 g3").sound(pad)
 ```
 
@@ -81,7 +79,7 @@ Future `splitSignalAndJoin()` would share the same source buffer (true signal sp
 ### Implementation
 
 - KlangScript: vararg arrow functions, call each with self, collect IgnitorDsl results
-- Register manually (like `Osc.register()`) since it needs to invoke KlangScript lambdas
+- Register manually since it needs to invoke KlangScript lambdas at construction time
 - Result: `Plus(Plus(b0, b1), b2).div(Constant(numBranches))`
 
 ---
@@ -285,4 +283,3 @@ Play white noise, cross-correlate input and output. Fast, lower quality.
 ## Minor Items
 
 - KSP: nested type alias resolution only one level deep (latent — no chained aliases exist today)
-- `Osc.register()` casts without validation — wrong arg types produce ClassCastException instead of user-friendly error

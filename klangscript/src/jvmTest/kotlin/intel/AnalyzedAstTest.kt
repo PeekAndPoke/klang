@@ -530,12 +530,12 @@ class AnalyzedAstTest : StringSpec({
         simulateDotCompletion(staleCode, dotOffset) shouldBe "IgnitorDsl"
     }
 
-    "completion sim: Osc.register('aa', Osc.sine().| ) — dot inside arg list" {
-        // Stale code: let w = Osc.register("aa", Osc.sine())
-        // User inserts dot after Osc.sine(), BEFORE the closing ) of register
-        val staleCode = """let w = Osc.register("aa", Osc.sine())"""
-        val sineCloseIdx = staleCode.indexOf("Osc.sine()") + "Osc.sine()".length
-        simulateDotCompletion(staleCode, sineCloseIdx) shouldBe "IgnitorDsl"
+    "completion sim: Osc.sine(Osc.sine().| ) — dot inside arg list" {
+        // Stale code: let w = Osc.sine(Osc.sine())
+        // User inserts dot after the inner Osc.sine(), BEFORE the closing ) of the outer call
+        val staleCode = """let w = Osc.sine(Osc.sine())"""
+        val innerSineCloseIdx = staleCode.lastIndexOf("Osc.sine()") + "Osc.sine()".length
+        simulateDotCompletion(staleCode, innerSineCloseIdx) shouldBe "IgnitorDsl"
     }
 
     "completion sim: Math.sqrt(16).| — should infer Number" {
@@ -543,7 +543,7 @@ class AnalyzedAstTest : StringSpec({
         simulateDotCompletion(staleCode, staleCode.length) shouldBe "Number"
     }
 
-    // ── Real-world completion: stdlib + sprudel, cursor inside register() ──
+    // ── Real-world completion: stdlib + sprudel, cursor inside a 2-arg call ──
 
     /**
      * Creates a realistic multi-lib registry mimicking what happens when both
@@ -621,18 +621,18 @@ class AnalyzedAstTest : StringSpec({
         return provider.memberCompletions(receiverType, prefix).map { it.name }
     }
 
-    // ── Test: Osc.sine().| inside register() — dot only, no prefix ────────
+    // ── Test: Osc.sine().| inside an enclosing call — dot only, no prefix ────────
 
-    "real-world: Osc.register('aa', Osc.sine().| ) — stale AST, should infer IgnitorDsl" {
-        // When user types "." after Osc.sine(), the code doesn't parse.
+    "real-world: Osc.sine(Osc.sine().| ) — stale AST, should infer IgnitorDsl" {
+        // When user types "." after the inner Osc.sine(), the code doesn't parse.
         // Stale AST is from the parseable version (without the dot).
-        val staleCode = """let a = Osc.register("aa", Osc.sine())"""
+        val staleCode = """let a = Osc.sine(Osc.sine())"""
         val registry = multiLibRegistry()
         val a = AnalyzedAst.build(staleCode, registry)
 
-        // The dot is inserted after Osc.sine() in the editor.
-        // In stale text, that's right after the ')' of sine().
-        val sineEnd = staleCode.indexOf("Osc.sine()") + "Osc.sine()".length
+        // The dot is inserted after the inner Osc.sine() in the editor.
+        // In stale text, that's right after its closing ')'.
+        val sineEnd = staleCode.lastIndexOf("Osc.sine()") + "Osc.sine()".length
 
         // getExpressionTypeEndingAt should find Osc.sine() → IgnitorDsl
         val receiverType = a.getExpressionTypeEndingAt(sineEnd - 1)
@@ -650,11 +650,16 @@ class AnalyzedAstTest : StringSpec({
         names.contains("gain") shouldBe false
     }
 
-    // ── Test: Osc.sine().ad| inside register() — parseable, prefix "ad" ──
+    // ── Test: Osc.sine().ad| inside a 2-arg call — parseable, prefix "ad" ──
+    //
+    // The enclosing call uses `placeholder("aa", …)` purely as a 2-arg vehicle for the
+    // inner `Osc.sine().ad` expression. The analyzer's inference (which is what these
+    // tests exercise) does not depend on the called function being type-compatible
+    // with its IgnitorDsl second argument — only on the parser accepting the syntax.
 
-    "real-world: Osc.register('aa', Osc.sine().ad| ) — fresh parse, prefix 'ad'" {
+    "real-world: placeholder('aa', Osc.sine().ad| ) — fresh parse, prefix 'ad'" {
         // This code IS parseable: .ad is a valid MemberAccess
-        val code = """let a = Osc.register("aa", Osc.sine().ad)"""
+        val code = """let a = placeholder("aa", Osc.sine().ad)"""
         val registry = multiLibRegistry()
 
         val dotOffset = code.indexOf(".ad")
@@ -668,14 +673,14 @@ class AnalyzedAstTest : StringSpec({
     }
 
     "real-world: Osc.sine().ad| — CompletionProvider returns stdlib adsr, NOT sprudel" {
-        val code = """let a = Osc.register("aa", Osc.sine().ad)"""
+        val code = """let a = placeholder("aa", Osc.sine().ad)"""
         val registry = multiLibRegistry()
         val a = AnalyzedAst.build(code, registry)
 
         // Navigate to the .ad MemberAccess
         val decl = a.ast.statements.first() as LetDeclaration
-        val registerCall = decl.initializer as CallExpression
-        val secondArg = registerCall.arguments[1].value as MemberAccess
+        val callExpr = decl.initializer as CallExpression
+        val secondArg = callExpr.arguments[1].value as MemberAccess
         secondArg.property shouldBe "ad"
 
         // The receiver of .ad is Osc.sine() → IgnitorDsl
@@ -690,20 +695,20 @@ class AnalyzedAstTest : StringSpec({
         adsrSuggestion.detail.contains("sprudel") shouldBe false
     }
 
-    "real-world: FULL code with imports — Osc.sine().ad| inside register" {
+    "real-world: FULL code with imports — Osc.sine().ad| inside a 2-arg call" {
         // EXACT code from the user's bug report, including import statements
         val code = """import * from "stdlib"
 import * from "sprudel"
 
-let a = Osc.register("aa", Osc.sine().ad)"""
+let a = placeholder("aa", Osc.sine().ad)"""
 
         val registry = multiLibRegistry()
         val a = AnalyzedAst.build(code, registry)
 
         // Find .ad MemberAccess
         val letDecl = a.ast.statements.filterIsInstance<LetDeclaration>().first()
-        val registerCall = letDecl.initializer as CallExpression
-        val secondArg = registerCall.arguments[1].value as MemberAccess
+        val callExpr = letDecl.initializer as CallExpression
+        val secondArg = callExpr.arguments[1].value as MemberAccess
         secondArg.property shouldBe "ad"
 
         // Receiver of .ad is Osc.sine() → must be IgnitorDsl
@@ -727,7 +732,7 @@ let a = Osc.register("aa", Osc.sine().ad)"""
         val staleCode = """import * from "stdlib"
 import * from "sprudel"
 
-let a = Osc.register("aa", Osc.sine())"""
+let a = placeholder("aa", Osc.sine())"""
 
         val registry = multiLibRegistry()
         val a = AnalyzedAst.build(staleCode, registry)
@@ -739,10 +744,10 @@ let a = Osc.register("aa", Osc.sine())"""
 
     "parse check: which intermediate editor states parse?" {
         val codes = mapOf(
-            """let a = Osc.register("aa", Osc.sine())""" to true,
-            """let a = Osc.register("aa", Osc.sine().)""" to false,
-            """let a = Osc.register("aa", Osc.sine().a)""" to true,
-            """let a = Osc.register("aa", Osc.sine().ad)""" to true,
+            """let a = placeholder("aa", Osc.sine())""" to true,
+            """let a = placeholder("aa", Osc.sine().)""" to false,
+            """let a = placeholder("aa", Osc.sine().a)""" to true,
+            """let a = placeholder("aa", Osc.sine().ad)""" to true,
         )
         for ((code, shouldParse) in codes) {
             val parsed = try {

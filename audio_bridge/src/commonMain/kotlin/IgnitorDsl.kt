@@ -85,14 +85,15 @@ sealed interface IgnitorDsl {
     /**
      * Canonical open parameter slots that mirror sprudel's `withOscParam(name)` calls.
      *
-     * Use these when registering a custom sound that should respond to sprudel modulation
+     * Use these when defining a custom sound that should respond to sprudel modulation
      * (e.g. `note("c").analog(0.3)`). Each slot is a `Param(name, default)` singleton with
      * the same name + default value that sprudel addons expect.
      *
-     * Builtin sounds (`IgnitorDefaults.kt`) wire these in automatically; user-registered
-     * sounds opt in explicitly:
+     * Builtin sounds (`IgnitorDefaults.kt`) wire these in automatically; custom sounds
+     * opt in explicitly:
      * ```
-     * Osc.register("mypad", Osc.sine().analog(OscSlot.analog()))
+     * let mypad = Osc.sine().analog(OscSlot.analog())
+     * note("c").sound(mypad)
      * ```
      */
     object Slots {

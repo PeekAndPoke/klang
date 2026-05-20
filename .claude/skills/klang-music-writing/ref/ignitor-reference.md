@@ -21,11 +21,9 @@ import * from "sprudel"
 import * from "stdlib"
 import * from "sprudel"
 
-let myPluck = Osc.register("myPluck",
-  Osc.saw()
+let myPluck = Osc.saw()
     .lowpass(Osc.constant(2000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.1)))
     .adsr(0.005, 0.3, 0.0, 0.05)
-)
 
 note("c3 e3 g3 c4").sound(myPluck).gain(0.5)
 ```
@@ -33,12 +31,10 @@ note("c3 e3 g3 c4").sound(myPluck).gain(0.5)
 ### Lush pad
 
 ```javascript
-let pad = Osc.register("pad",
-  Osc.supersaw()
+let pad = Osc.supersaw()
     .analog(0.3)
     .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
     .adsr(0.3, 0.5, 0.8, 1.5)
-)
 
 chord("<Am C F G>").voicing().sound(pad).gain(0.2).room(0.3).rsize(6)
 ```
@@ -46,11 +42,9 @@ chord("<Am C F G>").voicing().sound(pad).gain(0.2).room(0.3).rsize(6)
 ### FM bell
 
 ```javascript
-let bell = Osc.register("bell",
-  Osc.sine()
+let bell = Osc.sine()
     .fm(Osc.sine(), 2.3, 400)
     .adsr(0.001, 1.5, 0.0, 0.5)
-)
 
 note("c5 e5 g5 c6").sound(bell).gain(0.3).room(0.2)
 ```
@@ -62,7 +56,7 @@ note("c5 e5 g5 c6").sound(bell).gain(0.3).room(0.2)
 Instruments are built by composing `Osc` nodes into signal graphs, then registering them:
 
 ```javascript
-let name = Osc.register("name", oscGraph)
+let name = oscGraph
 // Use in patterns:
 note("c3 e3 g3").sound(name)
 // or:
@@ -228,11 +222,9 @@ modulation amount in Hz.
 ### `Osc.param(name, default)` — Overridable at play time
 
 ```javascript
-let bass = Osc.register("bass",
-  Osc.saw()
+let bass = Osc.saw()
     .lowpass(Osc.param("cutoff", 800, "filter cutoff"))
     .adsr(0.005, 0.2, 0.0, 0.05)
-)
 
 // Override param in pattern:
 note("c2").sound(bass).oscParam("cutoff", 1200)
@@ -312,8 +304,7 @@ Osc.sine(Osc.freq().plus(Osc.sine(5).mul(10)))  // 5 Hz vibrato, 10 Hz depth
 **Flute** — Sine + triangle + breath noise + vibrato
 
 ```javascript
-let flute = Osc.register("flute",
-    Osc.sine()
+let flute = Osc.sine()
         .plus(Osc.triangle().mul(0.3))
         .plus(Osc.perlin(12).mul(0.2).lowpass(4000).highpass(800).adsr(0.01, 0.12, 0.02, 0.01))
         .plus(Osc.perlin(8).mul(0.05))
@@ -321,14 +312,12 @@ let flute = Osc.register("flute",
         .analog(0.15).vibrato(4.5, 0.012)
         .pitchEnvelope(1.5, 0.01, 0.06)
         .adsr(0.06, 0.15, 0.75, 0.2)
-)
 ```
 
 **Clarinet** — Triangle (odd harmonics) + light square + breath
 
 ```javascript
-let clarinet = Osc.register("clarinet",
-    Osc.triangle().mul(0.7)
+let clarinet = Osc.triangle().mul(0.7)
         .plus(Osc.square().mul(0.15))
         .plus(Osc.sine().mul(0.15))
         .plus(Osc.perlin(6).mul(0.02))
@@ -337,14 +326,12 @@ let clarinet = Osc.register("clarinet",
         .vibrato(5, 0.003)
         .pitchEnvelope(0.5, 0.01, 0.06)
         .adsr(0.04, 0.08, 0.9, 0.1)
-)
 ```
 
 **Alto Saxophone** — Square + saw (reed buzz + conical bore)
 
 ```javascript
-let alto = Osc.register("alto",
-    Osc.square().mul(0.6)
+let alto = Osc.square().mul(0.6)
         .plus(Osc.saw().mul(0.3))
         .plus(Osc.sine().mul(0.1))
         .plus(Osc.perlin(10).mul(0.04))
@@ -353,7 +340,6 @@ let alto = Osc.register("alto",
         .vibrato(4.5, 0.015)
         .pitchEnvelope(-2, 0.01, 0.12)
         .adsr(0.03, 0.1, 0.85, 0.12)
-)
 ```
 
 ### Guitars
@@ -361,37 +347,29 @@ let alto = Osc.register("alto",
 **Acoustic Guitar** — Karplus-Strong with natural filtering
 
 ```javascript
-let acoustic = Osc.register("acoustic",
-    Osc.pluck().highpass(80).lowpass(4000)
-)
+let acoustic = Osc.pluck().highpass(80).lowpass(4000)
 ```
 
 **Steel String** — Brighter attack with filter envelope
 
 ```javascript
-let steel = Osc.register("steel",
-    Osc.pluck()
+let steel = Osc.pluck()
         .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.4, 0.0, 0.1)))
         .highpass(100)
-)
 ```
 
 **12-String** — Unison pluck for chorus effect
 
 ```javascript
-let twelve = Osc.register("12string",
-    Osc.superpluck()
+let twelve = Osc.superpluck()
         .lowpass(Osc.constant(4000).plus(Osc.constant(2000).adsr(0.001, 0.5, 0.0, 0.1)))
         .highpass(100)
-)
 ```
 
 **Electric Distorted**
 
 ```javascript
-let crunch = Osc.register("crunch",
-    Osc.pluck().lowpass(8000).distort(0.6).lowpass(4000).highpass(150)
-)
+let crunch = Osc.pluck().lowpass(8000).distort(0.6).lowpass(4000).highpass(150)
 ```
 
 ### Synth Pads
@@ -399,12 +377,10 @@ let crunch = Osc.register("crunch",
 **Fat Analog Pad** — Supersaw with LFO-modulated filter
 
 ```javascript
-let fatpad = Osc.register("fatpad",
-    Osc.supersaw()
+let fatpad = Osc.supersaw()
         .analog(0.3)
         .lowpass(Osc.sine(0.3).plus(1).times(1000).plus(1500))
         .adsr(0.2, 0.5, 0.7, 1.0)
-)
 ```
 
 ### Synth Bass
@@ -412,11 +388,9 @@ let fatpad = Osc.register("fatpad",
 **Plucky Bass** — Saw with fast filter envelope
 
 ```javascript
-let bass = Osc.register("pluckbass",
-    Osc.saw()
+let bass = Osc.saw()
         .lowpass(Osc.param("cutoff", 800, "filter cutoff"))
         .adsr(0.005, 0.2, 0.0, 0.05)
-)
 ```
 
 ### Synth Leads
@@ -424,9 +398,7 @@ let bass = Osc.register("pluckbass",
 **Bitcrushed Lead**
 
 ```javascript
-let crunchlead = Osc.register("crunchlead",
-    Osc.square().crush(6).lowpass(3000).adsr(0.01, 0.1, 0.8, 0.3)
-)
+let crunchlead = Osc.square().crush(6).lowpass(3000).adsr(0.01, 0.1, 0.8, 0.3)
 ```
 
 ### Bells & Mallet Percussion
@@ -434,65 +406,55 @@ let crunchlead = Osc.register("crunchlead",
 **Glockenspiel** — Detuned sine partials + noise transient
 
 ```javascript
-let glock = Osc.register("glock",
-    Osc.sine().mul(0.5)
+let glock = Osc.sine().mul(0.5)
         .plus(Osc.sine().detune(19.02).mul(0.3))
         .plus(Osc.sine().detune(27.86).mul(0.15))
         .plus(Osc.sine().detune(31.02).mul(0.1))
         .plus(Osc.whitenoise().highpass(6000).mul(0.15).adsr(0.001, 0.02, 0.0, 0.005))
         .lowpass(Osc.constant(8000).plus(Osc.constant(4000).adsr(0.001, 0.8, 0.0, 0.1)))
         .adsr(0.001, 1.5, 0.0, 0.3)
-)
 ```
 
 **FM Bell** — Inharmonic FM for metallic character
 
 ```javascript
-let bell = Osc.register("fmbell",
-    Osc.sine().fm(Osc.sine(), 2.3, 400)
+let bell = Osc.sine().fm(Osc.sine(), 2.3, 400)
         .adsr(0.001, 1.5, 0.0, 0.5)
-)
 ```
 
 **Marimba** — Sine with fast-decaying overtones + wood attack
 
 ```javascript
-let marimba = Osc.register("marimba",
-    Osc.sine().mul(0.7)
+let marimba = Osc.sine().mul(0.7)
         .plus(Osc.sine().detune(12).mul(0.15).adsr(0.001, 0.08, 0.0, 0.02))
         .plus(Osc.sine().detune(19.02).mul(0.08).adsr(0.001, 0.04, 0.0, 0.01))
         .plus(Osc.perlin(15).mul(0.12).lowpass(1500).highpass(200).adsr(0.001, 0.03, 0.0, 0.005))
         .lowpass(2500).warmth(3000)
         .pitchEnvelope(1, 0.001, 0.04)
         .adsr(0.005, 0.5, 0.0, 0.08)
-)
 ```
 
 **Vibraphone** — Detuned sines with tremolo
 
 ```javascript
-let vibes = Osc.register("vibes",
-    Osc.sine().mul(0.5)
+let vibes = Osc.sine().mul(0.5)
         .plus(Osc.sine().detune(19.02).mul(0.25))
         .plus(Osc.sine().detune(27.86).mul(0.12))
         .plus(Osc.whitenoise().highpass(4000).mul(0.06).adsr(0.001, 0.02, 0.0, 0.005))
         .lowpass(6000)
         .tremolo(5.5, 0.3)
         .adsr(0.003, 2.0, 0.0, 0.5)
-)
 ```
 
 **Music Box** — Bright octave-stacked sines
 
 ```javascript
-let musicbox = Osc.register("musicbox",
-    Osc.sine().mul(0.6)
+let musicbox = Osc.sine().mul(0.6)
         .plus(Osc.sine().detune(12).mul(0.3))
         .plus(Osc.sine().detune(24).mul(0.1))
         .plus(Osc.whitenoise().highpass(10000).mul(0.1).adsr(0.001, 0.01, 0.0, 0.005))
         .lowpass(6000)
         .adsr(0.001, 0.6, 0.0, 0.1)
-)
 ```
 
 ### Synth Percussion
@@ -500,32 +462,26 @@ let musicbox = Osc.register("musicbox",
 **Synth Kick** — Sine with pitch envelope
 
 ```javascript
-let kick = Osc.register("kick",
-    Osc.sine()
+let kick = Osc.sine()
         .pitchEnvelope(24, 0.001, 0.04)
         .adsr(0.001, 0.2, 0.0, 0.02)
-)
 ```
 
 **Hi-Hat** — Filtered white noise
 
 ```javascript
-let hat = Osc.register("hat",
-    Osc.whitenoise()
+let hat = Osc.whitenoise()
         .highpass(8000)
         .adsr(0.001, 0.05, 0.0, 0.01)
-)
 ```
 
 **Rim** — Sine + noise transient
 
 ```javascript
-let rim = Osc.register("rim",
-    Osc.sine(800)
+let rim = Osc.sine(800)
         .plus(Osc.whitenoise().highpass(4000).mul(0.3))
         .lowpass(3000)
         .adsr(0.001, 0.03, 0.0, 0.005)
-)
 ```
 
 ---
@@ -610,25 +566,21 @@ import * from "stdlib"
 import * from "sprudel"
 
 // Custom instruments
-let koto = Osc.register("koto", Osc.pluck()
+let koto = Osc.pluck()
     .plus(Osc.sine().detune(12).mul(0.1).adsr(0.001, 0.3, 0.0, 0.05))
     .lowpass(Osc.constant(5000).plus(Osc.constant(3000).adsr(0.001, 0.3, 0.0, 0.05)))
     .highpass(200)
-)
 
-let pad = Osc.register("pad", Osc.supersine().analog(0.3)
+let pad = Osc.supersine().analog(0.3)
     .lowpass(Osc.sine(0.08).plus(1).times(300).plus(800))
     .adsr(0.8, 0.5, 0.9, 2.0)
-)
 
-let kick = Osc.register("kick", Osc.sine()
+let kick = Osc.sine()
     .pitchEnvelope(24, 0.001, 0.04)
     .adsr(0.001, 0.2, 0.0, 0.02)
-)
 
-let sub = Osc.register("sub", Osc.sine().lowpass(200)
+let sub = Osc.sine().lowpass(200)
     .adsr(0.005, 0.3, 0.0, 0.05)
-)
 
 // Composition
 stack(

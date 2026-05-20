@@ -5,6 +5,7 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangLoopAtCpsSpec : StringSpec({
 
@@ -99,7 +100,7 @@ class LangLoopAtCpsSpec : StringSpec({
         events[0].data.gain shouldBe 0.8
 
         // Sound should be preserved
-        events[0].data.sound shouldBe "bd"
+        events[0].data.soundName shouldBe "bd"
 
         // Speed and unit are set
         events[0].data.speed shouldBe 0.25

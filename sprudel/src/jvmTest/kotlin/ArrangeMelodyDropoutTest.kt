@@ -73,7 +73,7 @@ arrange([8, part1], [8, part2], [8, part1], [8, part2])
 
         for (cycle in 0 until totalCycles) {
             val events = pattern.queryArc(cycle.toDouble(), cycle + 1.0)
-            val sounds = events.filter { it.isOnset }.groupBy { it.data.sound ?: "unknown" }
+            val sounds = events.filter { it.isOnset }.groupBy { it.data.soundName ?: "unknown" }
 
             val melodyCount = sounds["blockfloete"]?.size ?: 0
             val guitarCount = sounds["fingerpick"]?.size ?: 0

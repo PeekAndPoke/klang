@@ -8,6 +8,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.lang.apply
 import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.soundName
 
 class LangSndSuperPluckSpec : StringSpec({
 
@@ -22,7 +23,7 @@ class LangSndSuperPluckSpec : StringSpec({
         ) { _, events ->
             events.shouldNotBeEmpty()
             assertSoftly {
-                events[0].data.sound shouldBe "superpluck"
+                events[0].data.soundName shouldBe "superpluck"
                 events[0].data.oscParams?.get("voices") shouldBe 7.0
                 events[0].data.oscParams?.get("freqSpread") shouldBe 0.3
                 events[0].data.oscParams?.get("decay") shouldBe 0.99
@@ -36,7 +37,7 @@ class LangSndSuperPluckSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0)
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "superpluck"
+        events[0].data.soundName shouldBe "superpluck"
     }
 
     "sndSuperPluck() with all six params" {
@@ -45,7 +46,7 @@ class LangSndSuperPluckSpec : StringSpec({
 
         events.size shouldBe 1
         with(events[0].data) {
-            sound shouldBe "superpluck"
+            soundName shouldBe "superpluck"
             oscParams?.get("voices") shouldBe 7.0
             oscParams?.get("freqSpread") shouldBe 0.3
             oscParams?.get("decay") shouldBe 0.996
@@ -60,7 +61,7 @@ class LangSndSuperPluckSpec : StringSpec({
         val events = p?.queryArc(0.0, 1.0) ?: emptyList()
 
         events.size shouldBe 1
-        events[0].data.sound shouldBe "superpluck"
+        events[0].data.soundName shouldBe "superpluck"
         events[0].data.oscParams?.get("voices") shouldBe 5.0
         events[0].data.oscParams?.get("freqSpread") shouldBe 0.2
         events[0].data.oscParams?.get("decay") shouldBe 0.99
