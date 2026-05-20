@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.script.docs
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -284,6 +285,102 @@ class KlangDocsRegistryTest : StringSpec({
         // getCallable with null finds the top-level one
         registry.getCallable("abs", null) shouldNotBe null
         registry.getCallable("abs", null)!!.receiver shouldBe null
+    }
+
+    // ── FQCN-aware lookup ───────────────────────────────────────────────
+    //
+    // FQCN is the canonical cross-module identity key. When both the registered
+    // owner and the lookup-query type carry an `fqcn`, only the fqcn is consulted.
+    // simpleName is used as a fallback for primitives / RuntimeValue subtypes
+    // that don't map to a single Kotlin declaration.
+
+    "typeMatches: equal FQCN wins even when simpleName differs (cross-module case)" {
+        val registry = KlangDocsRegistry()
+        registry.register(
+            KlangSymbol(
+                name = "analog", category = "test",
+                variants = listOf(
+                    KlangProperty(
+                        name = "analog",
+                        // In-module emission: script-name + fqcn
+                        owner = KlangType("OscSlot", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"),
+                        type = KlangType("IgnitorDsl"),
+                    )
+                )
+            )
+        )
+
+        // Cross-module emission would carry the Kotlin simpleName but matching fqcn
+        val crossModuleQuery = KlangType(
+            simpleName = "KlangScriptOscSlot",
+            fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot",
+        )
+        registry.getVariantsForReceiver(crossModuleQuery).map { it.name } shouldBe listOf("analog")
+    }
+
+    "typeMatches: FQCN mismatch overrides simpleName-equal" {
+        // Two different classes happen to share the simpleName "Foo" — must not collide.
+        val registry = KlangDocsRegistry()
+        registry.register(
+            KlangSymbol(
+                name = "bar", category = "test",
+                variants = listOf(
+                    KlangCallable(
+                        name = "bar",
+                        receiver = KlangType("Foo", fqcn = "com.example.a.Foo"),
+                        params = emptyList(),
+                    )
+                )
+            )
+        )
+
+        val differentFoo = KlangType("Foo", fqcn = "com.example.b.Foo")
+        registry.getVariantsForReceiver(differentFoo).shouldBeEmpty()
+    }
+
+    "typeMatches: simpleName fallback when neither side has FQCN" {
+        val registry = KlangDocsRegistry()
+        registry.register(
+            KlangSymbol(
+                name = "abs", category = "math",
+                variants = listOf(KlangCallable(name = "abs", receiver = KlangType("Number"), params = emptyList()))
+            )
+        )
+        // Primitives / RuntimeValue subtypes don't carry FQCN in either direction.
+        registry.getVariantsForReceiver(KlangType("Number")).map { it.name } shouldBe listOf("abs")
+    }
+
+    "typeMatches: simpleName fallback when only one side has FQCN" {
+        // Mixed: owner has FQCN, query doesn't (or vice versa) — match by simpleName.
+        val registry = KlangDocsRegistry()
+        registry.register(
+            KlangSymbol(
+                name = "sine", category = "test",
+                variants = listOf(
+                    KlangCallable(
+                        name = "sine",
+                        receiver = KlangType("Osc", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"),
+                        params = emptyList(),
+                    )
+                )
+            )
+        )
+
+        // Inferrer emits a KlangType without fqcn — should still match by simpleName.
+        registry.getVariantsForReceiver(KlangType("Osc")).map { it.name } shouldBe listOf("sine")
+    }
+
+    "typeMatches: null query matches null-owner (top-level functions)" {
+        val registry = KlangDocsRegistry()
+        registry.register(
+            KlangSymbol(
+                name = "note", category = "pattern",
+                variants = listOf(KlangCallable(name = "note", receiver = null, params = emptyList()))
+            )
+        )
+        registry.getCallable("note", null)?.name shouldBe "note"
+        // A query for a real type must not match top-level entries.
+        registry.getCallable("note", KlangType("Osc")) shouldBe null
     }
 
     // ── snapshot ────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import io.peekandpoke.klang.script.types.KlangCallable
 import io.peekandpoke.klang.script.types.KlangProperty
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
+import io.peekandpoke.klang.script.types.putOrMerge
 
 /**
  * Registry for KlangScript symbol documentation.
@@ -26,30 +27,12 @@ class KlangDocsRegistry {
     /**
      * Register a single symbol.
      *
-     * When a symbol with the same name already exists, variants are merged so that
-     * symbols from multiple libraries (e.g. stdlib and sprudel) coexist.
+     * When a symbol with the same name already exists, variants are merged via
+     * [KlangSymbol.mergeWith] so that symbols from multiple libraries
+     * (e.g. stdlib and sprudel) coexist.
      */
     fun register(doc: KlangSymbol) {
-        val existing = _symbols[doc.name]
-        if (existing != null) {
-            // Merge variants, deduplicating by (name, receiver, library) so that
-            // re-registration from a second KSP processor doesn't produce
-            // duplicate entries in the docs popup — while keeping legitimate
-            // cross-library variants (e.g. "adsr" from stdlib + sprudel).
-            val merged = (existing.variants + doc.variants).distinctBy { variant ->
-                when (variant) {
-                    is KlangCallable -> Triple(variant.name, variant.receiver?.simpleName, variant.library)
-                    is KlangProperty -> Triple(variant.name, variant.owner?.simpleName, variant.library)
-                }
-            }
-            _symbols[doc.name] = existing.copy(
-                variants = merged,
-                tags = (existing.tags + doc.tags).distinct(),
-                aliases = (existing.aliases + doc.aliases).distinct(),
-            )
-        } else {
-            _symbols[doc.name] = doc
-        }
+        _symbols.putOrMerge(doc)
     }
 
     /**
@@ -141,6 +124,11 @@ class KlangDocsRegistry {
     /**
      * Find a [KlangCallable] variant matching the given receiver type.
      *
+     * Matches by FQCN when both sides carry one; otherwise falls back to
+     * [KlangType.simpleName] equality. FQCN is the canonical cross-module key —
+     * even when KSP can't see the `@Object` annotation on a class from another
+     * module, the resolved FQCN matches.
+     *
      * @param name Symbol name
      * @param receiverType The receiver type to match, or null for top-level functions
      * @return The matching callable, or null
@@ -149,7 +137,7 @@ class KlangDocsRegistry {
         val symbol = _symbols[name] ?: return null
         return symbol.variants
             .filterIsInstance<KlangCallable>()
-            .firstOrNull { it.receiver?.simpleName == receiverType?.simpleName }
+            .firstOrNull { typeMatches(it.receiver, receiverType) }
     }
 
     /**
@@ -162,10 +150,11 @@ class KlangDocsRegistry {
     fun getVariantsForReceiver(receiverType: KlangType): List<KlangSymbol> {
         return _symbols.values.filter { symbol ->
             symbol.variants.any { variant ->
-                when (variant) {
-                    is KlangCallable -> variant.receiver?.simpleName == receiverType.simpleName
-                    is KlangProperty -> variant.owner?.simpleName == receiverType.simpleName
+                val owner = when (variant) {
+                    is KlangCallable -> variant.receiver
+                    is KlangProperty -> variant.owner
                 }
+                typeMatches(owner, receiverType)
             }
         }.sortedBy { it.name }
     }
@@ -184,13 +173,32 @@ class KlangDocsRegistry {
         val symbol = _symbols[name] ?: return null
         if (receiverType == null) return symbol
         val filtered = symbol.variants.filter { variant ->
-            when (variant) {
-                is KlangCallable -> variant.receiver?.simpleName == receiverType.simpleName
-                is KlangProperty -> variant.owner?.simpleName == receiverType.simpleName
+            val owner = when (variant) {
+                is KlangCallable -> variant.receiver
+                is KlangProperty -> variant.owner
             }
+            typeMatches(owner, receiverType)
         }
         if (filtered.isEmpty()) return symbol // fallback: show all
         val variantLibrary = filtered.firstOrNull()?.library ?: symbol.library
         return symbol.copy(variants = filtered, library = variantLibrary)
+    }
+
+    /**
+     * Match a registered owner type against a query type.
+     *
+     * FQCN is the canonical cross-module identity key — when both sides carry
+     * one, that's the only field consulted. Otherwise falls back to
+     * [KlangType.simpleName]. Null query = top-level (owner must also be null).
+     */
+    private fun typeMatches(owner: KlangType?, query: KlangType?): Boolean {
+        if (query == null) return owner == null
+        if (owner == null) return false
+        val ownerFqcn = owner.fqcn
+        val queryFqcn = query.fqcn
+        if (ownerFqcn != null && queryFqcn != null) {
+            return ownerFqcn == queryFqcn
+        }
+        return owner.simpleName == query.simpleName
     }
 }

@@ -143,6 +143,86 @@ class StdlibDocsInferenceTest : StringSpec({
         reg.getCallable("sine", KlangType("Math")) shouldBe null
     }
 
+    // ── FQCN coverage in real KSP-emitted docs ──────────────────────────
+    //
+    // These tests act as a snapshot for the KSP code-gen: they assert that
+    // production stdlib symbols carry the expected FQCNs. If KSP regresses
+    // (stops emitting fqcn, or emits the wrong one), these fail loudly.
+
+    "real stdlib: Osc symbol's type carries the KlangScriptOsc FQCN" {
+        val reg = stdlibRegistry()
+        val osc = reg.get("Osc")!!
+        val prop = osc.variants.filterIsInstance<KlangProperty>().first()
+        prop.type.simpleName shouldBe "Osc"
+        prop.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
+    }
+
+    "real stdlib: OscSlot symbol's type carries the KlangScriptOscSlot FQCN" {
+        val reg = stdlibRegistry()
+        val oscSlot = reg.get("OscSlot")!!
+        val prop = oscSlot.variants.filterIsInstance<KlangProperty>().first()
+        prop.type.simpleName shouldBe "OscSlot"
+        prop.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"
+    }
+
+    "real stdlib: Osc.slot member-property owner FQCN matches KlangScriptOsc" {
+        val reg = stdlibRegistry()
+        val slotSym = reg.get("slot")!!
+        val slotProp = slotSym.variants
+            .filterIsInstance<KlangProperty>()
+            .first { it.owner?.simpleName == "Osc" }
+        slotProp.owner!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
+        // And its type points at OscSlot's FQCN so the inferrer can chain.
+        slotProp.type.simpleName shouldBe "OscSlot"
+        slotProp.type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"
+    }
+
+    "real stdlib: OscSlot.analog member-property owner FQCN matches KlangScriptOscSlot" {
+        val reg = stdlibRegistry()
+        val analogSym = reg.get("analog")!!
+        val analogProp = analogSym.variants
+            .filterIsInstance<KlangProperty>()
+            .first { it.owner?.simpleName == "OscSlot" }
+        analogProp.owner!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"
+    }
+
+    "real stdlib: Osc.sine method receiver FQCN matches KlangScriptOsc" {
+        val reg = stdlibRegistry()
+        val sine = reg.getCallable("sine", KlangType("Osc"))!!
+        sine.receiver!!.simpleName shouldBe "Osc"
+        sine.receiver!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
+    }
+
+    "real stdlib: Math.sqrt method receiver FQCN matches KlangScriptMath" {
+        val reg = stdlibRegistry()
+        val sqrt = reg.getCallable("sqrt", KlangType("Math"))!!
+        sqrt.receiver!!.simpleName shouldBe "Math"
+        sqrt.receiver!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptMath"
+    }
+
+    "real stdlib: type inference of Osc.slot returns OscSlot KlangType with FQCN" {
+        val inferrer = ExpressionTypeInferrer(stdlibRegistry())
+        val type = inferrer.inferType(parseExpr("Osc.slot"))!!
+        type.simpleName shouldBe "OscSlot"
+        type.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot"
+    }
+
+    "real stdlib: chained Osc.slot.analog resolves to IgnitorDsl" {
+        // Full chain: identifier → property access → property access.
+        // Each step depends on the previous step's KlangType being correctly
+        // populated, and on FQCN-aware lookup matching the next-step owner.
+        val inferrer = ExpressionTypeInferrer(stdlibRegistry())
+        val type = inferrer.inferType(parseExpr("Osc.slot.analog"))!!
+        type.simpleName shouldBe "IgnitorDsl"
+    }
+
+    "real stdlib: chained Osc.slot.analog.lowpass(2000) resolves to IgnitorDsl" {
+        // Confirms FQCN-aware lookup chains through an extension method call too.
+        val inferrer = ExpressionTypeInferrer(stdlibRegistry())
+        val type = inferrer.inferType(parseExpr("Osc.slot.analog.lowpass(2000)"))!!
+        type.simpleName shouldBe "IgnitorDsl"
+    }
+
     // ── Registry merge simulation ───────────────────────────────────────
 
     "merge: stdlib + mock sprudel docs preserves both variants for shared name" {

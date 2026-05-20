@@ -28,6 +28,18 @@ class KlangScriptProcessor(
     private val codeGenerator: CodeGenerator = environment.codeGenerator
     private val logger: KSPLogger = environment.logger
 
+    /**
+     * In-module map of Kotlin class FQCN → @Object script name.
+     *
+     * Populated at the start of [process] from `objectClasses`. Used by
+     * [generateKlangType] so that a class reference to an `@Object`-registered
+     * Kotlin class emits the script-facing display name as `simpleName`. Cross-module
+     * cases (where the @Object annotation isn't visible due to SOURCE retention)
+     * leave the Kotlin simple name as the display fallback; the emitted `fqcn` is
+     * still the canonical identity key for runtime lookup.
+     */
+    private var inModuleObjectFqcnToScriptName: Map<String, String> = emptyMap()
+
     companion object {
         private const val ANN_PKG = "io.peekandpoke.klang.script.annotations.KlangScript"
         private const val ANN_LIBRARY = "$ANN_PKG.Library"
@@ -99,6 +111,17 @@ class KlangScriptProcessor(
                     "${topLevelProperties.size} @Property, " +
                     "${topLevelConstants.size} @Constant"
         )
+
+        // Build the in-module FQCN → @Object script-name map upfront so that
+        // generateKlangType can resolve script names regardless of declaration order.
+        inModuleObjectFqcnToScriptName = objectClasses
+            .mapNotNull { cls ->
+                val fqcn = cls.qualifiedName?.asString() ?: return@mapNotNull null
+                val name = getAnnotationStringArg(cls, ANN_OBJECT, "name")
+                    .let { if (it.isNullOrEmpty()) cls.simpleName.asString() else it }
+                fqcn to name
+            }
+            .toMap()
 
         // ── Scope validation ──────────────────────────────────────────────────
         // Each annotation is required to live in a specific declaration context.
@@ -1074,6 +1097,7 @@ class KlangScriptProcessor(
     private data class DocItem(
         val scriptName: String,
         val receiver: String?,
+        val receiverFqcn: String?,
         val fn: KSFunctionDeclaration,
         val isTypeExtension: Boolean = false,
         val isRawArgs: Boolean = false,
@@ -1088,18 +1112,20 @@ class KlangScriptProcessor(
         val docItems = mutableListOf<DocItem>()
 
         for (obj in entries.objects) {
+            val fqcn = obj.cls.qualifiedName?.asString()
             for (method in obj.methods) {
-                docItems.add(DocItem(method.name, obj.name, method.fn, isRawArgs = isRawArgsMethod(method.fn)))
+                docItems.add(DocItem(method.name, obj.name, fqcn, method.fn, isRawArgs = isRawArgsMethod(method.fn)))
             }
         }
         for (ext in entries.typeExtensions) {
             val displayName = typeDisplayName(ext.typeDecl.simpleName.asString())
+            val fqcn = ext.typeDecl.qualifiedName?.asString()
             for (method in ext.methods) {
-                docItems.add(DocItem(method.name, displayName, method.fn, isTypeExtension = true))
+                docItems.add(DocItem(method.name, displayName, fqcn, method.fn, isTypeExtension = true))
             }
         }
         for (fn in entries.functions) {
-            docItems.add(DocItem(fn.name, null, fn.fn))
+            docItems.add(DocItem(fn.name, null, null, fn.fn))
         }
 
         val anyMemberProperties = entries.objects.any { it.memberProperties.isNotEmpty() } ||
@@ -1134,6 +1160,8 @@ class KlangScriptProcessor(
                 val category = kdoc.category ?: "object"
                 val tagsString = kdoc.tags.joinToString(", ") { "\"$it\"" }
                 appendLine()
+                val objFqcn = obj.cls.qualifiedName?.asString()
+                val objFqcnArg = if (objFqcn != null) ", fqcn = \"$objFqcn\"" else ""
                 appendLine("    \"${obj.name}\" to KlangSymbol(")
                 appendLine("        name = \"${obj.name}\",")
                 appendLine("        category = \"$category\",")
@@ -1143,7 +1171,7 @@ class KlangScriptProcessor(
                 appendLine("        variants = listOf(")
                 appendLine("            KlangProperty(")
                 appendLine("                name = \"${obj.name}\",")
-                appendLine("                type = KlangType(simpleName = \"${obj.name}\"),")
+                appendLine("                type = KlangType(simpleName = \"${obj.name}\"$objFqcnArg),")
                 appendLine("                description = \"\"\"$description\"\"\",")
                 appendLine("                library = \"$libraryName\",")
                 appendLine("            )")
@@ -1205,18 +1233,25 @@ class KlangScriptProcessor(
         }
 
         // Generate member-property entries (e.g., "slot" on "Osc", "analog" on "OscSlot")
-        data class MemberPropDoc(val name: String, val ownerName: String, val prop: KSPropertyDeclaration)
+        data class MemberPropDoc(
+            val name: String,
+            val ownerName: String,
+            val ownerFqcn: String?,
+            val prop: KSPropertyDeclaration,
+        )
 
         val memberPropDocs = buildList {
             for (obj in entries.objects) {
+                val fqcn = obj.cls.qualifiedName?.asString()
                 for (prop in obj.memberProperties) {
-                    add(MemberPropDoc(prop.name, obj.name, prop.prop))
+                    add(MemberPropDoc(prop.name, obj.name, fqcn, prop.prop))
                 }
             }
             for (ext in entries.typeExtensions) {
                 val displayName = typeDisplayName(ext.typeDecl.simpleName.asString())
+                val fqcn = ext.typeDecl.qualifiedName?.asString()
                 for (prop in ext.memberProperties) {
-                    add(MemberPropDoc(prop.name, displayName, prop.prop))
+                    add(MemberPropDoc(prop.name, displayName, fqcn, prop.prop))
                 }
             }
         }
@@ -1245,9 +1280,10 @@ class KlangScriptProcessor(
                     val propType = doc.prop.type.resolve()
                     val vKdoc = KDocParser.parse(doc.prop.docString)
                     val vDescription = vKdoc.description.escapeForRawString()
+                    val ownerFqcnArg = if (doc.ownerFqcn != null) ", fqcn = \"${doc.ownerFqcn}\"" else ""
                     appendLine("            KlangProperty(")
                     appendLine("                name = \"${doc.name}\",")
-                    appendLine("                owner = KlangType(simpleName = \"${doc.ownerName}\"),")
+                    appendLine("                owner = KlangType(simpleName = \"${doc.ownerName}\"$ownerFqcnArg),")
                     appendLine("                type = ${generateKlangType(propType)},")
                     appendLine("                description = \"\"\"$vDescription\"\"\",")
                     appendLine("                library = \"$libraryName\",")
@@ -1266,17 +1302,19 @@ class KlangScriptProcessor(
 
         appendLine("/** Generated documentation for the '$libraryName' library. */")
         appendLine("val generated${capitalizedName}Docs: Map<String, KlangSymbol> = buildMap {")
+        appendLine("    // Use putOrMerge so chunked emissions (e.g. a member-property variant and a")
+        appendLine("    // same-name extension method) merge their variants instead of overwriting.")
         if (entries.objects.isNotEmpty()) {
-            appendLine("    putAll(generated${capitalizedName}DocsObjects())")
+            appendLine("    generated${capitalizedName}DocsObjects().values.forEach(::putOrMerge)")
         }
         if (entries.properties.isNotEmpty()) {
-            appendLine("    putAll(generated${capitalizedName}DocsProperties())")
+            appendLine("    generated${capitalizedName}DocsProperties().values.forEach(::putOrMerge)")
         }
         if (memberPropsGrouped.isNotEmpty()) {
-            appendLine("    putAll(generated${capitalizedName}DocsMemberProperties())")
+            appendLine("    generated${capitalizedName}DocsMemberProperties().values.forEach(::putOrMerge)")
         }
         chunks.forEachIndexed { chunkIdx, _ ->
-            appendLine("    putAll(generated${capitalizedName}DocsChunk$chunkIdx())")
+            appendLine("    generated${capitalizedName}DocsChunk$chunkIdx().values.forEach(::putOrMerge)")
         }
         appendLine("}")
     }
@@ -1340,7 +1378,8 @@ class KlangScriptProcessor(
             appendLine("            KlangCallable(")
             appendLine("                name = \"${item.scriptName}\",")
             if (item.receiver != null) {
-                appendLine("                receiver = KlangType(simpleName = \"${item.receiver}\"),")
+                val recvFqcnArg = if (item.receiverFqcn != null) ", fqcn = \"${item.receiverFqcn}\"" else ""
+                appendLine("                receiver = KlangType(simpleName = \"${item.receiver}\"$recvFqcnArg),")
             }
             if (params.isNotEmpty()) {
                 appendLine("                params = listOf(")
@@ -1532,12 +1571,20 @@ class KlangScriptProcessor(
     private fun generateKlangType(type: KSType): String {
         val declaration = type.declaration
         val simpleName = declaration.simpleName.asString()
-        val displayName = typeDisplayName(simpleName)
+        val fqcn = declaration.qualifiedName?.asString()
+        val displayName = when {
+            // Prefer the @Object script name when the type is a known @Object in this module.
+            fqcn != null && inModuleObjectFqcnToScriptName.containsKey(fqcn) ->
+                inModuleObjectFqcnToScriptName.getValue(fqcn)
+
+            else -> typeDisplayName(simpleName)
+        }
         val isTypeAlias = declaration is KSTypeAlias
         val isNullable = type.nullability == Nullability.NULLABLE
 
         return buildString {
             append("KlangType(simpleName = \"$displayName\"")
+            if (fqcn != null) append(", fqcn = \"$fqcn\"")
             if (isTypeAlias) append(", isTypeAlias = true")
             if (isNullable) append(", isNullable = true")
             append(")")

@@ -265,6 +265,58 @@ class CompletionProviderTest : StringSpec({
         names.toSet().containsAll(listOf("gain", "pan", "adsr")) shouldBe true
     }
 
+    // ── Osc.slot chain (member-property + nested @Object) ────────────────
+    //
+    // `Osc.slot` is an @KlangScript.Property whose type is OscSlot. Typing
+    // `Osc.slot.` should surface OscSlot's member properties (analog, voices, ...).
+
+    "member: Osc shows slot property" {
+        val provider = CompletionProvider(stdlibRegistry())
+        val names = provider.memberCompletions(KlangType("Osc"), "").map { it.name }
+        names.contains("slot") shouldBe true
+    }
+
+    "member: OscSlot shows all slot properties" {
+        val provider = CompletionProvider(stdlibRegistry())
+        val names = provider.memberCompletions(KlangType("OscSlot"), "").map { it.name }
+        names.toSet().containsAll(
+            listOf("analog", "voices", "freqSpread", "duty", "density", "decay", "brightness", "pickPosition", "stiffness", "rate")
+        ) shouldBe true
+    }
+
+    "member: OscSlot lookup by FQCN matches the same set" {
+        // The inferrer produces KlangType("OscSlot", fqcn="...KlangScriptOscSlot")
+        // — verifying FQCN-keyed lookup returns the same results as simpleName-only.
+        val provider = CompletionProvider(stdlibRegistry())
+        val byFqcn = KlangType("OscSlot", fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot")
+        val names = provider.memberCompletions(byFqcn, "").map { it.name }
+        names.toSet().containsAll(listOf("analog", "voices", "freqSpread")) shouldBe true
+    }
+
+    "member: cross-module-style FQCN (Kotlin simpleName + fqcn) still matches" {
+        // Simulates a sprudel-side type ref where KSP couldn't see the @Object
+        // annotation (SOURCE retention) — emitted as Kotlin simpleName but with
+        // the real FQCN. FQCN-first matching must canonicalise both sides.
+        val provider = CompletionProvider(stdlibRegistry())
+        val crossModuleQuery = KlangType(
+            simpleName = "KlangScriptOscSlot",  // Kotlin simpleName — not the @Object script name
+            fqcn = "io.peekandpoke.klang.script.stdlib.KlangScriptOscSlot",
+        )
+        val names = provider.memberCompletions(crossModuleQuery, "").map { it.name }
+        names.toSet().containsAll(listOf("analog", "voices", "freqSpread")) shouldBe true
+    }
+
+    "member: same-simpleName-different-FQCN must not bleed" {
+        // Two registered owners share the simpleName "OscSlot" but with different
+        // FQCNs — a query with a non-matching FQCN must miss.
+        val provider = CompletionProvider(stdlibRegistry())
+        val foreignFqcn = KlangType(
+            simpleName = "OscSlot",
+            fqcn = "com.example.imposter.OscSlot",
+        )
+        provider.memberCompletions(foreignFqcn, "").shouldBeEmpty()
+    }
+
     // ════════════════════════════════════════════════════════════════════════
     // Category 3: Multi-library merge
     // ════════════════════════════════════════════════════════════════════════
