@@ -1,9 +1,9 @@
 package io.peekandpoke.klang.sprudel
 
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
-import io.peekandpoke.klang.audio_bridge.FilterEnvelope
+import io.peekandpoke.klang.audio_bridge.FilterEnvDef
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.uniqueId
@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
  * Sprudel-specific voice data with flat fields.
  *
  * This is the intermediate representation used within the Sprudel pattern system.
- * It uses flat fields (no complex objects like AdsrEnvelope or FilterDefs) to match
+ * It uses flat fields (no complex objects like AdsrDef or FilterDefs) to match
  * the original JavaScript Strudel implementation.
  *
  * Gets converted to [VoiceData] when passed to the audio engine.
@@ -479,7 +479,7 @@ data class SprudelVoiceData(
      * Converts this Sprudel-specific voice data to audio engine [VoiceData].
      *
      * Maps flat fields to complex objects:
-     * - attack, decay, sustain, release → AdsrEnvelope
+     * - attack, decay, sustain, release → AdsrDef
      * - cutoff/resonance, hcutoff/hresonance, bandf/bandq, notchf/nresonance → FilterDefs
      *
      * For inline ignitors ([SoundValue.Osc]) the wire-level `sound` name is resolved via
@@ -500,7 +500,7 @@ data class SprudelVoiceData(
                 // Build envelope if any lpattack/lpdecay/lpsustain/lprelease/lpenv fields are present
                 val envelope =
                     if (lpattack != null || lpdecay != null || lpsustain != null || lprelease != null || lpenv != null) {
-                        FilterEnvelope(
+                        FilterEnvDef(
                             attack = lpattack,
                             decay = lpdecay,
                             sustain = lpsustain,
@@ -523,7 +523,7 @@ data class SprudelVoiceData(
                 // Build envelope if any hpattack/hpdecay/hpsustain/hprelease/hpenv fields are present
                 val envelope =
                     if (hpattack != null || hpdecay != null || hpsustain != null || hprelease != null || hpenv != null) {
-                        FilterEnvelope(
+                        FilterEnvDef(
                             attack = hpattack,
                             decay = hpdecay,
                             sustain = hpsustain,
@@ -546,7 +546,7 @@ data class SprudelVoiceData(
                 // Build envelope if any bpattack/bpdecay/bpsustain/bprelease/bpenv fields are present
                 val envelope =
                     if (bpattack != null || bpdecay != null || bpsustain != null || bprelease != null || bpenv != null) {
-                        FilterEnvelope(
+                        FilterEnvDef(
                             attack = bpattack,
                             decay = bpdecay,
                             sustain = bpsustain,
@@ -569,7 +569,7 @@ data class SprudelVoiceData(
                 // Build envelope if any nfattack/nfdecay/nfsustain/nfrelease/nfenv fields are present
                 val envelope =
                     if (nfattack != null || nfdecay != null || nfsustain != null || nfrelease != null || nfenv != null) {
-                        FilterEnvelope(
+                        FilterEnvDef(
                             attack = nfattack,
                             decay = nfdecay,
                             sustain = nfsustain,
@@ -612,7 +612,7 @@ data class SprudelVoiceData(
             soundIndex = soundIndex,
             oscParams = oscParams,
             filters = FilterDefs(filters),
-            adsr = AdsrEnvelope(
+            adsr = AdsrDef(
                 attack = attack,
                 decay = decay,
                 sustain = sustain,

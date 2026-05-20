@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class SampleMetadata(
     val anchor: Double,
     val loop: LoopRange?,
-    val adsr: AdsrEnvelope?,
+    val adsr: AdsrDef?,
 ) {
     companion object {
         val default = SampleMetadata(anchor = 0.0, loop = null, adsr = null)

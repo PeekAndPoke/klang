@@ -32,7 +32,7 @@ enum class SvfMode {
  * When applied, the effective cutoff becomes: `baseCutoff * (1.0 + depth * envValue)`
  * where `envValue` is 0.0..1.0 from the envelope shape.
  */
-data class FilterEnvelope(
+data class FilterEnvDef(
     val depth: Double = 0.0,
     val attackSec: Double = 0.0,
     val decaySec: Double = 0.0,
@@ -40,7 +40,7 @@ data class FilterEnvelope(
     val releaseSec: Double = 0.0,
 ) {
     companion object {
-        val NONE = FilterEnvelope()
+        val NONE = FilterEnvDef()
     }
 }
 
@@ -78,7 +78,7 @@ fun Ignitor.svf(
     mode: SvfMode,
     cutoffHz: Ignitor,
     q: Ignitor = ParamIgnitor("q", 0.707),
-    env: FilterEnvelope = FilterEnvelope.NONE,
+    env: FilterEnvDef = FilterEnvDef.NONE,
 ): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env)
 
 private class SvfIgnitor(
@@ -86,7 +86,7 @@ private class SvfIgnitor(
     private val mode: SvfMode,
     private val cutoffHz: Ignitor,
     private val q: Ignitor,
-    private val env: FilterEnvelope,
+    private val env: FilterEnvDef,
 ) : Ignitor {
     // Integrator state.
     private var ic1eq: Double = 0.0
@@ -223,7 +223,7 @@ fun Ignitor.svf(
     mode: SvfMode,
     cutoffHz: Double,
     q: Double = 0.707,
-    env: FilterEnvelope = FilterEnvelope.NONE,
+    env: FilterEnvDef = FilterEnvDef.NONE,
 ): Ignitor = svf(mode, ParamIgnitor("cutoffHz", cutoffHz), ParamIgnitor("q", q), env)
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -237,7 +237,7 @@ fun Ignitor.svf(
  * @param q Resonance. 0.707 = flat (Butterworth), higher = peak at cutoff. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.lowpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
+fun Ignitor.lowpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
     svf(SvfMode.LOWPASS, cutoffHz, q, env)
 
 /**
@@ -247,7 +247,7 @@ fun Ignitor.lowpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), en
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
+fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
     svf(SvfMode.LOWPASS, cutoffHz, q, env)
 
 /**
@@ -257,7 +257,7 @@ fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = F
  * @param q Resonance. 0.707 = flat, higher = peak at cutoff. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.highpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
+fun Ignitor.highpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
     svf(SvfMode.HIGHPASS, cutoffHz, q, env)
 
 /**
@@ -267,7 +267,7 @@ fun Ignitor.highpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), e
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
+fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
     svf(SvfMode.HIGHPASS, cutoffHz, q, env)
 
 /**
@@ -277,7 +277,7 @@ fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvelope = 
  * @param q Width of the pass band. 1.0 = moderate, higher = narrower band. Default: 1.0.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.bandpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
+fun Ignitor.bandpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
     svf(SvfMode.BANDPASS, cutoffHz, q, env)
 
 /**
@@ -287,7 +287,7 @@ fun Ignitor.bandpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env
  * @param q Width of the pass band. Default: 1.0. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
+fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
     svf(SvfMode.BANDPASS, cutoffHz, q, env)
 
 /**
@@ -297,7 +297,7 @@ fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = Fi
  * @param q Width of the notch. 1.0 = moderate, higher = narrower cut. Default: 1.0.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.notch(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
+fun Ignitor.notch(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
     svf(SvfMode.NOTCH, cutoffHz, q, env)
 
 /**
@@ -307,7 +307,7 @@ fun Ignitor.notch(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: F
  * @param q Width of the notch. Default: 1.0. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvelope = FilterEnvelope.NONE): Ignitor =
+fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
     svf(SvfMode.NOTCH, cutoffHz, q, env)
 
 // ═══════════════════════════════════════════════════════════════════════════════

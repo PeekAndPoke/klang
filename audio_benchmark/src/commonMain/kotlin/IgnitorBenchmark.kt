@@ -5,7 +5,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
 import io.peekandpoke.klang.audio_be.ignitor.registerDefaults
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -182,7 +182,7 @@ class IgnitorBenchmark(
             freqHz: Double = 440.0,
             oscParams: Map<String, Double>? = null,
             filters: FilterDefs = FilterDefs.empty,
-            adsr: AdsrEnvelope = AdsrEnvelope.defaultSynth,
+            adsr: AdsrDef = AdsrDef.defaultSynth,
             room: Double? = null,
             roomSize: Double? = null,
             distort: Double? = null,

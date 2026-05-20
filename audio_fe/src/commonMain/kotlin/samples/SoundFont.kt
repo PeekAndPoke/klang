@@ -1,6 +1,6 @@
 package io.peekandpoke.klang.audio_fe.samples
 
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.tones.Tones
 import kotlinx.serialization.Serializable
@@ -77,7 +77,7 @@ data class SoundfontIndex(
 
                 val envelope = if (ahdsr || isSustainLoop) {
                     // Explicit ADSR requested/supported by font
-                    AdsrEnvelope(
+                    AdsrDef(
                         attack = 0.01,
                         decay = 0.1,
                         sustain = 1.0,
@@ -85,7 +85,7 @@ data class SoundfontIndex(
                     )
                 } else {
                     // Percussive (Drum, Xylophone): Instant On, Fade Out
-                    AdsrEnvelope(
+                    AdsrDef(
                         attack = 0.01,
                         decay = 0.5, // Longer decay to let the sample ring out a bit
                         sustain = 0.0,

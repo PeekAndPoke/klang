@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
@@ -200,7 +200,7 @@ class VoiceFactory(
 
         return when {
             isOsci -> {
-                val resolvedAdsr = data.adsr.resolve(AdsrEnvelope.defaultSynth)
+                val resolvedAdsr = data.adsr.resolve(AdsrDef.defaultSynth)
 
                 // Extend voice lifetime to accommodate ignitor-level ADSR release if needed
                 val ignitorDsl = ignitorRegistry.get(sound ?: IgnitorRegistry.DEFAULT_SOUND)
@@ -231,7 +231,7 @@ class VoiceFactory(
 
                 val resolvedAdsr = data.adsr
                     .mergeWith(sample.meta.adsr)
-                    .resolve(AdsrEnvelope.defaultSynth)
+                    .resolve(AdsrDef.defaultSynth)
 
                 val baseSamplePitchHz = entry.pitchHz
                 val targetPitchHz = data.freqHz ?: baseSamplePitchHz
@@ -352,7 +352,7 @@ class VoiceFactory(
 
     private fun buildVoice(
         data: VoiceData,
-        resolvedAdsr: AdsrEnvelope.Resolved,
+        resolvedAdsr: AdsrDef.Resolved,
         startFrame: Int,
         gateEndFrame: Int,
         voiceDurationFrames: Int,

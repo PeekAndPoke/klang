@@ -103,7 +103,7 @@ class LangHpsustainSpec : StringSpec({
         events[3].data.hpsustain shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "hpsustain() creates FilterEnvelope in FilterDef" {
+    "hpsustain() creates FilterEnvDef in FilterDef" {
         val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             hcutoff = 2000.0,
             hpsustain = 0.8

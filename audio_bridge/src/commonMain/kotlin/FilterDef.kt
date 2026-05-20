@@ -10,7 +10,7 @@ sealed class FilterDef {
     data class LowPass(
         val cutoffHz: Double,
         val q: Double?,
-        val envelope: FilterEnvelope? = null,
+        val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
     @Serializable
@@ -18,7 +18,7 @@ sealed class FilterDef {
     data class HighPass(
         val cutoffHz: Double,
         val q: Double?,
-        val envelope: FilterEnvelope? = null,
+        val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
     @Serializable
@@ -26,7 +26,7 @@ sealed class FilterDef {
     data class BandPass(
         val cutoffHz: Double,
         val q: Double?,
-        val envelope: FilterEnvelope? = null,
+        val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
     @Serializable
@@ -34,7 +34,7 @@ sealed class FilterDef {
     data class Notch(
         val cutoffHz: Double,
         val q: Double?,
-        val envelope: FilterEnvelope? = null,
+        val envelope: FilterEnvDef? = null,
     ) : FilterDef()
 
     @Serializable

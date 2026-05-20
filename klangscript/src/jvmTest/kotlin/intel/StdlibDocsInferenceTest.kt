@@ -190,14 +190,14 @@ class StdlibDocsInferenceTest : StringSpec({
         val reg = stdlibRegistry()
         val sine = reg.getCallable("sine", KlangType("Osc"))!!
         sine.receiver!!.simpleName shouldBe "Osc"
-        sine.receiver!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
+        sine.receiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptOsc"
     }
 
     "real stdlib: Math.sqrt method receiver FQCN matches KlangScriptMath" {
         val reg = stdlibRegistry()
         val sqrt = reg.getCallable("sqrt", KlangType("Math"))!!
         sqrt.receiver!!.simpleName shouldBe "Math"
-        sqrt.receiver!!.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptMath"
+        sqrt.receiver.fqcn shouldBe "io.peekandpoke.klang.script.stdlib.KlangScriptMath"
     }
 
     "real stdlib: type inference of Osc.slot returns OscSlot KlangType with FQCN" {

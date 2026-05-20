@@ -13,7 +13,7 @@ import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.filter.buildFilterPipeline
 import io.peekandpoke.klang.audio_be.voices.strip.ignite.IgniteRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.pitch.buildPitchPipeline
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import kotlin.math.PI
@@ -322,7 +322,7 @@ object TestSamples {
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = AudioBuffer(size) { 0.0 },
-            meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
+            meta = SampleMetadata(loop = null, adsr = AdsrDef.empty, anchor = 0.0)
         )
     }
 
@@ -330,7 +330,7 @@ object TestSamples {
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = AudioBuffer(size) { if (it == 0) 1.0 else 0.0 },
-            meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
+            meta = SampleMetadata(loop = null, adsr = AdsrDef.empty, anchor = 0.0)
         )
     }
 
@@ -338,7 +338,7 @@ object TestSamples {
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = AudioBuffer(size) { it.toDouble() / (size - 1) },
-            meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
+            meta = SampleMetadata(loop = null, adsr = AdsrDef.empty, anchor = 0.0)
         )
     }
 
@@ -348,7 +348,7 @@ object TestSamples {
             pcm = AudioBuffer(size) {
                 sin(2.0 * PI * it / size)
             },
-            meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
+            meta = SampleMetadata(loop = null, adsr = AdsrDef.empty, anchor = 0.0)
         )
     }
 
@@ -356,7 +356,7 @@ object TestSamples {
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = AudioBuffer(size) { value },
-            meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
+            meta = SampleMetadata(loop = null, adsr = AdsrDef.empty, anchor = 0.0)
         )
     }
 }

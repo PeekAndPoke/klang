@@ -108,7 +108,7 @@ class LangBpattackSpec : StringSpec({
         events[3].data.bpattack shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "bpattack() creates FilterEnvelope in FilterDef" {
+    "bpattack() creates FilterEnvDef in FilterDef" {
         val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             bandf = 1000.0,
             bpattack = 0.05

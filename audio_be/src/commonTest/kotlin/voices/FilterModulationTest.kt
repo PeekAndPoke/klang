@@ -11,7 +11,7 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 
@@ -84,7 +84,7 @@ class FilterModulationTest : StringSpec({
         return MonoSamplePcm(
             sampleRate = sampleRate,
             pcm = pcm,
-            meta = SampleMetadata(loop = null, adsr = AdsrEnvelope.empty, anchor = 0.0)
+            meta = SampleMetadata(loop = null, adsr = AdsrDef.empty, anchor = 0.0)
         )
     }
 

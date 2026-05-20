@@ -108,7 +108,7 @@ class LangBpsustainSpec : StringSpec({
         events[3].data.bpsustain shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "bpsustain() creates FilterEnvelope in FilterDef" {
+    "bpsustain() creates FilterEnvDef in FilterDef" {
         val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             bandf = 1000.0,
             bpsustain = 0.7

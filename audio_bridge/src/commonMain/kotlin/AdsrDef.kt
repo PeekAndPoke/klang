@@ -3,7 +3,7 @@ package io.peekandpoke.klang.audio_bridge
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class AdsrEnvelope(
+data class AdsrDef(
     val attack: Double? = null,
     val decay: Double? = null,
     val sustain: Double? = null,
@@ -11,7 +11,7 @@ data class AdsrEnvelope(
 ) {
     companion object {
         /** Empty envelope */
-        val empty = AdsrEnvelope(
+        val empty = AdsrDef(
             attack = null,
             decay = null,
             sustain = null,
@@ -19,7 +19,7 @@ data class AdsrEnvelope(
         )
 
         /** Standard Synth defaults (Organ-like) */
-        val defaultSynth = AdsrEnvelope(
+        val defaultSynth = AdsrDef(
             attack = 0.01,
             decay = 0.1,
             sustain = 1.0,
@@ -41,10 +41,10 @@ data class AdsrEnvelope(
      * Merges this envelope with a fallback envelope.
      * Values in this take precedence. If null, values from [other] are used.
      */
-    fun mergeWith(other: AdsrEnvelope?): AdsrEnvelope {
+    fun mergeWith(other: AdsrDef?): AdsrDef {
         if (other == null) return this
 
-        return AdsrEnvelope(
+        return AdsrDef(
             attack = this.attack ?: other.attack,
             decay = this.decay ?: other.decay,
             sustain = this.sustain ?: other.sustain,
@@ -55,7 +55,7 @@ data class AdsrEnvelope(
     /**
      * Resolves to non-nullable values, using provided defaults as final fallback.
      */
-    fun resolve(defaults: AdsrEnvelope = defaultSynth): Resolved {
+    fun resolve(defaults: AdsrDef = defaultSynth): Resolved {
         return Resolved(
             attack = this.attack ?: defaults.attack ?: 0.01,
             decay = this.decay ?: defaults.decay ?: 0.1,

@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.audio_be
 
 import io.peekandpoke.klang.audio_be.voices.VoiceScheduler
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
 import io.peekandpoke.klang.audio_bridge.SampleRequest
@@ -85,7 +85,7 @@ class WarmupRunner(
                     data = VoiceData.empty.copy(
                         sound = "sine",
                         freqHz = 440.0,
-                        adsr = AdsrEnvelope(attack = 0.005, decay = 0.05, sustain = 0.0, release = 0.05),
+                        adsr = AdsrDef(attack = 0.005, decay = 0.05, sustain = 0.0, release = 0.05),
                     ),
                     startTime = 0.0,
                     gateEndTime = 0.1,
@@ -96,7 +96,7 @@ class WarmupRunner(
                     playbackId = WARMUP_PLAYBACK_ID,
                     data = VoiceData.empty.copy(
                         sound = WARMUP_SAMPLE_NAME,
-                        adsr = AdsrEnvelope(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
+                        adsr = AdsrDef(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
                     ),
                     startTime = 0.0,
                     gateEndTime = 0.1,

@@ -34,7 +34,7 @@ class SprudelVoiceDataSpec : StringSpec({
         data.gain shouldBe 0.8
     }
 
-    "toVoiceData() converts flat ADSR fields to AdsrEnvelope" {
+    "toVoiceData() converts flat ADSR fields to AdsrDef" {
         val data = SprudelVoiceData.empty.copy(
             attack = 0.01,
             decay = 0.1,

@@ -8,7 +8,7 @@ import io.peekandpoke.klang.audio_be.effects.Ducking
 import io.peekandpoke.klang.audio_be.effects.Phaser
 import io.peekandpoke.klang.audio_be.effects.Reverb
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
-import io.peekandpoke.klang.audio_be.ignitor.FilterEnvelope
+import io.peekandpoke.klang.audio_be.ignitor.FilterEnvDef
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors
@@ -239,7 +239,7 @@ class EffectBenchmark(
                 Ignitors.sine().lowpass(
                     cutoffHz = 1000.0,
                     q = 1.0,
-                    env = FilterEnvelope(depth = 0.5, attackSec = 0.05, decaySec = 0.1, sustainLevel = 0.7, releaseSec = 0.5),
+                    env = FilterEnvDef(depth = 0.5, attackSec = 0.05, decaySec = 0.1, sustainLevel = 0.7, releaseSec = 0.5),
                 )
             },
 

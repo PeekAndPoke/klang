@@ -103,7 +103,7 @@ class LangHpenvSpec : StringSpec({
         events[3].data.hpenv shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "hpenv() creates FilterEnvelope in FilterDef" {
+    "hpenv() creates FilterEnvDef in FilterDef" {
         val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             hcutoff = 2000.0,
             hpenv = 0.7

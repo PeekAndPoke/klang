@@ -103,7 +103,7 @@ class LangHpdecaySpec : StringSpec({
         events[3].data.hpdecay shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "hpdecay() creates FilterEnvelope in FilterDef" {
+    "hpdecay() creates FilterEnvDef in FilterDef" {
         val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             hcutoff = 2000.0,
             hpdecay = 0.2

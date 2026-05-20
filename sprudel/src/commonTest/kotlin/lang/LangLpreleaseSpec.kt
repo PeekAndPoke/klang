@@ -108,7 +108,7 @@ class LangLpreleaseSpec : StringSpec({
         events[3].data.lprelease shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "lprelease() creates FilterEnvelope in FilterDef" {
+    "lprelease() creates FilterEnvDef in FilterDef" {
         val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             cutoff = 1000.0,
             lprelease = 0.5

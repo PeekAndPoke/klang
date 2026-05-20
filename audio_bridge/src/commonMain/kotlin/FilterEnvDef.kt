@@ -19,7 +19,7 @@ import kotlinx.serialization.Serializable
  * | 0.5   | 0.2      | 500 × (1+0.5×0.2) | 550 Hz (subtle)           |
  */
 @Serializable
-data class FilterEnvelope(
+data class FilterEnvDef(
     /** Attack time in seconds - time to reach peak modulation */
     val attack: Double? = null,
     /** Decay time in seconds - time to reach sustain level */
@@ -45,8 +45,8 @@ data class FilterEnvelope(
     /**
      * Merges this envelope with a fallback, using fallback values for any null fields.
      */
-    fun mergeWith(fallback: FilterEnvelope): FilterEnvelope {
-        return FilterEnvelope(
+    fun mergeWith(fallback: FilterEnvDef): FilterEnvDef {
+        return FilterEnvDef(
             attack = attack ?: fallback.attack,
             decay = decay ?: fallback.decay,
             sustain = sustain ?: fallback.sustain,
@@ -72,7 +72,7 @@ data class FilterEnvelope(
         /**
          * Default filter envelope settings.
          */
-        val default = FilterEnvelope(
+        val default = FilterEnvDef(
             attack = 0.01,
             decay = 0.1,
             sustain = 1.0,

@@ -108,7 +108,7 @@ class LangBpdecaySpec : StringSpec({
         events[3].data.bpdecay shouldBe (0.0 plusOrMinus EPSILON)
     }
 
-    "bpdecay() creates FilterEnvelope in FilterDef" {
+    "bpdecay() creates FilterEnvDef in FilterDef" {
         val data = io.peekandpoke.klang.sprudel.SprudelVoiceData.empty.copy(
             bandf = 1000.0,
             bpdecay = 0.2

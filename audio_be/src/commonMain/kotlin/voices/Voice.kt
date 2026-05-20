@@ -7,7 +7,7 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
-import io.peekandpoke.klang.audio_bridge.AdsrEnvelope
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 
 // Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
 // object), causing heap allocation on every operation. Int maps directly to a JS number.
@@ -152,7 +152,7 @@ class Voice(
         var releaseStarted: Boolean = false,
     ) {
         companion object {
-            fun of(adsr: AdsrEnvelope.Resolved, sampleRate: Int) = Envelope(
+            fun of(adsr: AdsrDef.Resolved, sampleRate: Int) = Envelope(
                 attackFrames = adsr.attack * sampleRate,
                 decayFrames = adsr.decay * sampleRate,
                 sustainLevel = adsr.sustain,

@@ -68,7 +68,7 @@ import kotlin.math.tan
 // Coefficient setup is shared via [computeSvfCoeffs] / [SvfCoeffs] — same NaN/Inf
 // guard as `bilinearK`, single source of truth across class and Ignitor sides.
 //
-// **Coefficient zipper (Ignitor side, env-modulated)**: when `FilterEnvelope.depth ≠ 0`,
+// **Coefficient zipper (Ignitor side, env-modulated)**: when `FilterEnvDef.depth ≠ 0`,
 // the cutoff sweeps over the block. Per-block coefficient recompute used to leave a
 // stair-step at the block rate (~187 Hz buzz @ 256 frames/48k on aggressive sweeps).
 // Now: compute coefs at block start AND end (2 `tan` calls), then linearly interpolate

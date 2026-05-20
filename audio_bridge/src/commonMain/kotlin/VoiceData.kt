@@ -34,7 +34,7 @@ data class VoiceData(
     val filters: FilterDefs = FilterDefs.empty,
 
     // ADSR
-    val adsr: AdsrEnvelope,
+    val adsr: AdsrDef,
 
     // Pitch / Glisando
     val accelerate: Double?,
@@ -160,7 +160,7 @@ data class VoiceData(
             soundIndex = null,
             oscParams = null,
             filters = FilterDefs.empty,
-            adsr = AdsrEnvelope.empty,
+            adsr = AdsrDef.empty,
             accelerate = null,
             vibrato = null,
             vibratoMod = null,
