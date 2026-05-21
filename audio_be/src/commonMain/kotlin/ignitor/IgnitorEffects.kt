@@ -43,9 +43,10 @@ import kotlin.math.sin
  *
  * @param amount Drive intensity. 0.0 = bypass, 0.3 = warm saturation, 1.0 = heavy distortion,
  *   2.0+ = extreme. Internally: gain = 10^(amount × 1.2). Default: 0.0 (bypass).
- * @param shape Waveshaper function. Default: "soft" (tanh).
- *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
- *   "diode" (asymmetric), "fold" (wave folding), "chebyshev", "rectify", "exp".
+ * @param shape Waveshaper function. Default: "soft" (tanh). Options:
+ *   - **Symmetric soft:** "soft" (tanh), "gentle" (soft clip, 2× gain), "softsat" (algebraic, gentler still), "cubic", "exp" (transistor), "sineshaper" (peak-at-unity fold).
+ *   - **Symmetric hard / harsh:** "hard" (clip), "zerosquare" (high-gain tanh → square), "chebyshev" (3rd-harmonic), "fold" (sin wavefold), "linearfold" (triangle wavefold).
+ *   - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly), "stompbox" (diode pedal), "rectify" (full-wave).
  */
 fun Ignitor.distort(amount: Ignitor, shape: String = "soft", oversampleStages: Int = 0): Ignitor =
     DistortIgnitor(this, amount, shape, oversampleStages)
@@ -184,9 +185,10 @@ fun Ignitor.drive(amount: Double, type: String = "linear"): Ignitor {
  * Output is bounded to ±1 by a C¹-piecewise soft cap ([ClippingFuncs.softCap])
  * — identity in the linear region, smooth saturation above. See [distort].
  *
- * @param shape Waveshaper function. Default: "soft" (tanh).
- *   Options: "soft" (tanh), "hard" (clip), "gentle" (soft clip, 2× gain), "cubic",
- *   "diode" (asymmetric), "fold" (wave folding), "chebyshev", "rectify", "exp".
+ * @param shape Waveshaper function. Default: "soft" (tanh). See [distort] for the full
+ *   list of options ("soft", "hard", "gentle", "softsat", "cubic", "exp", "sineshaper",
+ *   "zerosquare", "chebyshev", "fold", "linearfold", "diode", "tube", "asym", "stompbox",
+ *   "rectify").
  */
 fun Ignitor.clip(shape: String = "soft", oversampleStages: Int = 0): Ignitor =
     ClipIgnitor(this, shape, oversampleStages)

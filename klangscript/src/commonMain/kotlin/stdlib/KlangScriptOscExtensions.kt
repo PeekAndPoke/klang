@@ -97,7 +97,12 @@ object KlangScriptOscExtensions {
 
     /**
      * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
-     * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     *
+     * Shapes:
+     *  - **Symmetric soft:** "soft" (tanh), "gentle", "softsat", "cubic", "exp", "sineshaper".
+     *  - **Symmetric hard / wavefolding:** "hard", "zerosquare", "chebyshev", "fold", "linearfold".
+     *  - **Asymmetric (even harmonics):** "diode", "tube", "asym", "stompbox", "rectify".
+     *
      * Oversample: user-facing factor (2 = 2x, 4 = 4x, 8 = 8x). 0/1 = off. Non-power-of-2 floored.
      */
     @KlangScript.Method
@@ -106,7 +111,12 @@ object KlangScriptOscExtensions {
 
     /**
      * Waveshaping distortion. Convenience for drive(amount) + clip(shape).
-     * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     *
+     * Shapes:
+     *  - **Symmetric soft:** "soft" (tanh), "gentle", "softsat", "cubic", "exp", "sineshaper".
+     *  - **Symmetric hard / wavefolding:** "hard", "zerosquare", "chebyshev", "fold", "linearfold".
+     *  - **Asymmetric (even harmonics):** "diode", "tube", "asym", "stompbox", "rectify".
+     *
      * Oversample: user-facing factor (2 = 2x, 4 = 4x, 8 = 8x). 0/1 = off. Non-power-of-2 floored.
      */
     @KlangScript.Method

@@ -9,7 +9,10 @@ package io.peekandpoke.klang.audio_be
  * call — letting the inline shape functions in `ClippingFunctions.kt` actually
  * inline. Storing a `(Double) -> Double` function reference would defeat that.
  */
-internal enum class DistortionShape { SOFT, HARD, GENTLE, CUBIC, DIODE, FOLD, CHEBYSHEV, RECTIFY, EXP }
+internal enum class DistortionShape {
+    SOFT, HARD, GENTLE, CUBIC, DIODE, FOLD, CHEBYSHEV, RECTIFY, EXP,
+    SOFT_SAT, TUBE, LINEAR_FOLD, ZERO_SQUARE, SINE_SHAPER, ASYM, STOMP_BOX,
+}
 
 /**
  * Maps a DSL shape name to the enum. Unknown / null → [DistortionShape.SOFT]
@@ -24,6 +27,13 @@ internal fun parseDistortionShape(shape: String): DistortionShape = when (shape.
     "chebyshev" -> DistortionShape.CHEBYSHEV
     "rectify" -> DistortionShape.RECTIFY
     "exp" -> DistortionShape.EXP
+    "softsat", "soft_sat" -> DistortionShape.SOFT_SAT
+    "tube" -> DistortionShape.TUBE
+    "linearfold", "linear_fold", "lfold" -> DistortionShape.LINEAR_FOLD
+    "zerosquare", "zero_square", "square" -> DistortionShape.ZERO_SQUARE
+    "sineshaper", "sine_shaper", "sshape" -> DistortionShape.SINE_SHAPER
+    "asym" -> DistortionShape.ASYM
+    "stompbox", "stomp_box", "stomp" -> DistortionShape.STOMP_BOX
     else -> DistortionShape.SOFT // "soft" + fallback
 }
 
@@ -47,4 +57,11 @@ internal inline fun applyDistortionShape(shape: DistortionShape, x: Double): Dou
     DistortionShape.CHEBYSHEV -> ClippingFuncs.chebyshevT3(x)
     DistortionShape.RECTIFY -> ClippingFuncs.rectify(x)
     DistortionShape.EXP -> ClippingFuncs.expClip(x)
+    DistortionShape.SOFT_SAT -> ClippingFuncs.softSat(x)
+    DistortionShape.TUBE -> ClippingFuncs.tube(x)
+    DistortionShape.LINEAR_FOLD -> ClippingFuncs.linearFold(x)
+    DistortionShape.ZERO_SQUARE -> ClippingFuncs.zeroSquare(x)
+    DistortionShape.SINE_SHAPER -> ClippingFuncs.sineShaper(x)
+    DistortionShape.ASYM -> ClippingFuncs.asym(x)
+    DistortionShape.STOMP_BOX -> ClippingFuncs.stompBox(x)
 }

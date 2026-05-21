@@ -136,15 +136,17 @@ fun dslEditorExtension(
                     if (receiverType != null) {
                         val registry = analysis.registry
                         val symbol = registry.getSymbolWithReceiver(name, receiverType)
-                        if (symbol != null) {
-                            return word to symbol
-                        }
+                        // Strict: receiver known + no variant matches → no popup.
+                        // Falling back to the unfiltered lookup would leak variants
+                        // from other DSLs (e.g. sprudel `String.distort`) into a hover
+                        // on an IgnitorDsl chain.
+                        return if (symbol != null) word to symbol else null
                     }
                 }
             }
         }
 
-        // Fallback: name-only lookup
+        // Fallback: name-only lookup (no AST analysis, or no receiver type resolved)
         val doc = docProvider(name) ?: return null
         return word to doc
     }

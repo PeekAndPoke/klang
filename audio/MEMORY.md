@@ -163,6 +163,32 @@ Legacy effect filters (BitCrush, SampleRateReducer, Distortion, Tremolo, Phaser)
 BlockRenderer implementations. ~426 tests across 35 files.
 See `docs/agent-tasks/audio-pipeline-open-topics.md` for remaining open topics.
 
+## Distortion Shape Catalog Extension (2026-05-21)
+
+Added 7 new waveshapers to `ClippingFuncs` (+ `DistortionShape` enum + parser dispatch):
+
+- **softSat** — `x / √(1+x²)`. Gentler than softClip; close to identity at low levels.
+- **tube** — Shifted-tanh asymmetric: `(fastTanh(x+0.5) − fastTanh(0.5)) / (1 + fastTanh(0.5))`.
+  Normalised so negative rail = −1, positive peak ≈ +0.37. Generates even harmonics + DC.
+- **linearFold** — Triangle wavefolder, period 4, identity in [−1,1]. Sharper creases than `sineFold`.
+- **zeroSquare** — `fastTanh(8·x)`. Crossover-region timbre, near-square at high drive.
+- **sineShaper** — `sin(π·x/2)`. Normalised fold; peak at x=±1, folds outside.
+- **asym** — Piecewise polynomial: positive cubic clip, negative sqrt-knee. Even harmonics + DC.
+- **stompBox** — Asymmetric diode-pedal: `1 − e^(−1.5·x)` pos / `−(1 − e^(3·x))` neg. Pedal grit.
+
+**Tube bias constant lesson**: Tube uses Padé-consistent constants (`fastTanh(0.5) = 13.625/29.25 ≈ 0.46581` and
+`1/(1 + fastTanh(0.5)) = 29.25/42.875 ≈ 0.68222`), NOT the real `tanh(0.5) ≈ 0.46211`. Necessary so `tube(0) = 0`
+exactly when the underlying shape is the Padé approximation. If `fastTanh`'s Padé form ever changes, these
+constants must be recomputed (or `tube(0) ≠ 0` will fail a bounds test).
+
+Parser accepts canonical lowercase names + underscore/short aliases (e.g. `linearfold`, `linear_fold`, `lfold`;
+`zerosquare`, `zero_square`, `square`; `stompbox`, `stomp_box`, `stomp`). See
+`DistortionShape.parseDistortionShape()`.
+
+SVG visualisers in `sprudel/.../SprudelDistortEditorTool.kt` + `SprudelDistortShapeEditorTool.kt` mirror the
+shapes with the *real* `tanh` (their local helper), so they use real-tanh constants for tube — different
+numeric constants from the engine, same logical behaviour (visualisation reference, not audio).
+
 ## Lessons Learned
 
 - `KlangTime.internalMsNow()` is monotonic, NOT wall-clock — use only for relative timing.

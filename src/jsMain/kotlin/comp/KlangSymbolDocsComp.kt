@@ -85,7 +85,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
         val description = symbol.variants
             .firstOrNull { it.description.isNotBlank() }
             ?.description
-            ?.split("\n\n")?.first()?.trim()
+            ?.trim()
 
         val sortedVariants = symbol.variants.sortedBy {
             when (it) {

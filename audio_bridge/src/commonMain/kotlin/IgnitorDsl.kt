@@ -870,7 +870,14 @@ sealed interface IgnitorDsl {
     /**
      * Pure waveshaping without drive. Applies a nonlinear transfer function per sample.
      * Includes DC blocker for asymmetric shapes.
-     * Shapes: "soft" (tanh), "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp".
+     *
+     * Shapes:
+     *  - **Symmetric soft:** "soft" (tanh), "gentle" (soft clip, 2× gain), "softsat"
+     *    (algebraic, gentler), "cubic", "exp" (transistor), "sineshaper" (peak-at-unity fold).
+     *  - **Symmetric hard / harsh:** "hard" (clip), "zerosquare" (→ square), "chebyshev"
+     *    (3rd-harmonic), "fold" (sin wavefold), "linearfold" (triangle wavefold).
+     *  - **Asymmetric (even harmonics, DC):** "diode", "tube" (shifted-tanh), "asym" (poly),
+     *    "stompbox" (diode pedal), "rectify" (full-wave).
      */
     @Serializable
     @SerialName("clip")
@@ -1199,6 +1206,14 @@ fun IgnitorDsl.notch(cutoffHz: Double, q: Double = 1.0) = IgnitorDsl.Notch(
 fun IgnitorDsl.drive(amount: Double, driveType: String = "linear") =
     IgnitorDsl.Drive(this, IgnitorDsl.Constant(amount), driveType)
 
+/**
+ * Pure waveshaping without drive. See [IgnitorDsl.Clip] for the full list of supported [shape] values.
+ *
+ * Quick reference:
+ *  - soft / gentle / softsat / cubic / exp / sineshaper — symmetric soft
+ *  - hard / zerosquare / chebyshev / fold / linearfold — symmetric hard / wavefolding
+ *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
+ */
 fun IgnitorDsl.clip(shape: String = "soft", oversample: Int = 0) = IgnitorDsl.Clip(this, shape, oversample)
 
 // Envelope
@@ -1236,7 +1251,17 @@ fun IgnitorDsl.fm(
 
 // Effects
 
-/** Applies waveshaping distortion with the given [amount] and clipping [shape]. */
+/**
+ * Applies waveshaping distortion with the given [amount] and clipping [shape].
+ *
+ * Equivalent to `this.drive(amount).clip(shape, oversample)`. See [IgnitorDsl.Clip] for the
+ * full list of supported [shape] values.
+ *
+ * Quick reference:
+ *  - soft / gentle / softsat / cubic / exp / sineshaper — symmetric soft
+ *  - hard / zerosquare / chebyshev / fold / linearfold — symmetric hard / wavefolding
+ *  - diode / tube / asym / stompbox / rectify — asymmetric (even harmonics, DC offset)
+ */
 fun IgnitorDsl.distort(amount: Double, shape: String = "soft", oversample: Int = 0) =
     IgnitorDsl.Clip(inner = IgnitorDsl.Drive(inner = this, amount = IgnitorDsl.Constant(amount)), shape = shape, oversample = oversample)
 

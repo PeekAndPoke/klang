@@ -130,6 +130,100 @@ class ClippingFuncsBoundsSpec : StringSpec({
         assertSymmetric("expClip", allInputs, tol = 1e-12) { ClippingFuncs.expClip(it) }
     }
 
+    // ── new shapes (2026-05-21) ────────────────────────────────────────────
+
+    "softSat is finite and bounded by 1.0 for finite input" {
+        assertFiniteAndBounded("softSat", allInputs, 1.0) { ClippingFuncs.softSat(it) }
+    }
+    "softSat is odd-symmetric" {
+        assertSymmetric("softSat", allInputs, tol = 1e-12) { ClippingFuncs.softSat(it) }
+    }
+
+    "tube is finite and bounded by 1.0" {
+        assertFiniteAndBounded("tube", allInputs, 1.0) { ClippingFuncs.tube(it) }
+    }
+    "tube is asymmetric (negative side reaches deeper)" {
+        // bias=0.5 → normalized so negative rail hits -1, positive saturates ~+0.37.
+        for (x in listOf(0.5, 1.0, 1.5, 2.0, 5.0)) {
+            val pos = abs(ClippingFuncs.tube(x))
+            val neg = abs(ClippingFuncs.tube(-x))
+            withClue("tube asymmetry @ x=$x: |f(x)|=$pos, |f(-x)|=$neg") {
+                (neg > pos) shouldBe true
+            }
+        }
+    }
+    "tube has zero output at zero input (DC blocker can do its job downstream)" {
+        ClippingFuncs.tube(0.0) shouldBe (0.0 plusOrMinus 1e-12)
+    }
+
+    "linearFold is finite and bounded by 1.0" {
+        assertFiniteAndBounded("linearFold", allInputs, 1.0) { ClippingFuncs.linearFold(it) }
+    }
+    "linearFold is odd-symmetric" {
+        assertSymmetric("linearFold", allInputs, tol = 1e-9) { ClippingFuncs.linearFold(it) }
+    }
+    "linearFold is identity in [-1, 1]" {
+        for (x in listOf(-1.0, -0.95, -0.5, -0.1, 0.0, 0.1, 0.5, 0.95, 1.0)) {
+            ClippingFuncs.linearFold(x) shouldBe (x plusOrMinus 1e-12)
+        }
+    }
+
+    "zeroSquare is finite and bounded by 1.0" {
+        assertFiniteAndBounded("zeroSquare", allInputs, 1.0) { ClippingFuncs.zeroSquare(it) }
+    }
+    "zeroSquare is odd-symmetric" {
+        assertSymmetric("zeroSquare", allInputs, tol = 1e-12) { ClippingFuncs.zeroSquare(it) }
+    }
+
+    "sineShaper is finite and bounded by 1.0" {
+        assertFiniteAndBounded("sineShaper", allInputs, 1.0) { ClippingFuncs.sineShaper(it) }
+    }
+    "sineShaper is odd-symmetric" {
+        assertSymmetric("sineShaper", allInputs, tol = 1e-12) { ClippingFuncs.sineShaper(it) }
+    }
+    "sineShaper peaks at ±1 for x = ±1" {
+        ClippingFuncs.sineShaper(1.0) shouldBe (1.0 plusOrMinus 1e-12)
+        ClippingFuncs.sineShaper(-1.0) shouldBe (-1.0 plusOrMinus 1e-12)
+    }
+
+    "asym is finite and bounded by 1.0" {
+        assertFiniteAndBounded("asym", allInputs, 1.0) { ClippingFuncs.asym(it) }
+    }
+    "asym is asymmetric (negative reaches saturation faster)" {
+        // sqrt knee on negative side: |asym(-0.25)| = 0.5 ≫ |asym(0.25)| ≈ 0.367.
+        for (x in listOf(0.1, 0.25, 0.5)) {
+            val pos = abs(ClippingFuncs.asym(x))
+            val neg = abs(ClippingFuncs.asym(-x))
+            withClue("asym asymmetry @ x=$x: |f(x)|=$pos, |f(-x)|=$neg") {
+                (neg > pos) shouldBe true
+            }
+        }
+    }
+    "asym has zero output at zero input" {
+        ClippingFuncs.asym(0.0) shouldBe (0.0 plusOrMinus 1e-12)
+    }
+
+    "stompBox is finite and bounded by 1.0" {
+        assertFiniteAndBounded("stompBox", allInputs, 1.0) { ClippingFuncs.stompBox(it) }
+    }
+    "stompBox is asymmetric (negative anti-parallel pair saturates harder)" {
+        // Negative branch uses gain 3.0, positive uses 1.5 — neg should saturate harder.
+        for (x in listOf(0.3, 0.5, 1.0, 2.0)) {
+            val pos = abs(ClippingFuncs.stompBox(x))
+            val neg = abs(ClippingFuncs.stompBox(-x))
+            withClue("stompBox asymmetry @ x=$x: |f(x)|=$pos, |f(-x)|=$neg") {
+                (neg > pos) shouldBe true
+            }
+        }
+    }
+    "stompBox is continuous at zero" {
+        val eps = 1e-9
+        val below = ClippingFuncs.stompBox(-eps)
+        val above = ClippingFuncs.stompBox(eps)
+        below shouldBe (0.0 plusOrMinus 1e-7)
+        above shouldBe (0.0 plusOrMinus 1e-7)
+    }
+
     // ── softCap ────────────────────────────────────────────────────────────
 
     "softCap is identity for |x| <= 0.95" {

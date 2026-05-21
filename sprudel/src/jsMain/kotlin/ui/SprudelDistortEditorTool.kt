@@ -41,8 +41,10 @@ import kotlinx.html.label
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.floor
 import kotlin.math.sign
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
@@ -74,7 +76,10 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
     companion object {
-        val shapes = listOf("soft", "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp")
+        val shapes = listOf(
+            "soft", "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp",
+            "softsat", "tube", "linearfold", "zerosquare", "sineshaper", "asym", "stompbox",
+        )
     }
 
     // ── Parse current value from raw source text ──────────────────────────────
@@ -185,13 +190,9 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
                         }
                     }
 
-                    // Shape buttons
-                    noui.twelve.wide.field {
-                        label {
-                            +"Shape"
-                            subFieldInfoIcon("amount", "shape", props.toolCtx, infoPopup)
-                        }
-
+                    // Oversampling buttons
+                    noui.field {
+                        label { +"Oversampling" }
                         div {
                             css {
                                 display = Display.flex
@@ -199,32 +200,26 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
                                 gap = 6.px
                                 marginTop = 6.px
                             }
-                            // "default" button — clears shape selection
-                            val isDefault = shape == null
-                            ui.small.givenNot(isDefault) { basic }
-                                .given(isDefault) { with(laf.styles.goldButton()) }.button {
-                                    key = "default"
-                                    onClick { shape = null; liveUpdate() }
-                                    +"default"
-                                }
-                            for (s in shapes) {
-                                val isSelected = shape == s
+                            for ((label, factor) in listOf("Off" to null, "2x" to 2, "4x" to 4, "8x" to 8)) {
+                                val isSelected = oversample == factor
                                 ui.small.givenNot(isSelected) { basic }
                                     .given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                        key = s
-                                        onClick { shape = s; liveUpdate() }
-                                        +s
+                                        key = "os-${factor ?: "off"}"
+                                        onClick { oversample = factor; liveUpdate() }
+                                        +label
                                     }
                             }
                         }
                     }
                 }
-            }
 
-            // Oversampling buttons
-            ui.form {
+                // Shape buttons
                 noui.field {
-                    label { +"Oversampling" }
+                    label {
+                        +"Shape"
+                        subFieldInfoIcon("amount", "shape", props.toolCtx, infoPopup)
+                    }
+
                     div {
                         css {
                             display = Display.flex
@@ -232,13 +227,21 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
                             gap = 6.px
                             marginTop = 6.px
                         }
-                        for ((label, factor) in listOf("Off" to null, "2x" to 2, "4x" to 4, "8x" to 8)) {
-                            val isSelected = oversample == factor
+                        // "default" button — clears shape selection
+                        val isDefault = shape == null
+                        ui.small.givenNot(isDefault) { basic }
+                            .given(isDefault) { with(laf.styles.goldButton()) }.button {
+                                key = "default"
+                                onClick { shape = null; liveUpdate() }
+                                +"default"
+                            }
+                        for (s in shapes) {
+                            val isSelected = shape == s
                             ui.small.givenNot(isSelected) { basic }
                                 .given(isSelected) { with(laf.styles.goldButton()) }.button {
-                                    key = "os-${factor ?: "off"}"
-                                    onClick { oversample = factor; liveUpdate() }
-                                    +label
+                                    key = s
+                                    onClick { shape = s; liveUpdate() }
+                                    +s
                                 }
                         }
                     }
@@ -332,6 +335,26 @@ private class SprudelDistortEditorComp(ctx: Ctx<Props>) : Component<SprudelDisto
 
         "rectify" -> abs(tanh(x))
         "exp" -> sign(x) * (1.0 - exp(-abs(x)))
+
+        "softsat" -> x / sqrt(1.0 + x * x)
+        "tube" -> (tanh(x + 0.5) - 0.46211715726000974) * 0.6839397205857212
+        "linearfold" -> {
+            val shifted = x + 1.0
+            val phase = shifted - 4.0 * floor(shifted * 0.25)
+            1.0 - abs(phase - 2.0)
+        }
+
+        "zerosquare" -> tanh(x * 8.0)
+        "sineshaper" -> sin(x * PI * 0.5)
+        "asym" -> if (x >= 0.0) {
+            val xc = if (x > 1.0) 1.0 else x
+            1.5 * xc - 0.5 * xc * xc * xc
+        } else {
+            val xc = if (x < -1.0) 1.0 else -x
+            -sqrt(xc)
+        }
+
+        "stompbox" -> if (x >= 0.0) 1.0 - exp(-x * 1.5) else -(1.0 - exp(x * 3.0))
         else -> tanh(x)
     }
 

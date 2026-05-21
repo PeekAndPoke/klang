@@ -1,8 +1,15 @@
 package io.peekandpoke.klang.sprudel.ui
 
-import io.peekandpoke.klang.ui.*
+import io.peekandpoke.klang.ui.HoverPopupCtrl
+import io.peekandpoke.klang.ui.KlangUiToolContext
+import io.peekandpoke.klang.ui.KlangUiToolEmbeddable
 import io.peekandpoke.klang.ui.codetools.KlangToolAutoUpdate
 import io.peekandpoke.klang.ui.feel.KlangTheme
+import io.peekandpoke.klang.ui.svgLine
+import io.peekandpoke.klang.ui.svgPolyline
+import io.peekandpoke.klang.ui.svgRect
+import io.peekandpoke.klang.ui.svgRoot
+import io.peekandpoke.klang.ui.svgText
 import io.peekandpoke.kraft.components.Component
 import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
@@ -13,11 +20,25 @@ import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.html.onClick
 import io.peekandpoke.ultra.semanticui.SemanticIconFn
 import io.peekandpoke.ultra.semanticui.ui
-import kotlinx.css.*
+import kotlinx.css.Display
+import kotlinx.css.FlexWrap
+import kotlinx.css.display
+import kotlinx.css.flexWrap
+import kotlinx.css.gap
+import kotlinx.css.marginBottom
+import kotlinx.css.minWidth
+import kotlinx.css.px
+import kotlinx.css.rem
 import kotlinx.html.FlowContent
 import kotlinx.html.Tag
 import kotlinx.html.div
-import kotlin.math.*
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.floor
+import kotlin.math.sign
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 // ── Tool singleton ────────────────────────────────────────────────────────────
 
@@ -50,7 +71,10 @@ private class SprudelDistortShapeEditorComp(ctx: Ctx<Props>) :
     data class Props(val toolCtx: KlangUiToolContext, val embedded: Boolean = false)
 
     companion object {
-        val shapes = listOf("soft", "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp")
+        val shapes = listOf(
+            "soft", "hard", "gentle", "cubic", "diode", "fold", "chebyshev", "rectify", "exp",
+            "softsat", "tube", "linearfold", "zerosquare", "sineshaper", "asym", "stompbox",
+        )
         val allOptions = listOf("default") + shapes
     }
 
@@ -217,6 +241,26 @@ private class SprudelDistortShapeEditorComp(ctx: Ctx<Props>) :
 
         "rectify" -> abs(tanh(x))
         "exp" -> sign(x) * (1.0 - exp(-abs(x)))
+
+        "softsat" -> x / sqrt(1.0 + x * x)
+        "tube" -> (tanh(x + 0.5) - 0.46211715726000974) * 0.6839397205857212
+        "linearfold" -> {
+            val shifted = x + 1.0
+            val phase = shifted - 4.0 * floor(shifted * 0.25)
+            1.0 - abs(phase - 2.0)
+        }
+
+        "zerosquare" -> tanh(x * 8.0)
+        "sineshaper" -> sin(x * PI * 0.5)
+        "asym" -> if (x >= 0.0) {
+            val xc = if (x > 1.0) 1.0 else x
+            1.5 * xc - 0.5 * xc * xc * xc
+        } else {
+            val xc = if (x < -1.0) 1.0 else -x
+            -sqrt(xc)
+        }
+
+        "stompbox" -> if (x >= 0.0) 1.0 - exp(-x * 1.5) else -(1.0 - exp(x * 3.0))
         else -> tanh(x)
     }
 

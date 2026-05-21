@@ -155,7 +155,7 @@ class KlangDocsRegistryTest : StringSpec({
         all.variants shouldHaveSize 2
     }
 
-    "getSymbolWithReceiver falls back to all variants when no match" {
+    "getSymbolWithReceiver returns null when receiver is specified but no variant matches" {
         val registry = KlangDocsRegistry()
         registry.register(
             KlangSymbol(
@@ -164,8 +164,9 @@ class KlangDocsRegistryTest : StringSpec({
             )
         )
 
-        val fallback = registry.getSymbolWithReceiver("sine", KlangType("Unknown"))!!
-        fallback.variants shouldHaveSize 1 // falls back to all
+        // Strict: receiver given + no variant matches → null (so the hover popup
+        // doesn't leak unrelated DSL variants when the user is on a known receiver).
+        registry.getSymbolWithReceiver("sine", KlangType("Unknown")) shouldBe null
     }
 
     "getSymbolWithReceiver returns null for unknown name" {

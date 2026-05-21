@@ -49,7 +49,9 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *
  * Accepts either a single numeric value or a colon-separated `"amount:shape"` string
  * to set both distortion amount and waveshaper shape at once. Available shapes:
- * `soft`, `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`.
+ *  - **Symmetric soft:** `soft` (tanh), `gentle`, `softsat`, `cubic`, `exp`, `sineshaper`.
+ *  - **Symmetric hard / wavefolding:** `hard`, `zerosquare`, `chebyshev`, `fold`, `linearfold`.
+ *  - **Asymmetric (even harmonics):** `diode`, `tube`, `asym`, `stompbox`, `rectify`.
  *
  * When [amount] is omitted, the pattern's own numeric values are reinterpreted as distortion amounts.
  *
@@ -57,7 +59,7 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount SprudelDistortSequenceEditor
  * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
- * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
+ * @param-sub amount shape Waveshaper curve: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify
  * @return A new pattern with distortion applied.
  *
  * ```KlangScript(Playable)
@@ -103,6 +105,34 @@ private fun applyDistort(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * ```KlangScript(Playable)
  * note("c2 eb2 g2").s("sawtooth").distort("0.6:exp")        // exponential, transistor-style
  * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort("0.5:softsat")    // gentlest soft saturation
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort("0.7:tube")       // shifted-tanh tube, warm + asymmetric
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort("0.8:linearfold") // triangle wavefolding, sharper than fold
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort("0.6:zerosquare") // pushes signal toward square
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort("0.7:stompbox")   // asymmetric diode pedal grit
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort("0.6:asym")       // polynomial asymmetry, even+odd
+ * ```
+ *
+ * ```KlangScript(Playable)
+ * note("c2 eb2 g2").s("sawtooth").distort("0.5:sineshaper") // normalised sine fold (peak at unity)
+ * ```
  * @alias dist
  * @category effects
  * @tags distort, dist, distortion, waveshaper, overdrive
@@ -140,7 +170,7 @@ fun String.distort(amount: PatternLike? = null, callInfo: CallInfo? = null): Spr
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount SprudelDistortSequenceEditor
  * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
- * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
+ * @param-sub amount shape Waveshaper curve: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript(Playable)
@@ -186,7 +216,7 @@ fun PatternMapperFn.distort(amount: PatternLike? = null, callInfo: CallInfo? = n
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount SprudelDistortSequenceEditor
  * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
- * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
+ * @param-sub amount shape Waveshaper curve: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify
  * @return A new pattern with distortion applied.
  *
  * ```KlangScript(Playable)
@@ -237,7 +267,7 @@ fun String.dist(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  *   Omit to reinterpret the pattern's values as distortion.
  * @param-tool amount SprudelDistortSequenceEditor
  * @param-sub amount amount Distortion drive level (0 = clean, 2 = extreme)
- * @param-sub amount shape Waveshaper curve: soft, hard, gentle, cubic, diode, fold, chebyshev, rectify, exp
+ * @param-sub amount shape Waveshaper curve: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify
  * @return A [PatternMapperFn] that applies waveshaper distortion.
  *
  * ```KlangScript(Playable)
@@ -355,9 +385,11 @@ private fun applyDistortShape(source: SprudelPattern, args: List<SprudelDslArg<A
  * Sets the distortion waveshaper shape for this pattern.
  *
  * Controls which waveshaping algorithm is used for distortion. Available shapes:
- * `soft`, `hard`, `gentle`, `cubic`, `diode`, `fold`, `chebyshev`, `rectify`, `exp`.
+ *  - **Symmetric soft:** `soft` (tanh), `gentle`, `softsat`, `cubic`, `exp`, `sineshaper`.
+ *  - **Symmetric hard / wavefolding:** `hard`, `zerosquare`, `chebyshev`, `fold`, `linearfold`.
+ *  - **Asymmetric (even harmonics):** `diode`, `tube`, `asym`, `stompbox`, `rectify`.
  *
- * @param shape The waveshaper shape name.
+ * @param shape The waveshaper shape name. One of: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare, chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify.
  * @param-tool shape SprudelDistortShapeSequenceEditor
  * @return A new pattern with the distortion shape applied.
  *
@@ -381,6 +413,8 @@ fun SprudelPattern.distortshape(shape: PatternLike, callInfo: CallInfo? = null):
 /**
  * Parses this string as a pattern and sets the distortion waveshaper shape.
  *
+ * See [SprudelPattern.distortshape] for the full list of available shapes.
+ *
  * @param shape The waveshaper shape name.
  *
  * ```KlangScript(Playable)
@@ -394,6 +428,10 @@ fun String.distortshape(shape: PatternLike, callInfo: CallInfo? = null): Sprudel
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape.
+ *
+ * Available shapes: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare,
+ * chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify. See [SprudelPattern.distortshape]
+ * for grouping (symmetric soft / symmetric hard / asymmetric).
  *
  * @param shape The waveshaper shape name.
  * @param-tool shape SprudelDistortShapeSequenceEditor
@@ -414,6 +452,8 @@ fun distortshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperF
 /**
  * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape after the previous mapper.
  *
+ * See [SprudelPattern.distortshape] for the full list of available shapes.
+ *
  * @param shape The waveshaper shape name.
  * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.
  *
@@ -428,6 +468,10 @@ fun PatternMapperFn.distortshape(shape: PatternLike, callInfo: CallInfo? = null)
 
 /**
  * Alias for [distortshape]. Sets the distortion waveshaper shape for this pattern.
+ *
+ * Available shapes: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare,
+ * chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify. See [SprudelPattern.distortshape]
+ * for grouping.
  *
  * @param shape The waveshaper shape name.
  * @param-tool shape SprudelDistortShapeSequenceEditor
@@ -453,6 +497,8 @@ fun SprudelPattern.distshape(shape: PatternLike, callInfo: CallInfo? = null): Sp
 /**
  * Alias for [distortshape]. Parses this string as a pattern and sets the distortion waveshaper shape.
  *
+ * See [SprudelPattern.distortshape] for the full list of available shapes.
+ *
  * @param shape The waveshaper shape name.
  *
  * ```KlangScript(Playable)
@@ -466,6 +512,9 @@ fun String.distshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPat
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape. Alias for [distortshape].
+ *
+ * Available shapes: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare,
+ * chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify.
  *
  * @param shape The waveshaper shape name.
  * @return A [PatternMapperFn] that sets the distortion shape.
@@ -486,6 +535,8 @@ fun distshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape (alias for [distortshape])
  * after the previous mapper.
  *
+ * See [SprudelPattern.distortshape] for the full list of available shapes.
+ *
  * @param shape The waveshaper shape name.
  * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.
  *
@@ -500,6 +551,10 @@ fun PatternMapperFn.distshape(shape: PatternLike, callInfo: CallInfo? = null): P
 
 /**
  * Alias for [distortshape]. Sets the distortion waveshaper shape for this pattern.
+ *
+ * Available shapes: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare,
+ * chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify. See [SprudelPattern.distortshape]
+ * for grouping.
  *
  * @param shape The waveshaper shape name.
  * @param-tool shape SprudelDistortShapeSequenceEditor
@@ -521,6 +576,8 @@ fun SprudelPattern.dshape(shape: PatternLike, callInfo: CallInfo? = null): Sprud
 /**
  * Alias for [distortshape]. Parses this string as a pattern and sets the distortion waveshaper shape.
  *
+ * See [SprudelPattern.distortshape] for the full list of available shapes.
+ *
  * @param shape The waveshaper shape name.
  *
  * ```KlangScript(Playable)
@@ -534,6 +591,9 @@ fun String.dshape(shape: PatternLike, callInfo: CallInfo? = null): SprudelPatter
 
 /**
  * Returns a [PatternMapperFn] that sets the distortion waveshaper shape. Alias for [distortshape].
+ *
+ * Available shapes: soft, hard, gentle, softsat, cubic, exp, sineshaper, zerosquare,
+ * chebyshev, fold, linearfold, diode, tube, asym, stompbox, rectify.
  *
  * @param shape The waveshaper shape name.
  * @return A [PatternMapperFn] that sets the distortion shape.
@@ -553,6 +613,8 @@ fun dshape(shape: PatternLike, callInfo: CallInfo? = null): PatternMapperFn = { 
 /**
  * Creates a chained [PatternMapperFn] that sets the distortion waveshaper shape (alias for [distortshape])
  * after the previous mapper.
+ *
+ * See [SprudelPattern.distortshape] for the full list of available shapes.
  *
  * @param shape The waveshaper shape name.
  * @return A new [PatternMapperFn] chaining this distortion shape after the previous mapper.

@@ -163,11 +163,14 @@ class KlangDocsRegistry {
      * Look up a symbol and filter its variants to those matching the receiver type.
      * Used for hover docs when the receiver context is known.
      *
-     * Falls back to the full symbol (all variants) when no variants match.
+     * Strict: returns `null` when the symbol exists but no variant matches the
+     * receiver — callers should NOT fall back to the unfiltered symbol, otherwise
+     * unrelated DSL variants (e.g. sprudel `String.distort`) leak into the popup
+     * for a receiver they don't apply to.
      *
      * @param name Symbol name
      * @param receiverType The receiver type to filter by, or null to return all variants
-     * @return The filtered symbol, or null if the name is not found
+     * @return The filtered symbol, or null if the name is not found or no variant matches
      */
     fun getSymbolWithReceiver(name: String, receiverType: KlangType?): KlangSymbol? {
         val symbol = _symbols[name] ?: return null
@@ -179,7 +182,7 @@ class KlangDocsRegistry {
             }
             typeMatches(owner, receiverType)
         }
-        if (filtered.isEmpty()) return symbol // fallback: show all
+        if (filtered.isEmpty()) return null
         val variantLibrary = filtered.firstOrNull()?.library ?: symbol.library
         return symbol.copy(variants = filtered, library = variantLibrary)
     }
