@@ -215,7 +215,7 @@ class KlangDocsRegistryTest : StringSpec({
     "getLibrary returns null when origin is Local" {
         val sym = KlangSymbol(
             name = "signal", category = "local",
-            origin = KlangSymbol.Origin.Local,
+            origin = KlangSymbol.Origin.Local(KlangSymbol.LocalKind.LET),
             variants = emptyList(),
         )
         sym.getLibrary() shouldBe null
@@ -246,7 +246,7 @@ class KlangDocsRegistryTest : StringSpec({
         registry.register(
             KlangSymbol(
                 name = "signal", category = "local", variants = emptyList(),
-                origin = KlangSymbol.Origin.Local
+                origin = KlangSymbol.Origin.Local(KlangSymbol.LocalKind.LET)
             )
         )
         registry.register(
@@ -273,7 +273,7 @@ class KlangDocsRegistryTest : StringSpec({
         registry.register(
             KlangSymbol(
                 name = "signal", category = "local", variants = emptyList(),
-                origin = KlangSymbol.Origin.Local
+                origin = KlangSymbol.Origin.Local(KlangSymbol.LocalKind.LET)
             )
         )
 

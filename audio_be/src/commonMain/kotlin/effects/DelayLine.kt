@@ -28,8 +28,11 @@ import kotlin.math.min
  * - **Feedback** path with smooth saturation safety: rather than a hard clip,
  *   the recirculated sample is passed through [ClippingFuncs.softCap] to
  *   prevent runaway accumulation when `feedback ≥ 1.0` while keeping the
- *   character musical (smooth tanh-style knee). NaN/Inf inputs are scrubbed
- *   to 0 before clamp so they cannot poison the ring buffer.
+ *   character musical (smooth tanh-style knee). The ring buffer is therefore
+ *   always bounded to ±1, which together with the non-finite-rejecting
+ *   [delayTimeSeconds] / [feedback] setters means a finite input always
+ *   produces a finite output — no per-sample scrub needed. Callers are
+ *   expected to feed finite samples (consistent with the engine's raw style).
  *
  * **Output semantic (caller contract):** [process] writes the **wet (delayed)
  * signal additively** into `output`. The dry signal is NOT mixed in by this
@@ -148,14 +151,15 @@ class DelayLine(
             val s2 = buffer[readIndex2]
             val delayedSignal = s1 + alpha * (s2 - s1)
 
-            // --- 2. Feedback + safety. Scrub NaN/Inf first so it cannot poison
-            //         the ring buffer (softCap of NaN is NaN — IEEE-754).
-            var newSample = input[inputIndex] + (delayedSignal * fb)
-            if (!newSample.isFinite()) {
-                newSample = 0.0
-            }
-            // Smooth saturation around ±1 instead of a hard clip — softer,
-            // less brittle character on runaway feedback or hot inputs.
+            // --- 2. Feedback + smooth saturation around ±1 (instead of a hard
+            //         clip — softer, less brittle on runaway feedback or hot inputs).
+            //         softCap also keeps every ring-buffer store within [-1, 1], so
+            //         given finite input + finite feedback (enforced by setters) the
+            //         output stays finite without a per-sample isFinite() scrub.
+            //         Previous revision (Round 7) did a per-sample isFinite check
+            //         here; that cost ~+33% JVM / +30% JS at the rate this path
+            //         runs (every delay sample × stereo). Removed 2026-05-22.
+            val newSample = input[inputIndex] + (delayedSignal * fb)
             buffer[pos] = ClippingFuncs.softCap(newSample)
 
             // --- 3. Wet output, additive. Caller owns the dry mix.

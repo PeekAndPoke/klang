@@ -23,6 +23,7 @@ tree-walking interpreter.
 | Understanding language design / limitations                                        | `klangscript/ref/language-design.md`  |
 | Working on the parser / lexer                                                      | `klangscript/ref/parser-impl.md`      |
 | Working on the interpreter / runtime                                               | `klangscript/ref/interpreter-impl.md` |
+| Hover / completion / docs popup / AnalyzedAst / Origin / scope tracking            | `klangscript/ref/intel-analyzer.md`   |
 | Adding a new language feature end-to-end                                           | `klangscript/ref/adding-features.md`  |
 | Running or writing tests                                                           | `klangscript/ref/testing-strategy.md` |
 | Checking which features exist, which tests cover them, and klangblocks sync status | `klangscript/ref/feature-catalog.md`  |

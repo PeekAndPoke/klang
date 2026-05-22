@@ -80,10 +80,9 @@ private fun completeDsl(context: CompletionContext, docContext: EditorDocContext
     }
 }
 
-/** Try to infer the receiver type of the expression before a dot using the cached [AnalyzedAst]. */
+/** Resolve the receiver type for a dot-completion via the analyzer's single entry point. */
 private fun inferReceiverTypeBeforeDot(docContext: EditorDocContext, dotPos: Int): KlangType? {
-    val analysis = docContext.lastAnalysis ?: return null
-    return analysis.getExpressionTypeEndingAt(dotPos - 1)
+    return docContext.lastAnalysis?.receiverTypeBeforeDot(dotPos - 1)
 }
 
 /** Convert a [CompletionSuggestion] to a CodeMirror [Completion] JS object. */

@@ -40,6 +40,8 @@ import io.peekandpoke.klang.script.ast.buildLineOffsets
 import io.peekandpoke.klang.script.ast.lineColToOffset
 import io.peekandpoke.klang.script.docs.KlangDocsRegistry
 import io.peekandpoke.klang.script.parser.KlangScriptParser
+import io.peekandpoke.klang.script.types.KlangProperty
+import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.script.types.KlangType
 
 /**
@@ -62,6 +64,15 @@ class AnalyzedAst(
     val registry: KlangDocsRegistry,
     /** Pre-computed types for every expression in the AST. */
     private val typeMap: Map<Expression, KlangType?>,
+    /**
+     * Identifier-reference → local binding it resolved to.
+     *
+     * Populated for every [Identifier] occurrence that the lexical scope walk
+     * matched (i.e. references to a `let` / `const` / `export` / arrow-param
+     * binding in scope at that position). Used by [symbolAt] to render the
+     * popup as a local instead of looking the name up in the registry.
+     */
+    private val bindingMap: Map<Identifier, TypeScope.LocalBinding>,
     /** Diagnostics from static analysis (errors, warnings, hints). */
     val diagnostics: List<AnalyzerDiagnostic>,
 ) {
@@ -70,6 +81,95 @@ class AnalyzedAst(
 
     /** Look up the pre-computed type for an expression node. */
     fun typeOf(expr: Expression): KlangType? = typeMap[expr]
+
+    /**
+     * Resolve the docs/popup symbol for the cursor position [pos].
+     *
+     * Single entry point that callers (hover, doc popup) consume to keep the
+     * decision logic — member-access receiver filtering, local-binding
+     * shadowing, strict policy when receiver doesn't match — out of the UI.
+     *
+     * Resolution order:
+     * 1. If the node at [pos] is the `property` side of a `MemberAccess` and
+     *    the receiver's type is known → registry-filtered symbol restricted to
+     *    variants matching that receiver. Strict: if no variant matches, returns
+     *    `null` rather than leaking unrelated DSL variants.
+     * 2. If the node is an [Identifier] resolved to a local binding → a
+     *    synthesised [KlangSymbol] with `origin = KlangSymbol.Origin.Local`.
+     *    Locals shadow same-named registry entries.
+     * 3. Otherwise → bare-name lookup in the registry.
+     */
+    fun symbolAt(pos: Int): KlangSymbol? {
+        val node = astIndex.nodeAt(pos) ?: return null
+        val name = identifierNameOf(node) ?: return null
+
+        // Case 1: cursor sits on the property side of a MemberAccess.
+        val memberAccess = memberAccessFor(node, name)
+        if (memberAccess != null) {
+            val receiverType = typeMap[memberAccess.obj]
+            if (receiverType != null) {
+                return registry.getSymbolWithReceiver(name, receiverType)
+            }
+            // Receiver type unknown — fall through to bare lookup (best effort).
+        }
+
+        // Case 2: cursor sits on an Identifier reference that was resolved to a
+        // local binding by the type-map builder.
+        if (node is Identifier) {
+            bindingMap[node]?.let { return synthesizeLocalSymbol(it) }
+        }
+
+        // Case 3: bare-name registry lookup.
+        return registry.get(name)
+    }
+
+    /**
+     * Resolve the receiver type for code completion triggered at offset [pos]
+     * (typically the position immediately after a `.`).
+     *
+     * Wraps [getExpressionTypeEndingAt] so the completion source doesn't need
+     * to know about [typeMap] or about local-binding shadowing.
+     */
+    fun receiverTypeBeforeDot(pos: Int): KlangType? = getExpressionTypeEndingAt(pos)
+
+    private fun identifierNameOf(node: io.peekandpoke.klang.script.ast.AstNode): String? = when (node) {
+        is Identifier -> node.name
+        is MemberAccess -> node.property
+        is CallExpression -> (node.callee as? MemberAccess)?.property
+        else -> null
+    }
+
+    /**
+     * Returns the MemberAccess whose `property` slot is the symbol under the
+     * cursor — when the cursor is sitting on that property (either directly on
+     * the MemberAccess, or wrapped in a CallExpression `obj.foo(...)`, or on
+     * the property Identifier nested inside).
+     */
+    private fun memberAccessFor(node: io.peekandpoke.klang.script.ast.AstNode, name: String): MemberAccess? {
+        if (node is MemberAccess && node.property == name) return node
+        if (node is CallExpression) {
+            val cm = node.callee as? MemberAccess
+            if (cm != null && cm.property == name) return cm
+        }
+        val parent = astIndex.parentOf(node)
+        if (parent is MemberAccess && parent.property == name) return parent
+        return null
+    }
+
+    private fun synthesizeLocalSymbol(binding: TypeScope.LocalBinding): KlangSymbol {
+        return KlangSymbol(
+            name = binding.name,
+            category = "local",
+            origin = KlangSymbol.Origin.Local(kind = binding.kind),
+            variants = listOf(
+                KlangProperty(
+                    name = binding.name,
+                    owner = null,
+                    type = binding.type ?: KlangType("?"),
+                )
+            ),
+        )
+    }
 
     /**
      * Get the inferred type of the deepest expression at a 1-based line/column position.
@@ -173,7 +273,10 @@ class AnalyzedAst(
         ): AnalyzedAst {
             val astIndex = AstIndex.build(program, source)
             val inferrer = ExpressionTypeInferrer(registry)
-            val typeMap = buildTypeMap(program, inferrer)
+            val builder = TypeMapBuilder(inferrer)
+            program.statements.forEach { builder.visitStmt(it) }
+            val typeMap = builder.map
+            val bindingMap = builder.bindingMap
             val diagnostics = if (computeDiagnostics) {
                 NamedArgumentChecker(registry, typeMap).check(program)
             } else {
@@ -185,6 +288,7 @@ class AnalyzedAst(
                 astIndex = astIndex,
                 registry = registry,
                 typeMap = typeMap,
+                bindingMap = bindingMap,
                 diagnostics = diagnostics,
             )
         }
@@ -193,11 +297,38 @@ class AnalyzedAst(
 
 // ── Type map builder ───────────────────────────────────────────────────────
 
+/**
+ * Walks the AST building two parallel maps:
+ *  - [map]        : `Expression → KlangType?` for every expression encountered.
+ *  - [bindingMap] : `Identifier → LocalBinding` for every identifier reference
+ *                   that resolved to a lexical (let/const/export/arrow-param)
+ *                   binding in scope at that point.
+ *
+ * The builder maintains a [TypeScope] stack mirroring the interpreter's
+ * `runtime/Environment.kt` lookup rules (block-scope for let/const/export,
+ * shadowing of outer scopes and of registry globals).
+ */
 private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
     val map = mutableMapOf<Expression, KlangType?>()
+    val bindingMap = mutableMapOf<Identifier, TypeScope.LocalBinding>()
+
+    private var scope: TypeScope = TypeScope()
+
+    private inline fun <T> withChildScope(block: () -> T): T {
+        val saved = scope
+        scope = scope.child()
+        try {
+            return block()
+        } finally {
+            scope = saved
+        }
+    }
 
     fun visitExpr(expr: Expression) {
-        map[expr] = inferrer.inferType(expr)
+        map[expr] = inferrer.inferType(expr, scope)
+        if (expr is Identifier) {
+            scope.resolve(expr.name)?.let { bindingMap[expr] = it }
+        }
         // Recurse into children
         when (expr) {
             is CallExpression -> {
@@ -242,16 +373,24 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
                 expr.properties.forEach { (_, v) -> visitExpr(v) }
             }
 
-            is ArrowFunction -> when (val body = expr.body) {
-                is ArrowFunctionBody.ExpressionBody -> visitExpr(body.expression)
-                is ArrowFunctionBody.BlockBody -> body.statements.forEach { visitStmt(it) }
+            is ArrowFunction -> withChildScope {
+                // Arrow parameters become locals in the function body. We have no
+                // type for them (parameters carry only names in the AST) — they
+                // still shadow same-named registry symbols inside the body.
+                expr.parameters.forEach { p ->
+                    scope.bind(TypeScope.LocalBinding(name = p, type = null, kind = KlangSymbol.LocalKind.PARAM))
+                }
+                when (val body = expr.body) {
+                    is ArrowFunctionBody.ExpressionBody -> visitExpr(body.expression)
+                    is ArrowFunctionBody.BlockBody -> body.statements.forEach { visitStmt(it) }
+                }
             }
 
             is IfExpression -> {
                 visitExpr(expr.condition)
-                expr.thenBranch.forEach { visitStmt(it) }
+                withChildScope { expr.thenBranch.forEach { visitStmt(it) } }
                 when (val e = expr.elseBranch) {
-                    is ElseBranch.Block -> e.statements.forEach { visitStmt(it) }
+                    is ElseBranch.Block -> withChildScope { e.statements.forEach { visitStmt(it) } }
                     is ElseBranch.If -> visitExpr(e.ifExpr)
                     null -> {}
                 }
@@ -272,21 +411,43 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
     fun visitStmt(stmt: Statement) {
         when (stmt) {
             is ExpressionStatement -> visitExpr(stmt.expression)
-            is LetDeclaration -> stmt.initializer?.let { visitExpr(it) }
-            is ConstDeclaration -> visitExpr(stmt.initializer)
-            is ExportDeclaration -> visitExpr(stmt.initializer)
+            is LetDeclaration -> {
+                stmt.initializer?.let { visitExpr(it) }
+                val type = stmt.initializer?.let { map[it] }
+                scope.bind(TypeScope.LocalBinding(name = stmt.name, type = type, kind = KlangSymbol.LocalKind.LET))
+            }
+
+            is ConstDeclaration -> {
+                visitExpr(stmt.initializer)
+                scope.bind(
+                    TypeScope.LocalBinding(
+                        name = stmt.name, type = map[stmt.initializer], kind = KlangSymbol.LocalKind.CONST
+                    )
+                )
+            }
+
+            is ExportDeclaration -> {
+                visitExpr(stmt.initializer)
+                scope.bind(
+                    TypeScope.LocalBinding(
+                        name = stmt.name, type = map[stmt.initializer], kind = KlangSymbol.LocalKind.EXPORT
+                    )
+                )
+            }
             is ReturnStatement -> stmt.value?.let { visitExpr(it) }
             is WhileStatement -> {
                 visitExpr(stmt.condition)
-                stmt.body.forEach { visitStmt(it) }
+                withChildScope { stmt.body.forEach { visitStmt(it) } }
             }
 
             is DoWhileStatement -> {
-                stmt.body.forEach { visitStmt(it) }
+                withChildScope { stmt.body.forEach { visitStmt(it) } }
                 visitExpr(stmt.condition)
             }
 
-            is ForStatement -> {
+            is ForStatement -> withChildScope {
+                // `for (let i = 0; ...)` — the init's binding must be visible to
+                // condition/update/body, so they all share one scope started here.
                 stmt.init?.let { visitStmt(it) }
                 stmt.condition?.let { visitExpr(it) }
                 stmt.update?.let { visitExpr(it) }
@@ -296,10 +457,4 @@ private class TypeMapBuilder(private val inferrer: ExpressionTypeInferrer) {
             is ImportStatement, is ExportStatement, is BreakStatement, is ContinueStatement -> {}
         }
     }
-}
-
-private fun buildTypeMap(program: Program, inferrer: ExpressionTypeInferrer): Map<Expression, KlangType?> {
-    val builder = TypeMapBuilder(inferrer)
-    program.statements.forEach { builder.visitStmt(it) }
-    return builder.map
 }

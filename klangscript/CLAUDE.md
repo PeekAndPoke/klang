@@ -34,6 +34,7 @@ Interpreter (tree-walking)  →  RuntimeValue / Environment
 | Language design & limitations                                 | `ref/language-design.md`  |
 | Parser / lexer internals                                      | `ref/parser-impl.md`      |
 | Interpreter / runtime internals                               | `ref/interpreter-impl.md` |
+| Editor intelligence (AnalyzedAst, symbolAt, scope, Origin)    | `ref/intel-analyzer.md`   |
 | Adding a new language feature                                 | `ref/adding-features.md`  |
 | Testing strategy                                              | `ref/testing-strategy.md` |
 | All implemented features + test file links + klangblocks sync | `ref/feature-catalog.md`  |

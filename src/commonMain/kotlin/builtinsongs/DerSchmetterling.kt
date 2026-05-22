@@ -31,13 +31,13 @@ stack(                                                                          
         .superimpose(transpose(24).detune(0.20).velocity("<0!96 0.10!32>").lpf(2100).pan(0.7))
     ).phaser(1/8).phaserdepth("<0.05!64 0.4!16 0.1!48>").phasersweep(1000).phasercenter(1500).mute("<0!128 1!32>"),
   // Pad
-  n("<[0 0 2 <4 -1 4 3> 0 0 -2 <-1 -1 -1 -2>]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6 4] 0 <[2 3] [-2 0]>] [<0 4> [2 1] 0 [-2 <-1 -4>]]>/4")
+  n("<[0 0 2 <4 -1 4 3> 0 0 -2 <-1 1 -1 -2>]!4 [0 [2 4] 0 [2 [2 -1@3]]]!2 [0 [6 4] 0 <[2 3] [-2 0]>] [<0 4> [2 1] 0 [-2 <-1 -4>]]>/4")
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>").velocity("1.02 0.95!3 0.98 0.95!3".fast(2))
     .scale("<e2:minor!48 e3:minor!16>").sound("supersaw").unison(2).detune(0.05).distort("0.1:soft:2")
     .lpf("<1150!48 2150!16>").hpf("<180!48 320!16>").warmth(saw.range(0.3, 0.1).slow(5*32))
     .distort("0.3:gentle:2").distort(sine.range(0.15, 0.3).slow(10*32))
     .adsr("0.0175:0.15:0.45:0.12").clip("<0.55!48 0.6!16>").crush(saw.range(8, 4).slow(32))  // . solo()
-    .gain(0.35).orbit(1).pan(0.4).lpe(0.5)
+    .gain(0.35).orbit(1).pan(0.4).lpe(0.5).late(0.002)
     .superimpose(scaleTranspose(7).gain(0.1).pan(0.2).hpf(400).lpe("1.8"), scaleTranspose(7).gain(0.1).pan(0.8).hpf(400).lpe("1.8"))
   ,
   // Bass

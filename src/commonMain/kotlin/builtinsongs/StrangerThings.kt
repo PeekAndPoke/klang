@@ -32,10 +32,10 @@ stack(
   n("<[0 2 4 6 7 6 4 2]!14 [-2 -1 0 2 4 2 0 -1] [-2 -1 2 6 4 2 0 -1]>")
     .scale("[c3:major c3:pentatonic c3:major c3:major]/16")
     .orbit(1).s("supersaw").unison(3).detune(saw.range(0.0, 0.35).slow(16)).spread(1.0 ).tremolo("0.1:8").tremolodepth(saw.range(0,0.1).slow(256))
-    .gain(0.8).distort(0.25).warmth(0.5).postgain(0.2).adsr("0.01:0.2:0.8:0.155")
+    .gain(0.8).distort(0.25).warmth(0.7).postgain(0.25).adsr("0.01:0.2:0.8:0.155")
     .pan(sine.range(0.3, 0.7).slow(16)) // . solo()
     .superimpose(bandf(notch).bandq(1.0).gain(0.125).transpose(12))
-    .hpf(260).lpf(800).lpenv(perlin.range(3.0, 4.5).slow(8)).analog(2)
+    .hpf(350).lpf(800).lpenv(perlin.range(3.0, 4.5).slow(8)).analog(2)
     .filterWhen(x => x >= wait * 4 && x < (wait * 4 + keep)) // . solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------------------
   note("<a1 [f1 c2 e1 [f2 c2]] [a1 [c2 f1] a1 [f1@3 e1]] [a1@2 c2@3 d2 [c2,c3] [d1,d1,d2]]>/8").clip(0.8).struct("x!8")
@@ -43,7 +43,7 @@ stack(
     .gain(1.0).adsr("0.01:0.6:0.5:0.4").postgain(0.4).pan(saw.range(0.5, 0.1).slow(keep * 2))
     .superimpose(x => x.orbit(3).scaleTranspose("<[12 12 7 12 12 [12 12] 0 -12] [12 12 0 12 12 [0 12] 0 -12]>/16").pan(saw.range(0.5, 0.9).slow(keep * 2)).legato(1.05))
     .lpf(4 * 440).hpf(90).notchf(notch).notchq(0.75)
-    .superimpose(x => x.gain(saw.slow(64).pow(2.0).mul(2.2)).crush("1.5".add(berlin2.mul(0.25).slow(4))).lpf(4 * 440).hpf(400).postgain(0.4))
+    .superimpose(x => x.gain(saw.slow(64).pow(2.0).mul(2.2)).crush("1.5".add(berlin2.mul(0.25).slow(4))).lpf(4.5 * 440).hpf(300).postgain(0.4).late(0.002))
     .velocity(cat(saw.pow(2).slow(32), pure(1).slow(256)).mul("1 0.95 0.975 0.95".fast(2))).analog(1.5)  // . solo()
     .filterWhen(x => x < (wait * 4 + keep)) // . mute()
   , // Perc 2 ------------------------------------------------------------------------------------------------------------------

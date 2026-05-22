@@ -143,7 +143,7 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
 
                             is KlangSymbol.Origin.Local -> {
                                 icon.code()
-                                +"LOCAL"
+                                +origin.kind.display
                             }
                         }
                     }
@@ -233,21 +233,24 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
             }
 
             // ── View docs link ────────────────────────────────────────────────
-            noui.divider {}
+            // Suppressed for locals — there's no external library page to navigate to.
+            if (symbol.origin !is KlangSymbol.Origin.Local) {
+                noui.divider {}
 
-            ui.horizontal.list {
-                noui.item {
-                    css {
-                        cursor = Cursor.pointer
-                        fontSize = 12.px
-                        color = Color(laf.gold)
+                ui.horizontal.list {
+                    noui.item {
+                        css {
+                            cursor = Cursor.pointer
+                            fontSize = 12.px
+                            color = Color(laf.gold)
+                        }
+                        onClick { event ->
+                            event.stopPropagation()
+                            props.onNavigate(symbol, event.asDynamic())
+                        }
+                        icon.small.book()
+                        +"View docs"
                     }
-                    onClick { event ->
-                        event.stopPropagation()
-                        props.onNavigate(symbol, event.asDynamic())
-                    }
-                    icon.small.book()
-                    +"View docs"
                 }
             }
         }

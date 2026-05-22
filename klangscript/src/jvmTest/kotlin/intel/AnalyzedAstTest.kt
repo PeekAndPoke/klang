@@ -760,6 +760,142 @@ let a = placeholder("aa", Osc.sine())"""
         }
     }
 
+    // ── Local-binding type tracking (let / const / export / arrow params) ─
+
+    "let binding: identifier type resolves to initializer's inferred type" {
+        // `signal` should resolve to IgnitorDsl (return type of Osc.sine())
+        val a = analyze(
+            """
+            let signal = Osc.sine()
+            signal
+            """.trimIndent()
+        )
+        val signalRef = (a.ast.statements[1] as ExpressionStatement).expression as Identifier
+        a.typeOf(signalRef)?.simpleName shouldBe "IgnitorDsl"
+    }
+
+    "const binding: identifier type resolves to initializer's inferred type" {
+        val a = analyze(
+            """
+            const sig = Osc.sine()
+            sig
+            """.trimIndent()
+        )
+        val ref = (a.ast.statements[1] as ExpressionStatement).expression as Identifier
+        a.typeOf(ref)?.simpleName shouldBe "IgnitorDsl"
+    }
+
+    "chain on local: signal.lowpass(1000).distort(0.5) resolves receiver to IgnitorDsl" {
+        // The receiver chain rooted at a `let` must resolve through the binding,
+        // so the popup picks the IgnitorDsl.distort variant, not the sprudel ones.
+        val a = analyze(
+            """
+            let signal = Osc.sine()
+            signal.lowpass(1000).distort(0.5)
+            """.trimIndent()
+        )
+        val chain = (a.ast.statements[1] as ExpressionStatement).expression as CallExpression
+        val distortCallee = chain.callee as MemberAccess
+        a.typeOf(distortCallee.obj)?.simpleName shouldBe "IgnitorDsl"
+    }
+
+    "shadowing: local `signal` shadows a registered same-named function" {
+        // Even though sprudel registers `signal` (in real configs), a local `let signal`
+        // must shadow it so receiver-chain inference uses the local's type.
+        val reg = stdlibRegistry()
+        reg.register(
+            KlangSymbol(
+                name = "signal", category = "pattern",
+                origin = KlangSymbol.Origin.Library("sprudel-mock"),
+                variants = listOf(
+                    KlangCallable(
+                        name = "signal", receiver = null,
+                        params = listOf(KlangParam(name = "f", type = KlangType("Function"))),
+                        returnType = KlangType("Pattern"),
+                    )
+                )
+            )
+        )
+        val code = """
+            let signal = Osc.sine()
+            signal
+        """.trimIndent()
+        val analyzed = AnalyzedAst.build(code, reg)
+        val ref = (analyzed.ast.statements[1] as ExpressionStatement).expression as Identifier
+        // The reference is the local — type comes from the binding, NOT the sprudel `signal`.
+        analyzed.typeOf(ref)?.simpleName shouldBe "IgnitorDsl"
+    }
+
+    "unbound local with unknown initializer type still shadows registry" {
+        // `let signal = undefinedThing` — initializer's type is null. Even so the
+        // binding must shadow a same-named registry symbol.
+        val reg = stdlibRegistry()
+        reg.register(
+            KlangSymbol(
+                name = "signal", category = "pattern",
+                origin = KlangSymbol.Origin.Library("sprudel-mock"),
+                variants = listOf(
+                    KlangCallable(
+                        name = "signal", receiver = null, params = emptyList(),
+                        returnType = KlangType("Pattern")
+                    )
+                )
+            )
+        )
+        val analyzed = AnalyzedAst.build(
+            """
+            let signal = undefinedThing
+            signal
+            """.trimIndent(),
+            reg,
+        )
+        val ref = (analyzed.ast.statements[1] as ExpressionStatement).expression as Identifier
+        // Local shadows the sprudel signal even though its own type is null.
+        analyzed.typeOf(ref) shouldBe null
+    }
+
+    "scope leaving: binding in arrow body doesn't leak outside" {
+        val code = """
+            let f = () => {
+              let inner = Osc.sine()
+            }
+            inner
+        """.trimIndent()
+        val a = analyze(code)
+        // `inner` outside the arrow → not in scope → not a local → registry lookup → null
+        val ref = (a.ast.statements[1] as ExpressionStatement).expression as Identifier
+        a.typeOf(ref) shouldBe null
+    }
+
+    "symbolAt: hovering a local identifier returns a Local-origin symbol" {
+        val code = """
+            let signal = Osc.sine()
+            signal
+        """.trimIndent()
+        val a = analyze(code)
+        // Position of the `signal` reference on line 2
+        val refOffset = code.indexOf("signal", startIndex = code.indexOf("\n"))
+        val symbol = a.symbolAt(refOffset + 1) // inside the identifier
+        symbol.shouldNotBeNull()
+        symbol.name shouldBe "signal"
+        symbol.origin shouldBe KlangSymbol.Origin.Local(KlangSymbol.LocalKind.LET)
+    }
+
+    "symbolAt: hovering `.distort` on a chain rooted at a local resolves IgnitorDsl variant" {
+        val code = """
+            let signal = Osc.sine()
+            signal.lowpass(1000).distort(0.5)
+        """.trimIndent()
+        val a = analyze(code)
+        val distortOffset = code.indexOf("distort")
+        val symbol = a.symbolAt(distortOffset + 2) // inside "distort"
+        symbol.shouldNotBeNull()
+        symbol.name shouldBe "distort"
+        // Strict filter: only the IgnitorDsl variant should be present, not sprudel's.
+        symbol.variants.size shouldBe 1
+        (symbol.variants[0] as KlangCallable).receiver?.simpleName shouldBe "IgnitorDsl"
+    }
+
     "real-world: top-level fallback must NOT show sprudel adsr in dot context" {
         // This test documents the original bug:
         // When inference fails and falls back to topLevelCompletions("ad"),

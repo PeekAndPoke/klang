@@ -9,8 +9,6 @@ import io.peekandpoke.klang.codemirror.ext.SelectionRange
 import io.peekandpoke.klang.codemirror.ext.StateEffect
 import io.peekandpoke.klang.codemirror.ext.StateField
 import io.peekandpoke.klang.codemirror.ext.StateFieldConfig
-import io.peekandpoke.klang.script.ast.CallExpression
-import io.peekandpoke.klang.script.ast.MemberAccess
 import io.peekandpoke.klang.script.intel.AnalyzedAst
 import io.peekandpoke.klang.script.types.KlangSymbol
 import io.peekandpoke.klang.ui.HoverPopupCtrl
@@ -97,7 +95,7 @@ fun dslEditorExtension(
     fun isModifier(event: dynamic): Boolean =
         event.ctrlKey == true || event.metaKey == true
 
-    /** Resolve the word under the mouse and look it up in the doc registry (receiver-aware). */
+    /** Resolve the word under the mouse and look it up via the analyzer (receiver-aware + local-binding-aware). */
     fun wordDocAt(view: EditorView, event: dynamic): Pair<SelectionRange, KlangSymbol>? {
         val coords = jsObject<dynamic> {
             this.x = event.clientX
@@ -114,39 +112,17 @@ fun dslEditorExtension(
             return null
         }
 
-        // Try receiver-aware lookup using the cached AnalyzedAst
+        // Preferred path: the analyzer makes the decision (member-access receiver
+        // filtering, local-binding shadowing, strict policy when receiver doesn't
+        // match). The editor doesn't replicate any of that logic.
         val analysis = analysisProvider()
         if (analysis != null) {
-            val astIndex = analysis.astIndex
-            val node = astIndex.nodeAt(pos)
-            if (node != null) {
-                val parent = astIndex.parentOf(node)
-                // Cursor is on the property part of a MemberAccess (e.g., hovering "lowpass" in obj.lowpass())
-                val memberAccess = when {
-                    parent is MemberAccess && parent.property == name -> parent
-                    node is MemberAccess && node.property == name -> node
-                    node is CallExpression && (node.callee as? MemberAccess)?.property == name ->
-                        node.callee as MemberAccess
-
-                    else -> null
-                }
-                if (memberAccess != null) {
-                    // O(1) lookup from the pre-computed type map
-                    val receiverType = analysis.typeOf(memberAccess.obj)
-                    if (receiverType != null) {
-                        val registry = analysis.registry
-                        val symbol = registry.getSymbolWithReceiver(name, receiverType)
-                        // Strict: receiver known + no variant matches → no popup.
-                        // Falling back to the unfiltered lookup would leak variants
-                        // from other DSLs (e.g. sprudel `String.distort`) into a hover
-                        // on an IgnitorDsl chain.
-                        return if (symbol != null) word to symbol else null
-                    }
-                }
-            }
+            return analysis.symbolAt(pos)?.let { word to it }
         }
 
-        // Fallback: name-only lookup (no AST analysis, or no receiver type resolved)
+        // No analyzer yet (initial render, parse error) — fall back to the
+        // bare-name registry lookup. The strict / local-binding behaviours kick
+        // in as soon as an analysis is available again.
         val doc = docProvider(name) ?: return null
         return word to doc
     }

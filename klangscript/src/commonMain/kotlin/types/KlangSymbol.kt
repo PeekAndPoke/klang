@@ -30,8 +30,16 @@ data class KlangSymbol(
         /** Registered via a [io.peekandpoke.klang.script.KlangScriptLibrary]. */
         data class Library(val name: String) : Origin
 
-        /** Locally declared inside a KlangScript program (let / const / export / function). */
-        object Local : Origin
+        /** Locally declared inside a KlangScript program (let / const / export / arrow parameter). */
+        data class Local(val kind: LocalKind) : Origin
+    }
+
+    /** The declaration form that introduced a [Origin.Local] symbol — drives the popup chip label. */
+    enum class LocalKind(val display: String) {
+        LET("LET"),
+        CONST("CONST"),
+        EXPORT("EXPORT"),
+        PARAM("PARAM"),
     }
 
     /** Convenience accessor — returns the library origin, or null when origin is unknown or [Origin.Local]. */

@@ -140,7 +140,7 @@ let quietBuild = stack(
     // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
     // enter at section-local cycle 32 (= second half of the build)
     chord("<Am Dm Bb C Gm F Am Dm>").voicing().struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
-        .sound("superpulse").unison(2).detune(0.15).hpf(350).lpf(3000)
+        .sound("superpulse").unison(2).detune(0.15).hpf(400).lpf(3000)
         .adsr("0.005:0.08:0.25:0.2").legato(0.7)
         .gain(0.16).orbit(5).room(0.4).rsize(6)
         .filterWhen(t => t % 64 >= 48),
@@ -179,7 +179,7 @@ let darkBuild = stack(
     // Saw bass — pumping, LPF closes, warmth + distortion grow
     note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>")
         .sound("saw").legato(0.7)
-        .hpf(90).lpf(saw.range(280, 900).slow(64)).adsr("0.002:0.08:0.5:0.05")
+        .hpf(160).lpf(saw.range(280, 900).slow(64)).adsr("0.002:0.08:0.5:0.05")
         .distort("0.7:hard:4").postgain(0.5)
         .warmth(saw.range(0.6, 0.2).slow(64))
         .gain(saw.fast(4).range(0.7, 0.3))
@@ -197,7 +197,7 @@ let darkBuild = stack(
     chord("<Am Dm <Bb [Bb|F]> C Gm [F|F|Dm] Am Dm>").voicing(rank = sine.range(0, 1.8).fast(7).add(perlin.range(0, 0.3)))
         .struct("[x@3 x@3 x@4 x@2 x@2 x@2]").transpose(0)
         .sound("superpulse").unison(2).detune(0.05).pan(0.2).superimpose(pan(0.8))
-        .hpf(300).lpf(saw.range(800, 1500).slow(32)).lpenv(3).warmth(0.5)
+        .hpf(400).lpf(saw.range(800, 1500).slow(32)).lpenv(3).warmth(0.5)
         .adsr("0.005:0.1:0.25:0.1").legato(0.7)
         .gain(0.11).orbit(5).room(0.4).rsize(6),
     // Spheric supersine stabs — syncopated 5-3-3-3 (16ths), wide slow drift

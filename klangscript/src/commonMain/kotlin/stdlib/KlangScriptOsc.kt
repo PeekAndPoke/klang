@@ -239,27 +239,55 @@ object KlangScriptOsc {
     /**
      * Creates a Karplus-Strong plucked string model.
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
+     * @param decay loop decay per pass (default 0.996). Higher = longer sustain (0..1).
+     * @param brightness initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright.
+     * @param pickPosition relative pick position along the string (default 0.5). 0 = bridge, 1 = nut.
+     * @param stiffness string stiffness (default 0.0). Higher = more inharmonic, bell-like.
      */
     @KlangScript.Method
-    fun pluck(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Pluck(freq = freq.toIgnitorDsl())
+    fun pluck(
+        freq: IgnitorDslLike = IgnitorDsl.Freq,
+        decay: IgnitorDslLike = 0.996,
+        brightness: IgnitorDslLike = 0.5,
+        pickPosition: IgnitorDslLike = 0.5,
+        stiffness: IgnitorDslLike = 0.0,
+    ): IgnitorDsl =
+        IgnitorDsl.Pluck(
+            freq = freq.toIgnitorDsl(),
+            decay = decay.toIgnitorDsl(),
+            brightness = brightness.toIgnitorDsl(),
+            pickPosition = pickPosition.toIgnitorDsl(),
+            stiffness = stiffness.toIgnitorDsl(),
+        )
 
     /**
      * Creates a unison Karplus-Strong plucked string model.
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      * @param voices number of detuned voices (default 8).
      * @param freqSpread frequency spread between voices (default 0.2).
+     * @param decay loop decay per pass (default 0.996). Higher = longer sustain (0..1).
+     * @param brightness initial-burst brightness / pick hardness (default 0.5). 0 = mellow, 1 = bright.
+     * @param pickPosition relative pick position along the string (default 0.5). 0 = bridge, 1 = nut.
+     * @param stiffness string stiffness (default 0.0). Higher = more inharmonic, bell-like.
      */
     @KlangScript.Method
     fun superpluck(
         freq: IgnitorDslLike = IgnitorDsl.Freq,
         voices: IgnitorDslLike = 8.0,
         freqSpread: IgnitorDslLike = 0.2,
+        decay: IgnitorDslLike = 0.996,
+        brightness: IgnitorDslLike = 0.5,
+        pickPosition: IgnitorDslLike = 0.5,
+        stiffness: IgnitorDslLike = 0.0,
     ): IgnitorDsl =
         IgnitorDsl.SuperPluck(
             freq = freq.toIgnitorDsl(),
             voices = voices.toIgnitorDsl(),
             freqSpread = freqSpread.toIgnitorDsl(),
+            decay = decay.toIgnitorDsl(),
+            brightness = brightness.toIgnitorDsl(),
+            pickPosition = pickPosition.toIgnitorDsl(),
+            stiffness = stiffness.toIgnitorDsl(),
         )
 
     // ── Parameter Slot ───────────────────────────────────────────────────────
