@@ -19,7 +19,7 @@ class KlangDocsRegistryTest : StringSpec({
 
         registry.register(
             KlangSymbol(
-                name = "sine", category = "oscillator", library = "stdlib",
+                name = "sine", category = "oscillator", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(name = "sine", receiver = KlangType("Osc"), params = emptyList())
                 )
@@ -27,7 +27,7 @@ class KlangDocsRegistryTest : StringSpec({
         )
         registry.register(
             KlangSymbol(
-                name = "sine", category = "pattern", library = "sprudel",
+                name = "sine", category = "pattern", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     KlangCallable(name = "sine", receiver = null, params = emptyList())
                 )
@@ -178,7 +178,7 @@ class KlangDocsRegistryTest : StringSpec({
         val registry = KlangDocsRegistry()
         registry.register(
             KlangSymbol(
-                name = "adsr", category = "dynamics", library = "sprudel",
+                name = "adsr", category = "dynamics", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     KlangCallable(name = "adsr", receiver = KlangType("Pattern"), params = emptyList(), library = "sprudel"),
                 )
@@ -186,7 +186,7 @@ class KlangDocsRegistryTest : StringSpec({
         )
         registry.register(
             KlangSymbol(
-                name = "adsr", category = "uncategorized", library = "stdlib",
+                name = "adsr", category = "uncategorized", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(name = "adsr", receiver = KlangType("IgnitorDsl"), params = emptyList(), library = "stdlib"),
                 )
@@ -194,10 +194,91 @@ class KlangDocsRegistryTest : StringSpec({
         )
 
         val sprudelAdsr = registry.getSymbolWithReceiver("adsr", KlangType("Pattern"))!!
-        sprudelAdsr.library shouldBe "sprudel"
+        sprudelAdsr.getLibrary()?.name shouldBe "sprudel"
 
         val stdlibAdsr = registry.getSymbolWithReceiver("adsr", KlangType("IgnitorDsl"))!!
-        stdlibAdsr.library shouldBe "stdlib"
+        stdlibAdsr.getLibrary()?.name shouldBe "stdlib"
+    }
+
+    // ── KlangSymbol.Origin / getLibrary helper ──────────────────────────
+
+    "getLibrary returns the Library origin when origin is Library" {
+        val sym = KlangSymbol(
+            name = "x", category = "test",
+            origin = KlangSymbol.Origin.Library("stdlib"),
+            variants = emptyList(),
+        )
+        sym.getLibrary() shouldBe KlangSymbol.Origin.Library("stdlib")
+        sym.getLibrary()?.name shouldBe "stdlib"
+    }
+
+    "getLibrary returns null when origin is Local" {
+        val sym = KlangSymbol(
+            name = "signal", category = "local",
+            origin = KlangSymbol.Origin.Local,
+            variants = emptyList(),
+        )
+        sym.getLibrary() shouldBe null
+    }
+
+    "getLibrary returns null when origin is unknown (null)" {
+        // Default constructor leaves origin = null = "we don't know".
+        val sym = KlangSymbol(name = "x", category = "test", variants = emptyList())
+        sym.origin shouldBe null
+        sym.getLibrary() shouldBe null
+    }
+
+    "registry.libraries lists only Library-origin names" {
+        val registry = KlangDocsRegistry()
+        registry.register(
+            KlangSymbol(
+                name = "a", category = "x", variants = emptyList(),
+                origin = KlangSymbol.Origin.Library("stdlib")
+            )
+        )
+        registry.register(
+            KlangSymbol(
+                name = "b", category = "x", variants = emptyList(),
+                origin = KlangSymbol.Origin.Library("sprudel")
+            )
+        )
+        // Locals and null-origin symbols should not appear in the libraries list.
+        registry.register(
+            KlangSymbol(
+                name = "signal", category = "local", variants = emptyList(),
+                origin = KlangSymbol.Origin.Local
+            )
+        )
+        registry.register(
+            KlangSymbol(name = "unknown", category = "x", variants = emptyList()) // origin = null
+        )
+
+        registry.libraries shouldBe listOf("sprudel", "stdlib")
+    }
+
+    "registry.getByLibrary skips locals and unknown-origin symbols" {
+        val registry = KlangDocsRegistry()
+        registry.register(
+            KlangSymbol(
+                name = "fromStdlib", category = "x", variants = emptyList(),
+                origin = KlangSymbol.Origin.Library("stdlib")
+            )
+        )
+        registry.register(
+            KlangSymbol(
+                name = "fromSprudel", category = "x", variants = emptyList(),
+                origin = KlangSymbol.Origin.Library("sprudel")
+            )
+        )
+        registry.register(
+            KlangSymbol(
+                name = "signal", category = "local", variants = emptyList(),
+                origin = KlangSymbol.Origin.Local
+            )
+        )
+
+        registry.getByLibrary("stdlib").map { it.name } shouldBe listOf("fromStdlib")
+        registry.getByLibrary("sprudel").map { it.name } shouldBe listOf("fromSprudel")
     }
 
     // ── getVariantsForReceiver with KlangProperty ───────────────────────

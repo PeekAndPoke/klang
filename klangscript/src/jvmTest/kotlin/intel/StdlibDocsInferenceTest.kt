@@ -230,7 +230,7 @@ class StdlibDocsInferenceTest : StringSpec({
 
         // Simulate a sprudel "abs" function (top-level, no receiver)
         val sprudelAbs = io.peekandpoke.klang.script.types.KlangSymbol(
-            name = "abs", category = "math", library = "sprudel",
+            name = "abs", category = "math", origin = io.peekandpoke.klang.script.types.KlangSymbol.Origin.Library("sprudel"),
             variants = listOf(
                 KlangCallable(
                     name = "abs", receiver = null,

@@ -457,7 +457,7 @@ internal object LibraryDocSearch {
                 } ?: 0
                 val catScore = when {
                     symbol.category.lowercase().contains(lower) -> 3
-                    symbol.library.lowercase().contains(lower) -> 3
+                    (symbol.getLibrary()?.name?.lowercase()?.contains(lower) == true) -> 3
                     else -> 0
                 }
                 nameScore + aliasScore + tagScore + catScore
@@ -488,7 +488,7 @@ internal object LibraryDocSearch {
                         symbol.aliases.any { it.lowercase().contains(lower) } ||
                         symbol.tags.any { it.lowercase().contains(lower) } ||
                         symbol.category.lowercase().contains(lower) ||
-                        symbol.library.lowercase().contains(lower)
+                        (symbol.getLibrary()?.name?.lowercase()?.contains(lower) == true)
             }
         }
     }

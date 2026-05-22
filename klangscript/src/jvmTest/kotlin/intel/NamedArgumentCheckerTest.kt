@@ -30,7 +30,7 @@ class NamedArgumentCheckerTest : StringSpec({
                 category = "test",
                 tags = emptyList(),
                 aliases = emptyList(),
-                library = "test",
+                origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangCallable(
                         name = "filter",
@@ -52,7 +52,7 @@ class NamedArgumentCheckerTest : StringSpec({
                 category = "test",
                 tags = emptyList(),
                 aliases = emptyList(),
-                library = "test",
+                origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangCallable(
                         name = "gain",
@@ -73,7 +73,7 @@ class NamedArgumentCheckerTest : StringSpec({
                 category = "test",
                 tags = emptyList(),
                 aliases = emptyList(),
-                library = "test",
+                origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangCallable(
                         name = "answer",
@@ -92,7 +92,7 @@ class NamedArgumentCheckerTest : StringSpec({
                 category = "test",
                 tags = emptyList(),
                 aliases = emptyList(),
-                library = "test",
+                origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangCallable(
                         name = "note",

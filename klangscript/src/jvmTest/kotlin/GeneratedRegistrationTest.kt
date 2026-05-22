@@ -200,7 +200,7 @@ class GeneratedRegistrationTest : StringSpec({
         val sqrtDoc = generatedStdlibDocs["sqrt"]!!
         sqrtDoc.name shouldBe "sqrt"
         sqrtDoc.category shouldBe "math"
-        sqrtDoc.library shouldBe "stdlib"
+        sqrtDoc.getLibrary()?.name shouldBe "stdlib"
         sqrtDoc.tags shouldBe listOf("arithmetic", "calculation")
 
         val callable = sqrtDoc.variants
@@ -301,7 +301,7 @@ class GeneratedRegistrationTest : StringSpec({
         val doc = generatedStdlibDocs["Osc"]!!
         doc.name shouldBe "Osc"
         doc.category shouldBe "object"
-        doc.library shouldBe "stdlib"
+        doc.getLibrary()?.name shouldBe "stdlib"
         doc.variants shouldHaveSize 1
         val prop = doc.variants[0] as KlangProperty
         prop.name shouldBe "Osc"
@@ -312,7 +312,7 @@ class GeneratedRegistrationTest : StringSpec({
         val doc = generatedStdlibDocs["Math"]!!
         doc.name shouldBe "Math"
         doc.category shouldBe "object"
-        doc.library shouldBe "stdlib"
+        doc.getLibrary()?.name shouldBe "stdlib"
         doc.variants shouldHaveSize 1
         val prop = doc.variants[0] as KlangProperty
         prop.name shouldBe "Math"

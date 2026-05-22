@@ -26,19 +26,19 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
     fun registry(): KlangDocsRegistry = KlangDocsRegistry().apply {
         register(
             KlangSymbol(
-                name = "Osc", category = "object", library = "stdlib",
+                name = "Osc", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(KlangProperty(name = "Osc", type = KlangType("Osc")))
             )
         )
         register(
             KlangSymbol(
-                name = "Math", category = "object", library = "stdlib",
+                name = "Math", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(KlangProperty(name = "Math", type = KlangType("Math")))
             )
         )
         register(
             KlangSymbol(
-                name = "sine", category = "oscillator", library = "stdlib",
+                name = "sine", category = "oscillator", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "sine", receiver = KlangType("Osc"),
@@ -49,7 +49,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         )
         register(
             KlangSymbol(
-                name = "lowpass", category = "filter", library = "stdlib",
+                name = "lowpass", category = "filter", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "lowpass", receiver = KlangType("IgnitorDsl"),
@@ -61,7 +61,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         )
         register(
             KlangSymbol(
-                name = "adsr", category = "envelope", library = "stdlib",
+                name = "adsr", category = "envelope", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "adsr", receiver = KlangType("IgnitorDsl"),
@@ -78,7 +78,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         )
         register(
             KlangSymbol(
-                name = "sqrt", category = "math", library = "stdlib",
+                name = "sqrt", category = "math", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "sqrt", receiver = KlangType("Math"),
@@ -90,7 +90,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         )
         register(
             KlangSymbol(
-                name = "note", category = "pattern", library = "sprudel",
+                name = "note", category = "pattern", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     KlangCallable(
                         name = "note", receiver = null,
@@ -102,7 +102,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         )
         register(
             KlangSymbol(
-                name = "gain", category = "effect", library = "sprudel",
+                name = "gain", category = "effect", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     KlangCallable(
                         name = "gain", receiver = KlangType("Pattern"),
@@ -252,7 +252,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         val reg = KlangDocsRegistry().apply {
             register(
                 KlangSymbol(
-                    name = "note", category = "tonal", library = "sprudel",
+                    name = "note", category = "tonal", origin = KlangSymbol.Origin.Library("sprudel"),
                     variants = listOf(
                         KlangCallable(
                             name = "note", receiver = null,
@@ -264,7 +264,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
             )
             register(
                 KlangSymbol(
-                    name = "adsr", category = "dynamics", library = "sprudel",
+                    name = "adsr", category = "dynamics", origin = KlangSymbol.Origin.Library("sprudel"),
                     variants = listOf(
                         KlangCallable(
                             name = "adsr", receiver = KlangType("SprudelPattern"),
@@ -276,7 +276,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
             )
             register(
                 KlangSymbol(
-                    name = "adsr", category = "uncategorized", library = "stdlib",
+                    name = "adsr", category = "uncategorized", origin = KlangSymbol.Origin.Library("stdlib"),
                     variants = listOf(
                         KlangCallable(
                             name = "adsr", receiver = KlangType("IgnitorDsl"),
@@ -329,7 +329,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
         val reg = KlangDocsRegistry().apply {
             register(
                 KlangSymbol(
-                    name = "note", category = "tonal", library = "sprudel",
+                    name = "note", category = "tonal", origin = KlangSymbol.Origin.Library("sprudel"),
                     variants = listOf(
                         KlangCallable(
                             name = "note", receiver = null,
@@ -341,7 +341,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
             )
             register(
                 KlangSymbol(
-                    name = "adsr", category = "dynamics", library = "sprudel",
+                    name = "adsr", category = "dynamics", origin = KlangSymbol.Origin.Library("sprudel"),
                     variants = listOf(
                         KlangCallable(
                             name = "adsr", receiver = KlangType("SprudelPattern"),
@@ -354,7 +354,7 @@ class ExpressionTypeInferrerE2eTest : StringSpec({
             // Also add the stdlib adsr to simulate the merged registry
             register(
                 KlangSymbol(
-                    name = "adsr", category = "uncategorized", library = "stdlib",
+                    name = "adsr", category = "uncategorized", origin = KlangSymbol.Origin.Library("stdlib"),
                     variants = listOf(
                         KlangCallable(
                             name = "adsr", receiver = KlangType("IgnitorDsl"),

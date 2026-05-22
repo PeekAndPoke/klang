@@ -31,21 +31,21 @@ class ExpressionTypeInferrerTest : StringSpec({
         // Object: Osc (property with type "Osc")
         register(
             KlangSymbol(
-                name = "Osc", category = "object", library = "stdlib",
+                name = "Osc", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(KlangProperty(name = "Osc", type = KlangType("Osc")))
             )
         )
         // Object: Math
         register(
             KlangSymbol(
-                name = "Math", category = "object", library = "stdlib",
+                name = "Math", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(KlangProperty(name = "Math", type = KlangType("Math")))
             )
         )
         // Osc.sine() -> IgnitorDsl
         register(
             KlangSymbol(
-                name = "sine", category = "oscillator", library = "stdlib",
+                name = "sine", category = "oscillator", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "sine",
@@ -59,7 +59,7 @@ class ExpressionTypeInferrerTest : StringSpec({
         // IgnitorDsl.lowpass() -> IgnitorDsl
         register(
             KlangSymbol(
-                name = "lowpass", category = "filter", library = "stdlib",
+                name = "lowpass", category = "filter", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "lowpass",
@@ -73,7 +73,7 @@ class ExpressionTypeInferrerTest : StringSpec({
         // Math.sqrt() -> Number
         register(
             KlangSymbol(
-                name = "sqrt", category = "math", library = "stdlib",
+                name = "sqrt", category = "math", origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "sqrt",
@@ -87,7 +87,7 @@ class ExpressionTypeInferrerTest : StringSpec({
         // Top-level function: note() -> Pattern
         register(
             KlangSymbol(
-                name = "note", category = "pattern", library = "sprudel",
+                name = "note", category = "pattern", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     KlangCallable(
                         name = "note",
@@ -101,7 +101,7 @@ class ExpressionTypeInferrerTest : StringSpec({
         // Pattern.gain() -> Pattern
         register(
             KlangSymbol(
-                name = "gain", category = "effect", library = "sprudel",
+                name = "gain", category = "effect", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     KlangCallable(
                         name = "gain",
@@ -301,13 +301,13 @@ class ExpressionTypeInferrerTest : StringSpec({
         val reg = KlangDocsRegistry().apply {
             register(
                 KlangSymbol(
-                    name = "Osc", category = "object", library = "stdlib",
+                    name = "Osc", category = "object", origin = KlangSymbol.Origin.Library("stdlib"),
                     variants = listOf(KlangProperty(name = "Osc", type = KlangType("Osc")))
                 )
             )
             register(
                 KlangSymbol(
-                    name = "sampleRate", category = "property", library = "stdlib",
+                    name = "sampleRate", category = "property", origin = KlangSymbol.Origin.Library("stdlib"),
                     variants = listOf(
                         KlangProperty(
                             name = "sampleRate",

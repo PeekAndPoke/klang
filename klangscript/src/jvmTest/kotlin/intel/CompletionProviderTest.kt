@@ -29,7 +29,7 @@ class CompletionProviderTest : StringSpec({
         KlangSymbol(
             name = "note",
             category = "pattern",
-            library = "sprudel",
+            origin = KlangSymbol.Origin.Library("sprudel"),
             aliases = listOf("n"),
             variants = listOf(
                 KlangCallable(
@@ -43,7 +43,7 @@ class CompletionProviderTest : StringSpec({
         KlangSymbol(
             name = "sound",
             category = "pattern",
-            library = "sprudel",
+            origin = KlangSymbol.Origin.Library("sprudel"),
             aliases = listOf("s"),
             variants = listOf(
                 KlangCallable(
@@ -57,7 +57,7 @@ class CompletionProviderTest : StringSpec({
         KlangSymbol(
             name = "gain",
             category = "effect",
-            library = "sprudel",
+            origin = KlangSymbol.Origin.Library("sprudel"),
             variants = listOf(
                 KlangCallable(
                     name = "gain",
@@ -71,7 +71,7 @@ class CompletionProviderTest : StringSpec({
         KlangSymbol(
             name = "pan",
             category = "effect",
-            library = "sprudel",
+            origin = KlangSymbol.Origin.Library("sprudel"),
             variants = listOf(
                 KlangCallable(
                     name = "pan",
@@ -85,7 +85,7 @@ class CompletionProviderTest : StringSpec({
         KlangSymbol(
             name = "adsr",
             category = "effect",
-            library = "sprudel",
+            origin = KlangSymbol.Origin.Library("sprudel"),
             variants = listOf(
                 KlangCallable(
                     name = "adsr",
@@ -230,7 +230,7 @@ class CompletionProviderTest : StringSpec({
             KlangSymbol(
                 name = "length",
                 category = "property",
-                library = "stdlib",
+                origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangProperty(
                         name = "length",
@@ -365,7 +365,7 @@ class CompletionProviderTest : StringSpec({
         // lib A registers note() returning PatternA
         registry.register(
             KlangSymbol(
-                name = "note", category = "pattern", library = "libA",
+                name = "note", category = "pattern", origin = KlangSymbol.Origin.Library("libA"),
                 variants = listOf(
                     KlangCallable(
                         name = "note",
@@ -380,7 +380,7 @@ class CompletionProviderTest : StringSpec({
         // lib B also registers note() returning PatternB
         registry.register(
             KlangSymbol(
-                name = "note", category = "pattern", library = "libB",
+                name = "note", category = "pattern", origin = KlangSymbol.Origin.Library("libB"),
                 variants = listOf(
                     KlangCallable(
                         name = "note",
@@ -466,7 +466,7 @@ class CompletionProviderTest : StringSpec({
             KlangSymbol(
                 name = "lowpass",
                 category = "effect",
-                library = "stdlib",
+                origin = KlangSymbol.Origin.Library("stdlib"),
                 variants = listOf(
                     KlangCallable(
                         name = "lowpass",
@@ -495,7 +495,7 @@ class CompletionProviderTest : StringSpec({
             KlangSymbol(
                 name = "Foo",
                 category = "object",
-                library = "test",
+                origin = KlangSymbol.Origin.Library("test"),
                 variants = listOf(
                     KlangProperty(name = "Foo", type = KlangType("Foo"), library = "test")
                 )
@@ -542,7 +542,7 @@ class CompletionProviderTest : StringSpec({
             KlangSymbol(
                 name = "lowpass",
                 category = "effect",
-                library = "stdlib",
+                origin = KlangSymbol.Origin.Library("stdlib"),
                 aliases = listOf("lp"),
                 variants = listOf(
                     KlangCallable(

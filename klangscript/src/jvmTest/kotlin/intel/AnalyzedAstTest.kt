@@ -558,7 +558,7 @@ class AnalyzedAstTest : StringSpec({
         // Sprudel: top-level note(), top-level adsr (receiver-less!), and adsr on SprudelPattern
         register(
             KlangSymbol(
-                name = "note", category = "pattern", library = "sprudel",
+                name = "note", category = "pattern", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     KlangCallable(
                         name = "note",
@@ -570,7 +570,7 @@ class AnalyzedAstTest : StringSpec({
         )
         register(
             KlangSymbol(
-                name = "adsr", category = "dynamics", library = "sprudel",
+                name = "adsr", category = "dynamics", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     // Extension method on SprudelPattern
                     KlangCallable(
@@ -589,7 +589,7 @@ class AnalyzedAstTest : StringSpec({
         )
         register(
             KlangSymbol(
-                name = "gain", category = "dynamics", library = "sprudel",
+                name = "gain", category = "dynamics", origin = KlangSymbol.Origin.Library("sprudel"),
                 variants = listOf(
                     KlangCallable(
                         name = "gain", receiver = KlangType("SprudelPattern"),

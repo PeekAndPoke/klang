@@ -25,7 +25,7 @@ class SprudelDocsSpec : StringSpec({
         seqDoc shouldNotBe null
         seqDoc!!.name shouldBe "seq"
         seqDoc.category shouldBe "structural"
-        seqDoc.library shouldBe "sprudel"
+        seqDoc.getLibrary()?.name shouldBe "sprudel"
         seqDoc.tags shouldContain "sequence"
     }
 
@@ -94,7 +94,7 @@ class SprudelDocsSpec : StringSpec({
         doc shouldNotBe null
         doc!!.name shouldBe "sine"
         doc.category shouldBe "continuous"
-        doc.library shouldBe "sprudel"
+        doc.getLibrary()?.name shouldBe "sprudel"
         doc.tags shouldContain "oscillator"
 
         val variant = doc.variants.filterIsInstance<KlangProperty>().first()

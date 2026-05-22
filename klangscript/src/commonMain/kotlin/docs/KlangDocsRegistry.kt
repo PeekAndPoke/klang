@@ -82,7 +82,7 @@ class KlangDocsRegistry {
 
     /** Sorted distinct list of all non-empty library names present in the registry. */
     val libraries: List<String>
-        get() = _symbols.values.map { it.library }.filter { it.isNotEmpty() }.distinct().sorted()
+        get() = _symbols.values.mapNotNull { it.getLibrary()?.name }.filter { it.isNotEmpty() }.distinct().sorted()
 
     /**
      * Get all symbols belonging to a category, sorted by name.
@@ -100,7 +100,7 @@ class KlangDocsRegistry {
      * @return Matching symbols sorted by name
      */
     fun getByLibrary(library: String): List<KlangSymbol> =
-        _symbols.values.filter { it.library == library }.sortedBy { it.name }
+        _symbols.values.filter { it.getLibrary()?.name == library }.sortedBy { it.name }
 
     /**
      * Search symbols by free-text query.
@@ -117,7 +117,7 @@ class KlangDocsRegistry {
                     symbol.aliases.any { it.lowercase().contains(lowerQuery) } ||
                     symbol.tags.any { it.lowercase().contains(lowerQuery) } ||
                     symbol.category.lowercase().contains(lowerQuery) ||
-                    symbol.library.lowercase().contains(lowerQuery)
+                    (symbol.getLibrary()?.name?.lowercase()?.contains(lowerQuery) == true)
         }.sortedBy { it.name }
     }
 
@@ -183,8 +183,16 @@ class KlangDocsRegistry {
             typeMatches(owner, receiverType)
         }
         if (filtered.isEmpty()) return null
-        val variantLibrary = filtered.firstOrNull()?.library ?: symbol.library
-        return symbol.copy(variants = filtered, library = variantLibrary)
+        // Promote the filtered variant's library into the symbol's origin so the
+        // popup chip shows the right library (e.g. "STDLIB") instead of the merged
+        // symbol's original origin (which would still point to whichever library
+        // registered first, before the merge).
+        val variantLibrary = filtered.firstOrNull()?.library
+        val newOrigin = when {
+            !variantLibrary.isNullOrBlank() -> KlangSymbol.Origin.Library(variantLibrary)
+            else -> symbol.origin
+        }
+        return symbol.copy(variants = filtered, origin = newOrigin)
     }
 
     /**

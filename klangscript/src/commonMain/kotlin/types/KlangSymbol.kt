@@ -7,7 +7,7 @@ package io.peekandpoke.klang.script.types
  * @param variants List of callable/property declarations (overloads)
  * @param category Grouping category (e.g., "pattern", "effect")
  * @param tags Searchable tags for discovery
- * @param library The library this symbol belongs to (empty string for globals)
+ * @param origin Where this symbol originates — a registered library, a local binding, or `null` when unknown
  * @param aliases Alternative names this symbol is known by
  */
 data class KlangSymbol(
@@ -15,9 +15,28 @@ data class KlangSymbol(
     val variants: List<KlangDecl>,
     val category: String,
     val tags: List<String> = emptyList(),
-    val library: String = "",
+    val origin: Origin? = null,
     val aliases: List<String> = emptyList(),
 ) {
+    /**
+     * Origin of a [KlangSymbol]. A library-registered symbol carries the library's name;
+     * a script-local binding (let / const / export / function declaration) carries [Local].
+     *
+     * The owning [KlangSymbol.origin] is nullable — `null` means "we don't know" (e.g. a
+     * test fixture or a synthesized symbol that hasn't been classified). Don't paper over
+     * unknown origin with a fake `Library("")`.
+     */
+    sealed interface Origin {
+        /** Registered via a [io.peekandpoke.klang.script.KlangScriptLibrary]. */
+        data class Library(val name: String) : Origin
+
+        /** Locally declared inside a KlangScript program (let / const / export / function). */
+        object Local : Origin
+    }
+
+    /** Convenience accessor — returns the library origin, or null when origin is unknown or [Origin.Local]. */
+    fun getLibrary(): Origin.Library? = origin as? Origin.Library
+
     /**
      * Merge another [KlangSymbol] of the same name into this one.
      *

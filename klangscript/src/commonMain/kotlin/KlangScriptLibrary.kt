@@ -175,7 +175,7 @@ fun KlangCallable.toSymbol(): KlangSymbol {
     return KlangSymbol(
         name = name,
         category = receiver?.simpleName ?: "",
-        library = library,
+        origin = if (library.isNotBlank()) KlangSymbol.Origin.Library(library) else null,
         variants = listOf(this),
     )
 }

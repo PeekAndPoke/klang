@@ -127,11 +127,24 @@ class KlangSymbolDocsComp(ctx: Ctx<Props>) : Component<KlangSymbolDocsComp.Props
 
                 noui.middle.aligned.right.aligned.column {
                     ui.basic.label {
-                        if (symbol.library.isBlank()) {
-                            +"Built-in"
-                        } else {
-                            icon.book()
-                            +symbol.library.uppercase()
+                        when (val origin = symbol.origin) {
+                            null -> {
+                                +"Built-in"
+                            }
+
+                            is KlangSymbol.Origin.Library -> {
+                                if (origin.name.isBlank()) {
+                                    +"Built-in"
+                                } else {
+                                    icon.book()
+                                    +origin.name.uppercase()
+                                }
+                            }
+
+                            is KlangSymbol.Origin.Local -> {
+                                icon.code()
+                                +"LOCAL"
+                            }
                         }
                     }
                 }

@@ -120,7 +120,7 @@ private fun KlangSymbol.toTopLevelSuggestion(): CompletionSuggestion {
     return CompletionSuggestion(
         name = name,
         kind = displayVariant.toKind(),
-        detail = buildDetail(category, displayVariant?.library ?: library),
+        detail = buildDetail(category, displayVariant?.library ?: (getLibrary()?.name ?: "")),
         description = displayVariant?.description?.take(MAX_DESCRIPTION_LENGTH) ?: "",
         isAlias = false,
         aliasFor = null,
@@ -133,7 +133,7 @@ private fun KlangSymbol.toAliasSuggestion(alias: String): CompletionSuggestion {
     return CompletionSuggestion(
         name = alias,
         kind = displayVariant.toKind(),
-        detail = buildDetail(category, displayVariant?.library ?: library, "(alias for $name)"),
+        detail = buildDetail(category, displayVariant?.library ?: (getLibrary()?.name ?: ""), "(alias for $name)"),
         description = displayVariant?.description?.take(MAX_DESCRIPTION_LENGTH) ?: "",
         isAlias = true,
         aliasFor = name,
@@ -151,7 +151,7 @@ private fun KlangSymbol.toMemberSuggestion(receiverType: KlangType): CompletionS
     return CompletionSuggestion(
         name = name,
         kind = matchingVariant.toKind(),
-        detail = buildDetail(receiverType.simpleName, matchingVariant?.library ?: library),
+        detail = buildDetail(receiverType.simpleName, matchingVariant?.library ?: (getLibrary()?.name ?: "")),
         description = matchingVariant?.description?.take(MAX_DESCRIPTION_LENGTH) ?: "",
         isAlias = false,
         aliasFor = null,
