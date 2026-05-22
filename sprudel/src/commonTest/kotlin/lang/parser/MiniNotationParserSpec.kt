@@ -268,45 +268,48 @@ class MiniNotationParserSpec : StringSpec() {
             }
         }
 
-        "Parsing sound with index 'bd:1'" {
+        "Parsing 'name:index' splits into note + soundIndex" {
             val pattern = parse("bd:1")
             val events = pattern.queryArc(0.0, 1.0)
 
             assertSoftly {
                 events.size shouldBe 1
                 with(events[0]) {
-                    data.note shouldBeEqualIgnoringCase "bd:1"
-                    data.soundIndex shouldBe null
+                    data.note shouldBeEqualIgnoringCase "bd"
+                    data.soundIndex shouldBe 1
                 }
             }
         }
 
-        "Parsing sound with index and gain 'bd:1:0.5'" {
+        "Parsing 'name:index:gain' splits into note + soundIndex + gain" {
             val pattern = parse("bd:1:0.5")
             val events = pattern.queryArc(0.0, 1.0)
 
             assertSoftly {
                 events.size shouldBe 1
                 with(events[0]) {
-                    data.note shouldBeEqualIgnoringCase "bd:1:0.5"
-                    data.soundIndex shouldBe null
+                    data.note shouldBeEqualIgnoringCase "bd"
+                    data.soundIndex shouldBe 1
+                    data.gain shouldBe 0.5
                 }
             }
         }
 
-        "Parsing sound with index and gain and modifiers 'bd:1:0.5*2'" {
+        "Parsing 'name:index:gain' with modifier 'bd:1:0.5*2'" {
             val pattern = parse("bd:1:0.5*2")
             val events = pattern.queryArc(0.0, 1.0)
 
             assertSoftly {
                 events.size shouldBe 2
                 with(events[0]) {
-                    data.note shouldBeEqualIgnoringCase "bd:1:0.5"
-                    data.soundIndex shouldBe null
+                    data.note shouldBeEqualIgnoringCase "bd"
+                    data.soundIndex shouldBe 1
+                    data.gain shouldBe 0.5
                 }
                 with(events[1]) {
-                    data.note shouldBeEqualIgnoringCase "bd:1:0.5"
-                    data.soundIndex shouldBe null
+                    data.note shouldBeEqualIgnoringCase "bd"
+                    data.soundIndex shouldBe 1
+                    data.gain shouldBe 0.5
                 }
             }
         }

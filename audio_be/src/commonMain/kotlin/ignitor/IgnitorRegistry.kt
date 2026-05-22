@@ -44,7 +44,7 @@ class IgnitorRegistry(
 
         val dsl = get(key) ?: return null
 
-        val raw = dsl.toExciter(oscParams)
+        val raw = dsl.toExciter(oscParams, soundIndex = data.soundIndex ?: 0)
         val warmth = oscParams?.get("warmth") ?: 0.0
         return if (warmth > 0.0) raw.withWarmth(warmth) else raw
     }

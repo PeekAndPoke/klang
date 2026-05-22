@@ -412,6 +412,32 @@ sealed interface IgnitorDsl {
     }
 
     // ═════════════════════════════════════════════════════════════════════════════
+    // Dispatch / Selection
+    // ═════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Selects one of several child ignitors based on the voice's `soundIndex`.
+     *
+     * Lets a single sound expose multiple variants, addressable per note via the
+     * `name:n` mini-notation or `.n(...)` pattern — the same mechanism that picks
+     * variants in a sample bank (`bd:0`, `bd:1`, ...).
+     *
+     * Index wraps with floor-mod semantics: with N children, index `k` selects
+     * `children[k.mod(N)]`, so negative indices wrap from the end and overflow
+     * wraps to zero. Missing `:n` defaults to index 0 at the registry boundary.
+     *
+     * Nested variants all dispatch on the same `soundIndex` — this is intentional,
+     * so a single switching axis can drive correlated changes deep in the tree.
+     */
+    @Serializable
+    @SerialName("variants")
+    data class Variants(val children: List<IgnitorDsl>) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            children.forEach { it.collectParams(out) }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════════
     // Arithmetic Composition
     // ═════════════════════════════════════════════════════════════════════════════
 
@@ -1411,6 +1437,8 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     is IgnitorDsl.Sq -> inner.maxReleaseSec()
     is IgnitorDsl.Select -> maxOf(cond.maxReleaseSec(), whenTrue.maxReleaseSec(), whenFalse.maxReleaseSec())
     is IgnitorDsl.Fm -> maxOf(carrier.maxReleaseSec(), modulator.maxReleaseSec())
+    // Variants: voice lifetime must cover whichever child gets picked, so take the max.
+    is IgnitorDsl.Variants -> children.maxOfOrNull { it.maxReleaseSec() } ?: 0.0
     // Leaf nodes — no release info
     is IgnitorDsl.Freq -> 0.0
     is IgnitorDsl.Param -> 0.0

@@ -25,8 +25,11 @@ import kotlin.random.Random
  * 1.0 = no change) that is accumulated and passed down to the source oscillator via
  * [ModApplyingIgnitor]. Insert effects and binary ops pass the mod through transparently.
  */
-fun IgnitorDsl.toExciter(oscParams: Map<String, Double>? = null): Ignitor {
-    val cache = IgnitorBuildCache()
+fun IgnitorDsl.toExciter(
+    oscParams: Map<String, Double>? = null,
+    soundIndex: Int = 0,
+): Ignitor {
+    val cache = IgnitorBuildCache(soundIndex)
     return buildIgnitor(oscParams, cache)
 }
 
@@ -35,8 +38,11 @@ fun IgnitorDsl.toExciter(oscParams: Map<String, Double>? = null): Ignitor {
  *
  * Two references to the same DSL node with the same accumulated mod share one Ignitor.
  * Two references with different mods (or one with mod, one without) produce independent entries.
+ *
+ * Also carries the per-call [soundIndex] so `IgnitorDsl.Variants` nodes can dispatch
+ * without threading the value through every recursive call.
  */
-internal class IgnitorBuildCache {
+internal class IgnitorBuildCache(val soundIndex: Int = 0) {
     private val dslKeys = ArrayList<IgnitorDsl>()
     private val modKeys = ArrayList<Ignitor?>()
     private val values = ArrayList<Ignitor>()
@@ -74,6 +80,13 @@ internal fun IgnitorDsl.buildIgnitor(
         is IgnitorDsl.Freq -> return FreqIgnitor
         else -> { /* fall through */
         }
+    }
+
+    // ── Variants: dispatch on cache.soundIndex, no cache entry for this node itself. ──
+    if (this is IgnitorDsl.Variants) {
+        require(children.isNotEmpty()) { "Osc.variants(...) must have at least one child" }
+        val pick = cache.soundIndex.mod(children.size)
+        return children[pick].buildIgnitor(oscParams, cache, accumulatedMod)
     }
 
     // ── Pitch-mod nodes: absorb into mod, descend. No cache/Memoized for this node itself. ──
@@ -159,6 +172,9 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Vibrato, is IgnitorDsl.Accelerate, is IgnitorDsl.PitchEnvelope, is IgnitorDsl.Fm, is IgnitorDsl.PitchMod ->
             error("Pitch-mod DSL nodes must be absorbed in buildIgnitor, not buildRaw")
+
+        is IgnitorDsl.Variants ->
+            error("Variants DSL nodes must be absorbed in buildIgnitor, not buildRaw")
 
         // ── Sources: apply accumulated mod ──
 

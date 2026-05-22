@@ -157,4 +157,26 @@ class LangNoteSpec : StringSpec({
         events[0].data.note shouldBeEqualIgnoringCase "C4"
         events[1].data.note shouldBeEqualIgnoringCase "Eb4"
     }
+
+    "note() parses name:index into soundIndex" {
+        val p = note("a b c:2 d:2")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 4
+        events.map { it.data.note?.lowercase() } shouldBe listOf("a", "b", "c", "d")
+        events.map { it.data.soundIndex } shouldBe listOf(null, null, 2, 2)
+        // Frequencies should match the bare note name, not "a:2"
+        events[2].data.freqHz shouldBe Tones.noteToFreq("c")
+        events[3].data.freqHz shouldBe Tones.noteToFreq("d")
+    }
+
+    "note() parses name:index:gain into soundIndex + gain" {
+        val p = note("a:1:0.5")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.note?.lowercase() shouldBe "a"
+        events[0].data.soundIndex shouldBe 1
+        events[0].data.gain shouldBe 0.5
+    }
 })

@@ -7,6 +7,7 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.detune
 import io.peekandpoke.klang.audio_bridge.div
+import io.peekandpoke.klang.audio_bridge.drive
 import io.peekandpoke.klang.audio_bridge.fm
 import io.peekandpoke.klang.audio_bridge.lowpass
 import io.peekandpoke.klang.audio_bridge.onePoleLowpass
@@ -196,5 +197,67 @@ class IgnitorDslRuntimeTest : StringSpec({
             }
         }
         differs shouldBe true
+    }
+
+    // ─── Variants dispatch ────────────────────────────────────────────────────
+
+    fun referenceBlock(dsl: IgnitorDsl): AudioBuffer = generateBlock(dsl.toExciter())
+
+    "Variants with soundIndex=0 picks the first child" {
+        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()))
+        val picked = generateBlock(dsl.toExciter(soundIndex = 0))
+        val expected = referenceBlock(IgnitorDsl.Sine())
+        for (i in picked.indices) picked[i] shouldBe expected[i]
+    }
+
+    "Variants with soundIndex=1 picks the second child" {
+        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()))
+        val picked = generateBlock(dsl.toExciter(soundIndex = 1))
+        val expected = referenceBlock(IgnitorDsl.Sawtooth())
+        for (i in picked.indices) picked[i] shouldBe expected[i]
+    }
+
+    "Variants wraps via floor-mod for overflow indices" {
+        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()))
+        val picked = generateBlock(dsl.toExciter(soundIndex = 2)) // 2.mod(2) = 0 → Sine
+        val expected = referenceBlock(IgnitorDsl.Sine())
+        for (i in picked.indices) picked[i] shouldBe expected[i]
+    }
+
+    "Variants wraps via floor-mod for negative indices" {
+        val dsl = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Sawtooth()))
+        val picked = generateBlock(dsl.toExciter(soundIndex = -1)) // -1.mod(2) = 1 → Sawtooth
+        val expected = referenceBlock(IgnitorDsl.Sawtooth())
+        for (i in picked.indices) picked[i] shouldBe expected[i]
+    }
+
+    "Nested Variants dispatch on the same soundIndex" {
+        val inner = IgnitorDsl.Variants(listOf(IgnitorDsl.Sine(), IgnitorDsl.Square()))
+        val outer = IgnitorDsl.Variants(
+            listOf(
+                inner.lowpass(2000.0),
+                inner.drive(0.4),
+            )
+        )
+
+        val expectedIndex0 = referenceBlock(IgnitorDsl.Sine().lowpass(2000.0))
+        val expectedIndex1 = referenceBlock(IgnitorDsl.Square().drive(0.4))
+
+        val pickedIndex0 = generateBlock(outer.toExciter(soundIndex = 0))
+        val pickedIndex1 = generateBlock(outer.toExciter(soundIndex = 1))
+
+        for (i in pickedIndex0.indices) pickedIndex0[i] shouldBe expectedIndex0[i]
+        for (i in pickedIndex1.indices) pickedIndex1[i] shouldBe expectedIndex1[i]
+    }
+
+    "Variants with empty children throws at build time" {
+        val dsl = IgnitorDsl.Variants(emptyList())
+        var thrown: Throwable? = null
+        try {
+            dsl.toExciter()
+        } catch (t: Throwable) {
+            thrown = t
+        }
+        (thrown != null) shouldBe true
     }
 })

@@ -173,4 +173,57 @@ class IgnitorRegistryTest : StringSpec({
             buffer.any { it != 0.0 } shouldBe true
         }
     }
+
+    "createExciter dispatches Variants by VoiceData.soundIndex" {
+        val registry = IgnitorRegistry()
+        val variants = IgnitorDsl.Variants(
+            listOf(
+                IgnitorDsl.Sine(),
+                IgnitorDsl.Sawtooth(),
+            )
+        )
+        registry.register("v", variants)
+
+        val blockFrames = 128
+        fun ctx() = IgniteContext(
+            sampleRate = 44100,
+            voiceDurationFrames = 44100,
+            gateEndFrame = 44100,
+            releaseFrames = 4410,
+            voiceEndFrame = 48510,
+            scratchBuffers = ScratchBuffers(blockFrames),
+        ).apply { offset = 0; length = blockFrames; voiceElapsedFrames = 0 }
+
+        fun render(soundIndex: Int?): AudioBuffer {
+            val data = VoiceData.empty.copy(sound = "v", freqHz = 440.0, soundIndex = soundIndex)
+            val sig = registry.createExciter("v", data, 440.0)!!
+            val buffer = AudioBuffer(blockFrames)
+            sig.generate(buffer, 440.0, ctx())
+            return buffer
+        }
+
+        fun reference(dsl: IgnitorDsl): AudioBuffer {
+            val sig = dsl.toExciter()
+            val buffer = AudioBuffer(blockFrames)
+            sig.generate(buffer, 440.0, ctx())
+            return buffer
+        }
+
+        val nullIndex = render(null)        // ?: 0 → Sine
+        val zero = render(0)                // Sine
+        val one = render(1)                 // Sawtooth
+        val wrapped = render(2)             // 2 % 2 = 0 → Sine
+        val negative = render(-1)           // (-1).mod(2) = 1 → Sawtooth
+
+        val sineRef = reference(IgnitorDsl.Sine())
+        val sawRef = reference(IgnitorDsl.Sawtooth())
+
+        for (i in sineRef.indices) {
+            nullIndex[i] shouldBe sineRef[i]
+            zero[i] shouldBe sineRef[i]
+            wrapped[i] shouldBe sineRef[i]
+            one[i] shouldBe sawRef[i]
+            negative[i] shouldBe sawRef[i]
+        }
+    }
 })

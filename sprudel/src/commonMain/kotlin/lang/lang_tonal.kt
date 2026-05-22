@@ -152,25 +152,61 @@ fun PatternMapperFn.scale(name: PatternLike? = null, callInfo: CallInfo? = null)
 // -- note() -----------------------------------------------------------------------------------------------------------
 
 private val noteMutation = voiceModifier { input ->
-    input?.toString()?.let { newNote ->
-        copy(
-            note = newNote,
-            freqHz = Tones.noteToFreq(newNote),
-            value = null,
-        )
+    input?.toString()?.let { raw ->
+        // `name:index[:gain]` form — mirrors soundMutation so `note("a:1")` works the
+        // same way as `s("bd:1")` for picking a variant via Osc.variants(...) /
+        // sample banks. Only split when [1] parses as an integer; otherwise leave
+        // the string intact so non-numeric suffixes like "C4:minor" still resolve
+        // through Tones.noteToFreq unchanged.
+        val parts = raw.split(":")
+        val parsedIndex = parts.getOrNull(1)?.toIntOrNull()
+        if (parsedIndex == null) {
+            copy(
+                note = raw,
+                freqHz = Tones.noteToFreq(raw),
+                value = null,
+            )
+        } else {
+            copy(
+                note = parts[0],
+                freqHz = Tones.noteToFreq(parts[0]),
+                soundIndex = parsedIndex,
+                gain = parts.getOrNull(2)?.toDoubleOrNull() ?: gain,
+                value = null,
+            )
+        }
     } ?: this
 }
 
 private fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
+        // When the source carried a `value`, that value was consumed as a scale/note-index
+        // proxy and any derived soundIndex is incidental — clear it (strudel-compat).
+        // Otherwise (e.g. `note("c:2")` flowed through noteMutation, leaving value=null and
+        // a real soundIndex) preserve the soundIndex.
         source.reinterpretVoice {
-            it.resolveNote().copy(soundIndex = null, value = null)
+            val hadValue = it.value != null
+            val resolved = it.resolveNote()
+            if (hadValue) resolved.copy(soundIndex = null, value = null) else resolved.copy(value = null)
         }
     } else {
         source._applyControlFromParams(args, noteMutation) { src, ctrl ->
-            src.noteMutation(
-                ctrl.note ?: ctrl.value?.asString
-            )
+            // ctrl already passed through noteMutation, which parsed any `name:index:gain`
+            // form. Re-running the mutation on ctrl.note would lose those fields, so merge
+            // them in directly (mirrors applySound).
+            if (ctrl.note != null || ctrl.freqHz != null) {
+                src.copy(
+                    note = ctrl.note ?: src.note,
+                    freqHz = ctrl.freqHz ?: src.freqHz,
+                    soundIndex = ctrl.soundIndex ?: src.soundIndex,
+                    gain = ctrl.gain ?: src.gain,
+                    value = null,
+                )
+            } else {
+                // Fallback: ctrl wasn't parsed (e.g. raw value pattern) — interpret its
+                // value as the note name and run the parser on it.
+                src.noteMutation(ctrl.value?.asString)
+            }
         }
     }
 }

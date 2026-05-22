@@ -318,4 +318,30 @@ object KlangScriptOsc {
     @KlangScript.Method
     fun constant(value: Double): IgnitorDsl =
         IgnitorDsl.Constant(value)
+
+    // ── Dispatch / Selection ─────────────────────────────────────────────────
+
+    /**
+     * Creates a variants ignitor — selects one of [children] per note based on the
+     * voice's `soundIndex`. Lets a single sound expose multiple flavours,
+     * addressable via the `name:n` mini-notation or `.n(...)` pattern.
+     *
+     * Index wraps with floor-mod semantics: with N children, index `k` selects
+     * `children[k.mod(N)]`, so negative indices wrap from the end and overflow
+     * wraps to zero. Notes with no `:n` default to the first variant.
+     *
+     * Same selection mechanism used by sample banks (`bd:0`, `bd:1`, …). Nested
+     * `variants(...)` all dispatch on the same `soundIndex`, so a single switching
+     * axis can drive correlated changes throughout the tree.
+     *
+     * ```
+     * let combined = Osc.variants(Osc.sine(), Osc.saw())
+     * note("a b c:1 d:1").sound(combined)   // a/b → sine, c:1/d:1 → saw
+     * ```
+     *
+     * @param children candidate ignitors, indexed from 0
+     */
+    @KlangScript.Method
+    fun variants(vararg children: IgnitorDsl): IgnitorDsl =
+        IgnitorDsl.Variants(children.toList())
 }
