@@ -8,17 +8,26 @@ to avoid blocking the main thread.
 
 ## Foundation Already Built
 
-The receiver-aware code completion work (see `receiver-aware-editor.md` — DONE) provides:
+The receiver-aware code completion work (see `receiver-aware-editor.md` — DONE) plus the
+2026-05-22 analyzer overhaul provide:
 
-| Component                  | Location                | What It Does                                         |
-|----------------------------|-------------------------|------------------------------------------------------|
-| `ExpressionTypeInferrer`   | `klangscript/intel/`    | Infers types through call chains using docs metadata |
-| `KlangDocsRegistry`        | `klangscript/docs/`     | Merged registry with receiver-aware lookups          |
-| `AstIndex`                 | `klangscript/ast/`      | O(log n) cursor-to-node lookup, public API           |
-| `KlangScriptParser`        | `klangscript/parser/`   | Full recursive-descent parser                        |
-| CodeMirror linter bindings | `klangjs/.../Lint.kt`   | `Diagnostic`, `linter()`, `setDiagnostics()`         |
-| Linter extension           | `CodeMirrorComp.kt:112` | Wired up but source returns `[]`                     |
-| `setErrors()`              | `CodeMirrorComp.kt:228` | Converts `EditorError` → `Diagnostic` and renders    |
+| Component                                | Location                | What It Does                                                              |
+|------------------------------------------|-------------------------|---------------------------------------------------------------------------|
+| `ExpressionTypeInferrer`                 | `klangscript/intel/`    | Infers types through call chains; scope-aware (consults a `TypeScope?`)   |
+| `TypeScope`                              | `klangscript/intel/`    | Lexical type environment; mirrors interpreter's `Environment.kt`          |
+| `AnalyzedAst.symbolAt(pos)`              | `klangscript/intel/`    | **Single hover entry point** — receiver filter + local shadow + bare fall |
+| `AnalyzedAst.receiverTypeBeforeDot(pos)` | `klangscript/intel/`    | **Single completion entry point** — type of the chain ending before a dot |
+| `AnalyzedAst.bindingMap`                 | `klangscript/intel/`    | Identifier → local binding (let/const/export/arrow-param) at each ref     |
+| `KlangSymbol.Origin`                     | `klangscript/types/`    | Sealed: `Library(name)` / `Local(LocalKind)` / null — drives popup chip   |
+| `KlangDocsRegistry`                      | `klangscript/docs/`     | Strict receiver-aware lookup (returns null when no variant matches)       |
+| `AstIndex`                               | `klangscript/ast/`      | O(log n) cursor-to-node lookup, public API                                |
+| `KlangScriptParser`                      | `klangscript/parser/`   | Full recursive-descent parser                                             |
+| CodeMirror linter bindings               | `klangjs/.../Lint.kt`   | `Diagnostic`, `linter()`, `setDiagnostics()`                              |
+| Linter extension                         | `CodeMirrorComp.kt:112` | Wired up but source returns `[]`                                          |
+| `setErrors()`                            | `CodeMirrorComp.kt:228` | Converts `EditorError` → `Diagnostic` and renders                         |
+
+See `klangscript/ref/intel-analyzer.md` for the canonical analyzer architecture doc
+("analyzer-owns-decisions" principle — consumers stay dumb).
 
 **All analyzer code lives in `commonMain` (Kotlin Multiplatform)** — already compiles to both JVM (for tests) and JS (
 for browser/worker).
@@ -107,13 +116,13 @@ wrong receiver for method call), emit a context-specific diagnostic with a sugge
 **Implementation**: After resolving the callable, compare `args.size` against `params.size` (respecting `isVararg`).
 Skip type checking — `PatternLike` accepts almost anything.
 
-### Tier 4 — Variable type tracking (future)
+### Tier 4 — Variable type tracking
 
-| Check                 | Example                                   | What's needed                                        |
-|-----------------------|-------------------------------------------|------------------------------------------------------|
-| Variable inference    | `let x = Osc.sine(); x.lowpass(1000)`     | Track `let`/`const` initializer types in a scope map |
-| Reassignment          | `let x = note("c3"); x = 42; x.gain(0.5)` | Track latest assignment type                         |
-| Function return types | `const f = (x) => x.gain(0.5)`            | Infer arrow function return types                    |
+| Check                 | Example                                   | Status                                                                                                                                                                                                                                                     |
+|-----------------------|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Variable inference    | `let x = Osc.sine(); x.lowpass(1000)`     | **DONE 2026-05-22.** `TypeMapBuilder` scope walk binds `let`/`const`/`export`/arrow-params with their inferred type; shadows registry. Wired into hover + completion via `AnalyzedAst.symbolAt` / `receiverTypeBeforeDot`. Diagnostics not yet using this. |
+| Reassignment          | `let x = note("c3"); x = 42; x.gain(0.5)` | TBD. `AssignmentExpression` is visited but doesn't rebind. Mutability semantics need a decision.                                                                                                                                                           |
+| Function return types | `const f = (x) => x.gain(0.5)`            | TBD. Arrow-function literal currently infers as null. Would need return-type inference from body.                                                                                                                                                          |
 
 ---
 
@@ -287,16 +296,16 @@ All analyzer tests run on JVM (fast, no browser needed):
 
 ## Challenges & Decisions
 
-| Challenge                                     | Approach                                                        |
-|-----------------------------------------------|-----------------------------------------------------------------|
-| Variables (`let x = note("c3"); x.gain(0.5)`) | Phase 1: skip. Phase 2: single-assignment scope map             |
-| `PatternLike` accepts almost anything         | Don't validate argument types, only counts                      |
-| Parse errors in incomplete code               | Analyzer skips unparseable code gracefully                      |
-| Performance on large files                    | Phase 1: main thread + 500ms debounce. Phase 3: web worker      |
-| String extensions (`"c3".note()`)             | Already handled by `ExpressionTypeInferrer`                     |
-| Noise from transient errors while typing      | Longer debounce (500ms+) + version-based cancellation           |
-| Worker bundle size                            | Worker includes klangscript (parser + analyzer) but NOT UI code |
-| Registry sync to worker                       | Build-time baking; only imported library names sent via message |
+| Challenge                                     | Approach                                                                                                         |
+|-----------------------------------------------|------------------------------------------------------------------------------------------------------------------|
+| Variables (`let x = note("c3"); x.gain(0.5)`) | **DONE.** `TypeMapBuilder` scope walk; diagnostics can now read `analysis.typeOf(identifier)` for any reference. |
+| `PatternLike` accepts almost anything         | Don't validate argument types, only counts                                                                       |
+| Parse errors in incomplete code               | Analyzer skips unparseable code gracefully                                                                       |
+| Performance on large files                    | Phase 1: main thread + 500ms debounce. Phase 3: web worker                                                       |
+| String extensions (`"c3".note()`)             | Already handled by `ExpressionTypeInferrer`                                                                      |
+| Noise from transient errors while typing      | Longer debounce (500ms+) + version-based cancellation                                                            |
+| Worker bundle size                            | Worker includes klangscript (parser + analyzer) but NOT UI code                                                  |
+| Registry sync to worker                       | Build-time baking; only imported library names sent via message                                                  |
 
 ## Incremental Rollout
 
@@ -304,7 +313,9 @@ All analyzer tests run on JVM (fast, no browser needed):
 2. **v2**: Tier 2 diagnostics (wrong context) + helpful error messages with suggestions
 3. **v3**: Web worker offloading — performance for large files
 4. **v4**: Tier 3 (argument count validation)
-5. **v5**: Tier 4 (variable type tracking)
+5. **v5**: ~~Tier 4 (variable type tracking)~~ — **partially DONE 2026-05-22** for hover + completion;
+   diagnostics layer not yet using it. v5 reduces to "wire scope-aware analyzer output into
+   the diagnostic emitter for `x.unknownMethod()` style checks on locally-bound `x`".
 
 ## Key Files
 
