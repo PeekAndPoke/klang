@@ -157,23 +157,40 @@ internal inline fun computeSvfCoeffs(cutoffHz: Double, q: Double, sampleRate: Do
 
 object LowPassHighPassFilters {
 
-    fun createLPF(cutoffHz: Double, q: Double?, sampleRate: Double, analog: Double = 0.0): AudioFilter =
-        when (q) {
-            null -> OnePoleLPF(cutoffHz, sampleRate)
-            else -> SvfLPF(cutoffHz, q, sampleRate, analog)
-        }
+    fun createLPF(
+        cutoffHz: Double,
+        q: Double?,
+        sampleRate: Double,
+        analog: Double = 0.0,
+        cutoffOffsetMul: Double = 1.0,
+    ): AudioFilter = when (q) {
+        null -> OnePoleLPF(cutoffHz, sampleRate, cutoffOffsetMul)
+        else -> SvfLPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul)
+    }
 
-    fun createHPF(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
-        when (q) {
-            null -> OnePoleHPF(cutoffHz, sampleRate)
-            else -> SvfHPF(cutoffHz, q, sampleRate)
-        }
+    fun createHPF(
+        cutoffHz: Double,
+        q: Double?,
+        sampleRate: Double,
+        cutoffOffsetMul: Double = 1.0,
+    ): AudioFilter = when (q) {
+        null -> OnePoleHPF(cutoffHz, sampleRate, cutoffOffsetMul)
+        else -> SvfHPF(cutoffHz, q, sampleRate, cutoffOffsetMul)
+    }
 
-    fun createBPF(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
-        SvfBPF(cutoffHz, q ?: 1.0, sampleRate)
+    fun createBPF(
+        cutoffHz: Double,
+        q: Double?,
+        sampleRate: Double,
+        cutoffOffsetMul: Double = 1.0,
+    ): AudioFilter = SvfBPF(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
 
-    fun createNotch(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
-        SvfNotch(cutoffHz, q ?: 1.0, sampleRate)
+    fun createNotch(
+        cutoffHz: Double,
+        q: Double?,
+        sampleRate: Double,
+        cutoffOffsetMul: Double = 1.0,
+    ): AudioFilter = SvfNotch(cutoffHz, q ?: 1.0, sampleRate, cutoffOffsetMul)
 
     fun createFormant(bands: List<FilterDef.Formant.Band>, sampleRate: Double): AudioFilter =
         FormantFilter(bands, sampleRate)
@@ -186,7 +203,11 @@ object LowPassHighPassFilters {
      * Cutoff is accurate (−3 dB at `fc`) up to ~fs/4 — beyond that all bilinear
      * designs warp. See file header for review history.
      */
-    class OnePoleLPF(cutoffHz: Double, private val sampleRate: Double) : AudioFilter, AudioFilter.Tunable {
+    class OnePoleLPF(
+        cutoffHz: Double,
+        private val sampleRate: Double,
+        private val cutoffOffsetMul: Double = 1.0,
+    ) : AudioFilter, AudioFilter.Tunable {
         private var y = 0.0
         private var a: Double = 0.0
 
@@ -195,7 +216,7 @@ object LowPassHighPassFilters {
         }
 
         override fun setCutoff(cutoffHz: Double) {
-            a = onePoleLpfCoeff(cutoffHz, sampleRate)
+            a = onePoleLpfCoeff(cutoffHz * cutoffOffsetMul, sampleRate)
         }
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
@@ -216,7 +237,11 @@ object LowPassHighPassFilters {
      * the review history (replaced the old `y = a·(y + x − xPrev)` topology in 2026-04
      * because that one had Nyquist droop at high cutoffs).
      */
-    class OnePoleHPF(cutoffHz: Double, private val sampleRate: Double) : AudioFilter, AudioFilter.Tunable {
+    class OnePoleHPF(
+        cutoffHz: Double,
+        private val sampleRate: Double,
+        private val cutoffOffsetMul: Double = 1.0,
+    ) : AudioFilter, AudioFilter.Tunable {
         private var y = 0.0
         private var xPrev = 0.0
         private var b0: Double = 0.0
@@ -227,7 +252,7 @@ object LowPassHighPassFilters {
         }
 
         override fun setCutoff(cutoffHz: Double) {
-            val k = bilinearK(cutoffHz, sampleRate)
+            val k = bilinearK(cutoffHz * cutoffOffsetMul, sampleRate)
             val invOnePlusK = 1.0 / (1.0 + k)
             b0 = invOnePlusK
             a1 = (1.0 - k) * invOnePlusK
@@ -319,8 +344,12 @@ object LowPassHighPassFilters {
      * The helper writes into a private scratch holder; we then mirror to direct fields
      * so subclasses' inner loops touch fields, not getters (JIT specialization safety).
      */
-    abstract class BaseSvf(cutoffHz: Double, q: Double, private val sampleRate: Double) : AudioFilter,
-        AudioFilter.Tunable {
+    abstract class BaseSvf(
+        cutoffHz: Double,
+        q: Double,
+        private val sampleRate: Double,
+        private val cutoffOffsetMul: Double = 1.0,
+    ) : AudioFilter, AudioFilter.Tunable {
         protected var ic1eq = 0.0
         protected var ic2eq = 0.0
         protected var a1: Double = 0.0
@@ -335,7 +364,7 @@ object LowPassHighPassFilters {
         }
 
         override fun setCutoff(cutoffHz: Double) {
-            computeSvfCoeffs(cutoffHz, q, sampleRate, coefs)
+            computeSvfCoeffs(cutoffHz * cutoffOffsetMul, q, sampleRate, coefs)
             a1 = coefs.a1
             a2 = coefs.a2
             a3 = coefs.a3
@@ -362,7 +391,8 @@ object LowPassHighPassFilters {
         q: Double,
         sampleRate: Double,
         analog: Double = 0.0,
-    ) : BaseSvf(cutoffHz, q, sampleRate) {
+        cutoffOffsetMul: Double = 1.0,
+    ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
         private val driveK: Double = 1.0 + analog * DRIVE_PER_ANALOG
         private val invDriveK: Double = 1.0 / driveK
@@ -404,7 +434,12 @@ object LowPassHighPassFilters {
         }
     }
 
-    class SvfHPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
+    class SvfHPF(
+        cutoffHz: Double,
+        q: Double,
+        sampleRate: Double,
+        cutoffOffsetMul: Double = 1.0,
+    ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
@@ -419,7 +454,12 @@ object LowPassHighPassFilters {
         }
     }
 
-    class SvfBPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
+    class SvfBPF(
+        cutoffHz: Double,
+        q: Double,
+        sampleRate: Double,
+        cutoffOffsetMul: Double = 1.0,
+    ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {
@@ -434,7 +474,12 @@ object LowPassHighPassFilters {
         }
     }
 
-    class SvfNotch(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
+    class SvfNotch(
+        cutoffHz: Double,
+        q: Double,
+        sampleRate: Double,
+        cutoffOffsetMul: Double = 1.0,
+    ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
             for (i in offset until end) {

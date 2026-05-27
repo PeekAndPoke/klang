@@ -23,6 +23,7 @@ import io.peekandpoke.klang.audio_bridge.SampleRequest
 import io.peekandpoke.klang.audio_bridge.ScheduledVoice
 import io.peekandpoke.klang.audio_bridge.VoiceData
 import io.peekandpoke.klang.audio_bridge.maxReleaseSec
+import kotlin.random.Random
 
 /**
  * Creates [Voice] instances from [ScheduledVoice] data.
@@ -306,12 +307,31 @@ class VoiceFactory(
     // Private helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    private fun FilterDef.toFilter(analog: Double): AudioFilter = when (this) {
-        is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog)
-        is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(cutoffHz, q, sampleRateDouble)
-        is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble)
-        is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble)
-        is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, sampleRateDouble)
+    private fun FilterDef.toFilter(analog: Double): AudioFilter {
+        // Per-voice constant cutoff offset — set once per filter at note-on so that
+        // two voices through "the same" configured filter no longer process identically.
+        // Real analog filters have component tolerances; we simulate that with a small
+        // random multiplier per filter instance.
+        val offsetMul = perVoiceCutoffOffsetMul(analog)
+        return when (this) {
+            is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog, offsetMul)
+            is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(cutoffHz, q, sampleRateDouble, offsetMul)
+            is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble, offsetMul)
+            is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble, offsetMul)
+            // Formant's bands are vowel-specific — per-voice offset would smear vowel character. Skip.
+            is FilterDef.Formant -> LowPassHighPassFilters.createFormant(bands, sampleRateDouble)
+        }
+    }
+
+    /**
+     * Computes a per-voice cutoff offset multiplier. At `analog=0` returns `1.0`
+     * (bit-identical to no offset). At `analog>0` returns `1 + uniform(-1,1) × analog ×
+     * CUTOFF_OFFSET_PER_ANALOG`. So at `analog=1` ≈ ±0.3% (≈ ±5 cents); at `analog=3`
+     * (Schmetterling) ≈ ±0.9% (≈ ±15 cents); at `analog=10` ≈ ±3% (≈ ±50 cents).
+     */
+    private fun perVoiceCutoffOffsetMul(analog: Double): Double {
+        if (analog <= 0.0) return 1.0
+        return 1.0 + (Random.nextDouble() - 0.5) * 2.0 * CUTOFF_OFFSET_PER_ANALOG * analog
     }
 
     private fun FilterDef.toModulator(
@@ -455,5 +475,16 @@ class VoiceFactory(
             pipeline = pipeline,
             blockCtx = blockCtx,
         )
+    }
+
+    companion object {
+        /**
+         * Per-voice filter cutoff offset scale, per unit `analog`. The actual offset is
+         * `±CUTOFF_OFFSET_PER_ANALOG × analog` (uniform). At `analog=1` ≈ ±1.7 cents;
+         * at `analog=3` ≈ ±5 cents; at `analog=10` ≈ ±17 cents. Tuned by ear — larger
+         * values smear the filter's character noticeably across unison voices, especially
+         * with a long filter chain (e.g. notch + lpf + hpf, each drawing independently).
+         */
+        private const val CUTOFF_OFFSET_PER_ANALOG: Double = 0.001
     }
 }
