@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import kotlin.math.PI
@@ -156,10 +157,10 @@ internal inline fun computeSvfCoeffs(cutoffHz: Double, q: Double, sampleRate: Do
 
 object LowPassHighPassFilters {
 
-    fun createLPF(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
+    fun createLPF(cutoffHz: Double, q: Double?, sampleRate: Double, analog: Double = 0.0): AudioFilter =
         when (q) {
             null -> OnePoleLPF(cutoffHz, sampleRate)
-            else -> SvfLPF(cutoffHz, q, sampleRate)
+            else -> SvfLPF(cutoffHz, q, sampleRate, analog)
         }
 
     fun createHPF(cutoffHz: Double, q: Double?, sampleRate: Double): AudioFilter =
@@ -342,18 +343,64 @@ object LowPassHighPassFilters {
         }
     }
 
-    class SvfLPF(cutoffHz: Double, q: Double, sampleRate: Double) : BaseSvf(cutoffHz, q, sampleRate) {
+    /**
+     * Lowpass tap of the TPT SVF. When [analog] > 0, the bandpass intermediate `v1`
+     * (which drives the integrator-1 feedback) is run through `ClippingFuncs.fastTanh`
+     * before being stored in `ic1eq`. This:
+     *  - tames the mathematical-pole-pair resonance (peak compresses as it grows
+     *    rather than spiking to infinity);
+     *  - generates harmonics on saturation, audible at high resonance / drive;
+     *  - lets velocity feel real through the filter (hot input → more saturation).
+     *
+     * `analog = 0` selects a bit-identical linear path (no extra ops in the hot loop).
+     * Drive scales linearly with `analog`: `driveK = 1 + analog × DRIVE_PER_ANALOG`.
+     * `fastTanh` is the same Padé approximation used by `tube()`, `softCap()`, etc.,
+     * so the saturation character is consistent with the rest of the engine.
+     */
+    class SvfLPF(
+        cutoffHz: Double,
+        q: Double,
+        sampleRate: Double,
+        analog: Double = 0.0,
+    ) : BaseSvf(cutoffHz, q, sampleRate) {
+        private val saturate: Boolean = analog > 0.0
+        private val driveK: Double = 1.0 + analog * DRIVE_PER_ANALOG
+        private val invDriveK: Double = 1.0 / driveK
+
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
-            for (i in offset until end) {
-                val v0 = buffer[i]
-                val v3 = v0 - ic2eq
-                val v1 = a1 * ic1eq + a2 * v3
-                val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                buffer[i] = v2
+            if (saturate) {
+                val drv = driveK
+                val invDrv = invDriveK
+                for (i in offset until end) {
+                    val v0 = buffer[i]
+                    val v3 = v0 - ic2eq
+                    val v1 = a1 * ic1eq + a2 * v3
+                    // Saturate the BP intermediate before it feeds the integrator-1 state.
+                    // tanh(drv·v1) · invDrv = v1 for small v1 (unity gain) and asymptotes
+                    // to ±invDrv for large |v1|, compressing the resonance peak.
+                    val v1Sat = ClippingFuncs.fastTanh(drv * v1) * invDrv
+                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                    ic1eq = (2.0 * v1Sat - ic1eq).flushDenormal()
+                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                    buffer[i] = v2
+                }
+            } else {
+                for (i in offset until end) {
+                    val v0 = buffer[i]
+                    val v3 = v0 - ic2eq
+                    val v1 = a1 * ic1eq + a2 * v3
+                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                    ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                    buffer[i] = v2
+                }
             }
+        }
+
+        companion object {
+            /** Drive coefficient per unit `analog`. `analog=1` → driveK=1.5, `analog=3` → 2.5. */
+            private const val DRIVE_PER_ANALOG: Double = 0.5
         }
     }
 

@@ -71,7 +71,8 @@ class VoiceFactory(
         val gateEndFrame = startFrame + effectiveGateDuration
 
         // Create filters
-        val filters = data.filters.filters.map { it.toFilter() }
+        val analog = data.oscParams?.get("analog") ?: 0.0
+        val filters = data.filters.filters.map { it.toFilter(analog) }
         val modulators = data.filters.filters.zip(filters).mapNotNull { (def, filter) ->
             def.toModulator(filter, sampleRate)
         }
@@ -305,8 +306,8 @@ class VoiceFactory(
     // Private helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
-    private fun FilterDef.toFilter(): AudioFilter = when (this) {
-        is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble)
+    private fun FilterDef.toFilter(analog: Double): AudioFilter = when (this) {
+        is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog)
         is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(cutoffHz, q, sampleRateDouble)
         is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble)
         is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble)
