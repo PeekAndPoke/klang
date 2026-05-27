@@ -1678,10 +1678,10 @@ object Ignitors {
      * Reads the analog amount once from the param buffer (control rate).
      */
     internal fun initAnalogDrift(analog: Ignitor, freqHz: Double, ctx: IgniteContext): AnalogDrift {
-        if (analog is ParamIgnitor) return AnalogDrift(analog.default)
+        if (analog is ParamIgnitor) return AnalogDrift(analog.default, ctx.sampleRate)
         return ctx.scratchBuffers.use { tmp ->
             analog.generate(tmp, freqHz, ctx)
-            AnalogDrift(tmp[ctx.offset])
+            AnalogDrift(tmp[ctx.offset], ctx.sampleRate)
         }
     }
 
@@ -1704,7 +1704,7 @@ object Ignitors {
                 tmp[ctx.offset]
             }
         }
-        return PolyAnalogDrift(amount, voiceCount, rng)
+        return PolyAnalogDrift(amount, voiceCount, ctx.sampleRate, rng)
     }
 
     /** Read a control-rate parameter once per block. Optimized for FreqIgnitor and constant ParamIgnitor. */

@@ -26,6 +26,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -49,6 +50,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -73,6 +75,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -97,6 +100,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -123,6 +127,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -149,6 +154,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = 50.0, // Loop first half
                 isLooping = true,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -177,6 +183,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = 50.0, // Stop at frame 50
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -204,6 +211,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -227,6 +235,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
             vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),
@@ -251,6 +260,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
             fm = Voice.Fm(
@@ -278,6 +288,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -301,6 +312,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
             envelope = Voice.Envelope(
@@ -335,6 +347,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -361,6 +374,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -388,6 +402,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = -1.0,
                 isLooping = false,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
         )
@@ -418,6 +433,7 @@ class SampleVoiceSpecificTest : StringSpec({
                 loopEnd = 50.0,
                 isLooping = true,
                 stopFrame = Double.MAX_VALUE,
+                sampleRate = 48000,
             ),
             freqHz = 440.0,
             vibrato = Voice.Vibrato(rate = 5.0, depth = 0.25),

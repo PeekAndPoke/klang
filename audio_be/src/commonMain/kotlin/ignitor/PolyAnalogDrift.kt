@@ -1,11 +1,10 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
-import io.peekandpoke.klang.audio_be.ignitor.PolyAnalogDrift.Companion.BASE_STEP
-import io.peekandpoke.klang.common.math.PerlinNoise
 import kotlin.random.Random
 
 /**
- * Polyphonic analog drift — independent drift state for each unison voice.
+ * Polyphonic analog drift — independent two-timescale Ornstein–Uhlenbeck
+ * drift per unison voice.
  *
  * The single-voice [AnalogDrift] is fine for mono oscillators, but in
  * unison oscillators (SuperSaw, SuperSine, etc.) a single shared drift
@@ -13,10 +12,19 @@ import kotlin.random.Random
  * feel — real analog supersaws sound wide and organic precisely because
  * each VCO has its own independent pitch instability.
  *
- * This class allocates **one** [PerlinNoise] field (shared) and **N**
- * independent walking positions, one per voice. Each voice also gets a
- * slightly randomised step size (±25% of [BASE_STEP]) so the wobble
- * periods are incommensurate — no two voices ever sync back up.
+ * This class allocates per-voice state for two layered drift sources:
+ * - a **fast jitter** (~50 ms time constant, ±0.2 cents per unit `analog`);
+ * - a **slow OU drift** (~10 s with mild mean reversion, ±0.8 cents per
+ *   unit `analog`).
+ *
+ * Total drift peak ≈ ±`analog` cents per voice (clean linear mapping).
+ * Tuning constants live in [AnalogDriftCoeffs] — single source of truth
+ * shared with the mono [AnalogDrift].
+ *
+ * Each voice has its own RNG state and its own smoother state, so voices
+ * decorrelate from sample 0 and never re-sync. State is seeded at
+ * construction from the steady-state Gaussian distribution so drift is
+ * immediate after note-on (no ramp-up).
  *
  * Usage in the audio hot path:
  *
@@ -32,16 +40,22 @@ import kotlin.random.Random
  * ```
  *
  * [advanceAll] is `inline` so on Kotlin/JS its body expands at the call
- * site — zero method dispatch in the per-sample loop. The internal
- * state ([noise]/[jitter]/[pos]/[step]) is marked `@PublishedApi
- * internal` to allow inlining without leaking those fields to the
- * public surface.
+ * site — zero method dispatch in the per-sample loop. The internal state
+ * is marked `@PublishedApi internal` to allow inlining without leaking
+ * those fields to the public surface.
  *
  * When [active] is false, callers should skip [advanceAll] — multipliers
  * stay at 1.0 (their initial value), so any later `dt * multipliers[n]`
  * is a no-op multiply that the JIT/optimizer can eliminate.
+ *
+ * Per-sample-per-voice cost: 3 xorshift ops + 4 muls + 4 adds. No allocations.
  */
-class PolyAnalogDrift(analog: Double, voiceCount: Int, rng: Random = Random) {
+class PolyAnalogDrift(
+    analog: Double,
+    voiceCount: Int,
+    sampleRate: Int,
+    rng: Random = Random,
+) {
     /** Whether analog drift is active. When false, [advanceAll] need not be called. */
     val active: Boolean = analog > 0.0
 
@@ -53,28 +67,47 @@ class PolyAnalogDrift(analog: Double, voiceCount: Int, rng: Random = Random) {
      */
     val multipliers: DoubleArray = DoubleArray(voiceCount) { 1.0 }
 
-    /** Shared Perlin noise field. Every voice reads from it at its own [pos]. */
     @PublishedApi
-    internal val noise: PerlinNoise = PerlinNoise(rng)
+    internal val alphaFast: Double
+    @PublishedApi
+    internal val alphaSlow: Double
+    @PublishedApi
+    internal val betaSlow: Double
+    @PublishedApi
+    internal val scaleFast: Double
+    @PublishedApi
+    internal val scaleSlow: Double
 
-    /** Phase-increment jitter amount: `analog * 0.003`. Constant across voices. */
+    /** Per-voice state of the fast jitter smoother. */
     @PublishedApi
-    internal val jitter: Double = analog * 0.003
+    internal val yFast: DoubleArray
 
-    /**
-     * Per-voice walking position in the noise field. Each voice starts at a
-     * random offset so voices walk completely different regions.
-     */
+    /** Per-voice state of the slow OU drift. */
     @PublishedApi
-    internal val pos: DoubleArray = DoubleArray(voiceCount) { rng.nextDouble() * 256.0 }
+    internal val ySlow: DoubleArray
 
-    /**
-     * Per-voice step size. Randomised ±25% around [BASE_STEP] so the wobble
-     * periods of different voices are incommensurate — they never re-sync.
-     */
+    /** Per-voice xorshift32 RNG state. Non-zero by construction. */
     @PublishedApi
-    internal val step: DoubleArray = DoubleArray(voiceCount) {
-        BASE_STEP * (1.0 + (rng.nextDouble() - 0.5) * 0.5)
+    internal val rngState: IntArray
+
+    init {
+        val coeffs = AnalogDriftCoeffs(analog, sampleRate)
+        alphaFast = coeffs.alphaFast
+        alphaSlow = coeffs.alphaSlow
+        betaSlow = coeffs.betaSlow
+        scaleFast = coeffs.scaleFast
+        scaleSlow = coeffs.scaleSlow
+
+        // Seed each voice from the steady-state Gaussian. Slow layer would
+        // otherwise need ~30 seconds to reach steady state.
+        yFast = DoubleArray(voiceCount) { analogDriftGaussian(rng) * coeffs.sigmaYFast }
+        ySlow = DoubleArray(voiceCount) { analogDriftGaussian(rng) * coeffs.sigmaYSlow }
+
+        rngState = IntArray(voiceCount) {
+            var s = rng.nextInt()
+            if (s == 0) s = 1 // xorshift32 doesn't tolerate a zero seed
+            s
+        }
     }
 
     /**
@@ -89,21 +122,30 @@ class PolyAnalogDrift(analog: Double, voiceCount: Int, rng: Random = Random) {
     @Suppress("NOTHING_TO_INLINE")
     inline fun advanceAll() {
         val muls = multipliers
-        val voicePos = pos
-        val voiceStep = step
-        val noiseField = noise
-        val jit = jitter
         val n = muls.size
-        for (idx in 0 until n) {
-            val p = voicePos[idx]
-            muls[idx] = 1.0 + jit * noiseField.noise(p)
-            voicePos[idx] = p + voiceStep[idx]
-        }
-    }
+        val yF = yFast
+        val yS = ySlow
+        val states = rngState
+        val aF = alphaFast
+        val aS = alphaSlow
+        val bS = betaSlow
+        val sF = scaleFast
+        val sS = scaleSlow
 
-    companion object {
-        // Same base step as [AnalogDrift.STEP] — keeps the wobble character consistent.
-        // Perlin field repeats every 256 units, so one full cycle ≈ 1.8s at 48kHz.
-        private const val BASE_STEP = 0.003
+        for (idx in 0 until n) {
+            // xorshift32 — inline, no Random dispatch
+            var s = states[idx]
+            s = s xor (s shl 13)
+            s = s xor (s ushr 17)
+            s = s xor (s shl 5)
+            states[idx] = s
+            val x = s * ANALOG_INT_INV // uniform ≈ [-1, 1]
+
+            val newYF = yF[idx] + aF * (x - yF[idx])
+            val newYS = yS[idx] + aS * (x - yS[idx]) - bS * yS[idx]
+            yF[idx] = newYF
+            yS[idx] = newYS
+            muls[idx] = 1.0 + newYF * sF + newYS * sS
+        }
     }
 }

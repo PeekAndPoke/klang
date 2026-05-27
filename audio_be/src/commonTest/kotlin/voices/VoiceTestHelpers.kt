@@ -255,6 +255,7 @@ object VoiceTestHelpers {
             loopEnd = loopEnd,
             isLooping = isLooping,
             stopFrame = stopFrame,
+            sampleRate = sampleRate,
         ),
         fm = fm, accelerate = accelerate,
         vibrato = vibrato, pitchEnvelope = pitchEnvelope, gain = gain, pan = pan,

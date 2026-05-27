@@ -24,9 +24,10 @@ class SampleIgnitor(
     private val isLooping: Boolean,
     private val stopFrame: Double,
     analog: Double = 0.0,
+    sampleRate: Int,
 ) : Ignitor {
 
-    private val drift = AnalogDrift(analog)
+    private val drift = AnalogDrift(analog, sampleRate)
     private val loopLength = if (isLooping && loopEnd > loopStart) loopEnd - loopStart else 0.0
 
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {

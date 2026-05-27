@@ -286,6 +286,7 @@ class VoiceFactory(
                     isLooping = isLooping,
                     stopFrame = endSample,
                     analog = data.oscParams?.get("analog") ?: 0.0,
+                    sampleRate = sampleRate,
                 )
 
                 buildVoice(
