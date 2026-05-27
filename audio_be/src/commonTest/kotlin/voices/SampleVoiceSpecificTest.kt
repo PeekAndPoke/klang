@@ -6,6 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.ignitor.SampleIgnitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createVoice
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
  * Tests specific to sample playback via SampleIgnitor.
@@ -306,7 +307,10 @@ class SampleVoiceSpecificTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             ),
         )
 

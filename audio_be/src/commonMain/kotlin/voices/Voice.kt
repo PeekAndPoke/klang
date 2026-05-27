@@ -7,6 +7,7 @@ import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
 import io.peekandpoke.klang.audio_be.voices.strip.send.SendRenderer
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 
 // Frame counters use Int instead of Long: Long is boxed in Kotlin/JS (emulated via a wrapper
@@ -147,6 +148,9 @@ class Voice(
         val decayFrames: Double,
         val sustainLevel: Double,
         val releaseFrames: Double,
+        val attackCurve: AdsrCurve = AdsrCurve.Square,
+        val decayCurve: AdsrCurve = AdsrCurve.Square,
+        val releaseCurve: AdsrCurve = AdsrCurve.Square,
         var level: Double = 0.0,
         var releaseStartLevel: Double = 0.0,
         var releaseStarted: Boolean = false,
@@ -157,6 +161,9 @@ class Voice(
                 decayFrames = adsr.decay * sampleRate,
                 sustainLevel = adsr.sustain,
                 releaseFrames = adsr.release * sampleRate,
+                attackCurve = adsr.attackCurve,
+                decayCurve = adsr.decayCurve,
+                releaseCurve = adsr.releaseCurve,
             )
         }
     }

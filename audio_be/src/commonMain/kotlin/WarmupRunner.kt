@@ -85,7 +85,7 @@ class WarmupRunner(
                     data = VoiceData.empty.copy(
                         sound = "sine",
                         freqHz = 440.0,
-                        adsr = AdsrDef(attack = 0.005, decay = 0.05, sustain = 0.0, release = 0.05),
+                        adsr = AdsrDef.Std(attack = 0.005, decay = 0.05, sustain = 0.0, release = 0.05),
                     ),
                     startTime = 0.0,
                     gateEndTime = 0.1,
@@ -96,7 +96,7 @@ class WarmupRunner(
                     playbackId = WARMUP_PLAYBACK_ID,
                     data = VoiceData.empty.copy(
                         sound = WARMUP_SAMPLE_NAME,
-                        adsr = AdsrDef(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
+                        adsr = AdsrDef.Std(attack = 0.001, decay = 0.05, sustain = 0.0, release = 0.05),
                     ),
                     startTime = 0.0,
                     gateEndTime = 0.1,

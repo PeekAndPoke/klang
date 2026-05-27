@@ -39,46 +39,64 @@ fun String.cleanScaleName() = replace(":", " ").replace("_", " ")
 /**
  * Resolves the note and frequency based on the index and the current scale.
  *
+ * The `value` field is parsed lazily here (consumed-at-use). `seq("0:1")` stores
+ * the raw `"0:1"` string in `value`; only when `.scale(...)` / `.note()` reaches
+ * this function do we split it into a scale-step input, an optional `soundIndex`
+ * override, and an optional `gain` override. Parsed null parts never overwrite
+ * existing voice fields — they're only applied when we have a real value.
+ *
  * @param newIndex An optional new index to force (e.g. from n("0")).
- *                 If null, it tries to use existing soundIndex or interpret value as index.
+ *                 If null, interprets value first (numeric or "step[:variant[:gain]]"
+ *                 string), then falls back to existing soundIndex.
  */
 fun SprudelVoiceData.resolveNote(newIndex: Int? = null): SprudelVoiceData {
     val effectiveScale = scale?.cleanScaleName()
 
-    // Determine the effective index:
-    // 1. Explicit argument (newIndex)
-    // 2. Existing soundIndex
-    // 3. Existing value interpreted as integer
-    val n = newIndex ?: soundIndex ?: value?.asInt
+    // Classify `value` into up to three parts:
+    //   step             — scale-step input (or fallback note name)
+    //   variantOverride  — explicit `:variant` from "X:Y[:Z]"
+    //   gainOverride     — explicit `:gain`    from "X:Y:Z"
+    //   fallbackName     — first colon-part, used as note name when no scale resolves
+    val rawValue = value?.asString
+    val parts = rawValue?.split(":")
+    val firstPart = parts?.getOrNull(0)
+    val step = firstPart?.toIntOrNull() ?: value?.asInt
+    val variantOverride = parts?.getOrNull(1)?.toIntOrNull()
+    val gainOverride = parts?.getOrNull(2)?.toDoubleOrNull()
+    val fallbackName = firstPart
 
-    // Try to resolve note from index + scale
+    val n = newIndex ?: step ?: soundIndex
+
+    // Scale branch: index + scale -> resolve note name.
     if (n != null && !effectiveScale.isNullOrEmpty()) {
         val noteName = Scale.steps(effectiveScale).invoke(n)
+        val valueWasStepSource = step != null
         return copy(
             note = noteName,
             freqHz = Tones.noteToFreq(noteName),
-            soundIndex = null, // sound-index was consumed
+            // soundIndex: consumed (cleared) when soundIndex itself was the step source.
+            // When value provided the step, leave soundIndex untouched unless a variant
+            // override was parsed out of "step:variant".
+            soundIndex = if (valueWasStepSource) (variantOverride ?: soundIndex) else null,
+            // gain: only updated when a parsed gain override is present; else preserved.
+            gain = gainOverride ?: gain,
             value = null,
         )
     }
 
-    // Fallback cases
-
-    // Case A: Explicit index was provided, but no scale found.
-    // We must set the soundIndex.
+    // Case A: explicit newIndex, no scale -> set soundIndex.
     if (newIndex != null) {
         return copy(soundIndex = newIndex)
     }
 
-    // Case B: Reinterpretation or fallback.
-    // If we derived an index 'n' (e.g. from value), we preserve it.
-    // We also ensure 'note' is populated (e.g. from 'value' if 'note' is missing).
-    val fallbackNote = note ?: value?.asString
+    // Case B: reinterpretation / fallback. Populate note from value if missing.
+    val resolvedNote = note ?: fallbackName
 
     return copy(
-        note = fallbackNote,
-        freqHz = Tones.noteToFreq(fallbackNote ?: ""),
-        soundIndex = n ?: soundIndex,
+        note = resolvedNote,
+        freqHz = Tones.noteToFreq(resolvedNote ?: ""),
+        soundIndex = variantOverride ?: (n ?: soundIndex),
+        gain = gainOverride ?: gain,
     )
 }
 
@@ -180,14 +198,22 @@ private val noteMutation = voiceModifier { input ->
 
 private fun applyNote(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return if (args.isEmpty()) {
-        // When the source carried a `value`, that value was consumed as a scale/note-index
-        // proxy and any derived soundIndex is incidental — clear it (strudel-compat).
-        // Otherwise (e.g. `note("c:2")` flowed through noteMutation, leaving value=null and
-        // a real soundIndex) preserve the soundIndex.
+        // Already-resolved guard: if a previous .scale() / .note() set note and cleared
+        // value (e.g. seq("0:1").scale("cm").note()), don't re-run resolveNote — it would
+        // treat the surviving soundIndex (variant override) as a fresh scale-step input.
+        //
+        // Otherwise: if the source carried a `value`, that value was consumed as a
+        // scale/note-index proxy and any derived soundIndex is incidental — clear it
+        // (strudel-compat). If no value (e.g. `note("c:2")` flowed through noteMutation),
+        // preserve the soundIndex.
         source.reinterpretVoice {
-            val hadValue = it.value != null
-            val resolved = it.resolveNote()
-            if (hadValue) resolved.copy(soundIndex = null, value = null) else resolved.copy(value = null)
+            if (it.note != null && it.value == null) {
+                it
+            } else {
+                val hadValue = it.value != null
+                val resolved = it.resolveNote()
+                if (hadValue) resolved.copy(soundIndex = null, value = null) else resolved.copy(value = null)
+            }
         }
     } else {
         source._applyControlFromParams(args, noteMutation) { src, ctrl ->

@@ -77,7 +77,7 @@ data class SoundfontIndex(
 
                 val envelope = if (ahdsr || isSustainLoop) {
                     // Explicit ADSR requested/supported by font
-                    AdsrDef(
+                    AdsrDef.Std(
                         attack = 0.01,
                         decay = 0.1,
                         sustain = 1.0,
@@ -85,7 +85,7 @@ data class SoundfontIndex(
                     )
                 } else {
                     // Percussive (Drum, Xylophone): Instant On, Fade Out
-                    AdsrDef(
+                    AdsrDef.Std(
                         attack = 0.01,
                         decay = 0.5, // Longer decay to let the sample ring out a bit
                         sustain = 0.0,

@@ -332,6 +332,9 @@ class GraalSprudelPattern(
                 decay = decay,
                 sustain = sustain,
                 release = release,
+                attackCurve = null,
+                decayCurve = null,
+                releaseCurve = null,
                 // Pitch / Glisando
                 accelerate = accelerate,
                 // Vibrato

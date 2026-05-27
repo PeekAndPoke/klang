@@ -231,7 +231,7 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 
 | Function                | Aliases | Description                   | Example                                         |
 |-------------------------|---------|-------------------------------|-------------------------------------------------|
-| `note(name)`            |         | Set note name                 | `note("c3 e3 g3")`                              |
+| `note(name)`            |         | Set note name                 | `note("c3 e3 g3")` or `note("a:1 b:2")`         |
 | `n(index)`              |         | Set scale index               | `n("0 2 4 7").scale("C4:major")`                |
 | `scale(name)`           |         | Set scale context             | `n("0 1 2 3").scale("C4:minor")`                |
 | `transpose(semi)`       |         | Shift by semitones            | `note("c3").transpose(12)`                      |
@@ -242,6 +242,36 @@ multiple events. This is the most compact way to write multi-cycle sequences in 
 | `freq(hz)`              |         | Set frequency in Hz           | `freq("440 880")`                               |
 | `accelerate(amt)`       |         | Pitch ramp during playback    | `s("cr").accelerate(2)`                         |
 | `vibrato(rate, depth)`  | `vib`   | Pitch vibrato (sprudel-level) | `note("c3").vibrato("5:0.01")`                  |
+
+#### `:soundIndex:gain` suffix (universal variant picker)
+
+A `name:soundIndex[:gain]` suffix on `note()`, `s()` / `sound()`, and
+`seq(...).scale(...)` selects a per-event variant from a sound bundle
+(sample bank or `Osc.variants(...)`). Same syntax as strudel's sample
+selection — extended to ignitor variants and per-note gain.
+
+| Pattern                                  | What it does                                  |
+|------------------------------------------|-----------------------------------------------|
+| `note("a b:1 c:2")`                      | Notes a/b/c; variant 0/1/2                    |
+| `note("a:1:0.5")`                        | Note a, variant 1, gain 0.5                   |
+| `s("bd:0 bd:1 bd:2")`                    | Three samples from the `bd` bank              |
+| `seq("0 2 4 4:1 5:1").scale("c4:minor")` | Scale steps 0/2/4/4/5; last two get variant 1 |
+| `sound("bd sd").n(2)`                    | Both `bd` and `sd` use sample variant 2       |
+
+**Where the parse happens:**
+
+- `note(...)` and `s()`/`sound(...)` split immediately — the value is known
+  to be a note/sound name at insertion time.
+- `seq("X:Y")` keeps the raw `"X:Y"` string verbatim — the split happens
+  lazily inside `scale()` / `note()` reinterpretation, since `seq` doesn't
+  know what its values will be used for. So `seq("0:1").scale("c:minor")`
+  → scale step 0, variant 1.
+- `n("X")` is the strudel-port shim and does **not** parse `:variant`. Use
+  `seq("X:Y").scale(...)` for scale + variant combos.
+
+**Defaults & wrap-around** mirror sample-bank semantics: missing
+`:soundIndex` → variant 0; overflow / negative wraps via floor-mod
+(`children[i.mod(N)]`).
 
 ### Dynamics & Routing
 
@@ -452,7 +482,10 @@ note("c3").s("supersaw").detune(perlin.range(0.0, 0.3).slow(16))
 `bd` (bass drum), `sd` (snare), `hh` (closed hi-hat), `oh` (open hi-hat), `cp` (clap), `cr` (crash), `rd` (ride), `lt` (
 low tom), `mt` (mid tom), `ht` (high tom), `rim` (rimshot), `ch` (closed hat)
 
-Use `:N` for variants: `sd:3`, `bd:2`
+Use `:N` for sample-bank variants: `sd:3`, `bd:2`. The same `:N` suffix
+also picks ignitor flavours from `Osc.variants(...)` — see
+[Tonal & Pitch › `:soundIndex:gain` suffix](#soundindexgain-suffix-universal-variant-picker)
+for the full story.
 
 ### Synth Oscillators (via `sound()` / `s()`)
 

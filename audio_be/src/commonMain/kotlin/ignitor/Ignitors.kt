@@ -692,11 +692,15 @@ object Ignitors {
         // Hoisted out of the per-block loop — reused across blocks, resized only when v changes.
         private var detunes: DoubleArray = DoubleArray(0)
         private var voiceGain: Double = 0.0
-        private var drift: AnalogDrift? = null
+        private var drift: PolyAnalogDrift? = null
+
+        // Per-voice detune jitter (unit range ±0.05, scaled by `spread` when applied).
+        // Constant per voice across the voice lifetime — breaks the exact-spacing symmetry
+        // that makes the unison cloud sound mechanical.
+        private var detuneJitter: DoubleArray = DoubleArray(0)
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
 
             ctx.scratchBuffers.use { voicesBuf ->
                 voices.generate(voicesBuf, actualFreq, ctx)
@@ -707,10 +711,15 @@ object Ignitors {
                     val old = phases
                     phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
                     detunes = DoubleArray(v)
+                    // ±5% unit detune jitter — applied as `det += detuneJitter[n] * spread`.
+                    detuneJitter = DoubleArray(v) { (rng.nextDouble() - 0.5) * 0.1 }
+                    drift = null  // force re-init with new voice count
                 }
                 if (v <= 0) {
                     buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
                 }
+
+                val d = drift ?: initPolyAnalogDrift(analog, v, actualFreq, ctx, rng).also { drift = it }
 
                 ctx.scratchBuffers.use { spreadBuf ->
                     freqSpread.generate(spreadBuf, actualFreq, ctx)
@@ -723,37 +732,33 @@ object Ignitors {
                     if (phaseMod == null) {
                         // Recompute the detune increments into the persistent buffer.
                         for (n in 0 until v) {
-                            val det = getUnisonDetune(v, spread, n)
+                            val det = getUnisonDetune(v, spread, n) + detuneJitter[n] * spread
                             detunes[n] = actualFreq.applySemitoneDetuneToFrequency(det) / sr
                         }
 
                         if (d.active) {
-                            // Analog path: per-sample per-voice jitter
-                            // Voice 0: write
-                            run {
-                                var p = phases[0]
-                                val baseDt = detunes[0]
-                                for (i in ctx.offset until end) {
-                                    val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] = ((2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) p.polyBlep(dt) else 0.0) * voiceGain)
+                            // Analog path: sample-major. drift.advanceAll() refreshes per-voice
+                            // multipliers each sample, then we sum all voices into one write.
+                            val muls = d.multipliers
+                            for (i in ctx.offset until end) {
+                                d.advanceAll()
+                                var sum = 0.0
+                                for (n in 0 until v) {
+                                    var p = phases[n]
+                                    val dt = detunes[n] * muls[n]
+                                    sum += if (dt <= BLEP_MIN_DT) {
+                                        2.0 * p - 1.0
+                                    } else {
+                                        2.0 * p - 1.0 - p.polyBlep(dt)
+                                    }
                                     p += dt; p = p.wrapPhase(1.0)
+                                    phases[n] = p
                                 }
-                                phases[0] = p
-                            }
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val baseDt = detunes[n]
-                                for (i in ctx.offset until end) {
-                                    val dt = baseDt * d.nextMultiplier()
-                                    buffer[i] =
-                                        (buffer[i] + (2.0 * p - 1.0 - if (dt > BLEP_MIN_DT) p.polyBlep(dt) else 0.0) * voiceGain)
-                                    p += dt; p = p.wrapPhase(1.0)
-                                }
-                                phases[n] = p
+                                buffer[i] = sum * voiceGain
                             }
                         } else {
-                            // Clean digital path
+                            // Clean digital path: no per-sample drift. Voice-major preserves
+                            // per-voice register residency since dt is constant within a voice.
                             // Voice 0: write (overwrite buffer)
                             run {
                                 var p = phases[0]
@@ -791,15 +796,20 @@ object Ignitors {
                             }
                         }
                     } else {
-                        // Modulated path: per-sample (jitter on top of modulation)
+                        // Modulated path: per-sample (jitter on top of modulation).
+                        // Already sample-major, just plug in advanceAll().
+                        val driftActive = d.active
+                        val muls = d.multipliers
+
                         for (i in ctx.offset until end) {
+                            if (driftActive) d.advanceAll()
                             val mod = phaseMod[i]
                             var sum = 0.0
                             for (n in 0 until v) {
                                 var p = phases[n]
-                                val det = getUnisonDetune(v, spread, n)
+                                val det = getUnisonDetune(v, spread, n) + detuneJitter[n] * spread
                                 var dt = actualFreq.applySemitoneDetuneToFrequency(det) / sr * mod
-                                if (d.active) dt *= d.nextMultiplier()
+                                if (driftActive) dt *= muls[n]
                                 sum += if (dt <= BLEP_MIN_DT) {
                                     2.0 * p - 1.0
                                 } else {
@@ -1673,6 +1683,28 @@ object Ignitors {
             analog.generate(tmp, freqHz, ctx)
             AnalogDrift(tmp[ctx.offset])
         }
+    }
+
+    /**
+     * Initialize [PolyAnalogDrift] lazily from an Ignitor param on first block.
+     * Reads the analog amount once and allocates per-voice state for [voiceCount] voices.
+     */
+    internal fun initPolyAnalogDrift(
+        analog: Ignitor,
+        voiceCount: Int,
+        freqHz: Double,
+        ctx: IgniteContext,
+        rng: Random,
+    ): PolyAnalogDrift {
+        val amount = if (analog is ParamIgnitor) {
+            analog.default
+        } else {
+            ctx.scratchBuffers.use { tmp ->
+                analog.generate(tmp, freqHz, ctx)
+                tmp[ctx.offset]
+            }
+        }
+        return PolyAnalogDrift(amount, voiceCount, rng)
     }
 
     /** Read a control-rate parameter once per block. Optimized for FreqIgnitor and constant ParamIgnitor. */

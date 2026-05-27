@@ -240,4 +240,65 @@ class LangScaleSpec : StringSpec({
         events[1].data.note shouldBe "Db4" // or C#4
         events[2].data.note shouldBe "D4"
     }
+
+    // -- seq() with :variant[:gain] parsed at consumption time -----------------------
+
+    "seq().scale() with plain step preserves any existing soundIndex/gain" {
+        // seq("1") writes value="1" verbatim. scale() parses just the step,
+        // leaves soundIndex / gain untouched (they're null on a fresh atom here).
+        val p = seq("0 1 2").scale("C4:major")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events[0].data.note shouldBe "C4"
+        events[1].data.note shouldBe "D4"
+        events[2].data.note shouldBe "E4"
+        events.forEach { it.data.soundIndex shouldBe null }
+    }
+
+    "seq().scale() with step:variant sets soundIndex from the variant override" {
+        val p = seq("0:1").scale("C4:major")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe "C4"
+        events[0].data.soundIndex shouldBe 1
+    }
+
+    "seq().scale() with step:variant:gain sets all three" {
+        val p = seq("0:1:0.5").scale("C4:major")
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe "C4"
+        events[0].data.soundIndex shouldBe 1
+        events[0].data.gain shouldBe 0.5
+    }
+
+    "seq().scale() mixed plain + step:variant — variant survives only where explicit" {
+        // Canonical use case: guitar melody, some notes open (no variant)
+        // and some palm-muted (variant 1).
+        val p = seq("0 1 2:1 2:2").scale("C4:major")
+        val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
+
+        events.size shouldBe 4
+        events[0].data.note shouldBe "C4"
+        events[0].data.soundIndex shouldBe null
+        events[1].data.note shouldBe "D4"
+        events[1].data.soundIndex shouldBe null
+        events[2].data.note shouldBe "E4"
+        events[2].data.soundIndex shouldBe 1
+        events[3].data.note shouldBe "E4"
+        events[3].data.soundIndex shouldBe 2
+    }
+
+    "seq().scale().note() is idempotent (already-resolved guard)" {
+        // .note() after .scale() must not re-run resolveNote — otherwise the
+        // variant override soundIndex would be treated as a fresh scale step.
+        val p = seq("0:1").scale("C4:major").note()
+        val events = p.queryArc(0.0, 1.0)
+
+        events.size shouldBe 1
+        events[0].data.note shouldBe "C4"
+        events[0].data.soundIndex shouldBe 1
+    }
 })

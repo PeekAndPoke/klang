@@ -838,6 +838,9 @@ sealed interface IgnitorDsl {
         val decaySec: IgnitorDsl = Constant(0.1),
         val sustainLevel: IgnitorDsl = Constant(0.7),
         val releaseSec: IgnitorDsl = Constant(0.3),
+        val attackCurve: AdsrCurve? = null,
+        val decayCurve: AdsrCurve? = null,
+        val releaseCurve: AdsrCurve? = null,
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
             inner.collectParams(out); attackSec.collectParams(out); decaySec.collectParams(out)

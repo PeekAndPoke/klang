@@ -189,6 +189,58 @@ SVG visualisers in `sprudel/.../SprudelDistortEditorTool.kt` + `SprudelDistortSh
 shapes with the *real* `tanh` (their local helper), so they use real-tanh constants for tube — different
 numeric constants from the engine, same logical behaviour (visualisation reference, not audio).
 
+## Ignitor Variants — Dispatch on `soundIndex` (2026-05-22)
+
+New `IgnitorDsl.Variants(children: List<IgnitorDsl>)` sealed-interface node
+(`audio_bridge/.../IgnitorDsl.kt`). Lets a single ignitor expose multiple
+flavours selectable per note — same mechanism that picks sample-bank variants
+(`bd:0`, `bd:1`), now extended to ignitor graphs.
+
+- `cache.soundIndex` rides on `IgnitorBuildCache` (per-call invariant, not
+  threaded through every recursive call).
+- `toExciter(oscParams, soundIndex = 0)` — new optional param; default 0.
+- `buildIgnitor` dispatches `Variants` in the leaf prologue (no cache entry on
+  the Variants node itself): `children[cache.soundIndex.mod(children.size)]`.
+  Kotlin stdlib `Int.mod` = floor-mod (negative wraps from the end).
+- `IgnitorRegistry.createExciter` passes `data.soundIndex ?: 0` into
+  `toExciter`. Missing soundIndex → variant 0 (intuitive default).
+- `maxReleaseSec()` takes max across all children (conservative — voice may
+  live longer than the picked variant needs, silent tail harmless).
+- `buildRaw` errors loudly if Variants ever leaks past `buildIgnitor`.
+
+Nested Variants all dispatch on the same `soundIndex` (single switching axis).
+Empty children list throws at build time. Shared post-effects like
+`Osc.variants(a, b).lowpass(400)` wrap whichever variant got picked.
+
+Archive: `docs/agent-tasks-archive/2026-05/20260522-ignitor-variants.md`.
+
+## Sprudel-side scale + variant split (2026-05-25)
+
+Follow-on to the Variants work. With variants in place, `soundIndex` started
+serving two unrelated jobs: scale-step input to `.scale()` AND variant pick to
+`Variants` / sample banks. Resolved by splitting on the sprudel side without
+touching the bridge.
+
+- `SprudelVoiceData.resolveNote()` now parses `value` lazily at consumption
+  time: `step:variant:gain` form when `value` is a String. Step becomes the
+  scale-step input; variant overrides `soundIndex`; gain overrides `gain`.
+  Parsed null parts never overwrite existing voice fields.
+- Priority inverted: `n = newIndex ?: value?.asInt ?: soundIndex`. Value
+  wins; soundIndex is only used as the step input when nothing else provides
+  one (preserves the strudel-port `n("0").scale(...)` path).
+- Scale branch in `resolveNote()` clears `soundIndex` only when soundIndex
+  itself was the step source. When `value` provided the step, soundIndex
+  survives — it's a variant override now, not a consumed step.
+- `applyNote` empty branch (`.note()` reinterpret) gained an "already
+  resolved" guard: skip `resolveNote` when `note != null && value == null`
+  to prevent double-resolution wiping the variant.
+- `nMutation`, `voiceValueModifier`, `noteMutation`, `soundMutation`, and the
+  audio_bridge `VoiceData.soundIndex: Int?` type all unchanged. JsCompat
+  baseline preserved.
+
+Canonical scale + variant syntax: `seq("0 2 4 4:1 5:1").scale("c4:minor")`
+(notes c/d/e/e/f, last two on variant 1).
+
 ## Lessons Learned
 
 - `KlangTime.internalMsNow()` is monotonic, NOT wall-clock — use only for relative timing.
@@ -197,3 +249,5 @@ numeric constants from the engine, same logical behaviour (visualisation referen
 - `FilterDefs.addOrReplace()` is additive — calling it twice with the same filter type replaces, not duplicates.
 - `VoiceData` fields are nullable with defaults — omitting a field means "use engine default".
 - `duckCylinder` in `VoiceData` sets the cylinder ID to duck when a voice plays; ducking is cross-cylinder sidechain.
+- `VoiceData.soundIndex: Int?` is the universal variant channel — consumed by `SampleRequest` for sample-bank picking
+  AND by `IgnitorRegistry.createExciter` → `IgnitorDsl.Variants` dispatch.

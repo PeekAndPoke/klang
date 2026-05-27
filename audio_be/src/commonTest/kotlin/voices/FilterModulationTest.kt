@@ -11,6 +11,7 @@ import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSampleVoice
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.MonoSamplePcm
 import io.peekandpoke.klang.audio_bridge.SampleMetadata
@@ -502,7 +503,10 @@ class FilterModulationTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 100.0,
                 sustainLevel = 0.5,
-                releaseFrames = 200.0
+                releaseFrames = 200.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             ),
             depth = depth,
             baseCutoff = baseCutoff

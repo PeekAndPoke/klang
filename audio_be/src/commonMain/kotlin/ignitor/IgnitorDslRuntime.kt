@@ -1,6 +1,7 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.Oversampler
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import kotlin.random.Random
 
@@ -292,7 +293,12 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Envelope: pass mod through ──
 
-        is IgnitorDsl.Adsr -> inner.withMod().adsr(attackSec.noMod(), decaySec.noMod(), sustainLevel.noMod(), releaseSec.noMod())
+        is IgnitorDsl.Adsr -> inner.withMod().adsr(
+            attackSec.noMod(), decaySec.noMod(), sustainLevel.noMod(), releaseSec.noMod(),
+            attackCurve ?: AdsrCurve.Square,
+            decayCurve ?: AdsrCurve.Square,
+            releaseCurve ?: AdsrCurve.Square,
+        )
 
         // ── Effects: pass mod through to inner ──
 

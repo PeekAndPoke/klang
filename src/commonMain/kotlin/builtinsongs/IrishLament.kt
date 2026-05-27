@@ -20,17 +20,18 @@ import * from "sprudel"
 let blockfloete =
     Osc.sine().mul(0.55)
         .plus(Osc.triangle().mul(0.22))
-        .plus(Osc.saw().mul(0.01).lowpass(2500))
-        .plus(Osc.sine().detune(12).mul(0.04))
-        .plus(Osc.sine().detune(18.99).mul(0.02).adsr(0.001, 0.15, 0.0, 0.02))
-        .plus(Osc.sine().detune(24).mul(0.015).adsr(0.001, 0.1, 0.0, 0.01))
-        .plus(Osc.pinknoise().mul(0.12).lowpass(4000).highpass(800).adsr(0.003, 0.05, 0.0, 0.005))
+        .plus(Osc.saw().mul(0.03).lowpass(2500))
+        .plus(Osc.sine().detune(12).mul(0.08))
+        .plus(Osc.sine().detune(18.99).mul(0.04).adsr(0.001, 0.15, 0.01, 0.02))
+        .plus(Osc.sine().detune(24.01).mul(0.02).adsr(0.001, 0.1, 0.01, 0.01))
+        .plus(Osc.sine().detune(36.02).mul(0.01).adsr(0.001, 0.1, 0.01, 0.01))
+        .plus(Osc.pinknoise().mul(1.62).lowpass(4000).highpass(800).adsr(0.003, 0.05, 0.01, 0.005))
         .plus(Osc.perlin(10).mul(0.035).lowpass(3500).highpass(1000))
         .plus(Osc.whitenoise().mul(0.28).highpass(4000).lowpass(8000).adsr(0.001, 0.03, 0.0, 0.001))
-        .lowpass(2800, 0.8).highpass(300).warmth(3500)
-        .vibrato(1/4, 0.01)
+        .lowpass(3500, 0.8).highpass(300).warmth(3500)
+        .vibrato(1/2, 0.1)
         .analog(5)
-        .pitchEnvelope(0.25, 0.01, 0.03)
+        .pitchEnvelope(0.15, 0.01, 0.03)
         .adsr(0.01, 0.08, 0.5, 0.1)
 
 // Guitar — more sustain and release
@@ -98,5 +99,6 @@ arrange([8, part1], [8, part2], [8, part3], [8, part2], [8, part3], [8, part2]).
 // Composed by: Claude, Gemini, Motör, peekandpoke
             
             
+             
             """,
 )

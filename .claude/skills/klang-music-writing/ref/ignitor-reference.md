@@ -136,6 +136,45 @@ Osc.supersaw(Osc.freq(), /* voices */ 12, /* freqSpread */ 0.3, /* analog */ 0.2
 | `Osc.constant(value)`             | Fixed value (not overridable)                   |
 | `Osc.silence()`                   | Zero output                                     |
 
+### Dispatch / Selection
+
+| Method                    | Description                                                            |
+|---------------------------|------------------------------------------------------------------------|
+| `Osc.variants(a, b, ...)` | Bundles multiple ignitors into one. Per-event index picks which child. |
+
+`Osc.variants(...)` lets a single sound expose several flavours of itself,
+selected per note via the `soundIndex` field. Same dispatch mechanism that
+picks sample-bank variants (`bd:0` / `bd:1`), now applied to ignitor graphs.
+
+Index sources, in order of precedence:
+
+- `:n` suffix on a note name — `note("a:1 b:2")` or `s("bd:1")`
+- `:variant` suffix on a scale step — `seq("0 1 2:1").scale("c:minor")`
+- `.n("0 1 0 1")` pattern alongside `note(...)`
+
+Indices wrap with floor-mod semantics: `children[index.mod(N)]`. Negative
+indices wrap from the end, overflow wraps to zero. Missing `soundIndex`
+defaults to child 0.
+
+```javascript
+// Open vs. palm-muted guitar — same scale, two timbres
+let open  = Osc.saw().lowpass(2200).adsr(0.005, 0.3, 0.4, 0.4)
+let muted = Osc.saw().lowpass(1800).distort(0.7, "tube", 4)
+                     .adsr(0.002, 0.08, 0.0, 0.04)
+let guitar = Osc.variants(open, muted)
+
+// Inline: c4 and d4 ring out, e4 and f4 chug
+seq("0 1 2:1 3:1").scale("c4:major").sound(guitar).gain(0.3)
+```
+
+**Composition tips:**
+
+- `Osc.variants(a, b).lowpass(400)` wraps both variants in a shared filter —
+  whichever variant is picked flows through the same downstream chain. Build
+  the dispatch first, then attach shared post-processing.
+- Nested `Osc.variants(...)` all dispatch on the *same* `soundIndex` —
+  letting one index drive correlated changes deep in the tree.
+
 ---
 
 ## Processing Chain (Extension Methods)

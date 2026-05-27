@@ -1,15 +1,17 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
  * ADSR amplitude envelope combinator.
  *
- * Multiplies the signal by a time-varying gain envelope:
- * - Attack:  ramp from 0.0 to 1.0 over [attackSec]
- * - Decay:   ramp from 1.0 to [sustainLevel] over [decaySec]
- * - Sustain: hold at [sustainLevel] until gate ends
- * - Release: ramp from current level to 0.0 over [releaseSec]
+ * Multiplies the signal by a time-varying gain envelope. Each stage has its
+ * own shape curve (Linear/Square/Cube):
+ * - Attack:  ramps from 0.0 to 1.0 over [attackSec], shape via [attackCurve]
+ * - Decay:   ramps from 1.0 to [sustainLevel] over [decaySec], shape via [decayCurve]
+ * - Sustain: holds at [sustainLevel] until gate ends
+ * - Release: ramps from current level to 0.0 over [releaseSec], shape via [releaseCurve]
  *
  * Voice timing (gate end, release duration) is read from [IgniteContext].
  * The envelope does NOT control voice lifecycle — that's handled by frame counting in Voice.
@@ -21,7 +23,13 @@ fun Ignitor.adsr(
     decaySec: Ignitor,
     sustainLevel: Ignitor,
     releaseSec: Ignitor,
-): Ignitor = AdsrIgnitor(this, attackSec, decaySec, sustainLevel, releaseSec)
+    attackCurve: AdsrCurve = AdsrCurve.Square,
+    decayCurve: AdsrCurve = AdsrCurve.Square,
+    releaseCurve: AdsrCurve = AdsrCurve.Square,
+): Ignitor = AdsrIgnitor(
+    this, attackSec, decaySec, sustainLevel, releaseSec,
+    attackCurve, decayCurve, releaseCurve,
+)
 
 private class AdsrIgnitor(
     private val upstream: Ignitor,
@@ -29,6 +37,9 @@ private class AdsrIgnitor(
     private val decaySec: Ignitor,
     private val sustainLevel: Ignitor,
     private val releaseSec: Ignitor,
+    private val attackCurve: AdsrCurve,
+    private val decayCurve: AdsrCurve,
+    private val releaseCurve: AdsrCurve,
 ) : Ignitor {
     private var currentLevel: Double = 0.0
     private var releaseStartLevel: Double = 0.0
@@ -45,12 +56,17 @@ private class AdsrIgnitor(
 
             val attackFrames = (attackSecVal * ctx.sampleRate).toInt()
             val decayFrames = (decaySecVal * ctx.sampleRate).toInt()
+            val attDecFrames = attackFrames + decayFrames
             val gateEndPos = ctx.gateEndFrame
 
             val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
-            val decRate = if (decayFrames > 0) (1.0 - sustainLevelVal) / decayFrames else 0.0
+            val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
             val releaseFrames = (releaseSecVal * ctx.sampleRate).toInt()
             val relDenom = if (releaseFrames > 0) releaseFrames.toDouble() else 1.0
+
+            val attCurve = attackCurve
+            val decCurve = decayCurve
+            val relCurve = releaseCurve
 
             var absPos = ctx.voiceElapsedFrames
 
@@ -62,17 +78,37 @@ private class AdsrIgnitor(
                         releaseStarted = true
                     }
                     val relPos = absPos - gateEndPos
-                    val relRate = releaseStartLevel / relDenom
-                    currentLevel = releaseStartLevel - (relPos * relRate)
+                    val p = (relPos / relDenom).coerceAtMost(1.0)
+                    val omp = 1.0 - p
+                    val shape = when (relCurve) {
+                        AdsrCurve.Linear -> omp
+                        AdsrCurve.Square -> omp * omp
+                        AdsrCurve.Cube -> omp * omp * omp
+                    }
+                    currentLevel = releaseStartLevel * shape
                 } else {
                     releaseStarted = false
                     currentLevel = when {
-                        absPos < attackFrames -> absPos * attRate
-                        absPos < attackFrames + decayFrames -> {
-                            val decPos = absPos - attackFrames
-                            1.0 - (decPos * decRate)
+                        absPos < attackFrames -> {
+                            val p = absPos * attRate
+                            when (attCurve) {
+                                AdsrCurve.Linear -> p
+                                AdsrCurve.Square -> p * p
+                                AdsrCurve.Cube -> p * p * p
+                            }
                         }
 
+                        absPos < attDecFrames -> {
+                            val decPos = absPos - attackFrames
+                            val p = decPos * decRate
+                            val omp = 1.0 - p
+                            val shape = when (decCurve) {
+                                AdsrCurve.Linear -> omp
+                                AdsrCurve.Square -> omp * omp
+                                AdsrCurve.Cube -> omp * omp * omp
+                            }
+                            sustainLevelVal + (1.0 - sustainLevelVal) * shape
+                        }
                         else -> sustainLevelVal
                     }
                 }
@@ -92,9 +128,13 @@ fun Ignitor.adsr(
     decaySec: Double,
     sustainLevel: Double,
     releaseSec: Double,
+    attackCurve: AdsrCurve = AdsrCurve.Square,
+    decayCurve: AdsrCurve = AdsrCurve.Square,
+    releaseCurve: AdsrCurve = AdsrCurve.Square,
 ): Ignitor = adsr(
     ParamIgnitor("attackSec", attackSec),
     ParamIgnitor("decaySec", decaySec),
     ParamIgnitor("sustainLevel", sustainLevel),
     ParamIgnitor("releaseSec", releaseSec),
+    attackCurve, decayCurve, releaseCurve,
 )

@@ -70,7 +70,7 @@ object VoiceTestHelpers {
         gain: Double = 1.0,
         pan: Double = 0.5,
         postGain: Double = 1.0,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, 1.0), // Always on
+        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0), // Always on
         compressor: Voice.Compressor? = null,
         ducking: Voice.Ducking? = null,
 
@@ -185,7 +185,7 @@ object VoiceTestHelpers {
         gain: Double = 1.0,
         pan: Double = 0.5,
         postGain: Double = 1.0,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, 1.0),
+        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0),
         compressor: Voice.Compressor? = null,
         ducking: Voice.Ducking? = null,
         filter: AudioFilter = NoOpFilter,
@@ -231,7 +231,7 @@ object VoiceTestHelpers {
         gain: Double = 1.0,
         pan: Double = 0.5,
         postGain: Double = 1.0,
-        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, 1.0),
+        envelope: Voice.Envelope = Voice.Envelope(0.0, 0.0, 1.0, 0.0, level = 1.0),
         compressor: Voice.Compressor? = null,
         ducking: Voice.Ducking? = null,
         filter: AudioFilter = NoOpFilter,

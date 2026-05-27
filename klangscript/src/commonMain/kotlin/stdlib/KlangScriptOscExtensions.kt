@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.script.stdlib
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
@@ -84,6 +85,47 @@ object KlangScriptOscExtensions {
         sustainLevel = sustainLevel.toIgnitorDsl(),
         releaseSec = releaseSec.toIgnitorDsl(),
     )
+
+    /**
+     * Sets per-stage ADSR shape curves. Each stage takes `"linear"` (straight ramp),
+     * `"square"` (default — fast initial drop, long tail), or `"cube"` (more aggressive).
+     *
+     * If [self] is already an [IgnitorDsl.Adsr], the curves are set on it via copy.
+     * Otherwise, a new [IgnitorDsl.Adsr] is wrapped around [self] with default times.
+     */
+    @KlangScript.Method
+    fun adsrCurves(
+        self: IgnitorDsl,
+        attackCurve: String = "square",
+        decayCurve: String = "square",
+        releaseCurve: String = "square",
+    ): IgnitorDsl {
+        val a = parseAdsrCurveName(attackCurve) ?: AdsrCurve.Square
+        val d = parseAdsrCurveName(decayCurve) ?: AdsrCurve.Square
+        val r = parseAdsrCurveName(releaseCurve) ?: AdsrCurve.Square
+        return when (self) {
+            is IgnitorDsl.Adsr -> self.copy(
+                attackCurve = a, decayCurve = d, releaseCurve = r,
+            )
+
+            else -> IgnitorDsl.Adsr(
+                inner = self,
+                attackCurve = a, decayCurve = d, releaseCurve = r,
+            )
+        }
+    }
+
+    /** Applies the same ADSR shape curve to all three stages. Accepts `"linear"`, `"square"`, or `"cube"`. */
+    @KlangScript.Method
+    fun adsrCurve(self: IgnitorDsl, curve: String = "square"): IgnitorDsl =
+        adsrCurves(self, curve, curve, curve)
+
+    private fun parseAdsrCurveName(name: String): AdsrCurve? = when (name.trim().lowercase()) {
+        "linear", "lin" -> AdsrCurve.Linear
+        "square", "sq", "quad", "quadratic" -> AdsrCurve.Square
+        "cube", "cb", "cubic" -> AdsrCurve.Cube
+        else -> null
+    }
 
     // ── Effects ──────────────────────────────────────────────────────────────
 

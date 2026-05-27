@@ -4,6 +4,8 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 
 class SoundFontZoneMetadataTest : StringSpec({
 
@@ -50,22 +52,22 @@ class SoundFontZoneMetadataTest : StringSpec({
 
     "percussive ADSR when no sustain loop" {
         val meta = zone(loopStart = 0, loopEnd = 0).getSampleMetadata()
-        meta.adsr.shouldNotBeNull()
-        meta.adsr!!.sustain shouldBe 0.0
-        meta.adsr!!.decay shouldBe 0.5
+        val adsr = meta.adsr.shouldBeInstanceOf<AdsrDef.Std>()
+        adsr.sustain shouldBe 0.0
+        adsr.decay shouldBe 0.5
     }
 
     "sustain ADSR when loop is long enough" {
         val meta = zone(loopStart = 0, loopEnd = 5000, sampleRate = 22050).getSampleMetadata()
-        meta.adsr.shouldNotBeNull()
-        meta.adsr!!.sustain shouldBe 1.0
-        meta.adsr!!.release shouldBe 0.2
+        val adsr = meta.adsr.shouldBeInstanceOf<AdsrDef.Std>()
+        adsr.sustain shouldBe 1.0
+        adsr.release shouldBe 0.2
     }
 
     "sustain ADSR when ahdsr flag is set even without loop" {
         val meta = zone(loopStart = 0, loopEnd = 0, ahdsr = true).getSampleMetadata()
-        meta.adsr.shouldNotBeNull()
-        meta.adsr!!.sustain shouldBe 1.0
+        val adsr = meta.adsr.shouldBeInstanceOf<AdsrDef.Std>()
+        adsr.sustain shouldBe 1.0
     }
 
     "anchor is passed through" {

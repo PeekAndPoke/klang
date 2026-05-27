@@ -40,13 +40,13 @@ data class ScheduledVoice(
 | `solo`       | `Boolean?` | If true, mute all other voices         |
 | `compressor` | `Double?`  | Per-voice compression amount           |
 
-### Sample Selection
+### Sound Selection
 
-| Field        | Type      | Meaning                                  |
-|--------------|-----------|------------------------------------------|
-| `bank`       | `String?` | Sample bank name (e.g. `"mdk"`)          |
-| `sound`      | `String?` | Sound name within the bank (e.g. `"bd"`) |
-| `soundIndex` | `Int?`    | Variant index within the sound           |
+| Field        | Type      | Meaning                                                                                                                                              |
+|--------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `bank`       | `String?` | Sample bank name (e.g. `"mdk"`)                                                                                                                      |
+| `sound`      | `String?` | Sound name within the bank, or a registered ignitor name                                                                                             |
+| `soundIndex` | `Int?`    | Variant index — for samples picks the bank entry; for ignitors dispatches `IgnitorDsl.Variants` (`children[index.mod(N)]`). Defaults to 0 when null. |
 
 ### Oscillator (SynthVoice only)
 

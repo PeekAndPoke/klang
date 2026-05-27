@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import kotlinx.serialization.json.Json
@@ -44,10 +45,11 @@ class SprudelVoiceDataSpec : StringSpec({
 
         val voiceData = data.toVoiceData()
 
-        voiceData.adsr.attack shouldBe 0.01
-        voiceData.adsr.decay shouldBe 0.1
-        voiceData.adsr.sustain shouldBe 0.7
-        voiceData.adsr.release shouldBe 0.3
+        val adsr = voiceData.adsr as AdsrDef.Std
+        adsr.attack shouldBe 0.01
+        adsr.decay shouldBe 0.1
+        adsr.sustain shouldBe 0.7
+        adsr.release shouldBe 0.3
     }
 
     "toVoiceData() converts LPF flat fields to FilterDef.LowPass" {

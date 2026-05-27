@@ -3,6 +3,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -1356,6 +1357,138 @@ fun String.adsr(params: PatternLike? = null, callInfo: CallInfo? = null): Sprude
 @KlangScript.Function
 fun adsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.adsr(params, callInfo) }
+
+// -- ADSR curves ------------------------------------------------------------------------------------------------------
+
+private fun parseAdsrCurveName(name: String?): AdsrCurve? = when (name?.trim()?.lowercase()) {
+    "linear", "lin" -> AdsrCurve.Linear
+    "square", "sq", "quad", "quadratic" -> AdsrCurve.Square
+    "cube", "cb", "cubic" -> AdsrCurve.Cube
+    else -> null
+}
+
+private val adsrCurvesMutation = voiceModifier {
+    val parts = it?.toString()?.split(":") ?: emptyList()
+    val a = parts.getOrNull(0)?.let(::parseAdsrCurveName)
+    val d = parts.getOrNull(1)?.let(::parseAdsrCurveName)
+    val r = parts.getOrNull(2)?.let(::parseAdsrCurveName)
+    copy(
+        attackCurve = a ?: attackCurve,
+        decayCurve = d ?: decayCurve,
+        releaseCurve = r ?: releaseCurve,
+    )
+}
+
+private fun applyAdsrCurves(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, adsrCurvesMutation) { src, ctrl ->
+        src.copy(
+            attackCurve = ctrl.attackCurve ?: src.attackCurve,
+            decayCurve = ctrl.decayCurve ?: src.decayCurve,
+            releaseCurve = ctrl.releaseCurve ?: src.releaseCurve,
+        )
+    }
+}
+
+private val adsrCurveMutation = voiceModifier {
+    val curve = parseAdsrCurveName(it?.toString())
+    if (curve == null) this else copy(
+        attackCurve = curve,
+        decayCurve = curve,
+        releaseCurve = curve,
+    )
+}
+
+private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._applyControlFromParams(args, adsrCurveMutation) { src, ctrl ->
+        src.copy(
+            attackCurve = ctrl.attackCurve ?: src.attackCurve,
+            decayCurve = ctrl.decayCurve ?: src.decayCurve,
+            releaseCurve = ctrl.releaseCurve ?: src.releaseCurve,
+        )
+    }
+}
+
+/**
+ * Sets per-stage ADSR shape curves via a colon-separated string `"attack:decay:release"`.
+ * Each part is `linear`, `square` (default), or `cube`. Empty/missing parts leave the
+ * corresponding curve untouched.
+ *
+ * Linear gives a straight ramp ("plastic" feel). Square (default) gives a fast initial
+ * drop with a long tail — natural and analog-flavoured. Cube is more aggressive than Square.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurves("linear:square:cube")
+ * ```
+ *
+ * @param params Curve names separated by `:` — e.g. `"linear:square:cube"`.
+ *
+ * @category dynamics
+ * @tags adsr, curve, envelope, shape
+ */
+@SprudelDsl
+@KlangScript.Function
+fun SprudelPattern.adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyAdsrCurves(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and sets per-stage ADSR shape curves.
+ *
+ * @param params Curve names separated by `:` — e.g. `"linear:square:cube"`.
+ */
+@SprudelDsl
+@KlangScript.Function
+fun String.adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).adsrCurves(params, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that sets per-stage ADSR shape curves for each event.
+ *
+ * @param params Curve names separated by `:` — e.g. `"linear:square:cube"`.
+ */
+@SprudelDsl
+@KlangScript.Function
+fun adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.adsrCurves(params, callInfo) }
+
+/**
+ * Sets the same ADSR shape curve on all three stages (attack, decay, release).
+ *
+ * Accepts `linear`, `square` (default), or `cube`.
+ *
+ * ```KlangScript(Playable)
+ * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurve("cube")
+ * ```
+ *
+ * @param params Curve name string — `linear`, `square`, or `cube`.
+ *
+ * @category dynamics
+ * @tags adsr, curve, envelope, shape
+ */
+@SprudelDsl
+@KlangScript.Function
+fun SprudelPattern.adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applyAdsrCurve(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+
+/**
+ * Parses this string as a pattern and sets the same curve on all three ADSR stages.
+ *
+ * @param params Curve name string — `linear`, `square`, or `cube`.
+ */
+@SprudelDsl
+@KlangScript.Function
+fun String.adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).adsrCurve(params, callInfo)
+
+/**
+ * Creates a [PatternMapperFn] that applies the same ADSR shape curve to all three stages
+ * for each event.
+ *
+ * @param params Curve name string — `linear`, `square`, or `cube`.
+ */
+@SprudelDsl
+@KlangScript.Function
+fun adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.adsrCurve(params, callInfo) }
 
 /**
  * Creates a chained [PatternMapperFn] that sets all ADSR parameters after the previous mapper.

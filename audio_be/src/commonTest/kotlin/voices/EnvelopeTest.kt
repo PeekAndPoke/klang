@@ -5,12 +5,29 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
  * Tests for ADSR envelope implementation in Voice.
  * Verifies all phases (Attack, Decay, Sustain, Release) work correctly.
+ *
+ * These tests pin the envelope to LINEAR curves on all stages, so the assertions
+ * remain valid regardless of the default-curve change. Curve-specific behaviour
+ * (Square, Cube) is covered separately in [EnvelopeShapeTest].
  */
 class EnvelopeTest : StringSpec({
+
+    fun linearEnv(
+        attackFrames: Double, decayFrames: Double, sustainLevel: Double, releaseFrames: Double,
+    ) = Voice.Envelope(
+        attackFrames = attackFrames,
+        decayFrames = decayFrames,
+        sustainLevel = sustainLevel,
+        releaseFrames = releaseFrames,
+        attackCurve = AdsrCurve.Linear,
+        decayCurve = AdsrCurve.Linear,
+        releaseCurve = AdsrCurve.Linear,
+    )
 
     "attack phase increases linearly from 0 to 1" {
         val voice = createSynthVoice(
@@ -20,7 +37,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -45,7 +65,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 100.0,
                 sustainLevel = 0.5,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -72,7 +95,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 50.0,
                 decayFrames = 50.0,
                 sustainLevel = 0.6,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -95,7 +121,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 0.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
-                releaseFrames = 100.0
+                releaseFrames = 100.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -124,7 +153,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 0.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -144,7 +176,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 sustainLevel = 0.5,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -165,7 +200,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 0.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -191,7 +229,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 100.0,
                 sustainLevel = 0.5,
-                releaseFrames = 100.0
+                releaseFrames = 100.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -224,7 +265,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 200.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -251,7 +295,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 0.0,
                 decayFrames = 0.0,
                 sustainLevel = 0.5,
-                releaseFrames = 50.0
+                releaseFrames = 50.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -292,7 +339,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 50.0,
                 decayFrames = 50.0,
                 sustainLevel = 0.0,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 
@@ -314,7 +364,10 @@ class EnvelopeTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
-                releaseFrames = 100.0
+                releaseFrames = 100.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 

@@ -3,10 +3,15 @@ package io.peekandpoke.klang.audio_be.voices.strip.filter
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
  * ADSR amplitude envelope (VCA stage).
  * Multiplies the audio buffer by the envelope value per sample.
+ *
+ * Per-stage shape curves (Linear/Square/Cube) are applied to attack, decay
+ * and release independently. All math is multiplies only — no `pow()`, no
+ * LUT — so a Square curve adds two multiplies/sample over the linear path.
  *
  * All per-sample arithmetic uses Int to avoid Long boxing on Kotlin/JS.
  * Voice-relative offsets are computed once at the block boundary.
@@ -22,8 +27,16 @@ class EnvelopeRenderer(
 
     override fun render(ctx: BlockContext) {
         val env = envelope
-        val attRate = if (env.attackFrames > 0) 1.0 / env.attackFrames else 1.0
-        val decRate = if (env.decayFrames > 0) (1.0 - env.sustainLevel) / env.decayFrames else 0.0
+        val sustain = env.sustainLevel
+        val attackFrames = env.attackFrames
+        val decayFrames = env.decayFrames
+        val attDecFrames = attackFrames + decayFrames
+        val attackCurve = env.attackCurve
+        val decayCurve = env.decayCurve
+        val releaseCurve = env.releaseCurve
+
+        val attRate = if (attackFrames > 0) 1.0 / attackFrames else 1.0
+        val decRate = if (decayFrames > 0) 1.0 / decayFrames else 1.0
         val relRateDen = if (env.releaseFrames > 0) env.releaseFrames else 1.0
 
         // Compute voice-relative position as Int (once per block, not per sample)
@@ -34,25 +47,46 @@ class EnvelopeRenderer(
             val idx = ctx.offset + i
 
             if (absPos >= gateEndPos) {
-                // Release phase
+                // Release phase: level = releaseStartLevel * shape(1 - p)
                 if (!env.releaseStarted) {
                     env.releaseStartLevel = currentEnv
                     env.releaseStarted = true
                 }
                 val relPos = absPos - gateEndPos
-                val relRate = env.releaseStartLevel / relRateDen
-                currentEnv = env.releaseStartLevel - (relPos * relRate)
+                val p = (relPos / relRateDen).coerceAtMost(1.0)
+                val omp = 1.0 - p
+                val shape = when (releaseCurve) {
+                    AdsrCurve.Linear -> omp
+                    AdsrCurve.Square -> omp * omp
+                    AdsrCurve.Cube -> omp * omp * omp
+                }
+                currentEnv = env.releaseStartLevel * shape
             } else {
-                // Attack/Decay/Sustain phases
                 env.releaseStarted = false
                 currentEnv = when {
-                    absPos < env.attackFrames -> absPos * attRate
-                    absPos < env.attackFrames + env.decayFrames -> {
-                        val decPos = absPos - env.attackFrames
-                        1.0 - (decPos * decRate)
+                    // Attack: level = shape(p)
+                    absPos < attackFrames -> {
+                        val p = absPos * attRate
+                        when (attackCurve) {
+                            AdsrCurve.Linear -> p
+                            AdsrCurve.Square -> p * p
+                            AdsrCurve.Cube -> p * p * p
+                        }
+                    }
+                    // Decay: level = sustain + (1 - sustain) * shape(1 - p)
+                    absPos < attDecFrames -> {
+                        val decPos = absPos - attackFrames
+                        val p = decPos * decRate
+                        val omp = 1.0 - p
+                        val shape = when (decayCurve) {
+                            AdsrCurve.Linear -> omp
+                            AdsrCurve.Square -> omp * omp
+                            AdsrCurve.Cube -> omp * omp * omp
+                        }
+                        sustain + (1.0 - sustain) * shape
                     }
 
-                    else -> env.sustainLevel
+                    else -> sustain
                 }
             }
 

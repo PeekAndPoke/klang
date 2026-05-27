@@ -368,7 +368,7 @@ class FmSynthesisTest : StringSpec({
     "FM envelope release phase" {
         val bfLocal = 64
         // Amp envelope with matching release so the voice output doesn't go silent
-        val ampEnv = Voice.Envelope(0.0, 0.0, 1.0, 200.0, 1.0)
+        val ampEnv = Voice.Envelope(0.0, 0.0, 1.0, 200.0, level = 1.0)
 
         val voiceRelease = createSynthVoice(
             startFrame = 0, endFrame = 300, gateEndFrame = 100,

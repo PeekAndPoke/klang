@@ -10,6 +10,7 @@ import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createContext
 import io.peekandpoke.klang.audio_be.voices.VoiceTestHelpers.createSynthVoice
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 
 /**
  * Tests specific to SynthVoice implementation.
@@ -113,7 +114,10 @@ class SynthVoiceTest : StringSpec({
                 attackFrames = 100.0,
                 decayFrames = 0.0,
                 sustainLevel = 1.0,
-                releaseFrames = 0.0
+                releaseFrames = 0.0,
+                attackCurve = AdsrCurve.Linear,
+                decayCurve = AdsrCurve.Linear,
+                releaseCurve = AdsrCurve.Linear,
             )
         )
 

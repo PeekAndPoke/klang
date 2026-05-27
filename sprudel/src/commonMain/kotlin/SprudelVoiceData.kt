@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.sprudel
 
+import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.AdsrDef
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import io.peekandpoke.klang.audio_bridge.FilterDefs
@@ -56,6 +57,9 @@ data class SprudelVoiceData(
     val decay: Double?,
     val sustain: Double?,
     val release: Double?,
+    val attackCurve: AdsrCurve?,
+    val decayCurve: AdsrCurve?,
+    val releaseCurve: AdsrCurve?,
 
     // Pitch / Glisando
     val accelerate: Double?,
@@ -269,6 +273,9 @@ data class SprudelVoiceData(
             decay = null,
             sustain = null,
             release = null,
+            attackCurve = null,
+            decayCurve = null,
+            releaseCurve = null,
             accelerate = null,
             vibrato = null,
             vibratoMod = null,
@@ -372,6 +379,9 @@ data class SprudelVoiceData(
             decay = other.decay ?: decay,
             sustain = other.sustain ?: sustain,
             release = other.release ?: release,
+            attackCurve = other.attackCurve ?: attackCurve,
+            decayCurve = other.decayCurve ?: decayCurve,
+            releaseCurve = other.releaseCurve ?: releaseCurve,
             accelerate = other.accelerate ?: accelerate,
             vibrato = other.vibrato ?: vibrato,
             vibratoMod = other.vibratoMod ?: vibratoMod,
@@ -612,11 +622,14 @@ data class SprudelVoiceData(
             soundIndex = soundIndex,
             oscParams = oscParams,
             filters = FilterDefs(filters),
-            adsr = AdsrDef(
+            adsr = AdsrDef.Std(
                 attack = attack,
                 decay = decay,
                 sustain = sustain,
                 release = release,
+                attackCurve = attackCurve,
+                decayCurve = decayCurve,
+                releaseCurve = releaseCurve,
             ),
             accelerate = accelerate,
             vibrato = vibrato,

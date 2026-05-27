@@ -38,4 +38,5 @@ val allTutorials: List<Tutorial> = listOf(
     drumKitBuilderTutorial,
     bassDesignTutorial,
     oneLineWondersTutorial,
+    soundVariantsTutorial,
 )
