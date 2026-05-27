@@ -7,6 +7,7 @@ import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.engines.AudioEngine
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
+import io.peekandpoke.klang.audio_be.filters.FILTER_CUTOFF_OFFSET_PER_ANALOG
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
@@ -315,7 +316,7 @@ class VoiceFactory(
         val offsetMul = perVoiceCutoffOffsetMul(analog)
         return when (this) {
             is FilterDef.LowPass -> LowPassHighPassFilters.createLPF(cutoffHz, q, sampleRateDouble, analog, offsetMul)
-            is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(cutoffHz, q, sampleRateDouble, offsetMul)
+            is FilterDef.HighPass -> LowPassHighPassFilters.createHPF(cutoffHz, q, sampleRateDouble, analog, offsetMul)
             is FilterDef.BandPass -> LowPassHighPassFilters.createBPF(cutoffHz, q, sampleRateDouble, offsetMul)
             is FilterDef.Notch -> LowPassHighPassFilters.createNotch(cutoffHz, q, sampleRateDouble, offsetMul)
             // Formant's bands are vowel-specific — per-voice offset would smear vowel character. Skip.
@@ -331,7 +332,7 @@ class VoiceFactory(
      */
     private fun perVoiceCutoffOffsetMul(analog: Double): Double {
         if (analog <= 0.0) return 1.0
-        return 1.0 + (Random.nextDouble() - 0.5) * 2.0 * CUTOFF_OFFSET_PER_ANALOG * analog
+        return 1.0 + (Random.nextDouble() - 0.5) * 2.0 * FILTER_CUTOFF_OFFSET_PER_ANALOG * analog
     }
 
     private fun FilterDef.toModulator(
@@ -475,16 +476,5 @@ class VoiceFactory(
             pipeline = pipeline,
             blockCtx = blockCtx,
         )
-    }
-
-    companion object {
-        /**
-         * Per-voice filter cutoff offset scale, per unit `analog`. The actual offset is
-         * `±CUTOFF_OFFSET_PER_ANALOG × analog` (uniform). At `analog=1` ≈ ±1.7 cents;
-         * at `analog=3` ≈ ±5 cents; at `analog=10` ≈ ±17 cents. Tuned by ear — larger
-         * values smear the filter's character noticeably across unison voices, especially
-         * with a long filter chain (e.g. notch + lpf + hpf, each drawing independently).
-         */
-        private const val CUTOFF_OFFSET_PER_ANALOG: Double = 0.001
     }
 }

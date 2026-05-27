@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.audio_be.filters
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
-import io.peekandpoke.klang.audio_be.ClippingFuncs
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_bridge.FilterDef
 import kotlin.math.PI
@@ -131,6 +130,17 @@ internal class SvfCoeffs {
     var a2: Double = 0.0
     var a3: Double = 0.0
     var k: Double = 0.0
+
+    /**
+     * Bilinear-prewarped angle `g = tan(π·fc/fs)`. Same value used internally
+     * by `computeSvfCoeffs` to derive a1/a2/a3 — exposed here for the
+     * nonlinear (saturated) SVF branches, which use the explicit-feedback
+     * form `(v0 − k·bpFb − g·ic1eq − ic2eq) / (1 + g²)` per Zavalishin §5.5.
+     */
+    var g: Double = 0.0
+
+    /** `1 / (1 + g²)` — pre-divided so the saturated inner loop does muls only. */
+    var invOnePlusGsq: Double = 0.0
 }
 
 /**
@@ -153,6 +163,8 @@ internal inline fun computeSvfCoeffs(cutoffHz: Double, q: Double, sampleRate: Do
     out.a1 = 1.0 / (1.0 + g * (g + out.k))
     out.a2 = g * out.a1
     out.a3 = g * out.a2
+    out.g = g
+    out.invOnePlusGsq = 1.0 / (1.0 + g * g)
 }
 
 object LowPassHighPassFilters {
@@ -172,10 +184,11 @@ object LowPassHighPassFilters {
         cutoffHz: Double,
         q: Double?,
         sampleRate: Double,
+        analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
     ): AudioFilter = when (q) {
         null -> OnePoleHPF(cutoffHz, sampleRate, cutoffOffsetMul)
-        else -> SvfHPF(cutoffHz, q, sampleRate, cutoffOffsetMul)
+        else -> SvfHPF(cutoffHz, q, sampleRate, analog, cutoffOffsetMul)
     }
 
     fun createBPF(
@@ -343,6 +356,26 @@ object LowPassHighPassFilters {
      * Coefficient math is shared via [computeSvfCoeffs] (NaN/Inf-safe via [bilinearK]).
      * The helper writes into a private scratch holder; we then mirror to direct fields
      * so subclasses' inner loops touch fields, not getters (JIT specialization safety).
+     *
+     * **Coefficient smoothing**: `setCutoff` does NOT snap coefficients into place.
+     * Instead it stores per-sample increments and a [transitionSamples] counter; the
+     * subclass's per-sample loop advances the coefficients via increments for the
+     * first [FILTER_SMOOTH_SAMPLES] samples after each `setCutoff`. This masks the
+     * coefficient discontinuity at block boundaries when `FilterModRenderer` updates
+     * the cutoff per block. After [transitionSamples] reaches 0 the loop runs with
+     * static coefficients — no ongoing cost. 32 samples ≈ 0.67 ms at 48 kHz. Long
+     * enough to mask the click, short enough to add no audible lag to a swept envelope.
+     * Construction snaps directly to the target (no ramp on note-on) via [setCutoffSnap].
+     *
+     * **Saturation (currently disabled)**: SvfLPF/SvfHPF have a dormant `analog`
+     * parameter and `bpFb`/`g`/`invOnePlusGsq` infrastructure for nonlinear ZDF SVF
+     * (Zavalishin §5.5 — z⁻¹-delayed saturated resonance feedback). The math is
+     * correct but `fastTanh` hard-caps the feedback magnitude, which removes the
+     * damping required to bound resonance at hot drive (`drv=3.5` caps `k·bpFb` at
+     * ~0.06, vs linear ~1.0+ at the resonance peak → ~95% damping loss → run-away).
+     * Re-enabling requires either a non-hard-capping saturator (asinh-style growth)
+     * or proper Newton iteration. Kept as future work — see
+     * `docs/agent-tasks/plastic-pipe-hunt.md`.
      */
     abstract class BaseSvf(
         cutoffHz: Double,
@@ -356,35 +389,98 @@ object LowPassHighPassFilters {
         protected var a2: Double = 0.0
         protected var a3: Double = 0.0
         protected var k: Double = 0.0
+
+        // Coefficients reserved for future nonlinear ZDF SVF re-introduction (Zavalishin §5.5).
+        // Computed by setCutoff and ramped during smoothing transitions, but unused while the
+        // saturated branches are disabled. See BaseSvf kdoc for context.
+        protected var g: Double = 0.0
+        protected var invOnePlusGsq: Double = 0.0
+
+        /**
+         * Previous-sample saturated BP feedback for the nonlinear ZDF SVF. Currently
+         * unused while saturation is disabled — preserved for future re-introduction.
+         */
+        protected var bpFb: Double = 0.0
+
+        // Coefficient transition state. When transitionSamples > 0, the subclass's
+        // process() loop advances each coef by its `Inc` value per sample.
+        protected var a1Inc: Double = 0.0
+        protected var a2Inc: Double = 0.0
+        protected var a3Inc: Double = 0.0
+        protected var kInc: Double = 0.0
+        protected var gInc: Double = 0.0
+        protected var invOnePlusGsqInc: Double = 0.0
+        protected var transitionSamples: Int = 0
+
         private val coefs = SvfCoeffs()
         private val q: Double = q
 
         init {
-            setCutoff(cutoffHz)
+            setCutoffSnap(cutoffHz)
         }
 
+        /**
+         * Computes new coefficients and sets up a [SMOOTH_SAMPLES]-sample linear
+         * transition from the current values. Called per-block by
+         * `FilterModRenderer` whenever the cutoff envelope updates.
+         */
         override fun setCutoff(cutoffHz: Double) {
+            computeSvfCoeffs(cutoffHz * cutoffOffsetMul, q, sampleRate, coefs)
+            a1Inc = (coefs.a1 - a1) * FILTER_INV_SMOOTH_SAMPLES
+            a2Inc = (coefs.a2 - a2) * FILTER_INV_SMOOTH_SAMPLES
+            a3Inc = (coefs.a3 - a3) * FILTER_INV_SMOOTH_SAMPLES
+            kInc = (coefs.k - k) * FILTER_INV_SMOOTH_SAMPLES
+            gInc = (coefs.g - g) * FILTER_INV_SMOOTH_SAMPLES
+            invOnePlusGsqInc = (coefs.invOnePlusGsq - invOnePlusGsq) * FILTER_INV_SMOOTH_SAMPLES
+            transitionSamples = FILTER_SMOOTH_SAMPLES
+        }
+
+        /**
+         * Snaps coefficients directly to the target — no transition. Used at
+         * construction (no prior coefs to be discontinuous from) and exposed for
+         * tests / one-shot setups.
+         */
+        protected fun setCutoffSnap(cutoffHz: Double) {
             computeSvfCoeffs(cutoffHz * cutoffOffsetMul, q, sampleRate, coefs)
             a1 = coefs.a1
             a2 = coefs.a2
             a3 = coefs.a3
             k = coefs.k
+            g = coefs.g
+            invOnePlusGsq = coefs.invOnePlusGsq
+            a1Inc = 0.0
+            a2Inc = 0.0
+            a3Inc = 0.0
+            kInc = 0.0
+            gInc = 0.0
+            invOnePlusGsqInc = 0.0
+            transitionSamples = 0
         }
     }
 
     /**
-     * Lowpass tap of the TPT SVF. When [analog] > 0, the bandpass intermediate `v1`
-     * (which drives the integrator-1 feedback) is run through `ClippingFuncs.fastTanh`
-     * before being stored in `ic1eq`. This:
-     *  - tames the mathematical-pole-pair resonance (peak compresses as it grows
-     *    rather than spiking to infinity);
-     *  - generates harmonics on saturation, audible at high resonance / drive;
-     *  - lets velocity feel real through the filter (hot input → more saturation).
+     * Lowpass tap of the TPT SVF — currently **linear at all values of [analog]**.
      *
-     * `analog = 0` selects a bit-identical linear path (no extra ops in the hot loop).
-     * Drive scales linearly with `analog`: `driveK = 1 + analog × DRIVE_PER_ANALOG`.
-     * `fastTanh` is the same Padé approximation used by `tube()`, `softCap()`, etc.,
-     * so the saturation character is consistent with the rest of the engine.
+     * **Why saturation is disabled** (history): two attempts at adding tanh
+     * feedback for "analog warmth" both failed:
+     *   1. **Saturating `ic1eq` state update directly** (`v1Sat` stored into integrator)
+     *      — destroys the LPF/HPF spectral function by corrupting the integrator's
+     *      meaning. HPF lost complementarity (`v0 - k·v1 - v2`) and let lows through
+     *      with a notch at cutoff. See plastic-pipe-hunt.md "Phase 7 bug".
+     *   2. **z⁻¹-delayed saturated feedback** (Zavalishin §5.5 form, `bpFb = tanh(drv·v_BP)/drv`
+     *      used in next-sample's `v_HP` formula) — `fastTanh` hard-caps `bpFb` at
+     *      ±1/drv ≈ ±0.286. Linear feedback `k·v_BP` would grow with `v_BP` to
+     *      damp the resonance; capped feedback loses ~95% of its damping at hot
+     *      resonance peaks → runaway at Q=5+ with `analog>0`. Reverted 2026-05-28.
+     *
+     * The [analog], [bpFb], `g`, `invOnePlusGsq` infrastructure remains for a future
+     * re-introduction via an asinh-style growth-friendly saturator OR a properly
+     * iterated implicit nonlinear ZDF solve. For now: linear filter, with all
+     * "warmth" coming from upstream `.distort()`/`.warmth()` shapers and per-voice
+     * drift/cutoff variance.
+     *
+     * Per-voice cutoff offset and coefficient ramp on `setCutoff` are still active
+     * via the BaseSvf machinery (see kdoc there).
      */
     class SvfLPF(
         cutoffHz: Double,
@@ -394,55 +490,65 @@ object LowPassHighPassFilters {
         cutoffOffsetMul: Double = 1.0,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
-        private val driveK: Double = 1.0 + analog * DRIVE_PER_ANALOG
+        private val driveK: Double = 1.0 + analog * FILTER_DRIVE_PER_ANALOG
         private val invDriveK: Double = 1.0 / driveK
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+            // Saturation is currently disabled — both branches use the linear closed-form
+            // TPT SVF. The previous nonlinear ZDF z⁻¹-feedback implementation had stability
+            // problems at high drive (tanh hard-caps the feedback signal, which removes the
+            // damping that bounds resonance — at drv=3.5, k·tanh(drv·v_BP)/drv caps at ~0.057
+            // regardless of how large v_BP grows, leaving the loop nearly undamped). See the
+            // Obxd/Dexed reference and TODOs in docs/agent-tasks/plastic-pipe-hunt.md.
+            //
+            // The `saturate`, `driveK`, `invDriveK`, and `bpFb` infrastructure is preserved
+            // for the future re-introduction of analog character via a different mechanism
+            // (e.g. tanh on the LP output tap, or a proper Vadim-Filatov-style 2DaT ladder).
             val end = offset + length
-            if (saturate) {
-                val drv = driveK
-                val invDrv = invDriveK
-                for (i in offset until end) {
-                    val v0 = buffer[i]
-                    val v3 = v0 - ic2eq
-                    val v1 = a1 * ic1eq + a2 * v3
-                    // Saturate the BP intermediate before it feeds the integrator-1 state.
-                    // tanh(drv·v1) · invDrv = v1 for small v1 (unity gain) and asymptotes
-                    // to ±invDrv for large |v1|, compressing the resonance peak.
-                    val v1Sat = ClippingFuncs.fastTanh(drv * v1) * invDrv
-                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                    ic1eq = (2.0 * v1Sat - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                    buffer[i] = v2
+            var trans = transitionSamples
+            for (i in offset until end) {
+                if (trans > 0) {
+                    a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
+                    g += gInc; invOnePlusGsq += invOnePlusGsqInc
+                    trans--
                 }
-            } else {
-                for (i in offset until end) {
-                    val v0 = buffer[i]
-                    val v3 = v0 - ic2eq
-                    val v1 = a1 * ic1eq + a2 * v3
-                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                    ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                    buffer[i] = v2
-                }
+                val v0 = buffer[i]
+                val v3 = v0 - ic2eq
+                val v1 = a1 * ic1eq + a2 * v3
+                val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                buffer[i] = v2
             }
-        }
-
-        companion object {
-            /** Drive coefficient per unit `analog`. `analog=1` → driveK=1.5, `analog=3` → 2.5. */
-            private const val DRIVE_PER_ANALOG: Double = 0.5
+            transitionSamples = trans
         }
     }
 
+    /**
+     * Highpass tap of the TPT SVF — currently linear at all values of [analog].
+     * See [SvfLPF] kdoc for the history of why saturation is disabled.
+     */
     class SvfHPF(
         cutoffHz: Double,
         q: Double,
         sampleRate: Double,
+        analog: Double = 0.0,
         cutoffOffsetMul: Double = 1.0,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
+        private val saturate: Boolean = analog > 0.0
+        private val driveK: Double = 1.0 + analog * FILTER_DRIVE_PER_ANALOG
+        private val invDriveK: Double = 1.0 / driveK
+
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
+            // Saturation currently disabled — see [SvfLPF.process] kdoc for context.
             val end = offset + length
+            var trans = transitionSamples
             for (i in offset until end) {
+                if (trans > 0) {
+                    a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
+                    g += gInc; invOnePlusGsq += invOnePlusGsqInc
+                    trans--
+                }
                 val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
@@ -451,6 +557,7 @@ object LowPassHighPassFilters {
                 ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                 buffer[i] = (v0 - k * v1 - v2)
             }
+            transitionSamples = trans
         }
     }
 
@@ -462,7 +569,13 @@ object LowPassHighPassFilters {
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
+            var trans = transitionSamples
             for (i in offset until end) {
+                if (trans > 0) {
+                    a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
+                    g += gInc; invOnePlusGsq += invOnePlusGsqInc
+                    trans--
+                }
                 val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
@@ -471,6 +584,7 @@ object LowPassHighPassFilters {
                 ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                 buffer[i] = v1
             }
+            transitionSamples = trans
         }
     }
 
@@ -482,7 +596,13 @@ object LowPassHighPassFilters {
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
             val end = offset + length
+            var trans = transitionSamples
             for (i in offset until end) {
+                if (trans > 0) {
+                    a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
+                    g += gInc; invOnePlusGsq += invOnePlusGsqInc
+                    trans--
+                }
                 val v0 = buffer[i]
                 val v3 = v0 - ic2eq
                 val v1 = a1 * ic1eq + a2 * v3
@@ -491,6 +611,7 @@ object LowPassHighPassFilters {
                 ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                 buffer[i] = (v0 - k * v1)
             }
+            transitionSamples = trans
         }
     }
 }

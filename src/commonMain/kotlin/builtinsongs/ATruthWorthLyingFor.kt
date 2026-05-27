@@ -42,7 +42,7 @@ let guitar = (() => {
     .lowpass(pBrightness, 1.0)                                                      // Post-distortion: control fizz + warmth roll-off
     .highpass(Osc.freq(), 1.0)                                                      // Cut away muddy low frequencies
     .warmth(12000) // TODO: impulse response
-    .adsr(pAttack, 0.15, pSustain, 0.035)                                           // Tight rhythm envelope
+    .adsr(pAttack, 0.15, pSustain, 0.025)                                           // Tight rhythm envelope
 })()
 
 stack( // Gitarre! ----------------------------------------------------------------------------
@@ -65,7 +65,7 @@ stack( // Gitarre! -------------------------------------------------------------
           [0,7,12]                                [[[8,15,20]@12 [8,15,20]@4]  [10,10,17|17|22|22]*8]>`).repeat(2),
       n(`<[0 0 0 0 0 0 0 2 0 0 0 8 8 8 8 7]       [0!9 8 8 5 5 5 5 3]
           [0!11 5 8 8 [8,15] [7,14]]              [[[8,15]!4 [8,15]!3 [10,17]] [10,10|17|17|17|17]*8]>`).repeat(2),
-  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.999).lpf(5000).lpe(1.0).release(0.15).hpf(140).postgain(0.20)
+  ).orbit(3).fast(1).scale("C2:chromatic").clip(0.9995).lpf(5000).lpe(1.0).release(0.15).hpf(140).postgain(0.20)
     .s(guitar).oscparam("drive", drive).oscp("brightness", 4500).oscp("spread", 0.10) //  . mute()
     .transpose(tp).pan(0.33).superimpose(pan(0.66)).velocity("<[1.0 0.95 0.975 0.95]>").filterWhen(t => t % stay >= 4) //  .solo()
   , // Bass -----------------------------------------------------------------------------------------------------------------

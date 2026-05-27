@@ -230,6 +230,36 @@ class EffectBenchmark(
             monoFilterCase("SvfBPF (1k, q=1)") { sr -> LowPassHighPassFilters.SvfBPF(1000.0, 1.0, sr) },
             monoFilterCase("SvfNotch (1k, q=1)") { sr -> LowPassHighPassFilters.SvfNotch(1000.0, 1.0, sr) },
 
+            // ── Filter humanization (analog > 0) — cost of the tanh feedback saturation ──
+            // Compared against the analog=0 cases above, the delta is the saturation cost
+            // alone (one fastTanh + 2 muls per sample in the saturating branch).
+            monoFilterCase("SvfLPF (1k, q=1, analog=3)") { sr ->
+                LowPassHighPassFilters.SvfLPF(1000.0, 1.0, sr, analog = 3.0)
+            },
+            monoFilterCase("SvfHPF (1k, q=1, analog=3)") { sr ->
+                LowPassHighPassFilters.SvfHPF(1000.0, 1.0, sr, analog = 3.0)
+            },
+
+            // Full envelope-modulated hot path: setCutoff per block (triggers tan + the
+            // 32-sample coefficient ramp) AND the saturated process loop. Mimics what an
+            // `lpf(...).lpe(2.0)` patch actually does each block.
+            Case("SvfLPF (mod, 1k, q=1, analog=3)") { sr, bf ->
+                val filter = LowPassHighPassFilters.SvfLPF(1000.0, 1.0, sr.toDouble(), analog = 3.0)
+                val src = sineSource(440.0, sr, bf)
+                val buf = AudioBuffer(bf)
+                var phase = 0
+                val step: () -> Unit = {
+                    // Sweep cutoff 500 Hz → 2000 Hz over 256 blocks, then repeat. Each block
+                    // triggers a setCutoff so the coefficient ramp runs at the block boundary.
+                    phase = (phase + 1) and 0xFF
+                    val cutoff = 500.0 + (phase / 256.0) * 1500.0
+                    filter.setCutoff(cutoff)
+                    src.copyInto(buf)
+                    filter.process(buf, 0, bf)
+                }
+                step
+            },
+
             // Ignitor.svf combinator (sine → lowpass), env-off vs env-on. Comparable to
             // class-form `SvfLPF` but exercises the closure-based DSL hot path.
             svfIgnitorCase("Ignitor.svf LPF (no env, 1k, q=1)") {

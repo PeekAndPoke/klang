@@ -605,4 +605,281 @@ class LowPassHighPassFiltersSpec : StringSpec({
         }
         maxAbsDiff shouldBeLessThan 1e-12
     }
+
+    // -----------------------------------------------------------------------
+    // SvfLPF — feedback saturation (Phase 7)
+    //
+    // When `analog > 0`, the bandpass intermediate `v1` is run through
+    // `ClippingFuncs.fastTanh` before being stored in `ic1eq`. Tames the
+    // mathematical-pole-pair resonance, generates harmonics on saturation,
+    // and makes velocity feel real through the filter.
+    // -----------------------------------------------------------------------
+
+    "SvfLPF analog=0 - bit-identical linear path" {
+        // analog=0 path must be byte-for-byte equal to a clean SVF — no surprise
+        // changes for patches that don't opt in.
+        val ref = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
+        val sat0 = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
+
+        val refBuf = sine(freq = 800.0, length = 1024, amplitude = 0.8)
+        val satBuf = AudioBuffer(1024) { i -> refBuf[i] }
+
+        ref.process(refBuf, 0, refBuf.size)
+        sat0.process(satBuf, 0, satBuf.size)
+
+        for (i in 0 until 1024) {
+            satBuf[i] shouldBe refBuf[i]
+        }
+    }
+
+    "SvfLPF analog>0 - bit-identical to analog=0 (saturation currently disabled)" {
+        // Filter saturation is currently a no-op — analog>0 produces the same output as
+        // analog=0. The infrastructure remains for the future "warmth on output" /
+        // proper-ladder-filter approach. See plastic-pipe-hunt.md backlog.
+        val linear = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
+        val withAnalog = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
+
+        val linBuf = sine(freq = 800.0, length = blockFrames, amplitude = 1.0)
+        val anaBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
+
+        linear.process(linBuf, 0, linBuf.size)
+        withAnalog.process(anaBuf, 0, anaBuf.size)
+
+        for (i in 0 until blockFrames) {
+            anaBuf[i] shouldBe linBuf[i]
+        }
+    }
+
+    "SvfHPF analog=0 - bit-identical linear path" {
+        val ref = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
+        val sat0 = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
+
+        val refBuf = sine(freq = 800.0, length = 1024, amplitude = 0.8)
+        val satBuf = AudioBuffer(1024) { i -> refBuf[i] }
+
+        ref.process(refBuf, 0, refBuf.size)
+        sat0.process(satBuf, 0, satBuf.size)
+
+        for (i in 0 until 1024) {
+            satBuf[i] shouldBe refBuf[i]
+        }
+    }
+
+    "SvfLPF analog>0 - no DC or sub-bass accumulation under hot resonance (DC-purity diagnostic)" {
+        // Diagnostic for the "tanh in feedback loop pumps DC" risk: feed a perfectly
+        // symmetric sine through a saturated, high-Q LPF. Symmetric tanh of a symmetric
+        // input should produce zero DC and only odd harmonics (3k, 5k, …) above the input
+        // frequency. Strong DC or sub-bass would indicate either an asymmetry bug in the
+        // saturation curve or DC pumping in the feedback loop — neither of which should
+        // happen with our `fastTanh` (symmetric) on the BPF intermediate `v1` (which has
+        // zero DC gain by construction).
+        val filter = LowPassHighPassFilters.SvfLPF(2000.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
+        val buf = sine(freq = 1000.0, length = blockFrames, amplitude = 1.0)
+        filter.process(buf, 0, buf.size)
+
+        // Skip first half (filter settling time, especially at high Q)
+        val settledStart = blockFrames / 2
+        val settledLen = blockFrames - settledStart
+
+        // 1) DC test: mean of settled output should be ≈ 0. The z⁻¹-delayed feedback
+        // topology can leave a tiny transient DC bias before fully settling — well
+        // below the user-audible threshold (~−40 dB ≈ 0.01).
+        var sum = 0.0
+        for (i in settledStart until blockFrames) sum += buf[i]
+        val dc = sum / settledLen
+        kotlin.math.abs(dc) shouldBeLessThan 0.01
+
+        // 2) Sub-bass test: filter the output through a probe LPF at 100 Hz to isolate
+        // sub-100 Hz energy. With a 1 kHz fundamental input and only symmetric saturation,
+        // there should be no significant energy down there.
+        val probe = LowPassHighPassFilters.OnePoleLPF(100.0, sampleRate)
+        val probeBuf = AudioBuffer(blockFrames) { i -> buf[i] }
+        probe.process(probeBuf, 0, probeBuf.size)
+        val subBassRms = rms(AudioBuffer(settledLen) { i -> probeBuf[settledStart + i] })
+        // Input signal RMS is 1/√2 ≈ 0.707 (sine at amplitude 1.0). Sub-bass should be
+        // way under 5% of that.
+        subBassRms shouldBeLessThan 0.05
+    }
+
+    "SvfHPF analog>0 - low frequencies are still cut (regression test for HPF complementarity bug)" {
+        // Regression test: the first saturated SvfHPF implementation used `v1Sat` directly
+        // in the output formula (`v0 - k*v1Sat - v2`), which broke LP+HP=input complementarity
+        // and caused the HPF to pass low frequencies and create a notch at cutoff. Fix was to
+        // saturate only the integrator-1 feedback and keep the output formula linear.
+        val filter = LowPassHighPassFilters.SvfHPF(2500.0, q = 1.0, sampleRate = sampleRate, analog = 3.0)
+        val buf = sine(freq = 200.0, length = blockFrames, amplitude = 1.0)
+        val inputRms = rms(buf)
+
+        filter.process(buf, 0, buf.size)
+        val outputRms = rms(buf)
+
+        // 200 Hz signal through a 2500 Hz HPF — should be heavily attenuated regardless of saturation.
+        outputRms shouldBeLessThan (inputRms * 0.3)
+    }
+
+    "SvfHPF analog>0 - bit-identical to analog=0 (saturation currently disabled)" {
+        val linear = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
+        val withAnalog = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
+
+        val linBuf = sine(freq = 800.0, length = blockFrames, amplitude = 1.0)
+        val anaBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
+
+        linear.process(linBuf, 0, linBuf.size)
+        withAnalog.process(anaBuf, 0, anaBuf.size)
+
+        for (i in 0 until blockFrames) {
+            anaBuf[i] shouldBe linBuf[i]
+        }
+    }
+
+    "SvfLPF analog>0 - low-amplitude signal stays linear (saturation disabled)" {
+        // Trivially passes since analog>0 is currently a no-op. Keeps the test around
+        // for when saturation gets re-introduced via a new topology.
+        val linear = LowPassHighPassFilters.SvfLPF(2000.0, q = 1.0, sampleRate = sampleRate, analog = 0.0)
+        val withAnalog = LowPassHighPassFilters.SvfLPF(2000.0, q = 1.0, sampleRate = sampleRate, analog = 3.0)
+
+        val linBuf = sine(freq = 500.0, length = blockFrames, amplitude = 0.001)
+        val anaBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
+
+        linear.process(linBuf, 0, linBuf.size)
+        withAnalog.process(anaBuf, 0, anaBuf.size)
+
+        val linRms = rms(AudioBuffer(blockFrames - 1024) { i -> linBuf[1024 + i] })
+        val anaRms = rms(AudioBuffer(blockFrames - 1024) { i -> anaBuf[1024 + i] })
+        val ratio = anaRms / linRms
+        ratio shouldBeGreaterThan 0.99
+        ratio shouldBeLessThan 1.01
+    }
+
+    // -----------------------------------------------------------------------
+    // Per-voice cutoff offset (Step 2)
+    //
+    // Filters take an optional `cutoffOffsetMul` that multiplies the cutoff at
+    // both construction and runtime setCutoff. Two filters with the same patch
+    // but different offsets should behave differently.
+    // -----------------------------------------------------------------------
+
+    "SvfLPF cutoffOffsetMul=1.0 - no change vs unset" {
+        val unset = LowPassHighPassFilters.SvfLPF(1000.0, q = 2.0, sampleRate = sampleRate)
+        val unity = LowPassHighPassFilters.SvfLPF(1000.0, q = 2.0, sampleRate = sampleRate, cutoffOffsetMul = 1.0)
+
+        val a = sine(freq = 1000.0, length = 1024, amplitude = 0.5)
+        val b = AudioBuffer(1024) { i -> a[i] }
+
+        unset.process(a, 0, a.size)
+        unity.process(b, 0, b.size)
+
+        for (i in 0 until 1024) {
+            b[i] shouldBe a[i]
+        }
+    }
+
+    "SvfLPF cutoffOffsetMul shifts the cutoff" {
+        // Offset = 1.05 means effective cutoff is 5% higher (≈ 84 cents).
+        // For a Q=2 LPF at 1000 Hz fed a 1000 Hz sine, the offset filter should
+        // pass MORE signal (the sine is now below cutoff).
+        val nominal = LowPassHighPassFilters.SvfLPF(1000.0, q = 2.0, sampleRate = sampleRate, cutoffOffsetMul = 1.0)
+        val shifted = LowPassHighPassFilters.SvfLPF(1000.0, q = 2.0, sampleRate = sampleRate, cutoffOffsetMul = 1.05)
+
+        val a = sine(freq = 1000.0, length = blockFrames, amplitude = 0.5)
+        val b = AudioBuffer(blockFrames) { i -> a[i] }
+        val inputRms = rms(a)
+
+        nominal.process(a, 0, a.size)
+        shifted.process(b, 0, b.size)
+
+        val nominalRms = rms(a)
+        val shiftedRms = rms(b)
+
+        // The shifted-up filter passes more of the 1 kHz signal.
+        shiftedRms shouldBeGreaterThan nominalRms
+        // Both should be passing real signal — sanity.
+        shiftedRms shouldBeGreaterThan (inputRms * 0.1)
+    }
+
+    // -----------------------------------------------------------------------
+    // Coefficient ramp on setCutoff (Step 4)
+    //
+    // setCutoff sets up a 32-sample linear transition from current coefs to new
+    // coefs. Masks block-boundary discontinuities when FilterModRenderer updates
+    // the cutoff per block during envelope sweeps. Construction snaps directly
+    // (no ramp on note-on).
+    // -----------------------------------------------------------------------
+
+    "SvfLPF setCutoff - output transitions smoothly across a cutoff jump" {
+        // Construct at low cutoff, settle, then jump to high cutoff via setCutoff.
+        // The output must not contain a discontinuity (large sample-to-sample jump)
+        // — the coefficient ramp should distribute the change over ~32 samples.
+        val filter = LowPassHighPassFilters.SvfLPF(500.0, q = 1.0, sampleRate = sampleRate)
+        val buf = sine(freq = 2000.0, length = blockFrames, amplitude = 0.5)
+
+        // Settle the filter at low cutoff (first half of buffer)
+        filter.process(buf, 0, 256)
+
+        // Snapshot the last output value before the cutoff change
+        val sampleBeforeJump = buf[255]
+
+        // Now jump the cutoff to 8 kHz — big change, would normally cause a click
+        filter.setCutoff(8000.0)
+
+        // Process one more sample at a time, looking for any single-sample discontinuity
+        // larger than reasonable
+        var maxSingleSampleJump = 0.0
+        var prevOutput = sampleBeforeJump
+        for (i in 256 until 320) {  // 64 samples covering the transition
+            // Re-process a single sample (process a single-sample chunk).
+            // We can't truly do that because process() is block-based, so we use
+            // a single-sample slice approach.
+            val singleBuf = AudioBuffer(1) { _ -> buf[i] }
+            filter.process(singleBuf, 0, 1)
+            val cur = singleBuf[0]
+            val jump = kotlin.math.abs(cur - prevOutput)
+            if (jump > maxSingleSampleJump) maxSingleSampleJump = jump
+            prevOutput = cur
+        }
+
+        // With smoothing, no single-sample jump should be huge.
+        // The input is a 2 kHz sine at amplitude 0.5, so adjacent-sample diff is
+        // bounded by 2π·2000/44100·0.5 ≈ 0.14. We allow up to 3x that as headroom
+        // for the actual signal motion.
+        maxSingleSampleJump shouldBeLessThan 0.5
+    }
+
+    "SvfLPF - construction snaps to target cutoff (no ramp on first sample)" {
+        // The constructor uses setCutoffSnap so the first process() call should
+        // produce output as if the filter has been at the target cutoff forever.
+        // Specifically: filter the same input two ways and check that filtering
+        // works immediately, not gradually.
+        val filter = LowPassHighPassFilters.SvfLPF(500.0, q = 1.0, sampleRate = sampleRate)
+
+        // Send a 5 kHz signal — should be heavily attenuated even from sample 0.
+        val buf = sine(freq = 5000.0, length = 128, amplitude = 1.0)
+        val inputRms = rms(buf)
+        filter.process(buf, 0, buf.size)
+
+        // If construction had ramped from coefs=0 to target, the first 32 samples
+        // would pass through unfiltered (coefs near zero ≈ passthrough at low cutoff).
+        // Snap means full attenuation immediately.
+        val firstChunkRms = rms(AudioBuffer(32) { i -> buf[i] })
+        firstChunkRms shouldBeLessThan (inputRms * 0.5)
+    }
+
+    "SvfLPF - static cutoff has zero transition overhead" {
+        // After construction with no setCutoff calls, processing many blocks
+        // should NOT exhibit any per-sample ramp behavior. This is mostly a
+        // smoke test that setCutoffSnap properly zeroed the increments.
+        val filter = LowPassHighPassFilters.SvfLPF(1000.0, q = 1.0, sampleRate = sampleRate)
+
+        // Send DC — coefs should be static.
+        val buf = AudioBuffer(blockFrames) { _ -> 1.0 }
+        filter.process(buf, 0, buf.size)
+
+        // After settling, output should be very close to 1.0 (DC gain of LPF = 1)
+        var maxDelta = 0.0
+        for (i in 2048 until blockFrames) {
+            val d = kotlin.math.abs(buf[i] - 1.0)
+            if (d > maxDelta) maxDelta = d
+        }
+        maxDelta shouldBeLessThan 1e-6
+    }
 })

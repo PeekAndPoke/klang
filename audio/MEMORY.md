@@ -18,6 +18,42 @@
 - **Master limiter**: −1 dB threshold, 20:1 ratio, 1 ms attack, 100 ms release — always last in chain.
 - **`NullLiteral` / singletons**: `audio_bridge` data types use data classes; expect/actual for platform types.
 
+## Filter Saturation Dead-End — Linear SVF is the Right Choice (2026-05-28)
+
+Two attempts to add tanh saturation to `SvfLPF`/`SvfHPF` (for "analog warmth"
+inside the filter) both failed and were reverted:
+
+1. **Saturating `v1` in the `ic1eq` integrator state update** broke the SVF
+   spectral function. `ic1eq` no longer represents the linear bandpass output,
+   so `v2` (LPF tap) becomes a corrupted-LPF; the HPF formula `v0 - k·v1 - v2`
+   subtracts a corrupted-LPF from input → lows leak through, notch appears at
+   cutoff. Symptom matched user reports exactly ("dip in the middle, lows
+   passing through HPF").
+2. **z⁻¹-delayed saturated feedback** (Zavalishin §5.5 form,
+   `bpFb = tanh(drv·v_BP)/drv` used as `v_HP = (v0 - k·bpFb - g·ic1eq - ic2eq)/(1+g²)`)
+   — `fastTanh` hard-caps `bpFb` at ±1/drv ≈ ±0.286. Linear feedback `k·v_BP`
+   grows with `v_BP` to provide damping; capped feedback loses ~95% of its
+   damping strength at hot resonance peaks. Result: filter goes unstable at
+   Q ≥ 5 with `analog>0`, peak amplitude ~40× linear.
+
+**Conclusion**: filter feedback nonlinearity needs either (a) a non-hard-capping
+saturator like `asinh` (growth-friendly), (b) proper Newton iteration on the
+implicit equation, or (c) oversampling. None are trivial. **Filter is now
+purely linear** at all `analog` values; the `analog` parameter and
+`bpFb`/`g`/`invOnePlusGsq` infrastructure remain in `BaseSvf` / `SvfLPF` /
+`SvfHPF` for future re-introduction.
+
+**Where the "warmth" comes from now** — and it works: upstream `.distort()` /
+`.warmth()` / `.clip()` shapers, oscillator OU drift (per-voice), per-voice
+cutoff offset (`FILTER_CUTOFF_OFFSET_PER_ANALOG`), and the coefficient ramp
+(`FILTER_SMOOTH_SAMPLES`) on cutoff changes. These collectively give the
+"plastic pipe → wooden warm" transformation without needing the filter itself
+to be nonlinear.
+
+**Files touched**: `audio_be/.../filters/LowPassHighPassFilters.kt` (kdoc on
+`SvfLPF`/`SvfHPF` documents the dead-end inline so future attempts know to
+either change topology or change saturator), `docs/agent-tasks/plastic-pipe-hunt.md`.
+
 ## Numerical Safety Contract + Distort DC-Lock Fix (2026-04-27)
 
 Established `SAFE_MIN = 1e-15f` / `SAFE_MAX = 1e15f` as the engine's numerical
