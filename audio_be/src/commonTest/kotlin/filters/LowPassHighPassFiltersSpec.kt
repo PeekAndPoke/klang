@@ -607,12 +607,14 @@ class LowPassHighPassFiltersSpec : StringSpec({
     }
 
     // -----------------------------------------------------------------------
-    // SvfLPF — feedback saturation (Phase 7)
+    // SvfLPF / SvfHPF — state-dependent damping (Obxd-style)
     //
-    // When `analog > 0`, the bandpass intermediate `v1` is run through
-    // `ClippingFuncs.fastTanh` before being stored in `ic1eq`. Tames the
-    // mathematical-pole-pair resonance, generates harmonics on saturation,
-    // and makes velocity feel real through the filter.
+    // When `analog > 0`, the saturated branch uses Vadim Filatov's (2DaT)
+    // polynomial diode-pair approximation to make the resonance damping
+    // coefficient a function of the BP integrator state — as state grows,
+    // damping grows, compressing the resonance peak. The signal stays
+    // linear; only the damping gain is modulated. See
+    // `diodePairResistanceApprox` and the SvfLPF/SvfHPF kdocs.
     // -----------------------------------------------------------------------
 
     "SvfLPF analog=0 - bit-identical linear path" {
@@ -632,22 +634,49 @@ class LowPassHighPassFiltersSpec : StringSpec({
         }
     }
 
-    "SvfLPF analog>0 - bit-identical to analog=0 (saturation currently disabled)" {
-        // Filter saturation is currently a no-op — analog>0 produces the same output as
-        // analog=0. The infrastructure remains for the future "warmth on output" /
-        // proper-ladder-filter approach. See plastic-pipe-hunt.md backlog.
+    "SvfLPF analog>0 - resonance peak is compressed under hot drive" {
+        // The whole point of the state-dependent damping: hot input at the resonance
+        // frequency should make `kEff` grow → resonance peak gets smaller than the
+        // linear case. With Q=5 + analog=5 the saturated filter must produce a
+        // meaningfully lower steady-state peak than the linear filter.
         val linear = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
-        val withAnalog = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
+        val saturated = LowPassHighPassFilters.SvfLPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
 
         val linBuf = sine(freq = 800.0, length = blockFrames, amplitude = 1.0)
-        val anaBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
+        val satBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
 
         linear.process(linBuf, 0, linBuf.size)
-        withAnalog.process(anaBuf, 0, anaBuf.size)
+        saturated.process(satBuf, 0, satBuf.size)
 
-        for (i in 0 until blockFrames) {
-            anaBuf[i] shouldBe linBuf[i]
+        var linMaxAbs = 0.0
+        var satMaxAbs = 0.0
+        for (i in 2048 until blockFrames) {
+            val lv = kotlin.math.abs(linBuf[i])
+            val sv = kotlin.math.abs(satBuf[i])
+            if (lv > linMaxAbs) linMaxAbs = lv
+            if (sv > satMaxAbs) satMaxAbs = sv
         }
+
+        linMaxAbs shouldBeGreaterThan 2.0
+        satMaxAbs shouldBeLessThan (linMaxAbs * 0.9) // saturation should compress at least 10%
+    }
+
+    "SvfLPF analog>0 - stable at Q=10 with hot drive (regression guard)" {
+        // Previous z⁻¹-tanh-feedback topology blew up at Q≥5 + analog>0 because tanh
+        // hard-capped the feedback signal, removing damping. The Obxd state-dependent
+        // damping does the opposite — damping grows with state, so the filter is
+        // *more* stable under heavy resonance, not less. Verify no runaway.
+        val filter = LowPassHighPassFilters.SvfLPF(800.0, q = 10.0, sampleRate = sampleRate, analog = 5.0)
+        val buf = sine(freq = 800.0, length = blockFrames, amplitude = 1.0)
+        filter.process(buf, 0, buf.size)
+
+        // Filter must not run away — any output > 100 implies instability.
+        var maxAbs = 0.0
+        for (i in 0 until blockFrames) {
+            val v = kotlin.math.abs(buf[i])
+            if (v > maxAbs) maxAbs = v
+        }
+        maxAbs shouldBeLessThan 100.0
     }
 
     "SvfHPF analog=0 - bit-identical linear path" {
@@ -681,13 +710,15 @@ class LowPassHighPassFiltersSpec : StringSpec({
         val settledStart = blockFrames / 2
         val settledLen = blockFrames - settledStart
 
-        // 1) DC test: mean of settled output should be ≈ 0. The z⁻¹-delayed feedback
-        // topology can leave a tiny transient DC bias before fully settling — well
-        // below the user-audible threshold (~−40 dB ≈ 0.01).
+        // 1) DC test: mean of settled output should be ≈ 0. The Obxd polynomial has a
+        // small asymmetry near `x ≈ -0.1` (where `tCfb` dips slightly negative before
+        // turning positive again), which can leave a tiny steady-state DC bias at
+        // very hot drive + high Q. At ≈ −34 dB this is well below audibility and the
+        // master DC blocker catches it anyway.
         var sum = 0.0
         for (i in settledStart until blockFrames) sum += buf[i]
         val dc = sum / settledLen
-        kotlin.math.abs(dc) shouldBeLessThan 0.01
+        kotlin.math.abs(dc) shouldBeLessThan 0.02
 
         // 2) Sub-bass test: filter the output through a probe LPF at 100 Hz to isolate
         // sub-100 Hz energy. With a 1 kHz fundamental input and only symmetric saturation,
@@ -717,38 +748,48 @@ class LowPassHighPassFiltersSpec : StringSpec({
         outputRms shouldBeLessThan (inputRms * 0.3)
     }
 
-    "SvfHPF analog>0 - bit-identical to analog=0 (saturation currently disabled)" {
+    "SvfHPF analog>0 - resonance peak is compressed under hot drive" {
+        // Same as SvfLPF version — verify the Obxd damping mechanism reaches the HP tap.
         val linear = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 0.0)
-        val withAnalog = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
+        val saturated = LowPassHighPassFilters.SvfHPF(800.0, q = 5.0, sampleRate = sampleRate, analog = 5.0)
 
         val linBuf = sine(freq = 800.0, length = blockFrames, amplitude = 1.0)
-        val anaBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
+        val satBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
 
         linear.process(linBuf, 0, linBuf.size)
-        withAnalog.process(anaBuf, 0, anaBuf.size)
+        saturated.process(satBuf, 0, satBuf.size)
 
-        for (i in 0 until blockFrames) {
-            anaBuf[i] shouldBe linBuf[i]
+        var linMaxAbs = 0.0
+        var satMaxAbs = 0.0
+        for (i in 2048 until blockFrames) {
+            val lv = kotlin.math.abs(linBuf[i])
+            val sv = kotlin.math.abs(satBuf[i])
+            if (lv > linMaxAbs) linMaxAbs = lv
+            if (sv > satMaxAbs) satMaxAbs = sv
         }
+
+        linMaxAbs shouldBeGreaterThan 2.0
+        satMaxAbs shouldBeLessThan (linMaxAbs * 0.9)
     }
 
-    "SvfLPF analog>0 - low-amplitude signal stays linear (saturation disabled)" {
-        // Trivially passes since analog>0 is currently a no-op. Keeps the test around
-        // for when saturation gets re-introduced via a new topology.
+    "SvfLPF analog>0 - low-amplitude signal stays near-linear (saturation kicks in at high state)" {
+        // At small signal, `ic1eq` stays small, so `diodePairResistanceApprox(ic1eq·0.0876)`
+        // is ≈ 1.0 → `tCfb` ≈ 0 → `kEff` ≈ k → near-linear behaviour. RMS energy should
+        // match the linear filter within a few percent.
         val linear = LowPassHighPassFilters.SvfLPF(2000.0, q = 1.0, sampleRate = sampleRate, analog = 0.0)
-        val withAnalog = LowPassHighPassFilters.SvfLPF(2000.0, q = 1.0, sampleRate = sampleRate, analog = 3.0)
+        val saturated = LowPassHighPassFilters.SvfLPF(2000.0, q = 1.0, sampleRate = sampleRate, analog = 3.0)
 
         val linBuf = sine(freq = 500.0, length = blockFrames, amplitude = 0.001)
-        val anaBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
+        val satBuf = AudioBuffer(blockFrames) { i -> linBuf[i] }
 
         linear.process(linBuf, 0, linBuf.size)
-        withAnalog.process(anaBuf, 0, anaBuf.size)
+        saturated.process(satBuf, 0, satBuf.size)
 
         val linRms = rms(AudioBuffer(blockFrames - 1024) { i -> linBuf[1024 + i] })
-        val anaRms = rms(AudioBuffer(blockFrames - 1024) { i -> anaBuf[1024 + i] })
-        val ratio = anaRms / linRms
-        ratio shouldBeGreaterThan 0.99
-        ratio shouldBeLessThan 1.01
+        val satRms = rms(AudioBuffer(blockFrames - 1024) { i -> satBuf[1024 + i] })
+        val ratio = satRms / linRms
+        ratio shouldBeGreaterThan 0.97
+        ratio shouldBeLessThan 1.03
     }
 
     // -----------------------------------------------------------------------

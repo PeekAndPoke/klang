@@ -19,26 +19,28 @@ package io.peekandpoke.klang.audio_be.filters
  * uniform random multiplier in `1 ± FILTER_CUTOFF_OFFSET_PER_ANALOG × analog`
  * applied at construction and at every runtime `setCutoff` call.
  *
- * At `analog=1` ≈ ±1.7 cents per voice; at `analog=3` ≈ ±5 cents; at `analog=10`
- * ≈ ±17 cents. Tuned by ear — larger values smear the filter's character
+ * At `analog=1` ≈ ±5 cents per voice; at `analog=3` ≈ ±15 cents; at `analog=10`
+ * ≈ ±50 cents. Tuned by ear — larger values smear the filter's character
  * noticeably across unison voices, especially with long filter chains where
  * each filter draws independently (e.g. `notch + lpf + hpf`).
  *
  * Consumer: `VoiceFactory.perVoiceCutoffOffsetMul`.
  */
-internal const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.001
+internal const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.003
 
 /**
- * Saturation drive scale per unit `analog` for `SvfLPF` / `SvfHPF` tanh
- * feedback. `driveK = 1.0 + analog × FILTER_DRIVE_PER_ANALOG`. So `analog=1`
- * → driveK=1.5 (mild); `analog=3` → 2.5 (noticeable); `analog=10` → 6.0
- * (heavy compression of the resonance peak).
+ * Humanization-amount scale for the Obxd-style state-dependent damping in
+ * `SvfLPF` / `SvfHPF`. `driveScale = analog × FILTER_DRIVE_PER_ANALOG` multiplies
+ * the `tCfb` term in `kEff = k + 2·driveScale·tCfb`, where `tCfb` is the
+ * diode-pair polynomial ([diodePairResistanceApprox]) evaluated at the BP
+ * integrator state. Higher values → stronger resonance compression at hot
+ * drive, more "OB-X bite".
  *
- * Same value for LPF and HPF — the SVF state-update math is identical, so the
- * saturation character is identical too.
+ * At `analog = 0` the saturated branch is skipped — linear filter, no cost.
+ * At `analog = 1` → driveScale = 0.5 (subtle). At `analog = 3` → 1.5
+ * (noticeable). At `analog = 10` → 5.0 (crushed resonance, lots of bite).
  *
- * Consumers: `SvfLPF`, `SvfHPF` (and future `SvfBPF` / `SvfNotch` when
- * saturation extends to them).
+ * Consumers: `SvfLPF`, `SvfHPF` (and future `SvfBPF` / `SvfNotch` if extended).
  */
 internal const val FILTER_DRIVE_PER_ANALOG: Double = 0.5
 

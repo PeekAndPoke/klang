@@ -106,12 +106,40 @@ internal inline fun bilinearK(cutoffHz: Double, sampleRate: Double): Double {
     return tan(PI * fc / sampleRate)
 }
 
-/** First-order LPF coefficient `α = K/(1+K)` for `y[n] = α·x + (1−α)·y[n-1]`. */
+/** First-order LPF coefficient `α = K/(1+K)` for `y[ n ] = α·x + (1−α)·y[n-1]`. */
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun onePoleLpfCoeff(cutoffHz: Double, sampleRate: Double): Double {
     val k = bilinearK(cutoffHz, sampleRate)
     return k / (1.0 + k)
 }
+
+/**
+ * Polynomial approximation of a diode-pair's I-V resistance characteristic, ported
+ * verbatim from 2DaT's Obxd `Source/Engine/Filter.h::diodePairResistanceApprox`.
+ *
+ * Output is ≥ ~1.0 for all real `x` and grows monotonically with `|x|`. Used by the
+ * nonlinear (saturated) SVF branches to make the resonance damping coefficient a
+ * **function of the BP integrator state** — as state grows, damping grows,
+ * compressing the resonance peak. The signal stays linear, only the *damping gain*
+ * becomes state-dependent. Stability is preserved because increasing signal →
+ * more damping → bounded resonance (the inverse of what hard-capping `tanh` in
+ * the feedback signal would do).
+ *
+ * Per-sample cost: 4 muls + 4 adds (Horner form).
+ *
+ * Reference: github.com/2DaT/Obxd `Source/Engine/Filter.h`.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun diodePairResistanceApprox(x: Double): Double {
+    return ((((0.0103592 * x + 0.00920833) * x + 0.185) * x + 0.05) * x + 1.0)
+}
+
+/**
+ * Scales the BP integrator state (`ic1eq`) before evaluating
+ * [diodePairResistanceApprox]. Direct port from Obxd Filter.h — tuned by Filatov
+ * for the original OB-X character.
+ */
+internal const val OBXD_STATE_SCALE: Double = 0.0876
 
 /**
  * Default raw IIR pole for [LowPassHighPassFilters.DcBlocker]. `≈ 35 Hz @ 44.1k, 38 Hz @ 48k`.
@@ -134,13 +162,11 @@ internal class SvfCoeffs {
     /**
      * Bilinear-prewarped angle `g = tan(π·fc/fs)`. Same value used internally
      * by `computeSvfCoeffs` to derive a1/a2/a3 — exposed here for the
-     * nonlinear (saturated) SVF branches, which use the explicit-feedback
-     * form `(v0 − k·bpFb − g·ic1eq − ic2eq) / (1 + g²)` per Zavalishin §5.5.
+     * Obxd-style nonlinear (saturated) SVF branches in
+     * [LowPassHighPassFilters.SvfLPF]/[LowPassHighPassFilters.SvfHPF], which
+     * use `kEff + g` for the per-sample closed-form solve.
      */
     var g: Double = 0.0
-
-    /** `1 / (1 + g²)` — pre-divided so the saturated inner loop does muls only. */
-    var invOnePlusGsq: Double = 0.0
 }
 
 /**
@@ -164,7 +190,6 @@ internal inline fun computeSvfCoeffs(cutoffHz: Double, q: Double, sampleRate: Do
     out.a2 = g * out.a1
     out.a3 = g * out.a2
     out.g = g
-    out.invOnePlusGsq = 1.0 / (1.0 + g * g)
 }
 
 object LowPassHighPassFilters {
@@ -212,7 +237,7 @@ object LowPassHighPassFilters {
 
     /**
      * First-order bilinear-prewarped LPF: `K = tan(π·fc/fs); α = K/(1+K)`,
-     * `y[n] = α·x[n] + (1−α)·y[n-1]`. DC gain = 1, monotonic, stable.
+     * `y[ n ] = α·x[ n ] + (1−α)·y[n-1]`. DC gain = 1, monotonic, stable.
      * Cutoff is accurate (−3 dB at `fc`) up to ~fs/4 — beyond that all bilinear
      * designs warp. See file header for review history.
      */
@@ -245,7 +270,7 @@ object LowPassHighPassFilters {
 
     /**
      * First-order canonical bilinear HPF: `K = tan(π·fc/fs); b0 = 1/(1+K); a1 = (1−K)/(1+K)`,
-     * `y[n] = b0·(x[n] − x[n-1]) + a1·y[n-1]`. `H(z) = b0·(1 − z⁻¹)/(1 − a1·z⁻¹)`.
+     * `y[ n ] = b0·(x[ n ] − x[n-1]) + a1·y[n-1]`. `H(z) = b0·(1 − z⁻¹)/(1 − a1·z⁻¹)`.
      * DC gain = 0, Nyquist gain = 1, true −3 dB at `fc`, stable. See file header for
      * the review history (replaced the old `y = a·(y + x − xPrev)` topology in 2026-04
      * because that one had Nyquist droop at high cutoffs).
@@ -285,7 +310,7 @@ object LowPassHighPassFilters {
 
     /**
      * Lightweight DC blocker — degenerate first-order HPF with raw pole and
-     * no input scaling: `y[n] = x[n] − x[n-1] + a·y[n-1]`. One mul/sample cheaper than
+     * no input scaling: `y[ n ] = x[ n ] − x[n-1] + a·y[n-1]`. One mul/sample cheaper than
      * [OnePoleHPF]. Produces a ~2× edge transient on rail-to-rail input — call sites
      * post-distort/post-clip pair this with `ClippingFuncs.softCap()` to bound output to ±1.
      *
@@ -367,19 +392,14 @@ object LowPassHighPassFilters {
      * enough to mask the click, short enough to add no audible lag to a swept envelope.
      * Construction snaps directly to the target (no ramp on note-on) via [setCutoffSnap].
      *
-     * **Saturation (currently disabled)**: SvfLPF/SvfHPF have a dormant `analog`
-     * parameter and `bpFb`/`g`/`invOnePlusGsq` infrastructure for nonlinear ZDF SVF
-     * (Zavalishin §5.5 — z⁻¹-delayed saturated resonance feedback). The math is
-     * correct but `fastTanh` hard-caps the feedback magnitude, which removes the
-     * damping required to bound resonance at hot drive (`drv=3.5` caps `k·bpFb` at
-     * ~0.06, vs linear ~1.0+ at the resonance peak → ~95% damping loss → run-away).
-     * Re-enabling requires either a non-hard-capping saturator (asinh-style growth)
-     * or proper Newton iteration. Kept as future work — see
-     * `docs/agent-tasks/plastic-pipe-hunt.md`.
+     * **Nonlinear character**: SvfLPF/SvfHPF have an active `analog`-gated
+     * saturated branch that uses Obxd-style state-dependent damping
+     * (polynomial diode-pair approximation of the resonance feedback gain;
+     * see [diodePairResistanceApprox] and the kdoc on [SvfLPF]).
      */
     abstract class BaseSvf(
         cutoffHz: Double,
-        q: Double,
+        private val q: Double,
         private val sampleRate: Double,
         private val cutoffOffsetMul: Double = 1.0,
     ) : AudioFilter, AudioFilter.Tunable {
@@ -390,17 +410,13 @@ object LowPassHighPassFilters {
         protected var a3: Double = 0.0
         protected var k: Double = 0.0
 
-        // Coefficients reserved for future nonlinear ZDF SVF re-introduction (Zavalishin §5.5).
-        // Computed by setCutoff and ramped during smoothing transitions, but unused while the
-        // saturated branches are disabled. See BaseSvf kdoc for context.
-        protected var g: Double = 0.0
-        protected var invOnePlusGsq: Double = 0.0
-
         /**
-         * Previous-sample saturated BP feedback for the nonlinear ZDF SVF. Currently
-         * unused while saturation is disabled — preserved for future re-introduction.
+         * Bilinear-prewarped angle `g = tan(π·fc/fs)`. Used by the saturated
+         * branches of [SvfLPF]/[SvfHPF] for the closed-form solve with
+         * state-dependent damping (`kEff + g` etc.). Linear branches use only
+         * a1/a2/a3/k.
          */
-        protected var bpFb: Double = 0.0
+        protected var g: Double = 0.0
 
         // Coefficient transition state. When transitionSamples > 0, the subclass's
         // process() loop advances each coef by its `Inc` value per sample.
@@ -409,18 +425,16 @@ object LowPassHighPassFilters {
         protected var a3Inc: Double = 0.0
         protected var kInc: Double = 0.0
         protected var gInc: Double = 0.0
-        protected var invOnePlusGsqInc: Double = 0.0
         protected var transitionSamples: Int = 0
 
         private val coefs = SvfCoeffs()
-        private val q: Double = q
 
         init {
             setCutoffSnap(cutoffHz)
         }
 
         /**
-         * Computes new coefficients and sets up a [SMOOTH_SAMPLES]-sample linear
+         * Computes new coefficients and sets up a [FILTER_SMOOTH_SAMPLES]-sample linear
          * transition from the current values. Called per-block by
          * `FilterModRenderer` whenever the cutoff envelope updates.
          */
@@ -431,14 +445,12 @@ object LowPassHighPassFilters {
             a3Inc = (coefs.a3 - a3) * FILTER_INV_SMOOTH_SAMPLES
             kInc = (coefs.k - k) * FILTER_INV_SMOOTH_SAMPLES
             gInc = (coefs.g - g) * FILTER_INV_SMOOTH_SAMPLES
-            invOnePlusGsqInc = (coefs.invOnePlusGsq - invOnePlusGsq) * FILTER_INV_SMOOTH_SAMPLES
             transitionSamples = FILTER_SMOOTH_SAMPLES
         }
 
         /**
          * Snaps coefficients directly to the target — no transition. Used at
-         * construction (no prior coefs to be discontinuous from) and exposed for
-         * tests / one-shot setups.
+         * construction (no prior coefs to be discontinuous from).
          */
         protected fun setCutoffSnap(cutoffHz: Double) {
             computeSvfCoeffs(cutoffHz * cutoffOffsetMul, q, sampleRate, coefs)
@@ -447,40 +459,46 @@ object LowPassHighPassFilters {
             a3 = coefs.a3
             k = coefs.k
             g = coefs.g
-            invOnePlusGsq = coefs.invOnePlusGsq
             a1Inc = 0.0
             a2Inc = 0.0
             a3Inc = 0.0
             kInc = 0.0
             gInc = 0.0
-            invOnePlusGsqInc = 0.0
             transitionSamples = 0
         }
     }
 
     /**
-     * Lowpass tap of the TPT SVF — currently **linear at all values of [analog]**.
+     * Lowpass tap of the TPT SVF with optional Obxd-style state-dependent damping.
      *
-     * **Why saturation is disabled** (history): two attempts at adding tanh
-     * feedback for "analog warmth" both failed:
-     *   1. **Saturating `ic1eq` state update directly** (`v1Sat` stored into integrator)
-     *      — destroys the LPF/HPF spectral function by corrupting the integrator's
-     *      meaning. HPF lost complementarity (`v0 - k·v1 - v2`) and let lows through
-     *      with a notch at cutoff. See plastic-pipe-hunt.md "Phase 7 bug".
-     *   2. **z⁻¹-delayed saturated feedback** (Zavalishin §5.5 form, `bpFb = tanh(drv·v_BP)/drv`
-     *      used in next-sample's `v_HP` formula) — `fastTanh` hard-caps `bpFb` at
-     *      ±1/drv ≈ ±0.286. Linear feedback `k·v_BP` would grow with `v_BP` to
-     *      damp the resonance; capped feedback loses ~95% of its damping at hot
-     *      resonance peaks → runaway at Q=5+ with `analog>0`. Reverted 2026-05-28.
+     * When `analog > 0`, the saturated branch ports Vadim Filatov's (2DaT) OB-X
+     * filter approach: a polynomial approximation of a diode-pair's I-V curve
+     * ([diodePairResistanceApprox]) is evaluated at the current BP integrator
+     * state `ic1eq * OBXD_STATE_SCALE` and used to *increase* the resonance
+     * damping coefficient `k → kEff = k + 2·drv·tCfb` for the current sample.
+     * The filter solves the closed-form TPT SVF equation with `kEff` in place
+     * of `k` — one divide per sample, no iteration, no oversampling.
      *
-     * The [analog], [bpFb], `g`, `invOnePlusGsq` infrastructure remains for a future
-     * re-introduction via an asinh-style growth-friendly saturator OR a properly
-     * iterated implicit nonlinear ZDF solve. For now: linear filter, with all
-     * "warmth" coming from upstream `.distort()`/`.warmth()` shapers and per-voice
-     * drift/cutoff variance.
+     * **Why this works** (where prior tanh attempts failed): the signal stays
+     * linear; only the *damping gain* is modulated. As `|state|` grows, damping
+     * grows monotonically → resonance peak compresses → stable by construction.
+     * The inverse of a hard-capping `tanh` placed directly in the feedback signal
+     * (which would *reduce* damping and run away — the Phase 7 trap).
      *
-     * Per-voice cutoff offset and coefficient ramp on `setCutoff` are still active
-     * via the BaseSvf machinery (see kdoc there).
+     * **Convention conversion** (why the factor of 2): Obxd parameterises the
+     * resonance with `R` where `2R = our k` (damping vs. quality-factor-inverse
+     * conventions). Their per-sample feedback term `2·(R + tCfb)` maps to our
+     * `k + 2·tCfb` — hence the `kEff = k + 2·driveScale·tCfb` formula in the
+     * saturated branch.
+     *
+     * Linear branch (`analog == 0`) is bit-identical to the pre-saturation
+     * code path. Per-voice cutoff offset and coefficient smoothing on `setCutoff`
+     * are still active via the [BaseSvf] machinery.
+     *
+     * References:
+     * - github.com/2DaT/Obxd `Source/Engine/Filter.h` — porting source
+     * - `audio/MEMORY.md` "Filter Saturation Dead-End" — history of the failed
+     *   attempts that led to this approach
      */
     class SvfLPF(
         cutoffHz: Double,
@@ -490,43 +508,66 @@ object LowPassHighPassFilters {
         cutoffOffsetMul: Double = 1.0,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
-        private val driveK: Double = 1.0 + analog * FILTER_DRIVE_PER_ANALOG
-        private val invDriveK: Double = 1.0 / driveK
+
+        /** Humanization amount: `analog × FILTER_DRIVE_PER_ANALOG`. Scales the diode-pair tCfb term. */
+        private val driveScale: Double = analog * FILTER_DRIVE_PER_ANALOG
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            // Saturation is currently disabled — both branches use the linear closed-form
-            // TPT SVF. The previous nonlinear ZDF z⁻¹-feedback implementation had stability
-            // problems at high drive (tanh hard-caps the feedback signal, which removes the
-            // damping that bounds resonance — at drv=3.5, k·tanh(drv·v_BP)/drv caps at ~0.057
-            // regardless of how large v_BP grows, leaving the loop nearly undamped). See the
-            // Obxd/Dexed reference and TODOs in docs/agent-tasks/plastic-pipe-hunt.md.
-            //
-            // The `saturate`, `driveK`, `invDriveK`, and `bpFb` infrastructure is preserved
-            // for the future re-introduction of analog character via a different mechanism
-            // (e.g. tanh on the LP output tap, or a proper Vadim-Filatov-style 2DaT ladder).
             val end = offset + length
             var trans = transitionSamples
-            for (i in offset until end) {
-                if (trans > 0) {
-                    a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                    g += gInc; invOnePlusGsq += invOnePlusGsqInc
-                    trans--
+            if (saturate) {
+                // ── Obxd-style state-dependent damping (nonlinear ZDF SVF) ──────────
+                // Per-sample `kEff = k + 2·driveScale·tCfb` where `tCfb` grows monotonically
+                // with `|ic1eq|`. As resonance heats up, damping rises and compresses the
+                // peak. Closed-form single-step solve (no iteration). Convention factor of
+                // 2 because Obxd's R = our k/2.
+                val drv = driveScale
+                for (i in offset until end) {
+                    if (trans > 0) {
+                        a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
+                        g += gInc
+                        trans--
+                    }
+                    val v0 = buffer[i]
+                    val tCfb = diodePairResistanceApprox(ic1eq * OBXD_STATE_SCALE) - 1.0
+                    val kEff = k + 2.0 * drv * tCfb
+                    // Explicit closed-form HP intermediate with kEff. One divide per sample.
+                    val kPlusG = kEff + g
+                    val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
+                    val vBp = g * vHp + ic1eq
+                    val vLp = g * vBp + ic2eq
+                    ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
+                    ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                    // Obxd outputs a morph `mc = (1−mm)·vLp + mm·vHp` (LP↔HP blend).
+                    // With `mm = 0` (pure LP) this collapses to `vLp`.
+                    buffer[i] = vLp
                 }
-                val v0 = buffer[i]
-                val v3 = v0 - ic2eq
-                val v1 = a1 * ic1eq + a2 * v3
-                val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                buffer[i] = v2
+            } else {
+                // ── Linear closed-form TPT SVF (bit-identical to pre-saturation) ────
+                for (i in offset until end) {
+                    if (trans > 0) {
+                        a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
+                        g += gInc
+                        trans--
+                    }
+                    val v0 = buffer[i]
+                    val v3 = v0 - ic2eq
+                    val v1 = a1 * ic1eq + a2 * v3
+                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                    ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                    buffer[i] = v2
+                }
             }
             transitionSamples = trans
         }
     }
 
     /**
-     * Highpass tap of the TPT SVF — currently linear at all values of [analog].
-     * See [SvfLPF] kdoc for the history of why saturation is disabled.
+     * Highpass tap of the TPT SVF. Same Obxd-style state-dependent damping as
+     * [SvfLPF] in the saturated branch; output is the HP tap of the explicit-
+     * feedback form (`vHp` from the closed-form solve), preserving LP+kBP+HP=v0
+     * complementarity at every sample (with `k → kEff`).
      */
     class SvfHPF(
         cutoffHz: Double,
@@ -536,26 +577,51 @@ object LowPassHighPassFilters {
         cutoffOffsetMul: Double = 1.0,
     ) : BaseSvf(cutoffHz, q, sampleRate, cutoffOffsetMul) {
         private val saturate: Boolean = analog > 0.0
-        private val driveK: Double = 1.0 + analog * FILTER_DRIVE_PER_ANALOG
-        private val invDriveK: Double = 1.0 / driveK
+
+        /** Humanization amount: `analog × FILTER_DRIVE_PER_ANALOG`. See [SvfLPF] for math. */
+        private val driveScale: Double = analog * FILTER_DRIVE_PER_ANALOG
 
         override fun process(buffer: AudioBuffer, offset: Int, length: Int) {
-            // Saturation currently disabled — see [SvfLPF.process] kdoc for context.
             val end = offset + length
             var trans = transitionSamples
-            for (i in offset until end) {
-                if (trans > 0) {
-                    a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                    g += gInc; invOnePlusGsq += invOnePlusGsqInc
-                    trans--
+            if (saturate) {
+                // Same Obxd state-dependent damping as [SvfLPF]; output the HP tap directly
+                // from the explicit-feedback form (no need for `v0 − k·v1 − v2` algebra since
+                // `vHp` is computed in the closed-form solve already).
+                val drv = driveScale
+                for (i in offset until end) {
+                    if (trans > 0) {
+                        a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
+                        g += gInc
+                        trans--
+                    }
+                    val v0 = buffer[i]
+                    val tCfb = diodePairResistanceApprox(ic1eq * OBXD_STATE_SCALE) - 1.0
+                    val kEff = k + 2.0 * drv * tCfb
+                    val kPlusG = kEff + g
+                    val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
+                    val vBp = g * vHp + ic1eq
+                    val vLp = g * vBp + ic2eq
+                    ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
+                    ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                    buffer[i] = vHp
                 }
-                val v0 = buffer[i]
-                val v3 = v0 - ic2eq
-                val v1 = a1 * ic1eq + a2 * v3
-                val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                buffer[i] = (v0 - k * v1 - v2)
+            } else {
+                // ── Linear closed-form TPT SVF (bit-identical to pre-saturation) ────
+                for (i in offset until end) {
+                    if (trans > 0) {
+                        a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
+                        g += gInc
+                        trans--
+                    }
+                    val v0 = buffer[i]
+                    val v3 = v0 - ic2eq
+                    val v1 = a1 * ic1eq + a2 * v3
+                    val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                    ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                    ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                    buffer[i] = (v0 - k * v1 - v2)
+                }
             }
             transitionSamples = trans
         }
@@ -573,7 +639,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 if (trans > 0) {
                     a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                    g += gInc; invOnePlusGsq += invOnePlusGsqInc
+                    g += gInc
                     trans--
                 }
                 val v0 = buffer[i]
@@ -600,7 +666,7 @@ object LowPassHighPassFilters {
             for (i in offset until end) {
                 if (trans > 0) {
                     a1 += a1Inc; a2 += a2Inc; a3 += a3Inc; k += kInc
-                    g += gInc; invOnePlusGsq += invOnePlusGsqInc
+                    g += gInc
                     trans--
                 }
                 val v0 = buffer[i]
