@@ -285,11 +285,11 @@ private fun IgnitorDsl.buildRaw(
 
         // ── Filters: pass mod through to inner ──
 
-        is IgnitorDsl.Lowpass -> inner.withMod().lowpass(cutoffHz.noMod(), q.noMod())
-        is IgnitorDsl.Highpass -> inner.withMod().highpass(cutoffHz.noMod(), q.noMod())
+        is IgnitorDsl.Lowpass -> inner.withMod().lowpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+        is IgnitorDsl.Highpass -> inner.withMod().highpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
         is IgnitorDsl.OnePoleLowpass -> inner.withMod().onePoleLowpass(cutoffHz.noMod())
-        is IgnitorDsl.Bandpass -> inner.withMod().bandpass(cutoffHz.noMod(), q.noMod())
-        is IgnitorDsl.Notch -> inner.withMod().notch(cutoffHz.noMod(), q.noMod())
+        is IgnitorDsl.Bandpass -> inner.withMod().bandpass(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
+        is IgnitorDsl.Notch -> inner.withMod().notch(cutoffHz.noMod(), q.noMod(), analog = analog.noMod())
 
         // ── Envelope: pass mod through ──
 

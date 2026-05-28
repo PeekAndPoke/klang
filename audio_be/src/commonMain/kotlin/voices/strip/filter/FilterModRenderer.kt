@@ -1,5 +1,6 @@
 package io.peekandpoke.klang.audio_be.voices.strip.filter
 
+import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
 import io.peekandpoke.klang.audio_be.voices.Voice
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
@@ -19,7 +20,6 @@ class FilterModRenderer(
     private val startFrame: Int,
     private val gateEndFrame: Int,
 ) : BlockRenderer {
-
     override fun render(ctx: BlockContext) {
         for (mod in modulators) {
             val envValue = calculateControlRateEnvelope(mod.envelope, ctx.blockStart, startFrame, gateEndFrame)

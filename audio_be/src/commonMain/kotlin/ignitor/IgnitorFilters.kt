@@ -1,9 +1,12 @@
 package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
+import io.peekandpoke.klang.audio_be.filters.FILTER_DRIVE_PER_ANALOG
+import io.peekandpoke.klang.audio_be.filters.OBXD_STATE_SCALE
 import io.peekandpoke.klang.audio_be.filters.SvfCoeffs
 import io.peekandpoke.klang.audio_be.filters.bilinearK
 import io.peekandpoke.klang.audio_be.filters.computeSvfCoeffs
+import io.peekandpoke.klang.audio_be.filters.diodePairResistanceApprox
 import io.peekandpoke.klang.audio_be.filters.onePoleLpfCoeff
 import io.peekandpoke.klang.audio_be.flushDenormal
 import kotlin.math.PI
@@ -79,7 +82,8 @@ fun Ignitor.svf(
     cutoffHz: Ignitor,
     q: Ignitor = ParamIgnitor("q", 0.707),
     env: FilterEnvDef = FilterEnvDef.NONE,
-): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env)
+    analog: Ignitor = ParamIgnitor("analog", 0.0),
+): Ignitor = SvfIgnitor(this, mode, cutoffHz, q, env, analog)
 
 private class SvfIgnitor(
     private val upstream: Ignitor,
@@ -87,6 +91,7 @@ private class SvfIgnitor(
     private val cutoffHz: Ignitor,
     private val q: Ignitor,
     private val env: FilterEnvDef,
+    private val analog: Ignitor,
 ) : Ignitor {
     // Integrator state.
     private var ic1eq: Double = 0.0
@@ -104,19 +109,26 @@ private class SvfIgnitor(
 
             val baseCutoff = Ignitors.readParam(cutoffHz, freqHz, ctx)
             val qVal = Ignitors.readParam(q, freqHz, ctx)
+            val analogVal = Ignitors.readParam(analog, freqHz, ctx).coerceAtLeast(0.0)
+            val saturate = analogVal > 0.0 && (mode == SvfMode.LOWPASS || mode == SvfMode.HIGHPASS)
+            val driveScale = analogVal * FILTER_DRIVE_PER_ANALOG
             val sr = ctx.sampleRate.toDouble()
             val length = ctx.length
 
             // Per-sample coefficient deltas (Bresenham accumulator). When env is off they're
             // zero and the inner loop just adds zero each sample — no measurable cost.
+            // `g` is only needed by the saturated path (Obxd state-dependent damping); the
+            // linear branches just `g += 0.0` per sample.
             var a1: Double
             var a2: Double
             var a3: Double
             var k: Double
+            var g: Double
             var a1Step = 0.0
             var a2Step = 0.0
             var a3Step = 0.0
             var kStep = 0.0
+            var gStep = 0.0
 
             if (hasEnv) {
                 val envStart = computeFilterEnvelope(
@@ -133,7 +145,7 @@ private class SvfIgnitor(
                 computeSvfCoeffs(cutoffStart, qVal, sr, coefs)
                 computeSvfCoeffs(cutoffEnd, qVal, sr, coefsEnd)
 
-                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k
+                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
 
                 if (length > 0) {
                     val invLen = 1.0 / length
@@ -141,43 +153,78 @@ private class SvfIgnitor(
                     a2Step = (coefsEnd.a2 - coefs.a2) * invLen
                     a3Step = (coefsEnd.a3 - coefs.a3) * invLen
                     kStep = (coefsEnd.k - coefs.k) * invLen
+                    gStep = (coefsEnd.g - coefs.g) * invLen
                 }
                 initialized = true
             } else if (!initialized || cutoffHz !is ParamIgnitor || q !is ParamIgnitor) {
                 computeSvfCoeffs(baseCutoff, qVal, sr, coefs)
-                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k
+                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
                 initialized = true
             } else {
-                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k
+                a1 = coefs.a1; a2 = coefs.a2; a3 = coefs.a3; k = coefs.k; g = coefs.g
             }
 
             val end = ctx.offset + length
             // Mode is fixed for the lifetime of this Ignitor — branch once per block,
-            // not per sample. Each arm is the same SVF math with the appropriate output tap.
+            // not per sample. LOWPASS/HIGHPASS additionally branch on `saturate` (analog>0)
+            // to switch between the linear closed-form math and the Obxd state-dependent
+            // damping path (per-sample diode-pair polynomial + explicit-feedback solve).
             when (mode) {
                 SvfMode.LOWPASS -> {
-                    for (i in ctx.offset until end) {
-                        val v0 = input[i]
-                        val v3 = v0 - ic2eq
-                        val v1 = a1 * ic1eq + a2 * v3
-                        val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                        buffer[i] = v2
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep
+                    if (saturate) {
+                        for (i in ctx.offset until end) {
+                            val v0 = input[i]
+                            val tCfb = diodePairResistanceApprox(ic1eq * OBXD_STATE_SCALE) - 1.0
+                            val kEff = k + 2.0 * driveScale * tCfb
+                            val kPlusG = kEff + g
+                            val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
+                            val vBp = g * vHp + ic1eq
+                            val vLp = g * vBp + ic2eq
+                            ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
+                            ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                            buffer[i] = vLp
+                            a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                        }
+                    } else {
+                        for (i in ctx.offset until end) {
+                            val v0 = input[i]
+                            val v3 = v0 - ic2eq
+                            val v1 = a1 * ic1eq + a2 * v3
+                            val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                            ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                            ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                            buffer[i] = v2
+                            a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                        }
                     }
                 }
 
                 SvfMode.HIGHPASS -> {
-                    for (i in ctx.offset until end) {
-                        val v0 = input[i]
-                        val v3 = v0 - ic2eq
-                        val v1 = a1 * ic1eq + a2 * v3
-                        val v2 = ic2eq + a2 * ic1eq + a3 * v3
-                        ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
-                        ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
-                        buffer[i] = v0 - k * v1 - v2
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep
+                    if (saturate) {
+                        for (i in ctx.offset until end) {
+                            val v0 = input[i]
+                            val tCfb = diodePairResistanceApprox(ic1eq * OBXD_STATE_SCALE) - 1.0
+                            val kEff = k + 2.0 * driveScale * tCfb
+                            val kPlusG = kEff + g
+                            val vHp = (v0 - kPlusG * ic1eq - ic2eq) / (1.0 + g * kPlusG)
+                            val vBp = g * vHp + ic1eq
+                            val vLp = g * vBp + ic2eq
+                            ic1eq = (2.0 * vBp - ic1eq).flushDenormal()
+                            ic2eq = (2.0 * vLp - ic2eq).flushDenormal()
+                            buffer[i] = vHp
+                            a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                        }
+                    } else {
+                        for (i in ctx.offset until end) {
+                            val v0 = input[i]
+                            val v3 = v0 - ic2eq
+                            val v1 = a1 * ic1eq + a2 * v3
+                            val v2 = ic2eq + a2 * ic1eq + a3 * v3
+                            ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
+                            ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
+                            buffer[i] = v0 - k * v1 - v2
+                            a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
+                        }
                     }
                 }
 
@@ -190,7 +237,7 @@ private class SvfIgnitor(
                         ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
                         ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                         buffer[i] = v1
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                     }
                 }
 
@@ -203,7 +250,7 @@ private class SvfIgnitor(
                         ic1eq = (2.0 * v1 - ic1eq).flushDenormal()
                         ic2eq = (2.0 * v2 - ic2eq).flushDenormal()
                         buffer[i] = v0 - k * v1
-                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep
+                        a1 += a1Step; a2 += a2Step; a3 += a3Step; k += kStep; g += gStep
                     }
                 }
             }
@@ -224,7 +271,11 @@ fun Ignitor.svf(
     cutoffHz: Double,
     q: Double = 0.707,
     env: FilterEnvDef = FilterEnvDef.NONE,
-): Ignitor = svf(mode, ParamIgnitor("cutoffHz", cutoffHz), ParamIgnitor("q", q), env)
+    analog: Double = 0.0,
+): Ignitor = svf(
+    mode, ParamIgnitor("cutoffHz", cutoffHz), ParamIgnitor("q", q), env,
+    ParamIgnitor("analog", analog),
+)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Convenience wrappers — delegates to svf() with the appropriate mode
@@ -237,8 +288,12 @@ fun Ignitor.svf(
  * @param q Resonance. 0.707 = flat (Butterworth), higher = peak at cutoff. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.lowpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
-    svf(SvfMode.LOWPASS, cutoffHz, q, env)
+fun Ignitor.lowpass(
+    cutoffHz: Ignitor,
+    q: Ignitor = ParamIgnitor("q", 0.707),
+    env: FilterEnvDef = FilterEnvDef.NONE,
+    analog: Ignitor = ParamIgnitor("analog", 0.0),
+): Ignitor = svf(SvfMode.LOWPASS, cutoffHz, q, env, analog)
 
 /**
  * Lowpass filter (convenience overload with fixed values).
@@ -246,9 +301,10 @@ fun Ignitor.lowpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), en
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 200–8000.
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ * @param analog Analog character amount. Default: 0 (clean linear). >0 engages Obxd state-dependent damping.
  */
-fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
-    svf(SvfMode.LOWPASS, cutoffHz, q, env)
+fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
+    svf(SvfMode.LOWPASS, cutoffHz, q, env, analog)
 
 /**
  * Highpass filter — lets high frequencies through, removes the bottom.
@@ -257,8 +313,12 @@ fun Ignitor.lowpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Fil
  * @param q Resonance. 0.707 = flat, higher = peak at cutoff. Default: 0.707.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.highpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
-    svf(SvfMode.HIGHPASS, cutoffHz, q, env)
+fun Ignitor.highpass(
+    cutoffHz: Ignitor,
+    q: Ignitor = ParamIgnitor("q", 0.707),
+    env: FilterEnvDef = FilterEnvDef.NONE,
+    analog: Ignitor = ParamIgnitor("analog", 0.0),
+): Ignitor = svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog)
 
 /**
  * Highpass filter (convenience overload with fixed values).
@@ -266,9 +326,10 @@ fun Ignitor.highpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 0.707), e
  * @param cutoffHz Cutoff frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 80–2000.
  * @param q Resonance. Default: 0.707 (Butterworth). Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ * @param analog Analog character amount. Default: 0 (clean linear). >0 engages Obxd state-dependent damping.
  */
-fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
-    svf(SvfMode.HIGHPASS, cutoffHz, q, env)
+fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
+    svf(SvfMode.HIGHPASS, cutoffHz, q, env, analog)
 
 /**
  * Bandpass filter — keeps only a frequency band, removes everything above and below.
@@ -277,8 +338,12 @@ fun Ignitor.highpass(cutoffHz: Double, q: Double = 0.707, env: FilterEnvDef = Fi
  * @param q Width of the pass band. 1.0 = moderate, higher = narrower band. Default: 1.0.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.bandpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
-    svf(SvfMode.BANDPASS, cutoffHz, q, env)
+fun Ignitor.bandpass(
+    cutoffHz: Ignitor,
+    q: Ignitor = ParamIgnitor("q", 1.0),
+    env: FilterEnvDef = FilterEnvDef.NONE,
+    analog: Ignitor = ParamIgnitor("analog", 0.0),
+): Ignitor = svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
 
 /**
  * Bandpass filter (convenience overload with fixed values).
@@ -286,9 +351,10 @@ fun Ignitor.bandpass(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env
  * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
  * @param q Width of the pass band. Default: 1.0. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ * @param analog Reserved — currently a no-op (BP saturation not implemented).
  */
-fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
-    svf(SvfMode.BANDPASS, cutoffHz, q, env)
+fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
+    svf(SvfMode.BANDPASS, cutoffHz, q, env, analog)
 
 /**
  * Notch (band-reject) filter — removes one frequency band, keeps everything else.
@@ -297,8 +363,12 @@ fun Ignitor.bandpass(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = Filt
  * @param q Width of the notch. 1.0 = moderate, higher = narrower cut. Default: 1.0.
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
  */
-fun Ignitor.notch(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
-    svf(SvfMode.NOTCH, cutoffHz, q, env)
+fun Ignitor.notch(
+    cutoffHz: Ignitor,
+    q: Ignitor = ParamIgnitor("q", 1.0),
+    env: FilterEnvDef = FilterEnvDef.NONE,
+    analog: Ignitor = ParamIgnitor("analog", 0.0),
+): Ignitor = svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
 
 /**
  * Notch (band-reject) filter (convenience overload with fixed values).
@@ -306,9 +376,10 @@ fun Ignitor.notch(cutoffHz: Ignitor, q: Ignitor = ParamIgnitor("q", 1.0), env: F
  * @param cutoffHz Center frequency in Hz. Clamped to [5, Nyquist-1]. Typical: 300–5000.
  * @param q Width of the notch. Default: 1.0. Clamped to [0.1, 200.0].
  * @param env Optional ADSR envelope for cutoff modulation. Default: none.
+ * @param analog Reserved — currently a no-op.
  */
-fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE): Ignitor =
-    svf(SvfMode.NOTCH, cutoffHz, q, env)
+fun Ignitor.notch(cutoffHz: Double, q: Double = 1.0, env: FilterEnvDef = FilterEnvDef.NONE, analog: Double = 0.0): Ignitor =
+    svf(SvfMode.NOTCH, cutoffHz, q, env, analog)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // One-Pole Lowpass (for warmth / simple smoothing)

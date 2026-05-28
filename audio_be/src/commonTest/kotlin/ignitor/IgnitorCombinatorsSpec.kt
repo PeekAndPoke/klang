@@ -218,6 +218,49 @@ class ExciterCombinatorsSpec : StringSpec({
         wetRms shouldBeLessThan (dryRms * 0.3)
     }
 
+    "lowpass(cutoff, analog=0) - bit-identical to default linear" {
+        // Default `analog=0.0` must keep the linear closed-form path. Explicit `analog=0.0`
+        // should produce byte-for-byte equal output as the default — guards against
+        // accidental branch into the saturated path when analog is unset.
+        val lin = generate(Ignitors.sine().lowpass(800.0, 2.0), freqHz = 800.0)
+        val ana0 = generate(Ignitors.sine().lowpass(800.0, 2.0, analog = 0.0), freqHz = 800.0)
+
+        for (i in 0 until minOf(lin.size, ana0.size)) {
+            ana0[i] shouldBe lin[i]
+        }
+    }
+
+    "lowpass(cutoff, analog>0) - resonance peak compressed under hot drive" {
+        // Obxd state-dependent damping makes `kEff` grow with state; under hot drive at the
+        // resonance frequency the saturated path must produce a meaningfully smaller peak
+        // than the linear path.
+        val cutoff = 800.0
+        val linBuf = generate(Ignitors.sine().lowpass(cutoff, 5.0, analog = 0.0), freqHz = cutoff)
+        val satBuf = generate(Ignitors.sine().lowpass(cutoff, 5.0, analog = 5.0), freqHz = cutoff)
+
+        var linMax = 0.0
+        var satMax = 0.0
+        val settleStart = linBuf.size / 2
+        for (i in settleStart until minOf(linBuf.size, satBuf.size)) {
+            val lv = kotlin.math.abs(linBuf[i])
+            val sv = kotlin.math.abs(satBuf[i])
+            if (lv > linMax) linMax = lv
+            if (sv > satMax) satMax = sv
+        }
+        linMax shouldBeGreaterThan 1.5
+        satMax shouldBeLessThan (linMax * 0.9)
+    }
+
+    "highpass(cutoff, analog>0) - lows still cut (no complementarity bug)" {
+        // Regression guard mirroring the voice-strip HPF test: a low-frequency sine fed
+        // through a high-cutoff HPF must remain heavily attenuated even with saturation on.
+        val cutoff = 2500.0
+        val lowFreq = 200.0
+        val dry = generate(Ignitors.sine(), freqHz = lowFreq)
+        val wet = generate(Ignitors.sine().highpass(cutoff, 1.0, analog = 3.0), freqHz = lowFreq)
+        wet.rms() shouldBeLessThan (dry.rms() * 0.3)
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // Filters: highpass
     // ═════════════════════════════════════════════════════════════════════════════

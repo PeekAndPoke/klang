@@ -768,9 +768,16 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(2000.0),
         val q: IgnitorDsl = Constant(0.707),
+        /**
+         * Analog character amount. `0` = clean linear filter (default — bit-identical
+         * to pre-Obxd behaviour). Higher values engage the OB-X-style state-dependent
+         * damping in the SVF resonance feedback, compressing the resonance peak.
+         * Typical range 0..10; values around 1–3 give Diva-default warmth.
+         */
+        val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
+            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -781,9 +788,11 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(200.0),
         val q: IgnitorDsl = Constant(0.707),
+        /** See [Lowpass.analog] — same semantics for the HP tap. */
+        val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
+            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -806,9 +815,15 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(1000.0),
         val q: IgnitorDsl = Constant(1.0),
+        /**
+         * Reserved for forward-compat — accepted but currently a no-op (BP saturation
+         * not yet implemented; same pattern as the voice-strip `SvfBPF`).
+         * See [Lowpass.analog] for semantics when implemented.
+         */
+        val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
+            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 
@@ -819,9 +834,11 @@ sealed interface IgnitorDsl {
         val inner: IgnitorDsl,
         val cutoffHz: IgnitorDsl = Constant(1000.0),
         val q: IgnitorDsl = Constant(1.0),
+        /** Reserved for forward-compat — accepted but currently a no-op (see [Bandpass.analog]). */
+        val analog: IgnitorDsl = Constant(0.0),
     ) : IgnitorDsl {
         override fun collectParams(out: MutableList<Param>) {
-            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out)
+            inner.collectParams(out); cutoffHz.collectParams(out); q.collectParams(out); analog.collectParams(out)
         }
     }
 

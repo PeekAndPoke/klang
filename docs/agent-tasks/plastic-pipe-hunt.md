@@ -7,16 +7,16 @@ Last updated: 2026-05-28.
 Snapshot of which humanization features are live on each filter. Use this to
 plan the remaining "fix" work referenced throughout the hunt.
 
-| Filter                       | Linear core | Per-voice cutoff offset |      Coefficient ramp      |     State-dependent saturation      |                   Per-voice OU drift                    |
-|------------------------------|:-----------:|:-----------------------:|:--------------------------:|:-----------------------------------:|:-------------------------------------------------------:|
-| `SvfLPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |              ✓ (Obxd)               | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
-| `SvfHPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |              ✓ (Obxd)               | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
-| `SvfBPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |         open — same pattern         | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
-| `SvfNotch`                   |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |   open — likely skip (no Q peak)    | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
-| `OnePoleLPF`                 |      ✓      |       ✓ (Step 2)        |            n/a             |         n/a (no resonance)          | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
-| `OnePoleHPF`                 |      ✓      |       ✓ (Step 2)        |            n/a             |         n/a (no resonance)          | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
-| `FormantFilter`              |      ✓      |  n/a (vowel-specific)   |            n/a             | open — would change vowel character |                    open — same risk                     |
-| `Ignitor.svf` (ignitor-side) |      ✓      |  n/a (different layer)  | ✓ already (Bresenham lerp) |       open — mirror Obxd port       |                   open — likely defer                   |
+| Filter                       | Linear core | Per-voice cutoff offset |      Coefficient ramp      |                  State-dependent saturation                  |                   Per-voice OU drift                    |
+|------------------------------|:-----------:|:-----------------------:|:--------------------------:|:------------------------------------------------------------:|:-------------------------------------------------------:|
+| `SvfLPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |                           ✓ (Obxd)                           | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `SvfHPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |                           ✓ (Obxd)                           | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `SvfBPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |                     open — same pattern                      | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `SvfNotch`                   |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |                open — likely skip (no Q peak)                | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `OnePoleLPF`                 |      ✓      |       ✓ (Step 2)        |            n/a             |                      n/a (no resonance)                      | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `OnePoleHPF`                 |      ✓      |       ✓ (Step 2)        |            n/a             |                      n/a (no resonance)                      | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `FormantFilter`              |      ✓      |  n/a (vowel-specific)   |            n/a             |             open — would change vowel character              |                    open — same risk                     |
+| `Ignitor.svf` (ignitor-side) |      ✓      |  n/a (different layer)  | ✓ already (Bresenham lerp) | ✓ (Obxd, LP+HP — `analog` param on `Osc.lowpass`/`highpass`) |                   open — likely defer                   |
 
 Step labels refer to the original Phase plan below ("Open backlog" section).
 
@@ -337,6 +337,36 @@ different file.
   even harmonics. Free if we have `tanh` already, but defer.
 - Phase randomization on note-on — already done; oscillator phases start
   randomized via per-voice initial state.
+
+### KlangScript ergonomics — oscillator `freq` default
+
+**Status: not started.** Captured here for visibility, but the underlying
+issue is KlangScript parameter handling rather than analog character.
+
+Today the ~15 KlangScript oscillator methods (`Osc.sine`, `Osc.saw`,
+`Osc.square`, `Osc.triangle`, `Osc.ramp`, `Osc.zawtooth`, `Osc.impulse`,
+`Osc.pulze`, `Osc.supersaw`, `Osc.supersine`, `Osc.supersquare`,
+`Osc.supertri`, `Osc.superramp`, `Osc.pluck`, `Osc.superpluck` —
+`klangscript/.../stdlib/KlangScriptOsc.kt`) declare:
+
+```kotlin
+fun sine(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl = ...
+```
+
+User reports that the complex default value (`IgnitorDsl.Freq` is an
+object, not a literal) cannot be cleanly omitted at KlangScript call sites
+even though Kotlin's default-param syntax would normally allow it. Proposed
+fix:
+
+```kotlin
+fun sine(freq: IgnitorDslLike? = null): IgnitorDsl {
+    val resolved = freq ?: IgnitorDsl.Freq
+    // ...
+}
+```
+
+with the param's KlangScript doc explaining that `null` falls back to the
+per-note frequency. Apply uniformly to all ~15 oscillator methods.
 
 ### Architecture — central `tuning/` package for engine character constants
 

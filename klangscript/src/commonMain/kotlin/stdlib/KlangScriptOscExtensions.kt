@@ -4,7 +4,9 @@ import io.peekandpoke.klang.audio_bridge.AdsrCurve
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.bandpass
 import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.lerp
+import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.lowpass
 import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.minus
 import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.mod
 import io.peekandpoke.klang.script.stdlib.KlangScriptOscExtensions.neg
@@ -38,15 +40,36 @@ object KlangScriptOscExtensions {
 
     // ── Filters ──────────────────────────────────────────────────────────────
 
-    /** Applies a resonant lowpass filter. Cutoff and Q accept Number or IgnitorDsl. */
+    /**
+     * Applies a resonant lowpass filter. Cutoff and Q accept Number or IgnitorDsl.
+     *
+     * @param analog Analog character amount, 0..10. `0` = clean linear filter
+     * (default — bit-identical to pre-analog behaviour). Higher values engage
+     * OB-X-style state-dependent damping that compresses the resonance peak.
+     * 1–3 gives Diva-default warmth; higher = stronger "diode bite".
+     */
     @KlangScript.Method
-    fun lowpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike, q: IgnitorDslLike = 0.707): IgnitorDsl =
-        IgnitorDsl.Lowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl())
+    fun lowpass(
+        self: IgnitorDsl,
+        cutoffHz: IgnitorDslLike,
+        q: IgnitorDslLike = 0.707,
+        analog: IgnitorDslLike = 0.0,
+    ): IgnitorDsl = IgnitorDsl.Lowpass(
+        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        analog = analog.toIgnitorDsl(),
+    )
 
-    /** Applies a resonant highpass filter. Cutoff and Q accept Number or IgnitorDsl. */
+    /** Applies a resonant highpass filter. See [lowpass] for `analog` semantics. */
     @KlangScript.Method
-    fun highpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike, q: IgnitorDslLike = 0.707): IgnitorDsl =
-        IgnitorDsl.Highpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl())
+    fun highpass(
+        self: IgnitorDsl,
+        cutoffHz: IgnitorDslLike,
+        q: IgnitorDslLike = 0.707,
+        analog: IgnitorDslLike = 0.0,
+    ): IgnitorDsl = IgnitorDsl.Highpass(
+        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        analog = analog.toIgnitorDsl(),
+    )
 
     /** Applies a one-pole lowpass filter (gentle rolloff). Alias: onePoleLowpass. */
     @KlangScript.Method
@@ -58,15 +81,34 @@ object KlangScriptOscExtensions {
     fun onePoleLowpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike): IgnitorDsl =
         IgnitorDsl.OnePoleLowpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl())
 
-    /** SVF bandpass filter. Passes frequencies near the cutoff, attenuates others. */
+    /**
+     * SVF bandpass filter. Passes frequencies near the cutoff, attenuates others.
+     *
+     * @param analog Reserved — accepted for API consistency but currently a no-op
+     * (BP saturation not yet implemented). Same range as [lowpass.analog] when implemented.
+     */
     @KlangScript.Method
-    fun bandpass(self: IgnitorDsl, cutoffHz: IgnitorDslLike, q: IgnitorDslLike = 1.0): IgnitorDsl =
-        IgnitorDsl.Bandpass(inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl())
+    fun bandpass(
+        self: IgnitorDsl,
+        cutoffHz: IgnitorDslLike,
+        q: IgnitorDslLike = 1.0,
+        analog: IgnitorDslLike = 0.0,
+    ): IgnitorDsl = IgnitorDsl.Bandpass(
+        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        analog = analog.toIgnitorDsl(),
+    )
 
-    /** SVF notch (band-reject) filter. Removes frequencies near the cutoff, passes others. */
+    /** SVF notch (band-reject) filter. See [bandpass] for `analog` semantics (currently a no-op). */
     @KlangScript.Method
-    fun notch(self: IgnitorDsl, cutoffHz: IgnitorDslLike, q: IgnitorDslLike = 1.0): IgnitorDsl =
-        IgnitorDsl.Notch(inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl())
+    fun notch(
+        self: IgnitorDsl,
+        cutoffHz: IgnitorDslLike,
+        q: IgnitorDslLike = 1.0,
+        analog: IgnitorDslLike = 0.0,
+    ): IgnitorDsl = IgnitorDsl.Notch(
+        inner = self, cutoffHz = cutoffHz.toIgnitorDsl(), q = q.toIgnitorDsl(),
+        analog = analog.toIgnitorDsl(),
+    )
 
     // ── Envelope ─────────────────────────────────────────────────────────────
 
