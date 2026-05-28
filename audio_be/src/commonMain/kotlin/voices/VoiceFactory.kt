@@ -8,7 +8,9 @@ import io.peekandpoke.klang.audio_be.engines.AudioEngine
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
 import io.peekandpoke.klang.audio_be.filters.AudioFilter.Companion.combine
 import io.peekandpoke.klang.audio_be.filters.FILTER_CUTOFF_OFFSET_PER_ANALOG
+import io.peekandpoke.klang.audio_be.filters.FILTER_DRIFT_RELATIVE_TO_OSC
 import io.peekandpoke.klang.audio_be.filters.LowPassHighPassFilters
+import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
 import io.peekandpoke.klang.audio_be.ignitor.IgniteContext
 import io.peekandpoke.klang.audio_be.ignitor.Ignitor
 import io.peekandpoke.klang.audio_be.ignitor.IgnitorRegistry
@@ -35,12 +37,22 @@ import kotlin.random.Random
 class VoiceFactory(
     private val sampleRate: Int,
     private val sampleRateDouble: Double,
+    private val blockFrames: Int,
     private val ignitorRegistry: IgnitorRegistry,
     private val cylinders: Cylinders,
     private val voiceBuffer: AudioBuffer,
     private val freqModBuffer: DoubleArray,
     private val scratchBuffers: ScratchBuffers,
 ) {
+
+    /**
+     * Block rate ≈ sampleRate / blockFrames. Used to configure per-voice filter
+     * `AnalogDrift` instances so that calling `nextMultiplier()` once per block
+     * gives drift trajectories with the correct time constants (the drift coeffs
+     * in `AnalogDriftCoeffs` are derived from the effective update rate, not
+     * the audio rate).
+     */
+    private val driftUpdateRate: Int = (sampleRate / blockFrames.coerceAtLeast(1)).coerceAtLeast(1)
 
     /**
      * Creates a voice from a scheduled voice with absolute timing and resolved sample data.
@@ -76,7 +88,7 @@ class VoiceFactory(
         val analog = data.oscParams?.get("analog") ?: 0.0
         val filters = data.filters.filters.map { it.toFilter(analog) }
         val modulators = data.filters.filters.zip(filters).mapNotNull { (def, filter) ->
-            def.toModulator(filter, sampleRate)
+            def.toModulator(filter, sampleRate, analog)
         }
         val bakedFilters = filters.combine()
 
@@ -338,16 +350,32 @@ class VoiceFactory(
     private fun FilterDef.toModulator(
         filter: AudioFilter,
         sampleRate: Int,
+        analog: Double,
     ): Voice.FilterModulator? {
+        // Non-tunable filters (Formant) can't be modulated at all.
+        if (filter !is AudioFilter.Tunable) return null
+
         val envData = when (this) {
             is FilterDef.LowPass -> this.envelope
             is FilterDef.HighPass -> this.envelope
             is FilterDef.BandPass -> this.envelope
             is FilterDef.Notch -> this.envelope
             is FilterDef.Formant -> null
-        } ?: return null
+        }
 
-        if (filter !is AudioFilter.Tunable) return null
+        // Per-voice slow cutoff drift. Constructed with the block-rate effective
+        // sample rate so calling `nextMultiplier()` once per block in
+        // `FilterModRenderer` produces drift trajectories with the correct
+        // time constants. `analog * FILTER_DRIFT_RELATIVE_TO_OSC` makes the
+        // filter drift proportionally bigger than oscillator pitch drift.
+        val drift = if (analog > 0.0) {
+            AnalogDrift(analog * FILTER_DRIFT_RELATIVE_TO_OSC, driftUpdateRate)
+        } else {
+            null
+        }
+
+        // Nothing to modulate — no envelope AND no drift. Skip the per-block work.
+        if (envData == null && drift == null) return null
 
         val baseCutoff = when (this) {
             is FilterDef.LowPass -> this.cutoffHz
@@ -357,19 +385,31 @@ class VoiceFactory(
             is FilterDef.Formant -> 0.0
         }
 
-        val resolved = envData.resolve()
-        val envelope = Voice.Envelope(
-            attackFrames = resolved.attack * sampleRate,
-            decayFrames = resolved.decay * sampleRate,
-            sustainLevel = resolved.sustain,
-            releaseFrames = resolved.release * sampleRate,
-        )
+        // When there's no envelope but drift is active, build a degenerate envelope
+        // with depth=0 so the per-block `1 + depth*envValue = 1` math leaves the
+        // cutoff untouched by the envelope side — only drift multiplies it.
+        val envelope: Voice.Envelope
+        val depth: Double
+        if (envData != null) {
+            val resolved = envData.resolve()
+            envelope = Voice.Envelope(
+                attackFrames = resolved.attack * sampleRate,
+                decayFrames = resolved.decay * sampleRate,
+                sustainLevel = resolved.sustain,
+                releaseFrames = resolved.release * sampleRate,
+            )
+            depth = resolved.depth
+        } else {
+            envelope = Voice.Envelope(attackFrames = 0.0, decayFrames = 0.0, sustainLevel = 0.0, releaseFrames = 0.0)
+            depth = 0.0
+        }
 
         return Voice.FilterModulator(
             filter = filter,
             envelope = envelope,
-            depth = resolved.depth,
+            depth = depth,
             baseCutoff = baseCutoff,
+            drift = drift,
         )
     }
 

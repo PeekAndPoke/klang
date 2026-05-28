@@ -63,3 +63,18 @@ internal const val FILTER_SMOOTH_SAMPLES: Int = 32
 
 /** `1 / FILTER_SMOOTH_SAMPLES` — pre-divided so the per-sample loop does muls. */
 internal const val FILTER_INV_SMOOTH_SAMPLES: Double = 1.0 / FILTER_SMOOTH_SAMPLES
+
+/**
+ * Filter cutoff drift magnitude, expressed as a multiplier on the oscillator
+ * drift scale. Filters get their own `AnalogDrift` instance (constructed with
+ * `analog × FILTER_DRIFT_RELATIVE_TO_OSC` so the two-layer OU produces a
+ * proportionally bigger drift trajectory than oscillator pitch drift).
+ *
+ * Tuned by ear: filter cutoff is less perceptually sensitive than pitch, so
+ * drift can be a few times wider before sounding "out of tune". At `analog=1`
+ * with this constant = `5.0`, the slow layer wanders ±4 cents over ~10 s and
+ * the fast layer adds ±1 cent of micro-wobble — Diva-default territory.
+ *
+ * Consumer: `VoiceFactory.toModulator` (creates the per-filter drift).
+ */
+internal const val FILTER_DRIFT_RELATIVE_TO_OSC: Double = 5.0

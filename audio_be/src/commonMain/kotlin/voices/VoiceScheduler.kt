@@ -153,6 +153,7 @@ class VoiceScheduler(
     private val voiceFactory = VoiceFactory(
         sampleRate = options.sampleRate,
         sampleRateDouble = options.sampleRateDouble,
+        blockFrames = options.blockFrames,
         ignitorRegistry = options.ignitorRegistry,
         cylinders = options.cylinders,
         voiceBuffer = voiceBuffer,

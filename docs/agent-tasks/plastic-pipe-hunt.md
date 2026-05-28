@@ -1,6 +1,24 @@
 # The Plastic-Pipe Hunt
 
-Last updated: 2026-05-27.
+Last updated: 2026-05-28.
+
+## Filter humanization status
+
+Snapshot of which humanization features are live on each filter. Use this to
+plan the remaining "fix" work referenced throughout the hunt.
+
+| Filter                       | Linear core | Per-voice cutoff offset |      Coefficient ramp      |     State-dependent saturation      |                   Per-voice OU drift                    |
+|------------------------------|:-----------:|:-----------------------:|:--------------------------:|:-----------------------------------:|:-------------------------------------------------------:|
+| `SvfLPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |              ✓ (Obxd)               | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `SvfHPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |              ✓ (Obxd)               | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `SvfBPF`                     |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |         open — same pattern         | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `SvfNotch`                   |      ✓      |       ✓ (Step 2)        |         ✓ (Step 4)         |   open — likely skip (no Q peak)    | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `OnePoleLPF`                 |      ✓      |       ✓ (Step 2)        |            n/a             |         n/a (no resonance)          | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `OnePoleHPF`                 |      ✓      |       ✓ (Step 2)        |            n/a             |         n/a (no resonance)          | ✓ (Step 3, all `Tunable` filters drift when `analog>0`) |
+| `FormantFilter`              |      ✓      |  n/a (vowel-specific)   |            n/a             | open — would change vowel character |                    open — same risk                     |
+| `Ignitor.svf` (ignitor-side) |      ✓      |  n/a (different layer)  | ✓ already (Bresenham lerp) |       open — mirror Obxd port       |                   open — likely defer                   |
+
+Step labels refer to the original Phase plan below ("Open backlog" section).
 
 Multi-phase investigation into why the Klang audio engine sounded synthetic /
 "plastic pipe" on warm-analog patches — most clearly heard on the bass + pad of
@@ -319,6 +337,110 @@ different file.
   even harmonics. Free if we have `tanh` already, but defer.
 - Phase randomization on note-on — already done; oscillator phases start
   randomized via per-voice initial state.
+
+### Architecture — central `tuning/` package for engine character constants
+
+**Status: not started.** Forward-planning entry for when the engine wants to
+expose humanization knobs as user-tunable parameters.
+
+#### Problem
+
+Engine "feel" constants are spread across two files in two different domain
+folders:
+
+- `audio_be/.../ignitor/AnalogDriftCoeffs.kt` — oscillator drift tuning
+  (fast/slow τ, peak cents, mean-reversion ratio) + the `AnalogDriftCoeffs`
+  helper class and `analogDriftGaussian` Box-Muller helper.
+- `audio_be/.../filters/FilterHumanizationCoeffs.kt` — filter humanization
+  tuning (per-voice cutoff offset, drive, smooth samples, drift ratio).
+
+Fine today but doesn't scale: as more humanization knobs land (reverb tail
+tilt, compressor make-up character, super-osc spread, etc.) they'll get
+scattered further. Long-term goal: **expose these as engine parameters**
+(runtime-tunable from UI or patches). A central location now makes that
+future refactor mechanical, not architectural.
+
+#### Proposed layout
+
+```
+audio_be/src/commonMain/kotlin/tuning/
+├── AnalogDriftTuning.kt    ← constants only (moved from AnalogDriftCoeffs.kt)
+└── FilterTuning.kt         ← was FilterHumanizationCoeffs.kt
+```
+
+#### Move recipe
+
+`AnalogDriftCoeffs.kt` is **split**:
+
+- **Constants** (10 of them: `ANALOG_FAST_TAU_SEC`, `ANALOG_SLOW_TAU_SEC`,
+  `ANALOG_MEAN_REVERSION_RATIO`, `ANALOG_FAST_PEAK_CENTS`,
+  `ANALOG_SLOW_PEAK_CENTS`, `ANALOG_CENT_PER_MUL`, `ANALOG_PEAK_SIGMAS`,
+  `ANALOG_SIGMA_X`, `ANALOG_INT_INV`) → `tuning/AnalogDriftTuning.kt`.
+- **Helper class `AnalogDriftCoeffs`** and **`analogDriftGaussian()`** stay
+  in `ignitor/` (rename file to `AnalogDriftMath.kt`) — they're the math
+  layer that consumes the tuning, not tunable values themselves.
+
+`FilterHumanizationCoeffs.kt` moves whole-cloth to `tuning/FilterTuning.kt`
+(already only contains constants — 5 of them).
+
+#### Visibility caveat
+
+Keep `@PublishedApi internal const val` so the
+`PolyAnalogDrift.advanceAll` inline function still expands at the call site
+on Kotlin/JS. `ANALOG_INT_INV` and `FILTER_INV_SMOOTH_SAMPLES` specifically
+must stay `const val` — they're read inside inline functions.
+
+#### Consumer updates
+
+Inventory of imports to update:
+
+- `audio_be/.../voices/VoiceFactory.kt` — `FILTER_CUTOFF_OFFSET_PER_ANALOG`,
+  `FILTER_DRIFT_RELATIVE_TO_OSC`
+- `audio_be/.../ignitor/PolyAnalogDrift.kt` — `ANALOG_INT_INV` (inline)
+- `audio_be/.../filters/LowPassHighPassFilters.kt` —
+  `FILTER_SMOOTH_SAMPLES`, `FILTER_INV_SMOOTH_SAMPLES`,
+  `FILTER_DRIVE_PER_ANALOG`
+
+Pattern: `import io.peekandpoke.klang.audio_be.{filters,ignitor}.X` →
+`import io.peekandpoke.klang.audio_be.tuning.X`.
+
+#### Future — runtime engine parameters (separate later PR)
+
+Once the `tuning/` package exists, the runtime-exposure work becomes:
+
+```kotlin
+// tuning/EngineTuningConfig.kt
+data class EngineTuningConfig(
+  val analog: AnalogDriftSettings = AnalogDriftSettings(),
+  val filter: FilterSettings = FilterSettings(),
+  // future: reverb, compressor, super-osc, etc.
+) {
+  data class AnalogDriftSettings(
+    val fastTauSec: Double = 0.05,        // was ANALOG_FAST_TAU_SEC
+    val slowTauSec: Double = 10.0,
+    val fastPeakCents: Double = 0.2,
+    val slowPeakCents: Double = 0.8,
+    // do-not-expose: ANALOG_CENT_PER_MUL, ANALOG_SIGMA_X, ANALOG_INT_INV
+  )
+  data class FilterSettings(
+    val cutoffOffsetPerAnalog: Double = 0.003,
+    val drivePerAnalog: Double = 0.5,
+    val driftRelativeToOsc: Double = 5.0,
+    // do-not-expose: FILTER_SMOOTH_SAMPLES (used inline)
+  )
+}
+```
+
+Migration cost at that point: each consumer takes an `EngineTuningConfig`
+ctor argument (via `VoiceFactory` / `VoiceScheduler` plumbing); today's
+`const val` references become field reads on the config. ~1 hour of
+mechanical work.
+
+**Constraint**: per-sample constants accessed from inline functions
+(`ANALOG_INT_INV`, `FILTER_INV_SMOOTH_SAMPLES`) cannot become runtime-
+mutable without breaking inlining. They stay as `const val` even in the
+future system — documented as "do-not-make-mutable" at the top of the
+tuning files.
 
 ---
 

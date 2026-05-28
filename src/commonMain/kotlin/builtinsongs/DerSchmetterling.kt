@@ -14,7 +14,7 @@ internal val derSchmetterlingSong = Song(
 import * from "stdlib"                                                                                                           //
 import * from "sprudel"                                                                                                         ////
                                                                                                                                //  //
-let feel = 2.0   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                     //    //
+let feel = 3.0   // 0.0 .. mechanical | 10.0 .. old vinyl                                                                     //    //
 let snd  = 900   // sine.range(125, 300).slow(5).add(sine.range(125, 300).slow(13))   // 100 .. 2000                         //      //
                                                                                                                             //        //
 stack(                                                                                                         //////////////          //////////////
@@ -22,7 +22,7 @@ stack(                                                                          
   n("<[-7 0 2 4] [-7 0 4 2] [-5 -1 2 4] [-6 -1 3 1]>*2")                                                           //          DISCO!          //
     .orbit(0).scale("e4:minor").sound("supersaw").unison(8).detune(0.10).analog(feel)                                //       FOREVER!       //
     .hpf(600).lpf(1800).lpe(1.5).lpadsr("0.02:0.2:0.65:0.1").warmth(0.1)                                               //                  //
-    .gain(0.70).distort("0.5:gentle:4").postgain(0.23) // . solo()                                                      //       //      //
+    .gain(0.70).distort("0.1:gentle:4").postgain(0.50) // . solo()                                                      //       //      //
     .adsr("0.01:0.2:0.65:0.1").clip(0.95)                                                                              //     //    //    //
     .release("<0.105!16 0.4!16 0.110!16 0.325!16 0.16!16 0.35!16 0.09!16 0.4!16 0.095!16 0.5!16>")                    //   //          //  //
     .superimpose(                                                                                                    // //               // //

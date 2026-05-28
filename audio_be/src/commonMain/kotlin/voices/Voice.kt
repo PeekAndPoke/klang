@@ -3,6 +3,7 @@ package io.peekandpoke.klang.audio_be.voices
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.cylinders.Cylinders
 import io.peekandpoke.klang.audio_be.filters.AudioFilter
+import io.peekandpoke.klang.audio_be.ignitor.AnalogDrift
 import io.peekandpoke.klang.audio_be.ignitor.ScratchBuffers
 import io.peekandpoke.klang.audio_be.voices.strip.BlockContext
 import io.peekandpoke.klang.audio_be.voices.strip.BlockRenderer
@@ -202,6 +203,13 @@ class Voice(
         val envelope: Envelope,
         val depth: Double,
         val baseCutoff: Double,
+        /**
+         * Per-voice slow cutoff drift (OU process). When non-null, `FilterModRenderer`
+         * advances the drift once per block and multiplies its output into the
+         * envelope-derived cutoff. Set when the patch has `analog > 0`. See
+         * [io.peekandpoke.klang.audio_be.filters.FILTER_DRIFT_RELATIVE_TO_OSC].
+         */
+        val drift: AnalogDrift? = null,
     )
 
     class Distort(val amount: Double, val shape: String = "soft", val oversample: Int = 0)
