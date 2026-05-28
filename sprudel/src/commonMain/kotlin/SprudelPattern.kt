@@ -273,13 +273,16 @@ interface SprudelPattern : KlangPattern {
 
     /**
      * KlangPattern bridge: converts sprudel's Rational-based queryArc to the generic cycle-based API.
-     * Handles onset filtering and sorting.
+     * Handles onset filtering.
+     *
+     * Ordering: events come back grouped by cycle (because `_splitQueries` iterates cycles in order),
+     * but no within-cycle ordering is guaranteed. Downstream consumers (audio backend min-heap on
+     * startTime, UI signal events with absolute times) don't depend on it.
      */
     override fun queryEvents(fromCycles: Double, toCycles: Double, cps: Double): List<KlangPatternEvent> {
         val ctx = QueryContext { set(QueryContext.cpsKey, cps) }
         return queryArcContextual(Rational(fromCycles), Rational(toCycles), ctx)
             .filter { it.isOnset }
-            .sortedBy { it.part.begin }
     }
 }
 

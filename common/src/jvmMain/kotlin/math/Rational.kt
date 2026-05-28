@@ -146,10 +146,24 @@ actual class Rational private constructor(
         }
 
         val g = gcd(denominator, other.denominator)
-        val num = numerator * (other.denominator / g) + other.numerator * (denominator / g)
-        val den = denominator * (other.denominator / g)
 
-        return create(num, den)
+        // Coprime denominators (g == 1): result is already reduced (gcd(num, g) = 1), so skip
+        // the divisions and the second gcd. Includes every "add an integer" case.
+        if (g == 1L) {
+            val num = numerator * other.denominator + other.numerator * denominator
+            val den = denominator * other.denominator
+            return Rational(num, den)
+        }
+
+        val otherDOverG = other.denominator / g
+        val dOverG = denominator / g
+        val num = numerator * otherDOverG + other.numerator * dOverG
+        val den = denominator * otherDOverG
+
+        // Smart reduction: inputs are reduced, so gcd(num, den) = gcd(num, g). The smaller `g`
+        // is much cheaper to reduce against than the full lcm. See JS impl for the proof.
+        val g2 = gcd(num, g)
+        return if (g2 == 1L) Rational(num, den) else Rational(num / g2, den / g2)
     }
 
     actual operator fun minus(other: Rational): Rational {

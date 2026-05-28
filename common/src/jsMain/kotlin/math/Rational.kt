@@ -5,6 +5,147 @@ import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.pow
 
+// =============================================================================
+// File-private BigInt constants and helpers.
+// Kept at top level (not in Companion) so accesses on the hot path don't pay
+// the `Companion.getInstance()` accessor cost in compiled Kotlin/JS.
+// =============================================================================
+
+private val BI_ZERO: dynamic = js("BigInt(0)")
+private val BI_ONE: dynamic = js("BigInt(1)")
+private val BI_NEG_ONE: dynamic = js("BigInt(-1)")
+
+private fun intToBigInt(v: Int): dynamic = js("BigInt(v)")
+private fun longToBigInt(v: Long): dynamic = js("BigInt(v.toString())")
+private fun doubleToBigInt(v: Double): dynamic = js("BigInt(Math.trunc(v))")
+private fun bigIntToInt(v: dynamic): Int = (js("Number(v)") as Double).toInt()
+private fun bigIntToLong(v: dynamic): Long = v.toString().toLong()
+private fun bigIntToDouble(v: dynamic): Double = js("Number(v)") as Double
+
+private fun bigIntAdd(a: dynamic, b: dynamic): dynamic = js("a + b")
+private fun bigIntMul(a: dynamic, b: dynamic): dynamic = js("a * b")
+private fun bigIntDiv(a: dynamic, b: dynamic): dynamic = js("a / b")
+private fun bigIntRem(a: dynamic, b: dynamic): dynamic = js("a % b")
+private fun bigIntNeg(a: dynamic): dynamic = js("(-a)")
+
+private fun bigIntEq(a: dynamic, b: dynamic): Boolean = js("a === b") as Boolean
+private fun bigIntGt(a: dynamic, b: dynamic): Boolean = js("a > b") as Boolean
+private fun bigIntLt(a: dynamic, b: dynamic): Boolean = js("a < b") as Boolean
+
+private fun bigIntAbs(v: dynamic): dynamic =
+    if (bigIntLt(v, BI_ZERO)) bigIntNeg(v) else v
+
+private fun bigIntSign(v: dynamic): Int = when {
+    bigIntGt(v, BI_ZERO) -> 1
+    bigIntLt(v, BI_ZERO) -> -1
+    else -> 0
+}
+
+private fun gcd(a: dynamic, b: dynamic): dynamic {
+    var x = bigIntAbs(a)
+    var y = bigIntAbs(b)
+    while (!bigIntEq(y, BI_ZERO)) {
+        val t = y
+        y = bigIntRem(x, y)
+        x = t
+    }
+    return x
+}
+
+private fun doubleToFractionBigInt(
+    value: Double,
+    epsilon: Double = 1.0E-10,
+    maxDenominator: dynamic = js("BigInt(1000000000)"),
+): Pair<dynamic, dynamic> {
+    var n0: dynamic = BI_ZERO
+    var d0: dynamic = BI_ONE
+    var n1: dynamic = BI_ONE
+    var d1: dynamic = BI_ZERO
+    var v = value
+    var count = 0
+
+    while (count < 100) {
+        val aDouble = floor(v)
+        val a: dynamic = doubleToBigInt(aDouble)
+
+        val n2 = bigIntAdd(n0, bigIntMul(a, n1))
+        val d2 = bigIntAdd(d0, bigIntMul(a, d1))
+
+        if (bigIntGt(d2, maxDenominator)) break
+
+        n0 = n1; n1 = n2
+        d0 = d1; d1 = d2
+
+        val currentVal = bigIntToDouble(n1) / bigIntToDouble(d1)
+        if (abs(value - currentVal) < epsilon) break
+
+        if (abs(v - aDouble) < 1e-15) break
+
+        v = 1.0 / (v - aDouble)
+        count++
+    }
+    return Pair(n1, d1)
+}
+
+// Factory: computes sign by inspecting the numerator. Callers that already know the sign
+// (most arithmetic paths) should use `ofKnownSign` instead.
+private fun of(n: dynamic, d: dynamic): Rational {
+    val dIsZero = bigIntEq(d, BI_ZERO)
+    return Rational.create(
+        n = n, d = d,
+        isNaN = dIsZero && bigIntEq(n, BI_ZERO),
+        isInfinite = dIsZero && !bigIntEq(n, BI_ZERO),
+        sgn = bigIntSign(n),
+    )
+}
+
+// Fast factory: caller asserts the sign. Skips the `bigIntSign(n)` call that `of()` would do.
+// Invariant: sgn must match `bigIntSign(n)`, and `d` must be non-negative.
+private fun ofKnownSign(n: dynamic, d: dynamic, sgn: Int): Rational {
+    val dIsZero = bigIntEq(d, BI_ZERO)
+    return Rational.create(
+        n = n, d = d,
+        isNaN = dIsZero && sgn == 0,
+        isInfinite = dIsZero && sgn != 0,
+        sgn = sgn,
+    )
+}
+
+// Fastest factory: caller guarantees a finite value (denominator strictly positive) AND the sign.
+// Skips the `bigIntEq(d, BI_ZERO)` NaN/Infinity probe. Use only when the denominator cannot be zero
+// (e.g. results of arithmetic where both inputs were finite).
+private fun ofFinite(n: dynamic, d: dynamic, sgn: Int): Rational =
+    Rational.create(n = n, d = d, isNaN = false, isInfinite = false, sgn = sgn)
+
+private fun createBI(numerator: dynamic, denominator: dynamic): Rational {
+    if (bigIntEq(denominator, BI_ZERO)) {
+        if (bigIntEq(numerator, BI_ZERO)) return Rational.NaN
+        val numIsPos = bigIntGt(numerator, BI_ZERO)
+        return ofKnownSign(
+            if (numIsPos) BI_ONE else BI_NEG_ONE,
+            BI_ZERO,
+            if (numIsPos) 1 else -1,
+        )
+    }
+    if (bigIntEq(numerator, BI_ZERO)) return Rational.ZERO
+
+    val common = gcd(numerator, denominator)
+    val n = bigIntDiv(numerator, common)
+    val d = bigIntDiv(denominator, common)
+
+    // numerator and denominator are both non-zero here. Compute signs from the originals;
+    // common is positive (gcd always is), so dividing preserves sign. Result is finite.
+    val numPos = bigIntGt(numerator, BI_ZERO)
+    val denPos = bigIntGt(denominator, BI_ZERO)
+    val finalSgn = if (numPos == denPos) 1 else -1
+
+    return if (denPos) {
+        ofFinite(n, d, finalSgn)
+    } else {
+        ofFinite(bigIntNeg(n), bigIntNeg(d), finalSgn)
+    }
+}
+
 /**
  * JS actual: Native BigInt-based numerator/denominator.
  * Avoids Kotlin/JS Long boxing overhead by keeping all arithmetic in BigInt-land.
@@ -14,45 +155,51 @@ import kotlin.math.pow
 actual class Rational private constructor(
     /** BigInt numerator */
     private val n: dynamic,
-    /** BigInt denominator */
+    /** BigInt denominator (always non-negative; sign normalized onto numerator). */
     private val d: dynamic,
     /** Precomputed flags to avoid repeated BigInt comparisons on the hot path */
     actual val isNaN: Boolean,
     actual val isInfinite: Boolean,
+    /** Precomputed sign: -1, 0, +1. Equals sign(n) given the d-non-negative invariant. */
+    private val sgn: Int,
 ) : Comparable<Rational> {
 
     actual val numerator: Long get() = bigIntToLong(n)
     actual val denominator: Long get() = bigIntToLong(d)
 
     actual companion object {
-        // BigInt constants
-        private val BI_ZERO: dynamic = js("BigInt(0)")
-        private val BI_ONE: dynamic = js("BigInt(1)")
-        private val BI_NEG_ONE: dynamic = js("BigInt(-1)")
 
-        /** Private factory that precomputes isNaN/isInfinite flags */
-        private fun of(n: dynamic, d: dynamic): Rational {
-            val dIsZero = bigIntEq(d, BI_ZERO)
-            return Rational(
-                n = n, d = d,
-                isNaN = dIsZero && bigIntEq(n, BI_ZERO),
-                isInfinite = dIsZero && !bigIntEq(n, BI_ZERO),
-            )
+        /** Internal hook so top-level factories can construct the class. */
+        internal fun create(n: dynamic, d: dynamic, isNaN: Boolean, isInfinite: Boolean, sgn: Int): Rational =
+            Rational(n, d, isNaN, isInfinite, sgn)
+
+        actual val ZERO = ofKnownSign(BI_ZERO, BI_ONE, 0)
+        actual val QUARTER = ofKnownSign(BI_ONE, js("BigInt(4)"), 1)
+        actual val HALF = ofKnownSign(BI_ONE, js("BigInt(2)"), 1)
+        actual val ONE = ofKnownSign(BI_ONE, BI_ONE, 1)
+        actual val TWO = ofKnownSign(js("BigInt(2)"), BI_ONE, 1)
+        actual val MINUS_ONE = ofKnownSign(BI_NEG_ONE, BI_ONE, -1)
+        actual val POSITIVE_INFINITY = ofKnownSign(BI_ONE, BI_ZERO, 1)
+        actual val NEGATIVE_INFINITY = ofKnownSign(BI_NEG_ONE, BI_ZERO, -1)
+        actual val NaN = ofKnownSign(BI_ZERO, BI_ZERO, 0)
+
+        actual operator fun invoke(value: Long): Rational {
+            val sgn = when {
+                value > 0L -> 1
+                value < 0L -> -1
+                else -> 0
+            }
+            return ofKnownSign(longToBigInt(value), BI_ONE, sgn)
         }
 
-        actual val ZERO = of(BI_ZERO, BI_ONE)
-        actual val QUARTER = of(BI_ONE, js("BigInt(4)"))
-        actual val HALF = of(BI_ONE, js("BigInt(2)"))
-        actual val ONE = of(BI_ONE, BI_ONE)
-        actual val TWO = of(js("BigInt(2)"), BI_ONE)
-        actual val MINUS_ONE = of(BI_NEG_ONE, BI_ONE)
-        actual val POSITIVE_INFINITY = of(BI_ONE, BI_ZERO)
-        actual val NEGATIVE_INFINITY = of(BI_NEG_ONE, BI_ZERO)
-        actual val NaN = of(BI_ZERO, BI_ZERO)
-
-        actual operator fun invoke(value: Long): Rational = of(longToBigInt(value), BI_ONE)
-
-        actual operator fun invoke(value: Int): Rational = of(intToBigInt(value), BI_ONE)
+        actual operator fun invoke(value: Int): Rational {
+            val sgn = when {
+                value > 0 -> 1
+                value < 0 -> -1
+                else -> 0
+            }
+            return ofKnownSign(intToBigInt(value), BI_ONE, sgn)
+        }
 
         actual operator fun invoke(value: Double): Rational {
             if (value.isNaN()) return NaN
@@ -60,7 +207,7 @@ actual class Rational private constructor(
             if (value == 0.0) return ZERO
 
             val (bn, bd) = doubleToFractionBigInt(abs(value))
-            return if (value < 0) of(bigIntNeg(bn), bd) else of(bn, bd)
+            return if (value < 0) ofKnownSign(bigIntNeg(bn), bd, -1) else ofKnownSign(bn, bd, 1)
         }
 
         actual fun parse(value: String): Rational {
@@ -91,106 +238,9 @@ actual class Rational private constructor(
             return createBI(longToBigInt(numerator), longToBigInt(denominator))
         }
 
-        /** Internal create that stays in BigInt-land */
-        private fun createBI(numerator: dynamic, denominator: dynamic): Rational {
-            if (bigIntEq(denominator, BI_ZERO)) {
-                return if (bigIntEq(numerator, BI_ZERO)) {
-                    NaN
-                } else {
-                    of(if (bigIntGt(numerator, BI_ZERO)) BI_ONE else BI_NEG_ONE, BI_ZERO)
-                }
-            }
-            if (bigIntEq(numerator, BI_ZERO)) return ZERO
-
-            val common = gcd(numerator, denominator)
-            val n = bigIntDiv(numerator, common)
-            val d = bigIntDiv(denominator, common)
-
-            return if (bigIntLt(d, BI_ZERO)) {
-                of(bigIntNeg(n), bigIntNeg(d))
-            } else {
-                of(n, d)
-            }
-        }
-
         actual fun Number.toRational(): Rational = invoke(this.toDouble())
 
         actual fun List<Rational>.sum(): Rational = fold(ZERO) { acc, r -> acc + r }
-
-        private fun doubleToFractionBigInt(
-            value: Double,
-            epsilon: Double = 1.0E-10,
-            maxDenominator: dynamic = js("BigInt(1000000000)"),
-        ): Pair<dynamic, dynamic> {
-            var n0: dynamic = BI_ZERO
-            var d0: dynamic = BI_ONE
-            var n1: dynamic = BI_ONE
-            var d1: dynamic = BI_ZERO
-            var v = value
-            var count = 0
-
-            while (count < 100) {
-                val aDouble = floor(v)
-                val a: dynamic = doubleToBigInt(aDouble)
-
-                val n2 = bigIntAdd(n0, bigIntMul(a, n1))
-                val d2 = bigIntAdd(d0, bigIntMul(a, d1))
-
-                if (bigIntGt(d2, maxDenominator)) break
-
-                n0 = n1; n1 = n2
-                d0 = d1; d1 = d2
-
-                val currentVal = bigIntToDouble(n1) / bigIntToDouble(d1)
-                if (abs(value - currentVal) < epsilon) break
-
-                if (abs(v - aDouble) < 1e-15) break
-
-                v = 1.0 / (v - aDouble)
-                count++
-            }
-            return Pair(n1, d1)
-        }
-
-        private fun gcd(a: dynamic, b: dynamic): dynamic {
-            var x = bigIntAbs(a)
-            var y = bigIntAbs(b)
-            while (!bigIntEq(y, BI_ZERO)) {
-                val t = y
-                y = bigIntRem(x, y)
-                x = t
-            }
-            return x
-        }
-
-        // --- BigInt helper functions ---
-
-        private fun intToBigInt(v: Int): dynamic = js("BigInt(v)")
-        private fun longToBigInt(v: Long): dynamic = js("BigInt(v.toString())")
-        private fun doubleToBigInt(v: Double): dynamic = js("BigInt(Math.trunc(v))")
-        private fun bigIntToInt(v: dynamic): Int = (js("Number(v)") as Double).toInt()
-        private fun bigIntToLong(v: dynamic): Long = v.toString().toLong()
-        private fun bigIntToDouble(v: dynamic): Double = js("Number(v)") as Double
-
-        private fun bigIntAdd(a: dynamic, b: dynamic): dynamic = js("a + b")
-        private fun bigIntMul(a: dynamic, b: dynamic): dynamic = js("a * b")
-        private fun bigIntDiv(a: dynamic, b: dynamic): dynamic = js("a / b")
-        private fun bigIntRem(a: dynamic, b: dynamic): dynamic = js("a % b")
-        private fun bigIntNeg(a: dynamic): dynamic = js("(-a)")
-
-        private fun bigIntEq(a: dynamic, b: dynamic): Boolean = js("a === b") as Boolean
-        private fun bigIntGt(a: dynamic, b: dynamic): Boolean = js("a > b") as Boolean
-        private fun bigIntLt(a: dynamic, b: dynamic): Boolean = js("a < b") as Boolean
-        private fun bigIntGte(a: dynamic, b: dynamic): Boolean = js("a >= b") as Boolean
-
-        private fun bigIntAbs(v: dynamic): dynamic =
-            if (bigIntLt(v, BI_ZERO)) bigIntNeg(v) else v
-
-        private fun bigIntSign(v: dynamic): Int = when {
-            bigIntGt(v, BI_ZERO) -> 1
-            bigIntLt(v, BI_ZERO) -> -1
-            else -> 0
-        }
     }
 
     // --- Arithmetic ---
@@ -199,7 +249,7 @@ actual class Rational private constructor(
         if (isNaN || other.isNaN) return NaN
 
         if (isInfinite || other.isInfinite) {
-            return if (isInfinite && other.isInfinite && bigIntSign(n) != bigIntSign(other.n)) {
+            return if (isInfinite && other.isInfinite && sgn != other.sgn) {
                 NaN
             } else {
                 if (isInfinite) this else other
@@ -207,10 +257,31 @@ actual class Rational private constructor(
         }
 
         val g = gcd(d, other.d)
-        val num = bigIntAdd(bigIntMul(n, bigIntDiv(other.d, g)), bigIntMul(other.n, bigIntDiv(d, g)))
-        val den = bigIntMul(d, bigIntDiv(other.d, g))
 
-        return createBI(num, den)
+        // Coprime denominators (g == 1) — includes every "add an integer/cycle offset" case.
+        // Proof: gcd(num, den) = gcd(num, g) = gcd(num, 1) = 1, so the result is already reduced.
+        // Skip the divisions and the second gcd entirely. Common on the hot path.
+        if (bigIntEq(g, BI_ONE)) {
+            val num = bigIntAdd(bigIntMul(n, other.d), bigIntMul(other.n, d))
+            val den = bigIntMul(d, other.d)
+            val resultSgn = if (sgn == other.sgn) sgn else bigIntSign(num)
+            return ofFinite(num, den, resultSgn)
+        }
+
+        val otherDOverG = bigIntDiv(other.d, g)
+        val dOverG = bigIntDiv(d, g)
+        val num = bigIntAdd(bigIntMul(n, otherDOverG), bigIntMul(other.n, dOverG))
+        val den = bigIntMul(d, otherDOverG)
+
+        // Smart reduction: inputs are reduced, so gcd(num, den) = gcd(num, g) (much smaller).
+        val g2 = gcd(num, g)
+        // Result sign matches both inputs when they share a sign; otherwise probe `num`.
+        val resultSgn = if (sgn == other.sgn) sgn else bigIntSign(num)
+        return if (bigIntEq(g2, BI_ONE)) {
+            ofFinite(num, den, resultSgn)
+        } else {
+            ofFinite(bigIntDiv(num, g2), bigIntDiv(den, g2), resultSgn)
+        }
     }
 
     actual operator fun minus(other: Rational): Rational {
@@ -222,10 +293,8 @@ actual class Rational private constructor(
         if (isNaN || other.isNaN) return NaN
 
         if (isInfinite || other.isInfinite) {
-            if (this == ZERO || other == ZERO) return NaN
-            val thisSign = bigIntSign(n)
-            val otherSign = bigIntSign(other.n)
-            return if (thisSign == otherSign) POSITIVE_INFINITY else NEGATIVE_INFINITY
+            if (sgn == 0 || other.sgn == 0) return NaN
+            return if (sgn == other.sgn) POSITIVE_INFINITY else NEGATIVE_INFINITY
         }
 
         return createBI(bigIntMul(n, other.n), bigIntMul(d, other.d))
@@ -234,19 +303,15 @@ actual class Rational private constructor(
     actual operator fun div(other: Rational): Rational {
         if (isNaN || other.isNaN) return NaN
 
-        if (bigIntEq(other.n, BI_ZERO)) {
-            return if (bigIntEq(n, BI_ZERO)) {
-                NaN
-            } else {
-                if (bigIntGt(n, BI_ZERO)) POSITIVE_INFINITY else NEGATIVE_INFINITY
-            }
+        if (other.sgn == 0) {
+            return if (sgn == 0) NaN else if (sgn > 0) POSITIVE_INFINITY else NEGATIVE_INFINITY
         }
 
         return createBI(bigIntMul(n, other.d), bigIntMul(d, other.n))
     }
 
     actual operator fun rem(other: Rational): Rational {
-        if (isNaN || other.isNaN || bigIntEq(other.n, BI_ZERO)) return NaN
+        if (isNaN || other.isNaN || other.sgn == 0) return NaN
         val div = this / other
         val trunc = createBI(bigIntDiv(div.n, div.d), BI_ONE)
         return this - (other * trunc)
@@ -254,7 +319,7 @@ actual class Rational private constructor(
 
     actual operator fun unaryMinus(): Rational {
         if (isNaN) return NaN
-        return of(bigIntNeg(n), d)
+        return ofKnownSign(bigIntNeg(n), d, -sgn)
     }
 
     actual operator fun plus(other: Number): Rational = this + other.toRational()
@@ -270,12 +335,9 @@ actual class Rational private constructor(
         if (isNaN) return 1
         if (other.isNaN) return -1
 
-        val thisSign = bigIntSign(n)
-        val otherSign = bigIntSign(other.n)
+        if (sgn != other.sgn) return sgn - other.sgn
 
-        if (thisSign != otherSign) return thisSign - otherSign
-
-        // Cross-multiply for exact comparison (BigInt can't overflow)
+        // Same sign — cross-multiply for exact comparison (BigInt can't overflow)
         val lhs = bigIntMul(n, other.d)
         val rhs = bigIntMul(other.n, d)
 
@@ -292,11 +354,7 @@ actual class Rational private constructor(
         if (isNaN) return Double.NaN
 
         if (isInfinite) {
-            return if (bigIntGt(n, BI_ZERO)) {
-            Double.POSITIVE_INFINITY
-        } else {
-            Double.NEGATIVE_INFINITY
-        }
+            return if (sgn > 0) Double.POSITIVE_INFINITY else Double.NEGATIVE_INFINITY
         }
 
         return bigIntToDouble(n) / bigIntToDouble(d)
@@ -314,7 +372,7 @@ actual class Rational private constructor(
 
     actual fun toFractionString(): String {
         if (isNaN) return "NaN"
-        if (isInfinite) return if (bigIntGt(n, BI_ZERO)) "Infinity" else "-Infinity"
+        if (isInfinite) return if (sgn > 0) "Infinity" else "-Infinity"
 
         return "$n/$d"
     }
@@ -324,11 +382,7 @@ actual class Rational private constructor(
     actual fun abs(): Rational {
         if (isNaN) return NaN
 
-        return if (bigIntLt(n, BI_ZERO)) {
-            of(bigIntNeg(n), d)
-        } else {
-            this
-        }
+        return if (sgn < 0) ofKnownSign(bigIntNeg(n), d, 1) else this
     }
 
     actual fun floor(): Rational {
@@ -338,7 +392,7 @@ actual class Rational private constructor(
         val res = bigIntDiv(n, d)
         val exact = bigIntEq(bigIntRem(n, d), BI_ZERO)
 
-        return if (bigIntGte(n, BI_ZERO) || exact) {
+        return if (sgn >= 0 || exact) {
             of(res, BI_ONE)
         } else {
             of(bigIntAdd(res, BI_NEG_ONE), BI_ONE)
@@ -352,7 +406,7 @@ actual class Rational private constructor(
         val res = bigIntDiv(n, d)
         val exact = bigIntEq(bigIntRem(n, d), BI_ZERO)
 
-        return if (!bigIntGt(n, BI_ZERO) || exact) {
+        return if (sgn <= 0 || exact) {
             of(res, BI_ONE)
         } else {
             of(bigIntAdd(res, BI_ONE), BI_ONE)
@@ -374,11 +428,7 @@ actual class Rational private constructor(
 
         val roundedAbs = if (frac >= HALF) floor + ONE else floor
 
-        return if (bigIntLt(n, BI_ZERO)) {
-            -roundedAbs
-        } else {
-            roundedAbs
-        }
+        return if (sgn < 0) -roundedAbs else roundedAbs
     }
 
     actual fun exp(): Rational {
@@ -442,7 +492,7 @@ actual class Rational private constructor(
 
     override fun toString(): String {
         if (isNaN) return "NaN"
-        if (isInfinite) return if (bigIntGt(n, BI_ZERO)) "Infinity" else "-Infinity"
+        if (isInfinite) return if (sgn > 0) "Infinity" else "-Infinity"
         if (bigIntEq(d, BI_ONE)) return n.toString()
         return "$n/$d"
     }
