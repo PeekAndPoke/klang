@@ -35,7 +35,7 @@ internal class ShufflePattern(
         val updatedCtx = ctx.update { setIfAbsent(QueryContext.randomSeedKey, 0) }
 
         val firstCycle = from.floor().toInt()
-        val lastCycle = (to - QUERY_EPSILON).floor().toInt()
+        val lastCycle = (to - SprudelPattern.QUERY_EPSILON).floor().toInt()
 
         for (cycleInt in firstCycle..lastCycle) {
             val cycle = cycleInt.toRational()
@@ -81,9 +81,5 @@ internal class ShufflePattern(
         }
 
         return result
-    }
-
-    companion object {
-        private val QUERY_EPSILON = 1e-7.toRational()
     }
 }

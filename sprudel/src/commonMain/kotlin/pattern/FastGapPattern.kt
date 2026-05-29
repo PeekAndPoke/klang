@@ -52,7 +52,9 @@ internal class FastGapPattern(
         val result = createEventList()
 
         for (factorEvent in factorEvents) {
-            val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
+            // Read as Rational directly — avoids a Rational -> Double -> Rational round-trip
+            // that re-runs doubleToFractionBigInt per query (see TimeShiftPattern for details).
+            val factor = factorEvent.data.value?.asRational ?: Rational.ONE
             val events = queryWithFactor(factorEvent.part.begin, factorEvent.part.end, ctx, factor)
             result.addAll(events)
         }

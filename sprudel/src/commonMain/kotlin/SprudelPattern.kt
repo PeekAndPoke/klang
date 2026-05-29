@@ -39,8 +39,18 @@ import kotlin.random.Random
  */
 interface SprudelPattern : KlangPattern {
     companion object {
-        /** Small epsilon value for point queries (sampling control patterns at a specific time) */
-        val QUERY_EPSILON = 1e-7.toRational()
+        /**
+         * Small dyadic epsilon for point queries (sampling control patterns at a specific time).
+         *
+         * The denominator is a pure power of two so that adding it to a dyadic musical time
+         * (1/2, 1/4, 1/8, …) yields a power-of-two denominator that fully cancels downstream.
+         * The old `1e-7 = 1/(2^7·5^7)` left a persistent 5^7 factor that never cancels against
+         * dyadic times and inflated all downstream BigInt `Rational` arithmetic on JS.
+         *
+         * Constructed via `Rational.create` (exact) rather than a Double — `1e-7.toRational()`
+         * would route through the continued-fraction approximation and reintroduce `1/10^7`.
+         */
+        val QUERY_EPSILON = Rational.create(1, 1048576) // 1/2^20 ≈ 9.54e-7
 
         /**
          * Compile Sprudel code using a raw KlangScript engine (no pre-imported libraries).

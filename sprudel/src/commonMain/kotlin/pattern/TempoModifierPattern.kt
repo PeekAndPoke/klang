@@ -71,7 +71,9 @@ internal class TempoModifierPattern(
         val result = createEventList()
 
         for (factorEvent in factorEvents) {
-            val factor = (factorEvent.data.value?.asDouble ?: 1.0).toRational()
+            // Read as Rational directly — avoids a Rational -> Double -> Rational round-trip
+            // that re-runs doubleToFractionBigInt per query (see TimeShiftPattern for details).
+            val factor = factorEvent.data.value?.asRational ?: Rational.ONE
             val events = queryWithFactor(factorEvent.part.begin, factorEvent.part.end, ctx, factor)
 
             val factorLocation = factorEvent.sourceLocations?.innermost
@@ -125,7 +127,7 @@ internal class TempoModifierPattern(
     override fun estimateCycleDuration(): Rational {
         // Use static value if available, otherwise use 1.0 as estimate
         val factor = if (factorProvider is ControlValueProvider.Static) {
-            (factorProvider.value.asDouble ?: 1.0).toRational()
+            factorProvider.value.asRational ?: Rational.ONE
         } else {
             Rational.ONE
         }

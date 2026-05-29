@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
@@ -41,8 +40,12 @@ internal class TimeShiftPattern(
         val result = createEventList()
 
         for (controlEvent in controlEvents) {
-            val offsetDouble = controlEvent.data.value?.asDouble ?: continue
-            val offset = offsetDouble.toRational() * factor
+            // Read the offset as a Rational directly. The value is already stored as a Rational
+            // (late/early build it once via asControlValueProvider), so going through asDouble +
+            // toRational() would be a Rational -> Double -> Rational round-trip that needlessly
+            // re-runs doubleToFractionBigInt (a continued-fraction loop) on every query. It would
+            // also lose precision for rationals that don't round-trip cleanly through Double.
+            val offset = (controlEvent.data.value?.asRational ?: continue) * factor
 
             // Determine the time window where this control event (offset) applies
             // We intersect the control event's part with the requested query range
