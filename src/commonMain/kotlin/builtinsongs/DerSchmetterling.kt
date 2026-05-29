@@ -32,7 +32,7 @@ stack(                                                                          
     ).phaser(1/8).phaserdepth("<0.05!64 0.35!16 0.05!48>").phasersweep(1000).phasercenter(1800).mute("<0!192 1!32>"),
   // Pad
   n(`<[7 4 2 <4 -1 4 3> [0 -1 -3 -1] [0 -3] -2 <[-1 4@3] [5 6@3] [1 2@3] [2 5@3]>]!4 
-      [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [2 4] 0 <[4 1] [-2 0]>] [<0 4> [-5 -10] -7 [-2 <3 -6>]]>/4`)
+      [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [2 -3] 0 <[4 1] [-2 0]>] [<0 4> [-5 -10] -7 [-2 <3 -6>]]>/4`)
     .struct("<[x!16]!7 [x!24]!1 [x!16]!16>").velocity("1.02 0.95!3 0.98 0.95!3".fast(2)).analog(feel)
     .scale("<e2:minor!48 e3:minor!16>").sound("supersaw").unison(5).detune(0.12)
     .lpf(900).lpe(2.5).hpf(300)
@@ -41,7 +41,7 @@ stack(                                                                          
     .gain(0.3).postgain(0.75).orbit(1).pan(0.67)
     .superimpose(
       x => x.pan(0.33).late(0.0015),
-      x => x.postgain(0.55).lpadsr("0.02:0.3:0.5:0.15").hpf(600).lpf(2700).lpe(0.5).scaleTranspose(7).postgain(0.90).pan(0.9)
+      x => x.postgain(0.55).lpadsr("0.02:0.3:0.5:0.15").hpf(600).lpf(3000).lpe(0.45).scaleTranspose(7).postgain(0.90).pan(0.9)
             .superimpose(p => p.pan(0.1).early(0.0025))
     )
   ,
@@ -49,12 +49,12 @@ stack(                                                                          
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!8]!14 [x!12]!2 [x!8]!32>").fast(2).velocity("1.02 0.95!3 0.98 0.95!3".fast(2))
     .scale("<e2:minor!28 e3:minor!4>").analog(feel)
     .sound("supersaw").unison(5).detune(0.15) 
-    .lpf(600).lpe(3.0).hpf(90).distort("1.3:tube:4")
+    .lpf(600).lpe(3.0).hpf(85).distort("1.3:tube:4")
     .adsr("0.015:0.15:0.66:0.10").lpadsr("0.025:0.25:0.66:0.15").clip(0.50)  // . solo()
     .gain(0.3).postgain(0.6).orbit(2).pan(0.33).mute("<0!128 1!16 0!16>")
     .superimpose(
       x => x.pan(0.67).late(0.002),
-      x => x.postgain(0.4).pan(0.2).hpf(300).lpf(2700).lpe(0.525).adsr("0.025:0.15:0.66:0.13").scaleTranspose("<4!15 [2 4]>")
+      x => x.postgain(0.4).pan(0.2).hpf(400).lpf(2800).lpe(0.45).adsr("0.025:0.15:0.66:0.13").scaleTranspose("<4!15 [2 4]>")
             .superimpose(p => p.pan(0.8).late(0.002))
     )
   ,
