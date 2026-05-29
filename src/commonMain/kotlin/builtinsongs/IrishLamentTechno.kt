@@ -47,7 +47,7 @@ let bass = note("<[a1!8] [d2!8] [bb1!8] [c2!8] [g1!8] [f1!8] [a1!8] [d2!8]>")
 let core = stack(kick, hat, bass)
 
 // ── Build layers ────────────────────────────────────────────────────
-let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02").hpf(60).lpf(180).gain(0.35).orbit(6)
+let sub  = note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("x!2").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.02").hpf(80).lpf(180).gain(0.35).orbit(6)
 let clap = s("~ cp ~ cp").gain(0.21).hpf(600).orbit(4).room(0.2).rsize(3)
 let oh   = s("[~ ~ ~ oh]!4").gain(0.19).hpf(4000).orbit(2)
 let rim  = s("~ ~ rim ~ ~ ~ rim ~").gain(0.3).hpf(800).orbit(2)
@@ -65,7 +65,7 @@ let leadE = leadStyle(note(`<[a5 e5 d6 c6] [a5 f5 d5 c5] [f5  d5 g5  bb4] [e5 g5
 
 // ── Pad ─────────────────────────────────────────────────────────────
 let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing(rank = sine.range(0, 1.9).fast(7).add(perlin.range(0, 0.3)))
-    .sound("superpulse").unison(3).detune(0.20).lpf("1500:1:1.5").adsr("1.5:0.5:0.3:1.0").legato(1.2)
+    .sound("superpulse").unison(3).detune(0.20).lpf("1500:1:1.5").adsr("1.5:0.5:0.5:1.0").legato(1.4)
     .pan(0.3).superimpose(pan(0.5).transpose(-12), pan(0.5).transpose(12).velocity(0.9)).lpenv(1.2)
     .phaser(1/6).phaserdepth(saw.range(0.3, 0.6).slow(16)).phasersweep(900).phasercenter(1400)
     .gain(0.05).orbit(5).room(0.4).rsize(6) //  .solo()
@@ -111,8 +111,8 @@ let hit = stack(
 let melody3a = note(`<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5  f5 e5] [d5 a4 d5  f5] [c5 g4 bb4 a4] [d5 c5 a4 g4] [d4@2  d4 ~]>`)
 let melody1  = note(`<[d4 f4 e4 d4] [c4 a4 g4 f4] [d4 g4 f4 e4] [c4 bb4 a4 g4] [d5 c5 bb4 a4] [g4 e4 d4 e4]  [a4 g4 f4 e4] [f4 c4 a4 ~]>`)
 
-let mel3 = melody3a.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.15).orbit(0).pan(0.3)
-let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.225).orbit(0).pan(0.7)
+let mel3 = melody3a.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.3).orbit(0).pan(0.3)
+let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.35).orbit(0).pan(0.7)
 
 // One big 64-cycle section. saw.slow(64) ramps 0 → 1 across it.
 // Rhythm/bass build via clean gain ramps (no degrade — that was unpleasant).
@@ -128,7 +128,7 @@ let quietBuild = stack(
     s("[~ hh sd oh]!4").gain(saw.range(0.0, 0.22).slow(64)).hpf(5000).orbit(2),
     // Sub bass — always present, gain grows
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x]!32 [x!2]!32>").sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.05")
-        .hpf(60).lpf(220).lpenv(4).gain(saw.range(0.2, 0.3).slow(64)).orbit(6),
+        .hpf(80).lpf(220).lpenv(4).gain(saw.range(0.2, 0.3).slow(64)).orbit(6),
     // Saw bass — gain swells from silent to full
     note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>").sound("saw").legato(0.7).hpf(160).lpf(800)
         .adsr("0.002:0.08:0.5:0.05").distort("0.4:soft:2").postgain(0.4)
@@ -150,7 +150,7 @@ let quietBuild = stack(
           [bb1 f2 bb2 f2 d2 f2 bb1 f2] [c2 g2 c3 g2 e2 g2 c2 g2]
           [g1 d2 g2 d2 bb1 d2 g1 d2] [f1 c2 f2 c2 a1 c2 f1 c2]
           [a1 e2 a2 e2 c2 e2 a1 e2] [d2 a2 d3 a2 f2 a2 d2 a2]>`)
-        .sound("supersaw").unison(4).warmth(0.1).gain(0.55).adsr("0.005:0.2:0.7:0.15").pan(0.3)
+        .sound("supersaw").unison(4).warmth(0.1).gain(0.45).adsr("0.005:0.2:0.7:0.15").pan(0.3)
         .superimpose(transpose("<0 12 24 12>/8").pan(0.7)).phaser(1/13).phaserdepth(0.25).phasercenter(3500).phasersweep(1000)
         .detune(sine.range(0.15, 0.45).slow(64)).hpf(200).lpf(3600)
         .velocity(saw.range(-0.5, 1.0).min(0).slow(64))
@@ -174,7 +174,7 @@ let darkBuild = stack(
     // Sub bass — sidechain pump (drops at each kick, recovers between)
     note("<a1 d2 bb1 c2 g1 f1 a1 d2>").struct("<[x!4]!32 [x!8]!32>")
         .sound("sine").legato(1.0).adsr("0.005:0.05:0.5:0.05")
-        .hpf(60).lpf(220).gain(saw.fast(4).range(0.7, 0.3))
+        .hpf(70).lpf(220).gain(saw.fast(4).range(0.7, 0.3))
         .orbit(6),
     // Saw bass — pumping, LPF closes, warmth + distortion grow
     note("<[a1!4] [d2!4] [bb1!4] [c2!4] [g1!4] [f1!4] [a1!4] [d2!4]>")
