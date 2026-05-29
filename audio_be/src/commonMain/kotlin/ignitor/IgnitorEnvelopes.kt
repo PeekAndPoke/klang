@@ -23,7 +23,7 @@ fun Ignitor.adsr(
     decaySec: Ignitor,
     sustainLevel: Ignitor,
     releaseSec: Ignitor,
-    attackCurve: AdsrCurve = AdsrCurve.Square,
+    attackCurve: AdsrCurve = AdsrCurve.SCurve,
     decayCurve: AdsrCurve = AdsrCurve.Square,
     releaseCurve: AdsrCurve = AdsrCurve.Square,
 ): Ignitor = AdsrIgnitor(
@@ -84,6 +84,8 @@ private class AdsrIgnitor(
                         AdsrCurve.Linear -> omp
                         AdsrCurve.Square -> omp * omp
                         AdsrCurve.Cube -> omp * omp * omp
+                        AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
+                        AdsrCurve.InvSquare -> omp * (2.0 - omp)
                     }
                     currentLevel = releaseStartLevel * shape
                 } else {
@@ -95,6 +97,8 @@ private class AdsrIgnitor(
                                 AdsrCurve.Linear -> p
                                 AdsrCurve.Square -> p * p
                                 AdsrCurve.Cube -> p * p * p
+                                AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
+                                AdsrCurve.InvSquare -> p * (2.0 - p)
                             }
                         }
 
@@ -106,6 +110,8 @@ private class AdsrIgnitor(
                                 AdsrCurve.Linear -> omp
                                 AdsrCurve.Square -> omp * omp
                                 AdsrCurve.Cube -> omp * omp * omp
+                                AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
+                                AdsrCurve.InvSquare -> omp * (2.0 - omp)
                             }
                             sustainLevelVal + (1.0 - sustainLevelVal) * shape
                         }
@@ -128,7 +134,7 @@ fun Ignitor.adsr(
     decaySec: Double,
     sustainLevel: Double,
     releaseSec: Double,
-    attackCurve: AdsrCurve = AdsrCurve.Square,
+    attackCurve: AdsrCurve = AdsrCurve.SCurve,
     decayCurve: AdsrCurve = AdsrCurve.Square,
     releaseCurve: AdsrCurve = AdsrCurve.Square,
 ): Ignitor = adsr(

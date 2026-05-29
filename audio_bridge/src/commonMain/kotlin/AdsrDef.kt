@@ -12,12 +12,16 @@ import kotlinx.serialization.Serializable
  *  - [Square]: `p*p`         — convex (slow start, fast finish for upward
  *                              ramps; fast initial drop for downward ramps)
  *  - [Cube]:   `p*p*p`       — more pronounced version of [Square]
+ *  - [SCurve]: ease-in-out   — `2p²` then `1-2(1-p)²`; zero slope at BOTH
+ *                              ends (soft start AND soft finish — no corner)
+ *  - [InvSquare]: `p(2-p)`   — concave mirror of [Square]: strong start,
+ *                              then eases gently into the endpoint
  *
  * For decay and release the ramp uses `(1 - p)` so the level falls from
  * its starting value to its endpoint with a curved tail.
  */
 @Serializable
-enum class AdsrCurve { Linear, Square, Cube }
+enum class AdsrCurve { Linear, Square, Cube, SCurve, InvSquare }
 
 @Serializable
 sealed interface AdsrDef {
@@ -64,7 +68,7 @@ sealed interface AdsrDef {
                 decay = decay ?: d.decay ?: 0.1,
                 sustain = sustain ?: d.sustain ?: 1.0,
                 release = release ?: d.release ?: 0.1,
-                attackCurve = attackCurve ?: d.attackCurve ?: AdsrCurve.Square,
+                attackCurve = attackCurve ?: d.attackCurve ?: AdsrCurve.SCurve,
                 decayCurve = decayCurve ?: d.decayCurve ?: AdsrCurve.Square,
                 releaseCurve = releaseCurve ?: d.releaseCurve ?: AdsrCurve.Square,
             )
@@ -79,7 +83,7 @@ sealed interface AdsrDef {
                 decay = 0.1,
                 sustain = 1.0,
                 release = 0.05,
-                attackCurve = AdsrCurve.Square,
+                attackCurve = AdsrCurve.SCurve,
                 decayCurve = AdsrCurve.Square,
                 releaseCurve = AdsrCurve.Square,
             )

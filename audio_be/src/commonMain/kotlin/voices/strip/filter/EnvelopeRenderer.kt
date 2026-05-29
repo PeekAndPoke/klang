@@ -59,6 +59,8 @@ class EnvelopeRenderer(
                     AdsrCurve.Linear -> omp
                     AdsrCurve.Square -> omp * omp
                     AdsrCurve.Cube -> omp * omp * omp
+                    AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
+                    AdsrCurve.InvSquare -> omp * (2.0 - omp)
                 }
                 currentEnv = env.releaseStartLevel * shape
             } else {
@@ -71,6 +73,8 @@ class EnvelopeRenderer(
                             AdsrCurve.Linear -> p
                             AdsrCurve.Square -> p * p
                             AdsrCurve.Cube -> p * p * p
+                            AdsrCurve.SCurve -> if (p < 0.5) 2.0 * p * p else 1.0 - 2.0 * (1.0 - p) * (1.0 - p)
+                            AdsrCurve.InvSquare -> p * (2.0 - p)
                         }
                     }
                     // Decay: level = sustain + (1 - sustain) * shape(1 - p)
@@ -82,6 +86,8 @@ class EnvelopeRenderer(
                             AdsrCurve.Linear -> omp
                             AdsrCurve.Square -> omp * omp
                             AdsrCurve.Cube -> omp * omp * omp
+                            AdsrCurve.SCurve -> if (omp < 0.5) 2.0 * omp * omp else 1.0 - 2.0 * (1.0 - omp) * (1.0 - omp)
+                            AdsrCurve.InvSquare -> omp * (2.0 - omp)
                         }
                         sustain + (1.0 - sustain) * shape
                     }

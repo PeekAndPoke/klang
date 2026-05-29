@@ -166,6 +166,8 @@ object KlangScriptOscExtensions {
         "linear", "lin" -> AdsrCurve.Linear
         "square", "sq", "quad", "quadratic" -> AdsrCurve.Square
         "cube", "cb", "cubic" -> AdsrCurve.Cube
+        "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
+        "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
         else -> null
     }
 

@@ -149,7 +149,7 @@ class Voice(
         val decayFrames: Double,
         val sustainLevel: Double,
         val releaseFrames: Double,
-        val attackCurve: AdsrCurve = AdsrCurve.Square,
+        val attackCurve: AdsrCurve = AdsrCurve.SCurve,
         val decayCurve: AdsrCurve = AdsrCurve.Square,
         val releaseCurve: AdsrCurve = AdsrCurve.Square,
         var level: Double = 0.0,
