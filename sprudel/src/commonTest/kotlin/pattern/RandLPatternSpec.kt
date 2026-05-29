@@ -4,7 +4,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -15,7 +14,7 @@ class RandLPatternSpec : StringSpec({
 
     "RandLPattern emits n events per control window" {
         val nPattern = object : SprudelPattern.FixedWeight {
-            override val numSteps: Rational = Rational.ONE
+            override val numSteps: Double = 1.0
 
             override fun queryArcContextual(
                 from: CycleTime,
@@ -33,7 +32,7 @@ class RandLPatternSpec : StringSpec({
         }
 
         val pattern = RandLPattern(nPattern)
-        val events = pattern.queryArcContextual(Rational.ZERO, Rational.ONE, QueryContext.empty)
+        val events = pattern.queryArcContextual(0.0, 1.0, QueryContext.empty)
 
         events.size shouldBe 4
     }
@@ -42,7 +41,7 @@ class RandLPatternSpec : StringSpec({
         val nPattern = AtomicPattern.pure
         val pattern = RandLPattern.create(nPattern, staticN = 3)
 
-        val events = pattern.queryArcContextual(Rational.ZERO, Rational.ONE, QueryContext.empty)
+        val events = pattern.queryArcContextual(0.0, 1.0, QueryContext.empty)
         events.size shouldBe 3
     }
 })

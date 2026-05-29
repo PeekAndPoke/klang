@@ -2,7 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -23,9 +22,9 @@ internal class RandrunPattern(
 ) : SprudelPattern {
     override val weight = 1.0
 
-    override val numSteps: Rational? = null
+    override val numSteps: Double? = null
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     override fun queryArcContextual(
         from: CycleTime,
@@ -50,13 +49,14 @@ internal class RandrunPattern(
             val permutation = (0 until n).toMutableList()
             permutation.shuffle(random)
 
-            // Create n evenly-spaced events in the control event's timespan
+            // Create n evenly-spaced events in the control event's timespan, using absolute
+            // boundaries so the last event ends exactly at base+duration (no rounding gap).
             val duration = nEvent.part.duration
-            val stepSize = duration.divBy(n.toDouble())
+            val base = nEvent.part.begin
 
             for (index in 0 until n) {
-                val eventBegin = nEvent.part.begin + (stepSize * index)
-                val eventEnd = eventBegin + stepSize
+                val eventBegin = base + duration.scaleBy(index.toDouble() / n)
+                val eventEnd = base + duration.scaleBy((index + 1).toDouble() / n)
                 val value = permutation[index].asVoiceValue()
 
                 val timeSpan = CycleTimeSpan(begin = eventBegin, end = eventEnd)

@@ -3,7 +3,6 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.peekandpoke.klang.common.SourceLocation
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
@@ -30,7 +29,7 @@ sealed interface ControlValueProvider {
         val location: SourceLocation? = null,
     ) : ControlValueProvider {
         companion object {
-            val ONE = Static(Rational.ONE.asVoiceValue())
+            val ONE = Static(1.0.asVoiceValue())
         }
 
         override fun query(

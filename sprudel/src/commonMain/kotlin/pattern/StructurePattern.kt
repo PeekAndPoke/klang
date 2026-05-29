@@ -2,7 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -28,13 +27,13 @@ internal class StructurePattern(
 
     override val weight: Double = if (mode == Mode.In) source.weight else other.weight
 
-    override val numSteps: Rational?
+    override val numSteps: Double?
         get() = when (mode) {
             Mode.In -> source.numSteps
             Mode.Out -> other.numSteps
         }
 
-    override fun estimateCycleDuration(): Rational {
+    override fun estimateCycleDuration(): Double {
         return when (mode) {
             Mode.In -> source.estimateCycleDuration()
             Mode.Out -> other.estimateCycleDuration()

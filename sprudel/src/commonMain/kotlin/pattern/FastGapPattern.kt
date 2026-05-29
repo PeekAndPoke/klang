@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -29,7 +28,7 @@ internal class FastGapPattern(
         /**
          * Create a FastGapPattern with a static factor value.
          */
-        fun static(source: SprudelPattern, factor: Rational): FastGapPattern {
+        fun static(source: SprudelPattern, factor: Double): FastGapPattern {
             return FastGapPattern(
                 source = source,
                 factorProvider = ControlValueProvider.Static(factor.asVoiceValue())
@@ -39,9 +38,9 @@ internal class FastGapPattern(
 
     override val weight: Double get() = source.weight
 
-    override val numSteps: Rational? get() = source.numSteps
+    override val numSteps: Double? get() = source.numSteps
 
-    override fun estimateCycleDuration(): Rational {
+    override fun estimateCycleDuration(): Double {
         return source.estimateCycleDuration()
     }
 
@@ -52,9 +51,9 @@ internal class FastGapPattern(
         val result = createEventList()
 
         for (factorEvent in factorEvents) {
-            // Read as Rational directly — avoids a Rational -> Double -> Rational round-trip
-            // that re-runs doubleToFractionBigInt per query (see TimeShiftPattern for details).
-            val factor = factorEvent.data.value?.asRational ?: Rational.ONE
+            // Read the factor as a Double directly (it is already stored as a value)
+            // — no per-query reconstruction needed.
+            val factor = factorEvent.data.value?.asDouble ?: 1.0
             val events = queryWithFactor(factorEvent.part.begin, factorEvent.part.end, ctx, factor)
             result.addAll(events)
         }
@@ -66,19 +65,19 @@ internal class FastGapPattern(
         from: CycleTime,
         to: CycleTime,
         ctx: QueryContext,
-        factor: Rational,
+        factor: Double,
     ): List<SprudelPatternEvent> {
         // Handle edge case where factor <= 0
-        if (factor.toDouble() <= 0.0) {
+        if (factor <= 0.0) {
             return emptyList()
         }
 
         // If factor is 1.0, just return the source as-is
-        if (factor == Rational.ONE) {
+        if (factor == 1.0) {
             return source.queryArcContextual(from, to, ctx)
         }
 
-        val spanCycles = 1.0 / factor.toDouble()      // compressed-region width as a fraction of a cycle
+        val spanCycles = 1.0 / factor      // compressed-region width as a fraction of a cycle
         val spanDuration = CycleTime.ofCycles(spanCycles)
         val result = createEventList()
 

@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -22,9 +21,9 @@ internal class ShufflePattern(
 
     override val weight: Double = source.weight
 
-    override val numSteps: Rational? = source.numSteps
+    override val numSteps: Double? = source.numSteps
 
-    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
     override fun queryArcContextual(
         from: CycleTime,

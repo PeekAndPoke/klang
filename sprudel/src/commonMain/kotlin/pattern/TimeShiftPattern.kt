@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 
@@ -20,12 +19,12 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 internal class TimeShiftPattern(
     private val source: SprudelPattern,
     private val offsetProvider: ControlValueProvider,
-    private val factor: Rational = Rational.ONE,
+    private val factor: Double = 1.0,
 ) : SprudelPattern {
 
     override val weight: Double get() = source.weight
-    override val numSteps: Rational? get() = source.numSteps
-    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    override val numSteps: Double? get() = source.numSteps
+    override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
     override fun queryArcContextual(
         from: CycleTime,
@@ -41,11 +40,9 @@ internal class TimeShiftPattern(
         val result = createEventList()
 
         for (controlEvent in controlEvents) {
-            // Read the offset as a Rational directly (late/early build it once via
-            // asControlValueProvider), then snap it onto the tick grid as a CycleTime. Avoids a
-            // Rational -> Double -> Rational round-trip and keeps shift arithmetic in fixed-point.
-            val offsetRational = (controlEvent.data.value?.asRational ?: continue) * factor
-            val offset = CycleTime.ofRationalCycles(offsetRational)
+            // Read the offset as a Double (in cycles), then snap it onto the tick grid as a CycleTime.
+            val offsetCycles = (controlEvent.data.value?.asDouble ?: continue) * factor
+            val offset = CycleTime.ofCycles(offsetCycles)
 
             // Determine the time window where this control event (offset) applies
             // We intersect the control event's part with the requested query range

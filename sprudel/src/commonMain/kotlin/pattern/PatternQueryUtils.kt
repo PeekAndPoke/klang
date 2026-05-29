@@ -41,19 +41,6 @@ internal inline fun hasOverlap(
     return eventEnd > queryFrom && eventBegin < queryTo
 }
 
-/** Overlap test with an inward epsilon tolerance on the query boundaries. */
-internal inline fun hasOverlapWithEpsilon(
-    eventBegin: CycleTime,
-    eventEnd: CycleTime,
-    queryFrom: CycleTime,
-    queryTo: CycleTime,
-    epsilon: CycleTime,
-): Boolean {
-    val fromPlusEps = queryFrom + epsilon
-    val toMinusEps = queryTo - epsilon
-    return eventEnd > fromPlusEps && eventBegin <= toMinusEps
-}
-
 /** Overlap range between two spans, or null if they don't overlap. */
 internal inline fun calculateOverlapRange(
     begin1: CycleTime,

@@ -5,8 +5,6 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
 import io.peekandpoke.klang.sprudel.shouldBe
@@ -67,17 +65,17 @@ class LangRibbonSpec : StringSpec({
 
         // Loop 1
         sorted[0].data.note shouldBe "1"
-        sorted[0].part.begin shouldBe Rational(0)
+        sorted[0].part.begin shouldBe 0.0
 
         sorted[1].data.note shouldBe "2"
-        sorted[1].part.begin shouldBe Rational(1)
+        sorted[1].part.begin shouldBe 1.0
 
         // Loop 2
         sorted[2].data.note shouldBe "1"
-        sorted[2].part.begin shouldBe Rational(2)
+        sorted[2].part.begin shouldBe 2.0
 
         sorted[3].data.note shouldBe "2"
-        sorted[3].part.begin shouldBe Rational(3)
+        sorted[3].part.begin shouldBe 3.0
     }
 
     "ribbon works with string extension" {
@@ -92,13 +90,13 @@ class LangRibbonSpec : StringSpec({
 
         events.size shouldBe 3
         events[0].data.value?.asString shouldBe "b"
-        events[0].part.begin shouldBe Rational(0)
+        events[0].part.begin shouldBe 0.0
 
         events[1].data.value?.asString shouldBe "b"
-        events[1].part.begin shouldBe Rational(1)
+        events[1].part.begin shouldBe 1.0
 
         events[2].data.value?.asString shouldBe "b"
-        events[2].part.begin shouldBe Rational(2)
+        events[2].part.begin shouldBe 2.0
     }
 
     "ribbon works with fractional cycles" {
@@ -113,13 +111,13 @@ class LangRibbonSpec : StringSpec({
 
         // First occurrence 0.0 .. 0.5
         events[0].data.note shouldBe "b"
-        events[0].part.begin shouldBe 0.toRational()
-        events[0].part.end shouldBe 0.5.toRational()
+        events[0].part.begin shouldBe 0.toDouble()
+        events[0].part.end shouldBe 0.5
 
         // Second occurrence 0.5 .. 1.0
         events[1].data.note shouldBe "b"
-        events[1].part.begin shouldBe 0.5.toRational()
-        events[1].part.end shouldBe 1.toRational()
+        events[1].part.begin shouldBe 0.5
+        events[1].part.end shouldBe 1.toDouble()
     }
 
     "ribbon with sound pattern s(\"bd sd ht lt\").slow(4).ribbon(2, 1) produces correct events over 12 cycles" {
@@ -150,10 +148,10 @@ class LangRibbonSpec : StringSpec({
 
                     val event = events[0]
                     event.data.soundName shouldBe "ht"
-                    event.part.begin shouldBe cycle.toRational()
-                    event.part.end shouldBe (cycle + 1).toRational()
-                    event.whole.begin shouldBe cycle.toRational()
-                    event.whole.end shouldBe (cycle + 1).toRational()
+                    event.part.begin shouldBe cycle.toDouble()
+                    event.part.end shouldBe (cycle + 1).toDouble()
+                    event.whole.begin shouldBe cycle.toDouble()
+                    event.whole.end shouldBe (cycle + 1).toDouble()
                 }
             }
         }

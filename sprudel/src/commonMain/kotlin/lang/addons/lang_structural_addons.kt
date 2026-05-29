@@ -5,7 +5,6 @@ package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.common.math.CycleTime
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -21,8 +20,8 @@ import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.addons.pattern.MergePattern
 import io.peekandpoke.klang.sprudel.lang.addons.pattern.SoloPattern
 import io.peekandpoke.klang.sprudel.lang.applyCat
+import io.peekandpoke.klang.sprudel.lang.asDoubleOrNull
 import io.peekandpoke.klang.sprudel.lang.asIntOrNull
-import io.peekandpoke.klang.sprudel.lang.asRationalOrNull
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.fast
 import io.peekandpoke.klang.sprudel.lang.silence
@@ -104,7 +103,7 @@ private fun applyMorse(textArg: SprudelDslArg<Any?>?): SprudelPattern {
 
         // "x" is the standard note for rhythm/struct
         return AtomicPattern(
-            data = SprudelVoiceData.empty.copy(value = SprudelVoiceValue.Num(Rational.ONE)),
+            data = SprudelVoiceData.empty.copy(value = SprudelVoiceValue.Num(1.0)),
             sourceLocations = chain
         )
     }
@@ -311,20 +310,20 @@ fun PatternMapperFn.merge(ctrl: PatternLike, callInfo: CallInfo? = null): Patter
  * Core implementation: loops this pattern within the given duration in cycles.
  * Effectively repeats the pattern segment `[0, duration]` every `duration` cycles.
  */
-fun SprudelPattern.timeLoop(duration: Rational): SprudelPattern {
-    if (duration <= Rational.ZERO) return silence
+fun SprudelPattern.timeLoop(duration: Double): SprudelPattern {
+    if (duration <= 0.0) return silence
 
     val source = this
     return object : SprudelPattern {
         override val weight: Double get() = source.weight
-        override val numSteps: Rational? get() = source.numSteps
-        override fun estimateCycleDuration(): Rational = duration
+        override val numSteps: Double? get() = source.numSteps
+        override fun estimateCycleDuration(): Double = duration
 
         override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             val result = mutableListOf<SprudelPatternEvent>()
 
             // Calculate loop range covering [from, to]
-            val durationCycles = duration.toDouble()
+            val durationCycles = duration
             val durationSpan = CycleTime.ofCycles(durationCycles)
 
             // Loop through cycles
@@ -364,7 +363,7 @@ fun SprudelPattern.timeLoop(duration: Rational): SprudelPattern {
 }
 
 private fun applyTimeLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val duration = args.firstOrNull()?.value?.asRationalOrNull() ?: return source
+    val duration = args.firstOrNull()?.value?.asDoubleOrNull() ?: return source
     return source.timeLoop(duration)
 }
 

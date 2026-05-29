@@ -1,7 +1,6 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -93,9 +92,9 @@ internal class ChoicePattern(
 
     override val weight: Double get() = selector.weight
 
-    override val numSteps: Rational? get() = selector.numSteps
+    override val numSteps: Double? get() = selector.numSteps
 
-    override fun estimateCycleDuration(): Rational = selector.estimateCycleDuration()
+    override fun estimateCycleDuration(): Double = selector.estimateCycleDuration()
 
     override fun queryArcContextual(
         from: CycleTime,

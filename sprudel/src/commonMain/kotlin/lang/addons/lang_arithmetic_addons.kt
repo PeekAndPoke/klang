@@ -22,6 +22,7 @@ import io.peekandpoke.klang.sprudel.lang.silence
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.mapEvents
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpret
+import kotlin.math.abs
 
 // -- negateValue  -----------------------------------------------------------------------------------------------------
 
@@ -206,7 +207,7 @@ fun PatternMapperFn.not(callInfo: CallInfo? = null): PatternMapperFn =
 // -- abs --------------------------------------------------------------------------------------------------------------
 
 private fun applyAbs(pattern: SprudelPattern): SprudelPattern {
-    return applyUnaryOp(pattern) { v -> v.asRational?.abs()?.asVoiceValue() ?: v }
+    return applyUnaryOp(pattern) { v -> v.asDouble?.let { abs(it) }?.asVoiceValue() ?: v }
 }
 
 /**
@@ -269,8 +270,8 @@ fun PatternMapperFn.abs(callInfo: CallInfo? = null): PatternMapperFn =
 
 private fun applyMinValue(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     applyArithmetic(pattern, args) { a, b ->
-        val ar = a.asRational ?: return@applyArithmetic null
-        val br = b.asRational ?: return@applyArithmetic null
+        val ar = a.asDouble ?: return@applyArithmetic null
+        val br = b.asDouble ?: return@applyArithmetic null
         if (ar >= br) a else b
     }
 
@@ -339,8 +340,8 @@ fun PatternMapperFn.min(other: PatternLike, callInfo: CallInfo? = null): Pattern
 
 private fun applyMaxValue(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
     applyArithmetic(pattern, args) { a, b ->
-        val ar = a.asRational ?: return@applyArithmetic null
-        val br = b.asRational ?: return@applyArithmetic null
+        val ar = a.asDouble ?: return@applyArithmetic null
+        val br = b.asDouble ?: return@applyArithmetic null
         if (ar <= br) a else b
     }
 
@@ -409,12 +410,12 @@ fun PatternMapperFn.max(other: PatternLike, callInfo: CallInfo? = null): Pattern
 
 private fun applyClampValue(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return pattern._innerJoin(args) { src, vMin: SprudelVoiceValue?, vMax: SprudelVoiceValue? ->
-        val rMin = vMin?.asRational ?: return@_innerJoin silence
-        val rMax = vMax?.asRational ?: return@_innerJoin silence
+        val rMin = vMin?.asDouble ?: return@_innerJoin silence
+        val rMax = vMax?.asDouble ?: return@_innerJoin silence
 
         src.mapEvents { event ->
             val sourceVal = event.data.value ?: return@mapEvents event
-            val sr = sourceVal.asRational ?: return@mapEvents event
+            val sr = sourceVal.asDouble ?: return@mapEvents event
 
             val clamped = when {
                 sr < rMin -> vMin

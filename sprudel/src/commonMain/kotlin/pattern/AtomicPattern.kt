@@ -3,7 +3,6 @@ package io.peekandpoke.klang.sprudel.pattern
 import io.peekandpoke.klang.common.SourceLocationChain
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -33,9 +32,9 @@ internal class AtomicPattern(
         fun value(value: Any?) = AtomicPattern(SprudelVoiceData.empty.copy(value = value?.asVoiceValue()))
     }
 
-    override val numSteps: Rational = Rational.ONE
+    override val numSteps: Double = 1.0
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val startCycle = from.cycleIndex()
@@ -44,8 +43,10 @@ internal class AtomicPattern(
 
         for (i in startCycle until endCycle) {
             val begin = CycleTime.ofCycleIndex(i)
-            // Sprudel events are usually triggered if their start time is within the query arc.
-            if (begin >= from || begin < to) {
+            // Emit when the atom's cycle-long span [begin, begin+1) overlaps the query arc.
+            // (Note: a `begin >= from && …` form would wrongly drop an atom whose onset precedes
+            // `from`, breaking point-sampling — see AtomicInfinitePattern, which uses the same test.)
+            if (begin < to && begin + CycleTime.ONE > from) {
                 val timeSpan = CycleTimeSpan(begin = begin, end = begin + CycleTime.ONE)
 
                 events.add(

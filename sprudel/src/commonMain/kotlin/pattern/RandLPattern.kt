@@ -2,7 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -45,9 +44,9 @@ internal class RandLPattern(
         }
     }
 
-    override val numSteps: Rational = Rational.ONE
+    override val numSteps: Double = 1.0
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     override fun queryArcContextual(
         from: CycleTime,

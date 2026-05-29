@@ -2,8 +2,6 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.shouldBe
 
 class LangStackOperationsSpec : StringSpec({
@@ -27,13 +25,13 @@ class LangStackOperationsSpec : StringSpec({
 
         // e starts at 0.0, ends at 2.0
         val eEvent = events.find { it.data.note?.lowercase() == "e" }!!
-        eEvent.whole.begin shouldBe Rational.ZERO
-        eEvent.whole.end shouldBe Rational(2)
+        eEvent.whole.begin shouldBe 0.0
+        eEvent.whole.end shouldBe 2.0
 
         // c starts at 0.5, ends at 1.5
         val cEvent = events.find { it.data.note?.lowercase() == "c" }!!
-        cEvent.whole.begin shouldBe 0.5.toRational()
-        cEvent.whole.end shouldBe 1.5.toRational()
+        cEvent.whole.begin shouldBe 0.5
+        cEvent.whole.end shouldBe 1.5
     }
 
     "stackLeft() aligns to the start" {
@@ -44,8 +42,8 @@ class LangStackOperationsSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // Both start at 0.0
-        events.find { it.data.note?.lowercase() == "e" }!!.part.begin shouldBe Rational.ZERO
-        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe Rational.ZERO
+        events.find { it.data.note?.lowercase() == "e" }!!.part.begin shouldBe 0.0
+        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe 0.0
     }
 
     "stackRight() aligns to the end" {
@@ -56,10 +54,10 @@ class LangStackOperationsSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // p2 (dur=2) starts at 0.0
-        events.find { it.data.note?.lowercase() == "e" }!!.part.begin shouldBe Rational.ZERO
+        events.find { it.data.note?.lowercase() == "e" }!!.part.begin shouldBe 0.0
 
         // p1 (dur=1) should start at 1.0 so it ends at 2.0
-        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe Rational.ONE
+        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe 1.0
     }
 
     "stackCentre() aligns to the center" {
@@ -70,7 +68,7 @@ class LangStackOperationsSpec : StringSpec({
         val events = p.queryArc(0.0, 2.0).sortedBy { it.part.begin }
 
         // p1 (dur=1) should start at 0.5
-        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe 0.5.toRational()
+        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe 0.5
     }
 
     "stackBy works with ArrangementPattern" {
@@ -85,6 +83,6 @@ class LangStackOperationsSpec : StringSpec({
 
         // p1 starts at 0.0, dur 2.0
         // p2 (dur 1) should start at 0.5 relative to p1
-        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe 0.5.toRational()
+        events.find { it.data.note?.lowercase() == "c" }!!.part.begin shouldBe 0.5
     }
 })

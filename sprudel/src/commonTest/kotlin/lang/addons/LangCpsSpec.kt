@@ -2,7 +2,6 @@ package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
@@ -37,7 +36,7 @@ class LangCpsSpec : StringSpec({
             set(QueryContext.cpsKey, customCps)
         }
 
-        val events = p.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = p.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe 2.0

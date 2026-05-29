@@ -33,9 +33,9 @@ class LangOneMinusValueSpec : StringSpec({
                     SprudelPattern.compile("""seq("$pat").apply(oneMinusValue)"""),
         ) { _, events ->
             events.shouldHaveSize(3)
-            events[0].data.value?.asDouble shouldBe 1.0
-            events[1].data.value?.asDouble shouldBe -0.1
-            events[2].data.value?.asDouble shouldBe 3.3
+            events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
+            events[1].data.value?.asDouble shouldBe (-0.1 plusOrMinus EPSILON)
+            events[2].data.value?.asDouble shouldBe (3.3 plusOrMinus EPSILON)
         }
     }
 

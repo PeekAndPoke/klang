@@ -4,8 +4,6 @@
 package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.CycleTime
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.common.math.lcm
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
@@ -49,6 +47,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log2
+import kotlin.math.pow
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Structural patterns
@@ -250,11 +249,11 @@ fun PatternMapperFn.mute(vararg args: PatternLike, callInfo: CallInfo? = null): 
 
 /** Creates a silent pattern occupying the given number of steps. Supports control patterns via _innerJoin. */
 private fun applyGap(args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val stepsArg = args.getOrNull(0) ?: return GapPattern(Rational.ONE)
+    val stepsArg = args.getOrNull(0) ?: return GapPattern(1.0)
 
     // For static values create GapPattern directly so its weight is preserved.
     // SequencePattern reads .weight once at construction for proportional allocation.
-    val staticSteps = stepsArg.value?.asRationalOrNull()
+    val staticSteps = stepsArg.value?.asDoubleOrNull()
     if (staticSteps != null) {
         return GapPattern(staticSteps)
     }
@@ -262,7 +261,7 @@ private fun applyGap(args: List<SprudelDslArg<Any?>>): SprudelPattern {
     // For control patterns evaluate the step count per event via _innerJoin.
     // Proportional weight in sequences is not supported for control patterns (defaults to 1).
     return silence._innerJoin(stepsArg) { _, stepsVal ->
-        val steps = stepsVal?.asRationalOrNull() ?: Rational.ONE
+        val steps = stepsVal?.asDoubleOrNull() ?: 1.0
         GapPattern(steps)
     }
 }
@@ -307,6 +306,7 @@ fun gap(vararg steps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  * note("c").gap(2)  // Replaces with 2-step silence
  * ```
  */
+@Suppress("UnusedReceiverParameter")
 @SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.gap(vararg steps: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
@@ -778,9 +778,7 @@ private fun applyStackBy(patterns: List<SprudelPattern>, alignment: Double): Spr
 
     // Get duration for each pattern
     val durations = patterns.map { it.estimateCycleDuration() }
-    val maxDur = durations.maxOrNull() ?: Rational.ONE
-
-    val alignmentRat = alignment.toRational()
+    val maxDur = durations.maxOrNull() ?: 1.0
 
     // Align patterns by padding them with gaps to match maxDur
     val alignedPatterns = patterns.zip(durations).map { (pat, dur) ->
@@ -788,7 +786,7 @@ private fun applyStackBy(patterns: List<SprudelPattern>, alignment: Double): Spr
             pat
         } else {
             val diff = maxDur - dur
-            val leftGap = diff * alignmentRat
+            val leftGap = diff * alignment
             val rightGap = diff - leftGap
 
             val segments = mutableListOf<SprudelPattern>()
@@ -797,19 +795,19 @@ private fun applyStackBy(patterns: List<SprudelPattern>, alignment: Double): Spr
             // EmptyPattern occupies time (via weight) but produces NO events.
             // GapPattern produces "silent events" which pollute the event count.
 
-            if (leftGap > Rational.ZERO) {
-                segments.add(EmptyPattern.withWeight(leftGap.toDouble()))
+            if (leftGap > 0.0) {
+                segments.add(EmptyPattern.withWeight(leftGap))
             }
 
-            segments.add(pat.withWeight(dur.toDouble()))
+            segments.add(pat.withWeight(dur))
 
-            if (rightGap > Rational.ZERO) {
-                segments.add(EmptyPattern.withWeight(rightGap.toDouble()))
+            if (rightGap > 0.0) {
+                segments.add(EmptyPattern.withWeight(rightGap))
             }
 
             // SequencePattern fits total weight into 1 cycle.
             // We slow it down by maxDur to restore original speeds and placement within the larger cycle.
-            SequencePattern(segments).slow(maxDur.toDouble())
+            SequencePattern(segments).slow(maxDur)
         }
     }
 
@@ -985,20 +983,20 @@ fun applyCat(patterns: List<SprudelPattern>): SprudelPattern {
 
     return object : SprudelPattern {
         override val weight: Double = patterns.sumOf { it.weight }
-        override val numSteps: Rational? = null
+        override val numSteps: Double? = null
 
-        override fun estimateCycleDuration(): Rational {
-            return patterns.fold(Rational.ZERO) { acc, p -> acc + p.estimateCycleDuration() }
+        override fun estimateCycleDuration(): Double {
+            return patterns.fold(0.0) { acc, p -> acc + p.estimateCycleDuration() }
         }
 
         override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             val totalDuration = estimateCycleDuration()
-            if (totalDuration <= Rational.ZERO) return emptyList()
+            if (totalDuration <= 0.0) return emptyList()
 
             val result = mutableListOf<SprudelPatternEvent>()
 
             // Find which "loops" of the total sequence we touch
-            val totalDurationCycles = totalDuration.toDouble()
+            val totalDurationCycles = totalDuration
             val startLoop = floor(from.toCycles() / totalDurationCycles).toInt()
             val endLoop = ceil(to.toCycles() / totalDurationCycles).toInt()
 
@@ -1008,7 +1006,7 @@ fun applyCat(patterns: List<SprudelPattern>): SprudelPattern {
                 var currentOffset = loopStart
 
                 for (p in patterns) {
-                    val durTime = CycleTime.ofRationalCycles(p.estimateCycleDuration())
+                    val durTime = CycleTime.ofCycles(p.estimateCycleDuration())
                     val pStart = currentOffset
                     val pEnd = pStart + durTime
 
@@ -1192,9 +1190,9 @@ fun applySlowcatPrime(patterns: List<SprudelPattern>): SprudelPattern {
 
     return object : SprudelPattern {
         override val weight: Double = patterns.sumOf { it.weight }
-        override val numSteps: Rational? = null
+        override val numSteps: Double? = null
 
-        override fun estimateCycleDuration(): Rational = Rational.ONE * patterns.size
+        override fun estimateCycleDuration(): Double = 1.0 * patterns.size
 
         override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
 
@@ -1293,7 +1291,7 @@ private fun applyPolymeter(patterns: List<SprudelPattern>, baseSteps: Int? = nul
 
     return PropertyOverridePattern(
         source = StackPattern(adjustedPatterns),
-        stepsOverride = targetSteps.toRational()
+        stepsOverride = targetSteps.toDouble()
     )
 }
 
@@ -1391,7 +1389,7 @@ fun polymeterSteps(vararg args: PatternLike, callInfo: CallInfo? = null): Sprude
  */
 @SprudelDsl
 @KlangScript.Function
-fun pure(value: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
+fun pure(value: PatternLike, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     AtomicPattern(SprudelVoiceData.empty.copy(value = value.asVoiceValue()))
 
 // -- struct() ---------------------------------------------------------------------------------------------------------
@@ -1692,7 +1690,7 @@ private fun applyJux(source: SprudelPattern, transform: PatternMapperFn): Sprude
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.jux(transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.jux(transform: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyJux(this, transform)
 
 /** Pans this string pattern hard left and a transformed version hard right. */
@@ -1764,7 +1762,7 @@ private fun applyJuxBy(source: SprudelPattern, amount: Double, transform: Patter
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.juxBy(amount: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.juxBy(amount: Double, transform: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyJuxBy(this, amount, transform)
 
 /** Like [jux] with adjustable stereo width on a string pattern. */
@@ -1801,8 +1799,7 @@ fun PatternMapperFn.juxBy(amount: Double, transform: PatternMapperFn, callInfo: 
 // -- off() ------------------------------------------------------------------------------------------------------------
 
 private fun applyOff(source: SprudelPattern, time: Double, transform: PatternMapperFn): SprudelPattern {
-    val timeRat = time.toRational()
-    return source.stack(transform(source).late(timeRat))
+    return source.stack(transform(source).late(time))
 }
 
 /**
@@ -1828,7 +1825,7 @@ private fun applyOff(source: SprudelPattern, time: Double, transform: PatternMap
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.off(time: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.off(time: Double, transform: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyOff(this, time, transform)
 
 /** Layers a time-shifted, transformed copy of this string pattern on top of itself. */
@@ -1889,7 +1886,7 @@ private fun applyFilter(source: SprudelPattern, predicate: (SprudelPatternEvent)
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.filter(predicate: (SprudelPatternEvent) -> Boolean, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyFilter(this, predicate)
 
 /** Filters events from this string pattern using a predicate function. */
@@ -1945,7 +1942,7 @@ fun PatternMapperFn.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.filterWhen(predicate: (Double) -> Boolean, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.filterWhen(predicate: (Double) -> Boolean, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyFilter(this) { predicate(it.part.begin.toCycles()) }
 
 /** Filters events from this string pattern based on their begin time. */
@@ -2007,7 +2004,7 @@ private fun applySuperimpose(source: SprudelPattern, transforms: Array<out Patte
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.superimpose(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.superimpose(vararg transforms: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applySuperimpose(this, transforms)
 
 /** Layers a transformed copy of this string pattern on top of itself. */
@@ -2086,7 +2083,7 @@ private fun applyLayer(source: SprudelPattern, transforms: Array<out PatternMapp
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.layer(vararg transforms: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.layer(vararg transforms: PatternMapperFn, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyLayer(this, transforms)
 
 /** Applies transformations to this string pattern and stacks the results. */
@@ -2187,27 +2184,26 @@ private fun applyZoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 
     // Bind the start pattern...
     return startCtrl._bind { startEv ->
-        val s = startEv.data.value?.asRational ?: return@_bind null
+        val s = startEv.data.value?.asDouble ?: return@_bind null
 
         // ... then bind the end pattern
         endCtrl._bind { endEv ->
-            val e = endEv.data.value?.asRational ?: return@_bind null
+            val e = endEv.data.value?.asDouble ?: return@_bind null
 
             if (s >= e) return@_bind silence
 
             val d = e - s
             val steps = source.numSteps?.let { it * d }
-            val dCycles = d.toDouble()
 
             // Using relative start to ensure correct periodicity even if s > 1
-            val sRelTime = CycleTime.ofRationalCycles(s - s.floor())
+            val sRelTime = CycleTime.ofCycles(s - floor(s))
 
             // Match JS implementation: withQuerySpan + withHapSpan + splitQueries
             source
                 // Apply transformation to cycle-local time: t => t * d + sRel
-                ._withQuerySpan { span -> span.withCycle { t -> t.scaleBy(dCycles) + sRelTime } }
+                ._withQuerySpan { span -> span.withCycle { t -> t.scaleBy(d) + sRelTime } }
                 // Apply transformation to cycle-local time: t => (t - sRel) / d
-                ._withHapSpan { span -> span.withCycle { t -> (t - sRelTime).divBy(dCycles) } }
+                ._withHapSpan { span -> span.withCycle { t -> (t - sRelTime).divBy(d) } }
                 ._splitQueries()
                 .withSteps(steps)
         }
@@ -2279,27 +2275,23 @@ private fun applyWithin(
     endVal: Double,
     transform: PatternMapperFn,
 ): SprudelPattern {
-    val start = startVal.toRational()
-    val end = endVal.toRational()
-
-    if (start >= end || start < Rational.ZERO || end > Rational.ONE) {
+    if (startVal >= endVal || startVal < 0.0 || endVal > 1.0) {
         return source // Return unchanged if invalid window
     }
 
-    val startTime = CycleTime.ofRationalCycles(start)
-    val endTime = CycleTime.ofRationalCycles(end)
+    val startTime = CycleTime.ofCycles(startVal)
+    val endTime = CycleTime.ofCycles(endVal)
     val isBeginInWindow: (SprudelPatternEvent) -> Boolean = { ev ->
         val cycle = ev.part.begin.floorToCycle()
-        if (start < end) {
+        if (startVal < endVal) {
             val s = cycle + startTime
             val e = cycle + endTime
             ev.part.begin >= s && ev.part.begin < e
         } else {
             val s1 = cycle + startTime
             val e1 = cycle + CycleTime.ONE
-            val s2 = cycle
             val e2 = cycle + endTime
-            (ev.part.begin >= s1 && ev.part.begin < e1) || (ev.part.begin >= s2 && ev.part.begin < e2)
+            (ev.part.begin >= s1 && ev.part.begin < e1) || (ev.part.begin >= cycle && ev.part.begin < e2)
         }
     }
 
@@ -2338,7 +2330,7 @@ fun SprudelPattern.within(
     start: Double,
     end: Double,
     transform: PatternMapperFn,
-    callInfo: CallInfo? = null,
+    @Suppress("unused") callInfo: CallInfo? = null,
 ): SprudelPattern = applyWithin(this, start, end, transform)
 
 /**
@@ -2432,7 +2424,7 @@ internal fun applyChunk(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     }
 
     if (earlyOffset != 0) {
-        binaryIter = binaryIter.early(earlyOffset.toRational())
+        binaryIter = binaryIter.early(earlyOffset.toDouble())
     }
 
     val pattern = if (!fast) {
@@ -2857,18 +2849,18 @@ private fun applyLinger(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
     val tArg = args.getOrNull(0) ?: return pattern
 
     return pattern._innerJoin(tArg) { src, tVal ->
-        val t = tVal?.asRational ?: return@_innerJoin src
+        val t = tVal?.asDouble ?: return@_innerJoin src
 
         when {
-            t == Rational.ZERO -> silence
-            t < Rational.ZERO -> {
+            t == 0.0 -> silence
+            t < 0.0 -> {
                 // Negative: zoom from (t+1) to 1, then slow by t (which is negative)
-                src.zoom(t + Rational.ONE, Rational.ONE).slow(-t).timeLoop(Rational.ONE)
+                src.zoom(t + 1.0, 1.0).slow(-t).timeLoop(1.0)
             }
 
             else -> {
                 // Positive: zoom from 0 to t, then slow by t
-                src.zoom(Rational.ZERO, t).slow(t).timeLoop(Rational.ONE)
+                src.zoom(0.0, t).slow(t).timeLoop(1.0)
             }
         }
     }
@@ -2946,7 +2938,7 @@ fun PatternMapperFn.linger(t: PatternLike, callInfo: CallInfo? = null): PatternM
 
 // -- echo() / stut() --------------------------------------------------------------------------------------------------
 
-private fun applyEcho(source: SprudelPattern, times: Int, delay: Rational, decay: Rational): SprudelPattern {
+private fun applyEcho(source: SprudelPattern, times: Int, delay: Double, decay: Double): SprudelPattern {
     if (times < 1) return silence
     if (times == 1) return source // Only original, no echoes
 
@@ -2988,8 +2980,8 @@ private fun applyEcho(source: SprudelPattern, times: Int, delay: Rational, decay
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.echo(times: Int, delay: Double, decay: Double, callInfo: CallInfo? = null): SprudelPattern =
-    applyEcho(this, times, delay.toRational(), decay.toRational())
+fun SprudelPattern.echo(times: Int, delay: Double, decay: Double, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    applyEcho(this, times, delay, decay)
 
 /**
  * Like [echo] applied to a mini-notation string.
@@ -3114,7 +3106,7 @@ fun PatternMapperFn.stut(times: Int, delay: Double, decay: Double, callInfo: Cal
 
 // -- echoWith() / stutWith() ------------------------------------------------------------------------------------------
 
-private fun applyEchoWith(source: SprudelPattern, times: Int, delay: Rational, transform: PatternMapperFn): SprudelPattern {
+private fun applyEchoWith(source: SprudelPattern, times: Int, delay: Double, transform: PatternMapperFn): SprudelPattern {
     if (times <= 0) return silence
     if (times == 1) return source // Only original, no additional layers
 
@@ -3156,8 +3148,13 @@ private fun applyEchoWith(source: SprudelPattern, times: Int, delay: Rational, t
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.echoWith(times: Int, delay: Double, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
-    applyEchoWith(this, times, delay.toRational(), transform)
+fun SprudelPattern.echoWith(
+    times: Int,
+    delay: Double,
+    transform: PatternMapperFn,
+    @Suppress("unused") callInfo: CallInfo? = null
+): SprudelPattern =
+    applyEchoWith(this, times, delay, transform)
 
 /** Like [echoWith] applied to a mini-notation string. */
 @SprudelDsl
@@ -3262,16 +3259,16 @@ private fun applyBite(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 
     val nPattern = args.take(1).toPattern()
     val indicesPattern = args.drop(1).toPattern()
-    val indicesSteps: Rational = indicesPattern.numSteps ?: Rational.ONE
+    val indicesSteps: Double = indicesPattern.numSteps ?: 1.0
 
     return source._innerJoin(nPattern, indicesPattern) { src, nValue, indexValue ->
-        val steps: Rational =
+        val steps: Double =
             src.numSteps ?: return@_innerJoin silence
-        val n: Rational =
-            nValue?.asRational?.takeIf { it > Rational.ZERO } ?: return@_innerJoin silence
-        val index: Rational =
-            indexValue?.asRational ?: return@_innerJoin silence
-        val indexMod: Rational =
+        val n: Double =
+            nValue?.asDouble?.takeIf { it > 0.0 } ?: return@_innerJoin silence
+        val index: Double =
+            indexValue?.asDouble ?: return@_innerJoin silence
+        val indexMod: Double =
             ((index % steps) + steps) % steps
 
         val start = indexMod / n
@@ -3551,7 +3548,7 @@ private fun applyRun(n: Int): SprudelPattern {
  */
 @SprudelDsl
 @KlangScript.Function
-fun run(n: Int, callInfo: CallInfo? = null): SprudelPattern = applyRun(n)
+fun run(n: Int, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyRun(n)
 
 // -- binaryN() --------------------------------------------------------------------------------------------------------
 
@@ -3592,7 +3589,7 @@ private fun applyBinaryN(n: Int, bits: Int): SprudelPattern {
  */
 @SprudelDsl
 @KlangScript.Function
-fun binaryN(n: Int, bits: Int = 16, callInfo: CallInfo? = null): SprudelPattern = applyBinaryN(n, bits)
+fun binaryN(n: Int, bits: Int = 16, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyBinaryN(n, bits)
 
 // -- binary() ---------------------------------------------------------------------------------------------------------
 
@@ -3614,7 +3611,7 @@ fun binaryN(n: Int, bits: Int = 16, callInfo: CallInfo? = null): SprudelPattern 
  */
 @SprudelDsl
 @KlangScript.Function
-fun binary(n: Int, callInfo: CallInfo? = null): SprudelPattern {
+fun binary(n: Int, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern {
     return if (n == 0) {
         applyBinaryN(0, 1)
     } else {
@@ -3664,7 +3661,7 @@ private fun applyBinaryNL(n: Int, bits: Int): SprudelPattern {
  */
 @SprudelDsl
 @KlangScript.Function
-fun binaryNL(n: Int, bits: Int = 16, callInfo: CallInfo? = null): SprudelPattern = applyBinaryNL(n, bits)
+fun binaryNL(n: Int, bits: Int = 16, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyBinaryNL(n, bits)
 
 // -- binaryL() --------------------------------------------------------------------------------------------------------
 
@@ -3688,7 +3685,7 @@ fun binaryNL(n: Int, bits: Int = 16, callInfo: CallInfo? = null): SprudelPattern
  */
 @SprudelDsl
 @KlangScript.Function
-fun binaryL(n: Int, callInfo: CallInfo? = null): SprudelPattern {
+fun binaryL(n: Int, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern {
     return if (n == 0) {
         applyBinaryNL(0, 1)
     } else {
@@ -3748,7 +3745,7 @@ fun ratio(vararg values: PatternLike, callInfo: CallInfo? = null): SprudelPatter
 /** Converts colon-ratio notation in the pattern's values to numbers. */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.ratio(callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.ratio(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     this.reinterpretVoice { it.ratioMutation(it.value?.asString) }
 
 /** Converts colon-ratio notation in the mini-notation string to numbers. */
@@ -3760,10 +3757,10 @@ fun String.ratio(callInfo: CallInfo? = null): SprudelPattern =
 // -- pace() / steps() -------------------------------------------------------------------------------------------------
 
 private fun applyPace(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
-    val targetSteps = args.firstOrNull()?.value?.asRationalOrNull() ?: Rational.ONE
-    val currentSteps = source.numSteps ?: Rational.ONE
+    val targetSteps = args.firstOrNull()?.value?.asDoubleOrNull() ?: 1.0
+    val currentSteps = source.numSteps ?: 1.0
 
-    if (targetSteps <= Rational.ZERO || currentSteps <= Rational.ZERO) {
+    if (targetSteps <= 0.0 || currentSteps <= 0.0) {
         return source
     }
 
@@ -3871,7 +3868,7 @@ fun PatternMapperFn.steps(n: PatternLike, callInfo: CallInfo? = null): PatternMa
 private fun applyTake(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val takeArg = args.firstOrNull() ?: return source
 
-    val control: ControlValueProvider = takeArg.asControlValueProvider(Rational.ONE.asVoiceValue())
+    val control: ControlValueProvider = takeArg.asControlValueProvider(1.0.asVoiceValue())
 
     val takePattern = when (control) {
         is ControlValueProvider.Static -> AtomicPattern(SprudelVoiceData.empty.copy(value = control.value))
@@ -3879,20 +3876,19 @@ private fun applyTake(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     }
 
     return takePattern._stepJoin { event ->
-        val n = event.data.value?.asRational ?: return@_stepJoin null
+        val n = event.data.value?.asDouble ?: return@_stepJoin null
         val steps = source.numSteps
 
-        if (steps != null && steps > Rational.ZERO) {
+        if (steps != null && steps > 0.0) {
             val end = n / steps
 
-            if (end <= Rational.ZERO) return@_stepJoin silence
-            if (end >= Rational.ONE) return@_stepJoin source
+            if (end <= 0.0) return@_stepJoin silence
+            if (end >= 1.0) return@_stepJoin source
+
             // Take(n) keeps first n steps.
             // Zoom window [0, end] to [0, 1]
-            val endCycles = end.toDouble()
-            source
-                ._withQueryTime { t -> t.scaleBy(endCycles) }
-                ._withHapTime { t -> t.divBy(endCycles) }
+            source._withQueryTime { t -> t.scaleBy(end) }
+                ._withHapTime { t -> t.divBy(end) }
                 .withSteps(n)
         } else {
             silence
@@ -3957,7 +3953,7 @@ fun PatternMapperFn.take(n: PatternLike, callInfo: CallInfo? = null): PatternMap
 private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val dropArg = args.firstOrNull() ?: return source
 
-    val control: ControlValueProvider = dropArg.asControlValueProvider(Rational.ZERO.asVoiceValue())
+    val control: ControlValueProvider = dropArg.asControlValueProvider(0.0.asVoiceValue())
 
     val dropPattern = when (control) {
         is ControlValueProvider.Static -> AtomicPattern(SprudelVoiceData.empty.copy(value = control.value))
@@ -3965,18 +3961,18 @@ private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     }
 
     return dropPattern._stepJoin { event ->
-        val n = event.data.value?.asRational ?: return@_stepJoin null
+        val n = event.data.value?.asDouble ?: return@_stepJoin null
         val steps = source.numSteps
 
-        if (steps != null && steps > Rational.ZERO) {
-            if (n > Rational.ZERO) {
+        if (steps != null && steps > 0.0) {
+            if (n > 0.0) {
                 // drop from start: zoom(n/steps, 1)
                 val start = n / steps
-                if (start >= Rational.ONE) return@_stepJoin silence
+                if (start >= 1.0) return@_stepJoin silence
                 // Zoom window [start, 1] to [0, 1]
                 // Map query t in [0, 1] to [start, 1] -> t' = start + t * (1 - start)
-                val durationCycles = (Rational.ONE - start).toDouble()
-                val startTime = CycleTime.ofRationalCycles(start)
+                val durationCycles = (1.0 - start)
+                val startTime = CycleTime.ofCycles(start)
 
                 source
                     ._withQueryTime { t -> startTime + t.scaleBy(durationCycles) }
@@ -3986,13 +3982,12 @@ private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
                 // drop from end: zoom(0, (steps+n)/steps)
                 // n is negative
                 val end = (steps + n) / steps
-                if (end <= Rational.ZERO) return@_stepJoin silence
+                if (end <= 0.0) return@_stepJoin silence
+
                 // Zoom window [0, end] to [0, 1]
                 // Map query t in [0, 1] to [0, end] -> t' = t * end
-                val endCycles = end.toDouble()
-                source
-                    ._withQueryTime { t -> t.scaleBy(endCycles) }
-                    ._withHapTime { t -> t.divBy(endCycles) }
+                source._withQueryTime { t -> t.scaleBy(end) }
+                    ._withHapTime { t -> t.divBy(end) }
                     .withSteps(steps + n)
             }
         } else {
@@ -4068,7 +4063,7 @@ private fun applyRepeatCycles(source: SprudelPattern, args: List<SprudelDslArg<A
         }
     }
 
-    val staticReps = repsVal?.asRationalOrNull()
+    val staticReps = repsVal?.asDoubleOrNull()
 
     return if (staticReps != null) {
         RepeatCyclesPattern(source, staticReps)
@@ -4198,11 +4193,11 @@ internal fun applyIter(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
     if (n <= 0) return silence
 
-    val nRat = n.toRational()
+    val nDbl = n.toDouble()
 
     // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.early(Fraction(i).div(times)))
     val patterns = (0 until n).map { i ->
-        val shift = i.toRational() / nRat
+        val shift = i.toDouble() / nDbl
         // We use early() to shift the view forward (events appear earlier, effectively rotating the pattern left)
         source.early(shift)
     }
@@ -4275,11 +4270,11 @@ internal fun applyIterBack(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
     if (n <= 0) return silence
 
-    val nRat = n.toRational()
+    val nDbl = n.toDouble()
 
     // Equivalent to JS: listRange(0, times.sub(1)).map((i) => pat.late(Fraction(i).div(times)))
     val patterns = (0 until n).map { i ->
-        val shift = i.toRational() / nRat
+        val shift = i.toDouble() / nDbl
         // We use late() to shift the view backward (events appear later, rotating pattern right)
         source.late(shift)
     }
@@ -4379,7 +4374,7 @@ private fun applyInvert(pattern: SprudelPattern): SprudelPattern {
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.invert(callInfo: CallInfo? = null): SprudelPattern = applyInvert(this)
+fun SprudelPattern.invert(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyInvert(this)
 
 /** Inverts boolean values in this string pattern. */
 @SprudelDsl
@@ -4547,7 +4542,7 @@ private fun applyPressBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
     val rArg = args.getOrNull(0) ?: return pattern
 
     return pattern._innerJoin(rArg) { src, rVal ->
-        val r = rVal?.asRational ?: return@_innerJoin src
+        val r = rVal?.asDouble ?: return@_innerJoin src
 
         src._fmap { value ->
             // Create atomic pattern with the value
@@ -4646,7 +4641,7 @@ private fun applyPress(pattern: SprudelPattern): SprudelPattern {
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.press(callInfo: CallInfo? = null): SprudelPattern = applyPress(this)
+fun SprudelPattern.press(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyPress(this)
 
 /** Syncopates this string pattern by shifting events halfway into their timespan. */
 @SprudelDsl
@@ -4686,7 +4681,7 @@ private fun applyRibbon(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
     val cyclesArg = args.getOrNull(1) ?: SprudelDslArg.of(1.0)
 
     // pat.early(offset) -> use applyTimeShift with factor -1
-    val shifted = applyTimeShift(pattern, listOf(offsetArg), Rational.MINUS_ONE)
+    val shifted = applyTimeShift(pattern, listOf(offsetArg), -1.0)
 
     // pure(1).slow(cycles)
     // We use SequencePattern to ensure we get discrete events per cycle (or per 'cycles' duration),

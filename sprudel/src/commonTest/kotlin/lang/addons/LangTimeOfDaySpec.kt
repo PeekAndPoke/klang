@@ -5,7 +5,6 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.ultra.datetime.Kronos
 import io.peekandpoke.ultra.datetime.MpInstant
@@ -30,7 +29,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
         }
 
-        val events = timeOfDay.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = timeOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe 0.0
@@ -41,7 +40,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
         }
 
-        val events = timeOfDay.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = timeOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe 0.5
@@ -52,7 +51,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(6, 0, 0))
         }
 
-        val events = timeOfDay.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = timeOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe 0.25
@@ -63,7 +62,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(18, 0, 0))
         }
 
-        val events = timeOfDay.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = timeOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe 0.75
@@ -74,7 +73,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
         }
 
-        val events = sinOfDay.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = sinOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe (0.0 plusOrMinus 0.01)
@@ -85,7 +84,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
         }
 
-        val events = sinOfDay.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = sinOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // sin(0.5 * PI) = 1.0
@@ -97,7 +96,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
         }
 
-        val events = sinOfDay2.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = sinOfDay2.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // sin(0 * PI) * 2 - 1 = 0 * 2 - 1 = -1
@@ -109,7 +108,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
         }
 
-        val events = sinOfDay2.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = sinOfDay2.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // sin(0.5 * PI) * 2 - 1 = 1 * 2 - 1 = 1
@@ -121,7 +120,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
         }
 
-        val events = timeOfNight.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = timeOfNight.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe 1.0
@@ -132,7 +131,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
         }
 
-        val events = timeOfNight.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = timeOfNight.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe 0.5
@@ -143,7 +142,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
         }
 
-        val events = sinOfNight.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = sinOfNight.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // 1.0 - sin(0 * PI) = 1.0 - 0 = 1.0
@@ -155,7 +154,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
         }
 
-        val events = sinOfNight.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = sinOfNight.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // 1.0 - sin(0.5 * PI) = 1.0 - 1.0 = 0.0
@@ -167,7 +166,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(0, 0, 0))
         }
 
-        val events = sinOfNight2.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = sinOfNight2.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // 1.0 - sin(0 * PI) * 2 = 1.0 - 0 * 2 = 1.0
@@ -179,7 +178,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(12, 0, 0))
         }
 
-        val events = sinOfNight2.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = sinOfNight2.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // 1.0 - sin(0.5 * PI) * 2 = 1.0 - 1.0 * 2 = -1.0
@@ -189,7 +188,7 @@ class LangTimeOfDaySpec : StringSpec({
     "timeOfDay should use system time when no Kronos is set in context" {
         val ctx = QueryContext.empty
 
-        val events = timeOfDay.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = timeOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // Should return a value between 0.0 and 1.0 (can't test exact value, just range)
@@ -203,7 +202,7 @@ class LangTimeOfDaySpec : StringSpec({
             set(QueryContext.kronosKey, fixedKronos(12, 30, 0)) // 12:30:00
         }
 
-        val events = timeOfDay.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = timeOfDay.queryArcContextual(0.0, 1.0, ctx)
 
         events.size shouldBe 1
         // 12.5 hours / 24 = 0.520833...

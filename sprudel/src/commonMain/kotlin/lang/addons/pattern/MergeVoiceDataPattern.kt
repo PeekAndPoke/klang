@@ -2,7 +2,6 @@ package io.peekandpoke.klang.sprudel.lang.addons.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -23,8 +22,8 @@ internal class MergePattern(
     val control: SprudelPattern,
 ) : SprudelPattern {
     override val weight: Double get() = source.weight
-    override val numSteps: Rational? get() = source.numSteps
-    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    override val numSteps: Double? get() = source.numSteps
+    override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val sourceEvents = source.queryArcContextual(from, to, ctx)

@@ -4,7 +4,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -15,7 +14,7 @@ class ContextRangeMapPatternSpec : StringSpec({
 
     "ContextRangeMapPattern remaps min/max in context" {
         val base = object : SprudelPattern.FixedWeight {
-            override val numSteps: Rational = Rational.ONE
+            override val numSteps: Double = 1.0
 
             override fun queryArcContextual(
                 from: CycleTime,
@@ -48,7 +47,7 @@ class ContextRangeMapPatternSpec : StringSpec({
             set(ContinuousPattern.maxKey, 5.0)   // -> 10.0
         }
 
-        val events = wrapped.queryArcContextual(Rational.ZERO, Rational.ONE, ctx)
+        val events = wrapped.queryArcContextual(0.0, 1.0, ctx)
         val value = events.first().data.value?.asDouble
 
         value shouldBe 13.0

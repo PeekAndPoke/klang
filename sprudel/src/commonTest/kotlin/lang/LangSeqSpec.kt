@@ -6,7 +6,6 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.soundName
@@ -19,11 +18,11 @@ class LangSeqSpec : StringSpec({
         val events = p.queryArc(0.0, 1.0).sortedBy { it.part.begin }
 
         events.size shouldBe 2
-        events[0].data.value?.asRational shouldBe 0.toRational()
+        events[0].data.value?.asDouble shouldBe 0.toDouble()
         events[0].part.begin.toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         events[0].part.end.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
 
-        events[1].data.value?.asRational shouldBe 1.1.toRational()
+        events[1].data.value?.asDouble shouldBe 1.1
         events[1].part.begin.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
         events[1].part.end.toDouble() shouldBe (1.0 plusOrMinus EPSILON)
     }

@@ -2,8 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -26,7 +24,7 @@ internal class ReversePattern(
         /**
          * Create a ReversePattern with a static n value.
          */
-        fun static(inner: SprudelPattern, n: Rational = Rational.ONE): ReversePattern {
+        fun static(inner: SprudelPattern, n: Double = 1.0): ReversePattern {
             return ReversePattern(
                 inner = inner,
                 nProvider = ControlValueProvider.Static(n.asVoiceValue())
@@ -46,9 +44,9 @@ internal class ReversePattern(
 
     override val weight: Double get() = inner.weight
 
-    override val numSteps: Rational? get() = inner.numSteps
+    override val numSteps: Double? get() = inner.numSteps
 
-    override fun estimateCycleDuration(): Rational = inner.estimateCycleDuration()
+    override fun estimateCycleDuration(): Double = inner.estimateCycleDuration()
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val nEvents = nProvider.queryEvents(from, to, ctx)
@@ -60,7 +58,7 @@ internal class ReversePattern(
             return if (n <= 1) {
                 querySimpleReverse(from, to, ctx)
             } else {
-                queryMultiCycleReverse(from, to, ctx, n.toRational())
+                queryMultiCycleReverse(from, to, ctx, n.toDouble())
             }
         }
 
@@ -75,7 +73,7 @@ internal class ReversePattern(
                 querySimpleReverse(nEvent.part.begin, nEvent.part.end, ctx)
             } else {
                 // Multi-cycle reversal
-                queryMultiCycleReverse(nEvent.part.begin, nEvent.part.end, ctx, n.toRational())
+                queryMultiCycleReverse(nEvent.part.begin, nEvent.part.end, ctx, n.toDouble())
             }
 
             result.addAll(events)
@@ -122,7 +120,7 @@ internal class ReversePattern(
         from: CycleTime,
         to: CycleTime,
         ctx: QueryContext,
-        nRat: Rational,
+        nRat: Double,
     ): List<SprudelPatternEvent> {
         // Multi-cycle reversal using fast/slow approach
         // fast(n).rev().slow(n)

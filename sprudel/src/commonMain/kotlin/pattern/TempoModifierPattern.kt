@@ -2,8 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -30,7 +28,7 @@ internal class TempoModifierPattern(
          */
         fun static(
             source: SprudelPattern,
-            factor: Rational,
+            factor: Double,
             invertPattern: Boolean = false,
         ): TempoModifierPattern {
             return TempoModifierPattern(
@@ -58,7 +56,7 @@ internal class TempoModifierPattern(
 
     override val weight: Double get() = source.weight
 
-    override val numSteps: Rational? get() = source.numSteps
+    override val numSteps: Double? get() = source.numSteps
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
@@ -67,9 +65,9 @@ internal class TempoModifierPattern(
         val result = createEventList()
 
         for (factorEvent in factorEvents) {
-            // Read as Rational directly — avoids a Rational -> Double -> Rational round-trip
-            // that re-runs doubleToFractionBigInt per query (see TimeShiftPattern for details).
-            val factor = factorEvent.data.value?.asRational ?: Rational.ONE
+            // Read the factor as a Double directly (it is already stored as a value)
+            // — no per-query reconstruction needed.
+            val factor = factorEvent.data.value?.asDouble ?: 1.0
             val events = queryWithFactor(factorEvent.part.begin, factorEvent.part.end, ctx, factor)
 
             val factorLocation = factorEvent.sourceLocations?.innermost
@@ -87,19 +85,19 @@ internal class TempoModifierPattern(
         from: CycleTime,
         to: CycleTime,
         ctx: QueryContext,
-        factor: Rational,
+        factor: Double,
     ): List<SprudelPatternEvent> {
         // invertPattern=true means fast (use factor as-is)
         // invertPattern=false means slow (use 1/factor)
         val scale = if (invertPattern) {
-            factor.toDouble()
+            factor
         } else {
-            1.0 / maxOf(0.001, factor.toDouble())
+            1.0 / maxOf(0.001, factor)
         }
 
         val (innerFrom, innerToRaw) = scaleTimeRange(from, to, scale)
         // Preserve a non-empty window if scaling collapsed it (e.g. point-sampling through slow()).
-        val innerTo = if (to > from && innerToRaw <= innerFrom) innerFrom + CycleTime(1.0) else innerToRaw
+        val innerTo = if (to > from && innerToRaw <= innerFrom) innerFrom + SprudelPattern.QUERY_EPSILON else innerToRaw
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
@@ -114,18 +112,18 @@ internal class TempoModifierPattern(
         }
     }
 
-    override fun estimateCycleDuration(): Rational {
+    override fun estimateCycleDuration(): Double {
         // Use static value if available, otherwise use 1.0 as estimate
         val factor = if (factorProvider is ControlValueProvider.Static) {
-            factorProvider.value.asRational ?: Rational.ONE
+            factorProvider.value.asDouble ?: 1.0
         } else {
-            Rational.ONE
+            1.0
         }
 
         val scale = if (invertPattern) {
             factor
         } else {
-            Rational.ONE / maxOf(0.001.toRational(), factor)
+            1.0 / maxOf(0.001, factor)
         }
 
         val sourceDur = source.estimateCycleDuration()

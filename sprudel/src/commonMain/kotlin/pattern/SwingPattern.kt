@@ -2,7 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import kotlin.math.floor
@@ -25,20 +24,20 @@ import kotlin.math.floor
  */
 internal class SwingPattern(
     private val source: SprudelPattern,
-    private val swing: Rational,
-    private val n: Rational,
+    private val swing: Double,
+    private val n: Double,
 ) : SprudelPattern {
 
     override val weight: Double get() = source.weight
-    override val numSteps: Rational? get() = source.numSteps
-    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    override val numSteps: Double? get() = source.numSteps
+    override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
     override fun queryArcContextual(
         from: CycleTime,
         to: CycleTime,
         ctx: SprudelPattern.QueryContext,
     ): List<SprudelPatternEvent> {
-        if (swing == Rational.ZERO || n <= Rational.ZERO) {
+        if (swing == 0.0 || n <= 0.0) {
             return source.queryArcContextual(from, to, ctx)
         }
 
@@ -46,10 +45,10 @@ internal class SwingPattern(
         if (events.isEmpty()) return events
 
         // Duration of one subdivision in cycle time
-        val subdivDuration = CycleTime.ofCycles(1.0 / n.toDouble())
+        val subdivDuration = CycleTime.ofCycles(1.0 / n)
 
-        return events.mapNotNull { event ->
-            if (swing > Rational.ZERO) {
+        return events.map { event ->
+            if (swing > 0.0) {
                 applySwingPositive(event, subdivDuration)
             } else {
                 applySwingNegative(event, subdivDuration)
@@ -79,12 +78,12 @@ internal class SwingPattern(
 
         if (!isSecondHalf) {
             // First half: stretch, no shift
-            stretchFactor = 1.0 + swing.toDouble()
+            stretchFactor = 1.0 + swing
             shift = CycleTime.ZERO
         } else {
             // Second half: compress, shift later
-            stretchFactor = 1.0 - swing.toDouble()
-            shift = subdivHalf.scaleBy(swing.toDouble())
+            stretchFactor = 1.0 - swing
+            shift = subdivHalf.scaleBy(swing)
         }
 
         val newPartBegin = event.part.begin + shift
@@ -100,7 +99,7 @@ internal class SwingPattern(
 
     /** Negative swing: compress first-half events, shift+stretch second-half events (reverse swing) */
     private fun applySwingNegative(event: SprudelPatternEvent, subdivDuration: CycleTime): SprudelPatternEvent {
-        val absSwing = -swing.toDouble()
+        val absSwing = -swing
         val onsetInCycle = event.whole.begin.fracOfCycle()
         val subdivStart = subdivStartOf(onsetInCycle, subdivDuration)
         val posInSubdiv = onsetInCycle - subdivStart

@@ -8,7 +8,6 @@ import io.kotest.matchers.doubles.shouldBeBetween
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
@@ -1018,14 +1017,14 @@ class LangContinuousPatternsSpec : StringSpec({
         val pattern = sine.slow(8.0)
         val ctx = SprudelPattern.QueryContext.empty
 
-        val event0 = pattern.sampleAt(0.0.toRational(), ctx)
+        val event0 = pattern.sampleAt(0.0, ctx)
         withClue("sampleAt(0.0) should return event") {
             event0.shouldNotBeNull()
             event0.data.value.shouldNotBeNull()
             event0.data.value.asDouble shouldBe (0.5 plusOrMinus EPSILON)
         }
 
-        val event05 = pattern.sampleAt(0.5.toRational(), ctx)
+        val event05 = pattern.sampleAt(0.5, ctx)
         withClue("sampleAt(0.5) should return event") {
             event05.shouldNotBeNull()
             event05.data.value.shouldNotBeNull()

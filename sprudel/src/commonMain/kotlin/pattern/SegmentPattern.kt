@@ -2,7 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -32,7 +31,7 @@ internal class SegmentPattern(
         fun static(source: SprudelPattern, n: Int): SegmentPattern {
             return SegmentPattern(
                 source = source,
-                nProvider = ControlValueProvider.Static(Rational(n).asVoiceValue())
+                nProvider = ControlValueProvider.Static((n).asVoiceValue())
             )
         }
 
@@ -49,9 +48,9 @@ internal class SegmentPattern(
 
     override val weight: Double get() = source.weight
 
-    override val numSteps: Rational? get() = source.numSteps
+    override val numSteps: Double? get() = source.numSteps
 
-    override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+    override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val nEvents = nProvider.queryEvents(from, to, ctx)
@@ -64,12 +63,13 @@ internal class SegmentPattern(
             if (n <= 0) continue
 
             val duration = nEvent.part.duration
-            val sliceDuration = duration.divBy(n.toDouble())
+            val base = nEvent.part.begin
 
-            // Create n slices within this timespan
+            // Create n slices with absolute boundaries so the last slice ends exactly at base+duration
+            // (no cumulative-rounding gap for n that don't divide the tick grid).
             for (i in 0 until n) {
-                val sliceBegin = nEvent.part.begin + (sliceDuration * i)
-                val sliceEnd = sliceBegin + sliceDuration
+                val sliceBegin = base + duration.scaleBy(i.toDouble() / n)
+                val sliceEnd = base + duration.scaleBy((i + 1).toDouble() / n)
 
                 // Query source for this slice
                 val sourceEvents = source.queryArcContextual(sliceBegin, sliceEnd, ctx)

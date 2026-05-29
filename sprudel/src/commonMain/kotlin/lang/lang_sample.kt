@@ -3,7 +3,6 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -531,7 +530,7 @@ private fun applyLoopAt(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     if (args.isEmpty()) return source
 
     // Get the loopAt factor
-    val factor = args[0].value?.asRationalOrNull() ?: return source
+    val factor = args[0].value?.asDoubleOrNull() ?: return source
 
     // Apply slow() to stretch the events to the desired duration
     // loopAt(2) stretches events to 2 cycles, loopAt(0.5) compresses to 0.5 cycles
@@ -605,11 +604,11 @@ fun PatternMapperFn.loopAt(cycles: PatternLike, callInfo: CallInfo? = null): Pat
 
 private fun applyLoopAtCps(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return source._innerJoin(args) { pat, factorValue, cpsValue ->
-        val factor = factorValue?.asRational ?: return@_innerJoin silence
-        val cps = cpsValue?.asRational ?: Rational.HALF
+        val factor = factorValue?.asDouble ?: return@_innerJoin silence
+        val cps = cpsValue?.asDouble ?: 0.5
 
         // Calculate speed: (1 / factor) * cps
-        val speed = (Rational.ONE / factor) * cps
+        val speed = (1.0 / factor) * cps
 
         // JavaScript: pat.speed((1/factor) * cps).unit('c').slow(factor)
         pat.speed(speed).unit("c").slow(factor)

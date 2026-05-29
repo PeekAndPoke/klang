@@ -6,7 +6,6 @@ package io.peekandpoke.klang.sprudel.lang
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.common.math.CycleTime
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -1424,11 +1423,6 @@ fun SprudelVoiceData.transpose(amount: Any?): SprudelVoiceData {
     val intervalName: String
 
     when (amount) {
-        is Rational -> {
-            semitones = amount.toInt()
-            intervalName = ""
-        }
-
         is Number -> {
             semitones = amount.toInt()
             intervalName = ""
@@ -1944,8 +1938,8 @@ private fun applyVoicing(
 ): SprudelPattern {
     return object : SprudelPattern {
         override val weight: Double get() = source.weight
-        override val numSteps: Rational? get() = source.numSteps
-        override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+        override val numSteps: Double? get() = source.numSteps
+        override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
 
         override fun queryArcContextual(
             from: CycleTime,
@@ -2013,7 +2007,7 @@ private fun applyVoicing(
     }
 }
 
-/** Converts a [rank] [PatternLike] argument into a control [SprudelPattern], or null if no rank is given. */
+/** Converts a [value] [PatternLike] argument into a control [SprudelPattern], or null if no rank is given. */
 private fun toControlPattern(value: PatternLike?, callInfo: CallInfo?): SprudelPattern? =
     value?.let { listOf<Any?>(it).asSprudelDslArgs(callInfo).toPattern() }
 

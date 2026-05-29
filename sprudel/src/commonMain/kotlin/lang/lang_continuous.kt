@@ -17,6 +17,7 @@ import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern.Companion.wit
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import io.peekandpoke.klang.sprudel.pattern.EmptyPattern
 import kotlin.math.PI
+import kotlin.math.exp
 import kotlin.math.sin
 
 /**
@@ -60,7 +61,7 @@ private fun applyToBipolar(pattern: SprudelPattern): SprudelPattern {
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.toBipolar(callInfo: CallInfo? = null): SprudelPattern = applyToBipolar(this)
+fun SprudelPattern.toBipolar(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyToBipolar(this)
 
 /** Parses this string as a pattern, then maps its values from `0..1` to `-1..1`. */
 @SprudelDsl
@@ -137,7 +138,7 @@ private fun applyFromBipolar(pattern: SprudelPattern): SprudelPattern {
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.fromBipolar(callInfo: CallInfo? = null): SprudelPattern = applyFromBipolar(this)
+fun SprudelPattern.fromBipolar(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyFromBipolar(this)
 
 /** Parses this string as a pattern, then maps its values from `-1..1` to `0..1`. */
 @SprudelDsl
@@ -287,7 +288,7 @@ private fun applyRangex(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
 
     // Apply exponential function to the result
     return applyUnaryOp(ranged) { v ->
-        v.asRational?.exp()?.asVoiceValue() ?: v
+        v.asDouble?.let { exp(it) }?.asVoiceValue() ?: v
     }
 }
 
@@ -554,7 +555,7 @@ private fun applySignal(f: (Double) -> Double): SprudelPattern =
  */
 @SprudelDsl
 @KlangScript.Function
-fun signal(callInfo: CallInfo? = null, f: (Double) -> Double): SprudelPattern = applySignal(f)
+fun signal(@Suppress("unused") callInfo: CallInfo? = null, f: (Double) -> Double): SprudelPattern = applySignal(f)
 
 // -- steady -----------------------------------------------------------------------------------------------------------
 
@@ -579,7 +580,7 @@ fun signal(callInfo: CallInfo? = null, f: (Double) -> Double): SprudelPattern = 
  */
 @SprudelDsl
 @KlangScript.Function
-fun steady(value: Number, callInfo: CallInfo? = null): SprudelPattern {
+fun steady(value: Number, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern {
     val v = value.toDouble()
     return applySignal { _ -> v }
 }

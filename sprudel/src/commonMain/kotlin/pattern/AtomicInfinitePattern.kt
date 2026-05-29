@@ -2,7 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
@@ -16,7 +15,7 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
  */
 class AtomicInfinitePattern(val data: SprudelVoiceData) : SprudelPattern {
     override val weight: Double = 1.0
-    override val numSteps: Rational? = null // Infinite pattern has no defined step count
+    override val numSteps: Double? = null // Infinite pattern has no defined step count
 
     override fun queryArcContextual(
         from: CycleTime,

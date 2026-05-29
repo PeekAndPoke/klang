@@ -1,10 +1,6 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
-
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.sum
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -23,25 +19,23 @@ internal class SequencePattern(
             patterns.size == 1 -> patterns.first()
             else -> SequencePattern(patterns)
         }
-
-        private val MIN_QUERY_LENGTH = 1e-7.toRational()
     }
 
-    override val numSteps: Rational get() = patterns.size.toRational()
+    override val numSteps: Double get() = patterns.size.toDouble()
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     // Calculate proportional offsets based on weights
-    private val weights = patterns.map { it.weight.toRational() }
+    private val weights = patterns.map { it.weight }
     private val totalWeight = weights.sum()
-    private val offsets = mutableListOf(Rational.ZERO)
+    private val offsets = mutableListOf(0.0)
 
     init {
-        if (totalWeight == Rational.ZERO) {
+        if (totalWeight == 0.0) {
             // All weights are zero — fall back to equal distribution
-            val equalStep = Rational.ONE / Rational(patterns.size)
+            val equalStep = 1.0 / patterns.size.toDouble()
             patterns.indices.forEach { i ->
-                offsets.add(equalStep * Rational(i + 1))
+                offsets.add(equalStep * (i + 1).toDouble())
             }
         } else {
             weights.forEach { w ->
@@ -49,6 +43,11 @@ internal class SequencePattern(
             }
         }
     }
+
+    // Precomputed cycle-local step boundaries and sizes — fixed per pattern, so they are snapped to
+    // ticks once here instead of calling CycleTime.ofCycles on every query (hot path).
+    private val offsetTimes: List<CycleTime> = offsets.map { CycleTime.ofCycles(it) }
+    private val stepSizes: List<Double> = (0 until patterns.size).map { offsets[it + 1] - offsets[it] }
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
@@ -60,11 +59,11 @@ internal class SequencePattern(
         val endCycle = to.ceilToCycle().cycleIndex()
 
         for (cycle in startCycle until endCycle) {
+            val cycleOffset = CycleTime.ofCycleIndex(cycle)
             patterns.forEachIndexed { index, pattern ->
-                val cycleOffset = CycleTime.ofCycleIndex(cycle)
-                val stepStart = cycleOffset + CycleTime.ofCycles(offsets[index].toDouble())
-                val stepEnd = cycleOffset + CycleTime.ofCycles(offsets[index + 1].toDouble())
-                val stepSize = offsets[index + 1].toDouble() - offsets[index].toDouble()
+                val stepStart = cycleOffset + offsetTimes[index]
+                val stepEnd = cycleOffset + offsetTimes[index + 1]
+                val stepSize = stepSizes[index]
 
                 // Calculate the intersection of this step with the query arc
                 val intersectStart = from.coerceAtLeast(stepStart)

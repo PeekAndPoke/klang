@@ -6,7 +6,18 @@ import io.peekandpoke.klang.common.math.CycleTime.Companion.ofSubdivision
 import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 import kotlin.math.floor
-import kotlin.math.round
+
+/**
+ * Nearest-integer rounding for tick snapping. Uses native [floor] (half-up) rather than
+ * `kotlin.math.round` (round-half-to-even), which on Kotlin/JS is hand-implemented with tie
+ * branches and was a measurable hot path. `floor(x + 0.5)`:
+ * - is faster (one add + native floor),
+ * - rounds to nearest so exact subdivisions land right — e.g. `1.0/3.0` is `0.3333…` just *below*
+ *   a true third, so plain `floor` would truncate `T/3` one tick low; `floor(x+0.5)` lands on `T/3`,
+ * - never yields `-0.0` (floor of any value ≥ -0.5 is `+0.0`), keeping `== ZERO` checks robust.
+ * Ties round half-up; musically irrelevant (the snapping itself is the fixed-point approximation).
+ */
+private fun roundTicks(x: Double): Double = floor(x + 0.5)
 
 /**
  * Fixed-point musical time, measured in integer **ticks** of a cycle.
@@ -52,10 +63,10 @@ value class CycleTime(val ticks: Double) : Comparable<CycleTime> {
     // --- Grid-snapping arithmetic (rounds to the nearest tick) ---
 
     /** Scales by an arbitrary factor (tempo: fast/slow/zoom). Rounds to the nearest tick. */
-    fun scaleBy(factor: Double): CycleTime = CycleTime(round(ticks * factor))
+    fun scaleBy(factor: Double): CycleTime = CycleTime(roundTicks(ticks * factor))
 
     /** Divides by an arbitrary factor. Rounds to the nearest tick. */
-    fun divBy(factor: Double): CycleTime = CycleTime(round(ticks / factor))
+    fun divBy(factor: Double): CycleTime = CycleTime(roundTicks(ticks / factor))
 
     /** Dimensionless ratio of two durations (e.g. mapping outer time into an inner step). */
     fun ratioTo(other: CycleTime): Double = ticks / other.ticks
@@ -109,15 +120,12 @@ value class CycleTime(val ticks: Double) : Comparable<CycleTime> {
         val QUARTER = CycleTime(T / 4.0)
 
         /** From a fractional cycle position (Double bridge). Rounds to the nearest tick. */
-        fun ofCycles(cycles: Double): CycleTime = CycleTime(round(cycles * T))
+        fun ofCycles(cycles: Double): CycleTime = CycleTime(roundTicks(cycles * T))
 
         /** From a whole cycle index — exact. */
         fun ofCycleIndex(index: Int): CycleTime = CycleTime(index * T)
 
         /** Position of step [i] of [n] equal subdivisions (i/n of a cycle). Rounds if n ∤ T. */
-        fun ofSubdivision(i: Int, n: Int): CycleTime = CycleTime(round(i.toDouble() * T / n))
-
-        /** From a [Rational] cycle position (tempo factors / shift offsets from voice values). */
-        fun ofRationalCycles(r: Rational): CycleTime = ofCycles(r.toDouble())
+        fun ofSubdivision(i: Int, n: Int): CycleTime = CycleTime(roundTicks(i.toDouble() * T / n))
     }
 }

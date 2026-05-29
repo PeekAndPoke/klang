@@ -2,8 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -31,9 +29,9 @@ class StaticSprudelPattern(
         (events.maxOfOrNull { it.part.end } ?: CycleTime.ZERO).ceilToCycle().cycleIndex()
     )
 
-    override val numSteps: Rational = events.size.toRational() / totalCyclesInt.toRational()
+    override val numSteps: Double = events.size.toDouble() / totalCyclesInt.toDouble()
 
-    override fun estimateCycleDuration(): Rational = totalCyclesInt.toRational()
+    override fun estimateCycleDuration(): Double = totalCyclesInt.toDouble()
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         if (events.isEmpty()) return emptyList()

@@ -4,7 +4,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.range
@@ -17,7 +16,7 @@ class ContinuousPatternSpec : StringSpec({
         val pattern = ContinuousPattern { t -> t % 1.0 }
 
         // Querying a continuous pattern returns exactly one event covering the queried arc
-        val events = pattern.queryArc(0.25.toRational(), 0.75.toRational())
+        val events = pattern.queryArc(0.25, 0.75)
 
         events.size shouldBe 1
         val event = events[0]
@@ -33,7 +32,7 @@ class ContinuousPatternSpec : StringSpec({
 
         // sine is (sin(t * 2 * PI) + 1) / 2
         // at t=0.25, (sin(0.5 * PI) + 1) / 2 = (1 + 1) / 2 = 1.0
-        val events = pattern.queryArc(0.25.toRational(), 0.5.toRational())
+        val events = pattern.queryArc(0.25, 0.5)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe (1.0 plusOrMinus EPSILON)
@@ -44,7 +43,7 @@ class ContinuousPatternSpec : StringSpec({
 
         pattern.shouldNotBeNull()
         // at t=0.5, (sin(PI) + 1) / 2 = (0 + 1) / 2 = 0.5
-        val events = pattern.queryArc(0.5.toRational(), 1.0.toRational())
+        val events = pattern.queryArc(0.5, 1.0)
 
         events.size shouldBe 1
         events[0].data.value?.asDouble shouldBe (0.5 plusOrMinus EPSILON)
@@ -57,7 +56,7 @@ class ContinuousPatternSpec : StringSpec({
         // mapping 0..1 to 0..100. 0.5 is exactly the middle.
         val mapped = base.range(0.0, 100.0)
 
-        val events = mapped.queryArc(0.0.toRational(), 1.0.toRational())
+        val events = mapped.queryArc(0.0, 1.0)
         events[0].data.value?.asDouble shouldBe (50.0 plusOrMinus EPSILON)
     }
 })

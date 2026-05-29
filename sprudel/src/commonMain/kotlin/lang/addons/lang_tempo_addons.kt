@@ -5,7 +5,6 @@ package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -25,7 +24,7 @@ import io.peekandpoke.klang.sprudel.lang.voiceValueModifier
 private fun applyTimeMoveInCycle(
     pattern: SprudelPattern,
     args: List<SprudelDslArg<Any?>>,
-    factor: Rational,
+    factor: Double,
 ): SprudelPattern {
     if (args.isEmpty()) return pattern
     val control = args.toPattern()
@@ -34,7 +33,7 @@ private fun applyTimeMoveInCycle(
     // 2. Use _outerJoin to iterate source events and sample control at event time
     return pattern._splitQueries()._outerJoin(control) { srcEv, ctrlEv ->
         val shiftVal = (ctrlEv?.data?.value?.asDouble ?: 0.0)
-        val shift = CycleTime.ofCycles(shiftVal * factor.toDouble())
+        val shift = CycleTime.ofCycles(shiftVal * factor)
 
         if (shift == CycleTime.ZERO) return@_outerJoin srcEv
 
@@ -76,7 +75,7 @@ private fun applyTimeMoveInCycle(
 @SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lateInCycle(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyTimeMoveInCycle(pattern = this, args = listOf(amount).asSprudelDslArgs(callInfo), factor = Rational.ONE)
+    applyTimeMoveInCycle(pattern = this, args = listOf(amount).asSprudelDslArgs(callInfo), factor = 1.0)
 
 /**
  * Parses this string as a pattern and nudges events later within their cycle.
@@ -147,7 +146,7 @@ fun PatternMapperFn.lateInCycle(amount: PatternLike, callInfo: CallInfo? = null)
 @SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.earlyInCycle(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
-    applyTimeMoveInCycle(pattern = this, args = listOf(amount).asSprudelDslArgs(callInfo), factor = Rational.MINUS_ONE)
+    applyTimeMoveInCycle(pattern = this, args = listOf(amount).asSprudelDslArgs(callInfo), factor = -1.0)
 
 /**
  * Parses this string as a pattern and nudges events earlier within their cycle.

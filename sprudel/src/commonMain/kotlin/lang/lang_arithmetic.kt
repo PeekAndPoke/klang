@@ -12,6 +12,9 @@ import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.mapEvents
 import io.peekandpoke.klang.sprudel.pattern.ReinterpretPattern.Companion.reinterpretVoice
+import kotlin.math.ceil
+import kotlin.math.floor
+
 // Helper for arithmetic operations that modify the 'value' field
 internal fun applyArithmetic(
     source: SprudelPattern,
@@ -897,7 +900,7 @@ fun PatternMapperFn.brshift(bits: PatternLike, callInfo: CallInfo? = null): Patt
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.log2(callInfo: CallInfo? = null): SprudelPattern =
+fun SprudelPattern.log2(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyUnaryOp(this) { it.log2() }
 
 /**
@@ -1273,8 +1276,10 @@ fun PatternMapperFn.or(other: PatternLike, callInfo: CallInfo? = null): PatternM
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.round(callInfo: CallInfo? = null): SprudelPattern =
-    applyUnaryOp(this) { v -> v.asRational?.round()?.asVoiceValue() ?: v }
+fun SprudelPattern.round(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+// Half-up rounding (floor(x+0.5)) to match the previous behavior; kotlin.math.round is
+    // half-to-even (banker's), which would round 2.5 -> 2.
+    applyUnaryOp(this) { v -> v.asDouble?.let { floor(it + 0.5) }?.asVoiceValue() ?: v }
 
 @SprudelDsl
 @KlangScript.Function
@@ -1302,8 +1307,8 @@ fun PatternMapperFn.round(callInfo: CallInfo? = null): PatternMapperFn =
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.floor(callInfo: CallInfo? = null): SprudelPattern =
-    applyUnaryOp(this) { v -> v.asRational?.floor()?.asVoiceValue() ?: v }
+fun SprudelPattern.floor(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    applyUnaryOp(this) { v -> v.asDouble?.let { floor(it) }?.asVoiceValue() ?: v }
 
 @SprudelDsl
 @KlangScript.Function
@@ -1331,8 +1336,8 @@ fun PatternMapperFn.floor(callInfo: CallInfo? = null): PatternMapperFn =
  */
 @SprudelDsl
 @KlangScript.Function
-fun SprudelPattern.ceil(callInfo: CallInfo? = null): SprudelPattern =
-    applyUnaryOp(this) { v -> v.asRational?.ceil()?.asVoiceValue() ?: v }
+fun SprudelPattern.ceil(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
+    applyUnaryOp(this) { v -> v.asDouble?.let { ceil(it) }?.asVoiceValue() ?: v }
 
 @SprudelDsl
 @KlangScript.Function

@@ -3,8 +3,6 @@ package io.peekandpoke.klang.sprudel.graal
 import io.peekandpoke.klang.audio_bridge.SoundValue
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -25,9 +23,9 @@ class GraalSprudelPattern(
     // Graal patterns are treated as opaque units from the JS side, so we default to weight 1.0.
     override val weight: Double = 1.0
 
-    override val numSteps: Rational = Rational.ONE
+    override val numSteps: Double = 1.0
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val arc = graal.queryPattern(value, from.toCycles(), to.toCycles())
@@ -441,7 +439,7 @@ class GraalSprudelPattern(
                 value = when {
                     value?.isString == true -> value.asString().asVoiceValue()
 
-                    value?.isNumber == true -> value.asDouble().toRational().asVoiceValue()
+                    value?.isNumber == true -> value.asDouble().asVoiceValue()
 
                     value?.isBoolean == true -> value.asBoolean().asVoiceValue()
 

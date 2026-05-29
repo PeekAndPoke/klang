@@ -5,8 +5,6 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -35,11 +33,11 @@ import io.peekandpoke.klang.sprudel.withSteps
 internal fun applyTimeShift(
     pattern: SprudelPattern,
     args: List<SprudelDslArg<Any?>>,
-    factor: Rational = Rational.ONE,
+    factor: Double = 1.0,
 ): SprudelPattern {
     if (args.isEmpty()) return pattern
 
-    val control = args[0].asControlValueProvider(Rational.ZERO.asVoiceValue())
+    val control = args[0].asControlValueProvider(0.0.asVoiceValue())
 
     return TimeShiftPattern(
         source = pattern,
@@ -58,20 +56,20 @@ internal fun applySlow(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val factorArg = args.firstOrNull() ?: return pattern
 
     val result = pattern._innerJoin(factorArg) { src, factorVal ->
-        val factor = factorVal?.asRational ?: return@_innerJoin src
-        if (factor == Rational.ZERO) return@_innerJoin silence
-        val inverseFactor = 1.0 / factor.toDouble()
+        val factor = factorVal?.asDouble ?: return@_innerJoin src
+        if (factor == 0.0) return@_innerJoin silence
+        val inverseFactor = 1.0 / factor
 
         src._withQueryTime { t -> t.scaleBy(inverseFactor) }
             ._withHapTime { t -> t.divBy(inverseFactor) }
             .withSteps(src.numSteps)
     }
 
-    val staticFactor = factorArg.value?.asRationalOrNull()
+    val staticFactor = factorArg.value?.asDoubleOrNull()
 
-    if (staticFactor != null && staticFactor > Rational.ZERO) {
+    if (staticFactor != null && staticFactor > 0.0) {
         return object : SprudelPattern by result {
-            override fun estimateCycleDuration(): Rational =
+            override fun estimateCycleDuration(): Double =
                 pattern.estimateCycleDuration() * staticFactor
         }
     }
@@ -138,20 +136,19 @@ internal fun applyFast(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val factorArg = args.firstOrNull() ?: return pattern
 
     val result = pattern._innerJoin(factorArg) { src, factorVal ->
-        val factor = factorVal?.asRational ?: return@_innerJoin src
-        if (factor == Rational.ZERO) return@_innerJoin silence
-        val factorD = factor.toDouble()
+        val factor = factorVal?.asDouble ?: return@_innerJoin src
+        if (factor == 0.0) return@_innerJoin silence
 
-        src._withQueryTime { t -> t.scaleBy(factorD) }
-            ._withHapTime { t -> t.divBy(factorD) }
+        src._withQueryTime { t -> t.scaleBy(factor) }
+            ._withHapTime { t -> t.divBy(factor) }
             .withSteps(src.numSteps)
     }
 
-    val staticFactor = factorArg.value?.asRationalOrNull()
+    val staticFactor = factorArg.value?.asDoubleOrNull()
 
-    if (staticFactor != null && staticFactor > Rational.ZERO) {
+    if (staticFactor != null && staticFactor > 0.0) {
         return object : SprudelPattern by result {
-            override fun estimateCycleDuration(): Rational =
+            override fun estimateCycleDuration(): Double =
                 pattern.estimateCycleDuration() / staticFactor
         }
     }
@@ -216,7 +213,7 @@ fun PatternMapperFn.fast(factor: PatternLike, callInfo: CallInfo? = null): Patte
 
 private fun applyRev(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     val nProvider: ControlValueProvider =
-        args.firstOrNull().asControlValueProvider(Rational.ONE.asVoiceValue())
+        args.firstOrNull().asControlValueProvider(1.0.asVoiceValue())
 
     return ReversePattern(inner = pattern, nProvider = nProvider)
 }
@@ -405,7 +402,7 @@ fun PatternMapperFn.palindrome(callInfo: CallInfo? = null): PatternMapperFn =
 // -- early() ----------------------------------------------------------------------------------------------------------
 
 private fun applyEarly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    applyTimeShift(pattern = pattern, args = args, factor = Rational.MINUS_ONE)
+    applyTimeShift(pattern = pattern, args = args, factor = -1.0)
 
 /**
  * Nudges the pattern to start earlier by the given number of cycles.
@@ -465,7 +462,7 @@ fun PatternMapperFn.early(amount: PatternLike, callInfo: CallInfo? = null): Patt
 // -- late() -----------------------------------------------------------------------------------------------------------
 
 private fun applyLate(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern =
-    applyTimeShift(pattern = pattern, args = args, factor = Rational.ONE)
+    applyTimeShift(pattern = pattern, args = args, factor = 1.0)
 
 /**
  * Nudges the pattern to start later by the given number of cycles.
@@ -535,24 +532,24 @@ internal fun applyCompress(pattern: SprudelPattern, args: List<SprudelDslArg<Any
 
     // Bind start...
     return startCtrl._bind { startEv ->
-        val b = startEv.data.value?.asRational ?: return@_bind null
+        val b = startEv.data.value?.asDouble ?: return@_bind null
 
         // ...bind end
         endCtrl._bind { endEv ->
-            val e = endEv.data.value?.asRational ?: return@_bind null
+            val e = endEv.data.value?.asDouble ?: return@_bind null
 
             // JS check: if (b.gt(e) || b.gt(1) || e.gt(1) || b.lt(0) || e.lt(0)) return silence
-            if (b > e || b > Rational.ONE || e > Rational.ONE || b < Rational.ZERO || e < Rational.ZERO) {
+            if (b > e || b > 1.0 || e > 1.0 || b < 0.0 || e < 0.0) {
                 return@_bind null // effectively silence for this event
             }
 
             val duration = e - b
-            if (duration == Rational.ZERO) return@_bind null
+            if (duration == 0.0) return@_bind null
 
-            val factor = Rational.ONE / duration
+            val factor = 1.0 / duration
             val fastGapped = applyFastGap(pattern, listOf(SprudelDslArg.of(factor)))
 
-            val bTime = CycleTime.ofRationalCycles(b)
+            val bTime = CycleTime.ofCycles(b)
             fastGapped._withQueryTime { t -> t - bTime }.mapEvents { ev ->
                 val shiftedPart = ev.part.shift(bTime)
                 val shiftedWhole = ev.whole.shift(bTime)
@@ -627,15 +624,15 @@ private fun applyFocus(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
     val endCtrl = listOf(args[1]).toPattern(voiceValueModifier)
 
     return startCtrl._bind { startEv ->
-        val s = startEv.data.value?.asRational ?: return@_bind null
+        val s = startEv.data.value?.asDouble ?: return@_bind null
 
         endCtrl._bind { endEv ->
-            val e = endEv.data.value?.asRational ?: return@_bind null
+            val e = endEv.data.value?.asDouble ?: return@_bind null
 
             if (s >= e) return@_bind null
 
-            val dCycles = (e - s).toDouble()
-            val sTime = CycleTime.ofRationalCycles(s)
+            val dCycles = (e - s)
+            val sTime = CycleTime.ofCycles(s)
             val sFlooredTime = sTime.floorToCycle()
 
             source._withQueryTime { t -> (t - sTime).divBy(dCycles) + sFlooredTime }.mapEvents { ev ->
@@ -713,7 +710,7 @@ private fun applyPly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
     val factorArg = args[0]
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asRationalOrNull()
+    val staticFactor = factorArg.value?.asDoubleOrNull()
     val newSteps = if (staticFactor != null) pattern.numSteps?.times(staticFactor) else null
 
     // Convert factor to pattern (supports static values and control patterns)
@@ -819,16 +816,16 @@ private fun applyPlyWith(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
     val func = funcArg.toPatternMapper() ?: return pattern
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asRationalOrNull()?.toInt()
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toInt()
 
     val newSteps = if (staticFactor != null) {
-        pattern.numSteps?.times(staticFactor.toRational())
+        pattern.numSteps?.times(staticFactor.toDouble())
     } else {
         null
     }
 
     val result = pattern._bindSqueeze { event ->
-        val factor = staticFactor ?: event.data.value?.asRational?.toInt() ?: 1
+        val factor = staticFactor ?: event.data.value?.asDouble?.toInt() ?: 1
 
         if (factor <= 0) {
             return@_bindSqueeze null
@@ -955,7 +952,7 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
     val func = funcArg.value as? ((SprudelPattern, Int) -> SprudelPattern) ?: return pattern
 
     // Calculate new steps if factor is purely static
-    val staticFactor = factorArg.value?.asRationalOrNull()?.toInt()
+    val staticFactor = factorArg.value?.asDoubleOrNull()?.toInt()
 
     val newSteps = if (staticFactor != null) {
         pattern.numSteps?.times(staticFactor)
@@ -964,7 +961,7 @@ private fun applyPlyForEach(pattern: SprudelPattern, args: List<SprudelDslArg<An
     }
 
     val result = pattern._bindSqueeze { event ->
-        val factor = staticFactor ?: event.data.value?.asRationalOrNull()?.toInt() ?: 1
+        val factor = staticFactor ?: event.data.value?.asDoubleOrNull()?.toInt() ?: 1
 
         if (factor <= 0) {
             return@_bindSqueeze null
@@ -1145,7 +1142,7 @@ internal fun applyFastGap(pattern: SprudelPattern, args: List<SprudelDslArg<Any?
     }
 
     val factorProvider: ControlValueProvider =
-        args.firstOrNull().asControlValueProvider(Rational.ONE.asVoiceValue())
+        args.firstOrNull().asControlValueProvider(1.0.asVoiceValue())
 
     return FastGapPattern(source = pattern, factorProvider = factorProvider)
 }
@@ -1287,7 +1284,7 @@ private fun applyOutside(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>
     }
 
     // TODO: support control pattern for "factor"
-    val factor = args[0].value?.asRationalOrNull() ?: Rational.ONE
+    val factor = args[0].value?.asDoubleOrNull() ?: 1.0
 
     val func = args[1].toPatternMapper() ?: return pattern
 
@@ -1345,8 +1342,8 @@ fun PatternMapperFn.outside(factor: PatternLike, transform: PatternMapperFn, cal
 
 private fun applySwingBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
     return pattern._innerJoin(args) { source, swing, n ->
-        val swingValue = swing?.asRational ?: return@_innerJoin silence
-        val nVal = n?.asRational ?: Rational.ONE
+        val swingValue = swing?.asDouble ?: return@_innerJoin silence
+        val nVal = n?.asDouble ?: 1.0
 
         SwingPattern(source = source, swing = swingValue, n = nVal)
     }
@@ -1475,7 +1472,7 @@ private fun applyBrak(pattern: SprudelPattern): SprudelPattern {
     )
 
     return pattern.`when`(condition, { x ->
-        fastcat(x, silence).late(0.25.toRational())
+        fastcat(x, silence).late(0.25)
     })
 }
 

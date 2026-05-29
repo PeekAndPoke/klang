@@ -6,7 +6,6 @@ import io.peekandpoke.klang.audio_bridge.KlangPattern
 import io.peekandpoke.klang.audio_bridge.KlangPatternEvent
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.KlangScriptEngine
 import io.peekandpoke.klang.script.klangScript
 import io.peekandpoke.klang.script.runtime.toObjectOrNull
@@ -35,7 +34,7 @@ import kotlin.random.Random
  * Sprudel pattern.
  *
  * Implements [KlangPattern] to participate in cross-pattern composition.
- * The [queryEvents] default implementation bridges from sprudel's Rational-based [queryArc] API
+ * The [queryEvents] default implementation bridges sprudel's CycleTime-based queryArc API
  * to the generic cycle-based API, handling onset filtering and sorting.
  */
 interface SprudelPattern : KlangPattern {
@@ -66,7 +65,7 @@ interface SprudelPattern : KlangPattern {
          * Pre-executes import statements in the engine environment so user code
          * starts at line 1 — essential for code highlighting during playback.
          *
-         * @param engine A pre-configured KlangScriptEngine (use [Player.createEngine] in the app)
+         * @param engine A pre-configured KlangScriptEngine
          * @param code The Sprudel pattern code to compile (without import statements)
          * @return The compiled pattern, or null if compilation fails
          */
@@ -244,14 +243,14 @@ interface SprudelPattern : KlangPattern {
      * The number of steps per cycle for this pattern, if defined.
      * Used for aligning patterns in polymeter.
      */
-    val numSteps: Rational?
+    val numSteps: Double?
 
     /**
      * Estimates the duration of a cycle for this pattern.
      * Used for alignment in stacking operations.
-     * Defaults to 1.0 (Rational.ONE).
+     * Defaults to 1.0 (1.0).
      */
-    fun estimateCycleDuration(): Rational = Rational.ONE
+    fun estimateCycleDuration(): Double = 1.0
 
     /**
      * Queries events from [from] and [to] cycles with an empty [QueryContext].
@@ -265,10 +264,6 @@ interface SprudelPattern : KlangPattern {
     fun queryArc(from: Double, to: Double): List<SprudelPatternEvent> =
         queryArc(from = CycleTime.ofCycles(from), to = CycleTime.ofCycles(to))
 
-    /** Convenience overload: query an arc given as [Rational] cycle positions (boundary only). */
-    fun queryArc(from: Rational, to: Rational): List<SprudelPatternEvent> =
-        queryArc(from = CycleTime.ofRationalCycles(from), to = CycleTime.ofRationalCycles(to))
-
     /**
      * Queries events from [from] and [to] cycles with the given [ctx].
      */
@@ -279,10 +274,6 @@ interface SprudelPattern : KlangPattern {
      */
     fun queryArcContextual(from: Double, to: Double, ctx: QueryContext): List<SprudelPatternEvent> =
         queryArcContextual(from = CycleTime.ofCycles(from), to = CycleTime.ofCycles(to), ctx = ctx)
-
-    /** Convenience overload: query with [Rational] cycle positions (boundary only). */
-    fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> =
-        queryArcContextual(from = CycleTime.ofRationalCycles(from), to = CycleTime.ofRationalCycles(to), ctx = ctx)
 
     /**
      * KlangPattern bridge: converts the generic cycle-based (Double) API to sprudel's [CycleTime].
@@ -313,9 +304,9 @@ interface SprudelPattern : KlangPattern {
 fun SprudelPattern.sampleAt(time: CycleTime, ctx: QueryContext): SprudelPatternEvent? =
     queryArcContextual(from = time, to = time + SprudelPattern.QUERY_EPSILON, ctx = ctx).firstOrNull()
 
-/** Convenience overload: sample at a [Rational] cycle position (boundary only). */
-fun SprudelPattern.sampleAt(time: Rational, ctx: QueryContext): SprudelPatternEvent? =
-    sampleAt(CycleTime.ofRationalCycles(time), ctx)
+/** Samples at a cycle position given as a [Double] (convenience). */
+fun SprudelPattern.sampleAt(time: Double, ctx: QueryContext): SprudelPatternEvent? =
+    sampleAt(CycleTime.ofCycles(time), ctx)
 
 /**
  * Creates a static pattern, that can be stored and used for playback with
@@ -375,7 +366,7 @@ fun SprudelPattern.filterValues(test: (SprudelVoiceValue?) -> Boolean): SprudelP
 
     return object : SprudelPattern {
         override val weight: Double get() = source.weight
-        override val numSteps: Rational? get() = source.numSteps
+        override val numSteps: Double? get() = source.numSteps
 
         override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             return source.queryArcContextual(from, to, ctx).filter { event ->
@@ -383,7 +374,7 @@ fun SprudelPattern.filterValues(test: (SprudelVoiceValue?) -> Boolean): SprudelP
             }
         }
 
-        override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
+        override fun estimateCycleDuration(): Double = source.estimateCycleDuration()
     }
 }
 
@@ -405,7 +396,7 @@ fun SprudelPattern.appLeft(patVal: SprudelPattern): SprudelPattern {
 
     return object : SprudelPattern {
         override val weight: Double get() = patFunc.weight
-        override val numSteps: Rational? get() = patFunc.numSteps
+        override val numSteps: Double? get() = patFunc.numSteps
 
         override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             val result = mutableListOf<SprudelPatternEvent>()
@@ -433,7 +424,7 @@ fun SprudelPattern.appLeft(patVal: SprudelPattern): SprudelPattern {
             return result
         }
 
-        override fun estimateCycleDuration(): Rational = patFunc.estimateCycleDuration()
+        override fun estimateCycleDuration(): Double = patFunc.estimateCycleDuration()
     }
 }
 
@@ -460,7 +451,7 @@ fun SprudelPattern.withWeight(weight: Double): SprudelPattern {
  * @param steps The new steps value
  * @return A new pattern with the specified steps
  */
-fun SprudelPattern.withSteps(steps: Rational?): SprudelPattern {
+fun SprudelPattern.withSteps(steps: Double?): SprudelPattern {
     return PropertyOverridePattern(source = this, stepsOverride = steps)
 }
 
@@ -705,8 +696,8 @@ fun SprudelPattern._fmap(
  */
 fun SprudelPattern._squeezeJoin(): SprudelPattern = object : SprudelPattern {
     override val weight: Double get() = this@_squeezeJoin.weight
-    override val numSteps: Rational? get() = this@_squeezeJoin.numSteps
-    override fun estimateCycleDuration(): Rational = this@_squeezeJoin.estimateCycleDuration()
+    override val numSteps: Double? get() = this@_squeezeJoin.numSteps
+    override fun estimateCycleDuration(): Double = this@_squeezeJoin.estimateCycleDuration()
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val outerEvents = this@_squeezeJoin.queryArcContextual(from, to, ctx)
@@ -754,8 +745,8 @@ fun SprudelPattern._squeezeJoin(): SprudelPattern = object : SprudelPattern {
  */
 fun SprudelPattern._innerJoin(): SprudelPattern = object : SprudelPattern {
     override val weight: Double get() = this@_innerJoin.weight
-    override val numSteps: Rational? get() = this@_innerJoin.numSteps
-    override fun estimateCycleDuration(): Rational = this@_innerJoin.estimateCycleDuration()
+    override val numSteps: Double? get() = this@_innerJoin.numSteps
+    override fun estimateCycleDuration(): Double = this@_innerJoin.estimateCycleDuration()
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val outerEvents = this@_innerJoin.queryArcContextual(from, to, ctx)
@@ -849,8 +840,8 @@ fun SprudelPattern._bindPoly(
         val innerPattern = transform(outerEvent) ?: return@_bind null
         val innerSteps = innerPattern.numSteps
 
-        if (innerSteps != null && innerSteps != Rational.ZERO) {
-            val factor = (outerSteps / innerSteps).toDouble()
+        if (innerSteps != null && innerSteps != 0.0) {
+            val factor = (outerSteps / innerSteps)
             val invFactor = 1.0 / factor
             // p.extend(factor) -> p.fast(factor) (steps are preserved by _bind)
 
@@ -942,8 +933,8 @@ fun SprudelPattern._lift(
 ): SprudelPattern = object : SprudelPattern {
     // Preserve metadata from SOURCE pattern
     override val weight: Double get() = this@_lift.weight
-    override val numSteps: Rational? get() = this@_lift.numSteps
-    override fun estimateCycleDuration(): Rational = this@_lift.estimateCycleDuration()
+    override val numSteps: Double? get() = this@_lift.numSteps
+    override fun estimateCycleDuration(): Double = this@_lift.estimateCycleDuration()
 
     // Control pattern drives the structure via bind
     // LAZY initialization to avoid circular dependencies during construction
@@ -983,8 +974,8 @@ fun SprudelPattern._liftData(
 ): SprudelPattern = object : SprudelPattern {
     // Preserve metadata from the source pattern
     override val weight: Double get() = this@_liftData.weight
-    override val numSteps: Rational? get() = this@_liftData.numSteps
-    override fun estimateCycleDuration(): Rational = this@_liftData.estimateCycleDuration()
+    override val numSteps: Double? get() = this@_liftData.numSteps
+    override fun estimateCycleDuration(): Double = this@_liftData.estimateCycleDuration()
 
     // Use normalized bindPattern (defaults to preserveMetadata=true, which is redundant here but safe)
     // LAZY initialization to avoid circular dependencies during construction
@@ -1121,8 +1112,8 @@ fun SprudelPattern._outerJoin(
     combiner: (source: SprudelPatternEvent, control: SprudelPatternEvent?) -> SprudelPatternEvent?,
 ): SprudelPattern = object : SprudelPattern {
     override val weight: Double get() = this@_outerJoin.weight
-    override val numSteps: Rational? get() = this@_outerJoin.numSteps
-    override fun estimateCycleDuration(): Rational = this@_outerJoin.estimateCycleDuration()
+    override val numSteps: Double? get() = this@_outerJoin.numSteps
+    override fun estimateCycleDuration(): Double = this@_outerJoin.estimateCycleDuration()
 
     override fun queryArcContextual(
         from: CycleTime,
@@ -1208,8 +1199,8 @@ fun SprudelPattern._applyControl(
 
 fun SprudelPattern._withQueryTime(transform: (CycleTime) -> CycleTime): SprudelPattern = object : SprudelPattern {
     override val weight: Double get() = this@_withQueryTime.weight
-    override val numSteps: Rational? get() = this@_withQueryTime.numSteps
-    override fun estimateCycleDuration(): Rational = this@_withQueryTime.estimateCycleDuration()
+    override val numSteps: Double? get() = this@_withQueryTime.numSteps
+    override fun estimateCycleDuration(): Double = this@_withQueryTime.estimateCycleDuration()
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val nf = transform(from)
@@ -1218,7 +1209,7 @@ fun SprudelPattern._withQueryTime(transform: (CycleTime) -> CycleTime): SprudelP
         // query window below one tick, rounding it to zero width. Point-sampling (sampleAt uses a
         // one-tick window) relies on the window staying non-empty through such transforms, so
         // preserve at least one tick when the original arc was non-empty.
-        if (to > from && nt <= nf) nt = nf + CycleTime(1.0)
+        if (to > from && nt <= nf) nt = nf + SprudelPattern.QUERY_EPSILON
         return this@_withQueryTime.queryArcContextual(nf, nt, ctx)
     }
 }
@@ -1235,8 +1226,8 @@ fun SprudelPattern._withQueryTime(transform: (CycleTime) -> CycleTime): SprudelP
  */
 fun SprudelPattern._withQuerySpan(transform: (CycleTimeSpan) -> CycleTimeSpan): SprudelPattern = object : SprudelPattern {
     override val weight: Double get() = this@_withQuerySpan.weight
-    override val numSteps: Rational? get() = this@_withQuerySpan.numSteps
-    override fun estimateCycleDuration(): Rational = this@_withQuerySpan.estimateCycleDuration()
+    override val numSteps: Double? get() = this@_withQuerySpan.numSteps
+    override fun estimateCycleDuration(): Double = this@_withQuerySpan.estimateCycleDuration()
 
     override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val querySpan = CycleTimeSpan(from, to)
@@ -1293,8 +1284,8 @@ fun SprudelPattern._withHapSpan(transform: (CycleTimeSpan) -> CycleTimeSpan): Sp
  */
 fun SprudelPattern._splitQueries(): SprudelPattern = object : SprudelPattern {
     override val weight: Double get() = this@_splitQueries.weight
-    override val numSteps: Rational? get() = this@_splitQueries.numSteps
-    override fun estimateCycleDuration(): Rational = this@_splitQueries.estimateCycleDuration()
+    override val numSteps: Double? get() = this@_splitQueries.numSteps
+    override fun estimateCycleDuration(): Double = this@_splitQueries.estimateCycleDuration()
 
     override fun queryArcContextual(
         from: CycleTime,
@@ -1321,6 +1312,6 @@ fun SprudelPattern._splitQueries(): SprudelPattern = object : SprudelPattern {
     }
 }
 
-fun SprudelPattern._fastGap(factor: Rational): SprudelPattern {
+fun SprudelPattern._fastGap(factor: Double): SprudelPattern {
     return FastGapPattern.static(this, factor)
 }

@@ -1,7 +1,5 @@
 package io.peekandpoke.klang.sprudel
 
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.RationalStringSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -10,11 +8,20 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlin.math.log2
+import kotlin.math.pow
 
 /**
- * A value that can be either a number or a string.
- * Serializes directly to a JSON number or string.
+ * A musical value carried by a voice event — a number, string, boolean, sequence, or sub-pattern.
+ *
+ * Numbers are stored as [Double]. Musical time is NOT represented here (that is
+ * [io.peekandpoke.klang.common.math.CycleTime]); these are *values* (gain, pan, note numbers, filter
+ * cutoffs, control amounts), for which Double precision is ample.
  */
 @Serializable(with = SprudelVoiceValueSerializer::class)
 sealed interface SprudelVoiceValue {
@@ -22,17 +29,16 @@ sealed interface SprudelVoiceValue {
     val asString: String
     val asDouble: Double?
     val asInt: Int?
-    val asRational: Rational?
 
     fun isTruthy(): Boolean
 
     operator fun plus(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational
-        val r2 = other?.asRational
+        val a = asDouble
+        val b = other?.asDouble
 
         // Numeric addition if both are numbers
-        if (r1 != null && r2 != null) {
-            return Num(r1 + r2)
+        if (a != null && b != null) {
+            return Num(a + b)
         }
 
         // String concatenation otherwise
@@ -41,123 +47,123 @@ sealed interface SprudelVoiceValue {
     }
 
     operator fun minus(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational ?: return null
-        val r2 = other?.asRational ?: return null
-        return Num(r1 - r2)
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        return Num(a - b)
     }
 
     operator fun times(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational ?: return null
-        val r2 = other?.asRational ?: return null
-        return Num(r1 * r2)
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        return Num(a * b)
     }
 
     operator fun div(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational ?: return null
-        val r2 = other?.asRational ?: return null
-        if (r2 == Rational.ZERO) return null
-        return Num(r1 / r2)
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        if (b == 0.0) return null
+        return Num(a / b)
     }
 
     operator fun rem(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational ?: return null
-        val r2 = other?.asRational ?: return null
-        if (r2 == Rational.ZERO) return null
-        return Num(r1 % r2)
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        if (b == 0.0) return null
+        return Num(a % b)
     }
 
     infix fun pow(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val d1 = asRational ?: return null
-        val d2 = other?.asRational ?: return null
-        return Num(d1.pow(d2))
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        return Num(a.pow(b))
     }
 
     infix fun band(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val i1 = asInt ?: return null
         val i2 = other?.asInt ?: return null
-        return Num(Rational(i1 and i2))
+        return Num((i1 and i2).toDouble())
     }
 
     infix fun bor(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val i1 = asInt ?: return null
         val i2 = other?.asInt ?: return null
-        return Num(Rational(i1 or i2))
+        return Num((i1 or i2).toDouble())
     }
 
     infix fun bxor(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val i1 = asInt ?: return null
         val i2 = other?.asInt ?: return null
-        return Num(Rational(i1 xor i2))
+        return Num((i1 xor i2).toDouble())
     }
 
     infix fun shl(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val i1 = asInt ?: return null
         val i2 = other?.asInt ?: return null
-        return Num(Rational(i1 shl i2))
+        return Num((i1 shl i2).toDouble())
     }
 
     infix fun shr(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val i1 = asInt ?: return null
         val i2 = other?.asInt ?: return null
-        return Num(Rational(i1 shr i2))
+        return Num((i1 shr i2).toDouble())
     }
 
     fun log2(): SprudelVoiceValue? {
-        val d = asRational ?: return null
-        return Num(d.log2())
+        val d = asDouble ?: return null
+        return Num(log2(d))
     }
 
     infix fun lt(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational ?: return null
-        val r2 = other?.asRational ?: return null
-        return Num(if (r1 < r2) Rational.ONE else Rational.ZERO)
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        return Num(if (a < b) 1.0 else 0.0)
     }
 
     infix fun gt(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational ?: return null
-        val r2 = other?.asRational ?: return null
-        return Num(if (r1 > r2) Rational.ONE else Rational.ZERO)
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        return Num(if (a > b) 1.0 else 0.0)
     }
 
     infix fun lte(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational ?: return null
-        val r2 = other?.asRational ?: return null
-        return Num(if (r1 <= r2) Rational.ONE else Rational.ZERO)
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        return Num(if (a <= b) 1.0 else 0.0)
     }
 
     infix fun gte(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        val r1 = asRational ?: return null
-        val r2 = other?.asRational ?: return null
-        return Num(if (r1 >= r2) Rational.ONE else Rational.ZERO)
+        val a = asDouble ?: return null
+        val b = other?.asDouble ?: return null
+        return Num(if (a >= b) 1.0 else 0.0)
     }
 
     infix fun eq(other: SprudelVoiceValue?): SprudelVoiceValue? {
-        // We try rational comparison first
-        val r1 = asRational
-        val r2 = other?.asRational
-        if (r1 != null && r2 != null) {
-            return Num(if (r1 == r2) Rational.ONE else Rational.ZERO)
+        // We try numeric comparison first
+        val a = asDouble
+        val b = other?.asDouble
+        if (a != null && b != null) {
+            return Num(if (a == b) 1.0 else 0.0)
         }
         // Fallback to string comparison
-        return Num(if (asString == other?.asString) Rational.ONE else Rational.ZERO)
+        return Num(if (asString == other?.asString) 1.0 else 0.0)
     }
 
     infix fun eqt(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val t1 = isTruthy()
         val t2 = other?.isTruthy() ?: false
-        return Num(if (t1 == t2) Rational.ONE else Rational.ZERO)
+        return Num(if (t1 == t2) 1.0 else 0.0)
     }
 
     infix fun net(other: SprudelVoiceValue?): SprudelVoiceValue? {
         val t1 = isTruthy()
         val t2 = other?.isTruthy() ?: false
-        return Num(if (t1 != t2) Rational.ONE else Rational.ZERO)
+        return Num(if (t1 != t2) 1.0 else 0.0)
     }
 
     infix fun ne(other: SprudelVoiceValue?): SprudelVoiceValue? {
         // reuse eq logic
-        val isEqual = eq(other)?.asRational == Rational.ONE
-        return Num(if (!isEqual) Rational.ONE else Rational.ZERO)
+        val isEqual = eq(other)?.asDouble == 1.0
+        return Num(if (!isEqual) 1.0 else 0.0)
     }
 
     // Logical AND: if 'this' is truthy, return 'other', else return 'this'
@@ -170,13 +176,12 @@ sealed interface SprudelVoiceValue {
         return if (isTruthy()) this else other
     }
 
-    data class Num(val value: Rational) : SprudelVoiceValue {
+    data class Num(val value: Double) : SprudelVoiceValue {
         override val asBoolean get() = isTruthy()
-        override val asString get() = value.toDouble().toString()
-        override val asDouble get() = value.toDouble()
+        override val asString get() = value.toString()
+        override val asDouble get() = value
         override val asInt get() = value.toInt()
-        override val asRational get() = value
-        override fun isTruthy() = value != Rational.ZERO
+        override fun isTruthy() = value != 0.0
         override fun toString() = asString
     }
 
@@ -185,12 +190,11 @@ sealed interface SprudelVoiceValue {
         override val asString get() = value
         override val asDouble get() = value.toDoubleOrNull()
         override val asInt get() = value.toDoubleOrNull()?.toInt()
-        override val asRational get() = value.toDoubleOrNull()?.let { Rational(it) }
         override fun isTruthy(): Boolean {
             // If it can be interpreted as a number, use numerical truthiness (non-zero)
-            val r = asRational
-            if (r != null) {
-                return r != Rational.ZERO
+            val d = asDouble
+            if (d != null) {
+                return d != 0.0
             }
             // Otherwise use string truthiness (not blank, not "false")
             return value.isNotBlank() && value != "false"
@@ -203,7 +207,6 @@ sealed interface SprudelVoiceValue {
         override val asString get() = value.toString()
         override val asDouble get() = if (value) 1.0 else 0.0
         override val asInt get() = if (value) 1 else 0
-        override val asRational get() = if (value) Rational.ONE else Rational.ZERO
         override fun isTruthy() = value
         override fun toString() = asString
     }
@@ -213,7 +216,6 @@ sealed interface SprudelVoiceValue {
         override val asString get() = value.joinToString(", ") { it.asString }
         override val asDouble get() = value.firstOrNull()?.asDouble
         override val asInt get() = value.firstOrNull()?.asInt
-        override val asRational get() = value.firstOrNull()?.asRational
         override fun isTruthy() = value.isNotEmpty()
         override fun toString() = "[$asString]"
     }
@@ -223,17 +225,14 @@ sealed interface SprudelVoiceValue {
         override val asString get() = "<pattern>"
         override val asDouble get() = null
         override val asInt get() = null
-        override val asRational get() = null
         override fun isTruthy() = true
         override fun toString() = asString
     }
 
     companion object {
-        fun Double.asVoiceValue() = Num(Rational(this))
+        fun Double.asVoiceValue() = Num(this)
 
-        fun Number.asVoiceValue() = Num(Rational(toDouble()))
-
-        fun Rational.asVoiceValue() = Num(this)
+        fun Number.asVoiceValue() = Num(toDouble())
 
         fun String.asVoiceValue() = Text(this)
 
@@ -243,8 +242,7 @@ sealed interface SprudelVoiceValue {
 
         fun of(value: Any?): SprudelVoiceValue? = when (value) {
             is SprudelVoiceValue -> value
-            is Rational -> Num(value)
-            is Number -> Num(Rational(value.toDouble()))
+            is Number -> Num(value.toDouble())
             is String -> Text(value)
             is Boolean -> Bool(value)
             is SprudelPattern -> Pattern(value)
@@ -254,20 +252,12 @@ sealed interface SprudelVoiceValue {
 }
 
 object SprudelVoiceValueSerializer : KSerializer<SprudelVoiceValue> {
-    // We use a Contextual descriptor or a specialized one.
-    // Since it can be Double or String, simpler to treat as a generic primitive structure
-    // but declaring it as CONTEXTUAL allows flexible handling.
-    // However, to make it work with JsonPrimitive, we often use specific kinds.
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("SprudelVoiceValue", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: SprudelVoiceValue) {
         when (value) {
-            is SprudelVoiceValue.Num -> {
-                // Use string serialization for Rational (e.g., "2/3" or "-5/8")
-                encoder.encodeSerializableValue(RationalStringSerializer, value.value)
-            }
-
+            is SprudelVoiceValue.Num -> encoder.encodeDouble(value.value)
             is SprudelVoiceValue.Text -> encoder.encodeString(value.value)
             is SprudelVoiceValue.Bool -> encoder.encodeBoolean(value.value)
             is SprudelVoiceValue.Seq -> encoder.encodeSerializableValue(
@@ -287,37 +277,21 @@ object SprudelVoiceValueSerializer : KSerializer<SprudelVoiceValue> {
                 when {
                     element.isString -> {
                         val content = element.content
-                        // Try to parse as a Rational first (handles "2/3" format)
-                        // Check if it looks like a fraction
-                        if ("/" in content) {
-                            val parts = content.split("/")
-                            if (parts.size == 2) {
-                                val num = parts[0].trim().toDoubleOrNull()
-                                val den = parts[1].trim().toDoubleOrNull()
-                                if (num != null && den != null) {
-                                    // Division by zero or malformed results in NaN
-                                    if (den == 0.0) {
-                                        return SprudelVoiceValue.Num(Rational.NaN)
-                                    }
-                                    return SprudelVoiceValue.Num(Rational(num / den))
-                                }
-                            }
-                            // Malformed fraction - treat as text
-                        }
+                        // Legacy fraction form "a/b" (older persisted patterns) → parse to Double.
+                        parseFraction(content)?.let { return SprudelVoiceValue.Num(it) }
                         // Otherwise it's just text
                         SprudelVoiceValue.Text(content)
                     }
+
                     element.content == "true" || element.content == "false" ->
                         SprudelVoiceValue.Bool(element.content.toBoolean())
 
                     else -> {
-                        // It's a number
                         val d = element.doubleOrNull
-                        if (d != null) SprudelVoiceValue.Num(Rational(d)) else SprudelVoiceValue.Text(element.content)
+                        if (d != null) SprudelVoiceValue.Num(d) else SprudelVoiceValue.Text(element.content)
                     }
                 }
             } else if (element is JsonArray) {
-                // It's an array
                 val items = element.map {
                     Json.decodeFromJsonElement(SprudelVoiceValueSerializer, it)
                 }
@@ -327,43 +301,32 @@ object SprudelVoiceValueSerializer : KSerializer<SprudelVoiceValue> {
             }
         }
 
-        // Fallback for generic decoders (like Properties or CBOR):
-        // Try to decode as string first (supports fraction format like "2/3")
+        // Fallback for generic decoders (Properties / CBOR)
         try {
             val str = decoder.decodeString()
-            // Check if it's a fraction format
-            if ("/" in str) {
-                val parts = str.split("/")
-                if (parts.size == 2) {
-                    val num = parts[0].trim().toDoubleOrNull()
-                    val den = parts[1].trim().toDoubleOrNull()
-                    if (num != null && den != null) {
-                        // Division by zero results in NaN
-                        if (den == 0.0) {
-                            return SprudelVoiceValue.Num(Rational.NaN)
-                        }
-                        return SprudelVoiceValue.Num(Rational(num / den))
-                    }
-                }
-                // Malformed fraction - treat as text
-            }
-            // Try parsing as a number
+            parseFraction(str)?.let { return SprudelVoiceValue.Num(it) }
             val d = str.toDoubleOrNull()
-            return if (d != null) SprudelVoiceValue.Num(Rational(d)) else SprudelVoiceValue.Text(str)
+            return if (d != null) SprudelVoiceValue.Num(d) else SprudelVoiceValue.Text(str)
         } catch (e: Exception) {
-            // If string decoding fails, maybe it was encoded as a number?
             try {
-                val d = decoder.decodeDouble()
-                return SprudelVoiceValue.Num(Rational(d))
+                return SprudelVoiceValue.Num(decoder.decodeDouble())
             } catch (_: Exception) {
-                // Maybe it's a boolean?
                 try {
-                    val b = decoder.decodeBoolean()
-                    return SprudelVoiceValue.Bool(b)
+                    return SprudelVoiceValue.Bool(decoder.decodeBoolean())
                 } catch (_: Exception) {
-                    throw e // Giving up
+                    throw e
                 }
             }
         }
+    }
+
+    /** Parses a legacy `"a/b"` fraction string to a Double, or null if not a fraction. */
+    private fun parseFraction(content: String): Double? {
+        if ("/" !in content) return null
+        val parts = content.split("/")
+        if (parts.size != 2) return null
+        val num = parts[0].trim().toDoubleOrNull() ?: return null
+        val den = parts[1].trim().toDoubleOrNull() ?: return null
+        return if (den == 0.0) Double.NaN else num / den
     }
 }

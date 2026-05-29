@@ -2,8 +2,6 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.CycleTimeSpan
-import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.common.math.recursiveBjorklund
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
@@ -40,16 +38,16 @@ internal class EuclideanPattern(
 
     override val weight: Double get() = inner.weight
 
-    override val numSteps: Rational?
+    override val numSteps: Double?
         get() {
             return if (stepsProvider is ControlValueProvider.Static) {
-                (stepsProvider.value.asInt ?: 0).toRational()
+                (stepsProvider.value.asInt ?: 0).toDouble()
             } else {
                 inner.numSteps
             }
         }
 
-    override fun estimateCycleDuration(): Rational = Rational.ONE
+    override fun estimateCycleDuration(): Double = 1.0
 
     companion object {
         /**
@@ -64,9 +62,9 @@ internal class EuclideanPattern(
         ): EuclideanPattern {
             return EuclideanPattern(
                 inner = inner,
-                pulsesProvider = ControlValueProvider.Static(Rational(pulses).asVoiceValue()),
-                stepsProvider = ControlValueProvider.Static(Rational(steps).asVoiceValue()),
-                rotationProvider = ControlValueProvider.Static(Rational(rotation).asVoiceValue()),
+                pulsesProvider = ControlValueProvider.Static((pulses).asVoiceValue()),
+                stepsProvider = ControlValueProvider.Static((steps).asVoiceValue()),
+                rotationProvider = ControlValueProvider.Static((rotation).asVoiceValue()),
                 legato = legato
             )
         }
@@ -145,7 +143,7 @@ internal class EuclideanPattern(
 
             if (onsets.isEmpty()) return EmptyPattern
 
-            val ratSteps = steps.toRational()
+            val ratSteps = steps.toDouble()
             val segments = ArrayList<Pair<CycleTime, CycleTime>>()
 
             var i = 0
@@ -179,9 +177,9 @@ internal class EuclideanPattern(
             // even if events overhang into the next cycle.
             val geometry = object : SprudelPattern {
                 override val weight = 1.0
-                override val numSteps: Rational = ratSteps
+                override val numSteps: Double = ratSteps
 
-                override fun estimateCycleDuration(): Rational = Rational.ONE
+                override fun estimateCycleDuration(): Double = 1.0
 
                 override fun queryArcContextual(
                     from: CycleTime,
@@ -290,7 +288,7 @@ internal class EuclideanPattern(
                     SprudelPatternEvent(
                         part = timeSpan,
                         whole = timeSpan,
-                        data = SprudelVoiceData.empty.copy(value = Rational.ONE.asVoiceValue())
+                        data = SprudelVoiceData.empty.copy(value = 1.0.asVoiceValue())
                     )
                 )
             }
@@ -364,7 +362,8 @@ internal class EuclideanPattern(
 
             rhythm.forEachIndexed { stepIndex, isActive ->
                 if (isActive == 1) {
-                    // EXACT step boundaries on the tick grid: [stepIndex/steps, (stepIndex+1)/steps)
+                    // Step boundaries [stepIndex/steps, (stepIndex+1)/steps), snapped to the tick
+                    // grid (exact when steps divides T = 2^13·3·5·7, else nearest tick).
                     val stepStart = cycleOffset + CycleTime.ofSubdivision(stepIndex, steps)
                     val stepEnd = cycleOffset + CycleTime.ofSubdivision(stepIndex + 1, steps)
 
