@@ -37,12 +37,12 @@ internal const val FILTER_CUTOFF_OFFSET_PER_ANALOG: Double = 0.003
  * drive, more "OB-X bite".
  *
  * At `analog = 0` the saturated branch is skipped — linear filter, no cost.
- * At `analog = 1` → driveScale = 0.75 (subtle). At `analog = 3` → 1.5
- * (noticeable). At `analog = 10` → 7.5 (crushed resonance, lots of bite).
+ * At `analog = 1` → driveScale = 0.5 (subtle). At `analog = 3` → 1.0
+ * (noticeable). At `analog = 10` → 5.0 (crushed resonance, lots of bite).
  *
  * Consumers: `SvfLPF`, `SvfHPF` (and future `SvfBPF` / `SvfNotch` if extended).
  */
-internal const val FILTER_DRIVE_PER_ANALOG: Double = 0.75
+internal const val FILTER_DRIVE_PER_ANALOG: Double = 0.5
 
 /**
  * Coefficient ramp length in samples after each `setCutoff` call. The `BaseSvf`
