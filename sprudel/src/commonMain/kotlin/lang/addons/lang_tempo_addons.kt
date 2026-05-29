@@ -3,12 +3,12 @@
 
 package io.peekandpoke.klang.sprudel.lang.addons
 
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel._outerJoin
 import io.peekandpoke.klang.sprudel._splitQueries
 import io.peekandpoke.klang.sprudel.lang.PatternLike
@@ -34,16 +34,16 @@ private fun applyTimeMoveInCycle(
     // 2. Use _outerJoin to iterate source events and sample control at event time
     return pattern._splitQueries()._outerJoin(control) { srcEv, ctrlEv ->
         val shiftVal = (ctrlEv?.data?.value?.asDouble ?: 0.0)
-        val shift = shiftVal.toRational() * factor
+        val shift = CycleTime.ofCycles(shiftVal * factor.toDouble())
 
-        if (shift == Rational.ZERO) return@_outerJoin srcEv
+        if (shift == CycleTime.ZERO) return@_outerJoin srcEv
 
         val shiftedPart = srcEv.part.shift(shift)
         val shiftedWhole = srcEv.whole.shift(shift)
 
         // Clip to the cycle of the *original* event
-        val cycleStart = srcEv.whole.begin.floor()
-        val cycleEnd = cycleStart + Rational.ONE
+        val cycleStart = srcEv.whole.begin.floorToCycle()
+        val cycleEnd = cycleStart + CycleTime.ONE
 
         // If the event moves out of its cycle, it is dropped/clipped
         val clippedPart = shiftedPart.clipTo(cycleStart, cycleEnd) ?: return@_outerJoin null
@@ -203,13 +203,12 @@ private fun applyStretchBy(pattern: SprudelPattern, args: List<SprudelDslArg<Any
 
     return pattern._outerJoin(control) { sourceEvent, controlEvent ->
         val factor = controlEvent?.data?.value?.asDouble ?: 1.0
-        val factorRat = factor.toRational()
 
         val newPart = sourceEvent.part
-            .let { TimeSpan(begin = it.begin, end = it.begin + it.duration * factorRat) }
+            .let { CycleTimeSpan(begin = it.begin, end = it.begin + it.duration.scaleBy(factor)) }
 
         val newWhole = sourceEvent.whole
-            .let { TimeSpan(begin = it.begin, end = it.begin + it.duration * factorRat) }
+            .let { CycleTimeSpan(begin = it.begin, end = it.begin + it.duration.scaleBy(factor)) }
 
         sourceEvent.copy(part = newPart, whole = newWhole)
     }

@@ -4,6 +4,7 @@
 package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.common.SourceLocationChain
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
@@ -32,6 +33,8 @@ import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
 import io.peekandpoke.klang.sprudel.pattern.AtomicPattern
 import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
 import io.peekandpoke.klang.sprudel.pattern.SequencePattern
+import kotlin.math.floor
+
 // -- morse() ----------------------------------------------------------------------------------------------------------
 
 private val morseMap = mapOf(
@@ -317,20 +320,21 @@ fun SprudelPattern.timeLoop(duration: Rational): SprudelPattern {
         override val numSteps: Rational? get() = source.numSteps
         override fun estimateCycleDuration(): Rational = duration
 
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             val result = mutableListOf<SprudelPatternEvent>()
 
             // Calculate loop range covering [from, to]
-            val startLoop = (from / duration).floor()
+            val durationCycles = duration.toDouble()
+            val durationSpan = CycleTime.ofCycles(durationCycles)
 
             // Loop through cycles
-            var k = startLoop
-            while (k * duration < to) {
-                val loopStart = k * duration
+            var k = floor(from.toCycles() / durationCycles).toInt()
+            while (CycleTime.ofCycles(k * durationCycles) < to) {
+                val loopStart = CycleTime.ofCycles(k * durationCycles)
 
                 // Intersection of query with this loop
-                val qStart = maxOf(from, loopStart)
-                val qEnd = minOf(to, loopStart + duration)
+                val qStart = from.coerceAtLeast(loopStart)
+                val qEnd = to.coerceAtMost(loopStart + durationSpan)
 
                 if (qStart < qEnd) {
                     // Map to local time [0, duration]
@@ -351,7 +355,7 @@ fun SprudelPattern.timeLoop(duration: Rational): SprudelPattern {
                     }
                 }
 
-                k += Rational.ONE
+                k++
             }
 
             return result

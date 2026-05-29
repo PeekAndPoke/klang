@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.common.math.bjorklund
@@ -8,7 +10,6 @@ import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
  * Euclidean Morph Pattern: Morphs between Euclidean rhythm and even distribution.
@@ -110,8 +111,8 @@ internal class EuclideanMorphPattern(
     }
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         // Query groove pattern for morph factor over time
@@ -143,30 +144,30 @@ internal class EuclideanMorphPattern(
             val arcs = calculateMorphedArcs(pulses, steps, perc)
 
             // Generate events from arcs that intersect with the groove event
-            val startCycle = grooveEvent.part.begin.floor().toInt()
-            val endCycle = grooveEvent.part.end.ceil().toInt()
+            val startCycle = grooveEvent.part.begin.cycleIndex()
+            val endCycle = grooveEvent.part.end.ceilToCycle().cycleIndex()
 
             for (cycle in startCycle until endCycle) {
-                val cycleStart = Rational(cycle)
-                val cycleEnd = cycleStart + Rational.ONE
+                val cycleStart = CycleTime.ofCycleIndex(cycle)
+                val cycleEnd = cycleStart + CycleTime.ONE
 
                 // Effective window for this cycle is intersection of cycle and groove event
-                val windowStart = maxOf(grooveEvent.part.begin, cycleStart)
-                val windowEnd = minOf(grooveEvent.part.end, cycleEnd)
+                val windowStart = grooveEvent.part.begin.coerceAtLeast(cycleStart)
+                val windowEnd = grooveEvent.part.end.coerceAtMost(cycleEnd)
 
                 if (windowStart >= windowEnd) continue
 
                 for (arc in arcs) {
                     // Arc is relative to cycle start (0..1)
-                    val arcStartAbs = cycleStart + arc.first
-                    val arcEndAbs = cycleStart + arc.second
+                    val arcStartAbs = cycleStart + CycleTime.ofRationalCycles(arc.first)
+                    val arcEndAbs = cycleStart + CycleTime.ofRationalCycles(arc.second)
 
                     // Intersect arc with the query window (which is constrained by groove event)
-                    val intersectStart = maxOf(windowStart, arcStartAbs)
-                    val intersectEnd = minOf(windowEnd, arcEndAbs)
+                    val intersectStart = windowStart.coerceAtLeast(arcStartAbs)
+                    val intersectEnd = windowEnd.coerceAtMost(arcEndAbs)
 
                     if (intersectEnd > intersectStart) {
-                        val timeSpan = TimeSpan(begin = intersectStart, end = intersectEnd)
+                        val timeSpan = CycleTimeSpan(begin = intersectStart, end = intersectEnd)
 
                         result.add(
                             SprudelPatternEvent(

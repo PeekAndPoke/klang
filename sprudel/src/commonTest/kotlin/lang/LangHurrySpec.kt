@@ -6,7 +6,6 @@ import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
@@ -83,7 +82,7 @@ class LangHurrySpec : StringSpec({
         val events = p.queryArc(0.0, 2.0)
 
         // Pattern plays at half speed, so only 2 events in first cycle
-        val firstCycleEvents = events.filter { it.part.begin < 1.0.toRational() }
+        val firstCycleEvents = events.filter { it.part.begin.toDouble() < 1.0 }
         firstCycleEvents.size shouldBe 2
 
         // Speed should be 0.5

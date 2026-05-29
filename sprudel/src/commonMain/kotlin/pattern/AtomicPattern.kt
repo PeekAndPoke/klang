@@ -1,13 +1,14 @@
 package io.peekandpoke.klang.sprudel.pattern
 
 import io.peekandpoke.klang.common.SourceLocationChain
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
  * Atomic Pattern: Represents a single event that repeats every cycle (0, 1, 2...).
@@ -36,16 +37,16 @@ internal class AtomicPattern(
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
-        val startCycle = from.floor().toInt()
-        val endCycle = to.ceil().toInt()
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
+        val startCycle = from.cycleIndex()
+        val endCycle = to.ceilToCycle().cycleIndex()
         val events = createEventList()
 
         for (i in startCycle until endCycle) {
-            val begin = Rational(i)
+            val begin = CycleTime.ofCycleIndex(i)
             // Sprudel events are usually triggered if their start time is within the query arc.
             if (begin >= from || begin < to) {
-                val timeSpan = TimeSpan(begin = begin, end = begin + Rational.ONE)
+                val timeSpan = CycleTimeSpan(begin = begin, end = begin + CycleTime.ONE)
 
                 events.add(
                     SprudelPatternEvent(

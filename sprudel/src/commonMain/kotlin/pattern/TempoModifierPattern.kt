@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -23,12 +25,6 @@ internal class TempoModifierPattern(
     val invertPattern: Boolean = false,
 ) : SprudelPattern {
     companion object {
-        /**
-         * Minimum query length to avoid Rational precision issues with very small numbers.
-         * Queries smaller than this are skipped.
-         */
-        private val MIN_OVERLAP = 1e-7.toRational()
-
         /**
          * Create a TempoModifierPattern with a static factor value.
          */
@@ -64,7 +60,7 @@ internal class TempoModifierPattern(
 
     override val numSteps: Rational? get() = source.numSteps
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return emptyList()
 
@@ -88,35 +84,29 @@ internal class TempoModifierPattern(
     }
 
     private fun queryWithFactor(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
         factor: Rational,
     ): List<SprudelPatternEvent> {
         // invertPattern=true means fast (use factor as-is)
         // invertPattern=false means slow (use 1/factor)
         val scale = if (invertPattern) {
-            factor
+            factor.toDouble()
         } else {
-            Rational.ONE / maxOf(0.001.toRational(), factor)
+            1.0 / maxOf(0.001, factor.toDouble())
         }
 
-        val (innerFrom, innerTo) = scaleTimeRange(from, to, scale)
+        val (innerFrom, innerToRaw) = scaleTimeRange(from, to, scale)
+        // Preserve a non-empty window if scaling collapsed it (e.g. point-sampling through slow()).
+        val innerTo = if (to > from && innerToRaw <= innerFrom) innerFrom + CycleTime(1.0) else innerToRaw
 
         val innerEvents = source.queryArcContextual(innerFrom, innerTo, ctx)
 
         return innerEvents.mapNotNull { ev ->
             val (scaledPart, scaledWhole) = mapEventTimeByScale(ev, scale)
 
-            val hasOverlap = hasOverlapWithEpsilon(
-                eventBegin = scaledPart.begin,
-                eventEnd = scaledPart.end,
-                queryFrom = from,
-                queryTo = to,
-                epsilon = MIN_OVERLAP,
-            )
-
-            if (hasOverlap) {
+            if (hasOverlap(scaledPart.begin, scaledPart.end, from, to)) {
                 ev.copy(part = scaledPart, whole = scaledWhole)
             } else {
                 null

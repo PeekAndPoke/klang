@@ -1,10 +1,16 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
+import io.peekandpoke.klang.sprudel.lang.rand
+import io.peekandpoke.klang.sprudel.lang.segment
+import io.peekandpoke.klang.sprudel.lang.silence
+import io.peekandpoke.klang.sprudel.lang.toListOfPatterns
+import io.peekandpoke.klang.sprudel.lang.voiceValueModifier
 import io.peekandpoke.klang.sprudel.sampleAt
 
 internal class ChoicePattern(
@@ -92,8 +98,8 @@ internal class ChoicePattern(
     override fun estimateCycleDuration(): Rational = selector.estimateCycleDuration()
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         // Query the selector to find out which choice to pick at what time

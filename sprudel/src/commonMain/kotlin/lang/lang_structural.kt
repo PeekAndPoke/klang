@@ -3,6 +3,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.common.math.lcm
@@ -45,8 +46,10 @@ import io.peekandpoke.klang.sprudel.pattern.StructurePattern
 import io.peekandpoke.klang.sprudel.withSteps
 import io.peekandpoke.klang.sprudel.withWeight
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log2
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Structural patterns
 // ///
@@ -988,29 +991,30 @@ fun applyCat(patterns: List<SprudelPattern>): SprudelPattern {
             return patterns.fold(Rational.ZERO) { acc, p -> acc + p.estimateCycleDuration() }
         }
 
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             val totalDuration = estimateCycleDuration()
             if (totalDuration <= Rational.ZERO) return emptyList()
 
             val result = mutableListOf<SprudelPatternEvent>()
 
             // Find which "loops" of the total sequence we touch
-            val startLoop = (from / totalDuration).floor()
-            val endLoop = (to / totalDuration).ceil()
+            val totalDurationCycles = totalDuration.toDouble()
+            val startLoop = floor(from.toCycles() / totalDurationCycles).toInt()
+            val endLoop = ceil(to.toCycles() / totalDurationCycles).toInt()
 
             var currentLoop = startLoop
             while (currentLoop < endLoop) {
-                val loopStart = currentLoop * totalDuration
+                val loopStart = CycleTime.ofCycles(currentLoop * totalDurationCycles)
                 var currentOffset = loopStart
 
                 for (p in patterns) {
-                    val dur = p.estimateCycleDuration()
+                    val durTime = CycleTime.ofRationalCycles(p.estimateCycleDuration())
                     val pStart = currentOffset
-                    val pEnd = pStart + dur
+                    val pEnd = pStart + durTime
 
                     // Check intersection
-                    val start = if (from > pStart) from else pStart
-                    val end = if (to < pEnd) to else pEnd
+                    val start = from.coerceAtLeast(pStart)
+                    val end = to.coerceAtMost(pEnd)
 
                     if (end > start) {
                         // Map to pattern local time
@@ -1029,9 +1033,9 @@ fun applyCat(patterns: List<SprudelPattern>): SprudelPattern {
                             )
                         }
                     }
-                    currentOffset += dur
+                    currentOffset += durTime
                 }
-                currentLoop += Rational.ONE
+                currentLoop++
             }
             return result
         }
@@ -1192,19 +1196,20 @@ fun applySlowcatPrime(patterns: List<SprudelPattern>): SprudelPattern {
 
         override fun estimateCycleDuration(): Rational = Rational.ONE * patterns.size
 
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
 
             val result = mutableListOf<SprudelPatternEvent>()
             val n = patterns.size
-            var cycle = from.floor()
+            var cycleIdx = from.cycleIndex()
 
-            while (cycle < to) {
-                val cycleEnd = cycle + Rational.ONE
-                val queryStart = maxOf(from, cycle)
-                val queryEnd = minOf(to, cycleEnd)
+            while (CycleTime.ofCycleIndex(cycleIdx) < to) {
+                val cycle = CycleTime.ofCycleIndex(cycleIdx)
+                val cycleEnd = cycle + CycleTime.ONE
+                val queryStart = from.coerceAtLeast(cycle)
+                val queryEnd = to.coerceAtMost(cycleEnd)
 
                 // Select pattern using modulo (cycles infinitely through patterns)
-                val patternIndex = cycle.toInt().mod(n)
+                val patternIndex = cycleIdx.mod(n)
                 val pattern = patterns[patternIndex]
 
                 // Crucial: We query at absolute time (queryStart), not relative time.
@@ -1213,7 +1218,7 @@ fun applySlowcatPrime(patterns: List<SprudelPattern>): SprudelPattern {
                     result.addAll(pattern.queryArcContextual(queryStart, queryEnd, ctx))
                 }
 
-                cycle = cycleEnd
+                cycleIdx++
             }
 
             return result
@@ -1941,7 +1946,7 @@ fun PatternMapperFn.filter(predicate: (SprudelPatternEvent) -> Boolean, callInfo
 @SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.filterWhen(predicate: (Double) -> Boolean, callInfo: CallInfo? = null): SprudelPattern =
-    applyFilter(this) { predicate(it.part.begin.toDouble()) }
+    applyFilter(this) { predicate(it.part.begin.toCycles()) }
 
 /** Filters events from this string pattern based on their begin time. */
 @SprudelDsl
@@ -2192,16 +2197,17 @@ private fun applyZoom(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
 
             val d = e - s
             val steps = source.numSteps?.let { it * d }
+            val dCycles = d.toDouble()
 
             // Using relative start to ensure correct periodicity even if s > 1
-            val sRel = s - s.floor()
+            val sRelTime = CycleTime.ofRationalCycles(s - s.floor())
 
             // Match JS implementation: withQuerySpan + withHapSpan + splitQueries
             source
                 // Apply transformation to cycle-local time: t => t * d + sRel
-                ._withQuerySpan { span -> span.withCycle { t -> t * d + sRel } }
+                ._withQuerySpan { span -> span.withCycle { t -> t.scaleBy(dCycles) + sRelTime } }
                 // Apply transformation to cycle-local time: t => (t - sRel) / d
-                ._withHapSpan { span -> span.withCycle { t: Rational -> (t - sRel) / d } }
+                ._withHapSpan { span -> span.withCycle { t -> (t - sRelTime).divBy(dCycles) } }
                 ._splitQueries()
                 .withSteps(steps)
         }
@@ -2280,17 +2286,19 @@ private fun applyWithin(
         return source // Return unchanged if invalid window
     }
 
+    val startTime = CycleTime.ofRationalCycles(start)
+    val endTime = CycleTime.ofRationalCycles(end)
     val isBeginInWindow: (SprudelPatternEvent) -> Boolean = { ev ->
-        val cycle = ev.part.begin.floor()
+        val cycle = ev.part.begin.floorToCycle()
         if (start < end) {
-            val s = cycle + start
-            val e = cycle + end
+            val s = cycle + startTime
+            val e = cycle + endTime
             ev.part.begin >= s && ev.part.begin < e
         } else {
-            val s1 = cycle + start
-            val e1 = cycle + Rational.ONE
+            val s1 = cycle + startTime
+            val e1 = cycle + CycleTime.ONE
             val s2 = cycle
-            val e2 = cycle + end
+            val e2 = cycle + endTime
             (ev.part.begin >= s1 && ev.part.begin < e1) || (ev.part.begin >= s2 && ev.part.begin < e2)
         }
     }
@@ -3881,9 +3889,10 @@ private fun applyTake(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
             if (end >= Rational.ONE) return@_stepJoin source
             // Take(n) keeps first n steps.
             // Zoom window [0, end] to [0, 1]
+            val endCycles = end.toDouble()
             source
-                ._withQueryTime { t -> t * end }
-                ._withHapTime { t -> t / end }
+                ._withQueryTime { t -> t.scaleBy(endCycles) }
+                ._withHapTime { t -> t.divBy(endCycles) }
                 .withSteps(n)
         } else {
             silence
@@ -3966,11 +3975,12 @@ private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
                 if (start >= Rational.ONE) return@_stepJoin silence
                 // Zoom window [start, 1] to [0, 1]
                 // Map query t in [0, 1] to [start, 1] -> t' = start + t * (1 - start)
-                val duration = Rational.ONE - start
+                val durationCycles = (Rational.ONE - start).toDouble()
+                val startTime = CycleTime.ofRationalCycles(start)
 
                 source
-                    ._withQueryTime { t -> start + t * duration }
-                    ._withHapTime { t -> (t - start) / duration }
+                    ._withQueryTime { t -> startTime + t.scaleBy(durationCycles) }
+                    ._withHapTime { t -> (t - startTime).divBy(durationCycles) }
                     .withSteps(steps - n)
             } else {
                 // drop from end: zoom(0, (steps+n)/steps)
@@ -3979,9 +3989,10 @@ private fun applyDrop(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
                 if (end <= Rational.ZERO) return@_stepJoin silence
                 // Zoom window [0, end] to [0, 1]
                 // Map query t in [0, 1] to [0, end] -> t' = t * end
+                val endCycles = end.toDouble()
                 source
-                    ._withQueryTime { t -> t * end }
-                    ._withHapTime { t -> t / end }
+                    ._withQueryTime { t -> t.scaleBy(endCycles) }
+                    ._withHapTime { t -> t.divBy(endCycles) }
                     .withSteps(steps + n)
             }
         } else {

@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
@@ -39,7 +41,7 @@ internal class StructurePattern(
         }
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         return when (mode) {
             Mode.In -> queryIn(from, to, ctx)
             Mode.Out -> queryOut(from, to, ctx)
@@ -50,12 +52,12 @@ internal class StructurePattern(
      * In Mode (mask/maskAll): The source provides the structure.
      * We iterate over source events and sample the 'other' pattern at the midpoint to decide inclusion.
      */
-    private fun queryIn(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    private fun queryIn(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val sourceEvents = source.queryArcContextual(from, to, ctx)
         val result = createEventList()
 
         for (sourceEvent in sourceEvents) {
-            val mid = (sourceEvent.part.begin + sourceEvent.part.end) / Rational(2)
+            val mid = (sourceEvent.part.begin + sourceEvent.part.end).divBy(2.0)
 
             // Sample the other pattern at the midpoint
             val otherEvent = other.sampleAt(mid, ctx)
@@ -79,7 +81,7 @@ internal class StructurePattern(
      * Out Mode (struct/structAll): The 'other' pattern provides the structure.
      * We behave like an intersection: clipping source events to the mask's duration.
      */
-    private fun queryOut(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    private fun queryOut(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         // Optimization: Inline bind logic to avoid lambda allocation and ReinterpretPattern overhead
         val maskEvents = other.queryArcContextual(from, to, ctx)
         val result = createEventList()

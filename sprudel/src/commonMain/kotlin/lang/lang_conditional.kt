@@ -3,7 +3,7 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -12,6 +12,7 @@ import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel._innerJoin
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.sampleAt
+
 // -- firstOf() --------------------------------------------------------------------------------------------------------
 
 private fun applyFirstOf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
@@ -300,7 +301,7 @@ private fun applyWhen(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprud
 
     // The true part: events where the condition is sampled as truthy.
     val truePart = object : SprudelPattern by p {
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             return p.queryArcContextual(from, to, ctx).filter { event ->
                 // Keep if condition is missing OR if the found event is not truthy
                 condition.sampleAt(event.part.begin, ctx)?.data?.isTruthy() ?: false
@@ -311,7 +312,7 @@ private fun applyWhen(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprud
     // The false part: events where the condition is NOT truthy (falsy OR silent).
     // We implement this as a custom pattern to ensure complete coverage of the source pattern.
     val falsePart = object : SprudelPattern by p {
-        override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
             return p.queryArcContextual(from, to, ctx).filter { event ->
                 // Keep if condition is missing OR if the found event is not truthy
                 condition.sampleAt(event.part.begin, ctx)?.data?.isNotTruthy() ?: true

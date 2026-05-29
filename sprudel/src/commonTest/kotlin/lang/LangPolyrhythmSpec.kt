@@ -2,7 +2,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
 
 class LangPolyrhythmSpec : StringSpec({
 
@@ -13,6 +13,6 @@ class LangPolyrhythmSpec : StringSpec({
 
         events.size shouldBe 2
         // Both play full cycle
-        events.all { it.part.duration == Rational.ONE } shouldBe true
+        events.all { it.part.duration == CycleTime.ONE } shouldBe true
     }
 })

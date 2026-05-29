@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
@@ -25,7 +27,7 @@ internal class ContextModifierPattern(
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val updated = ctx.update(modifier)
 
         return source.queryArcContextual(from, to, updated)

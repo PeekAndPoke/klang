@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -26,25 +26,25 @@ internal class SeedPattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         val result = createEventList()
 
-        val firstCycle = from.floor().toInt()
-        val lastCycle = (to - SprudelPattern.QUERY_EPSILON).floor().toInt()
+        val firstCycle = from.cycleIndex()
+        val lastCycle = (to - SprudelPattern.QUERY_EPSILON).cycleIndex()
 
         for (cycleInt in firstCycle..lastCycle) {
-            val cycle = cycleInt.toRational()
-            val cycleEnd = cycle + Rational.ONE
+            val cycle = CycleTime.ofCycleIndex(cycleInt)
+            val cycleEnd = cycle + CycleTime.ONE
 
             // Sample the seed pattern at the start of this cycle
             val seed = seedPattern.sampleAt(cycle, ctx)?.data?.value?.asInt
 
             // Clip query to this cycle
-            val queryFrom = maxOf(from, cycle)
-            val queryTo = minOf(to, cycleEnd)
+            val queryFrom = from.coerceAtLeast(cycle)
+            val queryTo = to.coerceAtMost(cycleEnd)
 
             // Update context with the sampled seed
             val updatedCtx = ctx.update {

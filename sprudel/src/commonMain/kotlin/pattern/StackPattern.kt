@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.lcm
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -23,7 +25,7 @@ internal class StackPattern(val patterns: List<SprudelPattern>) : SprudelPattern
         return patterns.maxOfOrNull { it.estimateCycleDuration() } ?: Rational.ONE
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         return patterns
             .flatMap { it.queryArcContextual(from, to, ctx) }
             .sortedBy { it.part.begin } // Sort them to keep order nice (optional but good for debugging)

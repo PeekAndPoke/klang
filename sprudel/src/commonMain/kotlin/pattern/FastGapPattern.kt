@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -45,7 +45,7 @@ internal class FastGapPattern(
         return source.estimateCycleDuration()
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val factorEvents = factorProvider.queryEvents(from, to, ctx)
         if (factorEvents.isEmpty()) return source.queryArcContextual(from, to, ctx)
 
@@ -63,8 +63,8 @@ internal class FastGapPattern(
     }
 
     private fun queryWithFactor(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
         factor: Rational,
     ): List<SprudelPatternEvent> {
@@ -78,16 +78,17 @@ internal class FastGapPattern(
             return source.queryArcContextual(from, to, ctx)
         }
 
-        val span = Rational.ONE / factor
+        val spanCycles = 1.0 / factor.toDouble()      // compressed-region width as a fraction of a cycle
+        val spanDuration = CycleTime.ofCycles(spanCycles)
         val result = createEventList()
 
         // Determine which cycles we need to query
         for (cycle in calculateCycleBounds(from, to)) {
-            val cycleRat = cycle.toRational()
+            val cycleStart = CycleTime.ofCycleIndex(cycle)
 
             // The compressed region in this cycle: [cycle, cycle + 1/factor)
-            val compressedStart = cycleRat
-            val compressedEnd = cycleRat + span
+            val compressedStart = cycleStart
+            val compressedEnd = cycleStart + spanDuration
 
             // Check if our query range intersects with the compressed region
             if (!cycleRegionIntersects(from, to, compressedStart, compressedEnd)) {
@@ -95,11 +96,11 @@ internal class FastGapPattern(
             }
 
             // Query the source pattern for the full cycle (0 to 1)
-            val sourceEvents = source.queryArcContextual(cycleRat, cycleRat + Rational.ONE, ctx)
+            val sourceEvents = source.queryArcContextual(cycleStart, cycleStart + CycleTime.ONE, ctx)
 
             // Map each event from source cycle [0,1) to compressed region [start, start+span)
             for (ev in sourceEvents) {
-                val (mappedPart, mappedWhole) = mapEventTimeBySpan(ev, cycleRat, compressedStart, span)
+                val (mappedPart, mappedWhole) = mapEventTimeBySpan(ev, cycleStart, compressedStart, spanCycles)
 
                 // Only include if it intersects with our query range
                 if (hasOverlap(mappedPart.begin, mappedPart.end, from, to)) {

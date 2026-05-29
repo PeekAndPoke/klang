@@ -1,6 +1,8 @@
 package io.peekandpoke.klang.sprudel.graal
 
 import io.peekandpoke.klang.audio_bridge.SoundValue
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
@@ -8,7 +10,6 @@ import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeGetMember
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumber
 import io.peekandpoke.klang.sprudel.graal.GraalJsHelpers.safeNumberOrNull
@@ -28,8 +29,8 @@ class GraalSprudelPattern(
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
-        val arc = graal.queryPattern(value, from.toDouble(), to.toDouble())
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
+        val arc = graal.queryPattern(value, from.toCycles(), to.toCycles())
             ?: return emptyList()
 
         val events = mutableListOf<SprudelPatternEvent>()
@@ -59,16 +60,16 @@ class GraalSprudelPattern(
         val partJs = event.safeGetMember("part")
         val wholeJs = event.safeGetMember("whole")
 
-        // Extract part TimeSpan
-        val partBegin = Rational(partJs?.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
-        val partEnd = Rational(partJs?.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
-        val part = TimeSpan(partBegin, partEnd)
+        // Extract part CycleTimeSpan
+        val partBegin = CycleTime.ofCycles(partJs?.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
+        val partEnd = CycleTime.ofCycles(partJs?.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
+        val part = CycleTimeSpan(partBegin, partEnd)
 
-        // Extract whole TimeSpan (null for continuous patterns)
+        // Extract whole CycleTimeSpan (null for continuous patterns)
         val whole = wholeJs?.let {
-            val wholeBegin = Rational(it.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
-            val wholeEnd = Rational(it.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
-            TimeSpan(wholeBegin, wholeEnd)
+            val wholeBegin = CycleTime.ofCycles(it.safeGetMember("begin")?.safeNumber(0.0) ?: 0.0)
+            val wholeEnd = CycleTime.ofCycles(it.safeGetMember("end")?.safeNumber(0.0) ?: 0.0)
+            CycleTimeSpan(wholeBegin, wholeEnd)
         }
 
         // Get details from "value" field

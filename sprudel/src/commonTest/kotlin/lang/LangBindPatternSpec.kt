@@ -4,7 +4,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel._bind
 import io.peekandpoke.klang.sprudel.soundName
 
@@ -88,8 +87,8 @@ class LangBindPatternSpec : StringSpec({
 
         // All events should be within the cycle
         events.forEach { event ->
-            (event.part.begin >= 0.0.toRational()) shouldBe true
-            (event.part.end <= 1.0.toRational()) shouldBe true
+            (event.part.begin.toDouble() >= 0.0) shouldBe true
+            (event.part.end.toDouble() <= 1.0) shouldBe true
         }
     }
 })

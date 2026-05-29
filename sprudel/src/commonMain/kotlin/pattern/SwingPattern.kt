@@ -1,9 +1,11 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.TimeSpan
+import kotlin.math.floor
 
 /**
  * Applies swing timing to a source pattern by shifting and stretching events
@@ -32,8 +34,8 @@ internal class SwingPattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: SprudelPattern.QueryContext,
     ): List<SprudelPatternEvent> {
         if (swing == Rational.ZERO || n <= Rational.ZERO) {
@@ -44,7 +46,7 @@ internal class SwingPattern(
         if (events.isEmpty()) return events
 
         // Duration of one subdivision in cycle time
-        val subdivDuration = Rational.ONE / n
+        val subdivDuration = CycleTime.ofCycles(1.0 / n.toDouble())
 
         return events.mapNotNull { event ->
             if (swing > Rational.ZERO) {
@@ -55,72 +57,78 @@ internal class SwingPattern(
         }
     }
 
+    /** Finds the start of the subdivision containing [onsetInCycle]. */
+    private fun subdivStartOf(onsetInCycle: CycleTime, subdivDuration: CycleTime): CycleTime {
+        val k = floor(onsetInCycle.ratioTo(subdivDuration)).toInt()
+        return subdivDuration * k
+    }
+
     /** Positive swing: stretch first-half events, shift+compress second-half events */
-    private fun applySwingPositive(event: SprudelPatternEvent, subdivDuration: Rational): SprudelPatternEvent {
+    private fun applySwingPositive(event: SprudelPatternEvent, subdivDuration: CycleTime): SprudelPatternEvent {
         // Find which subdivision this event's onset is in
-        val onsetInCycle = event.whole.begin - event.whole.begin.floor()
-        val subdivStart = (onsetInCycle / subdivDuration).floor() * subdivDuration
+        val onsetInCycle = event.whole.begin.fracOfCycle()
+        val subdivStart = subdivStartOf(onsetInCycle, subdivDuration)
         val posInSubdiv = onsetInCycle - subdivStart
-        val subdivHalf = subdivDuration / Rational(2)
+        val subdivHalf = subdivDuration.divBy(2.0)
 
         // Is the event in the first or second half of its subdivision?
         val isSecondHalf = posInSubdiv >= subdivHalf
 
-        val stretchFactor: Rational
-        val shift: Rational
+        val stretchFactor: Double
+        val shift: CycleTime
 
         if (!isSecondHalf) {
             // First half: stretch, no shift
-            stretchFactor = Rational.ONE + swing
-            shift = Rational.ZERO
+            stretchFactor = 1.0 + swing.toDouble()
+            shift = CycleTime.ZERO
         } else {
             // Second half: compress, shift later
-            stretchFactor = Rational.ONE - swing
-            shift = swing * subdivHalf
+            stretchFactor = 1.0 - swing.toDouble()
+            shift = subdivHalf.scaleBy(swing.toDouble())
         }
 
         val newPartBegin = event.part.begin + shift
-        val newPartEnd = newPartBegin + event.part.duration * stretchFactor
+        val newPartEnd = newPartBegin + event.part.duration.scaleBy(stretchFactor)
         val newWholeBegin = event.whole.begin + shift
-        val newWholeEnd = newWholeBegin + event.whole.duration * stretchFactor
+        val newWholeEnd = newWholeBegin + event.whole.duration.scaleBy(stretchFactor)
 
         return event.copy(
-            part = TimeSpan(newPartBegin, newPartEnd),
-            whole = TimeSpan(newWholeBegin, newWholeEnd),
+            part = CycleTimeSpan(newPartBegin, newPartEnd),
+            whole = CycleTimeSpan(newWholeBegin, newWholeEnd),
         )
     }
 
     /** Negative swing: compress first-half events, shift+stretch second-half events (reverse swing) */
-    private fun applySwingNegative(event: SprudelPatternEvent, subdivDuration: Rational): SprudelPatternEvent {
-        val absSwing = Rational.ZERO - swing
-        val onsetInCycle = event.whole.begin - event.whole.begin.floor()
-        val subdivStart = (onsetInCycle / subdivDuration).floor() * subdivDuration
+    private fun applySwingNegative(event: SprudelPatternEvent, subdivDuration: CycleTime): SprudelPatternEvent {
+        val absSwing = -swing.toDouble()
+        val onsetInCycle = event.whole.begin.fracOfCycle()
+        val subdivStart = subdivStartOf(onsetInCycle, subdivDuration)
         val posInSubdiv = onsetInCycle - subdivStart
-        val subdivHalf = subdivDuration / Rational(2)
+        val subdivHalf = subdivDuration.divBy(2.0)
 
         val isSecondHalf = posInSubdiv >= subdivHalf
 
-        val stretchFactor: Rational
-        val shift: Rational
+        val stretchFactor: Double
+        val shift: CycleTime
 
         if (!isSecondHalf) {
             // First half: compress, shift earlier (negative swing shrinks first half)
-            stretchFactor = Rational.ONE - absSwing
-            shift = Rational.ZERO
+            stretchFactor = 1.0 - absSwing
+            shift = CycleTime.ZERO
         } else {
             // Second half: stretch, shift earlier to fill the gap
-            stretchFactor = Rational.ONE + absSwing
-            shift = Rational.ZERO - absSwing * subdivHalf
+            stretchFactor = 1.0 + absSwing
+            shift = -subdivHalf.scaleBy(absSwing)
         }
 
         val newPartBegin = event.part.begin + shift
-        val newPartEnd = newPartBegin + event.part.duration * stretchFactor
+        val newPartEnd = newPartBegin + event.part.duration.scaleBy(stretchFactor)
         val newWholeBegin = event.whole.begin + shift
-        val newWholeEnd = newWholeBegin + event.whole.duration * stretchFactor
+        val newWholeEnd = newWholeBegin + event.whole.duration.scaleBy(stretchFactor)
 
         return event.copy(
-            part = TimeSpan(newPartBegin, newPartEnd),
-            whole = TimeSpan(newWholeBegin, newWholeEnd),
+            part = CycleTimeSpan(newPartBegin, newPartEnd),
+            whole = CycleTimeSpan(newWholeBegin, newWholeEnd),
         )
     }
 }

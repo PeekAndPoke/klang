@@ -1256,7 +1256,7 @@ private fun applyRandrun(args: List<SprudelDslArg<Any?>>): SprudelPattern {
                     val updatedCtx = ctx.update {
                         setIfAbsent(QueryContext.randomSeedKey, 0)
                     }
-                    val cycle = evt.part.begin.floor()
+                    val cycle = evt.part.begin.cycleIndex()
                     val random = updatedCtx.getSeededRandom(cycle, "randrun")
                     val permutation = (0 until staticN).toMutableList()
                     permutation.shuffle(random)

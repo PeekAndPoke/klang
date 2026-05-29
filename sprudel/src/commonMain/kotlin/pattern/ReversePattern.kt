@@ -1,12 +1,13 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
  * Reverses the pattern within each cycle (or over multiple cycles based on n).
@@ -49,7 +50,7 @@ internal class ReversePattern(
 
     override fun estimateCycleDuration(): Rational = inner.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val nEvents = nProvider.queryEvents(from, to, ctx)
         if (nEvents.isEmpty()) return querySimpleReverse(from, to, ctx)
 
@@ -83,29 +84,30 @@ internal class ReversePattern(
         return result
     }
 
-    private fun querySimpleReverse(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
-        val startCycle = from.floor()
-        val endCycle = to.ceil()
+    private fun querySimpleReverse(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
+        val startCycle = from.cycleIndex()
+        val endCycle = to.ceilToCycle().cycleIndex()
         val events = createEventList()
 
-        for (c in startCycle.toInt()..endCycle.toInt()) {
-            val cycle = c.toRational()
-            val nextCycle = cycle + Rational.ONE
+        for (c in startCycle..endCycle) {
+            val cycle = CycleTime.ofCycleIndex(c)
+            val nextCycle = cycle + CycleTime.ONE
 
             // Intersect query with current cycle
-            val intersectStart = maxOf(from, cycle)
-            val intersectEnd = minOf(to, nextCycle)
+            val intersectStart = from.coerceAtLeast(cycle)
+            val intersectEnd = to.coerceAtMost(nextCycle)
 
             if (intersectEnd > intersectStart) {
+                // Reflection pivot for this cycle: maps t -> pivot - t (reverses within the cycle).
+                val pivot = CycleTime.ONE + (cycle * 2)
                 // Map the intersected range to reversed inner time
-                val innerTo = Rational.ONE + (cycle * Rational(2)) - intersectStart
-                val innerFrom = Rational.ONE + (cycle * Rational(2)) - intersectEnd
+                val innerTo = pivot - intersectStart
+                val innerFrom = pivot - intersectEnd
 
                 inner.queryArcContextual(innerFrom, innerTo, ctx).forEach { ev ->
-                    val pivot = Rational.ONE + (cycle * Rational(2))
-                    val reversedPart = TimeSpan(begin = pivot - ev.part.end, end = pivot - ev.part.begin)
+                    val reversedPart = CycleTimeSpan(begin = pivot - ev.part.end, end = pivot - ev.part.begin)
                     val reversedWhole = ev.whole.let {
-                        TimeSpan(begin = pivot - it.end, end = pivot - it.begin)
+                        CycleTimeSpan(begin = pivot - it.end, end = pivot - it.begin)
                     }
 
                     events.add(ev.copy(part = reversedPart, whole = reversedWhole))
@@ -117,8 +119,8 @@ internal class ReversePattern(
     }
 
     private fun queryMultiCycleReverse(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
         nRat: Rational,
     ): List<SprudelPatternEvent> {

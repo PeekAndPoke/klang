@@ -5,12 +5,19 @@ import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.formatAsTable
 import io.peekandpoke.klang.sprudel.graal.GraalSprudelCompiler
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.encodeToJsonElement
 import org.junit.jupiter.api.fail
 import kotlin.math.abs
 
@@ -256,7 +263,7 @@ ${comparison.report}
 
         fun Double.toFixed(n: Int) = "%.${n}f".format(this)
 
-        fun TimeSpan.str() = "${begin.toDouble().toFixed(5)}-${end.toDouble().toFixed(5)}"
+        fun CycleTimeSpan.str() = "${begin.toDouble().toFixed(5)}-${end.toDouble().toFixed(5)}"
 
         fun SprudelPatternEvent.str(): String {
             val parts = listOf(

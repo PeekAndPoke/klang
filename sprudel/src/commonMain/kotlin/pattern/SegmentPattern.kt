@@ -1,11 +1,12 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
  * Segments a pattern based on a control pattern that determines the number of segments per timespan.
@@ -52,7 +53,7 @@ internal class SegmentPattern(
 
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         val nEvents = nProvider.queryEvents(from, to, ctx)
         if (nEvents.isEmpty()) return emptyList()
 
@@ -63,11 +64,11 @@ internal class SegmentPattern(
             if (n <= 0) continue
 
             val duration = nEvent.part.duration
-            val sliceDuration = duration / Rational(n)
+            val sliceDuration = duration.divBy(n.toDouble())
 
             // Create n slices within this timespan
             for (i in 0 until n) {
-                val sliceBegin = nEvent.part.begin + (sliceDuration * Rational(i))
+                val sliceBegin = nEvent.part.begin + (sliceDuration * i)
                 val sliceEnd = sliceBegin + sliceDuration
 
                 // Query source for this slice
@@ -75,7 +76,7 @@ internal class SegmentPattern(
 
                 for (sourceEvent in sourceEvents) {
                     // Clip source event to slice boundaries
-                    val sliceSpan = TimeSpan(sliceBegin, sliceEnd)
+                    val sliceSpan = CycleTimeSpan(sliceBegin, sliceEnd)
                     val clippedPart = sourceEvent.part.clipTo(sliceSpan)
 
                     if (clippedPart != null) {

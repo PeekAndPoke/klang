@@ -1,12 +1,13 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
  * A pattern that generates a value based on continuous cycle time.
@@ -29,25 +30,25 @@ class ContinuousPattern private constructor(
 
     override fun estimateCycleDuration(): Rational = Rational.ONE
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
 
         val value = getValue(
             min = ctx.getOrDefault(minKey, 0.0),
             max = ctx.getOrDefault(maxKey, 1.0),
-            from = from.toDouble(),
-            to = to.toDouble(),
+            from = from.toCycles(),
+            to = to.toCycles(),
             ctx = ctx
         ).asVoiceValue()
 
         // Make sure we do not run into an infinite loop
-        val granularity = 1.0
+        val granularity = CycleTime.ONE
         val result = createEventList()
         var currentFrom = from
 
         while (to > currentFrom) {
-            val nextFrom = minOf(to, currentFrom + granularity)
+            val nextFrom = to.coerceAtMost(currentFrom + granularity)
 
-            val span = TimeSpan(begin = currentFrom, end = nextFrom)
+            val span = CycleTimeSpan(begin = currentFrom, end = nextFrom)
 
             val event = SprudelPatternEvent(
                 part = span,

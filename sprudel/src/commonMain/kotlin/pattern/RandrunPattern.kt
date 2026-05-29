@@ -1,12 +1,13 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 /**
  * Pattern that generates random sequences with varying length based on a control pattern.
@@ -27,8 +28,8 @@ internal class RandrunPattern(
     override fun estimateCycleDuration(): Rational = Rational.ONE
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         val nEvents = nPattern.queryArcContextual(from, to, ctx)
@@ -44,21 +45,21 @@ internal class RandrunPattern(
             val updatedCtx = ctx.update {
                 setIfAbsent(QueryContext.randomSeedKey, 0)
             }
-            val cycle = nEvent.part.begin.floor()
+            val cycle = nEvent.part.begin.cycleIndex()
             val random = updatedCtx.getSeededRandom(cycle, "randrun")
             val permutation = (0 until n).toMutableList()
             permutation.shuffle(random)
 
             // Create n evenly-spaced events in the control event's timespan
             val duration = nEvent.part.duration
-            val stepSize = duration / Rational(n)
+            val stepSize = duration.divBy(n.toDouble())
 
             for (index in 0 until n) {
-                val eventBegin = nEvent.part.begin + (stepSize * Rational(index))
+                val eventBegin = nEvent.part.begin + (stepSize * index)
                 val eventEnd = eventBegin + stepSize
                 val value = permutation[index].asVoiceValue()
 
-                val timeSpan = TimeSpan(begin = eventBegin, end = eventEnd)
+                val timeSpan = CycleTimeSpan(begin = eventBegin, end = eventEnd)
 
                 result.add(
                     SprudelPatternEvent(

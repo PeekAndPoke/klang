@@ -9,6 +9,7 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.lang.seq
 import io.peekandpoke.klang.sprudel.lang.silence
+import io.peekandpoke.klang.sprudel.shouldBe
 
 /**
  * Tests for BindPattern - Generic pattern for bind/innerJoin operations.

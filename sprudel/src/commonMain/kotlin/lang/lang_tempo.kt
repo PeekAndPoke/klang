@@ -3,13 +3,14 @@
 
 package io.peekandpoke.klang.sprudel.lang
 
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel._bind
 import io.peekandpoke.klang.sprudel._bindSqueeze
 import io.peekandpoke.klang.sprudel._innerJoin
@@ -28,6 +29,7 @@ import io.peekandpoke.klang.sprudel.pattern.SequencePattern
 import io.peekandpoke.klang.sprudel.pattern.SwingPattern
 import io.peekandpoke.klang.sprudel.pattern.TimeShiftPattern
 import io.peekandpoke.klang.sprudel.withSteps
+
 // Helpers /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 internal fun applyTimeShift(
@@ -58,10 +60,10 @@ internal fun applySlow(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val result = pattern._innerJoin(factorArg) { src, factorVal ->
         val factor = factorVal?.asRational ?: return@_innerJoin src
         if (factor == Rational.ZERO) return@_innerJoin silence
-        val inverseFactor = Rational.ONE / factor
+        val inverseFactor = 1.0 / factor.toDouble()
 
-        src._withQueryTime { t -> t * inverseFactor }
-            ._withHapTime { t -> t / inverseFactor }
+        src._withQueryTime { t -> t.scaleBy(inverseFactor) }
+            ._withHapTime { t -> t.divBy(inverseFactor) }
             .withSteps(src.numSteps)
     }
 
@@ -138,9 +140,10 @@ internal fun applyFast(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
     val result = pattern._innerJoin(factorArg) { src, factorVal ->
         val factor = factorVal?.asRational ?: return@_innerJoin src
         if (factor == Rational.ZERO) return@_innerJoin silence
+        val factorD = factor.toDouble()
 
-        src._withQueryTime { t -> t * factor }
-            ._withHapTime { t -> t / factor }
+        src._withQueryTime { t -> t.scaleBy(factorD) }
+            ._withHapTime { t -> t.divBy(factorD) }
             .withSteps(src.numSteps)
     }
 
@@ -278,10 +281,10 @@ fun PatternMapperFn.rev(n: PatternLike = 1, callInfo: CallInfo? = null): Pattern
 // TODO: deep checks ... does not seem to work to well for complex patterns
 private fun applyRevv(pattern: SprudelPattern): SprudelPattern {
     // Negates a time span: [begin, end] → [-end, -begin]
-    val negateSpan: (TimeSpan) -> TimeSpan = { span ->
-        TimeSpan(
-            begin = Rational.ZERO - span.end,
-            end = Rational.ZERO - span.begin
+    val negateSpan: (CycleTimeSpan) -> CycleTimeSpan = { span ->
+        CycleTimeSpan(
+            begin = -span.end,
+            end = -span.begin
         )
     }
 
@@ -549,9 +552,10 @@ internal fun applyCompress(pattern: SprudelPattern, args: List<SprudelDslArg<Any
             val factor = Rational.ONE / duration
             val fastGapped = applyFastGap(pattern, listOf(SprudelDslArg.of(factor)))
 
-            fastGapped._withQueryTime { t -> t - b }.mapEvents { ev ->
-                val shiftedPart = ev.part.shift(b)
-                val shiftedWhole = ev.whole.shift(b)
+            val bTime = CycleTime.ofRationalCycles(b)
+            fastGapped._withQueryTime { t -> t - bTime }.mapEvents { ev ->
+                val shiftedPart = ev.part.shift(bTime)
+                val shiftedWhole = ev.whole.shift(bTime)
                 ev.copy(part = shiftedPart, whole = shiftedWhole)
             }
         }
@@ -630,12 +634,13 @@ private fun applyFocus(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
 
             if (s >= e) return@_bind null
 
-            val d = e - s
-            val sFloored = s.floor()
+            val dCycles = (e - s).toDouble()
+            val sTime = CycleTime.ofRationalCycles(s)
+            val sFlooredTime = sTime.floorToCycle()
 
-            source._withQueryTime { t -> (t - s) / d + sFloored }.mapEvents { ev ->
-                val scaledPart = ev.part.shift(-sFloored).scale(d).shift(s)
-                val scaledWhole = ev.whole.shift(-sFloored).scale(d).shift(s)
+            source._withQueryTime { t -> (t - sTime).divBy(dCycles) + sFlooredTime }.mapEvents { ev ->
+                val scaledPart = ev.part.shift(-sFlooredTime).scale(dCycles).shift(sTime)
+                val scaledWhole = ev.whole.shift(-sFlooredTime).scale(dCycles).shift(sTime)
                 ev.copy(part = scaledPart, whole = scaledWhole)
             }
         }
@@ -723,7 +728,7 @@ private fun applyPly(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
         // factorPattern.zoom(begin, end) takes the slice of factor corresponding to the event
         // and stretches it to 0..1, which matches the squeezed context.
         val localFactor = if (staticFactor == null) {
-            factorPattern.zoom(event.whole.begin.toDouble(), event.whole.end.toDouble())
+            factorPattern.zoom(event.whole.begin.toCycles(), event.whole.end.toCycles())
         } else {
             factorPattern
         }

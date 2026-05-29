@@ -2,12 +2,13 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.lang.note
 import io.peekandpoke.klang.sprudel.pattern.ContextModifierPattern.Companion.withContext
 
@@ -21,15 +22,15 @@ class ContextModifierPatternSpec : StringSpec({
             override val numSteps: Rational = Rational.ONE
 
             override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
+                from: CycleTime,
+                to: CycleTime,
                 ctx: QueryContext,
             ): List<SprudelPatternEvent> {
                 val testVal = ctx.getOrNull(testKey) ?: "none"
                 return listOf(
                     SprudelPatternEvent(
-                        part = TimeSpan(from, to),
-                        whole = TimeSpan(from, to),
+                        part = CycleTimeSpan(from, to),
+                        whole = CycleTimeSpan(from, to),
                         data = SprudelVoiceData.empty.copy(note = testVal)
                     )
                 )
@@ -55,8 +56,8 @@ class ContextModifierPatternSpec : StringSpec({
             override val numSteps: Rational = Rational.ONE
 
             override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
+                from: CycleTime,
+                to: CycleTime,
                 ctx: QueryContext,
             ): List<SprudelPatternEvent> {
                 capturedValue = ctx.getOrNull(flagKey)

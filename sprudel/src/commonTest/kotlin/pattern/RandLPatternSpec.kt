@@ -2,13 +2,14 @@ package io.peekandpoke.klang.sprudel.pattern
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue.Companion.asVoiceValue
-import io.peekandpoke.klang.sprudel.TimeSpan
 
 class RandLPatternSpec : StringSpec({
 
@@ -17,14 +18,14 @@ class RandLPatternSpec : StringSpec({
             override val numSteps: Rational = Rational.ONE
 
             override fun queryArcContextual(
-                from: Rational,
-                to: Rational,
+                from: CycleTime,
+                to: CycleTime,
                 ctx: QueryContext,
             ): List<SprudelPatternEvent> {
                 return listOf(
                     SprudelPatternEvent(
-                        part = TimeSpan(from, to),
-                        whole = TimeSpan(from, to),
+                        part = CycleTimeSpan(from, to),
+                        whole = CycleTimeSpan(from, to),
                         data = SprudelVoiceData.empty.copy(value = 4.asVoiceValue())
                     )
                 )

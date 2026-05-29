@@ -9,6 +9,7 @@ import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.dslInterfaceTests
+import io.peekandpoke.klang.sprudel.shouldBe
 import io.peekandpoke.klang.sprudel.soundName
 
 class LangRibbonSpec : StringSpec({

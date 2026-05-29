@@ -4,6 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
+import io.peekandpoke.klang.sprudel.shouldBe
 
 class LangStackOperationsSpec : StringSpec({
 

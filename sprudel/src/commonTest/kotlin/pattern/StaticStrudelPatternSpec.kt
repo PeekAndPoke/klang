@@ -4,9 +4,13 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
-import io.peekandpoke.klang.sprudel.*
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
+import io.peekandpoke.klang.sprudel.EPSILON
+import io.peekandpoke.klang.sprudel.SprudelPatternEvent
+import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.makeStatic
 
 class StaticSprudelPatternSpec : StringSpec({
 
@@ -14,13 +18,13 @@ class StaticSprudelPatternSpec : StringSpec({
         // Manually create two events in a 1-cycle window
         val events = listOf(
             SprudelPatternEvent(
-                part = TimeSpan(0.0.toRational(), 0.5.toRational()),
-                whole = TimeSpan(0.0.toRational(), 0.5.toRational()),
+                part = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(0.5)),
+                whole = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(0.5)),
                 data = SprudelVoiceData.empty.copy(note = "a"),
             ),
             SprudelPatternEvent(
-                part = TimeSpan(0.5.toRational(), 1.0.toRational()),
-                whole = TimeSpan(0.5.toRational(), 1.0.toRational()),
+                part = CycleTimeSpan(CycleTime.ofCycles(0.5), CycleTime.ofCycles(1.0)),
+                whole = CycleTimeSpan(CycleTime.ofCycles(0.5), CycleTime.ofCycles(1.0)),
                 data = SprudelVoiceData.empty.copy(note = "b"),
             )
         )
@@ -44,8 +48,8 @@ class StaticSprudelPatternSpec : StringSpec({
     "StaticSprudelPattern: query multiple cycles (looping)" {
         val events = listOf(
             SprudelPatternEvent(
-                part = TimeSpan(0.0.toRational(), 1.0.toRational()),
-                whole = TimeSpan(0.0.toRational(), 1.0.toRational()),
+                part = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(1.0)),
+                whole = CycleTimeSpan(CycleTime.ofCycles(0.0), CycleTime.ofCycles(1.0)),
                 data = SprudelVoiceData.empty.copy(note = "kick"),
             )
         )

@@ -5,6 +5,7 @@ package io.peekandpoke.klang.sprudel.lang
 
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.audio_bridge.SoundValue
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.ast.CallInfo
@@ -1947,8 +1948,8 @@ private fun applyVoicing(
         override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
         override fun queryArcContextual(
-            from: Rational,
-            to: Rational,
+            from: CycleTime,
+            to: CycleTime,
             ctx: SprudelPattern.QueryContext,
         ): List<SprudelPatternEvent> {
             val outerEvents = source.queryArcContextual(from, to, ctx)

@@ -1,11 +1,11 @@
 package io.peekandpoke.klang.sprudel.lang.addons.pattern
 
 import io.peekandpoke.klang.audio_bridge.SoundValue
-import io.peekandpoke.klang.common.math.Rational
+import io.peekandpoke.klang.common.math.CycleTime
+import io.peekandpoke.klang.common.math.CycleTimeSpan
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
 import io.peekandpoke.klang.sprudel.SprudelVoiceData
-import io.peekandpoke.klang.sprudel.TimeSpan
 import io.peekandpoke.klang.sprudel.sampleAt
 
 /**
@@ -39,8 +39,8 @@ class SoloPattern(
     private var patternId: String? = null
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: SprudelPattern.QueryContext,
     ): List<SprudelPatternEvent> {
         // 1. Query and sort source events by visible start time
@@ -54,11 +54,11 @@ class SoloPattern(
         var cursor = from
 
         // Sample the solo control pattern at the given time
-        fun soloSampleAt(time: Rational): SprudelPatternEvent? = soloControl.sampleAt(time, ctx)
+        fun soloSampleAt(time: CycleTime): SprudelPatternEvent? = soloControl.sampleAt(time, ctx)
 
         // Silent filler event: keeps the backend's solo-tracker alive during rests
-        fun filler(start: Rational, end: Rational, evt: SprudelPatternEvent?): SprudelPatternEvent {
-            val span = TimeSpan(start, end)
+        fun filler(start: CycleTime, end: CycleTime, evt: SprudelPatternEvent?): SprudelPatternEvent {
+            val span = CycleTimeSpan(start, end)
             return SprudelPatternEvent(
                 part = span,
                 whole = span, // whole == part → isOnset = true, so the backend picks it up
@@ -95,7 +95,7 @@ class SoloPattern(
                 ).prependLocations(solo?.sourceLocations),
             )
 
-            cursor = maxOf(cursor, event.part.end)
+            cursor = cursor.coerceAtLeast(event.part.end)
         }
 
         // Fill any trailing gap after the last event

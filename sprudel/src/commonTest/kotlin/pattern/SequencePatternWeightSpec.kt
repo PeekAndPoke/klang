@@ -4,9 +4,14 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldBeEqualIgnoringCase
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.EPSILON
-import io.peekandpoke.klang.sprudel.lang.*
+import io.peekandpoke.klang.sprudel.lang.fast
+import io.peekandpoke.klang.sprudel.lang.gain
+import io.peekandpoke.klang.sprudel.lang.note
+import io.peekandpoke.klang.sprudel.lang.slow
+import io.peekandpoke.klang.sprudel.lang.stack
 
 class SequencePatternWeightSpec : StringSpec({
 
@@ -30,7 +35,7 @@ class SequencePatternWeightSpec : StringSpec({
 
             events.size shouldBe 4
 
-            var lastEnd = from
+            var lastEnd = CycleTime.ofRationalCycles(from)
 
             events.forEachIndexed { index, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[index]
@@ -54,7 +59,7 @@ class SequencePatternWeightSpec : StringSpec({
             val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
-            var lastEnd = from
+            var lastEnd = CycleTime.ofRationalCycles(from)
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
@@ -79,7 +84,7 @@ class SequencePatternWeightSpec : StringSpec({
             val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
-            var lastEnd = from
+            var lastEnd = CycleTime.ofRationalCycles(from)
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
@@ -103,7 +108,7 @@ class SequencePatternWeightSpec : StringSpec({
             val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 2
-            var lastEnd = from
+            var lastEnd = CycleTime.ofRationalCycles(from)
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
@@ -127,7 +132,7 @@ class SequencePatternWeightSpec : StringSpec({
             val events = pattern.queryArc(from, to).sortedBy { it.part.begin }
 
             events.size shouldBe 3
-            var lastEnd = from
+            var lastEnd = CycleTime.ofRationalCycles(from)
 
             events.forEachIndexed { i, event ->
                 event.data.note shouldBeEqualIgnoringCase expectedNotes[i]
@@ -167,8 +172,8 @@ class SequencePatternWeightSpec : StringSpec({
             d.part.duration.toDouble() shouldBe (0.5 plusOrMinus EPSILON)
             d.part.begin.toDouble() shouldBe (c.part.end.toDouble() plusOrMinus EPSILON)
 
-            (a.part.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
-            (c.part.begin % 1.0).toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            a.part.begin.fracOfCycle().toDouble() shouldBe (0.0 plusOrMinus EPSILON)
+            c.part.begin.fracOfCycle().toDouble() shouldBe (0.0 plusOrMinus EPSILON)
         }
     }
 

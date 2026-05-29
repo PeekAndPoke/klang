@@ -1,5 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
+
 import io.peekandpoke.klang.common.math.Rational
 import io.peekandpoke.klang.common.math.Rational.Companion.sum
 import io.peekandpoke.klang.common.math.Rational.Companion.toRational
@@ -48,32 +50,33 @@ internal class SequencePattern(
         }
     }
 
-    override fun queryArcContextual(from: Rational, to: Rational, ctx: QueryContext): List<SprudelPatternEvent> {
+    override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
         if (patterns.isEmpty()) return emptyList()
 
         val events = createEventList()
 
         // Optimize: Iterate only over the cycles involved in the query
-        val startCycle = from.floor().toInt()
-        val endCycle = to.ceil().toInt()
+        val startCycle = from.cycleIndex()
+        val endCycle = to.ceilToCycle().cycleIndex()
 
         for (cycle in startCycle until endCycle) {
             patterns.forEachIndexed { index, pattern ->
-                val cycleOffset = Rational(cycle)
-                val stepStart = cycleOffset + offsets[index]
-                val stepEnd = cycleOffset + offsets[index + 1]
-                val stepSize = offsets[index + 1] - offsets[index]
+                val cycleOffset = CycleTime.ofCycleIndex(cycle)
+                val stepStart = cycleOffset + CycleTime.ofCycles(offsets[index].toDouble())
+                val stepEnd = cycleOffset + CycleTime.ofCycles(offsets[index + 1].toDouble())
+                val stepSize = offsets[index + 1].toDouble() - offsets[index].toDouble()
 
                 // Calculate the intersection of this step with the query arc
-                val intersectStart = maxOf(from, stepStart)
-                val intersectEnd = minOf(to, stepEnd)
+                val intersectStart = from.coerceAtLeast(stepStart)
+                val intersectEnd = to.coerceAtMost(stepEnd)
 
                 // Map the "outer" time to the "inner" pattern time.
                 // The inner pattern covers 0..1 logically for this step.
                 // Formula: t_inner = (t_outer - stepStart) / stepSize + cycle
-                val innerFrom = (intersectStart - stepStart) / stepSize + cycleOffset
+                val innerFrom = (intersectStart - stepStart).divBy(stepSize) + cycleOffset
                 // Clamp innerTo to the end of the cycle
-                val innerTo = minOf((intersectEnd - stepStart) / stepSize + cycleOffset, cycleOffset + Rational.ONE)
+                val innerTo = ((intersectEnd - stepStart).divBy(stepSize) + cycleOffset)
+                    .coerceAtMost(cycleOffset + CycleTime.ONE)
 
                 val innerEvents = pattern.queryArcContextual(innerFrom, innerTo, ctx)
 

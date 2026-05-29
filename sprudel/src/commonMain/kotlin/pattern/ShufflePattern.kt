@@ -1,7 +1,7 @@
 package io.peekandpoke.klang.sprudel.pattern
 
+import io.peekandpoke.klang.common.math.CycleTime
 import io.peekandpoke.klang.common.math.Rational
-import io.peekandpoke.klang.common.math.Rational.Companion.toRational
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.SprudelPattern.QueryContext
 import io.peekandpoke.klang.sprudel.SprudelPatternEvent
@@ -27,24 +27,22 @@ internal class ShufflePattern(
     override fun estimateCycleDuration(): Rational = source.estimateCycleDuration()
 
     override fun queryArcContextual(
-        from: Rational,
-        to: Rational,
+        from: CycleTime,
+        to: CycleTime,
         ctx: QueryContext,
     ): List<SprudelPatternEvent> {
         val result = createEventList()
         val updatedCtx = ctx.update { setIfAbsent(QueryContext.randomSeedKey, 0) }
 
-        val firstCycle = from.floor().toInt()
-        val lastCycle = (to - SprudelPattern.QUERY_EPSILON).floor().toInt()
+        val firstCycle = from.cycleIndex()
+        val lastCycle = (to - SprudelPattern.QUERY_EPSILON).cycleIndex()
 
         for (cycleInt in firstCycle..lastCycle) {
-            val cycle = cycleInt.toRational()
+            val cycle = CycleTime.ofCycleIndex(cycleInt)
 
             // Sample n from the control pattern at the start of this cycle
             val n = nPattern.sampleAt(cycle, updatedCtx)?.data?.value?.asInt ?: 1
             if (n < 1) continue
-
-            val nRat = n.toRational()
 
             // Same permutation every cycle (seeded by n, not by cycle)
             val random = updatedCtx.getSeededRandom(n, "shuffle")
@@ -52,19 +50,19 @@ internal class ShufflePattern(
             permutation.shuffle(random)
 
             for (i in 0 until n) {
-                val slotStart = cycle + i.toRational() / nRat
-                val slotEnd = cycle + (i + 1).toRational() / nRat
+                val slotStart = cycle + CycleTime.ofSubdivision(i, n)
+                val slotEnd = cycle + CycleTime.ofSubdivision(i + 1, n)
 
                 // Skip slots outside the query range
                 if (slotEnd <= from || slotStart >= to) continue
 
                 val sourceSliceIdx = permutation[i]
                 // Time shift to move source slice events into the output slot
-                val timeShift = (i - sourceSliceIdx).toRational() / nRat
+                val timeShift = CycleTime.ofSubdivision(i - sourceSliceIdx, n)
 
                 // Map query range into source time
-                val sourceFrom = maxOf(from, slotStart) - timeShift
-                val sourceTo = minOf(to, slotEnd) - timeShift
+                val sourceFrom = from.coerceAtLeast(slotStart) - timeShift
+                val sourceTo = to.coerceAtMost(slotEnd) - timeShift
 
                 val sourceEvents = source.queryArcContextual(sourceFrom, sourceTo, updatedCtx)
 
