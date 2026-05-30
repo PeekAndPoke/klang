@@ -84,7 +84,11 @@ class VoiceFactory(
         val effectiveGateDuration = if (clip != null) (originalGateDuration * clip).toInt() else originalGateDuration
         val gateEndFrame = startFrame + effectiveGateDuration
 
-        // Create filters
+        // Create filters. The chain is baked in the EXACT order received from
+        // `data.filters` — VoiceFactory never reorders. The chain-order decision
+        // (highpass-first / lowpass-last for clean nonlinear behaviour) is made
+        // upstream by the language layer (see SprudelVoiceData.toVoiceData), which
+        // keeps the engine a faithful consumer and leaves explicit routing open.
         val analog = data.oscParams?.get("analog") ?: 0.0
         val filters = data.filters.filters.map { it.toFilter(analog) }
         val modulators = data.filters.filters.zip(filters).mapNotNull { (def, filter) ->
@@ -515,6 +519,7 @@ class VoiceFactory(
             cut = cut,
             pipeline = pipeline,
             blockCtx = blockCtx,
+            mainFilter = bakedFilters,
         )
     }
 }

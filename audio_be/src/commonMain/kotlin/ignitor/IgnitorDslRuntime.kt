@@ -295,7 +295,7 @@ private fun IgnitorDsl.buildRaw(
 
         is IgnitorDsl.Adsr -> inner.withMod().adsr(
             attackSec.noMod(), decaySec.noMod(), sustainLevel.noMod(), releaseSec.noMod(),
-            attackCurve ?: AdsrCurve.SCurve,
+            attackCurve ?: AdsrCurve.InvSquare,
             decayCurve ?: AdsrCurve.Square,
             releaseCurve ?: AdsrCurve.Square,
         )

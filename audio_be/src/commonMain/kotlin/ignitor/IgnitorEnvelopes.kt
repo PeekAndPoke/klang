@@ -23,7 +23,7 @@ fun Ignitor.adsr(
     decaySec: Ignitor,
     sustainLevel: Ignitor,
     releaseSec: Ignitor,
-    attackCurve: AdsrCurve = AdsrCurve.SCurve,
+    attackCurve: AdsrCurve = AdsrCurve.InvSquare,
     decayCurve: AdsrCurve = AdsrCurve.Square,
     releaseCurve: AdsrCurve = AdsrCurve.Square,
 ): Ignitor = AdsrIgnitor(
@@ -134,7 +134,7 @@ fun Ignitor.adsr(
     decaySec: Double,
     sustainLevel: Double,
     releaseSec: Double,
-    attackCurve: AdsrCurve = AdsrCurve.SCurve,
+    attackCurve: AdsrCurve = AdsrCurve.InvSquare,
     decayCurve: AdsrCurve = AdsrCurve.Square,
     releaseCurve: AdsrCurve = AdsrCurve.Square,
 ): Ignitor = adsr(

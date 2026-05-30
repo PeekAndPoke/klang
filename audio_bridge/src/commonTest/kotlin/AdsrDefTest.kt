@@ -21,13 +21,13 @@ class AdsrDefTest : StringSpec({
         empty.releaseCurve shouldBe null
     }
 
-    "AdsrDef.defaultSynth uses S-curve attack, Square decay/release" {
+    "AdsrDef.defaultSynth uses InvSquare attack, Square decay/release" {
         val def = AdsrDef.defaultSynth as AdsrDef.Std
         def.attack shouldBe 0.01
         def.decay shouldBe 0.1
         def.sustain shouldBe 1.0
         def.release shouldBe 0.05
-        def.attackCurve shouldBe AdsrCurve.SCurve
+        def.attackCurve shouldBe AdsrCurve.InvSquare
         def.decayCurve shouldBe AdsrCurve.Square
         def.releaseCurve shouldBe AdsrCurve.Square
     }
@@ -38,7 +38,7 @@ class AdsrDefTest : StringSpec({
         resolved.decay shouldBe 0.1
         resolved.sustain shouldBe 1.0
         resolved.release shouldBe 0.05
-        resolved.attackCurve shouldBe AdsrCurve.SCurve
+        resolved.attackCurve shouldBe AdsrCurve.InvSquare
         resolved.decayCurve shouldBe AdsrCurve.Square
         resolved.releaseCurve shouldBe AdsrCurve.Square
     }

@@ -111,8 +111,8 @@ value class CycleTime(val ticks: Double) : Comparable<CycleTime> {
     override fun toString(): String = "CycleTime(${ticks / T} cycles, $ticks ticks)"
 
     companion object {
-        /** Ticks per cycle: 2^13 · 3 · 5 · 7. Highly composite → exact tuplets + fine dyadic grid. */
-        const val T: Double = 860160.0
+        /** Ticks per cycle: 2^20 · 3 · 5 · 7. Highly composite → exact tuplets + fine dyadic grid. */
+        const val T: Double = 110100480.0
 
         val ZERO = CycleTime(0.0)
         val ONE = CycleTime(T)

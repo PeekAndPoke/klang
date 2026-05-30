@@ -34,12 +34,12 @@ suspend fun main() {
         registerBuiltInSongsAsModules()
     }
 
-    val pattern = SprudelPattern.compile(scripting, BuiltInSongs.aTruthWorthLyingFor.code)!!
+    val pattern = SprudelPattern.compile(scripting, BuiltInSongs.derSchmetterling.code)!!
 //    val pattern = SprudelPattern.compile(scripting, BuiltInSongs.tetris.code)!!
 
     println("Starting playback...")
     val playback = player.play(pattern)
-    playback.start(KlangCyclicPlayback.Options(rpm = 31.0))
+    playback.start(KlangCyclicPlayback.Options(rpm = 32.0))
 
     delay(600_000)
     playback.stop()

@@ -14,7 +14,7 @@ internal val aTruthWorthLyingForSong = Song(
 import * from "stdlib"
 import * from "sprudel"
 
-let drive = 8 // <--- Do not put 11
+let drive = 5 // <--- Do not put 11
 
 let stay = 64
 let tp = "[0 1 2 3 -2 -5 -3 -1]/8".slow(stay) // <---- transposition ... wait for it ... or change it ... NEVER try -12!
@@ -22,7 +22,7 @@ let tp = "[0 1 2 3 -2 -5 -3 -1]/8".slow(stay) // <---- transposition ... wait fo
 let guitar = (() => {
 
   let pSpread     = Osc.param("spread", 0.05, "Supersaw voice detuning")
-  let pAnalog     = Osc.param("analog", 1.00, "Analog pitch drift")
+  let pAnalog     = Osc.param("analog", 2.00, "Analog pitch drift")
   let pVoices     = Osc.param("voices", 8,    "Number of unison voices")
  
   let pDrive      = Osc.param("drive",         1.0,    "Primary distortion drive level")
@@ -39,6 +39,7 @@ let guitar = (() => {
     .plus(Osc.berlin(4.0).highpass(2000).adsr(pAttack, 0.05, 0.0, 0.005).mul(0.3))  // Noise burst
     .bandpass(700, 0.30)                                                            // Gentle mid-focus before distortion
     .distort(pDrive, "tube", 4)                                                     // Overdrive + Oversample
+    .coarse(2)
     .lowpass(pBrightness, 1.0, pAnalog)                                             // Post-distortion: control fizz + warmth roll-off
     .highpass(Osc.freq(), 1.0, pAnalog)                                             // Cut away muddy low frequencies
     //.warmth(12000) // TODO: impulse response
