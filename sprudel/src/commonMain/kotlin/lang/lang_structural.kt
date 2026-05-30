@@ -511,16 +511,80 @@ private fun applyArrange(args: List<SprudelDslArg<Any?>>): SprudelPattern {
     if (segments.isEmpty()) return silence
 
     val totalDuration = segments.sumOf { it.first }
+    if (totalDuration <= 0.0) return silence
 
-    // 1. fast(dur) speeds up the pattern to play 'dur' times in 1 cycle
-    // 2. withWeight(dur) tells SequencePattern to allocate 'dur' proportional space
-    // 3. SequencePattern compresses it to fit that space
-    // 4. slow(total) stretches the whole 1-cycle sequence to the total duration
-    val processedPatterns = segments.map { (dur, pat) ->
-        pat.fast(dur).withWeight(dur)
+    // arrange() is concatenation, NOT time-scaling: each segment plays its own cycles
+    // 0..dur-1 at natural speed, back to back, looping after `totalDuration` cycles.
+    //
+    // We place each segment at its cumulative cycle offset and query it at LOCAL time
+    // (outer - segStart), shifting events back by segStart. For the common integer-duration
+    // case every offset is an exact whole-cycle multiple of T, so `shift` introduces ZERO
+    // rounding and per-cycle downbeats stay exactly on the grid.
+    //
+    // (The earlier `pat.fast(dur).withWeight(dur)` + `slow(total)` formulation scaled query
+    // time through three rounded steps — `round(round(round(n*T/total)*…)*…)` — which could
+    // nudge a cycle boundary a tick past n*T. The downbeat sitting exactly on n*T was then
+    // dropped across the half-open query seam: rejected by the `< to` overlap test on one
+    // side, and demoted from an onset to a continuation on the other. See LangArrangeSpec.)
+    //
+    // Cumulative starts are derived from a running Double sum and snapped once via ofCycles,
+    // so fractional durations round per-boundary instead of accumulating drift in ticks.
+    val starts = DoubleArray(segments.size)
+    var acc = 0.0
+    for (i in segments.indices) {
+        starts[i] = acc
+        acc += segments[i].first
     }
 
-    return SequencePattern(processedPatterns).slow(totalDuration)
+    return object : SprudelPattern {
+        override val weight: Double = 1.0
+        override val numSteps: Double? = null
+
+        override fun estimateCycleDuration(): Double = totalDuration
+
+        override fun queryArcContextual(from: CycleTime, to: CycleTime, ctx: QueryContext): List<SprudelPatternEvent> {
+            val result = mutableListOf<SprudelPatternEvent>()
+
+            // Which repetitions of the whole arrangement does [from, to) touch?
+            val startLoop = floor(from.toCycles() / totalDuration).toInt()
+            val endLoop = ceil(to.toCycles() / totalDuration).toInt()
+
+            var loop = startLoop
+            while (loop < endLoop) {
+                val loopBaseCycles = loop * totalDuration
+
+                for (i in segments.indices) {
+                    val (dur, pat) = segments[i]
+
+                    val segStart = CycleTime.ofCycles(loopBaseCycles + starts[i])
+                    val segEnd = CycleTime.ofCycles(loopBaseCycles + starts[i] + dur)
+
+                    val qStart = from.coerceAtLeast(segStart)
+                    val qEnd = to.coerceAtMost(segEnd)
+
+                    if (qEnd > qStart) {
+                        // Local (segment-relative) query window — exact when segStart is a
+                        // whole-cycle offset (the integer-duration case).
+                        val localStart = qStart - segStart
+                        val localEnd = qEnd - segStart
+
+                        pat.queryArcContextual(localStart, localEnd, ctx).forEach { ev ->
+                            result.add(
+                                ev.copy(
+                                    part = ev.part.shift(segStart),
+                                    whole = ev.whole.shift(segStart),
+                                )
+                            )
+                        }
+                    }
+                }
+
+                loop++
+            }
+
+            return result
+        }
+    }
 }
 
 /**

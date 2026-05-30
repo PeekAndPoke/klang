@@ -17,6 +17,7 @@ import io.peekandpoke.klang.sprudel.lang.silence
 import io.peekandpoke.klang.sprudel.lang.slow
 import io.peekandpoke.klang.sprudel.lang.stack
 import io.peekandpoke.klang.sprudel.lang.velocity
+import io.peekandpoke.klang.sprudel.pattern.AlternationPattern
 import io.peekandpoke.klang.sprudel.pattern.ChoicePattern.Companion.choice
 import io.peekandpoke.klang.sprudel.pattern.EuclideanPattern
 import io.peekandpoke.klang.sprudel.pattern.PropertyOverridePattern
@@ -123,8 +124,10 @@ object MnPatternToSprudelPattern {
         // Expand bare Repeat nodes so <bd!2 sd> still means 3 alternation slots; strip Linebreaks
         val flat = node.items.filter { it !is MnNode.Linebreak }.flatMap { expandRepeat(it) }
         val items = flat.map { nodeToPattern(it, baseLocation, atomFactory) }
-        // <a b c> = seq(a, b, c).slow(n) — each item takes one full cycle
-        val base = seq(*items.toTypedArray()).slow(items.size.toDouble())
+        // <a b c>: each item takes one full cycle, cycling every n cycles. Implemented with exact
+        // integer-cycle selection (AlternationPattern) rather than the old `seq(items).slow(n)`, which
+        // rounded cycle boundaries and dropped/misselected items whenever n did not divide CycleTime.T.
+        val base = AlternationPattern(items)
         return applyMods(base, node.mods)
     }
 

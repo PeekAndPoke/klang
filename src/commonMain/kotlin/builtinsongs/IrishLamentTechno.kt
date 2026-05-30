@@ -65,7 +65,7 @@ let leadE = leadStyle(note(`<[a5 e5 d6 c6] [a5 f5 d5 c5] [f5  d5 g5  bb4] [e5 g5
 
 // ── Pad ─────────────────────────────────────────────────────────────
 let pad = chord("<Am Dm Bb C Gm F Am Dm>").voicing(rank = sine.range(0, 1.9).fast(7).add(perlin.range(0, 0.3)))
-    .sound("superpulse").unison(3).detune(0.20).lpf("1500:1:1.5").adsr("1.5:0.5:0.5:1.0").legato(1.4)
+    .sound("superpulse").unison(3).detune(0.20).lpf("1500:1:1.5").adsr("1.5:0.5:0.3:1.0").legato(1.4)
     .pan(0.3).superimpose(pan(0.5).transpose(-12), pan(0.5).transpose(12).velocity(0.9)).lpenv(1.2)
     .phaser(1/6).phaserdepth(saw.range(0.3, 0.6).slow(16)).phasersweep(900).phasercenter(1400)
     .gain(0.05).orbit(5).room(0.4).rsize(6) //  .solo()
@@ -111,8 +111,8 @@ let hit = stack(
 let melody3a = note(`<[d6 f6 g6 f6] [e6 c6 a5 g5] [d6 c6 d6 f6] [a5 g5  f5 e5] [d5 a4 d5  f5] [c5 g4 bb4 a4] [d5 c5 a4 g4] [d4@2  d4 ~]>`)
 let melody1  = note(`<[d4 f4 e4 d4] [c4 a4 g4 f4] [d4 g4 f4 e4] [c4 bb4 a4 g4] [d5 c5 bb4 a4] [g4 e4 d4 e4]  [a4 g4 f4 e4] [f4 c4 a4 ~]>`)
 
-let mel3 = melody3a.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.3).orbit(0).pan(0.3)
-let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.35).orbit(0).pan(0.7)
+let mel3 = melody3a.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.3).orbit(0).pan(0.3).coarse(3).coarseos(4)
+let mel1 = melody1.sound("saw").legato(0.75).hpf(400).lpf(3000).adsr("0.35:0.1:0.6:0.85").gain(0.35).orbit(0).pan(0.7).coarse(3).coarseos(4)
 
 // One big 64-cycle section. saw.slow(64) ramps 0 → 1 across it.
 // Rhythm/bass build via clean gain ramps (no degrade — that was unpleasant).
@@ -134,9 +134,9 @@ let quietBuild = stack(
         .adsr("0.002:0.08:0.5:0.05").distort("0.4:soft:2").postgain(0.4)
         .gain(saw.range(0.0, 0.45).slow(64)).orbit(0),
     // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.35, 1.0).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.05),
+    mel3.velocity(saw.range(0.2, 0.7).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.05),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(-0.2, 1.05).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.10),
+    mel1.velocity(saw.range(-0.2, 0.75).min(0).max(1).slow(64)).euclidrot(3, 8, 1).vib(4).vibmod(0.10),
     // Syncopated pad stabs — 90s dance keyboard rhythm (3-3-4-2-2-2),
     // enter at section-local cycle 32 (= second half of the build)
     chord("<Am Dm Bb C Gm F Am Dm>").voicing().struct("[x@3 x@3 x@4 x@2 x@2 x@2]")
@@ -210,9 +210,9 @@ let darkBuild = stack(
         .orbit(10).room(0.7).rsize(10),
 
       // Melody 3 — velocity fades from full to silent
-    mel3.velocity(saw.range(0.2, 1.00).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
+    mel3.velocity(saw.range(0.4, 0.80).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
     // Melody 1 — velocity fades from silent to full
-    mel1.velocity(saw.range(0.2, 1.05).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
+    mel1.velocity(saw.range(0.4, 0.85).min(0).max(1).slow(64)).struct("x!8").lpe(1.5).clip(0.5),
 
 )
 
@@ -244,6 +244,7 @@ arrange(
 
 // Inspired by: The Synthsale Piper's Farewell — gone clubbing
 // Composed by: Claude, Motör, peekandpoke
+
 
 
 
