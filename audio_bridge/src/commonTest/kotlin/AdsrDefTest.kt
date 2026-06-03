@@ -21,14 +21,14 @@ class AdsrDefTest : StringSpec({
         empty.releaseCurve shouldBe null
     }
 
-    "AdsrDef.defaultSynth uses InvSquare attack, Square decay/release" {
+    "AdsrDef.defaultSynth uses Square attack, Exponential decay, Square release" {
         val def = AdsrDef.defaultSynth as AdsrDef.Std
         def.attack shouldBe 0.01
         def.decay shouldBe 0.1
         def.sustain shouldBe 1.0
         def.release shouldBe 0.05
-        def.attackCurve shouldBe AdsrCurve.InvSquare
-        def.decayCurve shouldBe AdsrCurve.Square
+        def.attackCurve shouldBe AdsrCurve.Square
+        def.decayCurve shouldBe AdsrCurve.Exponential
         def.releaseCurve shouldBe AdsrCurve.Square
     }
 
@@ -38,8 +38,8 @@ class AdsrDefTest : StringSpec({
         resolved.decay shouldBe 0.1
         resolved.sustain shouldBe 1.0
         resolved.release shouldBe 0.05
-        resolved.attackCurve shouldBe AdsrCurve.InvSquare
-        resolved.decayCurve shouldBe AdsrCurve.Square
+        resolved.attackCurve shouldBe AdsrCurve.Square
+        resolved.decayCurve shouldBe AdsrCurve.Exponential
         resolved.releaseCurve shouldBe AdsrCurve.Square
     }
 
@@ -98,10 +98,11 @@ class AdsrDefTest : StringSpec({
         decoded.attackCurve shouldBe null
     }
 
-    "AdsrCurve enum has Linear, Square, Cube, SCurve, InvSquare" {
-        AdsrCurve.entries.size shouldBe 5
+    "AdsrCurve enum has Linear, Square, Cube, SCurve, InvSquare, Exponential" {
+        AdsrCurve.entries.size shouldBe 6
         AdsrCurve.entries shouldBe listOf(
-            AdsrCurve.Linear, AdsrCurve.Square, AdsrCurve.Cube, AdsrCurve.SCurve, AdsrCurve.InvSquare,
+            AdsrCurve.Linear, AdsrCurve.Square, AdsrCurve.Cube,
+            AdsrCurve.SCurve, AdsrCurve.InvSquare, AdsrCurve.Exponential,
         )
     }
 })

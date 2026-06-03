@@ -168,6 +168,7 @@ object KlangScriptOscExtensions {
         "cube", "cb", "cubic" -> AdsrCurve.Cube
         "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
         "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
+        "exponential", "exp", "expo" -> AdsrCurve.Exponential
         else -> null
     }
 

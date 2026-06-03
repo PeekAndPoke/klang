@@ -1366,6 +1366,7 @@ private fun parseAdsrCurveName(name: String?): AdsrCurve? = when (name?.trim()?.
     "cube", "cb", "cubic" -> AdsrCurve.Cube
     "scurve", "s", "smooth", "sigmoid" -> AdsrCurve.SCurve
     "invsquare", "inv", "isquare", "concave" -> AdsrCurve.InvSquare
+    "exponential", "exp", "expo" -> AdsrCurve.Exponential
     else -> null
 }
 
@@ -1412,17 +1413,26 @@ private fun applyAdsrCurve(source: SprudelPattern, args: List<SprudelDslArg<Any?
 
 /**
  * Sets per-stage ADSR shape curves via a colon-separated string `"attack:decay:release"`.
- * Each part is `linear`, `square` (default), or `cube`. Empty/missing parts leave the
- * corresponding curve untouched.
+ * Empty/missing parts leave the corresponding curve untouched — e.g. `"::scurve"` changes
+ * only the release.
  *
- * Linear gives a straight ramp ("plastic" feel). Square (default) gives a fast initial
- * drop with a long tail — natural and analog-flavoured. Cube is more aggressive than Square.
+ * Available curves (aliases in parentheses):
+ *  - `linear` (`lin`) — straight ramp.
+ *  - `square` (`sq`, `quad`, `quadratic`) — convex: slow-in rise / fast initial drop, long tail.
+ *  - `cube` (`cb`, `cubic`) — a more pronounced `square`.
+ *  - `scurve` (`s`, `smooth`, `sigmoid`) — ease-in-out, **zero slope at both ends**: no onset
+ *    snap and no release "plop" (smoothest).
+ *  - `invsquare` (`inv`, `isquare`, `concave`) — concave mirror of `square`: strong start, eases
+ *    gently into the endpoint.
+ *  - `exponential` (`exp`, `expo`) — a true exponential (convex, long tail).
+ *
+ * Defaults when unset: attack `square`, decay `exponential`, release `square`.
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurves("linear:square:cube")
+ * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurves("square:exponential:scurve")
  * ```
  *
- * @param params Curve names separated by `:` — e.g. `"linear:square:cube"`.
+ * @param params Curve names separated by `:` — e.g. `"square:exponential:scurve"`. Empty parts keep the current curve.
  *
  * @category dynamics
  * @tags adsr, curve, envelope, shape
@@ -1435,7 +1445,8 @@ fun SprudelPattern.adsrCurves(params: PatternLike? = null, callInfo: CallInfo? =
 /**
  * Parses this string as a pattern and sets per-stage ADSR shape curves.
  *
- * @param params Curve names separated by `:` — e.g. `"linear:square:cube"`.
+ * @param params Curve names separated by `:` — `linear` / `square` / `cube` / `scurve` /
+ *   `invsquare` / `exponential` per stage. Empty parts keep the current curve.
  */
 @SprudelDsl
 @KlangScript.Function
@@ -1445,7 +1456,8 @@ fun String.adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): 
 /**
  * Creates a [PatternMapperFn] that sets per-stage ADSR shape curves for each event.
  *
- * @param params Curve names separated by `:` — e.g. `"linear:square:cube"`.
+ * @param params Curve names separated by `:` — `linear` / `square` / `cube` / `scurve` /
+ *   `invsquare` / `exponential` per stage. Empty parts keep the current curve.
  */
 @SprudelDsl
 @KlangScript.Function
@@ -1455,13 +1467,14 @@ fun adsrCurves(params: PatternLike? = null, callInfo: CallInfo? = null): Pattern
 /**
  * Sets the same ADSR shape curve on all three stages (attack, decay, release).
  *
- * Accepts `linear`, `square` (default), or `cube`.
+ * Accepts `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential` (see the
+ * `adsrCurves` docs for the aliases and the shape of each).
  *
  * ```KlangScript(Playable)
- * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurve("cube")
+ * note("c3 e3 g3").s("supersaw").adsr("0.01:0.2:0.7:0.5").adsrCurve("scurve")
  * ```
  *
- * @param params Curve name string — `linear`, `square`, or `cube`.
+ * @param params Curve name — `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential`.
  *
  * @category dynamics
  * @tags adsr, curve, envelope, shape
@@ -1474,7 +1487,7 @@ fun SprudelPattern.adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = 
 /**
  * Parses this string as a pattern and sets the same curve on all three ADSR stages.
  *
- * @param params Curve name string — `linear`, `square`, or `cube`.
+ * @param params Curve name — `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential`.
  */
 @SprudelDsl
 @KlangScript.Function
@@ -1485,7 +1498,7 @@ fun String.adsrCurve(params: PatternLike? = null, callInfo: CallInfo? = null): S
  * Creates a [PatternMapperFn] that applies the same ADSR shape curve to all three stages
  * for each event.
  *
- * @param params Curve name string — `linear`, `square`, or `cube`.
+ * @param params Curve name — `linear`, `square`, `cube`, `scurve`, `invsquare`, or `exponential`.
  */
 @SprudelDsl
 @KlangScript.Function

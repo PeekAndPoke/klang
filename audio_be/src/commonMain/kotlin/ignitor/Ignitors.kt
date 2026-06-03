@@ -4,13 +4,22 @@ import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_DETUNE_POWER
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_GAIN_JITTER
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_HOLD_SAMPLES
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_RESET_SAMPLES
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_SIDE_ATTEN
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.dust
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.sawtooth
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSawRaw
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSawVoiceGains
 import io.peekandpoke.klang.audio_be.polyBlep
 import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.common.math.BerlinNoise
 import io.peekandpoke.klang.common.math.PerlinNoise
+import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -28,7 +37,7 @@ object Ignitors {
     // without that argument. Sprudel's oscParam lookup runs at the DSL layer
     // (IgnitorDslRuntime.buildIgnitor), upstream of these factories.
     private val analogDefault = ConstantIgnitor(0.0)
-    private val voicesDefault = ConstantIgnitor(8.0)
+    private val voicesDefault = ConstantIgnitor(7.0)
     private val freqSpreadDefault = ConstantIgnitor(0.2)
     private val dutyDefault = ConstantIgnitor(0.5)
     private val densityDefault = ConstantIgnitor(0.2)
@@ -668,10 +677,12 @@ object Ignitors {
     }
 
     /**
-     * Supersaw: multiple detuned PolyBLEP sawtooth oscillators summed together (mono).
-     * Voice count is read lazily from the [voices] Ignitor param on the first block.
+     * Supersaw: multiple detuned analog-flyback sawtooth oscillators summed together (mono).
+     * Voice count is read lazily from the [voices] Ignitor param on the first block. See
+     * [SuperSawIgnitor] for the analog shape, the gain-weighted-centroid tuning anchor, and the
+     * per-voice character knobs.
      */
-    fun superSaw(
+    fun superSawRaw(
         freq: Ignitor = FreqIgnitor,
         voices: Ignitor = voicesDefault,
         freqSpread: Ignitor = freqSpreadDefault,
@@ -679,6 +690,40 @@ object Ignitors {
         rng: Random = Random
     ): Ignitor = SuperSawIgnitor(freq, voices, freqSpread, analog, rng)
 
+    /** Super Saw (mono). Alias of [superSawRaw]; the historic pitch-tracking HPF wrapper was removed. */
+    fun superSaw(
+        freq: Ignitor = FreqIgnitor,
+        voices: Ignitor = voicesDefault,
+        freqSpread: Ignitor = freqSpreadDefault,
+        analog: Ignitor = analogDefault,
+        rng: Random = Random
+    ): Ignitor = superSawRaw(freq, voices, freqSpread, analog, rng)
+
+    /**
+     * Detuned saw ensemble with analog character (mono).
+     *
+     * Each voice is a self-contained [SawVoiceState] doing all its per-sample math in `tick()`.
+     *
+     * **Shape** ([SawVoiceState.sampleAt]): a finite-slope sawtooth — a linear rise, a brief peak
+     * hold, then a finite-time flyback — instead of an instantaneous reset + PolyBLEP. The flyback
+     * and hold span a *constant* number of samples ([SUPERSAW_RESET_SAMPLES] / [SUPERSAW_HOLD_SAMPLES]
+     * × dt), so they cover a larger fraction of the cycle at higher pitch → high notes soften toward
+     * a triangle (natural HF rolloff), low notes stay bright. A finite-slope edge is inherently
+     * band-limited, so no PolyBLEP is needed.
+     *
+     * **Tuning**: per-voice detune is the even spread (± [freqSpread]/2 semitones, optionally shaped
+     * by [SUPERSAW_DETUNE_POWER]) with the **gain-weighted mean removed**, so the perceived pitch
+     * centroid is exactly on the note regardless of voice-count parity, curve shaping, or the gain
+     * jitter below. The default voice count is odd so a voice also sits exactly on the note.
+     *
+     * **Character knobs** (internal, tuned by ear): [SUPERSAW_SIDE_ATTEN] center-dominant gain;
+     * [SUPERSAW_GAIN_JITTER] per-voice random *amplitude* offset (analog non-uniformity with zero
+     * pitch effect — replaces the old detune jitter); per-voice [AnalogDrift] pitch drift via the
+     * [analog] param; random initial phase (lushness).
+     *
+     * Per-voice detune increments and shape fractions are cached, recomputed only when frequency,
+     * voice count, or spread changes.
+     */
     private class SuperSawIgnitor(
         private val freq: Ignitor,
         private val voices: Ignitor,
@@ -687,141 +732,94 @@ object Ignitors {
         private val rng: Random,
     ) : Ignitor {
         private var v: Int = 0
-        private var phases: DoubleArray = DoubleArray(0)
+        private var voiceStates: Array<SawVoiceState> = emptyArray()
 
-        // Hoisted out of the per-block loop — reused across blocks, resized only when v changes.
-        private var detunes: DoubleArray = DoubleArray(0)
-        private var voiceGain: Double = 0.0
-        private var drift: PolyAnalogDrift? = null
-
-        // Per-voice detune jitter (unit range ±0.05, scaled by `spread` when applied).
-        // Constant per voice across the voice lifetime — breaks the exact-spacing symmetry
-        // that makes the unison cloud sound mechanical.
-        private var detuneJitter: DoubleArray = DoubleArray(0)
+        // Detune-recompute cache keys (NaN forces recompute).
+        private var lastFreq: Double = Double.NaN
+        private var lastSpread: Double = Double.NaN
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
 
-            ctx.scratchBuffers.use { voicesBuf ->
-                voices.generate(voicesBuf, actualFreq, ctx)
-                val newV = maxOf(0, voicesBuf[ctx.offset].toInt())
-                if (newV != v) {
-                    v = newV
-                    voiceGain = if (v > 0) 1.0 / v.toDouble() else 0.0
-                    val old = phases
-                    phases = DoubleArray(v) { i -> if (i < old.size) old[i] else rng.nextDouble() }
-                    detunes = DoubleArray(v)
-                    // ±5% unit detune jitter — applied as `det += detuneJitter[n] * spread`.
-                    detuneJitter = DoubleArray(v) { (rng.nextDouble() - 0.5) * 0.1 }
-                    drift = null  // force re-init with new voice count
+            val newV = maxOf(0, readParam(voices, actualFreq, ctx).toInt())
+            if (newV != v) {
+                v = newV
+                val old = voiceStates
+                // Reuse existing voice objects (preserve phase); random start phase for new ones —
+                // lush (phase-0 is thin; even spacing makes voice-count-dependent overtones). Innocent
+                // for tuning: a phase offset doesn't change frequency, and `p += dt` is unbiased.
+                voiceStates = Array(v) { i ->
+                    if (i < old.size) old[i] else SawVoiceState().also { it.phase = rng.nextDouble() }
                 }
-                if (v <= 0) {
-                    buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return@use
+                // Per-voice independent analog drift (amount read once, control rate).
+                val analogAmt = readParam(analog, actualFreq, ctx)
+                for (n in 0 until v) voiceStates[n].drift = AnalogDrift(analogAmt, ctx.sampleRate)
+                computeVoiceGains()
+                lastFreq = Double.NaN         // force detune/shape recompute
+                lastSpread = Double.NaN
+            }
+            if (v <= 0) {
+                buffer.fill(0.0, ctx.offset, ctx.offset + ctx.length); return
+            }
+
+            val spread = readParam(freqSpread, actualFreq, ctx)
+            // Recompute per-voice detune increment + shape ONCE per (freq, spread).
+            if (actualFreq != lastFreq || spread != lastSpread) {
+                lastFreq = actualFreq
+                lastSpread = spread
+                computeDetunes(actualFreq, spread, ctx.sampleRateD)
+            }
+
+            // Single path: each voice ticks itself (shape + own drift + phase advance). `mod` is the
+            // per-sample phaseMod multiplier (1.0 when absent) — carries vibrato/FM/pitch-env/accelerate.
+            val pm = ctx.phaseMod
+            val end = ctx.offset + ctx.length
+            for (i in ctx.offset until end) {
+                val mod = if (pm != null) pm[i] else 1.0
+                var sum = 0.0
+                for (n in 0 until v) sum += voiceStates[n].tick(mod)
+                buffer[i] = sum
+            }
+        }
+
+        /** Center-dominant base gains × per-voice amplitude jitter, renormalized to sum 1, into the voices. */
+        private fun computeVoiceGains() {
+            val base = superSawVoiceGains(v)
+            var s = 0.0
+            for (n in 0 until v) {
+                val jit = 1.0 + (rng.nextDouble() - 0.5) * 2.0 * SUPERSAW_GAIN_JITTER
+                val g = (base[n] * jit).coerceAtLeast(0.0)
+                voiceStates[n].gain = g; s += g
+            }
+            if (s > 0.0) {
+                val inv = 1.0 / s; for (n in 0 until v) voiceStates[n].gain *= inv
+            }
+        }
+
+        /**
+         * Per-voice detune increment + analog flyback shape, with the gain-weighted mean detune
+         * removed so the perceived pitch centroid sits exactly on the note (anchors tuning despite
+         * gain jitter, curve shaping, or voice-count parity).
+         */
+        private fun computeDetunes(actualFreq: Double, spread: Double, sr: Double) {
+            // Gain-weighted mean detune (two cheap passes — avoids a per-call array allocation).
+            var wsum = 0.0;
+            var gsum = 0.0
+            for (n in 0 until v) {
+                val g = voiceStates[n].gain
+                wsum += getUnisonDetune(v, spread, n) * g; gsum += g
+            }
+            val mean = if (gsum > 0.0) wsum / gsum else 0.0
+            for (n in 0 until v) {
+                val vs = voiceStates[n]
+                vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(v, spread, n) - mean) / sr
+                var r = SUPERSAW_RESET_SAMPLES * vs.dt
+                var h = SUPERSAW_HOLD_SAMPLES * vs.dt
+                val s = r + h
+                if (s > SUPERSAW_SHAPE_MAX) {
+                    val k = SUPERSAW_SHAPE_MAX / s; r *= k; h *= k
                 }
-
-                val d = drift ?: initPolyAnalogDrift(analog, v, actualFreq, ctx, rng).also { drift = it }
-
-                ctx.scratchBuffers.use { spreadBuf ->
-                    freqSpread.generate(spreadBuf, actualFreq, ctx)
-                    val spread = spreadBuf[ctx.offset]
-
-                    val sr = ctx.sampleRateD
-                    val phaseMod = ctx.phaseMod
-                    val end = ctx.offset + ctx.length
-
-                    if (phaseMod == null) {
-                        // Recompute the detune increments into the persistent buffer.
-                        for (n in 0 until v) {
-                            val det = getUnisonDetune(v, spread, n) + detuneJitter[n] * spread
-                            detunes[n] = actualFreq.applySemitoneDetuneToFrequency(det) / sr
-                        }
-
-                        if (d.active) {
-                            // Analog path: sample-major. drift.advanceAll() refreshes per-voice
-                            // multipliers each sample, then we sum all voices into one write.
-                            val muls = d.multipliers
-                            for (i in ctx.offset until end) {
-                                d.advanceAll()
-                                var sum = 0.0
-                                for (n in 0 until v) {
-                                    var p = phases[n]
-                                    val dt = detunes[n] * muls[n]
-                                    sum += if (dt <= BLEP_MIN_DT) {
-                                        2.0 * p - 1.0
-                                    } else {
-                                        2.0 * p - 1.0 - p.polyBlep(dt)
-                                    }
-                                    p += dt; p = p.wrapPhase(1.0)
-                                    phases[n] = p
-                                }
-                                buffer[i] = sum * voiceGain
-                            }
-                        } else {
-                            // Clean digital path: no per-sample drift. Voice-major preserves
-                            // per-voice register residency since dt is constant within a voice.
-                            // Voice 0: write (overwrite buffer)
-                            run {
-                                var p = phases[0]
-                                val dt = detunes[0]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((2.0 * p - 1.0) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = ((2.0 * p - 1.0 - p.polyBlep(dt)) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[0] = p
-                            }
-
-                            // Voices 1..v: accumulate
-                            for (n in 1 until v) {
-                                var p = phases[n]
-                                val dt = detunes[n]
-                                if (dt <= BLEP_MIN_DT) {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                } else {
-                                    for (i in ctx.offset until end) {
-                                        buffer[i] = (buffer[i] + (2.0 * p - 1.0 - p.polyBlep(dt)) * voiceGain)
-                                        p += dt; p = p.wrapPhase(1.0)
-                                    }
-                                }
-                                phases[n] = p
-                            }
-                        }
-                    } else {
-                        // Modulated path: per-sample (jitter on top of modulation).
-                        // Already sample-major, just plug in advanceAll().
-                        val driftActive = d.active
-                        val muls = d.multipliers
-
-                        for (i in ctx.offset until end) {
-                            if (driftActive) d.advanceAll()
-                            val mod = phaseMod[i]
-                            var sum = 0.0
-                            for (n in 0 until v) {
-                                var p = phases[n]
-                                val det = getUnisonDetune(v, spread, n) + detuneJitter[n] * spread
-                                var dt = actualFreq.applySemitoneDetuneToFrequency(det) / sr * mod
-                                if (driftActive) dt *= muls[n]
-                                sum += if (dt <= BLEP_MIN_DT) {
-                                    2.0 * p - 1.0
-                                } else {
-                                    2.0 * p - 1.0 - p.polyBlep(dt)
-                                }
-                                p += dt; p = p.wrapPhase(1.0)
-                                phases[n] = p
-                            }
-                            buffer[i] = (sum * voiceGain)
-                        }
-                    }
-                }
+                vs.setShape(r, h)
             }
         }
     }
@@ -1707,10 +1705,11 @@ object Ignitors {
         return PolyAnalogDrift(amount, voiceCount, ctx.sampleRate, rng)
     }
 
-    /** Read a control-rate parameter once per block. Optimized for FreqIgnitor and constant ParamIgnitor. */
+    /** Read a control-rate parameter once per block. Optimized for FreqIgnitor / ParamIgnitor / ConstantIgnitor. */
     internal fun readParam(param: Ignitor, freqHz: Double, ctx: IgniteContext): Double {
         if (param is FreqIgnitor) return freqHz
         if (param is ParamIgnitor) return param.default
+        if (param is ConstantIgnitor) return param.value
         return ctx.scratchBuffers.use { tmp -> param.generate(tmp, freqHz, ctx); tmp[ctx.offset] }
     }
 
@@ -1732,11 +1731,70 @@ object Ignitors {
     // Unison / supersaw helpers
     // ═════════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Center-dominant unison gain profile for the super-saw. The least-detuned (center)
+     * voices are loudest; the most-detuned (edge) voices form a quieter halo — the
+     * JP-8000 / Szabo Super Saw character. Summing all voices flat (`1/v`) sounds uniform
+     * and comb-filtered ("plastic"), and with random start phases an unlucky draw can sum
+     * destructively so the note barely rings. A dominant center voice anchors the note
+     * (always rings) while the quiet detuned halo only adds shimmer.
+     *
+     * Triangular falloff with distance-from-center, normalised to sum to 1 (same overall
+     * level as the old flat `1/v`). [SUPERSAW_SIDE_ATTEN] tunes the falloff: 0 = flat/equal
+     * (old behaviour), 1 = only the center voice. Tune by ear.
+     */
+    internal fun superSawVoiceGains(v: Int): DoubleArray {
+        if (v <= 0) return DoubleArray(0)
+        if (v == 1) return doubleArrayOf(1.0)
+        val c = (v - 1) * 0.5            // center index (fractional)
+        val halfSpan = c                 // > 0 for v >= 2
+        val gains = DoubleArray(v)
+        var s = 0.0
+        for (n in 0 until v) {
+            val d = n - c
+            val dn = (if (d < 0.0) -d else d) / halfSpan          // 0 at center .. 1 at edges
+            val g = (1.0 - SUPERSAW_SIDE_ATTEN * dn).coerceAtLeast(0.0)
+            gains[n] = g
+            s += g
+        }
+        val norm = if (s > 0.0) 1.0 / s else 0.0
+        for (n in 0 until v) gains[n] *= norm
+        return gains
+    }
+
+    /**
+     * Falloff strength for [superSawVoiceGains]: 0 = all voices equal (flat `1/v`, the old
+     * uniform/"plastic" sum), 1 = only the center voice. Mid values give a dominant center
+     * with a quieter detuned halo. Tune by ear.
+     */
+    internal const val SUPERSAW_SIDE_ATTEN: Double = 0.2
+
+    /** Analog flyback time in samples (constant → higher notes soften toward triangle). Tune by ear. */
+    internal const val SUPERSAW_RESET_SAMPLES: Double = 7.0
+
+    /** Peak "rest" hold in samples (brief plateau before the flyback). 0 = none. Tune by ear. */
+    internal const val SUPERSAW_HOLD_SAMPLES: Double = 1.0
+
+    /** Max combined flyback+hold fraction of a cycle (keeps very high notes from inverting the shape). */
+    internal const val SUPERSAW_SHAPE_MAX: Double = 0.5
+
+    /** Detune spacing shape: 1.0 = even; >1 concentrates voices toward center; <1 spreads outward. */
+    internal const val SUPERSAW_DETUNE_POWER: Double = 1.0
+
+    /** Per-voice random *amplitude* offset (±fraction): analog non-uniformity with zero pitch effect. */
+    internal const val SUPERSAW_GAIN_JITTER: Double = 0.1
+
     internal fun getUnisonDetune(unison: Int, detune: Double, voiceIndex: Int): Double {
         if (unison < 2) return 0.0
         val a = -detune * 0.5
         val b = detune * 0.5
-        val n = voiceIndex.toDouble() / (unison - 1).toDouble()
+        var n = voiceIndex.toDouble() / (unison - 1).toDouble()   // 0..1 across the spread
+        if (SUPERSAW_DETUNE_POWER != 1.0) {
+            // Signed power around the center (0.5) keeps the spacing symmetric (no detuning).
+            val x = n * 2.0 - 1.0                                 // -1..+1
+            val sx = (if (x < 0.0) -1.0 else 1.0) * abs(x).pow(SUPERSAW_DETUNE_POWER)
+            n = (sx + 1.0) * 0.5
+        }
         return n * (b - a) + a
     }
 }

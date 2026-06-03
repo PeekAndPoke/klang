@@ -9,8 +9,6 @@ import kotlin.math.pow
 
 const val TWO_PI = PI * 2.0
 
-const val ONE_OVER_TWELVE: Double = 1.0 / 12.0
-
 // ── DSP Utilities ────────────────────────────────────────────────────────────
 
 /** Threshold below which filter state is flushed to zero to avoid denormal slowdowns. */

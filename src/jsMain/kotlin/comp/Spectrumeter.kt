@@ -8,6 +8,7 @@ import io.peekandpoke.kraft.components.Ctx
 import io.peekandpoke.kraft.components.comp
 import io.peekandpoke.kraft.utils.onResize
 import io.peekandpoke.kraft.vdom.VDom
+import io.peekandpoke.ultra.common.roundWithPrecision
 import io.peekandpoke.ultra.html.css
 import io.peekandpoke.ultra.html.key
 import io.peekandpoke.ultra.maths.Ease
@@ -175,7 +176,11 @@ class Spectrumeter(ctx: Ctx<Props>) : Component<Spectrumeter.Props>(ctx) {
             val t = if (n == 1) 0.0 else i.toDouble() / (n - 1)
             // Ease-out falloff — 0.45 at bottom, reaches 0 by ~77% up (faster than full-height).
             val aMax = 0.45 * Ease.Out.quad((1.0 - t * 1.3).coerceAtLeast(0.0))
-            val alpha = aMax * heatCurve
+
+            // Sometimes parsing the color fails, so we need to round the alpha:
+            // Failed to execute 'addColorStop' on 'CanvasGradient': The value provided ('rgba(209, 154, 102, 6e-320.0)') could not be parsed as a color.
+            val alpha = (aMax * heatCurve).roundWithPrecision(5)
+
             glow.addColorStop(t, palette[i].withAlpha(alpha).toString())
         }
         ctx.fillStyle = glow

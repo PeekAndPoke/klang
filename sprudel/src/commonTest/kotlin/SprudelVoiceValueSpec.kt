@@ -491,7 +491,9 @@ class SprudelVoiceValueSpec : StringSpec({
     "VoiceValue.Num: whole number serialization" {
         val five = SprudelVoiceValue.Num(5.0)
         val json = Json.encodeToString(SprudelVoiceValueSerializer, five)
-        json shouldBe "5.0"
+        // Whole-number doubles format differently across platforms (JVM "5.0", JS "5"); assert it is an
+        // unquoted JSON number of the right value, not a brittle platform-specific string.
+        json.toDoubleOrNull() shouldBe 5.0
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
         deserialized.asDouble shouldBe 5.0
     }
@@ -499,7 +501,8 @@ class SprudelVoiceValueSpec : StringSpec({
     "VoiceValue.Num: zero serialization" {
         val zero = SprudelVoiceValue.Num(0.0)
         val json = Json.encodeToString(SprudelVoiceValueSerializer, zero)
-        json shouldBe "0.0"
+        // Same cross-platform formatting (JVM "0.0", JS "0"): assert the numeric value, not the string.
+        json.toDoubleOrNull() shouldBe 0.0
         val deserialized = Json.decodeFromString(SprudelVoiceValueSerializer, json)
         deserialized.asDouble shouldBe 0.0
     }
