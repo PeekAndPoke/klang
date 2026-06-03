@@ -79,6 +79,20 @@ inline fun Double.polyBlep(dt: Double): Double {
 }
 
 /**
+ * The one analog-flyback saw shape, shared by the single saw and the super-saw voices.
+ *
+ * A finite-slope sawtooth: a linear **rise** −1→+1 over `[0, riseEnd]`, then a finite-time **flyback**
+ * +1→−1 over the remainder. The slopes are precomputed by the caller (`riseSlope = 2/riseEnd`,
+ * `flySlope = 2/rf`, `riseEnd = 1−rf`) so this is **multiply-only** — no per-sample division. Zero-mean
+ * by construction. A finite-slope edge is inherently band-limited (no PolyBLEP needed); because `rf`
+ * is a constant number of samples, the flyback grows with pitch → high notes soften toward a triangle.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun analogSawShape(phase: Double, riseEnd: Double, riseSlope: Double, flySlope: Double): Double =
+    if (phase < riseEnd) phase * riseSlope - 1.0          // rise: −1 → +1
+    else 1.0 - (phase - riseEnd) * flySlope               // flyback: +1 → −1
+
+/**
  * Fast modulo for values that overshoot by at most one period.
  *
  * Typical for per-sample phase accumulators where the phase increments by a small dt each

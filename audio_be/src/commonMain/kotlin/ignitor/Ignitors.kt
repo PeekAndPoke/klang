@@ -2,17 +2,13 @@ package io.peekandpoke.klang.audio_be.ignitor
 
 import io.peekandpoke.klang.audio_be.AudioBuffer
 import io.peekandpoke.klang.audio_be.TWO_PI
+import io.peekandpoke.klang.audio_be.analogSawShape
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_DETUNE_POWER
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_GAIN_JITTER
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_HOLD_SAMPLES
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_RESET_SAMPLES
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors.SUPERSAW_SIDE_ATTEN
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.dust
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.sawtooth
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSaw
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSawRaw
-import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSawVoiceGains
 import io.peekandpoke.klang.audio_be.polyBlep
 import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.wrapPhase
@@ -100,7 +96,12 @@ object Ignitors {
         }
     }
 
-    /** Sawtooth wave oscillator with PolyBLEP anti-aliasing. Rich in harmonics, classic subtractive synth tone. */
+    /**
+     * Sawtooth oscillator — the single-voice form of the **one** analog-flyback saw shape
+     * ([analogSawShape]) shared with [superSaw]: a linear rise then a finite-time flyback whose length
+     * ([SAW_RESET_SAMPLES] samples) softens higher notes toward a triangle. No PolyBLEP — the finite
+     * slope is inherently band-limited. Per-voice analog drift via [analog].
+     */
     fun sawtooth(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
@@ -110,57 +111,41 @@ object Ignitors {
         private val freq: Ignitor,
         private val analog: Ignitor,
     ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
+        private val voice = SawVoiceState()   // reuses the shared shape + phase + drift
+        private var driftInit = false
+        private var lastDt: Double = Double.NaN
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * d.nextMultiplier()
-                        var out = 2.0 * phase - 1.0
-                        out -= phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i] * d.nextMultiplier()
-                        var out = 2.0 * phase - 1.0
-                        if (dt > BLEP_MIN_DT) out -= phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        var out = 2.0 * phase - 1.0
-                        out -= phase.polyBlep(inc)
-                        buffer[i] = out
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i]
-                        var out = 2.0 * phase - 1.0
-                        if (dt > BLEP_MIN_DT) out -= phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
+            if (!driftInit) {
+                driftInit = true
+                val amt = readParam(analog, actualFreq, ctx)
+                voice.drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate) else null
             }
+
+            val dt = actualFreq / ctx.sampleRateD
+            if (dt != lastDt) {   // recompute the shape only when pitch changes
+                lastDt = dt
+                voice.setShape((SAW_RESET_SAMPLES * dt).coerceAtMost(SAW_SHAPE_MAX))
+            }
+
+            val riseEnd = voice.riseEnd
+            val riseSlope = voice.riseSlope
+            val flySlope = voice.flySlope
+            val drift = voice.drift
+            var phase = voice.phase
+            val pm = ctx.phaseMod
+            val off = ctx.offset
+            val end = off + ctx.length
+            for (i in off until end) {
+                buffer[i] = analogSawShape(phase, riseEnd, riseSlope, flySlope)
+                var inc = dt
+                if (pm != null) inc *= pm[i]
+                if (drift != null) inc *= drift.nextMultiplier()
+                phase += inc
+                phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+            }
+            voice.phase = phase
         }
     }
 
@@ -704,12 +689,11 @@ object Ignitors {
      *
      * Each voice is a self-contained [SawVoiceState] doing all its per-sample math in `tick()`.
      *
-     * **Shape** ([SawVoiceState.sampleAt]): a finite-slope sawtooth — a linear rise, a brief peak
-     * hold, then a finite-time flyback — instead of an instantaneous reset + PolyBLEP. The flyback
-     * and hold span a *constant* number of samples ([SUPERSAW_RESET_SAMPLES] / [SUPERSAW_HOLD_SAMPLES]
-     * × dt), so they cover a larger fraction of the cycle at higher pitch → high notes soften toward
-     * a triangle (natural HF rolloff), low notes stay bright. A finite-slope edge is inherently
-     * band-limited, so no PolyBLEP is needed.
+     * **Shape** ([SawVoiceState.sampleAt]): a finite-slope sawtooth — a linear rise then a finite-time
+     * flyback — instead of an instantaneous reset + PolyBLEP. The flyback spans a *constant* number of
+     * samples ([SAW_RESET_SAMPLES] × dt), so it covers a larger fraction of the cycle at higher
+     * pitch → high notes soften toward a triangle (natural HF rolloff), low notes stay bright. A
+     * finite-slope edge is inherently band-limited, so no PolyBLEP is needed.
      *
      * **Tuning**: per-voice detune is the even spread (± [freqSpread]/2 semitones, optionally shaped
      * by [SUPERSAW_DETUNE_POWER]) with the **gain-weighted mean removed**, so the perceived pitch
@@ -751,9 +735,12 @@ object Ignitors {
                 voiceStates = Array(v) { i ->
                     if (i < old.size) old[i] else SawVoiceState().also { it.phase = rng.nextDouble() }
                 }
-                // Per-voice independent analog drift (amount read once, control rate).
+                // Per-voice independent analog drift (amount read once, control rate). When off,
+                // leave drift null so the hot loop skips it with a single null check (no allocation).
                 val analogAmt = readParam(analog, actualFreq, ctx)
-                for (n in 0 until v) voiceStates[n].drift = AnalogDrift(analogAmt, ctx.sampleRate)
+                for (n in 0 until v) {
+                    voiceStates[n].drift = if (analogAmt > 0.0) AnalogDrift(analogAmt, ctx.sampleRate) else null
+                }
                 computeVoiceGains()
                 lastFreq = Double.NaN         // force detune/shape recompute
                 lastSpread = Double.NaN
@@ -770,15 +757,36 @@ object Ignitors {
                 computeDetunes(actualFreq, spread, ctx.sampleRateD)
             }
 
-            // Single path: each voice ticks itself (shape + own drift + phase advance). `mod` is the
-            // per-sample phaseMod multiplier (1.0 when absent) — carries vibrato/FM/pitch-env/accelerate.
+            // Voice-major: hoist each voice's state into locals (register residency) for its whole
+            // sample run — voice 0 writes the buffer, the rest accumulate. Voices are independent now
+            // (each owns its drift), which is what lets this be voice-major instead of sample-major.
+            // `pm` = phaseMod (vibrato/FM/pitch-env/accelerate), null when unmodulated. The shape is
+            // inlined here (same 2-branch form as SawVoiceState.sampleAt — small, deliberate dup).
             val pm = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-            for (i in ctx.offset until end) {
-                val mod = if (pm != null) pm[i] else 1.0
-                var sum = 0.0
-                for (n in 0 until v) sum += voiceStates[n].tick(mod)
-                buffer[i] = sum
+            val off = ctx.offset
+            val end = off + ctx.length
+            for (n in 0 until v) {
+                val vs = voiceStates[n]
+                var phase = vs.phase
+                val dt = vs.dt
+                val gain = vs.gain
+                val riseEnd = vs.riseEnd
+                val riseSlope = vs.riseSlope
+                val flySlope = vs.flySlope
+                val drift = vs.drift
+                val first = n == 0
+                for (i in off until end) {
+                    val s = analogSawShape(phase, riseEnd, riseSlope, flySlope) * gain
+                    buffer[i] = if (first) s else buffer[i] + s
+                    var inc = dt
+                    if (pm != null) inc *= pm[i]
+                    if (drift != null) inc *= drift.nextMultiplier()
+                    phase += inc
+                    // No phaseMod ⇒ inc is small & positive ⇒ a single conditional subtract suffices;
+                    // with phaseMod, mod can be large/negative ⇒ keep the safe wrap.
+                    phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                }
+                vs.phase = phase
             }
         }
 
@@ -813,13 +821,8 @@ object Ignitors {
             for (n in 0 until v) {
                 val vs = voiceStates[n]
                 vs.dt = actualFreq.applySemitoneDetuneToFrequency(getUnisonDetune(v, spread, n) - mean) / sr
-                var r = SUPERSAW_RESET_SAMPLES * vs.dt
-                var h = SUPERSAW_HOLD_SAMPLES * vs.dt
-                val s = r + h
-                if (s > SUPERSAW_SHAPE_MAX) {
-                    val k = SUPERSAW_SHAPE_MAX / s; r *= k; h *= k
-                }
-                vs.setShape(r, h)
+                val rf = (SAW_RESET_SAMPLES * vs.dt).coerceAtMost(SAW_SHAPE_MAX)
+                vs.setShape(rf)
             }
         }
     }
@@ -1762,27 +1765,7 @@ object Ignitors {
         return gains
     }
 
-    /**
-     * Falloff strength for [superSawVoiceGains]: 0 = all voices equal (flat `1/v`, the old
-     * uniform/"plastic" sum), 1 = only the center voice. Mid values give a dominant center
-     * with a quieter detuned halo. Tune by ear.
-     */
-    internal const val SUPERSAW_SIDE_ATTEN: Double = 0.2
-
-    /** Analog flyback time in samples (constant → higher notes soften toward triangle). Tune by ear. */
-    internal const val SUPERSAW_RESET_SAMPLES: Double = 7.0
-
-    /** Peak "rest" hold in samples (brief plateau before the flyback). 0 = none. Tune by ear. */
-    internal const val SUPERSAW_HOLD_SAMPLES: Double = 1.0
-
-    /** Max combined flyback+hold fraction of a cycle (keeps very high notes from inverting the shape). */
-    internal const val SUPERSAW_SHAPE_MAX: Double = 0.5
-
-    /** Detune spacing shape: 1.0 = even; >1 concentrates voices toward center; <1 spreads outward. */
-    internal const val SUPERSAW_DETUNE_POWER: Double = 1.0
-
-    /** Per-voice random *amplitude* offset (±fraction): analog non-uniformity with zero pitch effect. */
-    internal const val SUPERSAW_GAIN_JITTER: Double = 0.1
+    // Oscillator character constants (SAW_* / SUPERSAW_*) live in OscillatorTuning.kt.
 
     internal fun getUnisonDetune(unison: Int, detune: Double, voiceIndex: Int): Double {
         if (unison < 2) return 0.0
