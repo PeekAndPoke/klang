@@ -149,7 +149,12 @@ object Ignitors {
         }
     }
 
-    /** Reverse sawtooth (ramp up) with PolyBLEP anti-aliasing. Inverted [sawtooth] waveform. */
+    /**
+     * Reverse sawtooth — the **mirror** (negated) of [sawtooth], so it shares the one analog-flyback
+     * saw shape ([analogSawShape]). Slow fall then a fast rise-back flyback. Uses its own `RAMP_*`
+     * tuning (seeded to the saw values) so it can be made distinct from the saw later. No PolyBLEP;
+     * per-voice analog drift via [analog].
+     */
     fun ramp(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
@@ -159,57 +164,41 @@ object Ignitors {
         private val freq: Ignitor,
         private val analog: Ignitor,
     ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
+        private val voice = SawVoiceState()   // reuses the shared saw shape + phase + drift
+        private var driftInit = false
+        private var lastDt: Double = Double.NaN
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * d.nextMultiplier()
-                        var out = 1.0 - 2.0 * phase
-                        out += phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i] * d.nextMultiplier()
-                        var out = 1.0 - 2.0 * phase
-                        if (dt > BLEP_MIN_DT) out += phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        var out = 1.0 - 2.0 * phase
-                        out += phase.polyBlep(inc)
-                        buffer[i] = out
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i]
-                        var out = 1.0 - 2.0 * phase
-                        if (dt > BLEP_MIN_DT) out += phase.polyBlep(dt)
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
+            if (!driftInit) {
+                driftInit = true
+                val amt = readParam(analog, actualFreq, ctx)
+                voice.drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate) else null
             }
+
+            val dt = actualFreq / ctx.sampleRateD
+            if (dt != lastDt) {   // recompute the shape only when pitch changes
+                lastDt = dt
+                voice.setShape((RAMP_RESET_SAMPLES * dt).coerceAtMost(RAMP_SHAPE_MAX))
+            }
+
+            val riseEnd = voice.riseEnd
+            val riseSlope = voice.riseSlope
+            val flySlope = voice.flySlope
+            val drift = voice.drift
+            var phase = voice.phase
+            val pm = ctx.phaseMod
+            val off = ctx.offset
+            val end = off + ctx.length
+            for (i in off until end) {
+                buffer[i] = -analogSawShape(phase, riseEnd, riseSlope, flySlope)   // mirror of the saw
+                var inc = dt
+                if (pm != null) inc *= pm[i]
+                if (drift != null) inc *= drift.nextMultiplier()
+                phase += inc
+                phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+            }
+            voice.phase = phase
         }
     }
 

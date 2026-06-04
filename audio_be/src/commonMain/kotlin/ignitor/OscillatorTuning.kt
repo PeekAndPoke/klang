@@ -18,6 +18,16 @@ internal const val SAW_RESET_SAMPLES: Double = 2.0
 /** Max flyback fraction of a cycle (`rf = 0.5` → symmetric triangle; keeps very high notes sane). */
 internal const val SAW_SHAPE_MAX: Double = 0.5
 
+// ── Ramp (mirrored saw) ──────────────────────────────────────────────────────────────────────────
+// The ramp shares the saw shape (negated) but has its OWN knobs so it can be made distinct later.
+// Seeded to the saw values for now — change these literals to diverge.
+
+/** Ramp flyback time in samples. Starts equal to the saw; give it its own feel later. */
+internal const val RAMP_RESET_SAMPLES: Double = SAW_RESET_SAMPLES
+
+/** Ramp max flyback fraction of a cycle. Starts equal to the saw. */
+internal const val RAMP_SHAPE_MAX: Double = SAW_SHAPE_MAX
+
 // ── Super-saw (unison) ───────────────────────────────────────────────────────────────────────────
 
 /** Center-dominant gain falloff: 0 = all voices equal (flat), 1 = only the center voice. */
