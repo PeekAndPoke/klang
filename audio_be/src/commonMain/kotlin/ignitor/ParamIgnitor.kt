@@ -20,6 +20,8 @@ class ParamIgnitor(
 
     private val defaultF = default
 
+    override fun controlRateValueOrNull(freqHz: Double, ctx: IgniteContext): Double = defaultF
+
     override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
         buffer.fill(defaultF, ctx.offset, ctx.offset + ctx.length)
     }

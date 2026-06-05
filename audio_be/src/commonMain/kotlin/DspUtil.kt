@@ -79,41 +79,30 @@ inline fun Double.polyBlep(dt: Double): Double {
 }
 
 /**
- * The one analog-flyback saw shape, shared by the single saw and the super-saw voices.
+ * The **one** piecewise-linear waveform shape behind saw / ramp / square / pulse / triangle (and their
+ * raw variants). A `±1` trapezoid in four segments: a **rise** ramp `−1→+1` over `[0, riseEnd]`, a
+ * **high** plateau `+1` to [highEnd], a **fall** ramp `+1→−1` to [fallEnd], then a **low** plateau `−1`.
  *
- * A finite-slope sawtooth: a linear **rise** −1→+1 over `[0, riseEnd]`, then a finite-time **flyback**
- * +1→−1 over the remainder. The slopes are precomputed by the caller (`riseSlope = 2/riseEnd`,
- * `flySlope = 2/rf`, `riseEnd = 1−rf`) so this is **multiply-only** — no per-sample division. Zero-mean
- * by construction. A finite-slope edge is inherently band-limited (no PolyBLEP needed); because `rf`
- * is a constant number of samples, the flyback grows with pitch → high notes soften toward a triangle.
+ * Slopes are precomputed by the caller (`riseSlope = 2/riseEnd`, `fallSlope = 2/fallLen`) so this is
+ * **multiply-only**. A segment of zero length is simply skipped (empty plateaus → saw/triangle; empty
+ * ramps → instant/raw edges). No PolyBLEP — a finite-slope edge is inherently band-limited.
+ *
+ * Configs (see `WaveVoiceState`): saw = empty plateaus (`highEnd = riseEnd`, `fallEnd = 1`); square/pulse
+ * = min-flank ramps + plateaus; triangle = `riseEnd = 0.5`, `fallEnd = 1`; raw = ramp length 0.
  */
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun analogSawShape(phase: Double, riseEnd: Double, riseSlope: Double, flySlope: Double): Double =
-    if (phase < riseEnd) phase * riseSlope - 1.0          // rise: −1 → +1
-    else 1.0 - (phase - riseEnd) * flySlope               // flyback: +1 → −1
-
-/**
- * The one pulse/rectangular shape, shared by `square` / `pulze` / `triangle`.
- *
- * A trapezoid: `+1` high plateau, a finite **fall** ramp `+1→−1` ending at the falling edge
- * ([fallEdge] = duty), `−1` low plateau, then a finite **rise** ramp `−1→+1` ending at the cycle wrap.
- * Slopes are precomputed by the caller (`fallSlope = 2/fallLen`, `riseSlope = 2/riseLen`) so this is
- * **multiply-only**. Flank length 0 collapses that ramp to an instant edge (caller adds PolyBLEP there).
- * Both flanks fully open (at duty 0.5) ⇒ a triangle. [p] is the normalised phase `0..1`.
- */
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun pulseTrapezoidShape(
+internal inline fun waveTrapezoid(
     p: Double,
-    fallStart: Double,
-    fallEdge: Double,
-    riseStart: Double,
-    fallSlope: Double,
+    riseEnd: Double,
+    highEnd: Double,
+    fallEnd: Double,
     riseSlope: Double,
+    fallSlope: Double,
 ): Double = when {
-    p < fallStart -> 1.0                                  // high plateau
-    p < fallEdge -> 1.0 - (p - fallStart) * fallSlope     // fall ramp +1 → −1
-    p < riseStart -> -1.0                                 // low plateau
-    else -> -1.0 + (p - riseStart) * riseSlope            // rise ramp −1 → +1
+    p < riseEnd -> -1.0 + p * riseSlope                   // rise −1 → +1
+    p < highEnd -> 1.0                                    // high plateau
+    p < fallEnd -> 1.0 - (p - highEnd) * fallSlope        // fall +1 → −1
+    else -> -1.0                                          // low plateau
 }
 
 /**

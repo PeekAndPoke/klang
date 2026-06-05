@@ -2,10 +2,10 @@
 
 Last updated: 2026-06-05.
 
-Status: **planned, not started.** Designed and audited in the CycleTime-migration
-session; deliberately parked while other work (CycleTime accuracy, sound design)
-was in flight. The CycleTime migration it depended on is now **done** — `Rational`
-timing is fully replaced and `CycleTime.T = 2²⁰·3·5·7 = 110 100 480` is locked in.
+Status: **Phase 0 (golden safety net) done.** Phases 1–3 not started. Designed and
+audited in the CycleTime-migration session; the CycleTime migration it depended on
+is now **done** — `Rational` timing is fully replaced and
+`CycleTime.T = 2²⁰·3·5·7 = 110 100 480` is locked in.
 
 ---
 
@@ -95,19 +95,49 @@ returns a fresh instance (always safe, just no perf win); a mutate-in-place
 modifier requires single-ownership, which the leaf clones guarantee. So we can
 convert incrementally.
 
-### Phase 0 — Safety net (do first, before any mutation)
+### Phase 0 — Safety net (DONE, 2026-06-05)
 
-Build a **differential golden test**. Aliasing bugs are silent — one voice's gain
-bleeding into the next event — and otherwise very hard to catch.
+Differential golden test landed and green. Aliasing bugs are silent — one voice's
+gain bleeding into the next event — so this guard is the prerequisite for any
+in-place mutation.
 
-- Capture the **current (immutable)** engine's per-event `toVoiceData()` output
-  across a corpus into a golden file.
-- Corpus must include the aliasing-prone constructs: `superimpose`, `ply`/`echo`,
-  `jux`, static recordings (`StaticSprudelPattern`), plus the built-in songs
-  (esp. *Der Schmetterling*).
-- Assert the post-change engine reproduces it **byte-identical**.
-- **Open decision:** capture goldens now on this branch and commit them, or pin
-  against a specific baseline commit. (See "Open questions".)
+**What was built**
+
+- `sprudel/src/jvmTest/kotlin/golden/MutableVoiceDataGoldenSpec.kt` — compiles the
+  corpus, queries each pattern **cycle-by-cycle** (the way playback does), and
+  serializes every event's wire-format `toVoiceData()` (`VoiceData`, `@Serializable`)
+  plus tick-exact timing (`whole`/`part` begin/end as integer ticks + `isOnset`).
+  Output is compared byte-for-byte against a committed golden.
+- `sprudel/src/jvmTest/kotlin/golden/GoldenCorpus.kt` — the corpus:
+    - **`der-schmetterling`** — a **frozen copy** of the built-in song (24 cycles),
+      seed pinned to a constant (`seed(42)` instead of the live `seed(timeOfDay…)`)
+      so the random `|`-choices and `berlin`/`saw` noise are reproducible. Real-world
+      complexity: `stack` + `superimpose` + `struct` + `scale`. **2822 events.**
+    - **Targeted patterns** for the constructs the song lacks: `ply` (leaf #2,
+      `AtomicInfinitePattern`), `echo`, `jux`, `superimpose`+`ply`, and a
+      **`static-recording`** entry that wraps queried events in `StaticSprudelPattern`
+      (leaf #3) and re-queries them.
+- Golden file: `sprudel/src/jvmTest/resources/golden/voicedata_golden.txt`
+  (3160 lines, ~2.3 MB). `Json { explicitNulls = false }` drops null fields —
+  full fidelity on set values, far smaller/readable.
+
+**Verified:** three independent JVM runs (one writing, two comparing with
+`--rerun-tasks`) produce byte-identical output → deterministic. `oscParams` is an
+insertion-ordered `LinkedHashMap`, so its serialization is stable.
+
+**Run / regenerate**
+
+```bash
+# Run (note: FQN, NO quotes — quoted/wildcard filters report "No tests found"):
+./gradlew :sprudel:jvmTest --tests io.peekandpoke.klang.sprudel.golden.MutableVoiceDataGoldenSpec
+# Regenerate after an INTENTIONAL change: delete the golden and run (it rewrites,
+# fails once asking for a verify run), or: UPDATE_GOLDEN=true ./gradlew … (env var,
+# since -D system props are not forwarded to the test JVM by this build).
+```
+
+**Resolved decisions:** goldens captured & committed **now on this branch**
+(option A of open-Q #1 — the corpus is self-contained and seed-pinned, no baseline
+pin needed). Corpus = **pinned song + targeted patterns** (per user).
 
 ### Phase 1 — Enable mutability + close the 3 leaks
 
@@ -136,10 +166,10 @@ bleeding into the next event — and otherwise very hard to catch.
 
 ## Open questions (decide before / during Phase 0–1)
 
-1. **Golden capture baseline** — capture & commit on this branch now, or pin to a
-   baseline commit?
+1. ~~**Golden capture baseline**~~ — RESOLVED: captured & committed on this branch
+   (seed-pinned, self-contained corpus; no baseline-commit pin needed).
 2. **Scope commitment** — hot-path-only (leaves codebase in a sound mixed state)
-   vs full 114-site sweep in one pass. User leans hot-path-first.
+   vs full 114-site sweep in one pass. User leans hot-path-first. *(Decide at Phase 2.)*
 3. **`clone()` cost** — cloning per leaf event partly offsets the win; confirm the
    net is still strongly positive (it should be: 1 clone at the leaf vs ~20 copies
    down the chain).

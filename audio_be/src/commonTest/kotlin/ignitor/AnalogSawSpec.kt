@@ -7,14 +7,14 @@ import io.kotest.matchers.shouldBe
 import kotlin.math.abs
 
 /**
- * Guards for the super-saw analog flyback shape ([SawVoiceState.sampleAt]) and its tuning anchor
- * ([Ignitors.getUnisonDetune]). See the SuperSaw rewrite plan.
+ * Guards for the saw config of the unified shape ([WaveVoiceState.setSawShape]) and the super-saw
+ * tuning anchor ([Ignitors.getUnisonDetune]).
  */
 class AnalogSawSpec : StringSpec({
 
     // Shape sample at phase [p] for a voice configured with the given flyback fraction.
     fun analogSaw(p: Double, rf: Double): Double =
-        SawVoiceState().apply { setShape(rf) }.sampleAt(p)
+        WaveVoiceState().apply { setSawShape(rf) }.sampleAt(p)
 
     "analogSaw - pure ramp (rf=0) spans -1..+1" {
         analogSaw(0.0, 0.0) shouldBe (-1.0 plusOrMinus 1e-9)

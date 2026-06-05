@@ -5,6 +5,7 @@ import io.peekandpoke.klang.ui.feel.KlangTheme
 import io.peekandpoke.klang.utils.FullscreenController
 import io.peekandpoke.kraft.addons.browserdetect.browserDetect
 import io.peekandpoke.kraft.addons.marked.marked
+import io.peekandpoke.kraft.addons.pixijs.pixiJs
 import io.peekandpoke.kraft.addons.registry.addons
 import io.peekandpoke.kraft.addons.threejs.threeJs
 import io.peekandpoke.kraft.kraftApp
@@ -17,6 +18,7 @@ val kraft = kraftApp {
     addons {
         browserDetect()
         marked()
+        pixiJs(lazy = true)
         threeJs(lazy = true)
     }
 

@@ -52,6 +52,45 @@ internal const val SUPERRAMP_GAIN_JITTER: Double = SUPERSAW_GAIN_JITTER
 /** Super-ramp detune spacing shape. Starts equal to the super-saw. */
 internal const val SUPERRAMP_DETUNE_POWER: Double = SUPERSAW_DETUNE_POWER
 
+// ── Super-square (unison) ────────────────────────────────────────────────────────────────────────
+// The super-square stacks the pulse shape (duty 0.5) on the shared super-saw unison engine; these are
+// its OWN knobs, seeded to the super-saw values. Change these literals to give it its own character.
+
+/** Super-square center-dominant gain falloff. Starts equal to the super-saw. */
+internal const val SUPERSQUARE_SIDE_ATTEN: Double = SUPERSAW_SIDE_ATTEN
+
+/** Super-square per-voice amplitude jitter. Starts equal to the super-saw. */
+internal const val SUPERSQUARE_GAIN_JITTER: Double = SUPERSAW_GAIN_JITTER
+
+/** Super-square detune spacing shape. Starts equal to the super-saw. */
+internal const val SUPERSQUARE_DETUNE_POWER: Double = SUPERSAW_DETUNE_POWER
+
+// ── Super-triangle (unison) ──────────────────────────────────────────────────────────────────────
+// The super-triangle stacks the pulse shape with fully-open flanks (1.0/1.0); its own unison knobs,
+// seeded to the super-saw values.
+
+/** Super-triangle center-dominant gain falloff. Starts equal to the super-saw. */
+internal const val SUPERTRI_SIDE_ATTEN: Double = SUPERSAW_SIDE_ATTEN
+
+/** Super-triangle per-voice amplitude jitter. Starts equal to the super-saw. */
+internal const val SUPERTRI_GAIN_JITTER: Double = SUPERSAW_GAIN_JITTER
+
+/** Super-triangle detune spacing shape. Starts equal to the super-saw. */
+internal const val SUPERTRI_DETUNE_POWER: Double = SUPERSAW_DETUNE_POWER
+
+// ── Super-sine (unison) ──────────────────────────────────────────────────────────────────────────
+// The super-sine stacks pure sines on the shared super-saw unison engine; its own knobs, seeded to
+// the super-saw values.
+
+/** Super-sine center-dominant gain falloff. Starts equal to the super-saw. */
+internal const val SUPERSINE_SIDE_ATTEN: Double = SUPERSAW_SIDE_ATTEN
+
+/** Super-sine per-voice amplitude jitter. Starts equal to the super-saw. */
+internal const val SUPERSINE_GAIN_JITTER: Double = SUPERSAW_GAIN_JITTER
+
+/** Super-sine detune spacing shape. Starts equal to the super-saw. */
+internal const val SUPERSINE_DETUNE_POWER: Double = SUPERSAW_DETUNE_POWER
+
 // ── Pulse family (square / pulse / pulze / triangle share one shape) ──────────────────────────────
 // square / pulse / pulze are one pulse oscillator (duty osc-param; 0.5 = square). Each edge is a
 // finite-slope flank (no PolyBLEP — like the saw), as a fraction of its plateau: 0 = sharpest (just
