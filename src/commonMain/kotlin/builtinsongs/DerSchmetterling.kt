@@ -21,7 +21,7 @@ stack(                                                                          
   // Lead                                                                                                        //                              //
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                //          DISCO!          //
     .orbit(1).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(11).detune(0.03).analog(feel)             //       FOREVER!       //
-    .hpf(1350).lpf(1600).lpe(berlin.range(3.0, 3.0)).lpq(1.2).lpadsr("0.005:3.0:0.5:0.05")                             //                  //
+    .hpf(1350).lpf(1600).lpe(berlin.range(2.0, 2.0)).lpq(1.2).lpadsr("0.005:3.0:0.5:0.05")                             //                  //
     .gain(1.00).distort("0.300:tube:4").postgain("<0.800!48 0.325!16>") // . solo()                                     //       //      //
     .adsr("0.01:3.0:0.0:0.05").clip(0.8)  // . mute()                                                                  //     //    //    //
     .release("<0.10!16 0.25!16>")                                                                                     //   //          //  //
@@ -32,7 +32,7 @@ stack(                                                                          
     .mute("<1!32 0!256>").engine("pedal"),
   // Guitar 1
   n(`<[7 4 2 <-1 4 1 3> [0 -1 -3 -1] [0 -3] -2 <[-1 4@3] [5 6@3] [4 7@3] [4 6@3]>]!4
-      [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [-1 -3] 0 <[4 6] [0, -2]>] [<7 [[7 4 6 4]!4]> [-5 -6] -7 [-2 <3 -1>]]>/4`) // . solo()
+      [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [-1 -3] 0 <[4 6] 0>] [<7 [[7 4 6 4]!4]> [-5 -6] -7 [-2 <3 -1>]]>/4`) // . solo()
     .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // .mute()
     .velocity("1.00 0.95!3 0.98 0.95!3".fast(2)).analog(feel)
     .sound("supersaw").unison(19).detune(0.08)
@@ -58,7 +58,7 @@ stack(                                                                          
     ).orbit(2).mute("<0!128 1!16 0!16>").engine("pedal")
   , // Bass
   n("<0 0 2 4 0 0 -2 -1>").struct("<[x!1]!32 [x@3 x]!32 [x!4]!64>").fast(2).velocity("1.00 0.95!3 0.98 0.95!3".fast(2))
-    .scale("<e2:minor!88 e3:minor!8>").sound("saw").gain(0.5).distort("0.2:tube:1").coarse(2).postgain(0.65).clip(1.0)
+    .scale("<e2:minor!88 e3:minor!8>").sound("saw").gain(0.5).distort("0.2:tube:1").coarse(2).postgain(0.55).clip(1.0)
     .adsr("0.015:0.3:0.0:0.15").hpf(80).hpq(1).lpf(100).lpe(2).lpadsr("0.01:0.1:0.0:0.22") //  .solo()
     .mute("<0!128 1!32>") // .engine("pedal")
   , // Drums

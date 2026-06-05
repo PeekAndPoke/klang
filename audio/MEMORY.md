@@ -11,7 +11,7 @@
 ## Oscillator Engine Unified (2026-06-05)
 
 The `audio_be` oscillator code was consolidated (branch `dedicated-cycle-time`) — see
-`docs/agent-tasks-archive/2026-06/20260605-oscillator-engine-unification.md` for the full writeup:
+`docs/tasks-archive/2026-06/20260605-oscillator-engine-unification.md` for the full writeup:
 
 1. **One shape engine** — `analogSawShape` + `pulseTrapezoidShape` → one `waveTrapezoid`
    (`DspUtil.kt`); `SawVoiceState` + `PulseWaveState` → one `WaveVoiceState`. One `WaveIgnitor` behind
