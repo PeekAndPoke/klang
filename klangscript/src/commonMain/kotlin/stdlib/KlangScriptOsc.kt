@@ -3,6 +3,7 @@ package io.peekandpoke.klang.script.stdlib
 import io.peekandpoke.klang.audio_bridge.IgnitorDsl
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.script.annotations.KlangScriptLibraries
+import io.peekandpoke.klang.script.stdlib.KlangScriptOsc.pulze
 
 /**
  * Osc object for KlangScript — builds IgnitorDsl signal graphs.
@@ -57,12 +58,13 @@ object KlangScriptOsc {
         IgnitorDsl.Sawtooth(freq = freq.toIgnitorDsl())
 
     /**
-     * Creates a square wave oscillator (PolyBLEP anti-aliased).
+     * Creates a square wave oscillator — a 50%-duty [pulze]. (`square`/`pulse`/`pulze` are aliases of
+     * the one pulse oscillator; its `duty` is an osc-param.)
      * @param freq frequency — omit for voice note frequency, or pass Hz for fixed frequency.
      */
     @KlangScript.Method
     fun square(freq: IgnitorDslLike = IgnitorDsl.Freq): IgnitorDsl =
-        IgnitorDsl.Square(freq = freq.toIgnitorDsl())
+        IgnitorDsl.Pulze(freq = freq.toIgnitorDsl())
 
     /**
      * Creates a triangle wave oscillator.

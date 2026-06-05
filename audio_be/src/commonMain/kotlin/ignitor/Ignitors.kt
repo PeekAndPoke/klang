@@ -6,11 +6,13 @@ import io.peekandpoke.klang.audio_be.analogSawShape
 import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.dust
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.pulze
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.sawtooth
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superRamp
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSaw
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSawRaw
 import io.peekandpoke.klang.audio_be.polyBlep
+import io.peekandpoke.klang.audio_be.pulseTrapezoidShape
 import io.peekandpoke.klang.audio_be.smallNumFastMod
 import io.peekandpoke.klang.audio_be.wrapPhase
 import io.peekandpoke.klang.common.math.BerlinNoise
@@ -203,132 +205,103 @@ object Ignitors {
         }
     }
 
-    /** Square wave oscillator with dual PolyBLEP anti-aliasing at both transitions. */
+    /** Square wave — a 50%-duty [pulze] (Kotlin convenience; the DSL drives `duty` via an osc-param). */
     fun square(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = SquareIgnitor(freq, analog)
+    ): Ignitor = pulze(freq, ConstantIgnitor(0.5), analog)
 
-    private class SquareIgnitor(
+    /**
+     * One pulse / rectangular oscillator behind `square` / `pulze` / `triangle` — a `±1` trapezoid
+     * ([pulseTrapezoidShape] via [PulseWaveState]) with finite-slope flanks: high plateau, fall ramp
+     * ending at the falling edge ([duty]), low plateau, rise ramp ending at the wrap. Each edge is at
+     * least [PULSE_MIN_FLANK_SAMPLES] samples → always band-limited (**no PolyBLEP**), softening with
+     * pitch like the saw. [riseFlank]/[fallFlank] (`0..1`) open each edge from the floor toward a full
+     * ramp; both `1` at duty 0.5 ⇒ a triangle. Per-voice analog drift via [analog]; [duty] may be
+     * audio-rate (PWM).
+     */
+    private class PulseIgnitor(
         private val freq: Ignitor,
+        private val duty: Ignitor,
+        private val riseFlank: Double,
+        private val fallFlank: Double,
         private val analog: Ignitor,
     ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
+        private val state = PulseWaveState()
+        private var driftInit = false
+        private var lastDuty: Double = Double.NaN
+        private var lastDt: Double = Double.NaN
 
         override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
             val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
+            if (!driftInit) {
+                driftInit = true
+                val amt = readParam(analog, actualFreq, ctx)
+                state.drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate) else null
+            }
 
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
+            val dt = actualFreq / ctx.sampleRateD
+            val pm = ctx.phaseMod
+            val off = ctx.offset
+            val end = off + ctx.length
 
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * d.nextMultiplier()
-                        // PolyBLEP square: two sawtooths subtracted, shifted by half period
-                        var out = if (phase < 0.5) 1.0 else -1.0
-                        out += phase.polyBlep(dt)                  // transition at 0
-                        out -= (phase + 0.5).smallNumFastMod(1.0).polyBlep(dt)   // transition at 0.5
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i] * d.nextMultiplier()
-                        var out = if (phase < 0.5) 1.0 else -1.0
-                        if (dt > BLEP_MIN_DT) {
-                            out += phase.polyBlep(dt)
-                            out -= (phase + 0.5).smallNumFastMod(1.0).polyBlep(dt)
-                        }
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
-                    }
+            if (duty is FreqIgnitor || duty is ParamIgnitor || duty is ConstantIgnitor) {
+                // Constant duty (square / triangle / fixed pulze): bake the shape once, hoist, tight loop.
+                val d = readParam(duty, actualFreq, ctx)
+                if (d != lastDuty || dt != lastDt) {
+                    lastDuty = d; lastDt = dt
+                    state.setShape(d, riseFlank, fallFlank, dt)
                 }
+                var phase = state.phase
+                val drift = state.drift
+                val fallStart = state.fallStart;
+                val fallEdge = state.fallEdge;
+                val riseStart = state.riseStart
+                val fallSlope = state.fallSlope;
+                val riseSlope = state.riseSlope
+                for (i in off until end) {
+                    buffer[i] = pulseTrapezoidShape(phase, fallStart, fallEdge, riseStart, fallSlope, riseSlope)
+                    var inc = dt
+                    if (pm != null) inc *= pm[i]
+                    if (drift != null) inc *= drift.nextMultiplier()
+                    phase += inc
+                    phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
+                }
+                state.phase = phase
             } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        var out = if (phase < 0.5) 1.0 else -1.0
-                        out += phase.polyBlep(inc)
-                        out -= (phase + 0.5).smallNumFastMod(1.0).polyBlep(inc)
-                        buffer[i] = out
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        val dt = inc * phaseMod[i]
-                        var out = if (phase < 0.5) 1.0 else -1.0
-                        if (dt > BLEP_MIN_DT) {
-                            out += phase.polyBlep(dt)
-                            out -= (phase + 0.5).smallNumFastMod(1.0).polyBlep(dt)
+                // Audio-rate duty (PWM): rebake the shape whenever duty (or pitch) changes.
+                if (dt != lastDt) {
+                    lastDt = dt; lastDuty = Double.NaN
+                }
+                ctx.scratchBuffers.use { dutyBuf ->
+                    duty.generate(dutyBuf, actualFreq, ctx)
+                    var phase = state.phase
+                    val drift = state.drift
+                    for (i in off until end) {
+                        val d = dutyBuf[i]
+                        if (d != lastDuty) {
+                            lastDuty = d; state.setShape(d, riseFlank, fallFlank, dt)
                         }
-                        buffer[i] = out
-                        phase += dt
-                        phase = phase.wrapPhase(1.0)
+                        buffer[i] = pulseTrapezoidShape(
+                            phase, state.fallStart, state.fallEdge, state.riseStart, state.fallSlope, state.riseSlope,
+                        )
+                        var inc = dt
+                        if (pm != null) inc *= pm[i]
+                        if (drift != null) inc *= drift.nextMultiplier()
+                        phase += inc
+                        phase = if (pm != null) phase.wrapPhase(1.0) else phase.smallNumFastMod(1.0)
                     }
+                    state.phase = phase
                 }
             }
         }
     }
 
-    /** Triangle wave oscillator. Piecewise linear, inherently band-limited. Softer tone than square or saw. */
+    /** Triangle wave — the [PulseIgnitor] preset with both flanks fully open (duty 0.5, rise = fall = 1). */
     fun triangle(
         freq: Ignitor = FreqIgnitor,
         analog: Ignitor = analogDefault,
-    ): Ignitor = TriangleIgnitor(freq, analog)
-
-    private class TriangleIgnitor(
-        private val freq: Ignitor,
-        private val analog: Ignitor,
-    ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val d = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            val inc = actualFreq / ctx.sampleRateD
-            val phaseMod = ctx.phaseMod
-            val end = ctx.offset + ctx.length
-
-            if (d.active) {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        // Piecewise linear: rising from -1 to +1 in first half, falling in second half
-                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        phase += inc * d.nextMultiplier()
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        phase += inc * phaseMod[i] * d.nextMultiplier()
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            } else {
-                if (phaseMod == null) {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        phase += inc
-                        phase = phase.wrapPhase(1.0)
-                    }
-                } else {
-                    for (i in ctx.offset until end) {
-                        buffer[i] = if (phase < 0.5) 4.0 * phase - 1.0 else 3.0 - 4.0 * phase
-                        phase += inc * phaseMod[i]
-                        phase = phase.wrapPhase(1.0)
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = PulseIgnitor(freq, ConstantIgnitor(0.5), 1.0, 1.0, analog)
 
     /** White noise generator. Flat spectrum with equal energy at all frequencies. */
     fun whiteNoise(rng: Random): Ignitor = WhiteNoiseIgnitor(rng)
@@ -453,87 +426,12 @@ object Ignitors {
         }
     }
 
-    /** Pulse wave with variable [duty] cycle (0.0..1.0) and dual PolyBLEP anti-aliasing at both transitions. */
+    /** Pulse wave with variable [duty] cycle — the [PulseIgnitor] with the pulze flank knobs (PWM-capable). */
     fun pulze(
         freq: Ignitor = FreqIgnitor,
         duty: Ignitor = dutyDefault,
         analog: Ignitor = analogDefault,
-    ): Ignitor = PulzeIgnitor(freq, duty, analog)
-
-    private class PulzeIgnitor(
-        private val freq: Ignitor,
-        private val duty: Ignitor,
-        private val analog: Ignitor,
-    ) : Ignitor {
-        private var phase: Double = 0.0
-        private var drift: AnalogDrift? = null
-
-        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
-            val actualFreq = resolveFreq(freq, freqHz, ctx)
-            val dr = drift ?: initAnalogDrift(analog, actualFreq, ctx).also { drift = it }
-
-            ctx.scratchBuffers.use { dutyBuf ->
-                duty.generate(dutyBuf, actualFreq, ctx)
-
-                val inc = actualFreq / ctx.sampleRateD
-                val phaseMod = ctx.phaseMod
-                val end = ctx.offset + ctx.length
-
-                if (dr.active) {
-                    if (phaseMod == null) {
-                        for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
-                            val dt = inc * dr.nextMultiplier()
-                            var out = if (phase < d) 1.0 else -1.0
-                            out += phase.polyBlep(dt)
-                            out -= (phase + (1.0 - d)).smallNumFastMod(1.0).polyBlep(dt)
-                            buffer[i] = out
-                            phase += dt
-                            phase = phase.wrapPhase(1.0)
-                        }
-                    } else {
-                        for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
-                            val dt = inc * phaseMod[i] * dr.nextMultiplier()
-                            var out = if (phase < d) 1.0 else -1.0
-                            if (dt > BLEP_MIN_DT) {
-                                out += phase.polyBlep(dt)
-                                out -= (phase + (1.0 - d)).smallNumFastMod(1.0).polyBlep(dt)
-                            }
-                            buffer[i] = out
-                            phase += dt
-                            phase = phase.wrapPhase(1.0)
-                        }
-                    }
-                } else {
-                    if (phaseMod == null) {
-                        for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
-                            var out = if (phase < d) 1.0 else -1.0
-                            out += phase.polyBlep(inc)
-                            out -= (phase + (1.0 - d)).smallNumFastMod(1.0).polyBlep(inc)
-                            buffer[i] = out
-                            phase += inc
-                            phase = phase.wrapPhase(1.0)
-                        }
-                    } else {
-                        for (i in ctx.offset until end) {
-                            val d = dutyBuf[i].coerceIn(0.01, 0.99)
-                            val dt = inc * phaseMod[i]
-                            var out = if (phase < d) 1.0 else -1.0
-                            if (dt > BLEP_MIN_DT) {
-                                out += phase.polyBlep(dt)
-                                out -= (phase + (1.0 - d)).smallNumFastMod(1.0).polyBlep(dt)
-                            }
-                            buffer[i] = out
-                            phase += dt
-                            phase = phase.wrapPhase(1.0)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    ): Ignitor = PulseIgnitor(freq, duty, PULSE_RISE_FLANK, PULSE_FALL_FLANK, analog)
 
     /** Brown noise (random walk with leaky integrator). Deeper, rumbly character. */
     fun brownNoise(rng: Random): Ignitor = BrownNoiseIgnitor(rng)

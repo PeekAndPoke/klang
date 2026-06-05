@@ -17,7 +17,7 @@ import io.peekandpoke.klang.audio_bridge.plus
  * - freq uses [IgnitorDsl.Freq] (voice note frequency) on all pitched oscillators
  * - "analog" on all pitched oscillators
  * - "voices", "freqSpread" on super oscillators
- * - "duty" on pulze
+ * - "duty" on square/sqr/pulse/pulze (one pulse oscillator; 0.5 = square)
  * - "density" on dust/crackle
  * - "decay", "brightness", "pickPosition", "stiffness" on pluck
  */
@@ -36,10 +36,12 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "sawtooth", dsl = saw)
     register(name = "saw", dsl = saw)
 
-    val square = IgnitorDsl.Square(freq = IgnitorDsl.Freq, analog = slots.analog)
-    register(name = "square", dsl = square)
-    register(name = "sqr", dsl = square)
-    register(name = "pulse", dsl = square)
+    // square / sqr / pulse / pulze are one pulse oscillator with a "duty" osc-param (0.5 = square).
+    val pulse = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
+    register(name = "square", dsl = pulse)
+    register(name = "sqr", dsl = pulse)
+    register(name = "pulse", dsl = pulse)
+    register(name = "pulze", dsl = pulse)
 
     val triangle = IgnitorDsl.Triangle(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "triangle", dsl = triangle)
@@ -51,9 +53,6 @@ fun IgnitorRegistry.registerDefaults() {
     val zawtooth = IgnitorDsl.Zawtooth(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "zawtooth", dsl = zawtooth)
     register(name = "zaw", dsl = zawtooth)
-
-    val pulze = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
-    register(name = "pulze", dsl = pulze)
 
     val impulse = IgnitorDsl.Impulse(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "impulse", dsl = impulse)

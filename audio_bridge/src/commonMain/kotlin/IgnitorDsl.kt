@@ -140,7 +140,11 @@ sealed interface IgnitorDsl {
         }
     }
 
-    /** Square wave oscillator. */
+    /**
+     * Square wave oscillator (fixed 50% duty). NOTE: the `square` / `sqr` / `pulse` *sound names* are
+     * registered to [Pulze] (one pulse oscillator with a `duty` osc-param); this type is retained as a
+     * plain 50%-duty pulse used internally (presets, generic test fixtures).
+     */
     @Serializable
     @SerialName("square")
     data class Square(

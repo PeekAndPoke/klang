@@ -93,6 +93,30 @@ internal inline fun analogSawShape(phase: Double, riseEnd: Double, riseSlope: Do
     else 1.0 - (phase - riseEnd) * flySlope               // flyback: +1 → −1
 
 /**
+ * The one pulse/rectangular shape, shared by `square` / `pulze` / `triangle`.
+ *
+ * A trapezoid: `+1` high plateau, a finite **fall** ramp `+1→−1` ending at the falling edge
+ * ([fallEdge] = duty), `−1` low plateau, then a finite **rise** ramp `−1→+1` ending at the cycle wrap.
+ * Slopes are precomputed by the caller (`fallSlope = 2/fallLen`, `riseSlope = 2/riseLen`) so this is
+ * **multiply-only**. Flank length 0 collapses that ramp to an instant edge (caller adds PolyBLEP there).
+ * Both flanks fully open (at duty 0.5) ⇒ a triangle. [p] is the normalised phase `0..1`.
+ */
+@Suppress("NOTHING_TO_INLINE")
+internal inline fun pulseTrapezoidShape(
+    p: Double,
+    fallStart: Double,
+    fallEdge: Double,
+    riseStart: Double,
+    fallSlope: Double,
+    riseSlope: Double,
+): Double = when {
+    p < fallStart -> 1.0                                  // high plateau
+    p < fallEdge -> 1.0 - (p - fallStart) * fallSlope     // fall ramp +1 → −1
+    p < riseStart -> -1.0                                 // low plateau
+    else -> -1.0 + (p - riseStart) * riseSlope            // rise ramp −1 → +1
+}
+
+/**
  * Fast modulo for values that overshoot by at most one period.
  *
  * Typical for per-sample phase accumulators where the phase increments by a small dt each

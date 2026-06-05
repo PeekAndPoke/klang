@@ -22,17 +22,17 @@ stack(                                                                          
   n(`<[-7 0 2 4] [-7 0 4 [2 6]|[4 2]|2|2|2|2] [-5 -1 2 4] [-6 -1 [4 3]|5|3|3|3 [1 -1]|1|1|1|1]>*2`)                //          DISCO!          //
     .orbit(1).scale("<e4:minor!48 e5:minor!16>").sound("superramp").unison(11).detune(0.03).analog(feel)             //       FOREVER!       //
     .hpf(1350).lpf(1625).lpe(berlin.range(3.0, 3.0)).lpq(1.2).lpadsr("0.005:3.0:0.5:0.05")                             //                  //
-    .gain(1.00).distort("0.300:tube:4").postgain("<0.800!48 0.350!16>") // . solo()                                     //       //      //
+    .gain(1.00).distort("0.300:tube:4").postgain("<0.800!48 0.325!16>") // . solo()                                     //       //      //
     .adsr("0.01:3.0:0.0:0.05").clip(0.8)  // . mute()                                                                  //     //    //    //
-    .release("<0.105!16 0.4!16>")                                                                                     //   //          //  //
+    .release("<0.25!16 0.15!16>")                                                                                     //   //          //  //
     .phaser(1/8).phaserdepth(0.15).phasersweep(1000).phasercenter(1800)                                              // //               // //
-    .shuffle("<1!64 0!16 1!1 4/8!14 1!33>").coarse(2).coarseos(4)                                                   //                       //
+    .shuffle("<1!64 0!16 1!1 4/8!14 1!33>").coarse(2).coarseos(8)                                                   //                       //
     .superimpose(x => x.transpose(12).detune(0.10).velocity("<0!32 0.15!32>").pan(0.3).late(0.001),
                  x => x.transpose(12).detune(0.15).velocity("<0!32 0.15!32>").pan(0.7).late(0.0015))
     .mute("<1!32 0!256>").engine("pedal"),
   // Guitar 1
   n(`<[7 4 2 <-1 4 1 3> [0 -1 -3 -1] [0 -3] -2 <[-1 4@3] [5 6@3] [4 7@3] [4 6@3]>]!4
-      [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [-1 -3] 0 <[4 6] 0>] [<7 [[7 4 6 4]!4]> [-5 -6] -7 [-2 <3 -1>]]>/4`) // . solo()
+      [[4 2] [-1 -3] 0 [2 [2 6@3]]]!2 [[0 -3] [-1 -3] 0 <[4 6] [0, -1]>] [<7 [[7 4 6 4]!4]> [-5 -6] -7 [-2 <3 -1>]]>/4`) // . solo()
     .scale("<e3:minor!48 e4:minor!16 e3:minor!48 e4:minor!16>").struct("<[x!16]!7 [x!24]!1 [x!16]!16>") // .mute()
     .velocity("1.00 0.95!3 0.98 0.95!3".fast(2)).analog(feel)
     .sound("supersaw").unison(17).detune(0.08)
