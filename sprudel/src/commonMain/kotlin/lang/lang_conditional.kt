@@ -52,7 +52,6 @@ private fun applyFirstOf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category conditional
  * @tags firstOf, every, conditional, cycle, periodic, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.firstOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyFirstOf(this, listOf(n, transform).asSprudelDslArgs(callInfo))
@@ -68,7 +67,6 @@ fun SprudelPattern.firstOf(n: PatternLike, transform: PatternMapperFn, callInfo:
  * "c3 d3 e3 g3".firstOf(4, x => x.rev()).note()  // reverse every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.firstOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).firstOf(n, transform, callInfo)
@@ -93,7 +91,6 @@ fun String.firstOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInf
  * @category conditional
  * @tags firstOf, every, conditional, cycle, periodic, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun firstOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.firstOf(n, transform, callInfo) }
@@ -108,7 +105,6 @@ fun firstOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = nu
  * @param n How many cycles make one period. The transform fires on the first of these.
  * @param transform The function to apply on the first cycle of each period.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.firstOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.firstOf(n, transform, callInfo) }
@@ -133,7 +129,6 @@ fun PatternMapperFn.firstOf(n: PatternLike, transform: PatternMapperFn, callInfo
  * @category conditional
  * @tags every, firstOf, conditional, cycle, periodic, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.every(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.firstOf(n, transform, callInfo)
@@ -149,7 +144,6 @@ fun SprudelPattern.every(n: PatternLike, transform: PatternMapperFn, callInfo: C
  * "c3 d3 e3 g3".every(4, x => x.rev()).note()  // reverse every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.every(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).every(n, transform, callInfo)
@@ -174,7 +168,6 @@ fun String.every(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo?
  * @category conditional
  * @tags every, firstOf, conditional, cycle, periodic, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun every(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     firstOf(n, transform, callInfo)
@@ -190,7 +183,6 @@ fun every(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null
  * @param transform The function to apply on the first cycle of each period.
  * @alias firstOf
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.every(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.firstOf(n, transform, callInfo)
@@ -233,7 +225,6 @@ private fun applyLastOf(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category conditional
  * @tags lastOf, conditional, cycle, periodic, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyLastOf(this, listOf(n, transform).asSprudelDslArgs(callInfo))
@@ -249,7 +240,6 @@ fun SprudelPattern.lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: 
  * "c3 d3 e3 g3".lastOf(4, x => x.rev()).note()  // reverse on the 4th of every 4 cycles
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lastOf(n, transform, callInfo)
@@ -273,7 +263,6 @@ fun String.lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo
  * @category conditional
  * @tags lastOf, conditional, cycle, periodic, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lastOf(n, transform, callInfo) }
@@ -288,7 +277,6 @@ fun lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = nul
  * @param n How many cycles make one period. The transform fires on the last of these.
  * @param transform The function to apply on the last cycle of each period.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lastOf(n: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lastOf(n, transform, callInfo) }
@@ -348,7 +336,6 @@ private fun applyWhen(p: SprudelPattern, args: List<SprudelDslArg<Any?>>): Sprud
  * @category conditional
  * @tags when, conditional, binary, gate, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.`when`(condition: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     applyWhen(this, listOf(condition, transform).asSprudelDslArgs(callInfo))
@@ -365,7 +352,6 @@ fun SprudelPattern.`when`(condition: PatternLike, transform: PatternMapperFn, ca
  * "c d e f".when("1 0 1 0", x => x.add(12)).note()
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.`when`(condition: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).`when`(condition, transform, callInfo)
@@ -390,7 +376,6 @@ fun String.`when`(condition: PatternLike, transform: PatternMapperFn, callInfo: 
  * @category conditional
  * @tags when, conditional, binary, gate, transform
  */
-@SprudelDsl
 @KlangScript.Function
 fun `when`(condition: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.`when`(condition, transform, callInfo) }
@@ -405,7 +390,6 @@ fun `when`(condition: PatternLike, transform: PatternMapperFn, callInfo: CallInf
  * @param condition A pattern whose values determine when to apply [transform].
  * @param transform The function to apply when [condition] is truthy.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.`when`(condition: PatternLike, transform: PatternMapperFn, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.`when`(condition, transform, callInfo) }

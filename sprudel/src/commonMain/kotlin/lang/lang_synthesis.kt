@@ -103,13 +103,11 @@ private fun applyFmh(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): S
  * @category synthesis
  * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyFmh(this, listOfNotNull(ratio).asSprudelDslArgs(callInfo))
 
 /** Sets the FM harmonicity ratio on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmh(ratio, callInfo)
@@ -125,13 +123,11 @@ fun String.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): SprudelP
  * @category synthesis
  * @tags fmh, FM, harmonicity, ratio, synthesis, modulator
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmh(ratio, callInfo) }
 
 /** Chains a fmh onto this [PatternMapperFn]; sets the FM harmonicity ratio on the result. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fmh(ratio: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fmh(ratio, callInfo) }
@@ -165,13 +161,11 @@ private fun applyFmattack(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category synthesis
  * @tags fmattack, fmatt, FM, attack, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyFmattack(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the FM modulation envelope attack time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmattack(seconds, callInfo)
@@ -188,13 +182,11 @@ fun String.fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): S
  * @category synthesis
  * @tags fmattack, fmatt, FM, attack, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmattack(seconds, callInfo) }
 
 /** Chains a fmattack onto this [PatternMapperFn]; sets the FM envelope attack time on the result. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fmattack(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fmattack(seconds, callInfo) }
@@ -206,13 +198,11 @@ fun PatternMapperFn.fmattack(seconds: PatternLike? = null, callInfo: CallInfo? =
  * @category synthesis
  * @tags fmatt, fmattack, FM, attack, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.fmattack(seconds, callInfo)
 
 /** Alias for [fmattack] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmatt(seconds, callInfo)
@@ -228,13 +218,11 @@ fun String.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category synthesis
  * @tags fmatt, fmattack, FM, attack, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmatt(seconds, callInfo) }
 
 /** Chains a fmatt onto this [PatternMapperFn]; alias for [PatternMapperFn.fmattack]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fmatt(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fmatt(seconds, callInfo) }
@@ -268,13 +256,11 @@ private fun applyFmdecay(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category synthesis
  * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyFmdecay(this, listOfNotNull(seconds).asSprudelDslArgs(callInfo))
 
 /** Sets the FM modulation envelope decay time on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmdecay(seconds, callInfo)
@@ -291,13 +277,11 @@ fun String.fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category synthesis
  * @tags fmdecay, fmdec, FM, decay, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmdecay(seconds, callInfo) }
 
 /** Chains a fmdecay onto this [PatternMapperFn]; sets the FM envelope decay time on the result. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fmdecay(seconds, callInfo) }
@@ -309,13 +293,11 @@ fun PatternMapperFn.fmdecay(seconds: PatternLike? = null, callInfo: CallInfo? = 
  * @category synthesis
  * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.fmdecay(seconds, callInfo)
 
 /** Alias for [fmdecay] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmdec(seconds, callInfo)
@@ -331,13 +313,11 @@ fun String.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category synthesis
  * @tags fmdec, fmdecay, FM, decay, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmdec(seconds, callInfo) }
 
 /** Chains a fmdec onto this [PatternMapperFn]; alias for [PatternMapperFn.fmdecay]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fmdec(seconds: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fmdec(seconds, callInfo) }
@@ -372,13 +352,11 @@ private fun applyFmsustain(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category synthesis
  * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyFmsustain(this, listOfNotNull(level).asSprudelDslArgs(callInfo))
 
 /** Sets the FM modulation envelope sustain level on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmsustain(level, callInfo)
@@ -395,13 +373,11 @@ fun String.fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category synthesis
  * @tags fmsustain, fmsus, FM, sustain, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmsustain(level, callInfo) }
 
 /** Chains a fmsustain onto this [PatternMapperFn]; sets the FM envelope sustain level on the result. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fmsustain(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fmsustain(level, callInfo) }
@@ -413,13 +389,11 @@ fun PatternMapperFn.fmsustain(level: PatternLike? = null, callInfo: CallInfo? = 
  * @category synthesis
  * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.fmsustain(level, callInfo)
 
 /** Alias for [fmsustain] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmsus(level, callInfo)
@@ -435,13 +409,11 @@ fun String.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category synthesis
  * @tags fmsus, fmsustain, FM, sustain, envelope, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.fmsus(level, callInfo) }
 
 /** Chains a fmsus onto this [PatternMapperFn]; alias for [PatternMapperFn.fmsustain]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fmsus(level: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fmsus(level, callInfo) }
@@ -476,19 +448,16 @@ private fun applyFmenv(source: SprudelPattern, args: List<SprudelDslArg<Any?>>):
  * @category synthesis
  * @tags fmenv, fmmod, FM, modulation, depth, amount, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     listOf(depth).asSprudelDslArgs(callInfo).toPattern(fmenvMutation)
 
 /** Sets the FM modulation depth on this pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyFmenv(this, listOf(depth).asSprudelDslArgs(callInfo))
 
 /** Sets the FM modulation depth on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmenv(depth, callInfo)
@@ -500,19 +469,16 @@ fun String.fmenv(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern
  * @category synthesis
  * @tags fmmod, fmenv, FM, modulation, depth, amount, synthesis
  */
-@SprudelDsl
 @KlangScript.Function
 fun fmmod(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     fmenv(depth, callInfo)
 
 /** Alias for [fmenv] on this pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fmmod(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.fmenv(depth, callInfo)
 
 /** Alias for [fmenv] on a string pattern. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fmmod(depth: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fmmod(depth, callInfo)

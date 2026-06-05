@@ -59,12 +59,10 @@ private fun applyToBipolar(pattern: SprudelPattern): SprudelPattern {
  * @category continuous
  * @tags toBipolar, bipolar, unipolar, range, lfo, oscillator
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.toBipolar(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyToBipolar(this)
 
 /** Parses this string as a pattern, then maps its values from `0..1` to `-1..1`. */
-@SprudelDsl
 @KlangScript.Function
 fun String.toBipolar(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).toBipolar(callInfo)
@@ -84,7 +82,6 @@ fun String.toBipolar(callInfo: CallInfo? = null): SprudelPattern =
  * @category continuous
  * @tags toBipolar, bipolar, unipolar, range, lfo, mapper
  */
-@SprudelDsl
 @KlangScript.Function
 fun toBipolar(callInfo: CallInfo? = null): PatternMapperFn = { p -> p.toBipolar(callInfo) }
 
@@ -97,7 +94,6 @@ fun toBipolar(callInfo: CallInfo? = null): PatternMapperFn = { p -> p.toBipolar(
  *
  * @return A [PatternMapperFn] that maps values from `0..1` to `-1..1`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.toBipolar(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.toBipolar(callInfo) }
@@ -136,12 +132,10 @@ private fun applyFromBipolar(pattern: SprudelPattern): SprudelPattern {
  * @category continuous
  * @tags fromBipolar, bipolar, unipolar, range, lfo, oscillator
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.fromBipolar(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern = applyFromBipolar(this)
 
 /** Parses this string as a pattern, then maps its values from `-1..1` to `0..1`. */
-@SprudelDsl
 @KlangScript.Function
 fun String.fromBipolar(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).fromBipolar(callInfo)
@@ -161,7 +155,6 @@ fun String.fromBipolar(callInfo: CallInfo? = null): SprudelPattern =
  * @category continuous
  * @tags fromBipolar, bipolar, unipolar, range, lfo, mapper
  */
-@SprudelDsl
 @KlangScript.Function
 fun fromBipolar(callInfo: CallInfo? = null): PatternMapperFn = { p -> p.fromBipolar(callInfo) }
 
@@ -174,7 +167,6 @@ fun fromBipolar(callInfo: CallInfo? = null): PatternMapperFn = { p -> p.fromBipo
  *
  * @return A [PatternMapperFn] that maps values from `-1..1` to `0..1`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.fromBipolar(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.fromBipolar(callInfo) }
@@ -215,7 +207,6 @@ private fun applyRange(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category continuous
  * @tags range, scale, min, max, oscillator, lfo, continuous
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.range(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     applyRange(this, listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs(callInfo))
@@ -227,7 +218,6 @@ fun SprudelPattern.range(min: Number = 0.0, max: Number = 1.0, callInfo: CallInf
  * @param max The target maximum value (default `1.0`).
  * @return A new pattern with values linearly scaled to `[min, max]`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.range(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).range(min, max, callInfo)
@@ -251,7 +241,6 @@ fun String.range(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = nul
  * @category continuous
  * @tags range, scale, min, max, oscillator, lfo, continuous
  */
-@SprudelDsl
 @KlangScript.Function
 fun range(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.range(min, max, callInfo) }
@@ -266,7 +255,6 @@ fun range(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): Pat
  * @param min The target minimum value (default `0.0`).
  * @param max The target maximum value (default `1.0`).
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.range(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.range(min, max, callInfo) }
@@ -317,7 +305,6 @@ private fun applyRangex(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category continuous
  * @tags rangex, range, exponential, logarithmic, scale, frequency, oscillator, lfo, continuous
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.rangex(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     applyRangex(this, listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs(callInfo))
@@ -333,7 +320,6 @@ fun SprudelPattern.rangex(min: Number = 0.0, max: Number = 1.0, callInfo: CallIn
  * "0 0.5 1".rangex(100, 1000).freq()  // manual values scaled exponentially to frequency range
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.rangex(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).rangex(min, max, callInfo)
@@ -357,7 +343,6 @@ fun String.rangex(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = nu
  * @category continuous
  * @tags rangex, range, exponential, logarithmic, scale, frequency, oscillator, lfo, continuous
  */
-@SprudelDsl
 @KlangScript.Function
 fun rangex(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.rangex(min, max, callInfo) }
@@ -372,7 +357,6 @@ fun rangex(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): Pa
  * @param min The target minimum value (default `0.0`; use a small positive number for frequencies).
  * @param max The target maximum value (default `1.0`).
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.rangex(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.rangex(min, max, callInfo) }
@@ -405,7 +389,6 @@ private fun applyRange2(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category continuous
  * @tags range2, bipolar, range, scale, lfo, oscillator, continuous
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     applyRange2(this, listOf(min.toDouble(), max.toDouble()).asSprudelDslArgs(callInfo))
@@ -421,7 +404,6 @@ fun SprudelPattern.range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallIn
  * "0 0.5 -0.5".range2(0, 100)  // manual bipolar values scaled to range
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).range2(min, max, callInfo)
@@ -445,7 +427,6 @@ fun String.range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = nu
  * @category continuous
  * @tags range2, bipolar, range, scale, lfo, oscillator, continuous
  */
-@SprudelDsl
 @KlangScript.Function
 fun range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.range2(min, max, callInfo) }
@@ -460,7 +441,6 @@ fun range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): Pa
  * @param min The target minimum value (default `0.0`).
  * @param max The target maximum value (default `1.0`).
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.range2(min, max, callInfo) }
@@ -485,7 +465,6 @@ fun PatternMapperFn.range2(min: Number = 0.0, max: Number = 1.0, callInfo: CallI
  * @category continuous
  * @tags silence, rest, empty, quiet
  */
-@SprudelDsl
 @KlangScript.Constant
 val silence: SprudelPattern = EmptyPattern
 
@@ -504,7 +483,6 @@ val silence: SprudelPattern = EmptyPattern
  * @category continuous
  * @tags rest, silence, empty, quiet
  */
-@SprudelDsl
 @KlangScript.Constant
 val rest: SprudelPattern = EmptyPattern
 
@@ -523,7 +501,6 @@ val rest: SprudelPattern = EmptyPattern
  * @category continuous
  * @tags nothing, silence, rest, empty, quiet
  */
-@SprudelDsl
 @KlangScript.Constant
 val nothing: SprudelPattern = EmptyPattern
 
@@ -553,7 +530,6 @@ private fun applySignal(f: (Double) -> Double): SprudelPattern =
  * @category continuous
  * @tags signal, continuous, lfo, function, custom, oscillator
  */
-@SprudelDsl
 @KlangScript.Function
 fun signal(@Suppress("unused") callInfo: CallInfo? = null, f: (Double) -> Double): SprudelPattern = applySignal(f)
 
@@ -578,7 +554,6 @@ fun signal(@Suppress("unused") callInfo: CallInfo? = null, f: (Double) -> Double
  * @category continuous
  * @tags steady, constant, continuous, signal, dc
  */
-@SprudelDsl
 @KlangScript.Function
 fun steady(value: Number, @Suppress("unused") callInfo: CallInfo? = null): SprudelPattern {
     val v = value.toDouble()
@@ -607,7 +582,6 @@ private val timeBase: SprudelPattern by lazy { applySignal { t -> t } }
  * @category continuous
  * @tags time, continuous, linear, ramp
  */
-@SprudelDsl
 @KlangScript.Constant
 val time: SprudelPattern = timeBase
 
@@ -634,7 +608,6 @@ private val sine2Base: SprudelPattern by lazy { sineBase.toBipolar() }
  * @category continuous
  * @tags sine, oscillator, lfo, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val sine: SprudelPattern = sineBase
 
@@ -654,7 +627,6 @@ val sine: SprudelPattern = sineBase
  * @category continuous
  * @tags sine2, sine, oscillator, lfo, bipolar, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val sine2: SprudelPattern = sine2Base
 
@@ -681,7 +653,6 @@ private val cosine2Base: SprudelPattern by lazy { cosineBase.toBipolar() }
  * @category continuous
  * @tags cosine, oscillator, lfo, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val cosine: SprudelPattern = cosineBase
 
@@ -701,7 +672,6 @@ val cosine: SprudelPattern = cosineBase
  * @category continuous
  * @tags cosine2, cosine, oscillator, lfo, bipolar, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val cosine2: SprudelPattern = cosine2Base
 
@@ -727,7 +697,6 @@ private val saw2Base: SprudelPattern by lazy { sawBase.toBipolar() }
  * @category continuous
  * @tags saw, sawtooth, oscillator, lfo, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val saw: SprudelPattern = sawBase
 
@@ -747,7 +716,6 @@ val saw: SprudelPattern = sawBase
  * @category continuous
  * @tags saw2, saw, sawtooth, oscillator, lfo, bipolar, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val saw2: SprudelPattern = saw2Base
 
@@ -773,7 +741,6 @@ private val isaw2Base: SprudelPattern by lazy { isawBase.toBipolar() }
  * @category continuous
  * @tags isaw, sawtooth, oscillator, lfo, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val isaw: SprudelPattern = isawBase
 
@@ -793,7 +760,6 @@ val isaw: SprudelPattern = isawBase
  * @category continuous
  * @tags isaw2, isaw, sawtooth, oscillator, lfo, bipolar, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val isaw2: SprudelPattern = isaw2Base
 
@@ -824,7 +790,6 @@ private val tri2Base: SprudelPattern by lazy { triBase.toBipolar() }
  * @category continuous
  * @tags tri, triangle, oscillator, lfo, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val tri: SprudelPattern = triBase
 
@@ -844,7 +809,6 @@ val tri: SprudelPattern = triBase
  * @category continuous
  * @tags tri2, tri, triangle, oscillator, lfo, bipolar, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val tri2: SprudelPattern = tri2Base
 
@@ -875,7 +839,6 @@ private val itri2Base: SprudelPattern by lazy { itriBase.toBipolar() }
  * @category continuous
  * @tags itri, triangle, oscillator, lfo, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val itri: SprudelPattern = itriBase
 
@@ -895,7 +858,6 @@ val itri: SprudelPattern = itriBase
  * @category continuous
  * @tags itri2, itri, triangle, oscillator, lfo, bipolar, continuous, wave
  */
-@SprudelDsl
 @KlangScript.Constant
 val itri2: SprudelPattern = itri2Base
 
@@ -921,7 +883,6 @@ private val square2Base: SprudelPattern by lazy { squareBase.toBipolar() }
  * @category continuous
  * @tags square, oscillator, lfo, continuous, wave, gate
  */
-@SprudelDsl
 @KlangScript.Constant
 val square: SprudelPattern = squareBase
 
@@ -941,7 +902,6 @@ val square: SprudelPattern = squareBase
  * @category continuous
  * @tags square2, square, oscillator, lfo, bipolar, continuous, wave, gate
  */
-@SprudelDsl
 @KlangScript.Constant
 val square2: SprudelPattern = square2Base
 
@@ -975,7 +935,6 @@ private fun createPerlin(): SprudelPattern {
  * @category continuous
  * @tags perlin, noise, random, smooth, continuous, lfo
  */
-@SprudelDsl
 @KlangScript.Constant
 val perlin: SprudelPattern = createPerlin()
 
@@ -995,7 +954,6 @@ val perlin: SprudelPattern = createPerlin()
  * @category continuous
  * @tags perlin2, perlin, noise, random, bipolar, smooth, continuous, lfo
  */
-@SprudelDsl
 @KlangScript.Constant
 val perlin2: SprudelPattern = createPerlin().toBipolar()
 
@@ -1033,7 +991,6 @@ private fun createBerlin2(): SprudelPattern {
  * @category continuous
  * @tags berlin, noise, random, sawtooth, continuous, lfo
  */
-@SprudelDsl
 @KlangScript.Constant
 val berlin: SprudelPattern = createBerlin()
 
@@ -1053,6 +1010,5 @@ val berlin: SprudelPattern = createBerlin()
  * @category continuous
  * @tags berlin2, berlin, noise, random, bipolar, sawtooth, continuous, lfo
  */
-@SprudelDsl
 @KlangScript.Constant
 val berlin2: SprudelPattern = createBerlin2()

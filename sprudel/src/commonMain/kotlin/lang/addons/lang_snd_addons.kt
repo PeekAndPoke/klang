@@ -11,7 +11,6 @@ import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel._liftOrReinterpretStringField
 import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
-import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.chain
@@ -70,7 +69,6 @@ private fun applySndPluck(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category tonal
  * @tags pluck, string, karplus-strong, physical-model, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndPluck(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndPluck(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -83,7 +81,6 @@ fun SprudelPattern.sndPluck(params: PatternLike? = null, callInfo: CallInfo? = n
  * @category tonal
  * @tags pluck, string, karplus-strong, physical-model, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndPluck(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndPluck(params, callInfo)
@@ -100,7 +97,6 @@ fun String.sndPluck(params: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category tonal
  * @tags pluck, string, karplus-strong, physical-model, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndPluck(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndPluck(params, callInfo) }
@@ -110,7 +106,6 @@ fun sndPluck(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
  *
  * @param params Pluck parameters as `"decay:brightness:pickPosition:stiffness"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndPluck(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndPluck(params, callInfo) }
@@ -166,7 +161,6 @@ private fun applySndSuperPluck(source: SprudelPattern, args: List<SprudelDslArg<
  * @category tonal
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSuperPluck(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -179,7 +173,6 @@ fun SprudelPattern.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo
  * @category tonal
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperPluck(params, callInfo)
@@ -192,7 +185,6 @@ fun String.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null
  * @category tonal
  * @tags superpluck, pluck, string, karplus-strong, unison, physical-model, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSuperPluck(params, callInfo) }
@@ -202,7 +194,6 @@ fun sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null): Patt
  *
  * @param params Parameters as `"voices:freqSpread:decay:brightness:pickPosition:stiffness"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSuperPluck(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSuperPluck(params, callInfo) }
@@ -221,7 +212,6 @@ private fun applySndSine(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category tonal
  * @tags sine, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSine(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSine(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -230,7 +220,6 @@ fun SprudelPattern.sndSine(params: PatternLike? = null, callInfo: CallInfo? = nu
  * @category tonal
  * @tags sine, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSine(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSine(params, callInfo)
@@ -239,13 +228,11 @@ fun String.sndSine(params: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category tonal
  * @tags sine, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSine(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSine(params, callInfo) }
 
 /** Chains a sine wave sound onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSine(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSine(params, callInfo) }
@@ -264,7 +251,6 @@ private fun applySndSaw(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category tonal
  * @tags saw, sawtooth, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSaw(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSaw(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -273,7 +259,6 @@ fun SprudelPattern.sndSaw(params: PatternLike? = null, callInfo: CallInfo? = nul
  * @category tonal
  * @tags saw, sawtooth, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSaw(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSaw(params, callInfo)
@@ -282,13 +267,11 @@ fun String.sndSaw(params: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category tonal
  * @tags saw, sawtooth, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSaw(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSaw(params, callInfo) }
 
 /** Chains a sawtooth wave sound onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSaw(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSaw(params, callInfo) }
@@ -307,7 +290,6 @@ private fun applySndSquare(source: SprudelPattern, args: List<SprudelDslArg<Any?
  * @category tonal
  * @tags square, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSquare(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSquare(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -316,7 +298,6 @@ fun SprudelPattern.sndSquare(params: PatternLike? = null, callInfo: CallInfo? = 
  * @category tonal
  * @tags square, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSquare(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSquare(params, callInfo)
@@ -325,13 +306,11 @@ fun String.sndSquare(params: PatternLike? = null, callInfo: CallInfo? = null): S
  * @category tonal
  * @tags square, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSquare(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSquare(params, callInfo) }
 
 /** Chains a square wave sound onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSquare(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSquare(params, callInfo) }
@@ -350,7 +329,6 @@ private fun applySndTriangle(source: SprudelPattern, args: List<SprudelDslArg<An
  * @category tonal
  * @tags triangle, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndTriangle(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -359,7 +337,6 @@ fun SprudelPattern.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? 
  * @category tonal
  * @tags triangle, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndTriangle(params, callInfo)
@@ -368,13 +345,11 @@ fun String.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null):
  * @category tonal
  * @tags triangle, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndTriangle(params, callInfo) }
 
 /** Chains a triangle wave sound onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndTriangle(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndTriangle(params, callInfo) }
@@ -393,7 +368,6 @@ private fun applySndRamp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category tonal
  * @tags ramp, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndRamp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndRamp(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -402,7 +376,6 @@ fun SprudelPattern.sndRamp(params: PatternLike? = null, callInfo: CallInfo? = nu
  * @category tonal
  * @tags ramp, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndRamp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndRamp(params, callInfo)
@@ -411,16 +384,53 @@ fun String.sndRamp(params: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category tonal
  * @tags ramp, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndRamp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndRamp(params, callInfo) }
 
 /** Chains a ramp wave sound onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndRamp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndRamp(params, callInfo) }
+
+// -- sndZamp() --------------------------------------------------------------------------------------------------------
+
+private fun applySndZamp(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): SprudelPattern {
+    return source._liftOrReinterpretStringField(args) { copy(sound = SoundValue.Named("zamp")) }
+}
+
+/**
+ * Sets the sound to a raw ramp ("zamp") oscillator — the naive/aliased counterpart of [sndRamp].
+ *
+ * @param params Optional pattern-like parameter.
+ * @return A new pattern with sound set to "zamp".
+ * @category tonal
+ * @tags zamp, ramp, raw, oscillator, snd, addon
+ */
+@KlangScript.Function
+fun SprudelPattern.sndZamp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    applySndZamp(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
+
+/** Parses this string as a pattern and sets sound to raw ramp ("zamp").
+ * @category tonal
+ * @tags zamp, ramp, raw, oscillator, snd, addon
+ */
+@KlangScript.Function
+fun String.sndZamp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
+    this.toVoiceValuePattern(callInfo?.receiverLocation).sndZamp(params, callInfo)
+
+/** Returns a [PatternMapperFn] that sets the sound to raw ramp ("zamp").
+ * @category tonal
+ * @tags zamp, ramp, raw, oscillator, snd, addon
+ */
+@KlangScript.Function
+fun sndZamp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    { p -> p.sndZamp(params, callInfo) }
+
+/** Chains a raw ramp ("zamp") sound onto this [PatternMapperFn]. */
+@KlangScript.Function
+fun PatternMapperFn.sndZamp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
+    this.chain { p -> p.sndZamp(params, callInfo) }
 
 // -- sndNoise() -------------------------------------------------------------------------------------------------------
 
@@ -436,7 +446,6 @@ private fun applySndNoise(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category tonal
  * @tags noise, whitenoise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndNoise(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -445,7 +454,6 @@ fun SprudelPattern.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = n
  * @category tonal
  * @tags noise, whitenoise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndNoise(params, callInfo)
@@ -454,13 +462,11 @@ fun String.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category tonal
  * @tags noise, whitenoise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndNoise(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndNoise(params, callInfo) }
 
 /** Chains a white noise sound onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndNoise(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndNoise(params, callInfo) }
@@ -479,7 +485,6 @@ private fun applySndBrown(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category tonal
  * @tags noise, brownnoise, brown, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndBrown(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndBrown(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -488,7 +493,6 @@ fun SprudelPattern.sndBrown(params: PatternLike? = null, callInfo: CallInfo? = n
  * @category tonal
  * @tags noise, brownnoise, brown, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndBrown(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndBrown(params, callInfo)
@@ -497,13 +501,11 @@ fun String.sndBrown(params: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category tonal
  * @tags noise, brownnoise, brown, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndBrown(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndBrown(params, callInfo) }
 
 /** Chains a brown noise sound onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndBrown(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndBrown(params, callInfo) }
@@ -522,7 +524,6 @@ private fun applySndPink(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category tonal
  * @tags noise, pinknoise, pink, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndPink(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndPink(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -531,7 +532,6 @@ fun SprudelPattern.sndPink(params: PatternLike? = null, callInfo: CallInfo? = nu
  * @category tonal
  * @tags noise, pinknoise, pink, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndPink(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndPink(params, callInfo)
@@ -540,13 +540,11 @@ fun String.sndPink(params: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category tonal
  * @tags noise, pinknoise, pink, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndPink(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndPink(params, callInfo) }
 
 /** Chains a pink noise sound onto this [PatternMapperFn]. */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndPink(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndPink(params, callInfo) }
@@ -582,7 +580,6 @@ private fun applySndPulze(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category tonal
  * @tags pulze, pulse, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndPulze(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndPulze(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -595,7 +592,6 @@ fun SprudelPattern.sndPulze(params: PatternLike? = null, callInfo: CallInfo? = n
  * @category tonal
  * @tags pulze, pulse, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndPulze(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndPulze(params, callInfo)
@@ -608,7 +604,6 @@ fun String.sndPulze(params: PatternLike? = null, callInfo: CallInfo? = null): Sp
  * @category tonal
  * @tags pulze, pulse, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndPulze(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndPulze(params, callInfo) }
@@ -616,7 +611,6 @@ fun sndPulze(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMa
 /** Chains a pulse wave sound onto this [PatternMapperFn].
  * @param params Pulse parameter as `"duty"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndPulze(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndPulze(params, callInfo) }
@@ -652,7 +646,6 @@ private fun applySndDust(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category tonal
  * @tags dust, impulse, noise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndDust(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndDust(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -665,7 +658,6 @@ fun SprudelPattern.sndDust(params: PatternLike? = null, callInfo: CallInfo? = nu
  * @category tonal
  * @tags dust, impulse, noise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndDust(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndDust(params, callInfo)
@@ -678,7 +670,6 @@ fun String.sndDust(params: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category tonal
  * @tags dust, impulse, noise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndDust(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndDust(params, callInfo) }
@@ -686,7 +677,6 @@ fun sndDust(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
 /** Chains a dust generator sound onto this [PatternMapperFn].
  * @param params Dust parameter as `"density"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndDust(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndDust(params, callInfo) }
@@ -722,7 +712,6 @@ private fun applySndCrackle(source: SprudelPattern, args: List<SprudelDslArg<Any
  * @category tonal
  * @tags crackle, noise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndCrackle(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -735,7 +724,6 @@ fun SprudelPattern.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? =
  * @category tonal
  * @tags crackle, noise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndCrackle(params, callInfo)
@@ -748,7 +736,6 @@ fun String.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? = null): 
  * @category tonal
  * @tags crackle, noise, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndCrackle(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndCrackle(params, callInfo) }
@@ -756,7 +743,6 @@ fun sndCrackle(params: PatternLike? = null, callInfo: CallInfo? = null): Pattern
 /** Chains a crackle generator sound onto this [PatternMapperFn].
  * @param params Crackle parameter as `"density"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndCrackle(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndCrackle(params, callInfo) }
@@ -794,7 +780,6 @@ private fun applySndSuperSaw(source: SprudelPattern, args: List<SprudelDslArg<An
  * @category tonal
  * @tags supersaw, saw, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSuperSaw(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -807,7 +792,6 @@ fun SprudelPattern.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? 
  * @category tonal
  * @tags supersaw, saw, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperSaw(params, callInfo)
@@ -820,7 +804,6 @@ fun String.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null):
  * @category tonal
  * @tags supersaw, saw, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSuperSaw(params, callInfo) }
@@ -829,7 +812,6 @@ fun sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null): Patter
  * Chains a super sawtooth sound onto this [PatternMapperFn].
  * @param params Parameters as `"voices:freqSpread"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSuperSaw(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSuperSaw(params, callInfo) }
@@ -867,7 +849,6 @@ private fun applySndSuperSine(source: SprudelPattern, args: List<SprudelDslArg<A
  * @category tonal
  * @tags supersine, sine, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSuperSine(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -880,7 +861,6 @@ fun SprudelPattern.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo?
  * @category tonal
  * @tags supersine, sine, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperSine(params, callInfo)
@@ -893,7 +873,6 @@ fun String.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null)
  * @category tonal
  * @tags supersine, sine, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSuperSine(params, callInfo) }
@@ -902,7 +881,6 @@ fun sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null): Patte
  * Chains a super sine sound onto this [PatternMapperFn].
  * @param params Parameters as `"voices:freqSpread"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSuperSine(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSuperSine(params, callInfo) }
@@ -940,7 +918,6 @@ private fun applySndSuperSquare(source: SprudelPattern, args: List<SprudelDslArg
  * @category tonal
  * @tags supersquare, square, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSuperSquare(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -953,7 +930,6 @@ fun SprudelPattern.sndSuperSquare(params: PatternLike? = null, callInfo: CallInf
  * @category tonal
  * @tags supersquare, square, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperSquare(params, callInfo)
@@ -966,7 +942,6 @@ fun String.sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = nul
  * @category tonal
  * @tags supersquare, square, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSuperSquare(params, callInfo) }
@@ -975,7 +950,6 @@ fun sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = null): Pat
  * Chains a super square sound onto this [PatternMapperFn].
  * @param params Parameters as `"voices:freqSpread"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSuperSquare(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSuperSquare(params, callInfo) }
@@ -1013,7 +987,6 @@ private fun applySndSuperTri(source: SprudelPattern, args: List<SprudelDslArg<An
  * @category tonal
  * @tags supertri, triangle, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSuperTri(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -1026,7 +999,6 @@ fun SprudelPattern.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? 
  * @category tonal
  * @tags supertri, triangle, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperTri(params, callInfo)
@@ -1039,7 +1011,6 @@ fun String.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null):
  * @category tonal
  * @tags supertri, triangle, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSuperTri(params, callInfo) }
@@ -1048,7 +1019,6 @@ fun sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null): Patter
  * Chains a super triangle sound onto this [PatternMapperFn].
  * @param params Parameters as `"voices:freqSpread"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSuperTri(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSuperTri(params, callInfo) }
@@ -1086,7 +1056,6 @@ private fun applySndSuperRamp(source: SprudelPattern, args: List<SprudelDslArg<A
  * @category tonal
  * @tags superramp, ramp, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySndSuperRamp(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -1099,7 +1068,6 @@ fun SprudelPattern.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo?
  * @category tonal
  * @tags superramp, ramp, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sndSuperRamp(params, callInfo)
@@ -1112,7 +1080,6 @@ fun String.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null)
  * @category tonal
  * @tags superramp, ramp, unison, oscillator, snd, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sndSuperRamp(params, callInfo) }
@@ -1121,7 +1088,6 @@ fun sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null): Patte
  * Chains a super ramp sound onto this [PatternMapperFn].
  * @param params Parameters as `"voices:freqSpread"`.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sndSuperRamp(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sndSuperRamp(params, callInfo) }

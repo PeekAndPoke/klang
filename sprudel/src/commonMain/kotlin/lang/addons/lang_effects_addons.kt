@@ -9,7 +9,6 @@ import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel._applyControlFromParams
 import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
-import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.chain
@@ -78,7 +77,6 @@ private fun applyReverb(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.reverb(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyReverb(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -95,7 +93,6 @@ fun SprudelPattern.reverb(params: PatternLike? = null, callInfo: CallInfo? = nul
  * @category effects
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.reverb(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).reverb(params, callInfo)
@@ -119,7 +116,6 @@ fun String.reverb(params: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags reverb, room, roomsize, roomfade, roomlp, roomdim, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun reverb(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.reverb(params, callInfo) }
@@ -138,7 +134,6 @@ fun reverb(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * note("c3*4").every(4, delay(0.5).reverb("0.9:4"))   // delay + reverb every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.reverb(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.reverb(params, callInfo) }
@@ -187,7 +182,6 @@ private fun applyLpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyLpadsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -204,7 +198,6 @@ fun SprudelPattern.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = nul
  * @category effects
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lpadsr(params, callInfo)
@@ -221,7 +214,6 @@ fun String.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags lpadsr, low pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lpadsr(params, callInfo) }
@@ -233,7 +225,6 @@ fun lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * note("c3 e3").apply(gain(0.8).lpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lpadsr(params, callInfo) }
@@ -282,7 +273,6 @@ private fun applyHpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyHpadsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -299,7 +289,6 @@ fun SprudelPattern.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = nul
  * @category effects
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).hpadsr(params, callInfo)
@@ -316,7 +305,6 @@ fun String.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags hpadsr, high pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.hpadsr(params, callInfo) }
@@ -328,7 +316,6 @@ fun hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * note("c3 e3").apply(gain(0.8).hpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.hpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.hpadsr(params, callInfo) }
@@ -377,7 +364,6 @@ private fun applyBpadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyBpadsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -394,7 +380,6 @@ fun SprudelPattern.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = nul
  * @category effects
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bpadsr(params, callInfo)
@@ -411,7 +396,6 @@ fun String.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags bpadsr, band pass filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bpadsr(params, callInfo) }
@@ -423,7 +407,6 @@ fun bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * note("c3 e3").apply(gain(0.8).bpadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bpadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bpadsr(params, callInfo) }
@@ -488,7 +471,6 @@ private fun applyTremolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category effects
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyTremolo(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -505,7 +487,6 @@ fun SprudelPattern.tremolo(params: PatternLike? = null, callInfo: CallInfo? = nu
  * @category effects
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).tremolo(params, callInfo)
@@ -526,7 +507,6 @@ fun String.tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category effects
  * @tags tremolo, depth, rate, shape, skew, phase, modulation, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.tremolo(params, callInfo) }
@@ -542,7 +522,6 @@ fun tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
  * note("c3*4").every(4, delay(0.5).tremolo("0.8:8"))   // delay + tremolo every 4th cycle
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.tremolo(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.tremolo(params, callInfo) }
@@ -591,7 +570,6 @@ private fun applyNfadsr(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applyNfadsr(this, listOfNotNull(params).asSprudelDslArgs(callInfo))
@@ -608,7 +586,6 @@ fun SprudelPattern.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = nul
  * @category effects
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).nfadsr(params, callInfo)
@@ -625,7 +602,6 @@ fun String.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): Spru
  * @category effects
  * @tags nfadsr, notch filter, envelope, adsr, attack, decay, sustain, release, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.nfadsr(params, callInfo) }
@@ -637,7 +613,6 @@ fun nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapp
  * note("c3 e3").apply(gain(0.8).nfadsr("0.01:0.3:0.5:0.5"))
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.nfadsr(params: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.nfadsr(params, callInfo) }

@@ -36,20 +36,27 @@ fun IgnitorRegistry.registerDefaults() {
     register(name = "sawtooth", dsl = saw)
     register(name = "saw", dsl = saw)
 
-    // square / sqr / pulse / pulze are one pulse oscillator with a "duty" osc-param (0.5 = square).
+    // Rounded pulse (square / sqr / pulse) — one band-limited pulse with a "duty" osc-param (0.5 = square).
     val pulse = IgnitorDsl.Pulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
     register(name = "square", dsl = pulse)
     register(name = "sqr", dsl = pulse)
     register(name = "pulse", dsl = pulse)
-    register(name = "pulze", dsl = pulse)
+    // Raw pulse (pulze) — naive/aliased counterpart, same "duty" osc-param.
+    val rawPulse = IgnitorDsl.RawPulze(freq = IgnitorDsl.Freq, duty = slots.duty, analog = slots.analog)
+    register(name = "pulze", dsl = rawPulse)
 
     val triangle = IgnitorDsl.Triangle(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "triangle", dsl = triangle)
     register(name = "tri", dsl = triangle)
 
+    // ramp = rounded reverse-saw; zamp = its raw/aliased counterpart.
     val ramp = IgnitorDsl.Ramp(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "ramp", dsl = ramp)
 
+    val zamp = IgnitorDsl.Zamp(freq = IgnitorDsl.Freq, analog = slots.analog)
+    register(name = "zamp", dsl = zamp)
+
+    // zaw = raw/aliased saw (counterpart of saw/sawtooth).
     val zawtooth = IgnitorDsl.Zawtooth(freq = IgnitorDsl.Freq, analog = slots.analog)
     register(name = "zawtooth", dsl = zawtooth)
     register(name = "zaw", dsl = zawtooth)

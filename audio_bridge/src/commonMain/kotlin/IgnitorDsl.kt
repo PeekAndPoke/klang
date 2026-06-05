@@ -195,6 +195,18 @@ sealed interface IgnitorDsl {
         }
     }
 
+    /** Zamp wave oscillator ("zamp"). Naive reverse sawtooth without anti-aliasing — the raw [Ramp]. */
+    @Serializable
+    @SerialName("zamp")
+    data class Zamp(
+        val freq: IgnitorDsl = Freq,
+        val analog: IgnitorDsl = Constant(0.0),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            freq.collectParams(out); analog.collectParams(out)
+        }
+    }
+
     /** Impulse oscillator. Emits a single-sample spike per cycle. */
     @Serializable
     @SerialName("impulse")
@@ -211,6 +223,22 @@ sealed interface IgnitorDsl {
     @Serializable
     @SerialName("pulze")
     data class Pulze(
+        val freq: IgnitorDsl = Freq,
+        val duty: IgnitorDsl = Constant(0.5),
+        val analog: IgnitorDsl = Constant(0.0),
+    ) : IgnitorDsl {
+        override fun collectParams(out: MutableList<Param>) {
+            freq.collectParams(out); duty.collectParams(out); analog.collectParams(out)
+        }
+    }
+
+    /**
+     * Raw pulse oscillator — naive (no anti-aliasing), the raw counterpart of the rounded pulse
+     * (sound names `square`/`pulse`, which use [Pulze]). This type backs the `pulze` sound name.
+     */
+    @Serializable
+    @SerialName("raw-pulze")
+    data class RawPulze(
         val freq: IgnitorDsl = Freq,
         val duty: IgnitorDsl = Constant(0.5),
         val analog: IgnitorDsl = Constant(0.0),
@@ -1481,8 +1509,10 @@ fun IgnitorDsl.maxReleaseSec(): Double = when (this) {
     is IgnitorDsl.Triangle -> 0.0
     is IgnitorDsl.Ramp -> 0.0
     is IgnitorDsl.Zawtooth -> 0.0
+    is IgnitorDsl.Zamp -> 0.0
     is IgnitorDsl.Impulse -> 0.0
     is IgnitorDsl.Pulze -> 0.0
+    is IgnitorDsl.RawPulze -> 0.0
     is IgnitorDsl.SuperSaw -> 0.0
     is IgnitorDsl.SuperSine -> 0.0
     is IgnitorDsl.SuperSquare -> 0.0

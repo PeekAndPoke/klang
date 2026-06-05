@@ -14,7 +14,6 @@ import io.peekandpoke.klang.sprudel.SprudelVoiceData
 import io.peekandpoke.klang.sprudel.SprudelVoiceValue
 import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
-import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg
 import io.peekandpoke.klang.sprudel.lang.SprudelDslArg.Companion.asSprudelDslArgs
 import io.peekandpoke.klang.sprudel.lang.addons.pattern.MergePattern
@@ -186,7 +185,6 @@ private fun applyMorse(textArg: SprudelDslArg<Any?>?): SprudelPattern {
  * @category structural
  * @tags morse, code, rhythm, structure, pattern, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.morse(text: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.struct(applyMorse(listOf(text).asSprudelDslArgs(callInfo).firstOrNull()))
@@ -200,7 +198,6 @@ fun SprudelPattern.morse(text: PatternLike, callInfo: CallInfo? = null): Sprudel
  *
  * @param text The text to encode as Morse code. Case-insensitive; unknown characters are skipped.
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.morse(text: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).morse(text, callInfo)
@@ -221,7 +218,6 @@ fun String.morse(text: PatternLike, callInfo: CallInfo? = null): SprudelPattern 
  *
  * @param text The text to encode as Morse code. Case-insensitive; unknown characters are skipped.
  */
-@SprudelDsl
 @KlangScript.Function
 fun morse(text: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyMorse(listOf(text).asSprudelDslArgs(callInfo).firstOrNull())
@@ -261,7 +257,6 @@ private fun applyMerge(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category structural
  * @tags merge, overlay, combine, voice, data, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.merge(ctrl: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyMerge(this, listOf(ctrl).asSprudelDslArgs(callInfo))
@@ -275,7 +270,6 @@ fun SprudelPattern.merge(ctrl: PatternLike, callInfo: CallInfo? = null): Sprudel
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.merge(ctrl: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).merge(ctrl, callInfo)
@@ -289,7 +283,6 @@ fun String.merge(ctrl: PatternLike, callInfo: CallInfo? = null): SprudelPattern 
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
  */
-@SprudelDsl
 @KlangScript.Function
 fun merge(ctrl: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.merge(ctrl, callInfo) }
@@ -299,7 +292,6 @@ fun merge(ctrl: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param ctrl The pattern (or mini-notation string) whose voice data is merged in.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.merge(ctrl: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.merge(ctrl, callInfo) }
@@ -387,7 +379,6 @@ private fun applyTimeLoop(source: SprudelPattern, args: List<SprudelDslArg<Any?>
  * @category structural
  * @tags timeLoop, loop, repeat, cycle, ostinato, window, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.timeLoop(duration: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyTimeLoop(this, listOf(duration).asSprudelDslArgs(callInfo))
@@ -401,7 +392,6 @@ fun SprudelPattern.timeLoop(duration: PatternLike, callInfo: CallInfo? = null): 
  *
  * @param duration The loop window length in cycles. Must be greater than zero.
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.timeLoop(duration: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).timeLoop(duration, callInfo)
@@ -422,7 +412,6 @@ fun String.timeLoop(duration: PatternLike, callInfo: CallInfo? = null): SprudelP
  * @category structural
  * @tags timeLoop, loop, repeat, cycle, ostinato, window, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun timeLoop(duration: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.timeLoop(duration, callInfo) }
@@ -436,7 +425,6 @@ fun timeLoop(duration: PatternLike, callInfo: CallInfo? = null): PatternMapperFn
  *
  * @param duration The loop window length in cycles. Must be greater than zero.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.timeLoop(duration: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.timeLoop(duration, callInfo) }
@@ -471,7 +459,6 @@ private fun applyRepeat(pattern: SprudelPattern, args: List<SprudelDslArg<Any?>>
  * @category structural
  * @tags repeat, loop, duplicate, sequence, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.repeat(times: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyRepeat(this, listOf(times).asSprudelDslArgs(callInfo))
@@ -489,7 +476,6 @@ fun SprudelPattern.repeat(times: PatternLike, callInfo: CallInfo? = null): Sprud
  *
  * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.repeat(times: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).repeat(times, callInfo)
@@ -510,7 +496,6 @@ fun String.repeat(times: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * @category structural
  * @tags repeat, loop, duplicate, sequence, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun repeat(times: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.repeat(times, callInfo) }
@@ -524,7 +509,6 @@ fun repeat(times: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param times The number of times to repeat. `0` returns silence; `1` returns the pattern unchanged.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.repeat(times: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.repeat(times, callInfo) }
@@ -567,7 +551,6 @@ private fun applySolo(source: SprudelPattern, args: List<SprudelDslArg<Any?>>): 
  * @category structural
  * @tags solo, mute, isolate, playback, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     applySolo(this, listOfNotNull(amount).asSprudelDslArgs(callInfo))
@@ -585,7 +568,6 @@ fun SprudelPattern.solo(amount: PatternLike? = null, callInfo: CallInfo? = null)
  *
  * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.97`. Accepts control patterns.
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).solo(amount, callInfo)
@@ -610,7 +592,6 @@ fun String.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): Sprude
  * @category structural
  * @tags solo, mute, isolate, playback, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun solo(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.solo(amount, callInfo) }
@@ -628,7 +609,6 @@ fun solo(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapper
  *
  * @param amount `0.0`..`1.0` solo strength; `null` defaults to `0.97`. Accepts control patterns.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.solo(amount: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.solo(amount, callInfo) }

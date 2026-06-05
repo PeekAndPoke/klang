@@ -185,7 +185,9 @@ private fun IgnitorDsl.buildRaw(
         is IgnitorDsl.Triangle -> applyMod(Ignitors.triangle(freq.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Ramp -> applyMod(Ignitors.ramp(freq.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Zawtooth -> applyMod(Ignitors.zawtooth(freq.noMod(), analog.noMod()), accumulatedMod)
+        is IgnitorDsl.Zamp -> applyMod(Ignitors.zamp(freq.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Pulze -> applyMod(Ignitors.pulze(freq.noMod(), duty.noMod(), analog.noMod()), accumulatedMod)
+        is IgnitorDsl.RawPulze -> applyMod(Ignitors.rawPulze(freq.noMod(), duty.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Impulse -> applyMod(Ignitors.impulse(freq.noMod(), analog.noMod()), accumulatedMod)
         is IgnitorDsl.Silence -> applyMod(Ignitors.silence(), accumulatedMod)
 

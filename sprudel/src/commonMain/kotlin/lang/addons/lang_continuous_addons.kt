@@ -5,7 +5,6 @@ package io.peekandpoke.klang.sprudel.lang.addons
 
 import io.peekandpoke.klang.script.annotations.KlangScript
 import io.peekandpoke.klang.sprudel.SprudelPattern
-import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.pattern.ContinuousPattern
 import io.peekandpoke.ultra.datetime.Kronos
 import kotlin.math.PI
@@ -22,7 +21,6 @@ import kotlin.math.sin
  * @category continuous
  * @tags cps, tempo, playback speed, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val cps: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() }
 
@@ -38,7 +36,6 @@ val cps: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() }
  * @category continuous
  * @tags rpm, tempo, revolutions per minute, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val rpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 }
 
@@ -54,7 +51,6 @@ val rpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 60.0 }
  * @category continuous
  * @tags bpm, tempo, beats per minute, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val bpm: SprudelPattern = ContinuousPattern { _, _, ctx -> ctx.getCps() * 240.0 }
 
@@ -86,7 +82,6 @@ private fun getTimeOfDayFraction(kronos: Kronos): Double {
  * @category continuous
  * @tags timeOfDay, time, clock, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val timeOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
     getTimeOfDayFraction(ctx.getKronos())
@@ -106,7 +101,6 @@ val timeOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * @category continuous
  * @tags sinOfDay, time, sine, clock, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val sinOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
     val t = getTimeOfDayFraction(ctx.getKronos())
@@ -127,7 +121,6 @@ val sinOfDay: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * @category continuous
  * @tags sinOfDay2, time, sine, bipolar, clock, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val sinOfDay2: SprudelPattern = ContinuousPattern { _, _, ctx ->
     val t = getTimeOfDayFraction(ctx.getKronos())
@@ -148,7 +141,6 @@ val sinOfDay2: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * @category continuous
  * @tags timeOfNight, time, clock, night, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val timeOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
     1.0 - getTimeOfDayFraction(ctx.getKronos())
@@ -168,7 +160,6 @@ val timeOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * @category continuous
  * @tags sinOfNight, time, sine, night, clock, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val sinOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
     val t = getTimeOfDayFraction(ctx.getKronos())
@@ -190,7 +181,6 @@ val sinOfNight: SprudelPattern = ContinuousPattern { _, _, ctx ->
  * @category continuous
  * @tags sinOfNight2, time, sine, bipolar, night, clock, continuous, addon
  */
-@SprudelDsl
 @KlangScript.Constant
 val sinOfNight2: SprudelPattern = ContinuousPattern { _, _, ctx ->
     val t = getTimeOfDayFraction(ctx.getKronos())

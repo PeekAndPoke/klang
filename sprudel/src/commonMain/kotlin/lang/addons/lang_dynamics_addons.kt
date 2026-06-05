@@ -9,7 +9,6 @@ import io.peekandpoke.klang.script.ast.CallInfo
 import io.peekandpoke.klang.sprudel.SprudelPattern
 import io.peekandpoke.klang.sprudel.lang.PatternLike
 import io.peekandpoke.klang.sprudel.lang.PatternMapperFn
-import io.peekandpoke.klang.sprudel.lang.SprudelDsl
 import io.peekandpoke.klang.sprudel.lang.chain
 import io.peekandpoke.klang.sprudel.lang.orbit
 import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
@@ -30,7 +29,6 @@ import io.peekandpoke.klang.sprudel.lang.toVoiceValuePattern
  * @category dynamics
  * @tags cylinder, orbit, routing, effects, bus, channel, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.orbit(index, callInfo)
@@ -47,7 +45,6 @@ fun SprudelPattern.cylinder(index: PatternLike? = null, callInfo: CallInfo? = nu
  * @category dynamics
  * @tags cylinder, orbit, routing, effects, bus, channel, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).orbit(index, callInfo)
@@ -64,7 +61,6 @@ fun String.cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): Spr
  * @category dynamics
  * @tags cylinder, orbit, routing, effects, bus, channel, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.orbit(index, callInfo) }
@@ -82,7 +78,6 @@ fun cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMap
  * @category dynamics
  * @tags cylinder, orbit, routing, effects, bus, channel, addon
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.cylinder(index: PatternLike? = null, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.orbit(index, callInfo) }

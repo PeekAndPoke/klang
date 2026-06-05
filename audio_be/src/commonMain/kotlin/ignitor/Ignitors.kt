@@ -7,10 +7,13 @@ import io.peekandpoke.klang.audio_be.applySemitoneDetuneToFrequency
 import io.peekandpoke.klang.audio_be.flushDenormal
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.dust
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.pulze
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.ramp
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.sawtooth
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.square
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superRamp
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSaw
 import io.peekandpoke.klang.audio_be.ignitor.Ignitors.superSawRaw
+import io.peekandpoke.klang.audio_be.ignitor.Ignitors.zawtooth
 import io.peekandpoke.klang.audio_be.polyBlep
 import io.peekandpoke.klang.audio_be.pulseTrapezoidShape
 import io.peekandpoke.klang.audio_be.smallNumFastMod
@@ -365,6 +368,93 @@ object Ignitors {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Raw ramp ("zamp"): naive reverse sawtooth (`1 − 2·phase`), **no anti-aliasing** — the raw
+     * counterpart of the rounded [ramp] (and the negation of [zawtooth]). Bright/harsh, aliases.
+     */
+    fun zamp(
+        freq: Ignitor = FreqIgnitor,
+        analog: Ignitor = analogDefault,
+    ): Ignitor = ZampIgnitor(freq, analog)
+
+    private class ZampIgnitor(
+        private val freq: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+        private var driftInit = false
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val actualFreq = resolveFreq(freq, freqHz, ctx)
+            if (!driftInit) {
+                driftInit = true
+                val amt = readParam(analog, actualFreq, ctx)
+                drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate) else null
+            }
+            val dt = actualFreq / ctx.sampleRateD
+            val pm = ctx.phaseMod
+            val d0 = drift
+            val off = ctx.offset
+            val end = off + ctx.length
+            var p = phase
+            for (i in off until end) {
+                buffer[i] = 1.0 - 2.0 * p
+                var inc = dt
+                if (pm != null) inc *= pm[i]
+                if (d0 != null) inc *= d0.nextMultiplier()
+                p += inc
+                p = if (pm != null) p.wrapPhase(1.0) else p.smallNumFastMod(1.0)
+            }
+            phase = p
+        }
+    }
+
+    /**
+     * Raw pulse ("pulze"): naive aliased pulse (`+1` while `phase < duty`, else `−1`), **no
+     * anti-aliasing** — the raw counterpart of the rounded [square]/[pulse]. [duty] is control-rate.
+     */
+    fun rawPulze(
+        freq: Ignitor = FreqIgnitor,
+        duty: Ignitor = dutyDefault,
+        analog: Ignitor = analogDefault,
+    ): Ignitor = RawPulseIgnitor(freq, duty, analog)
+
+    private class RawPulseIgnitor(
+        private val freq: Ignitor,
+        private val duty: Ignitor,
+        private val analog: Ignitor,
+    ) : Ignitor {
+        private var phase: Double = 0.0
+        private var drift: AnalogDrift? = null
+        private var driftInit = false
+
+        override fun generate(buffer: AudioBuffer, freqHz: Double, ctx: IgniteContext) {
+            val actualFreq = resolveFreq(freq, freqHz, ctx)
+            if (!driftInit) {
+                driftInit = true
+                val amt = readParam(analog, actualFreq, ctx)
+                drift = if (amt > 0.0) AnalogDrift(amt, ctx.sampleRate) else null
+            }
+            val d = readParam(duty, actualFreq, ctx).coerceIn(0.0, 1.0)
+            val dt = actualFreq / ctx.sampleRateD
+            val pm = ctx.phaseMod
+            val d0 = drift
+            val off = ctx.offset
+            val end = off + ctx.length
+            var p = phase
+            for (i in off until end) {
+                buffer[i] = if (p < d) 1.0 else -1.0
+                var inc = dt
+                if (pm != null) inc *= pm[i]
+                if (d0 != null) inc *= d0.nextMultiplier()
+                p += inc
+                p = if (pm != null) p.wrapPhase(1.0) else p.smallNumFastMod(1.0)
+            }
+            phase = p
         }
     }
 

@@ -75,7 +75,6 @@ internal fun applyUnaryOp(
  * @category arithmetic
  * @tags add, arithmetic, math, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.add(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(amount).asSprudelDslArgs(callInfo)) { a, b -> a + b }
@@ -92,7 +91,6 @@ fun SprudelPattern.add(amount: PatternLike, callInfo: CallInfo? = null): Sprudel
  *
  * @param amount The value to add. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.add(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).add(amount, callInfo)
@@ -109,7 +107,6 @@ fun String.add(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern 
  *
  * @param amount The value to add. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun add(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.add(amount, callInfo) }
@@ -123,7 +120,6 @@ fun add(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param amount The value to subtract. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.add(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.add(amount, callInfo) }
@@ -150,7 +146,6 @@ fun PatternMapperFn.add(amount: PatternLike, callInfo: CallInfo? = null): Patter
  * @category arithmetic
  * @tags sub, subtract, arithmetic, math, offset
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.sub(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(amount).asSprudelDslArgs(callInfo)) { a, b -> a - b }
@@ -167,7 +162,6 @@ fun SprudelPattern.sub(amount: PatternLike, callInfo: CallInfo? = null): Sprudel
  *
  * @param amount The value to subtract. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.sub(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).sub(amount, callInfo)
@@ -184,7 +178,6 @@ fun String.sub(amount: PatternLike, callInfo: CallInfo? = null): SprudelPattern 
  *
  * @param amount The value to subtract. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun sub(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.sub(amount, callInfo) }
@@ -198,7 +191,6 @@ fun sub(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param amount The value to subtract. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.sub(amount: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.sub(amount, callInfo) }
@@ -225,7 +217,6 @@ fun PatternMapperFn.sub(amount: PatternLike, callInfo: CallInfo? = null): Patter
  * @category arithmetic
  * @tags mul, multiply, arithmetic, math, scale
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.mul(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(factor).asSprudelDslArgs(callInfo)) { a, b -> a * b }
@@ -242,7 +233,6 @@ fun SprudelPattern.mul(factor: PatternLike, callInfo: CallInfo? = null): Sprudel
  *
  * @param factor The multiplier. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.mul(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).mul(factor, callInfo)
@@ -259,7 +249,6 @@ fun String.mul(factor: PatternLike, callInfo: CallInfo? = null): SprudelPattern 
  *
  * @param factor The multiplier. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun mul(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.mul(factor, callInfo) }
@@ -273,7 +262,6 @@ fun mul(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param factor The multiplier. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.mul(factor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.mul(factor, callInfo) }
@@ -300,7 +288,6 @@ fun PatternMapperFn.mul(factor: PatternLike, callInfo: CallInfo? = null): Patter
  * @category arithmetic
  * @tags div, divide, arithmetic, math, scale
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.div(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(divisor).asSprudelDslArgs(callInfo)) { a, b -> a / b }
@@ -317,7 +304,6 @@ fun SprudelPattern.div(divisor: PatternLike, callInfo: CallInfo? = null): Sprude
  *
  * @param divisor The divisor. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.div(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).div(divisor, callInfo)
@@ -334,7 +320,6 @@ fun String.div(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern
  *
  * @param divisor The divisor. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun div(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.div(divisor, callInfo) }
@@ -348,7 +333,6 @@ fun div(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param divisor The divisor. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.div(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.div(divisor, callInfo) }
@@ -376,7 +360,6 @@ fun PatternMapperFn.div(divisor: PatternLike, callInfo: CallInfo? = null): Patte
  * @category arithmetic
  * @tags mod, modulo, arithmetic, math, wrap
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.mod(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(divisor).asSprudelDslArgs(callInfo)) { a, b -> a % b }
@@ -393,7 +376,6 @@ fun SprudelPattern.mod(divisor: PatternLike, callInfo: CallInfo? = null): Sprude
  *
  * @param divisor The modulus. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.mod(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).mod(divisor, callInfo)
@@ -411,7 +393,6 @@ fun String.mod(divisor: PatternLike, callInfo: CallInfo? = null): SprudelPattern
  *
  * @param divisor The modulus. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun mod(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.mod(divisor, callInfo) }
@@ -425,7 +406,6 @@ fun mod(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param divisor The modulus. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.mod(divisor: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.mod(divisor, callInfo) }
@@ -452,7 +432,6 @@ fun PatternMapperFn.mod(divisor: PatternLike, callInfo: CallInfo? = null): Patte
  * @category arithmetic
  * @tags pow, power, exponent, arithmetic, math
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.pow(exponent: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(exponent).asSprudelDslArgs(callInfo)) { a, b -> a pow b }
@@ -469,7 +448,6 @@ fun SprudelPattern.pow(exponent: PatternLike, callInfo: CallInfo? = null): Sprud
  *
  * @param exponent The exponent. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.pow(exponent: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).pow(exponent, callInfo)
@@ -486,7 +464,6 @@ fun String.pow(exponent: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  *
  * @param exponent The exponent. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun pow(exponent: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.pow(exponent, callInfo) }
@@ -500,7 +477,6 @@ fun pow(exponent: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param exponent The exponent. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.pow(exponent: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.pow(exponent, callInfo) }
@@ -526,7 +502,6 @@ fun PatternMapperFn.pow(exponent: PatternLike, callInfo: CallInfo? = null): Patt
  * @category arithmetic
  * @tags band, bitwise, and, arithmetic, binary
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a band b }
@@ -543,7 +518,6 @@ fun SprudelPattern.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelP
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).band(mask, callInfo)
@@ -560,7 +534,6 @@ fun String.band(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun band(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.band(mask, callInfo) }
@@ -574,7 +547,6 @@ fun band(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.band(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.band(mask, callInfo) }
@@ -600,7 +572,6 @@ fun PatternMapperFn.band(mask: PatternLike, callInfo: CallInfo? = null): Pattern
  * @category arithmetic
  * @tags bor, bitwise, or, arithmetic, binary
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bor b }
@@ -617,7 +588,6 @@ fun SprudelPattern.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPa
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bor(mask, callInfo)
@@ -634,7 +604,6 @@ fun String.bor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun bor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bor(mask, callInfo) }
@@ -648,7 +617,6 @@ fun bor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bor(mask, callInfo) }
@@ -675,7 +643,6 @@ fun PatternMapperFn.bor(mask: PatternLike, callInfo: CallInfo? = null): PatternM
  * @category arithmetic
  * @tags bxor, bitwise, xor, arithmetic, binary
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(mask).asSprudelDslArgs(callInfo)) { a, b -> a bxor b }
@@ -692,7 +659,6 @@ fun SprudelPattern.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelP
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).bxor(mask, callInfo)
@@ -709,7 +675,6 @@ fun String.bxor(mask: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun bxor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.bxor(mask, callInfo) }
@@ -723,7 +688,6 @@ fun bxor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param mask The bitmask. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.bxor(mask: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.bxor(mask, callInfo) }
@@ -749,7 +713,6 @@ fun PatternMapperFn.bxor(mask: PatternLike, callInfo: CallInfo? = null): Pattern
  * @category arithmetic
  * @tags blshift, bitwise, shift, left shift, arithmetic, binary
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(bits).asSprudelDslArgs(callInfo)) { a, b -> a shl b }
@@ -766,7 +729,6 @@ fun SprudelPattern.blshift(bits: PatternLike, callInfo: CallInfo? = null): Sprud
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).blshift(bits, callInfo)
@@ -784,7 +746,6 @@ fun String.blshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  * @param bits The number of bit positions to shift. May be a number, string mini-notation,
  *   or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun blshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.blshift(bits, callInfo) }
@@ -798,7 +759,6 @@ fun blshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.blshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.blshift(bits, callInfo) }
@@ -824,7 +784,6 @@ fun PatternMapperFn.blshift(bits: PatternLike, callInfo: CallInfo? = null): Patt
  * @category arithmetic
  * @tags brshift, bitwise, shift, right shift, arithmetic, binary
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(bits).asSprudelDslArgs(callInfo)) { a, b -> a shr b }
@@ -841,7 +800,6 @@ fun SprudelPattern.brshift(bits: PatternLike, callInfo: CallInfo? = null): Sprud
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).brshift(bits, callInfo)
@@ -858,7 +816,6 @@ fun String.brshift(bits: PatternLike, callInfo: CallInfo? = null): SprudelPatter
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun brshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.brshift(bits, callInfo) }
@@ -872,7 +829,6 @@ fun brshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param bits The number of bit positions to shift. May be a number, string mini-notation, or a [SprudelPattern].
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.brshift(bits: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.brshift(bits, callInfo) }
@@ -898,7 +854,6 @@ fun PatternMapperFn.brshift(bits: PatternLike, callInfo: CallInfo? = null): Patt
  * @category arithmetic
  * @tags log2, logarithm, arithmetic, math
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.log2(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyUnaryOp(this) { it.log2() }
@@ -913,7 +868,6 @@ fun SprudelPattern.log2(@Suppress("unused") callInfo: CallInfo? = null): Sprudel
  * "1 2 4 8".log2().scale("c3:major").n()  // 0, 1, 2, 3
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.log2(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).log2(callInfo)
@@ -928,7 +882,6 @@ fun String.log2(callInfo: CallInfo? = null): SprudelPattern =
  * seq("1 2 4 8").apply(log2()).scale("c3:major").n()  // 0, 1, 2, 3
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun log2(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.log2(callInfo) }
@@ -940,7 +893,6 @@ fun log2(callInfo: CallInfo? = null): PatternMapperFn =
  * seq("2 4").apply(mul(4).log2()).scale("c3:major").n()  // log2(2*4)=log2(8)=3, log2(4*4)=log2(16)=4
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.log2(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.log2(callInfo) }
@@ -968,22 +920,18 @@ fun PatternMapperFn.log2(callInfo: CallInfo? = null): PatternMapperFn =
  * @category arithmetic
  * @tags lt, less than, comparison, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(threshold).asSprudelDslArgs(callInfo)) { a, b -> a lt b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.lt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lt(threshold, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun lt(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lt(threshold, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lt(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lt(threshold, callInfo) }
@@ -999,22 +947,18 @@ fun PatternMapperFn.lt(threshold: PatternLike, callInfo: CallInfo? = null): Patt
  * @category arithmetic
  * @tags gt, greater than, comparison, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.gt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(threshold).asSprudelDslArgs(callInfo)) { a, b -> a gt b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.gt(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).gt(threshold, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun gt(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.gt(threshold, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.gt(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.gt(threshold, callInfo) }
@@ -1030,22 +974,18 @@ fun PatternMapperFn.gt(threshold: PatternLike, callInfo: CallInfo? = null): Patt
  * @category arithmetic
  * @tags lte, less than or equal, comparison, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.lte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(threshold).asSprudelDslArgs(callInfo)) { a, b -> a lte b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.lte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).lte(threshold, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun lte(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.lte(threshold, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.lte(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.lte(threshold, callInfo) }
@@ -1061,22 +1001,18 @@ fun PatternMapperFn.lte(threshold: PatternLike, callInfo: CallInfo? = null): Pat
  * @category arithmetic
  * @tags gte, greater than or equal, comparison, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.gte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(threshold).asSprudelDslArgs(callInfo)) { a, b -> a gte b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.gte(threshold: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).gte(threshold, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun gte(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.gte(threshold, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.gte(threshold: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.gte(threshold, callInfo) }
@@ -1092,22 +1028,18 @@ fun PatternMapperFn.gte(threshold: PatternLike, callInfo: CallInfo? = null): Pat
  * @category arithmetic
  * @tags eq, equal, equality, comparison, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.eq(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a eq b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.eq(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).eq(other, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun eq(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.eq(other, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.eq(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.eq(other, callInfo) }
@@ -1123,22 +1055,18 @@ fun PatternMapperFn.eq(other: PatternLike, callInfo: CallInfo? = null): PatternM
  * @category arithmetic
  * @tags eqt, truthiness, equal, comparison, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.eqt(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a eqt b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.eqt(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).eqt(other, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun eqt(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.eqt(other, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.eqt(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.eqt(other, callInfo) }
@@ -1154,22 +1082,18 @@ fun PatternMapperFn.eqt(other: PatternLike, callInfo: CallInfo? = null): Pattern
  * @category arithmetic
  * @tags ne, not equal, inequality, comparison, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.ne(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a ne b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.ne(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).ne(other, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun ne(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.ne(other, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.ne(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.ne(other, callInfo) }
@@ -1185,22 +1109,18 @@ fun PatternMapperFn.ne(other: PatternLike, callInfo: CallInfo? = null): PatternM
  * @category arithmetic
  * @tags net, truthiness, not equal, inequality, comparison, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.net(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a net b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.net(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).net(other, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun net(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.net(other, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.net(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.net(other, callInfo) }
@@ -1215,22 +1135,18 @@ fun PatternMapperFn.net(other: PatternLike, callInfo: CallInfo? = null): Pattern
  * @category arithmetic
  * @tags and, logical, boolean, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.and(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a and b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.and(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).and(other, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun and(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.and(other, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.and(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.and(other, callInfo) }
@@ -1245,22 +1161,18 @@ fun PatternMapperFn.and(other: PatternLike, callInfo: CallInfo? = null): Pattern
  * @category arithmetic
  * @tags or, logical, boolean, arithmetic
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.or(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyArithmetic(this, listOfNotNull(other).asSprudelDslArgs(callInfo)) { a, b -> a or b }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.or(other: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).or(other, callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun or(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.or(other, callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.or(other: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.or(other, callInfo) }
@@ -1274,24 +1186,20 @@ fun PatternMapperFn.or(other: PatternLike, callInfo: CallInfo? = null): PatternM
  * @category arithmetic
  * @tags round, rounding, arithmetic, math
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.round(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
 // Half-up rounding (floor(x+0.5)) to match the previous behavior; kotlin.math.round is
     // half-to-even (banker's), which would round 2.5 -> 2.
     applyUnaryOp(this) { v -> v.asDouble?.let { floor(it + 0.5) }?.asVoiceValue() ?: v }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.round(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).round(callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun round(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.round(callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.round(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.round(callInfo) }
@@ -1305,22 +1213,18 @@ fun PatternMapperFn.round(callInfo: CallInfo? = null): PatternMapperFn =
  * @category arithmetic
  * @tags floor, rounding, arithmetic, math
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.floor(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyUnaryOp(this) { v -> v.asDouble?.let { floor(it) }?.asVoiceValue() ?: v }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.floor(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).floor(callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun floor(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.floor(callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.floor(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.floor(callInfo) }
@@ -1334,22 +1238,18 @@ fun PatternMapperFn.floor(callInfo: CallInfo? = null): PatternMapperFn =
  * @category arithmetic
  * @tags ceil, ceiling, rounding, arithmetic, math
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.ceil(@Suppress("unused") callInfo: CallInfo? = null): SprudelPattern =
     applyUnaryOp(this) { v -> v.asDouble?.let { ceil(it) }?.asVoiceValue() ?: v }
 
-@SprudelDsl
 @KlangScript.Function
 fun String.ceil(callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).ceil(callInfo)
 
-@SprudelDsl
 @KlangScript.Function
 fun ceil(callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.ceil(callInfo) }
 
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.ceil(callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.ceil(callInfo) }

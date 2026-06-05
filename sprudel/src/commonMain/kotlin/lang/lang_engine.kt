@@ -43,7 +43,6 @@ private fun applyEngine(source: SprudelPattern, args: List<SprudelDslArg<Any?>>)
  * @category effects
  * @tags engine, pipeline, topology, modern, pedal, motor
  */
-@SprudelDsl
 @KlangScript.Function
 fun SprudelPattern.engine(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     applyEngine(this, listOf(name).asSprudelDslArgs(callInfo))
@@ -58,7 +57,6 @@ fun SprudelPattern.engine(name: PatternLike, callInfo: CallInfo? = null): Sprude
  * "c3 e3 g3".engine("pedal").s("supersaw").distort(0.8)
  * ```
  */
-@SprudelDsl
 @KlangScript.Function
 fun String.engine(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern =
     this.toVoiceValuePattern(callInfo?.receiverLocation).engine(name, callInfo)
@@ -75,7 +73,6 @@ fun String.engine(name: PatternLike, callInfo: CallInfo? = null): SprudelPattern
  * @category effects
  * @tags engine, pipeline, topology, modern, pedal, motor
  */
-@SprudelDsl
 @KlangScript.Function
 fun engine(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     { p -> p.engine(name, callInfo) }
@@ -85,7 +82,6 @@ fun engine(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
  *
  * @param name The engine name (case-insensitive). See [SprudelPattern.engine] for known engines.
  */
-@SprudelDsl
 @KlangScript.Function
 fun PatternMapperFn.engine(name: PatternLike, callInfo: CallInfo? = null): PatternMapperFn =
     this.chain { p -> p.engine(name, callInfo) }
